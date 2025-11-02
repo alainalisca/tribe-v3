@@ -1,0 +1,231 @@
+export const translations = {
+  en: {
+    // Navigation
+    home: 'Home',
+    sessions: 'Sessions',
+    create: 'Create',
+    matches: 'Matches',
+    profile: 'Profile',
+    
+    // Home Page
+    findSessions: 'Find Sessions',
+    searchPlaceholder: 'Search by sport, location...',
+    clearFilters: 'Clear filters',
+    noSessionsFound: 'No sessions found',
+    tryAdjusting: 'Try adjusting your filters or create a new session!',
+    filters: 'Filters',
+    sessionsCount: 'sessions',
+    all: 'All',
+    
+    // Session Card
+    viewDetails: 'View Details',
+    join: 'Join',
+    joined: 'Joined',
+    full: 'Full',
+    past: 'Past',
+    hostedBy: 'Hosted by',
+    
+    // Session Detail
+    sessionDetails: 'Session Details',
+    host: 'Host',
+    sessionOrganizer: 'Session organizer',
+    participants: 'Participants',
+    noParticipants: 'No participants yet. Be the first to join!',
+    editSession: 'Edit Session',
+    cancelSession: 'Cancel Session',
+    leaveSession: 'Leave Session',
+    joinSession: 'Join Session',
+    sessionFull: 'Session Full',
+    openGroupChat: 'Open Group Chat',
+    
+    // Create/Edit Session
+    createSession: 'Create Session',
+    sport: 'Sport',
+    selectSport: 'Select a sport',
+    date: 'Date',
+    startTime: 'Start Time',
+    duration: 'Duration (min)',
+    location: 'Location',
+    locationPlaceholder: 'e.g., Central Park, NYC',
+    maxParticipants: 'Max Participants',
+    description: 'Description',
+    descriptionPlaceholder: 'Add any additional details about the session...',
+    charactersRemaining: 'characters',
+    saveChanges: 'Save Changes',
+    creating: 'Creating...',
+    saving: 'Saving...',
+    cancel: 'Cancel',
+    
+    // My Sessions
+    mySessions: 'My Sessions',
+    hosting: 'Hosting',
+    joinedTab: 'Joined',
+    noHostingSessions: 'No hosting sessions yet',
+    startHosting: 'Create your first session to start hosting!',
+    noJoinedSessions: 'No joined sessions yet',
+    startJoining: 'Join sessions to build your tribe!',
+    
+    // Matches
+    matchesTitle: 'Matches',
+    joinRequests: 'Join Requests',
+    myTribe: 'My Tribe',
+    noRequests: 'No join requests yet',
+    whenPeopleJoin: 'When people join your sessions, they will appear here',
+    noTribeSessions: 'No tribe sessions yet',
+    joinToBuild: 'Join sessions to build your tribe!',
+    
+    // Profile
+    stats: 'Stats',
+    hosted: 'Hosted',
+    totalSessions: 'Total',
+    settings: 'Settings',
+    language: 'Language',
+    english: 'English',
+    spanish: 'Spanish',
+    logout: 'Logout',
+    
+    // Sports
+    running: 'Running',
+    crossfit: 'CrossFit',
+    basketball: 'Basketball',
+    soccer: 'Soccer',
+    tennis: 'Tennis',
+    swimming: 'Swimming',
+    bjj: 'BJJ',
+    volleyball: 'Volleyball',
+    football: 'Football',
+    cycling: 'Cycling',
+    yoga: 'Yoga',
+    climbing: 'Climbing',
+    boxing: 'Boxing',
+    dance: 'Dance',
+    
+    // Messages
+    sessionCreated: 'Session created successfully!',
+    sessionUpdated: 'Session updated successfully!',
+    sessionCancelled: 'Session cancelled',
+    joinedSuccessfully: 'Successfully joined session!',
+    leftSuccessfully: 'Successfully left session',
+    alreadyJoined: 'You already joined this session!',
+    sessionFullMsg: 'This session is full!',
+    confirmCancel: 'Are you sure you want to cancel this session? This cannot be undone.',
+    confirmLeave: 'Are you sure you want to leave this session?',
+    loading: 'Loading...',
+  },
+  es: {
+    // Navigation
+    home: 'Inicio',
+    sessions: 'Sesiones',
+    create: 'Crear',
+    matches: 'Matches',
+    profile: 'Perfil',
+    
+    // Home Page
+    findSessions: 'Buscar Sesiones',
+    searchPlaceholder: 'Buscar por deporte, ubicación...',
+    clearFilters: 'Limpiar filtros',
+    noSessionsFound: 'No se encontraron sesiones',
+    tryAdjusting: '¡Intenta ajustar tus filtros o crear una nueva sesión!',
+    filters: 'Filtros',
+    sessionsCount: 'sesiones',
+    all: 'Todos',
+    
+    // Session Card
+    viewDetails: 'Ver Detalles',
+    join: 'Unirse',
+    joined: 'Unido',
+    full: 'Lleno',
+    past: 'Pasado',
+    hostedBy: 'Organizado por',
+    
+    // Session Detail
+    sessionDetails: 'Detalles de Sesión',
+    host: 'Anfitrión',
+    sessionOrganizer: 'Organizador de sesión',
+    participants: 'Participantes',
+    noParticipants: '¡Aún no hay participantes. Sé el primero en unirte!',
+    editSession: 'Editar Sesión',
+    cancelSession: 'Cancelar Sesión',
+    leaveSession: 'Abandonar Sesión',
+    joinSession: 'Unirse a Sesión',
+    sessionFull: 'Sesión Llena',
+    openGroupChat: 'Abrir Chat Grupal',
+    
+    // Create/Edit Session
+    createSession: 'Crear Sesión',
+    sport: 'Deporte',
+    selectSport: 'Selecciona un deporte',
+    date: 'Fecha',
+    startTime: 'Hora de Inicio',
+    duration: 'Duración (min)',
+    location: 'Ubicación',
+    locationPlaceholder: 'ej., Parque Lleras, Medellín',
+    maxParticipants: 'Máximo de Participantes',
+    description: 'Descripción',
+    descriptionPlaceholder: 'Agrega detalles adicionales sobre la sesión...',
+    charactersRemaining: 'caracteres',
+    saveChanges: 'Guardar Cambios',
+    creating: 'Creando...',
+    saving: 'Guardando...',
+    cancel: 'Cancelar',
+    
+    // My Sessions
+    mySessions: 'Mis Sesiones',
+    hosting: 'Organizando',
+    joinedTab: 'Unido',
+    noHostingSessions: 'Aún no organizas sesiones',
+    startHosting: '¡Crea tu primera sesión para comenzar a organizar!',
+    noJoinedSessions: 'Aún no te has unido a sesiones',
+    startJoining: '¡Únete a sesiones para construir tu tribu!',
+    
+    // Matches
+    matchesTitle: 'Matches',
+    joinRequests: 'Solicitudes',
+    myTribe: 'Mi Tribu',
+    noRequests: 'Aún no hay solicitudes',
+    whenPeopleJoin: 'Cuando alguien se una a tus sesiones, aparecerá aquí',
+    noTribeSessions: 'Aún no hay sesiones en tu tribu',
+    joinToBuild: '¡Únete a sesiones para construir tu tribu!',
+    
+    // Profile
+    stats: 'Estadísticas',
+    hosted: 'Organizadas',
+    totalSessions: 'Total',
+    settings: 'Configuración',
+    language: 'Idioma',
+    english: 'Inglés',
+    spanish: 'Español',
+    logout: 'Cerrar Sesión',
+    
+    // Sports (keep English names for consistency)
+    running: 'Running',
+    crossfit: 'CrossFit',
+    basketball: 'Baloncesto',
+    soccer: 'Fútbol',
+    tennis: 'Tenis',
+    swimming: 'Natación',
+    bjj: 'BJJ',
+    volleyball: 'Voleibol',
+    football: 'Fútbol Americano',
+    cycling: 'Ciclismo',
+    yoga: 'Yoga',
+    climbing: 'Escalada',
+    boxing: 'Boxeo',
+    dance: 'Baile',
+    
+    // Messages
+    sessionCreated: '¡Sesión creada exitosamente!',
+    sessionUpdated: '¡Sesión actualizada exitosamente!',
+    sessionCancelled: 'Sesión cancelada',
+    joinedSuccessfully: '¡Te has unido exitosamente!',
+    leftSuccessfully: 'Has abandonado la sesión',
+    alreadyJoined: '¡Ya te uniste a esta sesión!',
+    sessionFullMsg: '¡Esta sesión está llena!',
+    confirmCancel: '¿Estás seguro de cancelar esta sesión? Esto no se puede deshacer.',
+    confirmLeave: '¿Estás seguro de abandonar esta sesión?',
+    loading: 'Cargando...',
+  },
+};
+
+export type Language = 'en' | 'es';
+export type TranslationKey = keyof typeof translations.en;

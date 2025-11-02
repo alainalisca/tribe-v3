@@ -1,0 +1,33 @@
+{
+  "common": {
+    "appName": "Tribe",
+    "home": "Home",
+    "mySessions": "My Sessions",
+    "matches": "Matches",
+    "profile": "Profile",
+    "teams": "Teams"
+  },
+  "home": {
+    "title": "Find Training Partners",
+    "subtitle": "Join athletes near you for sports and training",
+    "createSession": "Create Session",
+    "join": "Join",
+    "joined": "joined",
+    "lookingFor": "Looking for",
+    "morePlayers": "more players",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "noSessions": "No sessions available yet. Create the first one!"
+  },
+  "sports": {
+    "football": "Football",
+    "basketball": "Basketball",
+    "crossfit": "CrossFit",
+    "bjj": "BJJ",
+    "running": "Running",
+    "swimming": "Swimming",
+    "tennis": "Tennis",
+    "volleyball": "Volleyball",
+    "soccer": "Soccer"
+  }
+}
