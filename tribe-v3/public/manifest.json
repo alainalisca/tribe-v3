@@ -1,21 +1,21 @@
 {
   "name": "Tribe - Find Training Partners",
   "short_name": "Tribe",
-  "description": "Connect with athletes near you for sports and training",
+  "description": "Real-time sports training partner matching app",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e293b",
-  "theme_color": "#84cc16",
+  "background_color": "#0f172a",
+  "theme_color": "#bef264",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
