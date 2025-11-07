@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Award, UserPlus, UserMinus, MessageCircle, X, Edit2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Users, UserPlus, UserMinus, X, Edit2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import BottomNav from '@/components/BottomNav';
 
 export default function SessionDetailPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [hasJoined, setHasJoined] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -51,72 +53,38 @@ export default function SessionDetailPage() {
         .single();
 
       if (sessionError) throw sessionError;
+      setSession(sessionData);
 
-      const { data: creator, error: creatorError } = await supabase
-        .from('users')
-        .select('id, name, avatar_url')
-        .eq('id', sessionData.creator_id)
-        .single();
-
-      if (creatorError) throw creatorError;
-
-      setSession({ ...sessionData, creator });
-
-      const { data: participantData, error: partError } = await supabase
+      const { data: participantsData, error: participantsError } = await supabase
         .from('session_participants')
-        .select('user_id, joined_at, status')
-        .eq('session_id', sessionId)
-        .eq('status', 'confirmed');
+        .select(`
+          *,
+          user:users(id, name, avatar_url)
+        `)
+        .eq('session_id', sessionId);
 
-      if (partError) throw partError;
+      if (participantsError) throw participantsError;
+      setParticipants(participantsData || []);
 
-      if (participantData && participantData.length > 0) {
-        const userIds = participantData.map(p => p.user_id);
-        
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, name, avatar_url')
-          .in('id', userIds);
-
-        if (usersError) throw usersError;
-
-        const enrichedParticipants = participantData.map(p => ({
-          ...p,
-          user: users?.find(u => u.id === p.user_id)
-        }));
-
-        setParticipants(enrichedParticipants);
-      }
+      const isParticipant = participantsData?.some((p) => p.user_id === user.id);
+      setHasJoined(isParticipant || false);
     } catch (error) {
       console.error('Error loading session:', error);
-      alert('Error loading session');
     } finally {
       setLoading(false);
     }
   }
 
   async function handleJoinSession() {
-    if (!user || !session) return;
+    if (!session || !user) return;
+
+    if (session.current_participants >= session.max_participants) {
+      alert('Session is full');
+      return;
+    }
 
     try {
       setActionLoading(true);
-
-      const { data: existing } = await supabase
-        .from('session_participants')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existing) {
-        alert(t('alreadyJoined'));
-        return;
-      }
-
-      if (session.current_participants >= session.max_participants) {
-        alert(t('sessionFullMsg'));
-        return;
-      }
 
       const { error: joinError } = await supabase
         .from('session_participants')
@@ -135,20 +103,18 @@ export default function SessionDetailPage() {
 
       if (updateError) throw updateError;
 
-      alert(t('joinedSuccessfully'));
       await loadSession();
+      alert('Successfully joined session!');
     } catch (error: any) {
       console.error('Error joining session:', error);
-      alert('Error joining session: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setActionLoading(false);
     }
   }
 
   async function handleLeaveSession() {
-    if (!user || !session) return;
-
-    if (!confirm(t('confirmLeave'))) return;
+    if (!session || !user) return;
 
     try {
       setActionLoading(true);
@@ -163,197 +129,154 @@ export default function SessionDetailPage() {
 
       const { error: updateError } = await supabase
         .from('sessions')
-        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .update({ current_participants: session.current_participants - 1 })
         .eq('id', sessionId);
 
       if (updateError) throw updateError;
 
-      alert(t('leftSuccessfully'));
-      router.push('/');
+      await loadSession();
+      alert('You have left the session');
     } catch (error: any) {
       console.error('Error leaving session:', error);
-      alert('Error leaving session: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setActionLoading(false);
     }
   }
 
   async function handleCancelSession() {
-    if (!confirm(t('confirmCancel'))) return;
+    if (!confirm('Are you sure you want to cancel this session?')) return;
 
     try {
       setActionLoading(true);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('sessions')
         .update({ status: 'cancelled' })
-        .eq('id', sessionId)
-        .select();
+        .eq('id', sessionId);
 
       if (error) throw error;
 
-      alert(t('sessionCancelled'));
-      router.push('/sessions');
+      alert('Session cancelled');
+      router.push('/');
     } catch (error: any) {
       console.error('Error cancelling session:', error);
-      alert('Error cancelling session: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setActionLoading(false);
     }
   }
 
-  if (loading || !session) {
+  if (!user || loading) {
     return (
-      <div className="min-h-screen bg-tribe-darker flex items-center justify-center">
-        <p className="text-white">Loading...</p>
+      <div className="min-h-screen bg-theme-page flex items-center justify-center">
+        <p className="text-theme-primary">{t('loading')}</p>
       </div>
     );
   }
 
-  const isCreator = user?.id === session.creator_id;
-  const hasJoined = participants.some(p => p.user_id === user?.id);
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-theme-page flex items-center justify-center">
+        <p className="text-theme-primary">Session not found</p>
+      </div>
+    );
+  }
+
+  const isCreator = session.creator_id === user.id;
   const isFull = session.current_participants >= session.max_participants;
-
   const date = format(parseISO(session.date), 'EEEE, MMMM d, yyyy');
-  const startTime = format(parseISO(`2000-01-01T${session.start_time}`), 'h:mm a');
-
-  const sportColors: Record<string, string> = {
-    football: 'bg-gray-700',
-    basketball: 'bg-blue-500',
-    crossfit: 'bg-orange-500',
-    bjj: 'bg-purple-600',
-    running: 'bg-green-500',
-    swimming: 'bg-cyan-500',
-    tennis: 'bg-yellow-500',
-    volleyball: 'bg-pink-500',
-    soccer: 'bg-green-600',
-  };
-
-  const sportColor = sportColors[session.sport?.toLowerCase()] || 'bg-gray-600';
-
-  const getColorFromName = (name: string) => {
-    const colors = [
-      'bg-red-500',
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-orange-500',
-    ];
-    const index = name?.charCodeAt(0) % colors.length || 0;
-    return colors[index];
-  };
+  const startTime = session.start_time;
 
   return (
-    <div className="min-h-screen bg-tribe-darker pb-20">
+    <div className="min-h-screen bg-theme-page pb-20">
       {/* Header */}
-      <div className="bg-tribe-dark p-4 sticky top-0 z-10 border-b border-slate-700">
+      <div className="bg-theme-card p-4 sticky top-0 z-10 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href="/">
-            <button className="p-2 hover:bg-slate-700 rounded-lg transition mr-3">
-              <ArrowLeft className="w-6 h-6 text-white" />
+            <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+              <ArrowLeft className="w-6 h-6 text-theme-primary" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-white">{t('sessionDetails')}</h1>
+          <h1 className="text-xl font-bold text-theme-primary">{t('sessionDetails')}</h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         {/* Main Info Card */}
-        <div className="bg-tribe-dark rounded-xl p-6 border border-slate-700">
-          <span className={`inline-block px-4 py-2 rounded-full text-sm font-bold text-white ${sportColor} mb-4`}>
+        <div className="bg-theme-card rounded-xl p-6 border border-theme">
+          <span className="inline-block px-4 py-2 rounded-full text-sm font-bold bg-tribe-green text-slate-900 mb-4">
             {session.sport}
           </span>
 
           <div className="space-y-3">
-            <div className="flex items-center text-gray-300">
+            <div className="flex items-center text-theme-secondary">
               <Calendar className="w-5 h-5 mr-3 text-tribe-green" />
               <span className="font-medium">{date}</span>
             </div>
 
-            <div className="flex items-center text-gray-300">
+            <div className="flex items-center text-theme-secondary">
               <Clock className="w-5 h-5 mr-3 text-tribe-green" />
               <span className="font-medium">{startTime}</span>
             </div>
 
-            <div className="flex items-start text-gray-300">
+            <div className="flex items-start text-theme-secondary">
               <MapPin className="w-5 h-5 mr-3 mt-0.5 text-tribe-green flex-shrink-0" />
               <span className="font-medium">{session.location}</span>
             </div>
 
-            <div className="flex items-center text-gray-300">
+            <div className="flex items-center text-theme-secondary">
               <Users className="w-5 h-5 mr-3 text-tribe-green" />
               <span className="font-medium">
-                {session.current_participants}/{session.max_participants} {t('participants').toLowerCase()}
+                {session.current_participants}/{session.max_participants} participants
               </span>
-              {isFull && <span className="ml-2 text-xs text-red-400">({t('full')})</span>}
             </div>
-          </div>
 
-          {session.description && (
-            <div className="mt-4 pt-4 border-t border-slate-600">
-              <p className="text-gray-300 text-sm leading-relaxed">{session.description}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Host Card */}
-        <div className="bg-tribe-dark rounded-xl p-4 border border-slate-700">
-          <h3 className="text-white font-semibold mb-3">{t('host')}</h3>
-          <div className="flex items-center">
-            <div className={`w-12 h-12 rounded-full ${getColorFromName(session.creator?.name || '')} flex items-center justify-center flex-shrink-0`}>
-              {session.creator?.avatar_url ? (
-                <img src={session.creator.avatar_url} alt="Host" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                <span className="text-lg font-bold text-white">
-                  {session.creator?.name?.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="ml-3">
-              <p className="text-white font-medium">{session.creator?.name}</p>
-              <p className="text-xs text-gray-400">{t('sessionOrganizer')}</p>
-            </div>
+            {session.description && (
+              <div className="pt-3 border-t border-theme">
+                <p className="text-theme-secondary">{session.description}</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Participants Card */}
-        <div className="bg-tribe-dark rounded-xl p-4 border border-slate-700">
-          <h3 className="text-white font-semibold mb-3">
-            {t('participants')} ({participants.length})
-          </h3>
-          {participants.length === 0 ? (
-            <p className="text-gray-400 text-sm">{t('noParticipants')}</p>
-          ) : (
+        {/* Participants - CLICKABLE */}
+        {participants.length > 0 && (
+          <div className="bg-theme-card rounded-xl p-6 border border-theme">
+            <h2 className="text-lg font-bold text-theme-primary mb-4">Participants</h2>
             <div className="space-y-2">
               {participants.map((participant) => (
-                <div key={participant.user_id} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full ${getColorFromName(participant.user?.name || '')} flex items-center justify-center flex-shrink-0`}>
+                <Link
+                  key={participant.user_id}
+                  href={`/profile/${participant.user_id}`}
+                  className="flex items-center p-3 rounded-lg hover:bg-stone-100 transition cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {participant.user?.avatar_url ? (
-                      <img src={participant.user.avatar_url} alt={participant.user.name} className="w-full h-full rounded-full object-cover" />
+                      <img src={participant.user.avatar_url} alt={participant.user.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-lg font-bold text-slate-900">
                         {participant.user?.name?.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div className="ml-3">
-                    <p className="text-white text-sm font-medium">{participant.user?.name}</p>
+                    <p className="text-theme-primary text-base font-semibold hover:text-tribe-green">
+                      {participant.user?.name}
+                    </p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-3">
           {isCreator ? (
             <>
               <Link href={`/session/${sessionId}/edit`}>
-                <button className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition flex items-center justify-center gap-2">
+                <button className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-2">
                   <Edit2 className="w-5 h-5" />
                   {t('editSession')}
                 </button>
@@ -361,31 +284,29 @@ export default function SessionDetailPage() {
               <button
                 onClick={handleCancelSession}
                 disabled={actionLoading}
-                className="w-full py-3 bg-red-500/20 text-red-400 font-semibold rounded-xl hover:bg-red-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-red-500/20 text-red-600 font-semibold rounded-xl hover:bg-red-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <X className="w-5 h-5" />
                 {actionLoading ? t('saving') : t('cancelSession')}
               </button>
             </>
           ) : hasJoined ? (
-            <>
-              <button
-                onClick={handleLeaveSession}
-                disabled={actionLoading}
-                className="w-full py-3 bg-red-500/20 text-red-400 font-semibold rounded-xl hover:bg-red-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <UserMinus className="w-5 h-5" />
-                {t('leaveSession')}
-              </button>
-            </>
+            <button
+              onClick={handleLeaveSession}
+              disabled={actionLoading}
+              className="w-full py-3 bg-red-500/20 text-red-600 font-semibold rounded-xl hover:bg-red-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <UserMinus className="w-5 h-5" />
+              {t('leaveSession')}
+            </button>
           ) : (
             <button
               onClick={handleJoinSession}
               disabled={actionLoading || isFull}
               className={`w-full py-3 font-bold rounded-xl transition flex items-center justify-center gap-2 ${
                 isFull
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-tribe-green text-slate-900 hover:bg-lime-500'
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-tribe-green text-slate-900 hover:opacity-90'
               }`}
             >
               <UserPlus className="w-5 h-5" />
@@ -394,6 +315,8 @@ export default function SessionDetailPage() {
           )}
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

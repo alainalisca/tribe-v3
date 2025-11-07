@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Calendar, Clock, MapPin, Users, FileText, Dumbbell } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { geocodeAddress } from '@/lib/location';
 
 export default function CreateSessionPage() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function CreateSessionPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   
-  const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
   const [formData, setFormData] = useState({
     sport: '',
     date: '',
@@ -91,8 +89,7 @@ export default function CreateSessionPage() {
           location: formData.location,
           description: formData.description || null,
           max_participants: formData.max_participants,
-          latitude: coordinates?.latitude || null,
-          longitude: coordinates?.longitude || null,          current_participants: 1,
+          current_participants: 1,
           status: 'active',
         })
         .select()
@@ -120,29 +117,29 @@ export default function CreateSessionPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+      <div className="min-h-screen bg-tribe-darker flex items-center justify-center">
+        <p className="text-white">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-20">
-      <div className="bg-theme-header p-4 sticky top-0 z-10 border-b border-theme">
+    <div className="min-h-screen bg-tribe-darker pb-20">
+      <div className="bg-tribe-dark p-4 sticky top-0 z-10 border-b border-slate-700">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href="/">
             <button className="p-2 hover:bg-slate-700 rounded-lg transition mr-3">
-              <ArrowLeft className="w-6 h-6 text-theme-primary" />
+              <ArrowLeft className="w-6 h-6 text-white" />
             </button>
           </Link>
-          <h1 className="text-2xl font-bold text-theme-primary">{t('createSession')}</h1>
+          <h1 className="text-2xl font-bold text-white">{t('createSession')}</h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
+            <label className="flex items-center text-white font-medium mb-2">
               <Dumbbell className="w-5 h-5 mr-2 text-tribe-green" />
               {t('sport')} *
             </label>
@@ -150,7 +147,7 @@ export default function CreateSessionPage() {
               required
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white focus:outline-none focus:border-tribe-green"
             >
               <option value="">{t('selectSport')}</option>
               {sports.map((sport) => (
@@ -160,7 +157,7 @@ export default function CreateSessionPage() {
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
+            <label className="flex items-center text-white font-medium mb-2">
               <Calendar className="w-5 h-5 mr-2 text-tribe-green" />
               {t('date')} *
             </label>
@@ -170,14 +167,14 @@ export default function CreateSessionPage() {
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               min={today}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white focus:outline-none focus:border-tribe-green"
             />
             {errors.date && <p className="text-red-400 text-sm mt-1">{errors.date}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="flex items-center text-theme-primary font-medium mb-2">
+              <label className="flex items-center text-white font-medium mb-2">
                 <Clock className="w-5 h-5 mr-2 text-tribe-green" />
                 {t('startTime')} *
               </label>
@@ -186,11 +183,11 @@ export default function CreateSessionPage() {
                 required
                 value={formData.start_time}
                 onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+                className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white focus:outline-none focus:border-tribe-green"
               />
             </div>
             <div>
-              <label className="flex items-center text-theme-primary font-medium mb-2">
+              <label className="flex items-center text-white font-medium mb-2">
                 <Clock className="w-5 h-5 mr-2 text-tribe-green" />
                 {t('duration')} *
               </label>
@@ -202,14 +199,14 @@ export default function CreateSessionPage() {
                 step="15"
                 value={formData.duration}
                 onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+                className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white focus:outline-none focus:border-tribe-green"
               />
               {errors.duration && <p className="text-red-400 text-sm mt-1">{errors.duration}</p>}
             </div>
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
+            <label className="flex items-center text-white font-medium mb-2">
               <MapPin className="w-5 h-5 mr-2 text-tribe-green" />
               {t('location')} *
             </label>
@@ -219,18 +216,12 @@ export default function CreateSessionPage() {
               placeholder={t('locationPlaceholder')}
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              onBlur={async (e) => {
-                if (e.target.value.length > 5) {
-                  const coords = await geocodeAddress(e.target.value);
-                  if (coords) setCoordinates(coords);
-                }
-              }}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary placeholder-gray-500 focus:outline-none focus:border-tribe-green"
+              className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-tribe-green"
             />
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
+            <label className="flex items-center text-white font-medium mb-2">
               <Users className="w-5 h-5 mr-2 text-tribe-green" />
               {t('maxParticipants')} *
             </label>
@@ -241,13 +232,13 @@ export default function CreateSessionPage() {
               max="50"
               value={formData.max_participants}
               onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white focus:outline-none focus:border-tribe-green"
             />
             {errors.max_participants && <p className="text-red-400 text-sm mt-1">{errors.max_participants}</p>}
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
+            <label className="flex items-center text-white font-medium mb-2">
               <FileText className="w-5 h-5 mr-2 text-tribe-green" />
               {t('description')}
             </label>
@@ -256,7 +247,7 @@ export default function CreateSessionPage() {
               placeholder={t('descriptionPlaceholder')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary placeholder-gray-500 focus:outline-none focus:border-tribe-green resize-none"
+              className="w-full p-3 bg-tribe-dark border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-tribe-green resize-none"
               maxLength={500}
             />
             <p className="text-xs text-gray-500 mt-1">

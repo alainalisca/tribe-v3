@@ -1,121 +1,131 @@
 'use client';
 
-import { Calendar, MapPin, Users, Clock, UserPlus, CheckCircle } from 'lucide-react';
-import { format, parseISO, isPast } from 'date-fns';
+import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import { sportTranslations } from '@/lib/translations';
+import { calculateDistance, formatDistance } from '@/lib/distance';
 
 interface SessionCardProps {
-  session: any;
-  onJoin?: () => void;
   currentUserId?: string;
-  showJoinButton?: boolean;
+  session: any;
+  onJoin?: (sessionId: string) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
-export default function SessionCard({ session, onJoin, currentUserId, showJoinButton = true }: SessionCardProps) {
-  const { t } = useLanguage();
-  const sessionDate = parseISO(session.date);
-  const sessionDateTime = parseISO(`${session.date}T${session.start_time}`);
-  const dateLabel = format(sessionDate, 'EEE, MMM d');
-  const timeLabel = format(parseISO(`2000-01-01T${session.start_time}`), 'h:mm a');
+export default function SessionCard({ session, onJoin, userLocation, currentUserId }: SessionCardProps) {
+  const { t, language } = useLanguage();
   
-  const isCreator = currentUserId === session.creator_id;
-  const hasJoined = session.participants?.some(
-    (p: any) => p.user_id === currentUserId
-  );
-  const isFull = session.current_participants >= session.max_participants;
-  const isPastSession = isPast(sessionDateTime);
-
   const sportColors: Record<string, string> = {
-    football: 'bg-gray-700',
-    basketball: 'bg-blue-500',
-    crossfit: 'bg-orange-500',
-    bjj: 'bg-purple-600',
-    running: 'bg-green-500',
-    swimming: 'bg-cyan-500',
-    tennis: 'bg-yellow-500',
-    volleyball: 'bg-pink-500',
-    soccer: 'bg-green-600',
+    Running: 'bg-[#C0E863] text-[#272D34]',
+    CrossFit: 'bg-[#C0E863] text-[#272D34]',
+    Basketball: 'bg-orange-500 text-white',
+    Soccer: 'bg-green-600 text-white',
+    Tennis: 'bg-yellow-500 text-[#272D34]',
+    Swimming: 'bg-blue-500 text-white',
+    BJJ: 'bg-purple-600 text-white',
+    Volleyball: 'bg-pink-500 text-white',
+    Football: 'bg-red-600 text-white',
+    Cycling: 'bg-indigo-500 text-white',
+    Yoga: 'bg-teal-500 text-white',
+    Climbing: 'bg-amber-600 text-white',
+    Boxing: 'bg-red-700 text-white',
+    Dance: 'bg-fuchsia-500 text-white',
   };
 
-  const sportColor = sportColors[session.sport?.toLowerCase()] || 'bg-gray-600';
+  const sportColor = sportColors[session.sport] || 'bg-[#C0E863] text-[#272D34]';
+  const isFull = session.current_participants >= session.max_participants;
+  const isPast = new Date(session.date) < new Date();
+  const userHasJoined = currentUserId && session.participants?.some((p: any) => p.user_id === currentUserId);
+
+  let distance: string | null = null;
+  if (userLocation && session.latitude && session.longitude) {
+    const km = calculateDistance(
+      userLocation.latitude,
+      userLocation.longitude,
+      session.latitude,
+      session.longitude
+    );
+    distance = formatDistance(km, language);
+  }
 
   return (
-    <div className="bg-tribe-dark rounded-xl overflow-hidden border border-slate-700 hover:border-slate-600 transition">
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold text-white ${sportColor}`}>
-                {session.sport}
-              </span>
-              {isPastSession && (
-                <span className="text-xs text-red-400 font-medium">{t('past')}</span>
-              )}
-            </div>
-            <div className="flex items-center text-gray-300">
-              <Calendar className="w-4 h-4 mr-1" />
-              <span className="font-medium text-sm">{dateLabel}</span>
-              <Clock className="w-4 h-4 ml-3 mr-1" />
-              <span className="font-medium text-sm">{timeLabel}</span>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="flex items-center text-gray-400">
-              <Users className="w-4 h-4 mr-1" />
-              <span className="text-sm">{session.current_participants}/{session.max_participants}</span>
-            </div>
-            {isFull && (
-              <span className="text-xs text-red-400 mt-1 block">{t('full')}</span>
-            )}
-          </div>
+    <div className="bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-[#C0E863] transition">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${sportColor}`}>
+            {language === "es" ? (sportTranslations[session.sport]?.es || session.sport) : session.sport}
+          </span>
+          {isPast && (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-[#E33629]/20 text-[#E33629] dark:text-red-300">
+              {t('past')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center text-stone-600 dark:text-[#B1B3B6] text-sm">
+          <Users className="w-4 h-4 mr-1" />
+          {session.current_participants}/{session.max_participants}
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center text-[#272D34] dark:text-white">
+          <Calendar className="w-4 h-4 mr-2 text-stone-500 dark:text-[#B1B3B6]" />
+          <span className="font-medium">
+            {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </span>
+          <Clock className="w-4 h-4 ml-4 mr-2 text-stone-500 dark:text-[#B1B3B6]" />
+          <span className="font-medium">{session.start_time}</span>
         </div>
 
-        <div className="flex items-start text-gray-400 mb-2">
-          <MapPin className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+        <div className="flex items-center text-stone-600 dark:text-[#E0E0E0]">
+          <MapPin className="w-4 h-4 mr-2" />
           <span className="text-sm">{session.location}</span>
+          {distance && (
+            <span className="ml-2 px-2 py-0.5 bg-tribe-green text-slate-900 rounded-full text-xs font-semibold">
+              {distance} {language === 'es' ? 'de distancia' : 'away'}
+            </span>
+          )}
         </div>
 
         {session.description && (
-          <p className="text-gray-300 text-sm mb-3 line-clamp-2">{session.description}</p>
+          <p className="text-sm text-stone-700 dark:text-[#E0E0E0] mt-2 line-clamp-2">
+            {session.description}
+          </p>
         )}
 
-        <div className="flex items-center text-sm text-gray-400 mb-3">
-          <span>{t('hostedBy')} {session.creator?.name || 'Unknown'}</span>
-        </div>
+        {session.creator && (
+          <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
+            {t('hostedBy')} {session.creator.name}
+          </p>
+        )}
+      </div>
 
-        <div className="flex gap-2">
-          <Link href={`/session/${session.id}`} className="flex-1">
-            <button className="w-full py-2 bg-slate-700 text-white font-semibold rounded-lg hover:bg-slate-600 transition text-sm">
-              {t('viewDetails')}
-            </button>
-          </Link>
-          
-          {showJoinButton && !isCreator && onJoin && (
-            hasJoined ? (
-              <button
-                disabled
-                className="flex-1 py-2 bg-tribe-green/20 text-tribe-green font-semibold rounded-lg flex items-center justify-center gap-2 text-sm"
-              >
-                <CheckCircle className="w-4 h-4" />
-                {t('joined')}
-              </button>
-            ) : (
-              <button
-                onClick={onJoin}
-                disabled={isFull || isPastSession}
-                className={`flex-1 py-2 font-semibold rounded-lg flex items-center justify-center gap-2 transition text-sm ${
-                  isFull || isPastSession
-                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                    : 'bg-tribe-green text-slate-900 hover:bg-lime-500'
-                }`}
-              >
-                <UserPlus className="w-4 h-4" />
-                {isFull ? t('full') : isPastSession ? t('past') : t('join')}
-              </button>
-            )
-          )}
-        </div>
+      <div className="flex gap-2">
+        <Link href={`/session/${session.id}`} className="flex-1">
+          <button className="w-full py-2 px-4 border border-stone-300 dark:border-[#52575D] text-[#272D34] dark:text-white rounded-lg hover:bg-stone-50 dark:hover:bg-[#52575D] transition font-medium">
+            {t('viewDetails')}
+          </button>
+        </Link>
+        
+        {onJoin && !isPast && !userHasJoined && (
+          <button
+            onClick={() => onJoin(session.id)}
+            disabled={isFull}
+            className={`flex-1 py-2 px-4 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
+              isFull
+                ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : 'bg-[#C0E863] text-[#272D34] hover:bg-[#b0d853]'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            {isFull ? t('full') : t('join')}
+          </button>
+        )}
       </div>
     </div>
   );

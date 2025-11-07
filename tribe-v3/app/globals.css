@@ -2,18 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-tribe-darker text-white;
-  }
+:root {
+  --background: #f5f5f4;
+  --foreground: #292524;
 }
 
-@layer utilities {
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
+.dark {
+  --background: #52575D;
+  --foreground: #ffffff;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+@layer components {
+  .bg-theme-page {
+    @apply bg-stone-50 dark:bg-[#52575D];
   }
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  
+  .bg-theme-header {
+    @apply bg-stone-200 dark:bg-[#272D34];
+  }
+  
+  .bg-theme-card {
+    @apply bg-white dark:bg-[#404549];
+  }
+  
+  .bg-theme-input {
+    @apply bg-white dark:bg-[#404549];
+  }
+  
+  .text-theme-primary {
+    @apply text-stone-900 dark:text-white;
+  }
+  
+  .text-theme-secondary {
+    @apply text-stone-600 dark:text-gray-300;
+  }
+  
+  .border-theme {
+    @apply border-stone-300 dark:border-[#52575D];
   }
 }

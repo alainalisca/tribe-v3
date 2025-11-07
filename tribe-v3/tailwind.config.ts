@@ -1,28 +1,26 @@
 import type { Config } from "tailwindcss";
 
-export default {
+const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "media",
   theme: {
     extend: {
       colors: {
-        'tribe-green': '#c0ff00',
-        'tribe-dark': '#3b4b5c',
-        'tribe-darker': '#2c3b4a',
-      },
-      keyframes: {
-        'slide-in': {
-          '0%': { transform: 'translateX(100%)', opacity: '0' },
-          '100%': { transform: 'translateX(0)', opacity: '1' },
-        },
-      },
-      animation: {
-        'slide-in': 'slide-in 0.3s ease-out',
+        // YOUR ACTUAL BRAND COLORS from guidelines
+        'tribe-green': '#C0E863',
+        'tribe-dark': '#272D34',
+        'tribe-gray-80': '#52575D',
+        'tribe-gray-60': '#B1B3B6',
+        'tribe-gray-40': '#F2F2F2',
+        'tribe-red': '#E33629',
       },
     },
   },
   plugins: [],
-} satisfies Config;
+};
+
+export default config;

@@ -1,40 +1,38 @@
-const CACHE_NAME = 'tribe-v3-cache-v1';
-const urlsToCache = [
-  '/',
-  '/auth',
-  '/create',
-  '/sessions',
-  '/matches',
-  '/profile',
-];
+console.log('Service worker loaded');
 
-// Install service worker
-self.addEventListener('install', (event) => {
+self.addEventListener('push', function(event) {
+  console.log('Push received:', event);
+  
+  if (!event.data) {
+    console.log('No data in push event');
+    return;
+  }
+
+  const data = event.data.json();
+  console.log('Push data:', data);
+  
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [200, 100, 200],
+    data: {
+      url: data.url || '/'
+    },
+    requireInteraction: true
+  };
+
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+    self.registration.showNotification(data.title, options)
+      .then(() => console.log('Notification shown'))
+      .catch(err => console.error('Notification error:', err))
   );
 });
 
-// Fetch from cache, fallback to network
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => response || fetch(event.request))
-  );
-});
-
-// Update service worker
-self.addEventListener('activate', (event) => {
+self.addEventListener('notificationclick', function(event) {
+  console.log('Notification clicked');
+  event.notification.close();
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    clients.openWindow(event.notification.data.url)
   );
 });

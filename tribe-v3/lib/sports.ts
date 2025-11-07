@@ -1,0 +1,26 @@
+export const SPORTS_LIST = [
+  'Running',
+  'Hiking', 
+  'Cycling',
+  'Swimming',
+  'CrossFit',
+  'Weightlifting',
+  'Calisthenics',
+  'Boxing',
+  'Muay Thai',
+  'Kickboxing',
+  'Jiu-Jitsu',
+  'Soccer',
+  'Basketball',
+  'Volleyball',
+  'Yoga',
+  'Pilates',
+  'Dance',
+  'Tennis',
+  'Padel',
+  'Skateboarding',
+  'BMX',
+  'Other',
+] as const;
+
+export type Sport = typeof SPORTS_LIST[number];

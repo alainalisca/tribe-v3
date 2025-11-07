@@ -1,46 +1,39 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { LanguageProvider } from "@/lib/LanguageContext";
-import PWAInstaller from "@/components/PWAInstaller";
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/lib/LanguageContext';
+import './globals.css';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Tribe - Find Training Partners",
-  description: "Real-time sports training partner matching app",
-  manifest: "/manifest.json",
-  themeColor: "#bef264",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Tribe",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+  title: 'Tribe - Find Training Partners',
+  description: 'Connect with athletes for real-time training sessions',
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+    <link rel="manifest" href="/manifest.json" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="icon" href="/tribe-logo.svg" />
-        <meta name="theme-color" content="#bef264" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Tribe" />
-        <link rel="apple-touch-icon" href="/tribe-logo.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#C0E863" />
       </head>
-      <body className="antialiased">
-        <PWAInstaller />
+      <body>
         <LanguageProvider>
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
         </LanguageProvider>
       </body>
     </html>

@@ -14,8 +14,8 @@ export default function SessionsPage() {
   const supabase = createClient();
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'Hosting' | 'joined'>('Hosting');
-  const [HostingSessions, setHostingSessions] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'hosting' | 'joined'>('hosting');
+  const [hostingSessions, setHostingSessions] = useState<any[]>([]);
   const [joinedSessions, setJoinedSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +43,7 @@ export default function SessionsPage() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      const { data: Hosting, error: HostingError } = await supabase
+      const { data: hosting, error: hostingError } = await supabase
         .from('sessions')
         .select(`
           *,
@@ -54,7 +54,7 @@ export default function SessionsPage() {
         .gte('date', today)
         .order('date', { ascending: true });
 
-      if (HostingError) throw HostingError;
+      if (hostingError) throw hostingError;
 
       const { data: participations, error: partError } = await supabase
         .from('session_participants')
@@ -82,7 +82,7 @@ export default function SessionsPage() {
         setJoinedSessions(joined || []);
       }
 
-      setHostingSessions(Hosting || []);
+      setHostingSessions(hosting || []);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
@@ -92,38 +92,38 @@ export default function SessionsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+      <div className="min-h-screen bg-tribe-darker flex items-center justify-center">
+        <p className="text-white">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-theme-page">
-      <div className="bg-theme-card p-4 sticky top-0 z-10 border-b border-theme">
+    <div className="min-h-screen pb-20 bg-tribe-darker">
+      <div className="bg-tribe-dark p-4 sticky top-0 z-10 border-b border-slate-700">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-theme-primary mb-4">{t('mySessions')}</h1>
+          <h1 className="text-2xl font-bold text-white mb-4">{t('mySessions')}</h1>
           
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab('Hosting')}
+              onClick={() => setActiveTab('hosting')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                activeTab === 'Hosting'
+                activeTab === 'hosting'
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-theme-page text-theme-secondary hover:text-theme-primary'
+                  : 'bg-tribe-darker text-gray-400 hover:text-white'
               }`}
             >
-              {t('Hosting')}
+              {t('hosting')}
             </button>
             <button
               onClick={() => setActiveTab('joined')}
               className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
                 activeTab === 'joined'
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-theme-page text-theme-secondary hover:text-theme-primary'
+                  : 'bg-tribe-darker text-gray-400 hover:text-white'
               }`}
             >
-              {t('Joined')}
+              {t('joinedTab')}
             </button>
           </div>
         </div>
@@ -133,24 +133,24 @@ export default function SessionsPage() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-theme-card rounded-xl animate-pulse" />
+              <div key={i} className="h-48 bg-tribe-dark rounded-xl animate-pulse" />
             ))}
           </div>
-        ) : activeTab === 'Hosting' ? (
-          HostingSessions.length === 0 ? (
-            <div className="bg-theme-card rounded-lg p-8 text-center border border-theme">
+        ) : activeTab === 'hosting' ? (
+          hostingSessions.length === 0 ? (
+            <div className="bg-tribe-dark rounded-lg p-8 text-center border border-slate-700">
               <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-theme-secondary mb-2">{t('No sessions')}</p>
+              <p className="text-gray-400 mb-2">{t('noHostingSessions')}</p>
               <p className="text-sm text-gray-500 mb-4">{t('startHosting')}</p>
               <Link href="/create">
                 <button className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition">
-                  {t('Create Session')}
+                  {t('createSession')}
                 </button>
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
-              {HostingSessions.map((session) => (
+              {hostingSessions.map((session) => (
                 <SessionCard 
                   key={session.id} 
                   session={session}
@@ -162,9 +162,9 @@ export default function SessionsPage() {
           )
         ) : (
           joinedSessions.length === 0 ? (
-            <div className="bg-theme-card rounded-lg p-8 text-center border border-theme">
+            <div className="bg-tribe-dark rounded-lg p-8 text-center border border-slate-700">
               <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-theme-secondary mb-2">{t('noJoinedSessions')}</p>
+              <p className="text-gray-400 mb-2">{t('noJoinedSessions')}</p>
               <p className="text-sm text-gray-500 mb-4">{t('startJoining')}</p>
               <Link href="/">
                 <button className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition">
