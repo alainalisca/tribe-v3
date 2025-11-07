@@ -155,7 +155,6 @@ export default function SessionsPage() {
                   key={session.id} 
                   session={session}
                   currentUserId={user.id}
-                  showJoinButton={false}
                 />
               ))}
             </div>
@@ -179,7 +178,6 @@ export default function SessionsPage() {
                   key={session.id} 
                   session={session}
                   currentUserId={user.id}
-                  showJoinButton={false}
                 />
               ))}
             </div>
