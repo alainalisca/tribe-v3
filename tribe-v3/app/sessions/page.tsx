@@ -185,7 +185,7 @@ export default function SessionsPage() {
         )}
       </div>
 
-      <BottomNav activeTab="sessions" />
+      <BottomNav />
     </div>
   );
 }
