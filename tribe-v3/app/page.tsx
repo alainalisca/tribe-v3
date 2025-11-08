@@ -66,16 +66,19 @@ export default function HomePage() {
         .select(`
           *,
           participants:session_participants(user_id),
-          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
+          creator:users(id, name, avatar_url)
         `)
         .eq('status', 'active')
         .gte('date', today)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       setSessions(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading sessions:', error);
     } finally {
       setLoading(false);
