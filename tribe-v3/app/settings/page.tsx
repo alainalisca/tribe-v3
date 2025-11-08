@@ -39,6 +39,10 @@ export default function SettingsPage() {
     spanish: 'Spanish',
     account: 'Account',
     signOut: 'Sign Out',
+    legal: 'Legal',
+    terms: 'Terms of Service',
+    privacy: 'Privacy Policy',
+    safety: 'Safety Guidelines',
   } : {
     settings: 'Configuración',
     language: 'Idioma',
@@ -46,6 +50,10 @@ export default function SettingsPage() {
     spanish: 'Español',
     account: 'Cuenta',
     signOut: 'Cerrar Sesión',
+    legal: 'Legal',
+    terms: 'Términos de Servicio',
+    privacy: 'Política de Privacidad',
+    safety: 'Guías de Seguridad',
   };
 
   return (
@@ -89,6 +97,27 @@ export default function SettingsPage() {
             >
               {txt.spanish}
             </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+          <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
+          <div className="space-y-2">
+            <Link href="/legal/terms">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+                {txt.terms}
+              </button>
+            </Link>
+            <Link href="/legal/privacy">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+                {txt.privacy}
+              </button>
+            </Link>
+            <Link href="/legal/safety">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+                {txt.safety}
+              </button>
+            </Link>
           </div>
         </div>
 
