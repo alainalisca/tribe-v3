@@ -15,27 +15,7 @@ export default function AuthPage() {
     email: '',
     password: '',
     name: '',
-    dateOfBirth: '',
   });
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  });
-
-  function calculateAge(dob: string): number {
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  }
-
-  function eighteenYearsAgo(): string {
-    const date = new Date();
-    date.setFullYear(date.getFullYear() - 18);
-    return date.toISOString().split('T')[0];
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +23,6 @@ export default function AuthPage() {
 
     try {
       if (mode === 'signup') {
-        
-        // Age verification
-        const age = calculateAge(formData.dateOfBirth);
-        if (age < 18) {
-          alert('You must be 18 or older to use Tribe');
-          setLoading(false);
-          return;
-        }
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -168,53 +140,6 @@ export default function AuthPage() {
               />
             </div>
 
-            {mode === 'signup' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-gray-200 mb-2">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    max={eighteenYearsAgo()}
-                    value={formData.dateOfBirth}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">You must be 18 or older</p>
-                </div>
-
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="mt-1 w-4 h-4 accent-tribe-green"
-                  />
-                  <span className="text-sm text-stone-700 dark:text-gray-300">
-                    I accept the{' '}
-                    <a
-                      href="/legal/terms"
-                      target="_blank"
-                      className="text-tribe-green underline hover:text-tribe-green/80"
-                    >
-                      Terms of Service
-                    </a>
-                    {' 'and{' '}
-                    <a
-                      href="/legal/privacy"
-                      target="_blank"
-                      className="text-tribe-green underline hover:text-tribe-green/80"
-                    >
-                      Privacy Policy
-                    </a>
-                  </span>
-                </label>
-              </>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -225,53 +150,6 @@ export default function AuthPage() {
           </form>
 
           <div className="mt-6 text-center">
-            {mode === 'signup' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-gray-200 mb-2">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    max={eighteenYearsAgo()}
-                    value={formData.dateOfBirth}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">You must be 18 or older</p>
-                </div>
-
-                <label className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="mt-1 w-4 h-4 accent-tribe-green"
-                  />
-                  <span className="text-sm text-stone-700 dark:text-gray-300">
-                    I accept the{' '}
-                    <a
-                      href="/legal/terms"
-                      target="_blank"
-                      className="text-tribe-green underline hover:text-tribe-green/80"
-                    >
-                      Terms of Service
-                    </a>
-                    {' 'and{' '}
-                    <a
-                      href="/legal/privacy"
-                      target="_blank"
-                      className="text-tribe-green underline hover:text-tribe-green/80"
-                    >
-                      Privacy Policy
-                    </a>
-                  </span>
-                </label>
-              </>
-            )}
-
             <button
               onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
               className="text-tribe-green hover:underline text-sm"
