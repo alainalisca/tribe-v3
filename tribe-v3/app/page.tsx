@@ -1,77 +1,46 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
-import { Settings, Plus, Search, Filter, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import SessionCard from '@/components/SessionCard';
 import BottomNav from '@/components/BottomNav';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
-interface Session {
-  id: string;
-  sport: string;
-  date: string;
-  start_time: string;
-  location: string;
-  description: string;
-  max_participants: number;
-  current_participants: number;
-  creator_id: string;
-  creator: {
-    name: string;
-    avatar_url: string;
-  };
-  participants: Array<{
-    user_id: string;
-    user: {
-      name: string;
-      avatar_url: string;
-    };
-  }>;
-}
+import NotificationPrompt from '@/components/NotificationPrompt';
+import LanguageToggle from '@/components/LanguageToggle';
+import { Search, X } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getUserLocation } from '@/lib/location';
+import { sportTranslations } from '@/lib/translations';
 
 export default function HomePage() {
-  const t = useTranslations();
   const router = useRouter();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSport, setSelectedSport] = useState<string>('all');
   const supabase = createClient();
+  const { t, language } = useLanguage();
+  const [user, setUser] = useState<any>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSport, setSelectedSport] = useState<string>('');
 
-  const sports = [
-    'All',
-    'Running',
-    'CrossFit',
-    'Basketball',
-    'Soccer',
-    'Tennis',
-    'Swimming',
-    'BJJ',
-    'Volleyball',
-    'Football',
-    'Cycling',
-    'Boxing',
-    'Yoga',
-    'Pilates',
-    'Dance',
-    'Climbing',
-    'Surfing',
-    'Skating',
-    'Golf',
-    'Baseball',
-    'Hockey',
-    'Rugby'
-  ];
+  const sports = Object.keys(sportTranslations);
 
   useEffect(() => {
     checkUser();
-    loadSessions();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadSessions();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    getUserLocation().then(loc => {
+      if (loc) setUserLocation(loc);
+    });
   }, []);
 
   useEffect(() => {
@@ -82,31 +51,27 @@ export default function HomePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth');
-      return;
+    } else {
+      setUser(user);
     }
-    setUser(user);
   }
 
   async function loadSessions() {
     try {
+      setLoading(true);
       const today = new Date().toISOString().split('T')[0];
-      
+
       const { data, error } = await supabase
         .from('sessions')
         .select(`
           *,
-          creator:users!creator_id(name, avatar_url),
-          participants:session_participants(
-            user_id,
-            status,
-            user:users(name, avatar_url)
-          )
+          participants:session_participants(user_id),
+          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
         `)
         .eq('status', 'active')
         .gte('date', today)
         .order('date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(50);
+        .order('start_time', { ascending: true });
 
       if (error) throw error;
       setSessions(data || []);
@@ -120,169 +85,164 @@ export default function HomePage() {
   function filterSessions() {
     let filtered = [...sessions];
 
-    // Filter by sport
-    if (selectedSport !== 'all') {
-      filtered = filtered.filter(
-        (s) => s.sport.toLowerCase() === selectedSport.toLowerCase()
-      );
-    }
-
-    // Filter by search query (location or sport)
-    if (searchQuery.trim()) {
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (s) =>
-          s.location.toLowerCase().includes(query) ||
-          s.sport.toLowerCase().includes(query)
+          s.sport?.toLowerCase().includes(query) ||
+          s.location?.toLowerCase().includes(query) ||
+          s.description?.toLowerCase().includes(query)
       );
+    }
+
+    if (selectedSport) {
+      filtered = filtered.filter((s) => s.sport === selectedSport);
     }
 
     setFilteredSessions(filtered);
   }
 
-  function clearFilters() {
-    setSearchQuery('');
-    setSelectedSport('all');
-    setShowFilters(false);
-  }
-
   async function handleJoinSession(sessionId: string) {
-    if (!user) return;
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+
+    if (session.current_participants >= session.max_participants) {
+      alert(t('sessionFullMsg'));
+      return;
+    }
 
     try {
-      const { error } = await supabase.from('session_participants').insert({
-        session_id: sessionId,
-        user_id: user.id,
-        status: 'pending',
-      });
+      const { data: existing } = await supabase
+        .from('session_participants')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('user_id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (existing) {
+        alert(t('alreadyJoined'));
+        return;
+      }
 
-      // Reload sessions to update UI
-      loadSessions();
-    } catch (error) {
+      const { error: joinError } = await supabase
+        .from('session_participants')
+        .insert({
+          session_id: sessionId,
+          user_id: user.id,
+          status: 'confirmed',
+        });
+
+      if (joinError) throw joinError;
+
+      const { error: updateError } = await supabase
+        .from('sessions')
+        .update({ current_participants: session.current_participants + 1 })
+        .eq('id', sessionId);
+
+      if (updateError) throw updateError;
+
+      alert(t('joinedSuccessfully'));
+      await loadSessions();
+    } catch (error: any) {
       console.error('Error joining session:', error);
+      alert('Error: ' + error.message);
     }
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-tribe-darker flex items-center justify-center">
-        <p className="text-white">Loading...</p>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+        <p className="text-stone-900 dark:text-gray-100">{t('loading')}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-tribe-darker pb-20">
-      {/* Header with Search */}
-      <div className="bg-tribe-dark sticky top-0 z-10 border-b border-slate-700">
-        <div className="max-w-2xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-white">Tribe</h1>
-            <Link href="/profile">
-              <Settings className="w-6 h-6 text-gray-400 hover:text-white transition" />
-            </Link>
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by location or sport..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-tribe-darker text-white rounded-lg border border-slate-700 focus:border-tribe-green focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                >
-                  <X className="w-5 h-5 text-gray-400 hover:text-white" />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-3 rounded-lg transition ${
-                showFilters || selectedSport !== 'all'
-                  ? 'bg-tribe-green text-slate-900'
-                  : 'bg-tribe-darker text-gray-400 hover:text-white border border-slate-700'
-              }`}
-            >
-              <Filter className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Results Count */}
-          <div className="mt-3 text-sm text-gray-400">
-            {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
-          </div>
-
-          {/* Sport Filter Pills */}
-          {showFilters && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-700 mt-3">
-              {sports.map((sport) => (
-                <button
-                  key={sport}
-                  onClick={() => setSelectedSport(sport.toLowerCase())}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                    selectedSport === sport.toLowerCase()
-                      ? 'bg-tribe-green text-slate-900'
-                      : 'bg-tribe-darker text-gray-400 hover:text-white hover:bg-slate-700'
-                  }`}
-                >
-                  {sport}
-                </button>
-              ))}
-            </div>
-          )}
+    <div className="min-h-screen pb-20 bg-stone-50 dark:bg-[#52575D]">
+      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <Link href="/profile">
+            <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">
+              Tribe<span className="text-tribe-green">.</span>
+            </h1>
+          </Link>
+          <LanguageToggle />
         </div>
       </div>
 
-      {/* Main Content */}
+      <div className="bg-stone-200 dark:bg-[#272D34] p-4 sticky top-0 z-10 border-b border-stone-300 dark:border-black">
+        <div className="max-w-2xl mx-auto space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+            <input
+              type="text"
+              placeholder={t('searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-stone-900 dark:hover:text-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          <select
+            value={selectedSport}
+            onChange={(e) => setSelectedSport(e.target.value)}
+            className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+          >
+            <option value="">{t('sportsActivities')}</option>
+            {sports.map((sport) => (
+              <option key={sport} value={sport}>
+                {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-stone-600 dark:text-gray-300">
+              {filteredSessions.length} {t('sessionsCount')}
+            </p>
+            {(searchQuery || selectedSport) && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedSport('');
+                }}
+                className="text-sm text-tribe-green hover:underline"
+              >
+                {t('clearAll')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-2xl mx-auto p-4">
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-tribe-dark rounded-lg animate-pulse" />
+              <div key={i} className="h-48 bg-white dark:bg-[#6B7178] rounded-xl animate-pulse" />
             ))}
           </div>
         ) : filteredSessions.length === 0 ? (
-          <div className="text-center py-12">
-            {sessions.length === 0 ? (
-              <>
-                <p className="text-gray-400 mb-4">No active sessions yet</p>
-                <Link
-                  href="/create"
-                  className="inline-flex items-center px-6 py-3 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition"
-                >
-                  <Plus className="w-5 h-5 mr-2" />
-                  Create Session
-                </Link>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-400 mb-2">No sessions match your filters</p>
-                <button
-                  onClick={clearFilters}
-                  className="text-tribe-green hover:underline"
-                >
-                  Clear filters
-                </button>
-              </>
-            )}
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
+            <p className="text-stone-600 dark:text-gray-300 mb-2">{t('noSessionsFound')}</p>
+            <p className="text-sm text-stone-500 dark:text-gray-400">{t('tryDifferentSearch')}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredSessions.map((session) => (
-              <SessionCard 
-                key={session.id} 
+              <SessionCard
+                key={session.id}
                 session={session}
-                onJoin={() => handleJoinSession(session.id)}
+                onJoin={handleJoinSession}
+                userLocation={userLocation}
                 currentUserId={user?.id}
               />
             ))}
@@ -290,17 +250,8 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Floating Action Button */}
-      {user && (
-        <Link
-          href="/create"
-          className="fixed bottom-24 right-6 w-14 h-14 bg-tribe-green rounded-full flex items-center justify-center shadow-lg hover:bg-lime-500 transition z-20"
-        >
-          <Plus className="w-6 h-6 text-slate-900" />
-        </Link>
-      )}
-
-      <BottomNav activeTab="home" />
+      <BottomNav />
+      <NotificationPrompt />
     </div>
   );
 }
