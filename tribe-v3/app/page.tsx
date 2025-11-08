@@ -8,6 +8,8 @@ import SessionCard from '@/components/SessionCard';
 import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import LanguageToggle from '@/components/LanguageToggle';
+import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
+import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
@@ -27,6 +29,9 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
   const [maxDistance, setMaxDistance] = useState<number>(50); // Default 50km
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
 
   const sports = Object.keys(sportTranslations);
 
@@ -37,6 +42,7 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       scheduleSessionReminders();
+      loadProfile();
     }
   }, [user]);
 
@@ -55,6 +61,7 @@ export default function HomePage() {
   useEffect(() => {
     if (user) {
       scheduleSessionReminders();
+      loadProfile();
     }
   }, [user]);
 
@@ -69,6 +76,16 @@ export default function HomePage() {
     } else {
       setUser(user);
     }
+  }
+
+  async function loadProfile() {
+    if (!user) return;
+    const { data } = await supabase
+      .from('users')
+      .select('avatar_url, sports, safety_waiver_accepted')
+      .eq('id', user.id)
+      .single();
+    setUserProfile(data);
   }
 
   async function loadSessions() {
@@ -132,6 +149,13 @@ export default function HomePage() {
   }
 
   async function handleJoinSession(sessionId: string) {
+    // Check if user has accepted safety waiver
+    if (userProfile && !userProfile.safety_waiver_accepted) {
+      setPendingSessionId(sessionId);
+      setShowSafetyWaiver(true);
+      return;
+    }
+
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
 
@@ -184,6 +208,40 @@ export default function HomePage() {
         <p className="text-stone-900 dark:text-gray-100">{t('loading')}</p>
       </div>
     );
+  }
+
+  async function handleWaiverAccepted() {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          safety_waiver_accepted: true,
+          safety_waiver_accepted_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setUserProfile({ ...userProfile, safety_waiver_accepted: true });
+      setShowSafetyWaiver(false);
+      
+      // Now join the pending session
+      if (pendingSessionId) {
+        await handleJoinSession(pendingSessionId);
+        setPendingSessionId(null);
+      }
+    } catch (error) {
+      console.error('Error accepting waiver:', error);
+      alert('Error accepting waiver. Please try again.');
+    }
+  }
+
+  function handleWaiverCancelled() {
+    setShowSafetyWaiver(false);
+    setPendingSessionId(null);
   }
 
   return (
@@ -298,6 +356,14 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+
+      {showSafetyWaiver && (
+        <SafetyWaiverModal
+          onAccept={handleWaiverAccepted}
+          onCancel={handleWaiverCancelled}
+        />
+      )}
 
       <BottomNav />
       <NotificationPrompt />

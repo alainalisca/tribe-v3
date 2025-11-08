@@ -61,6 +61,16 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
               {t('past')}
             </span>
           )}
+          {session.join_policy === 'curated' && (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300">
+              👥 Curated
+            </span>
+          )}
+          {session.join_policy === 'invite_only' && (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300">
+              🔒 Private
+            </span>
+          )}
         </div>
         <div className="text-right">
           <div className="flex items-center justify-end text-stone-600 dark:text-[#B1B3B6] text-sm mb-1">
