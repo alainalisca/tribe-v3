@@ -1,0 +1,47 @@
+'use client';
+
+import { X } from 'lucide-react';
+import { useState } from 'react';
+import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
+
+interface ProfileCompletionBannerProps {
+  hasPhoto: boolean;
+  hasSports: boolean;
+}
+
+export default function ProfileCompletionBanner({ hasPhoto, hasSports }: ProfileCompletionBannerProps) {
+  const [dismissed, setDismissed] = useState(false);
+  const { language } = useLanguage();
+
+  if (dismissed || (hasPhoto && hasSports)) return null;
+
+  const message = language === 'es' 
+    ? '¡Completa tu perfil para ayudar a otros a encontrarte!'
+    : 'Complete your profile to help others find you!';
+
+  return (
+    <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-lg p-4 mb-4">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-stone-900 dark:text-white font-medium">{message}</p>
+          <div className="flex gap-4 mt-2 text-sm">
+            {!hasPhoto && (
+              <Link href="/profile/edit" className="text-tribe-green hover:underline">
+                {language === 'es' ? '+ Agregar foto' : '+ Add photo'}
+              </Link>
+            )}
+            {!hasSports && (
+              <Link href="/profile/edit" className="text-tribe-green hover:underline">
+                {language === 'es' ? '+ Agregar deportes' : '+ Add sports'}
+              </Link>
+            )}
+          </div>
+        </div>
+        <button onClick={() => setDismissed(true)} className="text-stone-500 hover:text-stone-700">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}

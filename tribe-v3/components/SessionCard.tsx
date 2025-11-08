@@ -62,10 +62,19 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
             </span>
           )}
         </div>
-        <div className="flex items-center text-stone-600 dark:text-[#B1B3B6] text-sm">
-          <Users className="w-4 h-4 mr-1" />
-          {session.current_participants}/{session.max_participants}
+        <div className="text-right">
+          <div className="flex items-center justify-end text-stone-600 dark:text-[#B1B3B6] text-sm mb-1">
+            <Users className="w-4 h-4 mr-1" />
+            {session.current_participants}/{session.max_participants}
+          </div>
+          <div className="w-20 h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+            <div 
+              className={`h-full transition-all ${isFull ? 'bg-red-500' : 'bg-tribe-green'}`}
+              style={{ width: `${(session.current_participants / session.max_participants) * 100}%` }}
+            />
+          </div>
         </div>
+
       </div>
 
       <div className="space-y-2 mb-4">

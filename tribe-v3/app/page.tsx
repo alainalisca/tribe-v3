@@ -11,6 +11,8 @@ import LanguageToggle from '@/components/LanguageToggle';
 import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
+import { scheduleSessionReminders } from '@/lib/reminders';
+import { calculateDistance } from '@/lib/distance';
 import { sportTranslations } from '@/lib/translations';
 
 export default function HomePage() {
@@ -24,12 +26,19 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
+  const [maxDistance, setMaxDistance] = useState<number>(50); // Default 50km
 
   const sports = Object.keys(sportTranslations);
 
   useEffect(() => {
     checkUser();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      scheduleSessionReminders();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -44,8 +53,14 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (user) {
+      scheduleSessionReminders();
+    }
+  }, [user]);
+
+  useEffect(() => {
     filterSessions();
-  }, [sessions, searchQuery, selectedSport]);
+  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation]);
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -99,6 +114,20 @@ export default function HomePage() {
       filtered = filtered.filter((s) => s.sport === selectedSport);
     }
 
+
+    // Filter by distance if user has location
+    if (userLocation && maxDistance < 100) {
+      filtered = filtered.filter((s) => {
+        if (!s.latitude || !s.longitude) return true; // Keep sessions without location
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          s.latitude,
+          s.longitude
+        );
+        return distance <= maxDistance;
+      });
+    }
     setFilteredSessions(filtered);
   }
 
@@ -203,6 +232,26 @@ export default function HomePage() {
               </option>
             ))}
           </select>
+
+          {userLocation && (
+            <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-4 py-2">
+              <label className="text-sm font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
+                {language === 'es' ? 'Distancia' : 'Distance'}:
+              </label>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+                className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
+              />
+              <span className="text-sm font-semibold text-tribe-green min-w-[60px] text-right">
+                {maxDistance === 100 ? (language === 'es' ? 'Todas' : 'All') : `${maxDistance}km`}
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-stone-600 dark:text-gray-300">
