@@ -184,6 +184,13 @@ export default function SessionDetailPage() {
                 Sign in to Join
               </button>
             </Link>
+          ) : session.creator_id === user?.id ? (
+            <button 
+              disabled
+              className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+            >
+              Your Session
+            </button>
           ) : isPast ? (
             <button 
               disabled

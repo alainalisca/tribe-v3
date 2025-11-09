@@ -1,19 +1,61 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, Users, User, Plus } from 'lucide-react';
+import { Home, Calendar, Bell, User, Plus } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const supabase = createClient();
+  const [requestCount, setRequestCount] = useState(0);
+
+  useEffect(() => {
+    loadRequestCount();
+  }, []);
+
+  async function loadRequestCount() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: sessions } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('creator_id', user.id);
+
+      if (!sessions || sessions.length === 0) return;
+
+      const { count } = await supabase
+        .from('session_participants')
+        .select('*', { count: 'exact', head: true })
+        .in('session_id', sessions.map(s => s.id))
+        .eq('status', 'pending');
+
+      setRequestCount(count || 0);
+
+      // Subscribe to changes
+      const subscription = supabase
+        .channel('request-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'session_participants' },
+          () => loadRequestCount()
+        )
+        .subscribe();
+    } catch (error) {
+      console.error('Error loading request count:', error);
+    }
+  }
 
   const navItems = [
     { href: '/', icon: Home, label: t('home') },
     { href: '/sessions', icon: Calendar, label: t('mySessions') },
     { href: '/create', icon: Plus, label: t('create'), isCreate: true },
-    { href: '/matches', icon: Users, label: t('myTribe') },
+    { href: '/requests', icon: Bell, label: t('requests') },
     { href: '/profile', icon: User, label: t('profile') },
   ];
 

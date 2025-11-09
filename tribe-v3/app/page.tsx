@@ -158,6 +158,12 @@ export default function HomePage() {
 
     const session = sessions.find((s) => s.id === sessionId);
 
+    // Prevent creator from joining own session
+    if (session.creator_id === user.id) {
+      alert('You cannot join your own session!');
+      return;
+    }
+
     // Check join policy
     if (session.join_policy === 'invite_only') {
       alert('This is a private session. You need a direct invitation from the host.');
@@ -188,7 +194,7 @@ export default function HomePage() {
         .insert({
           session_id: sessionId,
           user_id: user.id,
-          status: 'confirmed',
+          status: 'pending',
         });
 
       if (joinError) throw joinError;
