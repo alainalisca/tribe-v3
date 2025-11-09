@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, MapPin, Users, Clock } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -34,6 +34,25 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
   };
 
   const sportColor = sportColors[session.sport] || 'bg-[#C0E863] text-[#272D34]';
+
+  async function handleShare() {
+    const url = `${window.location.origin}/session/${session.id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${session.sport} - ${session.location}`,
+          text: `Join my ${session.sport} session on ${new Date(session.date).toLocaleDateString()}`,
+          url: url
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard!');
+    }
+  }
   const isFull = session.current_participants >= session.max_participants;
   const isPast = new Date(session.date) < new Date();
   const userHasJoined = currentUserId && session.participants?.some((p: any) => p.user_id === currentUserId);
@@ -101,6 +120,9 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           <span className="font-medium">{session.start_time}</span>
         </div>
 
+          <button onClick={handleShare} className="mt-2 px-3 py-1.5 border border-tribe-green text-tribe-green hover:bg-tribe-green/10 rounded-lg text-xs font-medium flex items-center justify-center gap-1 w-full transition">
+            <Share2 className="w-3 h-3" /> {t('share')}
+          </button>
         <div className="flex items-center text-stone-600 dark:text-[#E0E0E0]">
           <MapPin className="w-4 h-4 mr-2" />
           <span className="text-sm">{session.location}</span>

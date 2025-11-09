@@ -157,6 +157,12 @@ export default function HomePage() {
     }
 
     const session = sessions.find((s) => s.id === sessionId);
+
+    // Check join policy
+    if (session.join_policy === 'invite_only') {
+      alert('This is a private session. You need a direct invitation from the host.');
+      return;
+    }
     if (!session) return;
 
     if (session.current_participants >= session.max_participants) {
@@ -194,7 +200,7 @@ export default function HomePage() {
 
       if (updateError) throw updateError;
 
-      alert(t('joinedSuccessfully'));
+      const message = session.join_policy === 'curated'         ? 'Request sent! The host will review your profile and decide.'         : t('joinedSuccessfully');      alert(message);
       await loadSessions();
     } catch (error: any) {
       console.error('Error joining session:', error);

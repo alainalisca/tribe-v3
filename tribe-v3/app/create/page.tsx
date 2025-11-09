@@ -25,6 +25,7 @@ export default function CreateSessionPage() {
     location: '',
     description: '',
     max_participants: 10,
+    join_policy: 'open',
   });
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export default function CreateSessionPage() {
           location: formData.location,
           description: formData.description || null,
           max_participants: formData.max_participants,
+          join_policy: formData.join_policy,
           latitude: coordinates?.latitude || null,
           longitude: coordinates?.longitude || null,          current_participants: 1,
           status: 'active',
@@ -244,6 +246,26 @@ export default function CreateSessionPage() {
               className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
             />
             {errors.max_participants && <p className="text-red-400 text-sm mt-1">{errors.max_participants}</p>}
+          </div>
+
+          <div>
+            <label className="flex items-center text-theme-primary font-medium mb-2">
+              <Users className="w-5 h-5 mr-2 text-tribe-green" />
+              Who can join?
+            </label>
+            <select
+              value={formData.join_policy}
+              onChange={(e) => setFormData({ ...formData, join_policy: e.target.value })}
+              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+            >
+              <option value="open">Anyone can request to join</option>
+              <option value="curated">Curated group (you select participants)</option>
+              <option value="invite_only">Private - Invite only</option>
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {formData.join_policy === 'curated' && "You'll review each request and choose who joins"}
+              {formData.join_policy === 'invite_only' && "Only people you directly invite can join"}
+            </p>
           </div>
 
           <div>

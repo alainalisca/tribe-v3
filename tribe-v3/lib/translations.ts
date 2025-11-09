@@ -241,3 +241,4 @@ translations.es.noSessions = 'Sin sesiones aún';
 
 translations.en.sportsActivities = 'Sports & Activities';
 translations.es.sportsActivities = 'Deportes y Actividades';
+
