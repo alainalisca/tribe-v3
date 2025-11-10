@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import OnboardingModal from '@/components/OnboardingModal';
+import ProfilePrompt from '@/components/ProfilePrompt';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -24,6 +26,15 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (!hasSeenOnboarding && user) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,6 +228,19 @@ export default function HomePage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={() => {
+            localStorage.setItem('hasSeenOnboarding', 'true');
+            setShowOnboarding(false);
+            setShowProfilePrompt(true);
+            // Check if user has sports
+            if (userProfile && (!userProfile.sports || userProfile.sports.length === 0)) {
+              setShowProfilePrompt(true);
+            }
+          }}
+        />
+      )}
         <p className="text-stone-900 dark:text-gray-100">{t('loading')}</p>
       </div>
     );
@@ -258,6 +282,16 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen pb-20 bg-stone-50 dark:bg-[#52575D]">
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={() => {
+            localStorage.setItem('hasSeenOnboarding', 'true');
+            setShowOnboarding(false);
+            setShowProfilePrompt(true);
+            // Check if user has sports
+          }}
+        />
+      )}
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/profile">
@@ -343,6 +377,9 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
+        {showProfilePrompt && (
+          <ProfilePrompt onDismiss={() => setShowProfilePrompt(false)} />
+        )}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (

@@ -242,3 +242,12 @@ translations.es.noSessions = 'Sin sesiones aún';
 translations.en.sportsActivities = 'Sports & Activities';
 translations.es.sportsActivities = 'Deportes y Actividades';
 
+
+translations.en.share = 'Share';
+translations.es.share = 'Compartir';
+
+translations.en.curated = 'Curated';
+translations.es.curated = 'Curado';
+
+translations.en.private = 'Private';
+translations.es.private = 'Privada';
