@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import OnboardingModal from '@/components/OnboardingModal';
-import EditSessionModal from '@/components/EditSessionModal';
 import ProfilePrompt from '@/components/ProfilePrompt';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -29,7 +28,6 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
-  const [editingSession, setEditingSession] = useState<any>(null);
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
@@ -124,29 +122,6 @@ export default function HomePage() {
       console.error('Error loading sessions:', error);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleEditSession(sessionId: string) {
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      setEditingSession(session);
-    }
-  }
-
-  async function handleDeleteSession(sessionId: string) {
-    if (!confirm("Are you sure you want to delete this session? This cannot be undone.")) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from("sessions").delete().eq("id", sessionId);
-      if (error) throw error;
-
-      alert("Session deleted successfully!");
-      await loadSessions();
-    } catch (error: any) {
-      alert("Error: " + error.message);
     }
   }
 
@@ -405,17 +380,6 @@ export default function HomePage() {
         {showProfilePrompt && (
           <ProfilePrompt onDismiss={() => setShowProfilePrompt(false)} />
         )}
-
-        {editingSession && (
-          <EditSessionModal
-            session={editingSession}
-            onClose={() => setEditingSession(null)}
-            onSave={() => {
-              loadSessions();
-              setEditingSession(null);
-            }}
-          />
-        )}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -436,9 +400,6 @@ export default function HomePage() {
                 onJoin={handleJoinSession}
                 userLocation={userLocation}
                 currentUserId={user?.id}
-                userId={user?.id}
-                onEdit={handleEditSession}
-                onDelete={handleDeleteSession}
               />
             ))}
           </div>

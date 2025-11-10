@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, MapPin, Users, Clock, Share2, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -9,14 +9,11 @@ import { calculateDistance, formatDistance } from '@/lib/distance';
 interface SessionCardProps {
   currentUserId?: string;
   session: any;
-  userId?: string;
-  onEdit?: (sessionId: string) => void;
-  onDelete?: (sessionId: string) => void;
   onJoin?: (sessionId: string) => void;
   userLocation?: { latitude: number; longitude: number } | null;
 }
 
-export default function SessionCard({ session, onJoin, userLocation, currentUserId, userId, onEdit, onDelete }: SessionCardProps) {
+export default function SessionCard({ session, onJoin, userLocation, currentUserId }: SessionCardProps) {
   const { t, language } = useLanguage();
   
   const sportColors: Record<string, string> = {
@@ -95,37 +92,6 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           )}
         </div>
         <div className="text-right">
-          {userId && session.creator_id === userId && (
-            <span className="px-3 py-1 rounded-full text-sm font-bold bg-yellow-400 text-black">
-            <div className="flex gap-2 mb-2 justify-end">
-              {onEdit && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onEdit(session.id);
-                  }}
-                  className="p-1.5 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
-                  title="Edit"
-                >
-                  <Edit2 className="w-4 h-4 text-stone-600 dark:text-gray-400" />
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDelete(session.id);
-                  }}
-                  className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
-                </button>
-              )}
-            </div>
-          )}
           <div className="flex items-center justify-end text-stone-600 dark:text-[#B1B3B6] text-sm mb-1">
             <Users className="w-4 h-4 mr-1" />
             {session.current_participants}/{session.max_participants}
