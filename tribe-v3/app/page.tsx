@@ -97,7 +97,7 @@ export default function HomePage() {
       .from('users')
       .select('avatar_url, sports, safety_waiver_accepted')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
     setUserProfile(data);
   }
 
@@ -110,7 +110,7 @@ export default function HomePage() {
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(user_id),
+          participants:session_participants(user_id, status),
           creator:users!sessions_creator_id_fkey(id, name, avatar_url)
         `)
         .eq('status', 'active')
@@ -185,6 +185,8 @@ export default function HomePage() {
   }
 
   async function handleJoinSession(sessionId: string) {
+    if (!user) return;
+
     // Check if user has accepted safety waiver
     if (userProfile && !userProfile.safety_waiver_accepted) {
       setPendingSessionId(sessionId);
@@ -193,6 +195,7 @@ export default function HomePage() {
     }
 
     const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
 
     // Prevent creator from joining own session
     if (session.creator_id === user.id) {
@@ -205,7 +208,6 @@ export default function HomePage() {
       alert('This is a private session. You need a direct invitation from the host.');
       return;
     }
-    if (!session) return;
 
     if (session.current_participants >= session.max_participants) {
       alert(t('sessionFullMsg'));
@@ -215,34 +217,44 @@ export default function HomePage() {
     try {
       const { data: existing } = await supabase
         .from('session_participants')
-        .select('id')
+        .select('id, status')
         .eq('session_id', sessionId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         alert(t('alreadyJoined'));
         return;
       }
 
+      // For curated sessions, status is 'pending', for open sessions it's 'confirmed'
+      const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
+
       const { error: joinError } = await supabase
         .from('session_participants')
         .insert({
           session_id: sessionId,
           user_id: user.id,
-          status: 'pending',
+          status: status,
         });
 
       if (joinError) throw joinError;
 
-      const { error: updateError } = await supabase
-        .from('sessions')
-        .update({ current_participants: session.current_participants + 1 })
-        .eq('id', sessionId);
+      // Only increment participant count for confirmed joins
+      if (status === 'confirmed') {
+        const { error: updateError } = await supabase
+          .from('sessions')
+          .update({ current_participants: session.current_participants + 1 })
+          .eq('id', sessionId);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
 
-      const message = session.join_policy === 'curated'         ? 'Request sent! The host will review your profile and decide.'         : t('joinedSuccessfully');      alert(message);
+      const message = session.join_policy === 'curated' 
+        ? 'Request sent! The host will review your profile and decide.' 
+        : t('joinedSuccessfully');
+      
+      alert(message);
       await loadSessions();
     } catch (error: any) {
       console.error('Error joining session:', error);

@@ -19,6 +19,10 @@ export const translations = {
     viewDetails: 'View Details',
     sessionFull: 'Session Full',
     participants: 'Participants',
+    joinedSuccessfully: "Joined successfully!",
+    alreadyJoined: "You've already joined this session",
+    sessionFullMsg: "This session is full",
+    past: "Past",
     noParticipants: 'No participants yet. Be the first to join!',
   },
   es: {
@@ -43,6 +47,10 @@ export const translations = {
     participants: 'Participantes',
     noParticipants: '¡Sin participantes aún! Sé el primero.',
   },
+    joinedSuccessfully: "¡Te uniste exitosamente!",
+    alreadyJoined: "Ya te uniste a esta sesión",
+    sessionFullMsg: "Esta sesión está llena",
+    past: "Pasado",
 };
 
 
