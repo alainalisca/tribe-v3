@@ -17,15 +17,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== "undefined") {
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('tribe-theme') as Theme;
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (mounted) {
+    if (mounted && typeof window !== 'undefined') {
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(theme);
       localStorage.setItem('tribe-theme', theme);
