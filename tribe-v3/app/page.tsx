@@ -448,7 +448,6 @@ export default function HomePage() {
                 onJoin={handleJoinSession}
                 userLocation={userLocation}
                 currentUserId={user?.id}
-                userId={user?.id}
                 onEdit={handleEditSession}
                 onDelete={handleDeleteSession}
               />
