@@ -17,9 +17,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem('tribe-theme') as Theme;
+    if (typeof window !== "undefined") {
     if (savedTheme) {
       setTheme(savedTheme);
+    }
     }
   }, []);
 
