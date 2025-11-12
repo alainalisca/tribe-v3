@@ -57,7 +57,11 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      const messagesWithUser = data?.map(msg => ({
+        ...msg,
+        user: Array.isArray(msg.user) ? msg.user[0] : msg.user
+      })) || [];
+      setMessages(messagesWithUser);
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
