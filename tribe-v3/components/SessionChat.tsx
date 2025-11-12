@@ -191,15 +191,15 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
               >
                 {/* Avatar */}
                 <div className="flex-shrink-0">
-                  {msg.users?.avatar_url ? (
+                  {msg.user?.avatar_url ? (
                     <img
-                      src={msg.users.avatar_url}
-                      alt={msg.users.name}
+                      src={msg.user.avatar_url}
+                      alt={msg.user.name}
                       className="w-8 h-8 rounded-full"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-[#C0E863] flex items-center justify-center text-xs font-semibold text-[#272D34]">
-                      {getInitials(msg.users?.name || 'U')}
+                      {getInitials(msg.user?.name || 'U')}
                     </div>
                   )}
                 </div>
@@ -208,7 +208,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
                 <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-xs font-medium text-stone-700 dark:text-gray-300">
-                      {isOwnMessage ? 'You' : msg.users?.name}
+                      {isOwnMessage ? 'You' : msg.user?.name}
                     </span>
                     <span className="text-xs text-stone-500 dark:text-gray-400">
                       {formatTime(msg.created_at)}
