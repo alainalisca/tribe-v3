@@ -1,4 +1,5 @@
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import IOSInstallPrompt from '@/components/IOSInstallPrompt';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import './globals.css';
 import type { Metadata } from 'next';
@@ -33,6 +34,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
       </head>
       <body>
+        <IOSInstallPrompt />
         <LanguageProvider>
           <ThemeProvider>
             {children}
