@@ -48,7 +48,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           user_id,
           message,
           created_at,
-          users:user_id (
+          user:users!messages_user_id_fkey (
             name,
             avatar_url
           )
@@ -85,7 +85,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
               user_id,
               message,
               created_at,
-              users:user_id (
+              user:users!messages_user_id_fkey (
                 name,
                 avatar_url
               )
