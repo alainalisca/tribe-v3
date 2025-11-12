@@ -269,3 +269,31 @@ translations.es.curated = 'Curado';
 
 translations.en.private = 'Private';
 translations.es.private = 'Privada';
+
+// Additional translations for create page
+translations.en.sport = 'Sport';
+translations.es.sport = 'Deporte';
+
+translations.en.date = 'Date';
+translations.es.date = 'Fecha';
+
+translations.en.time = 'Time';
+translations.es.time = 'Hora';
+
+translations.en.duration = 'Duration';
+translations.es.duration = 'Duración';
+
+translations.en.location = 'Location';
+translations.es.location = 'Ubicación';
+
+translations.en.maxParticipants = 'Max Participants';
+translations.es.maxParticipants = 'Máximo de Participantes';
+
+translations.en.description = 'Description';
+translations.es.description = 'Descripción';
+
+translations.en.optional = 'Optional';
+translations.es.optional = 'Opcional';
+
+translations.en.minutes = 'minutes';
+translations.es.minutes = 'minutos';
