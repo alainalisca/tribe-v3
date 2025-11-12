@@ -37,7 +37,7 @@ export default function IOSInstallPrompt() {
               1
             </div>
             <div className="flex-1">
-              <p className="font-semibold mb-1">Tap the Share button</p>
+              <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap the Share button</p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Share className="w-4 h-4" />
                 <span>At the bottom of your screen</span>
@@ -50,7 +50,7 @@ export default function IOSInstallPrompt() {
               2
             </div>
             <div className="flex-1">
-              <p className="font-semibold mb-1">Tap "Add to Home Screen"</p>
+              <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Add to Home Screen"</p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Plus className="w-4 h-4" />
                 <span>Scroll down if you don't see it</span>
@@ -63,7 +63,7 @@ export default function IOSInstallPrompt() {
               3
             </div>
             <div className="flex-1">
-              <p className="font-semibold mb-1">Tap "Add"</p>
+              <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Add"</p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Home className="w-4 h-4" />
                 <span>Tribe will appear on your home screen!</span>
