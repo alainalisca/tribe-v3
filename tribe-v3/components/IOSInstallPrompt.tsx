@@ -19,6 +19,10 @@ export default function IOSInstallPrompt() {
     }
   }, []);
 
+  const handleDismiss = () => {
+    setShow(false);
+  };
+
   if (!show) return null;
 
   return (
@@ -35,7 +39,6 @@ export default function IOSInstallPrompt() {
         </div>
 
         {isIOS ? (
-          // iOS Instructions
           <div className="space-y-4 mb-6">
             <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
@@ -77,7 +80,6 @@ export default function IOSInstallPrompt() {
             </div>
           </div>
         ) : (
-          // Android Instructions
           <div className="space-y-4 mb-6">
             <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
@@ -121,14 +123,14 @@ export default function IOSInstallPrompt() {
         )}
 
         <button
-          onClick={() => setShow(false)}
+          onClick={handleDismiss}
           className="w-full mb-4 bg-tribe-green text-slate-900 font-bold py-3 rounded-lg hover:bg-[#b0d853] transition"
         >
           I've Installed It - Continue
         </button>
 
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200">
-          ⚠️ This prompt will remain until you install the app
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200 text-center">
+          ⚠️ After installing, open Tribe from your home screen
         </div>
       </div>
     </div>
