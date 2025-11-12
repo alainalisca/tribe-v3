@@ -36,7 +36,7 @@ export default function IOSInstallPrompt() {
 
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-tribe-green rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl font-bold text-slate-900">T</span>
+            <span className="text-3xl font-bold text-slate-900">Tribe<span className="text-tribe-green">.</span></span>
           </div>
           <h2 className="text-2xl font-bold mb-2">Install Tribe</h2>
           <p className="text-gray-600 dark:text-gray-400">
@@ -63,7 +63,7 @@ export default function IOSInstallPrompt() {
               2
             </div>
             <div className="flex-1">
-              <p className="font-semibold mb-1">Select "Add to Home Screen"</p>
+              <p className="font-semibold mb-1">Tap "Add to Home Screen"</p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Plus className="w-4 h-4" />
                 <span>Scroll down if needed</span>
