@@ -29,6 +29,15 @@ export const translations = {
     sessionFullMsg: "This session is full",
     past: "Past",
     noParticipants: 'No participants yet. Be the first to join!',
+    sport: 'Sport',
+    date: 'Date',
+    time: 'Time',
+    duration: 'Duration',
+    location: 'Location',
+    maxParticipants: 'Max Participants',
+    description: 'Description',
+    optional: 'Optional',
+    minutes: 'minutes',
   },
   es: {
     home: 'Inicio',
@@ -56,6 +65,15 @@ export const translations = {
     sessionFull: 'Lleno',
     participants: 'Participantes',
     noParticipants: '¡Sin participantes aún! Sé el primero.',
+    sport: 'Deporte',
+    date: 'Fecha',
+    time: 'Hora',
+    duration: 'Duración',
+    location: 'Ubicación',
+    maxParticipants: 'Máximo de Participantes',
+    description: 'Descripción',
+    optional: 'Opcional',
+    minutes: 'minutos',
   },
     joinedSuccessfully: "¡Te uniste exitosamente!",
     alreadyJoined: "Ya te uniste a esta sesión",
@@ -65,123 +83,31 @@ export const translations = {
 
 
 // Add missing My Sessions translations
-translations.en.mySessions = 'My Sessions';
-translations.en.Hosting = 'Hosting';
-translations.en.Joined = 'Joined';
 translations.en['No sessions'] = 'No sessions';
-translations.en.startHosting = 'Start hosting sessions to see them here';
 translations.en['Create Session'] = 'Create Session';
 
-translations.es.mySessions = 'Mis Sesiones';
-translations.es.Hosting = 'Organizando';
-translations.es.Joined = 'Unidos';
 translations.es['No sessions'] = 'Sin sesiones';
-translations.es.startHosting = 'Comienza a organizar para verlas aquí';
 translations.es['Create Session'] = 'Crear Sesión';
 
 // Bottom nav translations
-translations.en.home = 'Home';
-translations.en.mySessions = 'My Sessions';
-translations.en.create = 'Create';
-translations.en.myTribe = 'My Tribe';
-translations.en.profile = 'Profile';
 
-translations.es.home = 'Inicio';
-translations.es.mySessions = 'Mis Sesiones';
-translations.es.create = 'Crear';
-translations.es.myTribe = 'Mi Tribu';
-translations.es.profile = 'Perfil';
 
 // Matches page
-translations.en.matches = 'Matches';
-translations.en.joinRequests = 'Join Requests';
-translations.en.myTribe = 'My Tribe';
 
-translations.es.matches = 'Matches';
-translations.es.joinRequests = 'Solicitudes';
-translations.es.myTribe = 'Mi Tribu';
 
 // Edit Profile
-translations.en.editProfile = 'Edit Profile';
-translations.en.name = 'Name';
-translations.en.username = 'Username';
-translations.en.location = 'Location';
-translations.en.bio = 'Bio';
-translations.en.photos = 'Photos';
-translations.en.sportsActivities = 'Sports & Activities';
-translations.en.saveProfile = 'Save Profile';
 
-translations.es.editProfile = 'Editar Perfil';
-translations.es.name = 'Nombre';
-translations.es.username = 'Usuario';
-translations.es.location = 'Ubicación';
-translations.es.bio = 'Biografía';
-translations.es.photos = 'Fotos';
-translations.es.sportsActivities = 'Deportes y Actividades';
-translations.es.saveProfile = 'Guardar Perfil';
 
-translations.en.past = 'Past';
-translations.es.past = 'Pasado';
 
 // Add all missing translations
-translations.en.allFilters = 'all - filters';
-translations.en.sessionsCount = 'sessions';
-translations.en.past = 'Past';
-translations.en.viewDetails = 'View Details';
-translations.en.join = 'Join';
-translations.en.editProfile = 'Edit Profile';
-translations.en.save = 'Save';
-translations.en.saveProfile = 'Save Profile';
-translations.en.name = 'Name';
-translations.en.username = 'Username';
-translations.en.location = 'Location';
-translations.en.bio = 'Bio';
-translations.en.photos = 'Photos';
-translations.en.sportsActivities = 'Sports & Activities';
 
-translations.es.allFilters = 'todos - filtros';
-translations.es.sessionsCount = 'sesiones';
-translations.es.past = 'Pasado';
-translations.es.viewDetails = 'Ver Detalles';
-translations.es.join = 'Unirse';
-translations.es.editProfile = 'Editar Perfil';
-translations.es.save = 'Guardar';
-translations.es.saveProfile = 'Guardar Perfil';
-translations.es.name = 'Nombre';
-translations.es.username = 'Usuario';
-translations.es.location = 'Ubicación';
-translations.es.bio = 'Biografía';
-translations.es.photos = 'Fotos';
-translations.es.sportsActivities = 'Deportes y Actividades';
-translations.en.hostedBy = 'Hosted by';
-translations.es.hostedBy = 'Organizado por';
 
 // Add missing translations
-translations.en.hostedBy = 'Hosted by';
-translations.en.viewDetails = 'View Details';
-translations.en.join = 'Join';
-translations.en.full = 'Full';
-translations.en.past = 'Past';
 
-translations.es.hostedBy = 'Organizado por';
-translations.es.viewDetails = 'Ver Detalles';
-translations.es.join = 'Unirse';
-translations.es.full = 'Lleno';
-translations.es.past = 'Pasado';
 
-translations.en.allFilters = 'all - filters';
-translations.es.allFilters = 'todos - filtros';
 
-translations.en.sportsAndActivities = 'Sports & Activities';
-translations.es.sportsAndActivities = 'Deportes y Actividades';
 
-translations.en.noSessionsFound = 'No sessions found';
-translations.en.tryAdjustingFilters = 'Try adjusting your filters';
-translations.en.clearFilters = 'Clear Filters';
 
-translations.es.noSessionsFound = 'No se encontraron sesiones';
-translations.es.tryAdjustingFilters = 'Intenta ajustar tus filtros';
-translations.es.clearFilters = 'Borrar Filtros';
 export const sportTranslations: { [key: string]: { en: string; es: string } } = {
   'Running': { en: 'Running', es: 'Correr' },
   'Hiking': { en: 'Hiking', es: 'Senderismo' },
@@ -208,92 +134,24 @@ export const sportTranslations: { [key: string]: { en: string; es: string } } = 
 };
 
 // Matches page translations
-translations.en.matches = 'Matches';
-translations.en.joinRequests = 'Join Requests';
-translations.en.myTribe = 'My Tribe';
-translations.en.newJoinRequest = 'New Join Request';
-translations.en.userWantsToJoin = 'User wants to join your session';
-translations.en.noJoinRequests = 'No join requests yet';
-translations.en.noSessions = 'No sessions yet';
 
-translations.es.matches = 'Coincidencias';
-translations.es.joinRequests = 'Solicitudes';
-translations.es.myTribe = 'Mi Tribu';
-translations.es.newJoinRequest = 'Nueva Solicitud';
-translations.es.userWantsToJoin = 'Usuario quiere unirse a tu sesión';
-translations.es.noJoinRequests = 'Sin solicitudes aún';
-translations.es.noSessions = 'Sin sesiones aún';
 
 // Matches page translations
-translations.en.matches = 'Matches';
-translations.en.joinRequests = 'Join Requests';
-translations.en.myTribe = 'My Tribe';
-translations.en.newJoinRequest = 'New Join Request';
-translations.en.userWantsToJoin = 'User wants to join your session';
-translations.en.noJoinRequests = 'No join requests yet';
-translations.en.noSessions = 'No sessions yet';
-
-translations.es.matches = 'Coincidencias';
-translations.es.joinRequests = 'Solicitudes';
-translations.es.myTribe = 'Mi Tribu';
-translations.es.newJoinRequest = 'Nueva Solicitud';
-translations.es.userWantsToJoin = 'Usuario quiere unirse a tu sesión';
-translations.es.noJoinRequests = 'Sin solicitudes aún';
-translations.es.noSessions = 'Sin sesiones aún';
-
-translations.en.matches = 'Matches';
-translations.en.joinRequests = 'Join Requests';
-translations.en.myTribe = 'My Tribe';
-translations.en.newJoinRequest = 'New Join Request';
-translations.en.userWantsToJoin = 'User wants to join your session';
-translations.en.noJoinRequests = 'No join requests yet';
-translations.en.noSessions = 'No sessions yet';
-
-translations.es.matches = 'Coincidencias';
-translations.es.joinRequests = 'Solicitudes';
-translations.es.myTribe = 'Mi Tribu';
-translations.es.newJoinRequest = 'Nueva Solicitud';
-translations.es.userWantsToJoin = 'Usuario quiere unirse a tu sesión';
-translations.es.noJoinRequests = 'Sin solicitudes aún';
-translations.es.noSessions = 'Sin sesiones aún';
-
-translations.en.sportsActivities = 'Sports & Activities';
-translations.es.sportsActivities = 'Deportes y Actividades';
 
 
-translations.en.share = 'Share';
-translations.es.share = 'Compartir';
 
-translations.en.curated = 'Curated';
-translations.es.curated = 'Curado';
 
-translations.en.private = 'Private';
-translations.es.private = 'Privada';
+
+
+
+
 
 // Additional translations for create page
-translations.en.sport = 'Sport';
-translations.es.sport = 'Deporte';
 
-translations.en.date = 'Date';
-translations.es.date = 'Fecha';
 
-translations.en.time = 'Time';
-translations.es.time = 'Hora';
 
-translations.en.duration = 'Duration';
-translations.es.duration = 'Duración';
 
-translations.en.location = 'Location';
-translations.es.location = 'Ubicación';
 
-translations.en.maxParticipants = 'Max Participants';
-translations.es.maxParticipants = 'Máximo de Participantes';
 
-translations.en.description = 'Description';
-translations.es.description = 'Descripción';
 
-translations.en.optional = 'Optional';
-translations.es.optional = 'Opcional';
 
-translations.en.minutes = 'minutes';
-translations.es.minutes = 'minutos';
