@@ -10,16 +10,13 @@ export default function IOSInstallPrompt() {
     // Detect if iOS Safari (not in standalone mode)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-    const hasPromptedBefore = localStorage.getItem('ios-install-prompted');
 
-    if (isIOS && !isInStandaloneMode && !hasPromptedBefore) {
       setShow(true);
     }
   }, []);
 
-  const handleDismiss = () => {
+  const handleDismissDisabled = () => {
     setShow(false);
-    localStorage.setItem('ios-install-prompted', 'true');
   };
 
   if (!show) return null;
@@ -27,11 +24,6 @@ export default function IOSInstallPrompt() {
   return (
     <div className="fixed inset-0 bg-black/80 z-[9999] flex items-end sm:items-center justify-center p-4">
       <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6 relative animate-slide-up">
-        <button
-          onClick={handleDismiss}
-          className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition"
-        >
-          <X className="w-5 h-5" />
         </button>
 
         <div className="text-center mb-6">
@@ -85,13 +77,3 @@ export default function IOSInstallPrompt() {
           </div>
         </div>
 
-        <button
-          onClick={handleDismiss}
-          className="w-full bg-tribe-green text-slate-900 font-bold py-3 rounded-lg hover:bg-[#b0d853] transition"
-        >
-          Got it!
-        </button>
-      </div>
-    </div>
-  );
-}
