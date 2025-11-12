@@ -157,3 +157,16 @@ export const sportTranslations: { [key: string]: { en: string; es: string } } = 
 
 
 
+
+// Additional create page translations
+translations.en.startTime = 'Start Time';
+translations.es.startTime = 'Hora de Inicio';
+
+translations.en.sessionType = 'Session Type';
+translations.es.sessionType = 'Tipo de Sesión';
+
+translations.en.public = 'Public';
+translations.es.public = 'Pública';
+
+translations.en.unlimited = 'Unlimited';
+translations.es.unlimited = 'Ilimitado';
