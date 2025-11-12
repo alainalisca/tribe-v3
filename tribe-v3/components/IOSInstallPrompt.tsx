@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Share, Plus, Home } from 'lucide-react';
+import { Share, Plus, Home } from 'lucide-react';
 
 export default function IOSInstallPrompt() {
   const [show, setShow] = useState(false);
@@ -11,28 +11,23 @@ export default function IOSInstallPrompt() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
 
+    if (isIOS && !isInStandaloneMode) {
       setShow(true);
     }
   }, []);
 
-  const handleDismissDisabled = () => {
-    setShow(false);
-  };
-
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[9999] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6 relative animate-slide-up">
-        </button>
-
+    <div className="fixed inset-0 bg-black/90 z-[9999] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl font-bold text-white">Tribe<span className="text-tribe-green">.</span></span>
           </div>
           <h2 className="text-2xl font-bold mb-2">Install Tribe</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Add Tribe to your home screen for the best experience!
+            This app must be installed to work properly on iOS
           </p>
         </div>
 
@@ -58,7 +53,7 @@ export default function IOSInstallPrompt() {
               <p className="font-semibold mb-1">Tap "Add to Home Screen"</p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Plus className="w-4 h-4" />
-                <span>Scroll down if needed</span>
+                <span>Scroll down if you don't see it</span>
               </div>
             </div>
           </div>
@@ -77,3 +72,10 @@ export default function IOSInstallPrompt() {
           </div>
         </div>
 
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200">
+          ⚠️ This prompt will remain until you install the app
+        </div>
+      </div>
+    </div>
+  );
+}
