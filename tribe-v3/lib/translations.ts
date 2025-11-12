@@ -1,3 +1,6 @@
+export type Language = 'en' | 'es';
+export type TranslationKey = keyof typeof translations.en;
+
 export const translations = {
   en: {
     home: 'Home',
