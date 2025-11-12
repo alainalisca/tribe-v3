@@ -35,8 +35,8 @@ export default function IOSInstallPrompt() {
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-tribe-green rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-slate-900">Tribe<span className="text-tribe-green">.</span></span>
+          <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl font-bold text-white">Tribe<span className="text-tribe-green">.</span></span>
           </div>
           <h2 className="text-2xl font-bold mb-2">Install Tribe</h2>
           <p className="text-gray-600 dark:text-gray-400">
