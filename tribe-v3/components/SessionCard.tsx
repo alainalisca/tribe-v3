@@ -11,9 +11,11 @@ interface SessionCardProps {
   session: any;
   onJoin?: (sessionId: string) => void;
   userLocation?: { latitude: number; longitude: number } | null;
+  onEdit?: (sessionId: string) => void;
+  onDelete?: (sessionId: string) => void;
 }
 
-export default function SessionCard({ session, onJoin, userLocation, currentUserId }: SessionCardProps) {
+export default function SessionCard({ session, onJoin, userLocation, currentUserId, onEdit, onDelete }: SessionCardProps) {
   const { t, language } = useLanguage();
   
   const sportColors: Record<string, string> = {
