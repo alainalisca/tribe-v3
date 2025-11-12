@@ -123,7 +123,6 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
         </div>
 
           <button onClick={handleShare} className="mt-2 px-3 py-1.5 border border-tribe-green text-tribe-green hover:bg-tribe-green/10 rounded-lg text-xs font-medium flex items-center justify-center gap-1 w-full transition">
-
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleShare}
@@ -133,6 +132,7 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           </button>
           <button
             onClick={(e) => {
+              e.stopPropagation();
               e.preventDefault();
               window.location.href = `/session/${session.id}/chat`;
             }}
@@ -141,7 +141,6 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
             💬 Chat
           </button>
         </div>
-          </button>
         <div className="flex items-center text-stone-600 dark:text-[#E0E0E0]">
           <MapPin className="w-4 h-4 mr-2" />
           <span className="text-sm">{session.location}</span>
