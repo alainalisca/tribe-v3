@@ -98,7 +98,11 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
             .single();
 
           if (data) {
-            setMessages((prev) => [...prev, data]);
+            const messageWithUser = {
+              ...data,
+              user: Array.isArray(data.user) ? data.user[0] : data.user
+            };
+            setMessages((prev) => [...prev, messageWithUser]);
           }
         }
       )
