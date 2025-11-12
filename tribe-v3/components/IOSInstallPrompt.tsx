@@ -120,6 +120,13 @@ export default function IOSInstallPrompt() {
           </div>
         )}
 
+        <button
+          onClick={() => setShow(false)}
+          className="w-full mb-4 bg-tribe-green text-slate-900 font-bold py-3 rounded-lg hover:bg-[#b0d853] transition"
+        >
+          I've Installed It - Continue
+        </button>
+
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200">
           ⚠️ This prompt will remain until you install the app
         </div>
