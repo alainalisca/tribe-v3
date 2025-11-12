@@ -10,7 +10,7 @@ interface Message {
   user_id: string;
   message: string;
   created_at: string;
-  users: {
+  user: {
     name: string;
     avatar_url: string | null;
   };
