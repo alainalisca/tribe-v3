@@ -106,7 +106,9 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
