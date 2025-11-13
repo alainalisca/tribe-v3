@@ -128,8 +128,24 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
             onClick={handleShare}
             className="flex-1 px-3 py-1.5 border border-tribe-green text-tribe-green hover:bg-tribe-green/10 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition"
           >
-            <Share2 className="w-3 h-3" /> Share
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={handleShare}
+            className="flex-1 px-3 py-1.5 border border-tribe-green text-tribe-green hover:bg-tribe-green/10 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition"
+          >
+            <Share2 className="w-3 h-3" /> {t('share')}
           </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              window.location.href = `/session/${session.id}/chat`;
+            }}
+            className="flex-1 px-3 py-1.5 bg-blue-500 text-white hover:bg-blue-600 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition"
+          >
+            💬 Chat
+          </button>
+        </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
