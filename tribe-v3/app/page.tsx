@@ -238,6 +238,7 @@ export default function HomePage() {
           status: status,
         });
 
+      console.log("Join attempt:", { sessionId, userId: user.id, status, joinError });
       if (joinError) throw joinError;
 
       // Only increment participant count for confirmed joins
