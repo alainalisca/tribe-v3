@@ -62,7 +62,7 @@ export default function RequestsPage() {
 
       const { data: pendingRequests, error: reqError } = await supabase
         .from('session_participants')
-        .select('*');
+        .select('*')        .eq('status', 'pending');
 
       console.log('Pending requests:', pendingRequests);
       console.log('Request error:', reqError);
