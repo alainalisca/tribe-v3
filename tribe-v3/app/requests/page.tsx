@@ -24,6 +24,7 @@ export default function RequestsPage() {
       return;
     }
     setUser(user);
+    loadRequests(user.id);
   async function loadRequests(userId: string) {
   }
     try {
