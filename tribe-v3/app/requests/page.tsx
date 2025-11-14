@@ -24,8 +24,6 @@ export default function RequestsPage() {
       return;
     }
     setUser(user);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-    
   }
 
   async function loadRequests(userId: string) {
