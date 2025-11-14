@@ -25,7 +25,7 @@ export default function RequestsPage() {
     }
     setUser(user);
       setRequests(prev => prev.filter(r => r.id !== requestId));
-    loadRequests(user.id);
+    
   }
 
   async function loadRequests(userId: string) {
@@ -99,7 +99,7 @@ export default function RequestsPage() {
 
       alert('Request accepted!');
       setRequests(prev => prev.filter(r => r.id !== requestId));
-      loadRequests(user.id);
+      
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
@@ -130,7 +130,7 @@ export default function RequestsPage() {
 
       alert('Request declined');
       setRequests(prev => prev.filter(r => r.id !== requestId));
-      loadRequests(user.id);
+      
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
