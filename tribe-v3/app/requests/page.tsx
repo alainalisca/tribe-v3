@@ -24,6 +24,7 @@ export default function RequestsPage() {
       return;
     }
     setUser(user);
+      setRequests(prev => prev.filter(r => r.id !== requestId));
     loadRequests(user.id);
   }
 
@@ -91,12 +92,13 @@ export default function RequestsPage() {
     try {
       const { error } = await supabase
         .from('session_participants')
-        .update({ status: 'approved' })
+        .update({ status: 'confirmed' })
         .eq('id', requestId);
 
       if (error) throw error;
 
       alert('Request accepted!');
+      setRequests(prev => prev.filter(r => r.id !== requestId));
       loadRequests(user.id);
     } catch (error: any) {
       alert('Error: ' + error.message);
@@ -127,6 +129,7 @@ export default function RequestsPage() {
       }
 
       alert('Request declined');
+      setRequests(prev => prev.filter(r => r.id !== requestId));
       loadRequests(user.id);
     } catch (error: any) {
       alert('Error: ' + error.message);
