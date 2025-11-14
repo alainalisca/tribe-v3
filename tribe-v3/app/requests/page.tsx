@@ -25,6 +25,7 @@ export default function RequestsPage() {
     }
     setUser(user);
   async function loadRequests(userId: string) {
+  }
     try {
       // Get all sessions created by this user
       const { data: mySessions } = await supabase
