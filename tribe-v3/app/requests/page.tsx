@@ -24,8 +24,6 @@ export default function RequestsPage() {
       return;
     }
     setUser(user);
-  }
-
   async function loadRequests(userId: string) {
     try {
       // Get all sessions created by this user
