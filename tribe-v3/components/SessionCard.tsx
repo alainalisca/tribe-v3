@@ -57,7 +57,7 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
   }
   const isFull = session.current_participants >= session.max_participants;
   const isPast = new Date(session.date) < new Date();
-  const userHasJoined = currentUserId && session.participants?.some((p: any) => p.user_id === currentUserId);
+  const userHasJoined = currentUserId && session.participants?.some((p: any) => p.user_id === currentUserId && p.status === 'confirmed');
 
   let distance: string | null = null;
   if (userLocation && session.latitude && session.longitude) {
