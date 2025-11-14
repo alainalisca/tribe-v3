@@ -25,8 +25,9 @@ export default function RequestsPage() {
     }
     setUser(user);
     loadRequests(user.id);
-  async function loadRequests(userId: string) {
   }
+
+  async function loadRequests(userId: string) {
     try {
       // Get all sessions created by this user
       const { data: mySessions } = await supabase
@@ -60,7 +61,7 @@ export default function RequestsPage() {
 
       const { data: pendingRequests, error: reqError } = await supabase
         .from('session_participants')
-        .select('*')        .eq('status', 'pending');
+        .select('*');
 
       console.log('Pending requests:', pendingRequests);
       console.log('Request error:', reqError);
@@ -90,14 +91,13 @@ export default function RequestsPage() {
     try {
       const { error } = await supabase
         .from('session_participants')
-        .update({ status: 'confirmed' })
+        .update({ status: 'approved' })
         .eq('id', requestId);
 
       if (error) throw error;
 
       alert('Request accepted!');
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-      
+      loadRequests(user.id);
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
@@ -127,8 +127,7 @@ export default function RequestsPage() {
       }
 
       alert('Request declined');
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-      
+      loadRequests(user.id);
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
