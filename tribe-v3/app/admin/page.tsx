@@ -31,7 +31,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (activeTab === 'users') {
-      loadUsers();
+      await loadUsers();
     }
   }, [activeTab]);
 
@@ -51,7 +51,7 @@ export default function AdminPage() {
 
     setUser(user);
     setAuthorized(true);
-    await loadStats();
+    await await loadStats();
     setLoading(false);
   }
 
@@ -123,8 +123,8 @@ export default function AdminPage() {
 
       if (error) throw error;
       alert('User banned successfully');
-      loadUsers();
-      loadStats();
+      await loadUsers();
+      await loadStats();
     } catch (error: any) {
       console.error('Ban error:', error);
       alert('Error: ' + error.message);
@@ -140,7 +140,7 @@ export default function AdminPage() {
 
       if (error) throw error;
       alert('User unbanned successfully');
-      loadUsers();
+      await loadUsers();
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
@@ -166,8 +166,8 @@ export default function AdminPage() {
 
       if (error) throw error;
       alert('User deleted successfully');
-      loadUsers();
-      loadStats();
+      await loadUsers();
+      await loadStats();
     } catch (error: any) {
       console.error('Delete error:', error);
       alert('Error: ' + error.message);
