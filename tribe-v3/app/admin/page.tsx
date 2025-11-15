@@ -31,7 +31,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (activeTab === 'users') {
-      await loadUsers();
+      loadUsers();
     }
   }, [activeTab]);
 
