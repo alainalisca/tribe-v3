@@ -60,7 +60,6 @@ export default function AdminPage() {
       const { count: userCount } = await supabase
         .from('users')
         .select('id', { count: 'exact', head: true });
-        .select('*', { count: 'exact', head: true });
 
       const today = new Date().toISOString().split('T')[0];
       const { count: sessionCount } = await supabase
