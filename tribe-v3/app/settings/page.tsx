@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Globe, LogOut } from 'lucide-react';
+import { ArrowLeft, Globe, LogOut, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -43,6 +43,8 @@ export default function SettingsPage() {
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
     safety: 'Safety Guidelines',
+    admin: 'Admin',
+    adminPanel: 'Admin Panel',
   } : {
     settings: 'Configuración',
     language: 'Idioma',
@@ -54,6 +56,8 @@ export default function SettingsPage() {
     terms: 'Términos de Servicio',
     privacy: 'Política de Privacidad',
     safety: 'Guías de Seguridad',
+    admin: 'Administrador',
+    adminPanel: 'Panel de Administrador',
   };
 
   return (
@@ -70,17 +74,22 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Admin Section - Only for admin */}
         {user?.email === 'alainalisca@aplusfitnessllc.com' && (
           <div className="bg-white rounded-2xl p-5 border border-stone-200">
-            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-5 h-5 text-tribe-green" />
+              <h2 className="text-lg font-bold text-theme-primary">{txt.admin}</h2>
+            </div>
             <Link href="/admin">
               <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
-                Admin Panel
+                {txt.adminPanel}
               </button>
             </Link>
           </div>
         )}
 
+        {/* Language Section */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-5 h-5 text-tribe-green" />
@@ -111,17 +120,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {user?.email === 'alainalisca@aplusfitnessllc.com' && (
-          <div className="bg-white rounded-2xl p-5 border border-stone-200">
-            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
-            <Link href="/admin">
-              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
-                Admin Panel
-              </button>
-            </Link>
-          </div>
-        )}
-
+        {/* Legal Section */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
@@ -143,17 +142,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {user?.email === 'alainalisca@aplusfitnessllc.com' && (
-          <div className="bg-white rounded-2xl p-5 border border-stone-200">
-            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
-            <Link href="/admin">
-              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
-                Admin Panel
-              </button>
-            </Link>
-          </div>
-        )}
-
+        {/* Account Section */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
           <button

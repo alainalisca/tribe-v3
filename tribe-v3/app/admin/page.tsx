@@ -184,13 +184,13 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8">
         <Link
-          href="/"
+          href="/settings"
           className="inline-flex items-center gap-2 text-stone-600 dark:text-gray-400 hover:text-[#272D34] dark:hover:text-white mb-4"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Home
+          Back to Settings
         </Link>
           <h1 className="text-3xl font-bold text-[#272D34] dark:text-white mb-2">
             Tribe Admin Panel
