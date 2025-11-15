@@ -70,6 +70,17 @@ export default function SettingsPage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
+        {user?.email === 'alainalisca@aplusfitnessllc.com' && (
+          <div className="bg-white rounded-2xl p-5 border border-stone-200">
+            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
+            <Link href="/admin">
+              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
+                Admin Panel
+              </button>
+            </Link>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-5 h-5 text-tribe-green" />
@@ -100,6 +111,17 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {user?.email === 'alainalisca@aplusfitnessllc.com' && (
+          <div className="bg-white rounded-2xl p-5 border border-stone-200">
+            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
+            <Link href="/admin">
+              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
+                Admin Panel
+              </button>
+            </Link>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
@@ -120,6 +142,17 @@ export default function SettingsPage() {
             </Link>
           </div>
         </div>
+
+        {user?.email === 'alainalisca@aplusfitnessllc.com' && (
+          <div className="bg-white rounded-2xl p-5 border border-stone-200">
+            <h2 className="text-lg font-bold text-theme-primary mb-4">Admin</h2>
+            <Link href="/admin">
+              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
+                Admin Panel
+              </button>
+            </Link>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
