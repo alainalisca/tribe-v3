@@ -112,15 +112,21 @@ export default function AdminPage() {
     if (!confirm('Are you sure you want to ban this user?')) return;
 
     try {
-      const { error } = await supabase
+      console.log('Banning user:', userId);
+      const { data, error } = await supabase
         .from('users')
         .update({ banned: true })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
+
+      console.log('Ban result:', { data, error });
 
       if (error) throw error;
       alert('User banned successfully');
       loadUsers();
+      loadStats();
     } catch (error: any) {
+      console.error('Ban error:', error);
       alert('Error: ' + error.message);
     }
   }
@@ -141,24 +147,29 @@ export default function AdminPage() {
   }
 
   async function deleteUser(userId: string) {
-    if (!confirm('⚠️ WARNING: This will permanently delete the user and ALL their data (sessions, messages, etc). Are you absolutely sure?')) return;
+    if (!confirm('⚠️ WARNING: This will permanently delete the user and ALL their data. Are you sure?')) return;
 
     try {
-      // Delete in order: messages, session participants, sessions, user
-      await supabase.from('messages').delete().eq('user_id', userId);
-      await supabase.from('session_participants').delete().eq('user_id', userId);
-      await supabase.from('sessions').delete().eq('creator_id', userId);
+      console.log('Deleting user:', userId);
       
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId);
+      const { error: msgError } = await supabase.from('messages').delete().eq('user_id', userId);
+      console.log('Messages deleted:', msgError);
+      
+      const { error: partError } = await supabase.from('session_participants').delete().eq('user_id', userId);
+      console.log('Participants deleted:', partError);
+      
+      const { error: sessError } = await supabase.from('sessions').delete().eq('creator_id', userId);
+      console.log('Sessions deleted:', sessError);
+      
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      console.log('User deleted:', error);
 
       if (error) throw error;
       alert('User deleted successfully');
       loadUsers();
       loadStats();
     } catch (error: any) {
+      console.error('Delete error:', error);
       alert('Error: ' + error.message);
     }
   }
