@@ -67,9 +67,6 @@ export default function AdminPage() {
         .select('id', { count: 'exact', head: true })
         .eq('status', 'active')
         .gte('date', today);
-
-      const { count: messageCount } = await supabase
-        .from('messages')
         .select('id', { count: 'exact', head: true });
         .select('*', { count: 'exact', head: true });
 
@@ -77,15 +74,12 @@ export default function AdminPage() {
       const { count: newUsers } = await supabase
         .from('users')
         .select('id', { count: 'exact', head: true })
-        .gte('created_at', todayStart.toISOString());
         .select('*', { count: 'exact', head: true })
         .gte('created_at', todayStart.toISOString());
         totalUsers: userCount || 0,
         activeSessions: sessionCount || 0,
         totalMessages: messageCount || 0,
         newUsersToday: newUsers || 0,
-      });
-    } catch (error) {
       console.error('Error loading stats:', error);
     }
   }
