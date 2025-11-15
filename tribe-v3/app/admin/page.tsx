@@ -59,23 +59,30 @@ export default function AdminPage() {
     try {
       const { count: userCount } = await supabase
         .from('users')
+        .select('id', { count: 'exact', head: true });
         .select('*', { count: 'exact', head: true });
 
       const today = new Date().toISOString().split('T')[0];
       const { count: sessionCount } = await supabase
         .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gte('date', today);
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
         .gte('date', today);
 
       const { count: messageCount } = await supabase
         .from('messages')
+        .select('id', { count: 'exact', head: true });
         .select('*', { count: 'exact', head: true });
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const { count: newUsers } = await supabase
         .from('users')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', todayStart.toISOString());
         .select('*', { count: 'exact', head: true })
         .gte('created_at', todayStart.toISOString());
 
