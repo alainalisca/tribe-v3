@@ -1,5 +1,3 @@
-export type Language = 'en' | 'es';
-
 export const translations = {
   en: {
     // Navigation
@@ -24,29 +22,14 @@ export const translations = {
     edit: 'Edit',
     delete: 'Delete',
     close: 'Close',
-    search: 'Search sessions...',
-    searchPlaceholder: 'Search sessions...',
-    clearAll: 'Clear all',
-    sessionsCount: 'sessions',
-    noSessionsFound: 'No sessions found',
-    tryDifferentSearch: 'Try a different search or filter',
     
     // Session Card
     spots: 'spots',
-    share: 'Share',
+    share: 'share',
     chat: 'Chat',
     joined: 'Joined',
     pending: 'Pending',
     full: 'Full',
-    join: 'Join',
-    past: 'Past',
-    viewDetails: 'View Details',
-    hostedBy: 'Hosted by',
-    away: 'away',
-    
-    // My Sessions
-    hosting: 'Hosting',
-    joinedSessions: 'Joined',
     
     // Create Session
     createSession: 'Create Session',
@@ -102,29 +85,14 @@ export const translations = {
     edit: 'Editar',
     delete: 'Eliminar',
     close: 'Cerrar',
-    search: 'Buscar sesiones...',
-    searchPlaceholder: 'Buscar sesiones...',
-    clearAll: 'Limpiar todo',
-    sessionsCount: 'sesiones',
-    noSessionsFound: 'No se encontraron sesiones',
-    tryDifferentSearch: 'Intenta una búsqueda o filtro diferente',
     
     // Tarjeta de Sesión
     spots: 'espacios',
-    share: 'Compartir',
+    share: 'compartir',
     chat: 'Chat',
     joined: 'Unido',
     pending: 'Pendiente',
     full: 'Lleno',
-    join: 'Unirse',
-    past: 'Pasado',
-    viewDetails: 'Ver Detalles',
-    hostedBy: 'Organizado por',
-    away: 'de distancia',
-    
-    // Mis Sesiones
-    hosting: 'Organizando',
-    joinedSessions: 'Unido',
     
     // Crear Sesión
     createSession: 'Crear Sesión',
@@ -156,34 +124,4 @@ export const translations = {
     password: 'Contraseña',
     forgotPassword: '¿Olvidaste tu Contraseña?',
   }
-};
-
-export type TranslationKey = keyof typeof translations.en;
-
-// Sport translations for Colombia/Medellín market
-export const sportTranslations = {
-  'All': { en: 'All', es: 'Todos' },
-  'Running': { en: 'Running', es: 'Running' },
-  'CrossFit': { en: 'CrossFit', es: 'CrossFit' },
-  'Basketball': { en: 'Basketball', es: 'Baloncesto' },
-  'Soccer': { en: 'Soccer', es: 'Fútbol' },
-  'Tennis': { en: 'Tennis', es: 'Tenis' },
-  'Swimming': { en: 'Swimming', es: 'Natación' },
-  'BJJ': { en: 'BJJ', es: 'BJJ' },
-  'Volleyball': { en: 'Volleyball', es: 'Voleibol' },
-  'Football': { en: 'Football', es: 'Fútbol Americano' },
-  'Cycling': { en: 'Cycling', es: 'Ciclismo' },
-  'Boxing': { en: 'Boxing', es: 'Boxeo' },
-  'Yoga': { en: 'Yoga', es: 'Yoga' },
-  'Pilates': { en: 'Pilates', es: 'Pilates' },
-  'Dance': { en: 'Dance', es: 'Baile' },
-  'Climbing': { en: 'Climbing', es: 'Escalada' },
-  'Surfing': { en: 'Surfing', es: 'Surf' },
-  'Skating': { en: 'Skating', es: 'Patinaje' },
-  'Golf': { en: 'Golf', es: 'Golf' },
-  'Baseball': { en: 'Baseball', es: 'Béisbol' },
-  'Hockey': { en: 'Hockey', es: 'Hockey' },
-  'Rugby': { en: 'Rugby', es: 'Rugby' },
-  'Padel': { en: 'Padel', es: 'Pádel' },
-  'Muay Thai': { en: 'Muay Thai', es: 'Muay Thai' }
 };

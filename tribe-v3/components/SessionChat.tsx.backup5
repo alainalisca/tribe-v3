@@ -32,8 +32,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
 
   useEffect(() => {
     loadMessages();
-    const cleanup = subscribeToMessages();
-    return cleanup;
+    subscribeToMessages();
   }, [sessionId]);
 
   useEffect(() => {
@@ -71,10 +70,8 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
   }
 
   function subscribeToMessages() {
-    const channelName = `session:${sessionId}:messages`;
-    
     const channel = supabase
-      .channel(channelName)
+      .channel(`session-${sessionId}-messages`)
       .on(
         'postgres_changes',
         {
@@ -84,8 +81,6 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          console.log('New message received:', payload);
-          
           const { data: userData } = await supabase
             .from('users')
             .select('name, avatar_url')
@@ -93,23 +88,18 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
             .single();
 
           const messageWithUser = {
-            id: payload.new.id,
-            user_id: payload.new.user_id,
-            message: payload.new.message,
-            created_at: payload.new.created_at,
+            ...payload.new,
             user: userData || { name: 'Unknown', avatar_url: null }
           };
           
           setMessages((prev) => [...prev, messageWithUser]);
         }
       )
-      .subscribe((status, err) => {
-        console.log('Subscription status:', status);
-        if (err) console.error('Subscription error:', err);
+      .subscribe((status) => {
+        console.log("Subscription status:", status, status === "SUBSCRIBED" ? "Connected!" : "Error details:", status);
       });
 
     return () => {
-      console.log('Unsubscribing from channel');
       supabase.removeChannel(channel);
     };
   }
@@ -122,6 +112,9 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
     try {
       setSending(true);
 
+    console.log("Sending message with:", { sessionId, currentUserId, message: newMessage.trim() });
+    console.log("sessionId type:", typeof sessionId);
+    console.log("currentUserId type:", typeof currentUserId);
       const { error } = await supabase
         .from('chat_messages')
         .insert({
@@ -168,9 +161,9 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
   }
 
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[600px]">
+    <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col" style={{ height: '400px' }}>
       {/* Chat Header */}
-      <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+      <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D]">
         <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
         <p className="text-xs text-stone-600 dark:text-gray-300">{messages.length} messages</p>
       </div>
@@ -232,9 +225,9 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Fixed at Bottom of Container */}
-      <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
-        <form onSubmit={sendMessage} className="flex gap-2">
+      {/* Message Input */}
+      <form onSubmit={sendMessage} className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D]">
+        <div className="flex gap-2">
           <input
             type="text"
             value={newMessage}
@@ -250,8 +243,8 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           >
             <Send className="w-5 h-5" />
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

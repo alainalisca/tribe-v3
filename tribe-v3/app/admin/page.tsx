@@ -69,7 +69,7 @@ export default function AdminPage() {
         .gte('date', today);
 
       const { count: messageCount } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .select('id', { count: 'exact', head: true });
 
       const todayStart = new Date();
@@ -152,7 +152,7 @@ export default function AdminPage() {
     try {
       console.log('Deleting user:', userId);
       
-      const { error: msgError } = await supabase.from('messages').delete().eq('user_id', userId);
+      const { error: msgError } = await supabase.from('chat_messages').delete().eq('user_id', userId);
       console.log('Messages deleted:', msgError);
       
       const { error: partError } = await supabase.from('session_participants').delete().eq('user_id', userId);

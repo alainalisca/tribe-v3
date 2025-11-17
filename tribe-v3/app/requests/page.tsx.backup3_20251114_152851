@@ -1,0 +1,213 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/LanguageContext';
+import BottomNav from '@/components/BottomNav';
+
+interface JoinRequest {
+  id: string;
+  session_id: string;
+  user_id: string;
+  status: string;
+  joined_at: string;
+  sessions: {
+    sport: string;
+    date: string;
+    start_time: string;
+    location: string;
+  };
+  profiles: {
+    full_name: string;
+    avatar_url: string;
+  };
+}
+
+export default function RequestsPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const { t } = useLanguage();
+  const [requests, setRequests] = useState<JoinRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  async function loadRequests() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth/signin');
+        return;
+      }
+
+      // Get requests for sessions the user created
+      const { data: userSessions } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('created_by', user.id);
+
+      if (!userSessions || userSessions.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      const sessionIds = userSessions.map(s => s.id);
+
+      const { data, error } = await supabase
+        .from('session_participants')
+        .select(`
+          id,
+          session_id,
+          user_id,
+          status,
+          joined_at,
+          sessions (
+            sport,
+            date,
+            start_time,
+            location
+          ),
+          profiles (
+            full_name,
+            avatar_url
+          )
+        `)
+        .in('session_id', sessionIds)
+        .eq('status', 'pending')
+        .order('joined_at', { ascending: false });
+
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (error) {
+      console.error('Error loading requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRequest(requestId: string, action: 'confirmed' | 'declined') {
+    try {
+      const { error } = await supabase
+        .from('session_participants')
+        .update({ status: action })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      // Remove from list
+      setRequests(requests.filter(r => r.id !== requestId));
+    } catch (error) {
+      console.error('Error handling request:', error);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20">
+        <div className="text-gray-600">{t('loading')}</div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="max-w-2xl mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-6">{t('joinRequests')}</h1>
+
+        {requests.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">{t('noRequests')}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {requests.map((request) => (
+              <div key={request.id} className="bg-white rounded-lg shadow p-4">
+                <div className="flex items-start gap-4">
+                  {/* Profile Image */}
+                  <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                    {request.profiles?.avatar_url ? (
+                      <img 
+                        src={request.profiles.avatar_url} 
+                        alt={request.profiles.full_name || 'User'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center bg-gray-300">
+                                <svg class="w-8 h-8 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                </svg>
+                              </div>
+                            `;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-300">
+                        <svg className="w-8 h-8 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Request Info */}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">
+                      {request.profiles?.full_name || t('anonymous')}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {request.sessions.sport} - {request.sessions.location}
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {new Date(request.sessions.date + 'T' + request.sessions.start_time).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleRequest(request.id, 'confirmed')}
+                        className="flex-1 bg-[#9EE551] hover:bg-[#8FD642] text-black font-semibold py-2 px-4 rounded-lg transition-colors"
+                      >
+                        ✓ {t('accept')}
+                      </button>
+                      <button
+                        onClick={() => handleRequest(request.id, 'declined')}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                      >
+                        ✗ {t('decline')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* View Profile Link */}
+                <button
+                  onClick={() => router.push(`/profile/${request.user_id}`)}
+                  className="text-[#9EE551] text-sm font-medium mt-3 hover:underline"
+                >
+                  {t('viewProfile')}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+}
