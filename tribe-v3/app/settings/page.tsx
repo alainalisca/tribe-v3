@@ -32,6 +32,50 @@ export default function SettingsPage() {
     router.push('/auth');
   }
 
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkNotificationStatus();
+    }
+  }, [user]);
+
+  async function checkNotificationStatus() {
+    if (!user) return;
+    const { data } = await supabase
+      .from('users')
+      .select('push_subscription')
+      .eq('id', user.id)
+      .single();
+    setNotificationsEnabled(!!data?.push_subscription);
+  }
+
+  async function toggleNotifications() {
+    if (!user) return;
+    
+    if (notificationsEnabled) {
+      // Disable notifications
+      const { error } = await supabase
+        .from('users')
+        .update({ push_subscription: null })
+        .eq('id', user.id);
+      if (!error) {
+        setNotificationsEnabled(false);
+        alert('Notifications disabled');
+      }
+    } else {
+      // Enable notifications
+      const { requestNotificationPermission } = await import('@/lib/notifications');
+      const subscription = await requestNotificationPermission(user.id);
+      if (subscription) {
+        setNotificationsEnabled(true);
+        alert('Notifications enabled!');
+      } else {
+        alert('Could not enable notifications. Please check your browser settings.');
+      }
+    }
+  }
+
   const txt = language === 'en' ? {
     settings: 'Settings',
     language: 'Language',
@@ -88,6 +132,30 @@ export default function SettingsPage() {
             </Link>
           </div>
         )}
+
+        {/* Notifications Section */}
+        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-5 h-5 text-tribe-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <h2 className="text-lg font-bold text-theme-primary">
+              {language === 'en' ? 'Push Notifications' : 'Notificaciones Push'}
+            </h2>
+          </div>
+          <button
+            onClick={toggleNotifications}
+            className={`w-full p-4 rounded-xl text-left transition font-semibold ${
+              notificationsEnabled
+                ? 'bg-tribe-green text-slate-900'
+                : 'bg-stone-100 text-theme-primary hover:bg-stone-200'
+            }`}
+          >
+            {notificationsEnabled 
+              ? (language === 'en' ? '✓ Notifications Enabled' : '✓ Notificaciones Activadas')
+              : (language === 'en' ? 'Enable Notifications' : 'Activar Notificaciones')}
+          </button>
+        </div>
 
         {/* Language Section */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
