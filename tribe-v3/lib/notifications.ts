@@ -1,63 +1,66 @@
 import { createClient } from '@/lib/supabase/client';
 
-export async function requestNotificationPermission(): Promise<boolean> {
+export async function requestNotificationPermission(userId: string) {
+  // Check if browser supports notifications
   if (!('Notification' in window)) {
-    return false;
+    console.log('This browser does not support notifications');
+    return null;
   }
 
+  // Check if service worker is ready
+  const registration = await navigator.serviceWorker.ready;
+  
+  // Request permission
   const permission = await Notification.requestPermission();
-  return permission === 'granted';
-}
+  
+  if (permission !== 'granted') {
+    console.log('Notification permission denied');
+    return null;
+  }
 
-export async function subscribeToPush(): Promise<boolean> {
+  // Get VAPID public key from environment
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  
+  if (!vapidPublicKey) {
+    console.error('VAPID public key not found');
+    return null;
+  }
+
   try {
-    
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    
-    if (!user) {
-      return false;
-    }
-
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-
+    // Subscribe to push notifications
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
     });
 
-    // Save subscription to database
-    const { data, error } = await supabase
-      .from('push_subscriptions')
-      .upsert({
-        user_id: user.id,
-        subscription: subscription.toJSON(),
-        updated_at: new Date().toISOString()
-      })
-      .select();
+    // Save subscription to Supabase
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ push_subscription: subscription.toJSON() })
+      .eq('id', userId);
 
+    if (error) {
+      console.error('Error saving push subscription:', error);
+      return null;
+    }
 
-    if (error) throw error;
-
-    return true;
+    console.log('Push notification subscription saved successfully');
+    return subscription;
   } catch (error) {
-    console.error('Error subscribing to push:', error);
-    alert('Subscribe error: ' + (error as Error).message);
-    return false;
+    console.error('Error subscribing to push notifications:', error);
+    return null;
   }
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// Helper function to convert VAPID key
+function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
     .replace(/\-/g, '+')
     .replace(/_/g, '/');
-
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
