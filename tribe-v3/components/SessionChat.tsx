@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Send } from 'lucide-react';
+import { Send, MoreVertical, Trash2, Flag, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import Link from 'next/link';
 
 interface Message {
   id: string;
   user_id: string;
   message: string;
   created_at: string;
+  deleted: boolean;
   user: {
     name: string;
     avatar_url: string | null;
@@ -19,13 +21,19 @@ interface Message {
 interface SessionChatProps {
   sessionId: string;
   currentUserId: string;
+  isHost?: boolean;
 }
 
-export default function SessionChat({ sessionId, currentUserId }: SessionChatProps) {
+export default function SessionChat({ sessionId, currentUserId, isHost = false }: SessionChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { t } = useLanguage();
@@ -49,6 +57,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           user_id,
           message,
           created_at,
+          deleted,
           user:users!chat_messages_user_id_fkey (
             name,
             avatar_url
@@ -84,8 +93,6 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           filter: `session_id=eq.${sessionId}`,
         },
         async (payload) => {
-          console.log('New message received:', payload);
-          
           const { data: userData } = await supabase
             .from('users')
             .select('name, avatar_url')
@@ -97,19 +104,34 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
             user_id: payload.new.user_id,
             message: payload.new.message,
             created_at: payload.new.created_at,
+            deleted: payload.new.deleted || false,
             user: userData || { name: 'Unknown', avatar_url: null }
           };
           
           setMessages((prev) => [...prev, messageWithUser]);
         }
       )
-      .subscribe((status, err) => {
-        console.log('Subscription status:', status);
-        if (err) console.error('Subscription error:', err);
-      });
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          setMessages((prev) => 
+            prev.map(msg => 
+              msg.id === payload.new.id 
+                ? { ...msg, deleted: payload.new.deleted }
+                : msg
+            )
+          );
+        }
+      )
+      .subscribe();
 
     return () => {
-      console.log('Unsubscribing from channel');
       supabase.removeChannel(channel);
     };
   }
@@ -138,6 +160,63 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
       alert('Failed to send message');
     } finally {
       setSending(false);
+    }
+  }
+
+  async function deleteMessage(messageId: string) {
+    if (!confirm('Delete this message?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ 
+          deleted: true,
+          deleted_by: currentUserId,
+          deleted_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+      if (error) throw error;
+      
+      setSelectedMessage(null);
+      alert('✅ Message deleted');
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
+  async function reportMessage(messageId: string) {
+    setReportingMessageId(messageId);
+    setShowReportModal(true);
+    setSelectedMessage(null);
+  }
+
+  async function submitReport() {
+    if (!reportReason) {
+      alert('Please select a reason');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('reported_messages')
+        .insert({
+          message_id: reportingMessageId,
+          reporter_id: currentUserId,
+          session_id: sessionId,
+          reason: reportReason,
+          description: reportDescription,
+        });
+
+      if (error) throw error;
+
+      alert('✅ Message reported. Host will review it.');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDescription('');
+      setReportingMessageId(null);
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
     }
   }
 
@@ -172,7 +251,10 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
       {/* Chat Header */}
       <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
-        <p className="text-xs text-stone-600 dark:text-gray-300">{messages.length} messages</p>
+        <p className="text-xs text-stone-600 dark:text-gray-300">
+          {messages.filter(m => !m.deleted).length} messages
+          {isHost && <span className="ml-2 text-tribe-green">• You're the host</span>}
+        </p>
       </div>
 
       {/* Messages List */}
@@ -185,28 +267,38 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           messages.map((msg) => {
             const isOwnMessage = msg.user_id === currentUserId;
             
+            if (msg.deleted) {
+              return (
+                <div key={msg.id} className="flex gap-2">
+                  <div className="flex-1 p-3 bg-stone-100 dark:bg-[#52575D] rounded-lg opacity-50">
+                    <p className="text-xs text-stone-500 italic">Message deleted</p>
+                  </div>
+                </div>
+              );
+            }
+            
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
+                className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} group`}
               >
                 {/* Avatar */}
-                <div className="flex-shrink-0">
+                <Link href={`/profile/${msg.user_id}`} className="flex-shrink-0">
                   {msg.user?.avatar_url ? (
                     <img
                       src={msg.user.avatar_url}
                       alt={msg.user.name}
-                      className="w-8 h-8 rounded-full"
+                      className="w-8 h-8 rounded-full cursor-pointer hover:opacity-80"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#C0E863] flex items-center justify-center text-xs font-semibold text-[#272D34]">
+                    <div className="w-8 h-8 rounded-full bg-[#C0E863] flex items-center justify-center text-xs font-semibold text-[#272D34] cursor-pointer hover:opacity-80">
                       {getInitials(msg.user?.name || 'U')}
                     </div>
                   )}
-                </div>
+                </Link>
 
                 {/* Message Bubble */}
-                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%] relative`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-xs font-medium text-stone-700 dark:text-gray-300">
                       {isOwnMessage ? 'You' : msg.user?.name}
@@ -215,15 +307,51 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
                       {formatTime(msg.created_at)}
                     </span>
                   </div>
-                  <div
-                    className={`rounded-2xl px-4 py-2 ${
-                      isOwnMessage
-                        ? 'bg-[#C0E863] text-[#272D34]'
-                        : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-white'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                  <div className="flex items-start gap-1">
+                    <div
+                      className={`rounded-2xl px-4 py-2 ${
+                        isOwnMessage
+                          ? 'bg-[#C0E863] text-[#272D34]'
+                          : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-white'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                    </div>
+                    
+                    {/* Message Actions Menu */}
+                    {(isHost || isOwnMessage) && (
+                      <button
+                        onClick={() => setSelectedMessage(selectedMessage === msg.id ? null : msg.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-[#52575D] rounded transition"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
+
+                  {/* Actions Dropdown */}
+                  {selectedMessage === msg.id && (
+                    <div className="absolute top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]">
+                      {isHost && !isOwnMessage && (
+                        <button
+                          onClick={() => deleteMessage(msg.id)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      )}
+                      {!isOwnMessage && (
+                        <button
+                          onClick={() => reportMessage(msg.id)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-orange-600"
+                        >
+                          <Flag className="w-4 h-4" />
+                          Report
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -232,7 +360,7 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Fixed at Bottom of Container */}
+      {/* Message Input */}
       <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <form onSubmit={sendMessage} className="flex gap-2">
           <input
@@ -252,7 +380,64 @@ export default function SessionChat({ sessionId, currentUserId }: SessionChatPro
           </button>
         </form>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Report Message</h3>
+              <button onClick={() => setShowReportModal(false)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="spam">Spam</option>
+                  <option value="harassment">Harassment</option>
+                  <option value="inappropriate">Inappropriate content</option>
+                  <option value="offensive">Offensive language</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Details (optional)</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Provide more context..."
+                  className="w-full p-2 border rounded-lg h-20 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={!reportReason}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-// Updated Mon Nov 17 16:16:30 -05 2025

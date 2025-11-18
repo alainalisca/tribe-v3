@@ -31,7 +31,11 @@ export default function ChatPage() {
     setSession(sessionData);
   }
 
-  if (!user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (!user || !session) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  const isHost = session.creator_id === user.id;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-20">
@@ -39,16 +43,25 @@ export default function ChatPage() {
         <div className="sticky top-0 bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700 p-4 z-10">
           <div className="flex items-center gap-3">
             <Link href={`/session/${sessionId}`}>
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
             </Link>
             <div>
-              <h1 className="text-xl font-bold">{session?.sport} Chat</h1>
-              <p className="text-sm text-gray-500">{session?.location}</p>
+              <h1 className="text-xl font-bold">{session.sport} Chat</h1>
+              <p className="text-sm text-gray-500">
+                {session.location}
+                {isHost && <span className="ml-2 text-tribe-green">• Host</span>}
+              </p>
             </div>
           </div>
         </div>
 
-        <SessionChat sessionId={sessionId} currentUserId={user.id} />
+        <div className="p-4">
+          <SessionChat 
+            sessionId={sessionId} 
+            currentUserId={user.id}
+            isHost={isHost}
+          />
+        </div>
       </div>
     </div>
   );
