@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 
@@ -14,16 +14,40 @@ export default function PublicProfilePage() {
   const supabase = createClient();
   
   const [profile, setProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
     totalSessions: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadProfile();
+    checkCurrentUser();
   }, [userId]);
+
+  async function checkCurrentUser() {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUser(user);
+    
+    if (user) {
+      // Check if current user has blocked this profile
+      const { data } = await supabase
+        .from('blocked_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('blocked_user_id', userId)
+        .single();
+      
+      setIsBlocked(!!data);
+    }
+  }
 
   async function loadProfile() {
     try {
@@ -58,6 +82,67 @@ export default function PublicProfilePage() {
     }
   }
 
+  async function handleBlock() {
+    if (!currentUser) return;
+
+    try {
+      if (isBlocked) {
+        // Unblock
+        await supabase
+          .from('blocked_users')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('blocked_user_id', userId);
+        
+        setIsBlocked(false);
+        alert('✅ User unblocked');
+      } else {
+        // Block
+        if (!confirm(`Block ${profile.name}? You won't see their sessions or messages.`)) return;
+        
+        await supabase
+          .from('blocked_users')
+          .insert({
+            user_id: currentUser.id,
+            blocked_user_id: userId,
+          });
+        
+        setIsBlocked(true);
+        alert('✅ User blocked');
+      }
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
+  async function handleReport() {
+    if (!reportReason.trim()) {
+      alert('Please select a reason');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await supabase
+        .from('reported_users')
+        .insert({
+          reporter_id: currentUser.id,
+          reported_user_id: userId,
+          reason: reportReason,
+          description: reportDescription,
+        });
+
+      alert('✅ Report submitted. Our team will review it.');
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDescription('');
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
@@ -79,16 +164,43 @@ export default function PublicProfilePage() {
   };
 
   const sports = profile?.sports || [];
+  const isOwnProfile = currentUser?.id === userId;
 
   return (
     <div className="min-h-screen bg-theme-page pb-20">
       {/* Header */}
       <div className="bg-theme-card p-4 border-b border-theme">
-        <div className="max-w-2xl mx-auto flex items-center">
-          <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
-            <ArrowLeft className="w-6 h-6 text-theme-primary" />
-          </button>
-          <h1 className="text-xl font-bold text-theme-primary">{profile.name}'s Profile</h1>
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <div className="flex items-center">
+            <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+              <ArrowLeft className="w-6 h-6 text-theme-primary" />
+            </button>
+            <h1 className="text-xl font-bold text-theme-primary">{profile.name}'s Profile</h1>
+          </div>
+          
+          {/* Block/Report Buttons (only for other users) */}
+          {!isOwnProfile && currentUser && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleBlock}
+                className={`p-2 rounded-lg transition ${
+                  isBlocked 
+                    ? 'bg-green-500 text-white hover:bg-green-600' 
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+                title={isBlocked ? 'Unblock user' : 'Block user'}
+              >
+                <Shield className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+                title="Report user"
+              >
+                <Flag className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -120,6 +232,15 @@ export default function PublicProfilePage() {
               </span>
             )}
           </div>
+
+          {/* Blocked Warning */}
+          {isBlocked && (
+            <div className="mt-4 bg-red-100 border border-red-300 rounded-lg p-3">
+              <p className="text-sm text-red-700">
+                🚫 You have blocked this user. Click the shield icon to unblock.
+              </p>
+            </div>
+          )}
 
           {/* Name & Info */}
           <div className="mt-4">
@@ -195,6 +316,61 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Report User</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="">Select a reason</option>
+                  <option value="harassment">Harassment</option>
+                  <option value="inappropriate">Inappropriate behavior</option>
+                  <option value="spam">Spam</option>
+                  <option value="fake">Fake account</option>
+                  <option value="no-show">Repeated no-shows</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Additional details (optional)</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Provide more context..."
+                  className="w-full p-2 border rounded-lg h-24 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="flex-1 px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50"
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={submitting || !reportReason}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Submit Report'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>
