@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck, Shield } from 'lucide-react';
+import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck, Shield, Flag, AlertTriangle } from 'lucide-react';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -20,8 +20,10 @@ export default function AdminPage() {
     newUsersToday: 0,
   });
   const [users, setUsers] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingReports, setLoadingReports] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
@@ -33,6 +35,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'users') {
       loadUsers();
+    } else if (activeTab === 'reports') {
+      loadReports();
     }
   }, [activeTab]);
 
@@ -109,6 +113,27 @@ export default function AdminPage() {
     }
   }
 
+  async function loadReports() {
+    setLoadingReports(true);
+    try {
+      const { data, error } = await supabase
+        .from('reported_users')
+        .select(`
+          *,
+          reporter:users!reported_users_reporter_id_fkey(id, name, email),
+          reported:users!reported_users_reported_user_id_fkey(id, name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReports(data || []);
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    } finally {
+      setLoadingReports(false);
+    }
+  }
+
   async function banUser(userId: string) {
     if (!confirm('Ban this user?')) return;
 
@@ -179,10 +204,32 @@ export default function AdminPage() {
     }
   }
 
+  async function updateReportStatus(reportId: string, status: string) {
+    try {
+      const { error } = await supabase
+        .from('reported_users')
+        .update({ status })
+        .eq('id', reportId);
+
+      if (error) throw error;
+      
+      setReports(prev => prev.map(r => 
+        r.id === reportId ? { ...r, status } : r
+      ));
+      
+      alert(`✅ Report marked as ${status}`);
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
   const filteredUsers = users.filter(u => 
     u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const pendingReports = reports.filter(r => r.status === 'pending');
+  const resolvedReports = reports.filter(r => r.status !== 'pending');
 
   if (loading) {
     return (
@@ -207,10 +254,10 @@ export default function AdminPage() {
         <h1 className="text-lg font-bold text-[#272D34] mb-1">Admin Panel</h1>
         <p className="text-xs text-stone-600 mb-4 truncate">{user?.email}</p>
 
-        <div className="flex gap-3 mb-4 border-b border-stone-300">
+        <div className="flex gap-2 mb-4 border-b border-stone-300 overflow-x-auto">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-3 py-1.5 text-sm font-medium ${
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
               activeTab === 'dashboard'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
@@ -220,13 +267,28 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-3 py-1.5 text-sm font-medium ${
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
               activeTab === 'users'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
             }`}
           >
             Users
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap relative ${
+              activeTab === 'reports'
+                ? 'border-b-2 border-[#C0E863] text-[#272D34]'
+                : 'text-stone-600'
+            }`}
+          >
+            Reports
+            {pendingReports.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {pendingReports.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -278,7 +340,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="divide-y">
+            <div className="divide-y max-h-96 overflow-y-auto">
               {loadingUsers ? (
                 <p className="text-center py-6 text-sm text-gray-500">Loading...</p>
               ) : filteredUsers.length === 0 ? (
@@ -333,6 +395,94 @@ export default function AdminPage() {
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="space-y-3">
+            {loadingReports ? (
+              <p className="text-center py-6 text-sm text-gray-500">Loading reports...</p>
+            ) : reports.length === 0 ? (
+              <div className="bg-white rounded p-6 text-center shadow">
+                <Flag className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No reports yet</p>
+              </div>
+            ) : (
+              <>
+                {pendingReports.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-500" />
+                      Pending ({pendingReports.length})
+                    </h3>
+                    {pendingReports.map((report) => (
+                      <div key={report.id} className="bg-white rounded shadow p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-[#272D34]">{report.reported?.name}</p>
+                            <p className="text-xs text-stone-600">{report.reported?.email}</p>
+                          </div>
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
+                            {report.reason}
+                          </span>
+                        </div>
+                        
+                        {report.description && (
+                          <p className="text-xs text-stone-700 mb-2 p-2 bg-stone-50 rounded">
+                            {report.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center justify-between text-xs text-stone-500 mb-3">
+                          <span>By: {report.reporter?.name}</span>
+                          <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => router.push(`/profile/${report.reported_user_id}`)}
+                            className="flex-1 py-1.5 border border-stone-300 text-stone-700 text-xs rounded hover:bg-stone-50"
+                          >
+                            View Profile
+                          </button>
+                          <button
+                            onClick={() => banUser(report.reported_user_id)}
+                            className="flex-1 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                          >
+                            Ban User
+                          </button>
+                          <button
+                            onClick={() => updateReportStatus(report.id, 'resolved')}
+                            className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                          >
+                            Resolve
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {resolvedReports.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-bold text-[#272D34] mt-4">
+                      Resolved ({resolvedReports.length})
+                    </h3>
+                    {resolvedReports.slice(0, 5).map((report) => (
+                      <div key={report.id} className="bg-stone-50 rounded p-3 opacity-60">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{report.reported?.name}</p>
+                            <p className="text-xs text-stone-600">{report.reason}</p>
+                          </div>
+                          <span className="text-xs text-green-600">✓ Resolved</span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
