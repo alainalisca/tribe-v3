@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck } from 'lucide-react';
+import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck, Shield } from 'lucide-react';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
 
@@ -100,6 +101,8 @@ export default function AdminPage() {
         .limit(100);
 
       if (error) throw error;
+      
+      console.log('Loaded users:', data);
       setUsers(data || []);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -111,39 +114,68 @@ export default function AdminPage() {
   async function banUser(userId: string) {
     if (!confirm('Are you sure you want to ban this user?')) return;
 
+    setActionLoading(userId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ banned: true })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
 
       if (error) throw error;
-      alert('User banned successfully');
-      await loadUsers();
+      
+      console.log('Ban result:', data);
+      
+      // Immediately update local state
+      setUsers(prev => prev.map(u => 
+        u.id === userId ? { ...u, banned: true } : u
+      ));
+      
+      alert('✅ User banned successfully');
       await loadStats();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      console.error('Ban error:', error);
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setActionLoading(null);
     }
   }
 
   async function unbanUser(userId: string) {
+    if (!confirm('Are you sure you want to unban this user?')) return;
+
+    setActionLoading(userId);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ banned: false })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
 
       if (error) throw error;
-      alert('User unbanned successfully');
-      await loadUsers();
+      
+      console.log('Unban result:', data);
+      
+      // Immediately update local state
+      setUsers(prev => prev.map(u => 
+        u.id === userId ? { ...u, banned: false } : u
+      ));
+      
+      alert('✅ User unbanned successfully');
+      await loadStats();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      console.error('Unban error:', error);
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setActionLoading(null);
     }
   }
 
   async function deleteUser(userId: string) {
     if (!confirm('⚠️ WARNING: This will permanently delete the user and ALL their data. Are you sure?')) return;
+    if (!confirm('⚠️ FINAL WARNING: This action CANNOT be undone. Delete user?')) return;
 
+    setActionLoading(userId);
     try {
       await supabase.from('chat_messages').delete().eq('user_id', userId);
       await supabase.from('session_participants').delete().eq('user_id', userId);
@@ -152,11 +184,17 @@ export default function AdminPage() {
       const { error } = await supabase.from('users').delete().eq('id', userId);
 
       if (error) throw error;
-      alert('User deleted successfully');
-      await loadUsers();
+      
+      // Remove from local state
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      
+      alert('✅ User deleted successfully');
       await loadStats();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      console.error('Delete error:', error);
+      alert('❌ Error: ' + error.message);
+    } finally {
+      setActionLoading(null);
     }
   }
 
@@ -276,7 +314,7 @@ export default function AdminPage() {
                 <p className="text-center text-gray-500 py-8">No users found</p>
               ) : (
                 filteredUsers.map((u) => (
-                  <div key={u.id} className="p-4">
+                  <div key={u.id} className={`p-4 ${u.banned ? 'bg-red-50' : ''}`}>
                     {/* User Info */}
                     <div className="flex items-start gap-3 mb-3">
                       {u.avatar_url ? (
@@ -291,14 +329,17 @@ export default function AdminPage() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-[#272D34] truncate">
-                          {u.name || 'No name'}
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-[#272D34] truncate">
+                            {u.name || 'No name'}
+                          </h3>
                           {u.banned && (
-                            <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded">
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded">
+                              <Shield className="w-3 h-3" />
                               BANNED
-                            </span>
+                            </div>
                           )}
-                        </h3>
+                        </div>
                         <p className="text-sm text-stone-600 truncate">{u.email}</p>
                         <p className="text-xs text-stone-500">
                           Joined: {new Date(u.created_at).toLocaleDateString()}
@@ -311,26 +352,29 @@ export default function AdminPage() {
                       {u.banned ? (
                         <button
                           onClick={() => unbanUser(u.id)}
-                          className="flex-1 px-3 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2"
+                          disabled={actionLoading === u.id}
+                          className="flex-1 px-3 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           <UserCheck className="w-4 h-4" />
-                          Unban
+                          {actionLoading === u.id ? 'Unbanning...' : 'Unban'}
                         </button>
                       ) : (
                         <button
                           onClick={() => banUser(u.id)}
-                          className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+                          disabled={actionLoading === u.id}
+                          className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           <Ban className="w-4 h-4" />
-                          Ban
+                          {actionLoading === u.id ? 'Banning...' : 'Ban'}
                         </button>
                       )}
                       <button
                         onClick={() => deleteUser(u.id)}
-                        className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
+                        disabled={actionLoading === u.id}
+                        className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <Trash2 className="w-4 h-4" />
-                        Delete
+                        {actionLoading === u.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
                   </div>
