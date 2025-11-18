@@ -101,8 +101,6 @@ export default function AdminPage() {
         .limit(100);
 
       if (error) throw error;
-      
-      console.log('Loaded users:', data);
       setUsers(data || []);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -124,9 +122,6 @@ export default function AdminPage() {
 
       if (error) throw error;
       
-      console.log('Ban result:', data);
-      
-      // Immediately update local state
       setUsers(prev => prev.map(u => 
         u.id === userId ? { ...u, banned: true } : u
       ));
@@ -134,7 +129,6 @@ export default function AdminPage() {
       alert('✅ User banned successfully');
       await loadStats();
     } catch (error: any) {
-      console.error('Ban error:', error);
       alert('❌ Error: ' + error.message);
     } finally {
       setActionLoading(null);
@@ -154,9 +148,6 @@ export default function AdminPage() {
 
       if (error) throw error;
       
-      console.log('Unban result:', data);
-      
-      // Immediately update local state
       setUsers(prev => prev.map(u => 
         u.id === userId ? { ...u, banned: false } : u
       ));
@@ -164,7 +155,6 @@ export default function AdminPage() {
       alert('✅ User unbanned successfully');
       await loadStats();
     } catch (error: any) {
-      console.error('Unban error:', error);
       alert('❌ Error: ' + error.message);
     } finally {
       setActionLoading(null);
@@ -185,13 +175,11 @@ export default function AdminPage() {
 
       if (error) throw error;
       
-      // Remove from local state
       setUsers(prev => prev.filter(u => u.id !== userId));
       
       alert('✅ User deleted successfully');
       await loadStats();
     } catch (error: any) {
-      console.error('Delete error:', error);
       alert('❌ Error: ' + error.message);
     } finally {
       setActionLoading(null);
@@ -215,7 +203,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <Link
@@ -230,8 +218,8 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-[#272D34] mb-1">
             Tribe Admin Panel
           </h1>
-          <p className="text-sm text-stone-600">
-            Logged in as {user?.email}
+          <p className="text-sm text-stone-600 break-all">
+            {user?.email}
           </p>
         </div>
 
@@ -291,7 +279,7 @@ export default function AdminPage() {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             {/* Search Bar */}
             <div className="p-4 border-b border-stone-200">
               <div className="relative">
@@ -307,73 +295,78 @@ export default function AdminPage() {
             </div>
 
             {/* Users List */}
-            <div className="divide-y divide-stone-200">
+            <div>
               {loadingUsers ? (
                 <p className="text-center text-gray-500 py-8">Loading users...</p>
               ) : filteredUsers.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No users found</p>
               ) : (
                 filteredUsers.map((u) => (
-                  <div key={u.id} className={`p-4 ${u.banned ? 'bg-red-50' : ''}`}>
-                    {/* User Info */}
-                    <div className="flex items-start gap-3 mb-3">
+                  <div 
+                    key={u.id} 
+                    className={`p-4 border-b border-stone-200 last:border-b-0 ${
+                      u.banned ? 'bg-red-50' : 'bg-white'
+                    }`}
+                  >
+                    {/* User Info Row */}
+                    <div className="flex items-center gap-3 mb-3">
                       {u.avatar_url ? (
                         <img
                           src={u.avatar_url}
                           alt={u.name}
-                          className="w-12 h-12 rounded-full flex-shrink-0"
+                          className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-[#C0E863] flex items-center justify-center text-[#272D34] font-bold flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#C0E863] flex items-center justify-center text-[#272D34] font-bold flex-shrink-0 text-sm">
                           {u.name?.[0]?.toUpperCase() || 'U'}
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-[#272D34] truncate">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium text-[#272D34] text-sm truncate">
                             {u.name || 'No name'}
                           </h3>
                           {u.banned && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded whitespace-nowrap">
                               <Shield className="w-3 h-3" />
                               BANNED
-                            </div>
+                            </span>
                           )}
                         </div>
-                        <p className="text-sm text-stone-600 truncate">{u.email}</p>
+                        <p className="text-xs text-stone-600 truncate">{u.email}</p>
                         <p className="text-xs text-stone-500">
                           Joined: {new Date(u.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    {/* Action Buttons Row */}
+                    <div className="grid grid-cols-2 gap-2">
                       {u.banned ? (
                         <button
                           onClick={() => unbanUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="flex-1 px-3 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="px-3 py-2 bg-green-500 text-white text-xs font-medium rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <UserCheck className="w-4 h-4" />
+                          <UserCheck className="w-3.5 h-3.5" />
                           {actionLoading === u.id ? 'Unbanning...' : 'Unban'}
                         </button>
                       ) : (
                         <button
                           onClick={() => banUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="flex-1 px-3 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="px-3 py-2 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <Ban className="w-4 h-4" />
+                          <Ban className="w-3.5 h-3.5" />
                           {actionLoading === u.id ? 'Banning...' : 'Ban'}
                         </button>
                       )}
                       <button
                         onClick={() => deleteUser(u.id)}
                         disabled={actionLoading === u.id}
-                        className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="px-3 py-2 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                         {actionLoading === u.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
