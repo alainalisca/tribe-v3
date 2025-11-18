@@ -41,7 +41,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
-  const [maxDistance, setMaxDistance] = useState<number>(50); // Default 50km
+  const [maxDistance, setMaxDistance] = useState<number>(50);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
@@ -70,13 +70,6 @@ export default function HomePage() {
       if (loc) setUserLocation(loc);
     });
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      scheduleSessionReminders();
-      loadProfile();
-    }
-  }, [user]);
 
   useEffect(() => {
     filterSessions();
@@ -110,7 +103,11 @@ export default function HomePage() {
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(user_id, status),
+          participants:session_participants(
+            user_id, 
+            status,
+            user:users(id, name, avatar_url)
+          ),
           creator:users!sessions_creator_id_fkey(id, name, avatar_url)
         `)
         .eq('status', 'active')
@@ -119,6 +116,8 @@ export default function HomePage() {
         .order('start_time', { ascending: true });
 
       if (error) throw error;
+      
+      console.log('Loaded sessions with participants:', data);
       setSessions(data || []);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -167,11 +166,9 @@ export default function HomePage() {
       filtered = filtered.filter((s) => s.sport === selectedSport);
     }
 
-
-    // Filter by distance if user has location
     if (userLocation && maxDistance < 100) {
       filtered = filtered.filter((s) => {
-        if (!s.latitude || !s.longitude) return true; // Keep sessions without location
+        if (!s.latitude || !s.longitude) return true;
         const distance = calculateDistance(
           userLocation.latitude,
           userLocation.longitude,
@@ -187,7 +184,6 @@ export default function HomePage() {
   async function handleJoinSession(sessionId: string) {
     if (!user) return;
 
-    // Check if user has accepted safety waiver
     if (userProfile && !userProfile.safety_waiver_accepted) {
       setPendingSessionId(sessionId);
       setShowSafetyWaiver(true);
@@ -197,13 +193,11 @@ export default function HomePage() {
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
 
-    // Prevent creator from joining own session
     if (session.creator_id === user.id) {
       alert('You cannot join your own session!');
       return;
     }
 
-    // Check join policy
     if (session.join_policy === 'invite_only') {
       alert('This is a private session. You need a direct invitation from the host.');
       return;
@@ -227,7 +221,6 @@ export default function HomePage() {
         return;
       }
 
-      // For curated sessions, status is 'pending', for open sessions it's 'confirmed'
       const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
 
       const { error: joinError } = await supabase
@@ -238,10 +231,8 @@ export default function HomePage() {
           status: status,
         });
 
-      console.log("Join attempt:", { sessionId, userId: user.id, status, joinError });
       if (joinError) throw joinError;
 
-      // Only increment participant count for confirmed joins
       if (status === 'confirmed') {
         const { error: updateError } = await supabase
           .from('sessions')
@@ -266,19 +257,15 @@ export default function HomePage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-      {showOnboarding && (
-        <OnboardingModal
-          onComplete={() => {
-            localStorage.setItem('hasSeenOnboarding', 'true');
-            setShowOnboarding(false);
-            setShowProfilePrompt(true);
-            // Check if user has sports
-            if (userProfile && (!userProfile.sports || userProfile.sports.length === 0)) {
+        {showOnboarding && (
+          <OnboardingModal
+            onComplete={() => {
+              localStorage.setItem('hasSeenOnboarding', 'true');
+              setShowOnboarding(false);
               setShowProfilePrompt(true);
-            }
-          }}
-        />
-      )}
+            }}
+          />
+        )}
         <p className="text-stone-900 dark:text-gray-100">{t('loading')}</p>
       </div>
     );
@@ -298,11 +285,9 @@ export default function HomePage() {
       
       if (error) throw error;
       
-      // Update local state
       setUserProfile({ ...userProfile, safety_waiver_accepted: true });
       setShowSafetyWaiver(false);
       
-      // Now join the pending session
       if (pendingSessionId) {
         await handleJoinSession(pendingSessionId);
         setPendingSessionId(null);
@@ -326,7 +311,6 @@ export default function HomePage() {
             localStorage.setItem('hasSeenOnboarding', 'true');
             setShowOnboarding(false);
             setShowProfilePrompt(true);
-            // Check if user has sports
           }}
         />
       )}
@@ -456,7 +440,6 @@ export default function HomePage() {
           </div>
         )}
       </div>
-
 
       {showSafetyWaiver && (
         <SafetyWaiverModal

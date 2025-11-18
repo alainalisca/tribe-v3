@@ -55,10 +55,13 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
       alert('Link copied to clipboard!');
     }
   }
+
   const isFull = session.current_participants >= session.max_participants;
   const isPast = new Date(session.date) < new Date();
-  console.log("Session participants:", session.participants, "Current user:", currentUserId);
-  const userHasJoined = currentUserId && session.participants?.some((p: any) => p.user_id === currentUserId && p.status === 'confirmed');
+  
+  // Get confirmed participants
+  const confirmedParticipants = session.participants?.filter((p: any) => p.status === 'confirmed') || [];
+  const userHasJoined = currentUserId && confirmedParticipants.some((p: any) => p.user_id === currentUserId);
 
   let distance: string | null = null;
   if (userLocation && session.latitude && session.longitude) {
@@ -74,13 +77,18 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
   return (
     <div className="bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-[#C0E863] transition">
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${sportColor}`}>
             {language === "es" ? (sportTranslations[session.sport]?.es || session.sport) : session.sport}
           </span>
           {isPast && (
             <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-[#E33629]/20 text-[#E33629] dark:text-red-300">
               {t('past')}
+            </span>
+          )}
+          {userHasJoined && (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              ✓ {t('joined') || 'Joined'}
             </span>
           )}
           {session.join_policy === 'curated' && (
@@ -106,7 +114,6 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
             />
           </div>
         </div>
-
       </div>
 
       <div className="space-y-2 mb-4">
@@ -160,6 +167,41 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
             {t('hostedBy')} {session.creator.name}
           </p>
         )}
+
+        {/* Participant Avatars */}
+        {confirmedParticipants.length > 0 && (
+          <div className="flex items-center gap-2 mt-3">
+            <div className="flex -space-x-2">
+              {confirmedParticipants.slice(0, 5).map((p: any, idx: number) => (
+                <Link key={idx} href={`/profile/${p.user_id}`}>
+                  {p.user?.avatar_url ? (
+                    <img
+                      src={p.user.avatar_url}
+                      alt={p.user.name}
+                      className="w-8 h-8 rounded-full border-2 border-white object-cover cursor-pointer hover:scale-110 transition"
+                      title={p.user.name}
+                    />
+                  ) : (
+                    <div 
+                      className="w-8 h-8 rounded-full border-2 border-white bg-tribe-green flex items-center justify-center text-xs font-bold cursor-pointer hover:scale-110 transition"
+                      title={p.user?.name || 'User'}
+                    >
+                      {p.user?.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </Link>
+              ))}
+              {confirmedParticipants.length > 5 && (
+                <div className="w-8 h-8 rounded-full border-2 border-white bg-stone-300 flex items-center justify-center text-xs font-bold">
+                  +{confirmedParticipants.length - 5}
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-stone-500">
+              {confirmedParticipants.length} {confirmedParticipants.length === 1 ? 'participant' : 'participants'}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -169,7 +211,7 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           </button>
         </Link>
         
-        {onJoin && !isPast && !userHasJoined && (
+        {onJoin && !isPast && !userHasJoined && session.creator_id !== currentUserId && (
           <button
             onClick={() => onJoin(session.id)}
             disabled={isFull}
