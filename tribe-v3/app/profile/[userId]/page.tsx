@@ -14,13 +14,15 @@ export default function PublicProfilePage() {
   const supabase = createClient();
   
   const [profile, setProfile] = useState<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isBlocked, setIsBlocked] = useState(false);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
     totalSessions: 0,
+    attendanceRate: 0,
+    totalAttendance: 0,
   });
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -37,7 +39,6 @@ export default function PublicProfilePage() {
     setCurrentUser(user);
     
     if (user) {
-      // Check if current user has blocked this profile
       const { data } = await supabase
         .from('blocked_users')
         .select('id')
@@ -70,10 +71,22 @@ export default function PublicProfilePage() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
 
+      // Get attendance stats
+      const { data: attendanceData } = await supabase
+        .rpc('get_user_attendance_stats', { user_uuid: userId });
+
+      const attendance = attendanceData?.[0] || { 
+        total_sessions: 0, 
+        attended_sessions: 0, 
+        attendance_rate: 0 
+      };
+
       setStats({
         sessionsCreated: created || 0,
         sessionsJoined: joined || 0,
         totalSessions: (created || 0) + (joined || 0),
+        attendanceRate: Number(attendance.attendance_rate) || 0,
+        totalAttendance: Number(attendance.total_sessions) || 0,
       });
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -87,7 +100,6 @@ export default function PublicProfilePage() {
 
     try {
       if (isBlocked) {
-        // Unblock
         await supabase
           .from('blocked_users')
           .delete()
@@ -97,7 +109,6 @@ export default function PublicProfilePage() {
         setIsBlocked(false);
         alert('✅ User unblocked');
       } else {
-        // Block
         if (!confirm(`Block ${profile.name}? You won't see their sessions or messages.`)) return;
         
         await supabase
@@ -165,10 +176,10 @@ export default function PublicProfilePage() {
 
   const sports = profile?.sports || [];
   const isOwnProfile = currentUser?.id === userId;
+  const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 70;
 
   return (
     <div className="min-h-screen bg-theme-page pb-20">
-      {/* Header */}
       <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
@@ -178,7 +189,6 @@ export default function PublicProfilePage() {
             <h1 className="text-xl font-bold text-theme-primary">{profile.name}'s Profile</h1>
           </div>
           
-          {/* Block/Report Buttons (only for other users) */}
           {!isOwnProfile && currentUser && (
             <div className="flex gap-2">
               <button
@@ -205,7 +215,6 @@ export default function PublicProfilePage() {
       </div>
 
       <div className="max-w-2xl mx-auto">
-        {/* Banner */}
         <div className="relative h-48 bg-gradient-to-br from-tribe-green to-lime-500">
           {profile?.banner_url && (
             <img 
@@ -216,9 +225,7 @@ export default function PublicProfilePage() {
           )}
         </div>
 
-        {/* Profile Section */}
         <div className="px-4 -mt-16 relative z-10">
-          {/* Avatar */}
           <div className="w-32 h-32 rounded-full border-4 border-white bg-tribe-green flex items-center justify-center overflow-hidden shadow-lg">
             {profile?.avatar_url ? (
               <img 
@@ -233,7 +240,6 @@ export default function PublicProfilePage() {
             )}
           </div>
 
-          {/* Blocked Warning */}
           {isBlocked && (
             <div className="mt-4 bg-red-100 border border-red-300 rounded-lg p-3">
               <p className="text-sm text-red-700">
@@ -242,7 +248,14 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {/* Name & Info */}
+          {hasLowAttendance && !isOwnProfile && (
+            <div className="mt-4 bg-orange-100 border border-orange-300 rounded-lg p-3">
+              <p className="text-sm text-orange-700">
+                ⚠️ Low attendance rate - This user has a {stats.attendanceRate.toFixed(0)}% show-up rate
+              </p>
+            </div>
+          )}
+
           <div className="mt-4">
             <h2 className="text-2xl font-bold text-theme-primary">{profile?.name}</h2>
             <div className="flex items-center gap-3 mt-2">
@@ -258,30 +271,37 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-sm text-theme-secondary mt-1">Created</p>
+          <div className="grid grid-cols-4 gap-3 mt-6">
+            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
+              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
+              <p className="text-xs text-theme-secondary mt-1">Created</p>
             </div>
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-sm text-theme-secondary mt-1">Joined</p>
+            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
+              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
+              <p className="text-xs text-theme-secondary mt-1">Joined</p>
             </div>
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
-              <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-sm text-theme-secondary mt-1">Total</p>
+            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
+              <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
+              <p className="text-xs text-theme-secondary mt-1">Total</p>
+            </div>
+            <div className={`bg-white rounded-2xl p-3 text-center border ${
+              hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
+            }`}>
+              <p className={`text-3xl font-bold ${
+                hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'
+              }`}>
+                {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : 'N/A'}
+              </p>
+              <p className="text-xs text-theme-secondary mt-1">Attendance</p>
             </div>
           </div>
 
-          {/* Bio */}
           {profile?.bio && (
             <div className="mt-6 bg-white rounded-2xl p-5 border border-stone-200">
               <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
             </div>
           )}
 
-          {/* Photo Gallery */}
           {profile?.photos && profile.photos.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-theme-primary mb-3">Photos</h3>
@@ -299,7 +319,6 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {/* Sports */}
           {sports.length > 0 && (
             <div className="mt-6">
               <div className="flex flex-wrap gap-2">
@@ -317,7 +336,6 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {/* Report Modal */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">

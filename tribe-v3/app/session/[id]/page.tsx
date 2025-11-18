@@ -5,6 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Calendar, Clock, MapPin, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import AttendanceTracker from '@/components/AttendanceTracker';
+
+const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -37,7 +40,6 @@ export default function SessionDetailPage() {
       if (error) throw error;
       setSession(sessionData);
 
-      // Load creator info
       const { data: creatorData } = await supabase
         .from('users')
         .select('id, name, avatar_url')
@@ -46,7 +48,6 @@ export default function SessionDetailPage() {
 
       setCreator(creatorData);
 
-      // Load participants with user details
       const { data: participantsData } = await supabase
         .from('session_participants')
         .select(`
@@ -235,7 +236,6 @@ export default function SessionDetailPage() {
               Participants ({participants.length})
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {/* Show creator first */}
               {creator && (
                 <Link href={`/profile/${creator.id}`}>
                   <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
@@ -258,7 +258,6 @@ export default function SessionDetailPage() {
                 </Link>
               )}
               
-              {/* Show participants */}
               {participants.map((participant: any) => (
                 <Link key={participant.user_id} href={`/profile/${participant.user_id}`}>
                   <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
@@ -281,6 +280,16 @@ export default function SessionDetailPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Attendance Tracker */}
+        {user && (
+          <AttendanceTracker
+            sessionId={params.id as string}
+            isHost={session.creator_id === user.id}
+            isAdmin={user.email === ADMIN_EMAIL}
+            sessionDate={session.date}
+          />
         )}
       </div>
     </div>
