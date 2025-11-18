@@ -208,17 +208,17 @@ export default function AdminPage() {
         <div className="mb-6">
           <Link
             href="/settings"
-            className="inline-flex items-center gap-2 text-stone-600 hover:text-[#272D34] mb-4"
+            className="inline-flex items-center gap-2 text-stone-600 hover:text-[#272D34] mb-4 text-sm"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Settings
           </Link>
-          <h1 className="text-2xl font-bold text-[#272D34] mb-1">
+          <h1 className="text-xl font-bold text-[#272D34] mb-1">
             Tribe Admin Panel
           </h1>
-          <p className="text-sm text-stone-600 break-all">
+          <p className="text-xs text-stone-600 break-all">
             {user?.email}
           </p>
         </div>
@@ -227,7 +227,7 @@ export default function AdminPage() {
         <div className="flex gap-4 mb-6 border-b border-stone-300">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-2 font-medium transition ${
+            className={`px-3 py-2 text-sm font-medium transition ${
               activeTab === 'dashboard'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
@@ -237,7 +237,7 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 font-medium transition ${
+            className={`px-3 py-2 text-sm font-medium transition ${
               activeTab === 'users'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
@@ -249,29 +249,29 @@ export default function AdminPage() {
 
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <StatCard
               title="Total Users"
               value={stats.totalUsers}
-              icon={<Users className="w-5 h-5" />}
+              icon={<Users className="w-4 h-4" />}
               color="bg-blue-500"
             />
             <StatCard
               title="Active Sessions"
               value={stats.activeSessions}
-              icon={<Calendar className="w-5 h-5" />}
+              icon={<Calendar className="w-4 h-4" />}
               color="bg-green-500"
             />
             <StatCard
               title="Total Messages"
               value={stats.totalMessages}
-              icon={<MessageSquare className="w-5 h-5" />}
+              icon={<MessageSquare className="w-4 h-4" />}
               color="bg-purple-500"
             />
             <StatCard
               title="New Users Today"
               value={stats.newUsersToday}
-              icon={<TrendingUp className="w-5 h-5" />}
+              icon={<TrendingUp className="w-4 h-4" />}
               color="bg-orange-500"
             />
           </div>
@@ -281,15 +281,15 @@ export default function AdminPage() {
         {activeTab === 'users' && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
             {/* Search Bar */}
-            <div className="p-4 border-b border-stone-200">
+            <div className="p-3 border-b border-stone-200">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by name or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C0E863]"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C0E863]"
                 />
               </div>
             </div>
@@ -297,19 +297,19 @@ export default function AdminPage() {
             {/* Users List */}
             <div>
               {loadingUsers ? (
-                <p className="text-center text-gray-500 py-8">Loading users...</p>
+                <p className="text-center text-gray-500 py-8 text-sm">Loading users...</p>
               ) : filteredUsers.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No users found</p>
+                <p className="text-center text-gray-500 py-8 text-sm">No users found</p>
               ) : (
                 filteredUsers.map((u) => (
                   <div 
                     key={u.id} 
-                    className={`p-4 border-b border-stone-200 last:border-b-0 ${
+                    className={`p-3 border-b border-stone-200 last:border-b-0 ${
                       u.banned ? 'bg-red-50' : 'bg-white'
                     }`}
                   >
-                    {/* User Info Row */}
-                    <div className="flex items-center gap-3 mb-3">
+                    {/* User Info */}
+                    <div className="flex items-center gap-2 mb-2">
                       {u.avatar_url ? (
                         <img
                           src={u.avatar_url}
@@ -321,14 +321,14 @@ export default function AdminPage() {
                           {u.name?.[0]?.toUpperCase() || 'U'}
                         </div>
                       )}
-                      <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
                           <h3 className="font-medium text-[#272D34] text-sm truncate">
                             {u.name || 'No name'}
                           </h3>
                           {u.banned && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded whitespace-nowrap">
-                              <Shield className="w-3 h-3" />
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded flex-shrink-0">
+                              <Shield className="w-2.5 h-2.5" />
                               BANNED
                             </span>
                           )}
@@ -340,33 +340,33 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons Row */}
+                    {/* Action Buttons */}
                     <div className="grid grid-cols-2 gap-2">
                       {u.banned ? (
                         <button
                           onClick={() => unbanUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="px-3 py-2 bg-green-500 text-white text-xs font-medium rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full px-2 py-1.5 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
                         >
-                          <UserCheck className="w-3.5 h-3.5" />
+                          <UserCheck className="w-3 h-3" />
                           {actionLoading === u.id ? 'Unbanning...' : 'Unban'}
                         </button>
                       ) : (
                         <button
                           onClick={() => banUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="px-3 py-2 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full px-2 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
                         >
-                          <Ban className="w-3.5 h-3.5" />
+                          <Ban className="w-3 h-3" />
                           {actionLoading === u.id ? 'Banning...' : 'Ban'}
                         </button>
                       )}
                       <button
                         onClick={() => deleteUser(u.id)}
                         disabled={actionLoading === u.id}
-                        className="px-3 py-2 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-2 py-1.5 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                         {actionLoading === u.id ? 'Deleting...' : 'Delete'}
                       </button>
                     </div>
@@ -383,16 +383,16 @@ export default function AdminPage() {
 
 function StatCard({ title, value, icon, color }: any) {
   return (
-    <div className="bg-white rounded-lg p-4 shadow">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-white rounded-lg p-3 shadow">
+      <div className="flex items-center justify-between mb-1">
         <h3 className="text-xs font-medium text-stone-600">
           {title}
         </h3>
-        <div className={`${color} p-2 rounded-lg text-white`}>
+        <div className={`${color} p-1.5 rounded text-white`}>
           {icon}
         </div>
       </div>
-      <p className="text-2xl font-bold text-[#272D34]">
+      <p className="text-xl font-bold text-[#272D34]">
         {value}
       </p>
     </div>
