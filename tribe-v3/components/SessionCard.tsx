@@ -59,9 +59,9 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
   const isFull = session.current_participants >= session.max_participants;
   const isPast = new Date(session.date) < new Date();
   
-  // Get confirmed participants
   const confirmedParticipants = session.participants?.filter((p: any) => p.status === 'confirmed') || [];
   const userHasJoined = currentUserId && confirmedParticipants.some((p: any) => p.user_id === currentUserId);
+  const isCreator = session.creator_id === currentUserId;
 
   let distance: string | null = null;
   if (userLocation && session.latitude && session.longitude) {
@@ -81,6 +81,11 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${sportColor}`}>
             {language === "es" ? (sportTranslations[session.sport]?.es || session.sport) : session.sport}
           </span>
+          {isCreator && (
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              👤 {language === 'es' ? 'Anfitrión' : 'Host'}
+            </span>
+          )}
           {isPast && (
             <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-[#E33629]/20 text-[#E33629] dark:text-red-300">
               {t('past')}
@@ -168,7 +173,6 @@ export default function SessionCard({ session, onJoin, userLocation, currentUser
           </p>
         )}
 
-        {/* Participant Avatars */}
         {confirmedParticipants.length > 0 && (
           <div className="flex items-center gap-2 mt-3">
             <div className="flex -space-x-2">

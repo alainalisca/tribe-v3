@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
+const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
+
 export default function ChatPage() {
   const params = useParams();
   const sessionId = params.id as string;
@@ -36,6 +38,7 @@ export default function ChatPage() {
   }
 
   const isHost = session.creator_id === user.id;
+  const isAdmin = user.email === ADMIN_EMAIL;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-20">
@@ -49,7 +52,8 @@ export default function ChatPage() {
               <h1 className="text-xl font-bold">{session.sport} Chat</h1>
               <p className="text-sm text-gray-500">
                 {session.location}
-                {isHost && <span className="ml-2 text-tribe-green">• Host</span>}
+                {isAdmin && <span className="ml-2 text-red-500">• Admin</span>}
+                {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• Host</span>}
               </p>
             </div>
           </div>
@@ -60,6 +64,7 @@ export default function ChatPage() {
             sessionId={sessionId} 
             currentUserId={user.id}
             isHost={isHost}
+            isAdmin={isAdmin}
           />
         </div>
       </div>

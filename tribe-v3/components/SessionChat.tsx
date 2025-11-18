@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Send, MoreVertical, Trash2, Flag, X } from 'lucide-react';
+import { Send, MoreVertical, Trash2, Flag, X, Shield } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import Link from 'next/link';
 
@@ -22,9 +22,10 @@ interface SessionChatProps {
   sessionId: string;
   currentUserId: string;
   isHost?: boolean;
+  isAdmin?: boolean;
 }
 
-export default function SessionChat({ sessionId, currentUserId, isHost = false }: SessionChatProps) {
+export default function SessionChat({ sessionId, currentUserId, isHost = false, isAdmin = false }: SessionChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { t } = useLanguage();
+
+  const canModerate = isHost || isAdmin;
 
   useEffect(() => {
     loadMessages();
@@ -176,11 +179,15 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
         })
         .eq('id', messageId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
       
       setSelectedMessage(null);
       alert('✅ Message deleted');
     } catch (error: any) {
+      console.error('Full error:', error);
       alert('❌ Error: ' + error.message);
     }
   }
@@ -210,7 +217,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
 
       if (error) throw error;
 
-      alert('✅ Message reported. Host will review it.');
+      alert('✅ Message reported. Admins will review it.');
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
@@ -250,11 +257,22 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
     <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[600px]">
       {/* Chat Header */}
       <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
-        <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
-        <p className="text-xs text-stone-600 dark:text-gray-300">
-          {messages.filter(m => !m.deleted).length} messages
-          {isHost && <span className="ml-2 text-tribe-green">• You're the host</span>}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
+            <p className="text-xs text-stone-600 dark:text-gray-300">
+              {messages.filter(m => !m.deleted).length} messages
+            </p>
+          </div>
+          {canModerate && (
+            <div className="flex items-center gap-1 text-xs">
+              <Shield className="w-4 h-4 text-tribe-green" />
+              <span className="text-tribe-green font-medium">
+                {isAdmin ? 'Admin' : 'Host'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Messages List */}
@@ -280,7 +298,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
             return (
               <div
                 key={msg.id}
-                className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} group`}
+                className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} group relative`}
               >
                 {/* Avatar */}
                 <Link href={`/profile/${msg.user_id}`} className="flex-shrink-0">
@@ -298,7 +316,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
                 </Link>
 
                 {/* Message Bubble */}
-                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%] relative`}>
+                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-xs font-medium text-stone-700 dark:text-gray-300">
                       {isOwnMessage ? 'You' : msg.user?.name}
@@ -319,7 +337,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
                     </div>
                     
                     {/* Message Actions Menu */}
-                    {(isHost || isOwnMessage) && (
+                    {(canModerate || isOwnMessage) && (
                       <button
                         onClick={() => setSelectedMessage(selectedMessage === msg.id ? null : msg.id)}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-[#52575D] rounded transition"
@@ -331,8 +349,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
 
                   {/* Actions Dropdown */}
                   {selectedMessage === msg.id && (
-                    <div className="absolute top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]">
-                      {isHost && !isOwnMessage && (
+                    <div className={`absolute ${isOwnMessage ? 'right-0' : 'left-0'} top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]`}>
+                      {canModerate && (
                         <button
                           onClick={() => deleteMessage(msg.id)}
                           className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
@@ -341,7 +359,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false }
                           Delete
                         </button>
                       )}
-                      {!isOwnMessage && (
+                      {!isOwnMessage && !canModerate && (
                         <button
                           onClick={() => reportMessage(msg.id)}
                           className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-orange-600"
