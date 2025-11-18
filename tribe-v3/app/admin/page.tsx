@@ -110,15 +110,14 @@ export default function AdminPage() {
   }
 
   async function banUser(userId: string) {
-    if (!confirm('Are you sure you want to ban this user?')) return;
+    if (!confirm('Ban this user?')) return;
 
     setActionLoading(userId);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('users')
         .update({ banned: true })
-        .eq('id', userId)
-        .select();
+        .eq('id', userId);
 
       if (error) throw error;
       
@@ -126,8 +125,7 @@ export default function AdminPage() {
         u.id === userId ? { ...u, banned: true } : u
       ));
       
-      alert('✅ User banned successfully');
-      await loadStats();
+      alert('✅ User banned');
     } catch (error: any) {
       alert('❌ Error: ' + error.message);
     } finally {
@@ -136,15 +134,14 @@ export default function AdminPage() {
   }
 
   async function unbanUser(userId: string) {
-    if (!confirm('Are you sure you want to unban this user?')) return;
+    if (!confirm('Unban this user?')) return;
 
     setActionLoading(userId);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('users')
         .update({ banned: false })
-        .eq('id', userId)
-        .select();
+        .eq('id', userId);
 
       if (error) throw error;
       
@@ -152,8 +149,7 @@ export default function AdminPage() {
         u.id === userId ? { ...u, banned: false } : u
       ));
       
-      alert('✅ User unbanned successfully');
-      await loadStats();
+      alert('✅ User unbanned');
     } catch (error: any) {
       alert('❌ Error: ' + error.message);
     } finally {
@@ -162,23 +158,20 @@ export default function AdminPage() {
   }
 
   async function deleteUser(userId: string) {
-    if (!confirm('⚠️ WARNING: This will permanently delete the user and ALL their data. Are you sure?')) return;
-    if (!confirm('⚠️ FINAL WARNING: This action CANNOT be undone. Delete user?')) return;
+    if (!confirm('⚠️ DELETE user and ALL data?')) return;
 
     setActionLoading(userId);
     try {
       await supabase.from('chat_messages').delete().eq('user_id', userId);
       await supabase.from('session_participants').delete().eq('user_id', userId);
       await supabase.from('sessions').delete().eq('creator_id', userId);
-      
       const { error } = await supabase.from('users').delete().eq('id', userId);
 
       if (error) throw error;
       
       setUsers(prev => prev.filter(u => u.id !== userId));
       
-      alert('✅ User deleted successfully');
-      await loadStats();
+      alert('✅ User deleted');
     } catch (error: any) {
       alert('❌ Error: ' + error.message);
     } finally {
@@ -194,7 +187,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-stone-50">
-        <div className="text-lg">Loading admin panel...</div>
+        <div className="text-lg">Loading...</div>
       </div>
     );
   }
@@ -203,31 +196,21 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-20">
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-2 text-stone-600 hover:text-[#272D34] mb-4 text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Settings
-          </Link>
-          <h1 className="text-xl font-bold text-[#272D34] mb-1">
-            Tribe Admin Panel
-          </h1>
-          <p className="text-xs text-stone-600 break-all">
-            {user?.email}
-          </p>
-        </div>
+      <div className="w-full max-w-md mx-auto px-3 py-4">
+        <Link href="/settings" className="inline-flex items-center gap-1 text-stone-600 mb-3 text-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </Link>
+        
+        <h1 className="text-lg font-bold text-[#272D34] mb-1">Admin Panel</h1>
+        <p className="text-xs text-stone-600 mb-4 truncate">{user?.email}</p>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b border-stone-300">
+        <div className="flex gap-3 mb-4 border-b border-stone-300">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`px-3 py-2 text-sm font-medium transition ${
+            className={`px-3 py-1.5 text-sm font-medium ${
               activeTab === 'dashboard'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
@@ -237,137 +220,113 @@ export default function AdminPage() {
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-3 py-2 text-sm font-medium transition ${
+            className={`px-3 py-1.5 text-sm font-medium ${
               activeTab === 'users'
                 ? 'border-b-2 border-[#C0E863] text-[#272D34]'
                 : 'text-stone-600'
             }`}
           >
-            User Management
+            Users
           </button>
         </div>
 
-        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              title="Total Users"
-              value={stats.totalUsers}
-              icon={<Users className="w-4 h-4" />}
-              color="bg-blue-500"
-            />
-            <StatCard
-              title="Active Sessions"
-              value={stats.activeSessions}
-              icon={<Calendar className="w-4 h-4" />}
-              color="bg-green-500"
-            />
-            <StatCard
-              title="Total Messages"
-              value={stats.totalMessages}
-              icon={<MessageSquare className="w-4 h-4" />}
-              color="bg-purple-500"
-            />
-            <StatCard
-              title="New Users Today"
-              value={stats.newUsersToday}
-              icon={<TrendingUp className="w-4 h-4" />}
-              color="bg-orange-500"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white rounded p-3 shadow">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-stone-600">Users</p>
+                <Users className="w-4 h-4 text-blue-500" />
+              </div>
+              <p className="text-lg font-bold">{stats.totalUsers}</p>
+            </div>
+            <div className="bg-white rounded p-3 shadow">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-stone-600">Sessions</p>
+                <Calendar className="w-4 h-4 text-green-500" />
+              </div>
+              <p className="text-lg font-bold">{stats.activeSessions}</p>
+            </div>
+            <div className="bg-white rounded p-3 shadow">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-stone-600">Messages</p>
+                <MessageSquare className="w-4 h-4 text-purple-500" />
+              </div>
+              <p className="text-lg font-bold">{stats.totalMessages}</p>
+            </div>
+            <div className="bg-white rounded p-3 shadow">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-stone-600">New Today</p>
+                <TrendingUp className="w-4 h-4 text-orange-500" />
+              </div>
+              <p className="text-lg font-bold">{stats.newUsersToday}</p>
+            </div>
           </div>
         )}
 
-        {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            {/* Search Bar */}
-            <div className="p-3 border-b border-stone-200">
+          <div className="bg-white rounded shadow">
+            <div className="p-3 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-2 top-2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search by name or email..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C0E863]"
+                  className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#C0E863]"
                 />
               </div>
             </div>
 
-            {/* Users List */}
-            <div>
+            <div className="divide-y">
               {loadingUsers ? (
-                <p className="text-center text-gray-500 py-8 text-sm">Loading users...</p>
+                <p className="text-center py-6 text-sm text-gray-500">Loading...</p>
               ) : filteredUsers.length === 0 ? (
-                <p className="text-center text-gray-500 py-8 text-sm">No users found</p>
+                <p className="text-center py-6 text-sm text-gray-500">No users found</p>
               ) : (
                 filteredUsers.map((u) => (
-                  <div 
-                    key={u.id} 
-                    className={`p-3 border-b border-stone-200 last:border-b-0 ${
-                      u.banned ? 'bg-red-50' : 'bg-white'
-                    }`}
-                  >
-                    {/* User Info */}
+                  <div key={u.id} className={`p-3 ${u.banned ? 'bg-red-50' : ''}`}>
                     <div className="flex items-center gap-2 mb-2">
-                      {u.avatar_url ? (
-                        <img
-                          src={u.avatar_url}
-                          alt={u.name}
-                          className="w-10 h-10 rounded-full flex-shrink-0 object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-[#C0E863] flex items-center justify-center text-[#272D34] font-bold flex-shrink-0 text-sm">
-                          {u.name?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                      )}
+                      <div className="w-9 h-9 rounded-full bg-[#C0E863] flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {u.name?.[0]?.toUpperCase() || 'U'}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <h3 className="font-medium text-[#272D34] text-sm truncate">
-                            {u.name || 'No name'}
-                          </h3>
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <p className="text-sm font-medium truncate">{u.name || 'No name'}</p>
                           {u.banned && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded flex-shrink-0">
-                              <Shield className="w-2.5 h-2.5" />
+                            <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded flex-shrink-0">
                               BANNED
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-stone-600 truncate">{u.email}</p>
-                        <p className="text-xs text-stone-500">
-                          Joined: {new Date(u.created_at).toLocaleDateString()}
-                        </p>
                       </div>
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="grid grid-cols-2 gap-2">
+                    
+                    <div className="flex gap-2">
                       {u.banned ? (
                         <button
                           onClick={() => unbanUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="w-full px-2 py-1.5 bg-green-500 text-white text-xs font-medium rounded hover:bg-green-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
+                          className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
                         >
-                          <UserCheck className="w-3 h-3" />
-                          {actionLoading === u.id ? 'Unbanning...' : 'Unban'}
+                          {actionLoading === u.id ? 'Wait...' : 'Unban'}
                         </button>
                       ) : (
                         <button
                           onClick={() => banUser(u.id)}
                           disabled={actionLoading === u.id}
-                          className="w-full px-2 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
+                          className="flex-1 py-1.5 bg-orange-500 text-white text-xs rounded hover:bg-orange-600 disabled:opacity-50"
                         >
-                          <Ban className="w-3 h-3" />
-                          {actionLoading === u.id ? 'Banning...' : 'Ban'}
+                          {actionLoading === u.id ? 'Wait...' : 'Ban'}
                         </button>
                       )}
                       <button
                         onClick={() => deleteUser(u.id)}
                         disabled={actionLoading === u.id}
-                        className="w-full px-2 py-1.5 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 transition flex items-center justify-center gap-1 disabled:opacity-50"
+                        className="flex-1 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:opacity-50"
                       >
-                        <Trash2 className="w-3 h-3" />
-                        {actionLoading === u.id ? 'Deleting...' : 'Delete'}
+                        {actionLoading === u.id ? 'Wait...' : 'Delete'}
                       </button>
                     </div>
                   </div>
@@ -377,24 +336,6 @@ export default function AdminPage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon, color }: any) {
-  return (
-    <div className="bg-white rounded-lg p-3 shadow">
-      <div className="flex items-center justify-between mb-1">
-        <h3 className="text-xs font-medium text-stone-600">
-          {title}
-        </h3>
-        <div className={`${color} p-1.5 rounded text-white`}>
-          {icon}
-        </div>
-      </div>
-      <p className="text-xl font-bold text-[#272D34]">
-        {value}
-      </p>
     </div>
   );
 }
