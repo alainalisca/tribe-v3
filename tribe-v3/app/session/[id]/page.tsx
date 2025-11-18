@@ -11,6 +11,7 @@ export default function SessionDetailPage() {
   const router = useRouter();
   const supabase = createClient();
   const [session, setSession] = useState<any>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -39,11 +40,24 @@ export default function SessionDetailPage() {
       // Load creator info
       const { data: creatorData } = await supabase
         .from('users')
-        .select('name, avatar_url')
+        .select('id, name, avatar_url')
         .eq('id', sessionData.creator_id)
         .single();
 
       setCreator(creatorData);
+
+      // Load participants with user details
+      const { data: participantsData } = await supabase
+        .from('session_participants')
+        .select(`
+          user_id,
+          status,
+          user:users(id, name, avatar_url)
+        `)
+        .eq('session_id', params.id)
+        .eq('status', 'confirmed');
+
+      setParticipants(participantsData || []);
     } catch (error) {
       console.error('Error loading session:', error);
     } finally {
@@ -58,7 +72,6 @@ export default function SessionDetailPage() {
     }
 
     try {
-      // Check if already joined
       const { data: existing } = await supabase
         .from('session_participants')
         .select('id')
@@ -71,7 +84,6 @@ export default function SessionDetailPage() {
         return;
       }
 
-      // Join session
       await supabase.from('session_participants').insert({
         session_id: session.id,
         user_id: user.id,
@@ -122,7 +134,8 @@ export default function SessionDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4">
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Session Info Card */}
         <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
@@ -214,6 +227,61 @@ export default function SessionDetailPage() {
             </button>
           )}
         </div>
+
+        {/* Participants Card */}
+        {participants.length > 0 && (
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+            <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
+              Participants ({participants.length})
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Show creator first */}
+              {creator && (
+                <Link href={`/profile/${creator.id}`}>
+                  <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
+                    {creator.avatar_url ? (
+                      <img
+                        src={creator.avatar_url}
+                        alt={creator.name}
+                        className="w-16 h-16 rounded-full object-cover mb-2"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xl mb-2">
+                        {creator.name[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <p className="text-sm font-medium text-stone-900 dark:text-white text-center truncate w-full">
+                      {creator.name}
+                    </p>
+                    <p className="text-xs text-tribe-green font-semibold">Host</p>
+                  </div>
+                </Link>
+              )}
+              
+              {/* Show participants */}
+              {participants.map((participant: any) => (
+                <Link key={participant.user_id} href={`/profile/${participant.user_id}`}>
+                  <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
+                    {participant.user?.avatar_url ? (
+                      <img
+                        src={participant.user.avatar_url}
+                        alt={participant.user.name}
+                        className="w-16 h-16 rounded-full object-cover mb-2"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xl mb-2">
+                        {participant.user?.name?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                    )}
+                    <p className="text-sm font-medium text-stone-900 dark:text-white text-center truncate w-full">
+                      {participant.user?.name || 'Unknown'}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
