@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
-import { ArrowLeft, Upload, X } from 'lucide-react';
+import { ArrowLeft, Upload, X, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -54,12 +54,52 @@ export default function CreateSessionPage() {
     }
   }
 
+  // Compress image before upload
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            resolve(blob as Blob);
+          }, 'image/jpeg', 0.8);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     if (photos.length + files.length > 3) {
-      alert('Maximum 3 photos allowed');
+      alert(language === 'es' ? 'Máximo 3 fotos permitidas' : 'Maximum 3 photos allowed');
       return;
     }
 
@@ -69,12 +109,16 @@ export default function CreateSessionPage() {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        
+        // Compress image
+        const compressedBlob = await compressImage(file);
+        
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
 
         const { data, error } = await supabase.storage
           .from('session-photos')
-          .upload(fileName, file, {
+          .upload(fileName, compressedBlob, {
             cacheControl: '3600',
             upsert: false
           });
@@ -90,7 +134,7 @@ export default function CreateSessionPage() {
 
       setPhotos(prev => [...prev, ...uploadedUrls]);
     } catch (error: any) {
-      alert('Error uploading photos: ' + error.message);
+      alert((language === 'es' ? 'Error subiendo fotos: ' : 'Error uploading photos: ') + error.message);
     } finally {
       setUploadingPhotos(false);
     }
@@ -102,10 +146,10 @@ export default function CreateSessionPage() {
 
   function validate() {
     const newErrors: any = {};
-    if (!formData.sport) newErrors.sport = 'Sport is required';
-    if (!formData.date) newErrors.date = 'Date is required';
-    if (!formData.start_time) newErrors.start_time = 'Start time is required';
-    if (!formData.location) newErrors.location = 'Location is required';
+    if (!formData.sport) newErrors.sport = language === 'es' ? 'El deporte es requerido' : 'Sport is required';
+    if (!formData.date) newErrors.date = language === 'es' ? 'La fecha es requerida' : 'Date is required';
+    if (!formData.start_time) newErrors.start_time = language === 'es' ? 'La hora es requerida' : 'Start time is required';
+    if (!formData.location) newErrors.location = language === 'es' ? 'La ubicación es requerida' : 'Location is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -298,50 +342,56 @@ export default function CreateSessionPage() {
             />
           </div>
 
-          {/* Photo Upload Section */}
+          {/* Photo Upload Section - REDESIGNED */}
           <div>
             <label className="block text-sm font-medium text-theme-primary mb-2">
-              {language === 'es' ? 'Fotos (máximo 3)' : 'Photos (max 3)'}
+              <ImageIcon className="w-4 h-4 inline mr-2" />
+              {language === 'es' ? 'Fotos de ubicación (máx. 3)' : 'Location photos (max 3)'}
             </label>
+            <p className="text-xs text-stone-500 mb-3">
+              {language === 'es' 
+                ? 'Ayuda a los participantes a encontrar el lugar de encuentro' 
+                : 'Help participants find the meeting spot'}
+            </p>
             
-            {photos.length < 3 && (
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-theme rounded-lg cursor-pointer hover:bg-stone-50 transition">
-                <Upload className="w-8 h-8 text-stone-400 mb-2" />
-                <span className="text-sm text-stone-500">
-                  {uploadingPhotos ? (language === 'es' ? 'Subiendo...' : 'Uploading...') : 
-                   (language === 'es' ? 'Click para subir fotos' : 'Click to upload photos')}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePhotoUpload}
-                  disabled={uploadingPhotos}
-                  className="hidden"
-                />
-              </label>
-            )}
+            <div className="flex gap-2 items-center">
+              {/* Photo thumbnails */}
+              {photos.map((photo, index) => (
+                <div key={index} className="relative w-20 h-20 flex-shrink-0">
+                  <img
+                    src={photo}
+                    alt={`Location ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border-2 border-stone-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
 
-            {photos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mt-3">
-                {photos.map((photo, index) => (
-                  <div key={index} className="relative aspect-square">
-                    <img
-                      src={photo}
-                      alt={`Session photo ${index + 1}`}
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+              {/* Upload button */}
+              {photos.length < 3 && (
+                <label className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-stone-300 rounded-lg cursor-pointer hover:border-tribe-green hover:bg-stone-50 transition flex items-center justify-center">
+                  {uploadingPhotos ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-tribe-green"></div>
+                  ) : (
+                    <Upload className="w-6 h-6 text-stone-400" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    disabled={uploadingPhotos}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           <button

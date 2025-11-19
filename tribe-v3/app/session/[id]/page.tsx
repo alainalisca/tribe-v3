@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
@@ -19,6 +19,8 @@ export default function SessionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [hasJoined, setHasJoined] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -153,39 +155,52 @@ export default function SessionDetailPage() {
     }
   }
 
-
   async function handleKickUser(userId: string, userName: string) {
     if (!confirm(`Remove ${userName} from this session?`)) return;
 
     try {
-      // Delete participant
       const { error: deleteError } = await supabase
-        .from("session_participants")
+        .from('session_participants')
         .delete()
-        .eq("session_id", session.id)
-        .eq("user_id", userId);
+        .eq('session_id', session.id)
+        .eq('user_id', userId);
 
       if (deleteError) throw deleteError;
 
-      // Update count
       const { error: updateError } = await supabase
-        .from("sessions")
+        .from('sessions')
         .update({ current_participants: Math.max(0, session.current_participants - 1) })
-        .eq("id", session.id);
+        .eq('id', session.id);
 
       if (updateError) throw updateError;
 
-      // Update local state immediately
       setParticipants(prev => prev.filter(p => p.user_id !== userId));
       setSession(prev => ({
         ...prev,
         current_participants: Math.max(0, prev.current_participants - 1)
       }));
 
-      alert("✅ User removed from session");
+      alert('✅ User removed from session');
     } catch (error: any) {
-      console.error("Kick error:", error);
-      alert("❌ Error: " + error.message);
+      console.error('Kick error:', error);
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
+  function openLightbox(index: number) {
+    setCurrentPhotoIndex(index);
+    setLightboxOpen(true);
+  }
+
+  function nextPhoto() {
+    if (session.photos && currentPhotoIndex < session.photos.length - 1) {
+      setCurrentPhotoIndex(prev => prev + 1);
+    }
+  }
+
+  function prevPhoto() {
+    if (currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(prev => prev - 1);
     }
   }
 
@@ -213,6 +228,46 @@ export default function SessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
+      {/* Lightbox */}
+      {lightboxOpen && session.photos && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+
+          {currentPhotoIndex > 0 && (
+            <button
+              onClick={prevPhoto}
+              className="absolute left-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
+            >
+              <ChevronLeft className="w-8 h-8 text-white" />
+            </button>
+          )}
+
+          <img
+            src={session.photos[currentPhotoIndex]}
+            alt={`Photo ${currentPhotoIndex + 1}`}
+            className="max-w-[90%] max-h-[90%] object-contain"
+          />
+
+          {currentPhotoIndex < session.photos.length - 1 && (
+            <button
+              onClick={nextPhoto}
+              className="absolute right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
+            >
+              <ChevronRight className="w-8 h-8 text-white" />
+            </button>
+          )}
+
+          <div className="absolute bottom-4 text-white text-sm">
+            {currentPhotoIndex + 1} / {session.photos.length}
+          </div>
+        </div>
+      )}
+
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
           <Link href="/">
@@ -225,33 +280,8 @@ export default function SessionDetailPage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Session Info Card */}
         <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
-
-          {/* Photo Gallery */}
-          {session.photos && session.photos.length > 0 && (
-            <div className={`mb-6 ${
-              session.photos.length === 1 ? "grid grid-cols-1" :
-              session.photos.length === 2 ? "grid grid-cols-2 gap-2" :
-              "grid grid-cols-2 gap-2"
-            }`}>
-              {session.photos.slice(0, 3).map((photo: string, idx: number) => (
-                <div
-                  key={idx}
-                  className={`relative ${
-                    session.photos.length === 3 && idx === 0 ? "col-span-2" : ""
-                  } aspect-video rounded-lg overflow-hidden`}
-                >
-                  <img
-                    src={photo}
-                    alt={`Session photo ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
             <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
               {session.sport}
             </span>
@@ -267,6 +297,29 @@ export default function SessionDetailPage() {
               </div>
             </div>
           </div>
+
+          {session.photos && session.photos.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+                📍 Location Photos
+              </p>
+              <div className="flex gap-2">
+                {session.photos.map((photo: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => openLightbox(idx)}
+                    className="w-24 h-24 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition"
+                  >
+                    <img
+                      src={photo}
+                      alt={`Location photo ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center text-stone-900 dark:text-white">
@@ -305,7 +358,6 @@ export default function SessionDetailPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="space-y-2">
             {!user ? (
               <Link href="/auth">
@@ -361,7 +413,6 @@ export default function SessionDetailPage() {
           </div>
         </div>
 
-        {/* Participants Card */}
         {(creator || participants.length > 0) && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
             <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
@@ -424,7 +475,6 @@ export default function SessionDetailPage() {
           </div>
         )}
 
-        {/* Attendance Tracker */}
         {user && (
           <AttendanceTracker
             sessionId={params.id as string}
