@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
@@ -21,6 +21,8 @@ export default function SessionDetailPage() {
   const [hasJoined, setHasJoined] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -192,14 +194,25 @@ export default function SessionDetailPage() {
     setLightboxOpen(true);
   }
 
-  function nextPhoto() {
-    if (session.photos && currentPhotoIndex < session.photos.length - 1) {
-      setCurrentPhotoIndex(prev => prev + 1);
-    }
+  function handleTouchStart(e: React.TouchEvent) {
+    setTouchStart(e.targetTouches[0].clientX);
   }
 
-  function prevPhoto() {
-    if (currentPhotoIndex > 0) {
+  function handleTouchMove(e: React.TouchEvent) {
+    setTouchEnd(e.targetTouches[0].clientX);
+  }
+
+  function handleTouchEnd() {
+    if (!session.photos) return;
+    
+    const minSwipeDistance = 50;
+    const distance = touchStart - touchEnd;
+    
+    if (distance > minSwipeDistance && currentPhotoIndex < session.photos.length - 1) {
+      setCurrentPhotoIndex(prev => prev + 1);
+    }
+    
+    if (distance < -minSwipeDistance && currentPhotoIndex > 0) {
       setCurrentPhotoIndex(prev => prev - 1);
     }
   }
@@ -228,7 +241,7 @@ export default function SessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
-      {/* Lightbox */}
+      {/* Swipeable Lightbox */}
       {lightboxOpen && session.photos && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
           <button
@@ -238,29 +251,33 @@ export default function SessionDetailPage() {
             <X className="w-6 h-6 text-white" />
           </button>
 
-          {currentPhotoIndex > 0 && (
-            <button
-              onClick={prevPhoto}
-              className="absolute left-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
-            >
-              <ChevronLeft className="w-8 h-8 text-white" />
-            </button>
-          )}
+          <div 
+            className="w-full h-full flex items-center justify-center"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <img
+              src={session.photos[currentPhotoIndex]}
+              alt={`Photo ${currentPhotoIndex + 1}`}
+              className="max-w-[90%] max-h-[90%] object-contain transition-opacity duration-300"
+            />
+          </div>
 
-          <img
-            src={session.photos[currentPhotoIndex]}
-            alt={`Photo ${currentPhotoIndex + 1}`}
-            className="max-w-[90%] max-h-[90%] object-contain"
-          />
-
-          {currentPhotoIndex < session.photos.length - 1 && (
-            <button
-              onClick={nextPhoto}
-              className="absolute right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition"
-            >
-              <ChevronRight className="w-8 h-8 text-white" />
-            </button>
-          )}
+          {/* Dot indicators */}
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2">
+            {session.photos.map((_: any, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentPhotoIndex(idx)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  idx === currentPhotoIndex 
+                    ? 'bg-white w-6' 
+                    : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
 
           <div className="absolute bottom-4 text-white text-sm">
             {currentPhotoIndex + 1} / {session.photos.length}
@@ -298,21 +315,25 @@ export default function SessionDetailPage() {
             </div>
           </div>
 
+          {/* Clean Photo Gallery */}
           {session.photos && session.photos.length > 0 && (
             <div className="mb-6">
-              <p className="text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                📍 Location Photos
-              </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="w-4 h-4 text-tribe-green" />
+                <p className="text-sm font-medium text-stone-700 dark:text-gray-300">
+                  Location Photos
+                </p>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
                 {session.photos.map((photo: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => openLightbox(idx)}
-                    className="w-24 h-24 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition"
+                    className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
                     <img
                       src={photo}
-                      alt={`Location photo ${idx + 1}`}
+                      alt={`Location ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>

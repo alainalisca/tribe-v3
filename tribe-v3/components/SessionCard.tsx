@@ -45,7 +45,7 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
               {/* Photo indicator badge */}
               {session.photos && session.photos.length > 0 && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold flex items-center gap-1">
-                  <ImageIcon className="w-3 h-3" />
+                  <span className="font-bold">📍</span>
                   {session.photos.length}
                 </span>
               )}
