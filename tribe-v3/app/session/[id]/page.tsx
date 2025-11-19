@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
@@ -18,6 +18,7 @@ export default function SessionDetailPage() {
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [hasJoined, setHasJoined] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -59,6 +60,13 @@ export default function SessionDetailPage() {
         .eq('status', 'confirmed');
 
       setParticipants(participantsData || []);
+
+      // Check if current user has joined
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const joined = participantsData?.some(p => p.user_id === user.id);
+        setHasJoined(!!joined);
+      }
     } catch (error) {
       console.error('Error loading session:', error);
     } finally {
@@ -88,7 +96,7 @@ export default function SessionDetailPage() {
       await supabase.from('session_participants').insert({
         session_id: session.id,
         user_id: user.id,
-        status: 'pending'
+        status: 'confirmed'
       });
 
       await supabase
@@ -96,10 +104,52 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants + 1 })
         .eq('id', session.id);
 
-      alert('Join request sent!');
-      router.push('/');
+      alert('✅ Successfully joined the session!');
+      loadSession();
     } catch (error: any) {
       alert('Error: ' + error.message);
+    }
+  }
+
+  async function handleLeave() {
+    if (!confirm('Are you sure you want to leave this session?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', session.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await supabase
+        .from('sessions')
+        .update({ current_participants: session.current_participants - 1 })
+        .eq('id', session.id);
+
+      alert('✅ You have left the session');
+      router.push('/sessions');
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
+  async function handleCancel() {
+    if (!confirm('⚠️ Cancel this session? All participants will be notified. This cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({ status: 'cancelled' })
+        .eq('id', session.id);
+
+      if (error) throw error;
+
+      alert('✅ Session cancelled');
+      router.push('/sessions');
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
     }
   }
 
@@ -121,6 +171,7 @@ export default function SessionDetailPage() {
 
   const isPast = new Date(session.date) < new Date();
   const isFull = session.current_participants >= session.max_participants;
+  const isCreator = session.creator_id === user?.id;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
@@ -192,41 +243,60 @@ export default function SessionDetailPage() {
             </div>
           )}
 
-          {!user ? (
-            <Link href="/auth">
-              <button className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                Sign in to Join
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            {!user ? (
+              <Link href="/auth">
+                <button className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
+                  Sign in to Join
+                </button>
+              </Link>
+            ) : isCreator ? (
+              <>
+                <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">
+                  👤 You're hosting this session
+                </div>
+                {!isPast && (
+                  <button 
+                    onClick={handleCancel}
+                    className="w-full py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Cancel Session
+                  </button>
+                )}
+              </>
+            ) : hasJoined ? (
+              <button 
+                onClick={handleLeave}
+                className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-5 h-5" />
+                Leave Session
               </button>
-            </Link>
-          ) : session.creator_id === user?.id ? (
-            <button 
-              disabled
-              className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-            >
-              Your Session
-            </button>
-          ) : isPast ? (
-            <button 
-              disabled
-              className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-            >
-              Session Ended
-            </button>
-          ) : isFull ? (
-            <button 
-              disabled
-              className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-            >
-              Session Full
-            </button>
-          ) : (
-            <button 
-              onClick={handleJoin}
-              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-            >
-              Join Session
-            </button>
-          )}
+            ) : isPast ? (
+              <button 
+                disabled
+                className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+              >
+                Session Ended
+              </button>
+            ) : isFull ? (
+              <button 
+                disabled
+                className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+              >
+                Session Full
+              </button>
+            ) : (
+              <button 
+                onClick={handleJoin}
+                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+              >
+                Join Session
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Participants Card */}
