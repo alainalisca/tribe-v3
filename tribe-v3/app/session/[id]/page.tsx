@@ -153,27 +153,39 @@ export default function SessionDetailPage() {
     }
   }
 
+
   async function handleKickUser(userId: string, userName: string) {
     if (!confirm(`Remove ${userName} from this session?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('session_participants')
+      // Delete participant
+      const { error: deleteError } = await supabase
+        .from("session_participants")
         .delete()
-        .eq('session_id', session.id)
-        .eq('user_id', userId);
+        .eq("session_id", session.id)
+        .eq("user_id", userId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      await supabase
-        .from('sessions')
-        .update({ current_participants: session.current_participants - 1 })
-        .eq('id', session.id);
+      // Update count
+      const { error: updateError } = await supabase
+        .from("sessions")
+        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .eq("id", session.id);
 
-      alert('✅ User removed from session');
-      await loadSession(); // Reload to update UI
+      if (updateError) throw updateError;
+
+      // Update local state immediately
+      setParticipants(prev => prev.filter(p => p.user_id !== userId));
+      setSession(prev => ({
+        ...prev,
+        current_participants: Math.max(0, prev.current_participants - 1)
+      }));
+
+      alert("✅ User removed from session");
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      console.error("Kick error:", error);
+      alert("❌ Error: " + error.message);
     }
   }
 
