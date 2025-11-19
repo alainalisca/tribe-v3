@@ -42,6 +42,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
   const [maxDistance, setMaxDistance] = useState<number>(50);
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function HomePage() {
 
   useEffect(() => {
     filterSessions();
-  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation]);
+  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter]);
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -177,6 +178,26 @@ export default function HomePage() {
         );
         return distance <= maxDistance;
       });
+
+    // Date filter
+    if (dateFilter !== "all") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      let endDate = new Date();
+      if (dateFilter === "today") {
+        endDate.setHours(23, 59, 59, 999);
+      } else if (dateFilter === "week") {
+        endDate.setDate(today.getDate() + 7);
+      } else if (dateFilter === "month") {
+        endDate.setMonth(today.getMonth() + 1);
+      }
+      
+      filtered = filtered.filter((s) => {
+        const sessionDate = new Date(s.date);
+        return sessionDate >= today && sessionDate <= endDate;
+      });
+    }
     }
     setFilteredSessions(filtered);
   }
@@ -357,6 +378,17 @@ export default function HomePage() {
                 {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
               </option>
             ))}
+          </select>
+
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+          >
+            <option value="all">{language === 'es' ? 'Todas las fechas' : 'All dates'}</option>
+            <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
+            <option value="week">{language === 'es' ? 'Esta semana' : 'This week'}</option>
+            <option value="month">{language === 'es' ? 'Este mes' : 'This month'}</option>
           </select>
 
           {userLocation && (

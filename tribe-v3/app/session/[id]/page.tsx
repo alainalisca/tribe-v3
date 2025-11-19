@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
@@ -61,7 +61,6 @@ export default function SessionDetailPage() {
 
       setParticipants(participantsData || []);
 
-      // Check if current user has joined
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const joined = participantsData?.some(p => p.user_id === user.id);
@@ -153,6 +152,30 @@ export default function SessionDetailPage() {
     }
   }
 
+  async function handleKickUser(userId: string, userName: string) {
+    if (!confirm(`Remove ${userName} from this session?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', session.id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      await supabase
+        .from('sessions')
+        .update({ current_participants: session.current_participants - 1 })
+        .eq('id', session.id);
+
+      alert('✅ User removed from session');
+      loadSession();
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
@@ -172,6 +195,8 @@ export default function SessionDetailPage() {
   const isPast = new Date(session.date) < new Date();
   const isFull = session.current_participants >= session.max_participants;
   const isCreator = session.creator_id === user?.id;
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const canKick = isCreator || isAdmin;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
@@ -305,48 +330,58 @@ export default function SessionDetailPage() {
             <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
               Participants ({participants.length})
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {creator && (
-                <Link href={`/profile/${creator.id}`}>
-                  <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
+                <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+                  <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
                     {creator.avatar_url ? (
                       <img
                         src={creator.avatar_url}
                         alt={creator.name}
-                        className="w-16 h-16 rounded-full object-cover mb-2"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xl mb-2">
+                      <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
                         {creator.name[0]?.toUpperCase()}
                       </div>
                     )}
-                    <p className="text-sm font-medium text-stone-900 dark:text-white text-center truncate w-full">
-                      {creator.name}
-                    </p>
-                    <p className="text-xs text-tribe-green font-semibold">Host</p>
-                  </div>
-                </Link>
+                    <div>
+                      <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
+                      <p className="text-xs text-tribe-green font-semibold">Host</p>
+                    </div>
+                  </Link>
+                </div>
               )}
               
               {participants.map((participant: any) => (
-                <Link key={participant.user_id} href={`/profile/${participant.user_id}`}>
-                  <div className="flex flex-col items-center p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg hover:bg-stone-100 dark:hover:bg-[#404549] transition cursor-pointer">
+                <div key={participant.user_id} className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+                  <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
                     {participant.user?.avatar_url ? (
                       <img
                         src={participant.user.avatar_url}
                         alt={participant.user.name}
-                        className="w-16 h-16 rounded-full object-cover mb-2"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xl mb-2">
+                      <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
                         {participant.user?.name?.[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
-                    <p className="text-sm font-medium text-stone-900 dark:text-white text-center truncate w-full">
+                    <p className="font-medium text-stone-900 dark:text-white">
                       {participant.user?.name || 'Unknown'}
                     </p>
-                  </div>
-                </Link>
+                  </Link>
+                  
+                  {canKick && (
+                    <button
+                      onClick={() => handleKickUser(participant.user_id, participant.user?.name)}
+                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                      title="Remove from session"
+                    >
+                      <UserX className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
