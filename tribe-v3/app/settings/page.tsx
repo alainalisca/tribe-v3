@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Globe, LogOut, Shield } from 'lucide-react';
+import { ArrowLeft, Globe, LogOut, Shield, MessageSquare, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -34,46 +34,45 @@ export default function SettingsPage() {
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      checkNotificationStatus();
-    }
-  }, [user]);
-
-  async function checkNotificationStatus() {
-    if (!user) return;
-    const { data } = await supabase
-      .from('users')
-      .select('push_subscription')
-      .eq('id', user.id)
-      .single();
-    setNotificationsEnabled(!!data?.push_subscription);
-  }
-
   async function toggleNotifications() {
-    if (!user) return;
-    
-    if (notificationsEnabled) {
-      // Disable notifications
-      const { error } = await supabase
-        .from('users')
-        .update({ push_subscription: null })
-        .eq('id', user.id);
-      if (!error) {
-        setNotificationsEnabled(false);
-        alert('Notifications disabled');
+    if (!('Notification' in window)) {
+      alert('This browser does not support notifications');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      setNotificationsEnabled(false);
+      alert(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
+    } else if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setNotificationsEnabled(true);
+        new Notification('Tribe', {
+          body: language === 'en' 
+            ? 'Notifications enabled! You\'ll receive updates about your sessions.' 
+            : '¡Notificaciones activadas! Recibirás actualizaciones sobre tus sesiones.',
+          icon: '/icon-192x192.png'
+        });
       }
     } else {
-      // Enable notifications
-      const { requestNotificationPermission } = await import('@/lib/notifications');
-      const subscription = await requestNotificationPermission(user.id);
-      if (subscription) {
-        setNotificationsEnabled(true);
-        alert('Notifications enabled!');
-      } else {
-        alert('Could not enable notifications. Please check your browser settings.');
-      }
+      alert(language === 'en' 
+        ? 'Notifications are blocked. Please enable them in your browser settings.' 
+        : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.');
     }
+  }
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted');
+    }
+  }, []);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-theme-page flex items-center justify-center">
+        <p className="text-theme-primary">Loading...</p>
+      </div>
+    );
   }
 
   const txt = language === 'en' ? {
@@ -89,6 +88,9 @@ export default function SettingsPage() {
     safety: 'Safety Guidelines',
     admin: 'Admin',
     adminPanel: 'Admin Panel',
+    help: 'Help & Feedback',
+    feedback: 'Send Feedback',
+    bugReport: 'Report a Bug',
   } : {
     settings: 'Configuración',
     language: 'Idioma',
@@ -102,6 +104,9 @@ export default function SettingsPage() {
     safety: 'Guías de Seguridad',
     admin: 'Administrador',
     adminPanel: 'Panel de Administrador',
+    help: 'Ayuda y Comentarios',
+    feedback: 'Enviar Comentarios',
+    bugReport: 'Reportar un Error',
   };
 
   return (
@@ -132,6 +137,34 @@ export default function SettingsPage() {
             </Link>
           </div>
         )}
+
+        {/* Help & Feedback Section */}
+        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+          <div className="flex items-center gap-3 mb-4">
+            <MessageSquare className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{txt.help}</h2>
+          </div>
+          <div className="space-y-2">
+            <Link href="/feedback">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                {txt.feedback}
+              </button>
+            </Link>
+            <Link href="/feedback">
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push('/feedback?tab=bug');
+                }}
+                className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition flex items-center gap-2"
+              >
+                <Bug className="w-4 h-4" />
+                {txt.bugReport}
+              </button>
+            </Link>
+          </div>
+        </div>
 
         {/* Notifications Section */}
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
