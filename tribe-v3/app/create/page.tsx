@@ -1,20 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, FileText, Dumbbell } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import BottomNav from '@/components/BottomNav';
+import { ArrowLeft, Upload, X } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { geocodeAddress } from '@/lib/location';
+import { sportTranslations } from '@/lib/translations';
 
 export default function CreateSessionPage() {
   const router = useRouter();
   const supabase = createClient();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
   
   const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
   const [formData, setFormData] = useState({
@@ -27,6 +30,8 @@ export default function CreateSessionPage() {
     max_participants: 10,
     join_policy: 'open',
   });
+
+  const sports = Object.keys(sportTranslations);
 
   useEffect(() => {
     checkUser();
@@ -41,61 +46,86 @@ export default function CreateSessionPage() {
     }
   }
 
-  function validateForm() {
+  function handleChange(e: any) {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev: any) => ({ ...prev, [name]: '' }));
+    }
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (photos.length + files.length > 3) {
+      alert('Maximum 3 photos allowed');
+      return;
+    }
+
+    setUploadingPhotos(true);
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from('session-photos')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('session-photos')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      setPhotos(prev => [...prev, ...uploadedUrls]);
+    } catch (error: any) {
+      alert('Error uploading photos: ' + error.message);
+    } finally {
+      setUploadingPhotos(false);
+    }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function validate() {
     const newErrors: any = {};
-    const selectedDate = new Date(formData.date + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (selectedDate < today) {
-      newErrors.date = 'Date cannot be in the past';
-    }
-
-    if (formData.duration < 15) {
-      newErrors.duration = 'Duration must be at least 15 minutes';
-    }
-    if (formData.duration > 480) {
-      newErrors.duration = 'Duration cannot exceed 8 hours';
-    }
-
-    if (formData.max_participants < 2) {
-      newErrors.max_participants = 'Must allow at least 2 participants';
-    }
-    if (formData.max_participants > 50) {
-      newErrors.max_participants = 'Maximum 50 participants allowed';
-    }
-
+    if (!formData.sport) newErrors.sport = 'Sport is required';
+    if (!formData.date) newErrors.date = 'Date is required';
+    if (!formData.start_time) newErrors.start_time = 'Start time is required';
+    if (!formData.location) newErrors.location = 'Location is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    if (!user) return;
+    if (!validate()) return;
 
     setLoading(true);
-
     try {
-      const { data: session, error } = await supabase
+      const { data, error } = await supabase
         .from('sessions')
         .insert({
+          ...formData,
           creator_id: user.id,
-          sport: formData.sport,
-          date: formData.date,
-          start_time: formData.start_time,
-          duration: formData.duration,
-          location: formData.location,
-          description: formData.description || null,
-          max_participants: formData.max_participants,
-          join_policy: formData.join_policy,
-          latitude: coordinates?.latitude || null,
-          longitude: coordinates?.longitude || null,          current_participants: 1,
+          current_participants: 0,
           status: 'active',
+          latitude: coordinates?.latitude,
+          longitude: coordinates?.longitude,
+          photos: photos.length > 0 ? photos : null,
         })
         .select()
         .single();
@@ -103,22 +133,13 @@ export default function CreateSessionPage() {
       if (error) throw error;
 
       alert(t('sessionCreated'));
-      router.push(`/session/${session.id}`);
+      router.push('/');
     } catch (error: any) {
-      console.error('Error creating session:', error);
-      alert('Error creating session: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const sports = [
-    'Running', 'CrossFit', 'Basketball', 'Soccer', 'Tennis', 
-    'Swimming', 'BJJ', 'Volleyball', 'Football', 'Cycling', 
-    'Yoga', 'Climbing', 'Boxing', 'Dance',
-  ];
-
-  const today = new Date().toISOString().split('T')[0];
+  }
 
   if (!user) {
     return (
@@ -130,171 +151,210 @@ export default function CreateSessionPage() {
 
   return (
     <div className="min-h-screen bg-theme-page pb-20">
-      <div className="bg-theme-header p-4 sticky top-0 z-10 border-b border-theme">
+      <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href="/">
-            <button className="p-2 hover:bg-slate-700 rounded-lg transition mr-3">
+            <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
             </button>
           </Link>
-          <h1 className="text-2xl font-bold text-theme-primary">{t('createSession')}</h1>
+          <h1 className="text-xl font-bold text-theme-primary">{t('createSession')}</h1>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <Dumbbell className="w-5 h-5 mr-2 text-tribe-green" />
+            <label className="block text-sm font-medium text-theme-primary mb-2">
               {t('sport')} *
             </label>
             <select
-              required
+              name="sport"
               value={formData.sport}
-              onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              onChange={handleChange}
+              className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
+                errors.sport ? 'border-red-500' : 'border-theme'
+              }`}
             >
               <option value="">{t('selectSport')}</option>
               {sports.map((sport) => (
-                <option key={sport} value={sport}>{sport}</option>
+                <option key={sport} value={sport}>
+                  {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
+                </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <Calendar className="w-5 h-5 mr-2 text-tribe-green" />
-              {t('date')} *
-            </label>
-            <input
-              type="date"
-              required
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              min={today}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
-            />
-            {errors.date && <p className="text-red-400 text-sm mt-1">{errors.date}</p>}
+            {errors.sport && <p className="text-red-500 text-sm mt-1">{errors.sport}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="flex items-center text-theme-primary font-medium mb-2">
-                <Clock className="w-5 h-5 mr-2 text-tribe-green" />
+              <label className="block text-sm font-medium text-theme-primary mb-2">
+                {t('date')} *
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                min={new Date().toISOString().split('T')[0]}
+                className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
+                  errors.date ? 'border-red-500' : 'border-theme'
+                }`}
+              />
+              {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-theme-primary mb-2">
                 {t('startTime')} *
               </label>
               <input
                 type="time"
-                required
+                name="start_time"
                 value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+                onChange={handleChange}
+                className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
+                  errors.start_time ? 'border-red-500' : 'border-theme'
+                }`}
               />
-            </div>
-            <div>
-              <label className="flex items-center text-theme-primary font-medium mb-2">
-                <Clock className="w-5 h-5 mr-2 text-tribe-green" />
-                {t('duration')} *
-              </label>
-              <input
-                type="number"
-                required
-                min="15"
-                max="480"
-                step="15"
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
-              />
-              {errors.duration && <p className="text-red-400 text-sm mt-1">{errors.duration}</p>}
+              {errors.start_time && <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>}
             </div>
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <MapPin className="w-5 h-5 mr-2 text-tribe-green" />
+            <label className="block text-sm font-medium text-theme-primary mb-2">
               {t('location')} *
             </label>
             <input
               type="text"
-              required
-              placeholder={t('locationPlaceholder')}
+              name="location"
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              onBlur={async (e) => {
-                if (e.target.value.length > 5) {
-                  const coords = await geocodeAddress(e.target.value);
-                  if (coords) setCoordinates(coords);
-                }
-              }}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary placeholder-gray-500 focus:outline-none focus:border-tribe-green"
+              onChange={handleChange}
+              placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
+              className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
+                errors.location ? 'border-red-500' : 'border-theme'
+              }`}
             />
+            {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <Users className="w-5 h-5 mr-2 text-tribe-green" />
-              {t('maxParticipants')} *
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {t('duration')} ({language === 'es' ? 'minutos' : 'minutes'})
             </label>
             <input
               type="number"
-              required
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              min="15"
+              step="15"
+              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {t('maxParticipants')}
+            </label>
+            <input
+              type="number"
+              name="max_participants"
+              value={formData.max_participants}
+              onChange={handleChange}
               min="2"
               max="50"
-              value={formData.max_participants}
-              onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
             />
-            {errors.max_participants && <p className="text-red-400 text-sm mt-1">{errors.max_participants}</p>}
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <Users className="w-5 h-5 mr-2 text-tribe-green" />
-              Who can join?
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {language === 'es' ? 'Política de unión' : 'Join Policy'}
             </label>
             <select
+              name="join_policy"
               value={formData.join_policy}
-              onChange={(e) => setFormData({ ...formData, join_policy: e.target.value })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary focus:outline-none focus:border-tribe-green"
+              onChange={handleChange}
+              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
             >
-              <option value="open">Anyone can request to join</option>
-              <option value="curated">Curated group (you select participants)</option>
-              <option value="invite_only">Private - Invite only</option>
+              <option value="open">{language === 'es' ? 'Abierto - Cualquiera puede unirse' : 'Open - Anyone can join'}</option>
+              <option value="curated">{language === 'es' ? 'Curado - Revisas solicitudes' : 'Curated - You review requests'}</option>
+              <option value="invite_only">{language === 'es' ? 'Solo invitación - Privado' : 'Invite Only - Private'}</option>
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {formData.join_policy === 'curated' && "You'll review each request and choose who joins"}
-              {formData.join_policy === 'invite_only' && "Only people you directly invite can join"}
-            </p>
           </div>
 
           <div>
-            <label className="flex items-center text-theme-primary font-medium mb-2">
-              <FileText className="w-5 h-5 mr-2 text-tribe-green" />
+            <label className="block text-sm font-medium text-theme-primary mb-2">
               {t('description')}
             </label>
             <textarea
-              rows={4}
-              placeholder={t('descriptionPlaceholder')}
+              name="description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-3 bg-theme-header border border-theme rounded-lg text-theme-primary placeholder-gray-500 focus:outline-none focus:border-tribe-green resize-none"
-              maxLength={500}
+              onChange={handleChange}
+              rows={4}
+              placeholder={language === 'es' ? 'Describe tu sesión...' : 'Describe your session...'}
+              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary resize-none"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.description.length}/500 {t('charactersRemaining')}
-            </p>
+          </div>
+
+          {/* Photo Upload Section */}
+          <div>
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {language === 'es' ? 'Fotos (máximo 3)' : 'Photos (max 3)'}
+            </label>
+            
+            {photos.length < 3 && (
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-theme rounded-lg cursor-pointer hover:bg-stone-50 transition">
+                <Upload className="w-8 h-8 text-stone-400 mb-2" />
+                <span className="text-sm text-stone-500">
+                  {uploadingPhotos ? (language === 'es' ? 'Subiendo...' : 'Uploading...') : 
+                   (language === 'es' ? 'Click para subir fotos' : 'Click to upload photos')}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhotos}
+                  className="hidden"
+                />
+              </label>
+            )}
+
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {photos.map((photo, index) => (
+                  <div key={index} className="relative aspect-square">
+                    <img
+                      src={photo}
+                      alt={`Session photo ${index + 1}`}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || uploadingPhotos}
+            className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
           >
-            {loading ? t('creating') : t('createSession')}
+            {loading ? (language === 'es' ? 'Creando...' : 'Creating...') : t('createSession')}
           </button>
         </form>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

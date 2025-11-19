@@ -228,6 +228,30 @@ export default function SessionDetailPage() {
         {/* Session Info Card */}
         <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
+
+          {/* Photo Gallery */}
+          {session.photos && session.photos.length > 0 && (
+            <div className={`mb-6 ${
+              session.photos.length === 1 ? "grid grid-cols-1" :
+              session.photos.length === 2 ? "grid grid-cols-2 gap-2" :
+              "grid grid-cols-2 gap-2"
+            }`}>
+              {session.photos.slice(0, 3).map((photo: string, idx: number) => (
+                <div
+                  key={idx}
+                  className={`relative ${
+                    session.photos.length === 3 && idx === 0 ? "col-span-2" : ""
+                  } aspect-video rounded-lg overflow-hidden`}
+                >
+                  <img
+                    src={photo}
+                    alt={`Session photo ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
             <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
               {session.sport}
             </span>
