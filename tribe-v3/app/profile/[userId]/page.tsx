@@ -71,7 +71,6 @@ export default function PublicProfilePage() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      // Get attendance stats
       const { data: attendanceData } = await supabase
         .rpc('get_user_attendance_stats', { user_uuid: userId });
 
@@ -271,28 +270,29 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3 mt-6">
-            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
-              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-xs text-theme-secondary mt-1">Created</p>
+          {/* Stats - 2x2 Grid Layout */}
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
+              <p className="text-sm text-theme-secondary mt-1">Sessions Created</p>
             </div>
-            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
-              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-xs text-theme-secondary mt-1">Joined</p>
+            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
+              <p className="text-sm text-theme-secondary mt-1">Sessions Joined</p>
             </div>
-            <div className="bg-white rounded-2xl p-3 text-center border border-stone-200">
-              <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-xs text-theme-secondary mt-1">Total</p>
+            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+              <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
+              <p className="text-sm text-theme-secondary mt-1">Total Sessions</p>
             </div>
-            <div className={`bg-white rounded-2xl p-3 text-center border ${
+            <div className={`bg-white rounded-2xl p-4 text-center border ${
               hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
             }`}>
-              <p className={`text-3xl font-bold ${
+              <p className={`text-4xl font-bold ${
                 hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'
               }`}>
-                {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : 'N/A'}
+                {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
               </p>
-              <p className="text-xs text-theme-secondary mt-1">Attendance</p>
+              <p className="text-sm text-theme-secondary mt-1">Attendance Rate</p>
             </div>
           </div>
 
