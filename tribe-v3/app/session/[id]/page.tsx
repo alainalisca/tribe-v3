@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, Upload, Camera } from 'lucide-react';
 import Link from 'next/link';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
@@ -21,15 +21,16 @@ export default function SessionDetailPage() {
   const [hasJoined, setHasJoined] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [photoType, setPhotoType] = useState<'location' | 'recap'>('location');
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [uploadingRecap, setUploadingRecap] = useState(false);
 
   useEffect(() => {
     checkUser();
     loadSession();
   }, [params.id]);
 
-  // Lock body scroll when lightbox is open
   useEffect(() => {
     if (lightboxOpen) {
       document.body.style.overflow = 'hidden';
@@ -87,6 +88,99 @@ export default function SessionDetailPage() {
       console.error('Error loading session:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            resolve(blob as Blob);
+          }, 'image/jpeg', 0.8);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleRecapUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const currentRecapCount = session.recap_photos?.length || 0;
+    if (currentRecapCount + files.length > 5) {
+      alert('Maximum 5 recap photos allowed per session');
+      return;
+    }
+
+    setUploadingRecap(true);
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const compressedBlob = await compressImage(file);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-recap-${i}.${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from('session-photos')
+          .upload(fileName, compressedBlob, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('session-photos')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      const updatedRecapPhotos = [...(session.recap_photos || []), ...uploadedUrls];
+
+      const { error: updateError } = await supabase
+        .from('sessions')
+        .update({ recap_photos: updatedRecapPhotos })
+        .eq('id', session.id);
+
+      if (updateError) throw updateError;
+
+      setSession(prev => ({ ...prev, recap_photos: updatedRecapPhotos }));
+      alert('✅ Recap photos uploaded!');
+    } catch (error: any) {
+      alert('Error uploading photos: ' + error.message);
+    } finally {
+      setUploadingRecap(false);
     }
   }
 
@@ -201,8 +295,9 @@ export default function SessionDetailPage() {
     }
   }
 
-  function openLightbox(index: number) {
+  function openLightbox(index: number, type: 'location' | 'recap') {
     setCurrentPhotoIndex(index);
+    setPhotoType(type);
     setLightboxOpen(true);
   }
 
@@ -215,12 +310,13 @@ export default function SessionDetailPage() {
   }
 
   function handleTouchEnd() {
-    if (!session.photos) return;
+    const photos = photoType === 'location' ? session.photos : session.recap_photos;
+    if (!photos) return;
     
     const minSwipeDistance = 50;
     const distance = touchStart - touchEnd;
     
-    if (distance > minSwipeDistance && currentPhotoIndex < session.photos.length - 1) {
+    if (distance > minSwipeDistance && currentPhotoIndex < photos.length - 1) {
       setCurrentPhotoIndex(prev => prev + 1);
     }
     
@@ -250,11 +346,13 @@ export default function SessionDetailPage() {
   const isCreator = session.creator_id === user?.id;
   const isAdmin = user?.email === ADMIN_EMAIL;
   const canKick = isCreator || isAdmin;
+  const canUploadRecap = user && (hasJoined || isCreator) && isPast;
+
+  const currentPhotos = photoType === 'location' ? session.photos : session.recap_photos;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
-      {/* Swipeable Lightbox - Fixed Position */}
-      {lightboxOpen && session.photos && (
+      {lightboxOpen && currentPhotos && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center overflow-hidden">
           <button
             onClick={() => setLightboxOpen(false)}
@@ -270,16 +368,15 @@ export default function SessionDetailPage() {
             onTouchEnd={handleTouchEnd}
           >
             <img
-              src={session.photos[currentPhotoIndex]}
+              src={currentPhotos[currentPhotoIndex]}
               alt={`Photo ${currentPhotoIndex + 1}`}
               className="max-w-[90%] max-h-[90%] object-contain transition-opacity duration-300 select-none"
               draggable={false}
             />
           </div>
 
-          {/* Dot indicators */}
           <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2">
-            {session.photos.map((_: any, idx: number) => (
+            {currentPhotos.map((_: any, idx: number) => (
               <button
                 key={idx}
                 onClick={() => setCurrentPhotoIndex(idx)}
@@ -293,7 +390,7 @@ export default function SessionDetailPage() {
           </div>
 
           <div className="absolute bottom-4 text-white text-sm">
-            {currentPhotoIndex + 1} / {session.photos.length}
+            {currentPhotoIndex + 1} / {currentPhotos.length}
           </div>
         </div>
       )}
@@ -328,7 +425,6 @@ export default function SessionDetailPage() {
             </div>
           </div>
 
-          {/* Clean Photo Gallery */}
           {session.photos && session.photos.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-2">
@@ -341,7 +437,7 @@ export default function SessionDetailPage() {
                 {session.photos.map((photo: string, idx: number) => (
                   <button
                     key={idx}
-                    onClick={() => openLightbox(idx)}
+                    onClick={() => openLightbox(idx, 'location')}
                     className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
                     <img
@@ -446,6 +542,74 @@ export default function SessionDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Session Recap Section */}
+        {isPast && (
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <Camera className="w-5 h-5 text-tribe-green" />
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">
+                Session Recap
+              </h2>
+            </div>
+
+            {session.recap_photos && session.recap_photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {session.recap_photos.map((photo: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => openLightbox(idx, 'recap')}
+                    className="aspect-square rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
+                  >
+                    <img
+                      src={photo}
+                      alt={`Recap ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {canUploadRecap && (
+              <div>
+                {(!session.recap_photos || session.recap_photos.length < 5) ? (
+                  <label className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition cursor-pointer flex items-center justify-center gap-2">
+                    {uploadingRecap ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-900"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5" />
+                        Upload Recap Photos ({session.recap_photos?.length || 0}/5)
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleRecapUpload}
+                      disabled={uploadingRecap}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <p className="text-sm text-center text-stone-500">
+                    Maximum recap photos reached (5/5)
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!canUploadRecap && (!session.recap_photos || session.recap_photos.length === 0) && (
+              <p className="text-sm text-center text-stone-500 py-4">
+                No recap photos yet. Participants can upload after the session ends.
+              </p>
+            )}
+          </div>
+        )}
 
         {(creator || participants.length > 0) && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
