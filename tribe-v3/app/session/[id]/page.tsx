@@ -29,6 +29,18 @@ export default function SessionDetailPage() {
     loadSession();
   }, [params.id]);
 
+  // Lock body scroll when lightbox is open
+  useEffect(() => {
+    if (lightboxOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [lightboxOpen]);
+
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
@@ -241,9 +253,9 @@ export default function SessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
-      {/* Swipeable Lightbox */}
+      {/* Swipeable Lightbox - Fixed Position */}
       {lightboxOpen && session.photos && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center overflow-hidden">
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
@@ -252,7 +264,7 @@ export default function SessionDetailPage() {
           </button>
 
           <div 
-            className="w-full h-full flex items-center justify-center"
+            className="w-full h-full flex items-center justify-center touch-none"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -260,7 +272,8 @@ export default function SessionDetailPage() {
             <img
               src={session.photos[currentPhotoIndex]}
               alt={`Photo ${currentPhotoIndex + 1}`}
-              className="max-w-[90%] max-h-[90%] object-contain transition-opacity duration-300"
+              className="max-w-[90%] max-h-[90%] object-contain transition-opacity duration-300 select-none"
+              draggable={false}
             />
           </div>
 
