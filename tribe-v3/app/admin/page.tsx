@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck, Shield, Flag, AlertTriangle } from 'lucide-react';
+import { Users, Calendar, MessageSquare, TrendingUp, Search, Ban, Trash2, UserCheck, Shield, Flag, AlertTriangle, Bug } from 'lucide-react';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -21,9 +21,13 @@ export default function AdminPage() {
   });
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<any[]>([]);
+  const [bugs, setBugs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [loadingBugs, setLoadingBugs] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
@@ -37,6 +41,10 @@ export default function AdminPage() {
       loadUsers();
     } else if (activeTab === 'reports') {
       loadReports();
+    } else if (activeTab === 'feedback') {
+      loadFeedback();
+    } else if (activeTab === 'bugs') {
+      loadBugs();
     }
   }, [activeTab]);
 
@@ -134,6 +142,46 @@ export default function AdminPage() {
     }
   }
 
+  async function loadFeedback() {
+    setLoadingFeedback(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_feedback')
+        .select(`
+          *,
+          user:users(id, name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setFeedback(data || []);
+    } catch (error) {
+      console.error('Error loading feedback:', error);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  }
+
+  async function loadBugs() {
+    setLoadingBugs(true);
+    try {
+      const { data, error } = await supabase
+        .from('bug_reports')
+        .select(`
+          *,
+          user:users(id, name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBugs(data || []);
+    } catch (error) {
+      console.error('Error loading bugs:', error);
+    } finally {
+      setLoadingBugs(false);
+    }
+  }
+
   async function banUser(userId: string) {
     if (!confirm('Ban this user?')) return;
 
@@ -223,13 +271,52 @@ export default function AdminPage() {
     }
   }
 
+  async function updateFeedbackStatus(feedbackId: string, status: string) {
+    try {
+      const { error } = await supabase
+        .from('user_feedback')
+        .update({ status })
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+      
+      setFeedback(prev => prev.map(f => 
+        f.id === feedbackId ? { ...f, status } : f
+      ));
+      
+      alert(`✅ Feedback marked as ${status}`);
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
+  async function updateBugStatus(bugId: string, status: string) {
+    try {
+      const { error } = await supabase
+        .from('bug_reports')
+        .update({ status })
+        .eq('id', bugId);
+
+      if (error) throw error;
+      
+      setBugs(prev => prev.map(b => 
+        b.id === bugId ? { ...b, status } : b
+      ));
+      
+      alert(`✅ Bug marked as ${status}`);
+    } catch (error: any) {
+      alert('❌ Error: ' + error.message);
+    }
+  }
+
   const filteredUsers = users.filter(u => 
     u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const pendingReports = reports.filter(r => r.status === 'pending');
-  const resolvedReports = reports.filter(r => r.status !== 'pending');
+  const pendingFeedback = feedback.filter(f => f.status === 'pending');
+  const pendingBugs = bugs.filter(b => b.status === 'pending');
 
   if (loading) {
     return (
@@ -287,6 +374,36 @@ export default function AdminPage() {
             {pendingReports.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {pendingReports.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('feedback')}
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap relative ${
+              activeTab === 'feedback'
+                ? 'border-b-2 border-[#C0E863] text-[#272D34]'
+                : 'text-stone-600'
+            }`}
+          >
+            Feedback
+            {pendingFeedback.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {pendingFeedback.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('bugs')}
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap relative ${
+              activeTab === 'bugs'
+                ? 'border-b-2 border-[#C0E863] text-[#272D34]'
+                : 'text-stone-600'
+            }`}
+          >
+            Bugs
+            {pendingBugs.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {pendingBugs.length}
               </span>
             )}
           </button>
@@ -463,12 +580,12 @@ export default function AdminPage() {
                   </>
                 )}
 
-                {resolvedReports.length > 0 && (
+                {reports.filter(r => r.status !== 'pending').length > 0 && (
                   <>
                     <h3 className="text-sm font-bold text-[#272D34] mt-4">
-                      Resolved ({resolvedReports.length})
+                      Resolved ({reports.filter(r => r.status !== 'pending').length})
                     </h3>
-                    {resolvedReports.slice(0, 5).map((report) => (
+                    {reports.filter(r => r.status !== 'pending').slice(0, 5).map((report) => (
                       <div key={report.id} className="bg-stone-50 rounded p-3 opacity-60">
                         <div className="flex items-center justify-between">
                           <div>
@@ -481,6 +598,165 @@ export default function AdminPage() {
                     ))}
                   </>
                 )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'feedback' && (
+          <div className="space-y-3">
+            {loadingFeedback ? (
+              <p className="text-center py-6 text-sm text-gray-500">Loading feedback...</p>
+            ) : feedback.length === 0 ? (
+              <div className="bg-white rounded p-6 text-center shadow">
+                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No feedback yet</p>
+              </div>
+            ) : (
+              <>
+                {pendingFeedback.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-blue-500" />
+                      New Feedback ({pendingFeedback.length})
+                    </h3>
+                    {pendingFeedback.map((item) => (
+                      <div key={item.id} className="bg-white rounded shadow p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-[#272D34]">{item.title}</p>
+                            <p className="text-xs text-stone-600">{item.user?.email}</p>
+                          </div>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            {item.type === 'feature_request' ? 'Feature' : 'General'}
+                          </span>
+                        </div>
+                        
+                        <p className="text-xs text-stone-700 mb-2 p-2 bg-stone-50 rounded">
+                          {item.description}
+                        </p>
+                        
+                        <div className="text-xs text-stone-500 mb-3">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => updateFeedbackStatus(item.id, 'reviewed')}
+                            className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                          >
+                            Mark Reviewed
+                          </button>
+                          <button
+                            onClick={() => updateFeedbackStatus(item.id, 'implemented')}
+                            className="flex-1 py-1.5 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
+                          >
+                            Implemented
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {feedback.filter(f => f.status !== 'pending').slice(0, 5).map((item) => (
+                  <div key={item.id} className="bg-stone-50 rounded p-3 opacity-60">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <p className="text-xs text-stone-600">{item.user?.name}</p>
+                      </div>
+                      <span className="text-xs text-green-600">
+                        {item.status === 'implemented' ? '✓ Done' : '✓ Reviewed'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'bugs' && (
+          <div className="space-y-3">
+            {loadingBugs ? (
+              <p className="text-center py-6 text-sm text-gray-500">Loading bugs...</p>
+            ) : bugs.length === 0 ? (
+              <div className="bg-white rounded p-6 text-center shadow">
+                <Bug className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No bug reports yet</p>
+              </div>
+            ) : (
+              <>
+                {pendingBugs.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+                      <Bug className="w-4 h-4 text-orange-500" />
+                      Open Bugs ({pendingBugs.length})
+                    </h3>
+                    {pendingBugs.map((bug) => (
+                      <div key={bug.id} className="bg-white rounded shadow p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-[#272D34]">{bug.title}</p>
+                            <p className="text-xs text-stone-600">{bug.user?.email}</p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            bug.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                            bug.severity === 'high' ? 'bg-orange-100 text-orange-800' :
+                            bug.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {bug.severity}
+                          </span>
+                        </div>
+                        
+                        <p className="text-xs text-stone-700 mb-1 p-2 bg-stone-50 rounded">
+                          {bug.description}
+                        </p>
+                        
+                        {bug.steps_to_reproduce && (
+                          <p className="text-xs text-stone-600 mb-2 p-2 bg-blue-50 rounded whitespace-pre-wrap">
+                            <strong>Steps:</strong> {bug.steps_to_reproduce}
+                          </p>
+                        )}
+                        
+                        <div className="text-xs text-stone-500 mb-3">
+                          {new Date(bug.created_at).toLocaleDateString()}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => updateBugStatus(bug.id, 'investigating')}
+                            className="flex-1 py-1.5 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+                          >
+                            Investigating
+                          </button>
+                          <button
+                            onClick={() => updateBugStatus(bug.id, 'fixed')}
+                            className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                          >
+                            Fixed
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {bugs.filter(b => b.status !== 'pending').slice(0, 5).map((bug) => (
+                  <div key={bug.id} className="bg-stone-50 rounded p-3 opacity-60">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{bug.title}</p>
+                        <p className="text-xs text-stone-600">{bug.user?.name}</p>
+                      </div>
+                      <span className="text-xs text-green-600">
+                        {bug.status === 'fixed' ? '✓ Fixed' : '🔍 Investigating'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </>
             )}
           </div>
