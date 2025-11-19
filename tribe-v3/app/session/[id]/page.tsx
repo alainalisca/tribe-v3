@@ -32,6 +32,7 @@ export default function SessionDetailPage() {
 
   async function loadSession() {
     try {
+      setLoading(true);
       const { data: sessionData, error } = await supabase
         .from('sessions')
         .select('*')
@@ -104,7 +105,7 @@ export default function SessionDetailPage() {
         .eq('id', session.id);
 
       alert('✅ Successfully joined the session!');
-      loadSession();
+      await loadSession();
     } catch (error: any) {
       alert('Error: ' + error.message);
     }
@@ -170,7 +171,7 @@ export default function SessionDetailPage() {
         .eq('id', session.id);
 
       alert('✅ User removed from session');
-      loadSession();
+      await loadSession(); // Reload to update UI
     } catch (error: any) {
       alert('❌ Error: ' + error.message);
     }
@@ -220,12 +221,12 @@ export default function SessionDetailPage() {
             </span>
             <div className="text-right">
               <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
-                {session.current_participants}/{session.max_participants} participants
+                {participants.length}/{session.max_participants} joined
               </div>
               <div className="w-24 h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
                 <div 
                   className={`h-full ${isFull ? 'bg-red-500' : 'bg-tribe-green'}`}
-                  style={{ width: `${(session.current_participants / session.max_participants) * 100}%` }}
+                  style={{ width: `${(participants.length / session.max_participants) * 100}%` }}
                 />
               </div>
             </div>
@@ -325,10 +326,10 @@ export default function SessionDetailPage() {
         </div>
 
         {/* Participants Card */}
-        {participants.length > 0 && (
+        {(creator || participants.length > 0) && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
             <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-              Participants ({participants.length})
+              Participants ({participants.length + 1})
             </h2>
             <div className="grid grid-cols-1 gap-3">
               {creator && (
