@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface Request {
   id: string;
@@ -181,7 +185,7 @@ export default function RequestsPage() {
     <div className="min-h-screen bg-[#F5F5F0] pb-24">
       <div className="bg-white border-b border-stone-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-[#272D34]">Solicitudes</h1>
+          <h1 className="text-2xl font-bold text-[#272D34]">{language === 'en' ? 'Requests' : 'Solicitudes'}</h1>
           <p className="text-sm text-stone-600 mt-1">
             Gestiona las solicitudes para unirse a tus sesiones
           </p>
@@ -191,7 +195,7 @@ export default function RequestsPage() {
       <div className="max-w-2xl mx-auto px-4 py-4">
         {requests.length === 0 ? (
           <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
-            <p className="text-stone-600 text-lg font-medium mb-2">No hay solicitudes pendientes</p>
+            <p className="text-stone-600 text-lg font-medium mb-2">{language === 'en' ? 'No pending requests' : 'No hay solicitudes pendientes'}</p>
             <p className="text-sm text-stone-500 mb-6">
               Cuando alguien solicite unirse a tus sesiones, aparecerán aquí
             </p>
@@ -199,7 +203,7 @@ export default function RequestsPage() {
               href="/"
               className="inline-block px-6 py-2.5 bg-[#9EE551] text-[#272D34] font-semibold rounded-lg hover:bg-[#8FD642] transition-colors"
             >
-              Ver sesiones disponibles
+              {language === 'en' ? 'Browse Available Sessions' : '{language === 'en' ? 'Browse Available Sessions' : '{language === 'en' ? 'Browse Available Sessions' : 'Ver sesiones disponibles'}'}'}
             </Link>
           </div>
         ) : (

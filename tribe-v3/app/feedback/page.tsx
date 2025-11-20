@@ -160,7 +160,7 @@ export default function FeedbackPage() {
                 <select
                   value={feedbackType}
                   onChange={(e) => setFeedbackType(e.target.value)}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 >
                   <option value="feature_request">Feature Request</option>
                   <option value="general">General Feedback</option>
@@ -174,7 +174,7 @@ export default function FeedbackPage() {
                   value={feedbackTitle}
                   onChange={(e) => setFeedbackTitle(e.target.value)}
                   placeholder="Brief summary of your feedback"
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
@@ -184,7 +184,7 @@ export default function FeedbackPage() {
                   value={feedbackDescription}
                   onChange={(e) => setFeedbackDescription(e.target.value)}
                   placeholder="Tell us more about your idea or feedback..."
-                  className="w-full p-3 border border-stone-300 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
@@ -216,7 +216,7 @@ export default function FeedbackPage() {
                   value={bugTitle}
                   onChange={(e) => setBugTitle(e.target.value)}
                   placeholder="Brief description of the bug"
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
@@ -226,7 +226,7 @@ export default function FeedbackPage() {
                   value={bugDescription}
                   onChange={(e) => setBugDescription(e.target.value)}
                   placeholder="Describe what went wrong..."
-                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
@@ -236,7 +236,7 @@ export default function FeedbackPage() {
                   value={bugSteps}
                   onChange={(e) => setBugSteps(e.target.value)}
                   placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
-                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
@@ -245,7 +245,7 @@ export default function FeedbackPage() {
                 <select
                   value={bugSeverity}
                   onChange={(e) => setBugSeverity(e.target.value)}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 >
                   <option value="low">Low - Minor issue</option>
                   <option value="medium">Medium - Annoying but usable</option>
