@@ -148,8 +148,6 @@ export default function SessionDetailPage() {
       console.error('Error loading recap photos:', error);
     }
   }
-    }
-  }
 
   async function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve) => {
