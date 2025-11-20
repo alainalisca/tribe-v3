@@ -28,6 +28,7 @@ export default function SessionDetailPage() {
   const [wasMarkedAttended, setWasMarkedAttended] = useState(false);
   const [recapPhotos, setRecapPhotos] = useState<any[]>([]);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
+  const [shouldPromptUpload, setShouldPromptUpload] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -45,6 +46,14 @@ export default function SessionDetailPage() {
     };
   }, [lightboxOpen]);
 
+
+  useEffect(() => {
+    if (user && session && isPast && wasMarkedAttended && userPhotoCount === 0) {
+      setShouldPromptUpload(true);
+    } else {
+      setShouldPromptUpload(false);
+    }
+  }, [user, session, isPast, wasMarkedAttended, userPhotoCount]);
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
@@ -641,6 +650,25 @@ export default function SessionDetailPage() {
           </div>
         </div>
 
+
+        {/* Upload Prompt Banner */}
+        {shouldPromptUpload && (
+          <div className="bg-gradient-to-r from-tribe-green to-lime-400 rounded-xl p-6 shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <Camera className="w-6 h-6 text-slate-900" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                  Share Your Experience! 📸
+                </h3>
+                <p className="text-sm text-slate-800">
+                  You attended this session - upload up to 3 photos to share with the community!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Session Recap Section with Moderation */}
         {isPast && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
