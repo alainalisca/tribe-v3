@@ -1,164 +1,188 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function AuthPage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
   const router = useRouter();
   const supabase = createClient();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setMessage('');
 
     try {
-      if (mode === 'signup') {
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (signUpError) throw signUpError;
-
-        if (authData.user) {
-          const { data: existingProfile } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', authData.user.id)
-            .single();
-
-          if (!existingProfile) {
-            const { error: profileError } = await supabase
-              .from('users')
-              .insert({
-                id: authData.user.id,
-                email: formData.email,
-                name: formData.name,
-              });
-
-            if (profileError) throw profileError;
-          } else {
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({ name: formData.name })
-              .eq('id', authData.user.id);
-
-            if (updateError) throw updateError;
-          }
-        }
-
-        alert('Account created! Please log in.');
-        setMode('login');
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
         });
 
         if (error) throw error;
 
+        if (!data.user?.email_confirmed_at) {
+          setMessage('⚠️ Please verify your email before logging in. Check your inbox.');
+          await supabase.auth.signOut();
+          return;
+        }
+
         router.push('/');
-        router.refresh();
+      } else {
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          setMessage('❌ Please enter a valid email address');
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          await supabase.from('users').insert({
+            id: data.user.id,
+            email: data.user.email,
+            name,
+          });
+
+          setMessage('✅ Check your email to verify your account!');
+          setEmail('');
+          setPassword('');
+          setName('');
+        }
       }
     } catch (error: any) {
-      alert(error.message || 'An error occurred');
+      setMessage('❌ ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-[#6B7178] rounded-2xl p-8 shadow-xl border border-stone-200 dark:border-[#52575D]">
-          <div className="mb-6">
-            <Link href="/">
-              <button className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition mb-4">
-                <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
-              </button>
-            </Link>
-            <h1 className="text-3xl font-bold text-stone-900 dark:text-white">
+        <div className="bg-white dark:bg-[#6B7178] rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-stone-900 dark:text-white mb-2">
               Tribe<span className="text-tribe-green">.</span>
             </h1>
-            <p className="text-stone-600 dark:text-gray-300 mt-2">
-              {mode === 'login' ? 'Welcome back!' : 'Create your account'}
+            <p className="text-stone-600 dark:text-gray-300">
+              {isLogin ? 'Welcome back!' : 'Join the community'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
+            {!isLogin && (
               <div>
-                <label className="block text-sm font-medium text-stone-700 dark:text-gray-200 mb-2">
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
                   Name
                 </label>
                 <input
                   type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                   placeholder="Your name"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 dark:text-gray-200 mb-2">
+              <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
                 Email
               </label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-stone-700 dark:text-gray-200 mb-2">
+              <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
                 Password
               </label>
               <input
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                minLength={6}
+                className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                 placeholder="••••••••"
               />
             </div>
 
+            {message && (
+              <div className={`p-3 rounded-lg text-sm ${
+                message.includes('✅') 
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }`}>
+                {message}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-[#b0d853] transition disabled:opacity-50"
+              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : mode === 'login' ? 'Log In' : 'Sign Up'}
+              {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <button
-              onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-              className="text-tribe-green hover:underline text-sm"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setMessage('');
+              }}
+              className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
             >
-              {mode === 'login'
-                ? "Don't have an account? Sign up"
-                : 'Already have an account? Log in'}
+              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           </div>
+
+          {isLogin && (
+            <div className="mt-4 text-center">
+              <Link 
+                href="/auth/reset-password"
+                className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link href="/" className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition">
+            ← Back to home
+          </Link>
         </div>
       </div>
     </div>
