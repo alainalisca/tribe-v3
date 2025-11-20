@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { CheckCircle, XCircle, Users } from 'lucide-react';
-import Link from 'next/link';
+import { Check, X } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   sessionId: string;
@@ -15,22 +14,23 @@ interface AttendanceTrackerProps {
 export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionDate }: AttendanceTrackerProps) {
   const supabase = createClient();
   const [participants, setParticipants] = useState<any[]>([]);
-  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [hasMarked, setHasMarked] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
-  const canMark = isHost || isAdmin;
-  const sessionPassed = new Date(sessionDate) < new Date();
+  const canManageAttendance = isHost || isAdmin;
+  const sessionHasPassed = new Date(sessionDate) < new Date();
 
   useEffect(() => {
-    loadParticipants();
-  }, [sessionId]);
+    if (canManageAttendance && sessionHasPassed) {
+      loadParticipants();
+    } else {
+      setLoading(false);
+    }
+  }, [sessionId, canManageAttendance, sessionHasPassed]);
 
   async function loadParticipants() {
     try {
-      // Get confirmed participants
-      const { data: participants, error } = await supabase
+      const { data: participantsData } = await supabase
         .from('session_participants')
         .select(`
           user_id,
@@ -39,25 +39,28 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
         .eq('session_id', sessionId)
         .eq('status', 'confirmed');
 
-      if (error) throw error;
+      if (!participantsData) {
+        setParticipants([]);
+        return;
+      }
 
-      // Get existing attendance records
-      const { data: attendanceData } = await supabase
-        .from('session_attendance')
-        .select('user_id, attended, marked_at')
-        .eq('session_id', sessionId);
+      const participantsWithAttendance = await Promise.all(
+        participantsData.map(async (p) => {
+          const { data: attendanceData } = await supabase
+            .from('session_attendance')
+            .select('attended')
+            .eq('session_id', sessionId)
+            .eq('user_id', p.user_id)
+            .single();
 
-      const attendanceMap: Record<string, boolean> = {};
-      let marked = false;
+          return {
+            ...p,
+            attended: attendanceData?.attended || false
+          };
+        })
+      );
 
-      attendanceData?.forEach(a => {
-        attendanceMap[a.user_id] = a.attended;
-        if (a.marked_at) marked = true;
-      });
-
-      setParticipants(participants || []);
-      setAttendance(attendanceMap);
-      setHasMarked(marked);
+      setParticipants(participantsWithAttendance);
     } catch (error) {
       console.error('Error loading participants:', error);
     } finally {
@@ -65,156 +68,135 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
     }
   }
 
-  async function toggleAttendance(userId: string) {
-    const newStatus = !attendance[userId];
-    
-    setAttendance(prev => ({
-      ...prev,
-      [userId]: newStatus
-    }));
-  }
-
-  async function saveAttendance() {
-    if (!canMark) return;
-
-    setSaving(true);
+  async function markAttendance(userId: string, attended: boolean) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      setSendingEmail(userId);
       
-      // Upsert attendance for all participants
-      const records = participants.map(p => ({
-        session_id: sessionId,
-        user_id: p.user_id,
-        attended: attendance[p.user_id] || false,
-        marked_by: user?.id,
-        marked_at: new Date().toISOString()
-      }));
-
-      const { error } = await supabase
+      const { data: existing } = await supabase
         .from('session_attendance')
-        .upsert(records, { onConflict: 'session_id,user_id' });
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .single();
 
-      if (error) throw error;
+      if (existing) {
+        await supabase
+          .from('session_attendance')
+          .update({ attended })
+          .eq('session_id', sessionId)
+          .eq('user_id', userId);
+      } else {
+        await supabase
+          .from('session_attendance')
+          .insert({
+            session_id: sessionId,
+            user_id: userId,
+            attended
+          });
+      }
 
-      alert('✅ Attendance saved!');
-      setHasMarked(true);
+      // Send email notification if marking as attended
+      if (attended) {
+        try {
+          await fetch('/api/send-attendance-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, userId })
+          });
+        } catch (emailError) {
+          console.error('Failed to send email:', emailError);
+          // Don't fail the whole operation if email fails
+        }
+      }
+
+      await loadParticipants();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      alert('Error: ' + error.message);
     } finally {
-      setSaving(false);
+      setSendingEmail(null);
     }
   }
 
-  if (!sessionPassed && !isAdmin) {
-    return (
-      <div className="bg-stone-100 dark:bg-[#52575D] rounded-xl p-6 text-center">
-        <Users className="w-12 h-12 text-stone-400 mx-auto mb-2" />
-        <p className="text-sm text-stone-600 dark:text-gray-300">
-          Attendance tracking will be available after the session ends
-        </p>
-      </div>
-    );
-  }
-
-  if (!canMark) {
+  if (!canManageAttendance || !sessionHasPassed) {
     return null;
   }
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6">
-        <p className="text-center text-stone-600">Loading...</p>
+      <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+        <p className="text-stone-500 dark:text-gray-400">Loading attendance...</p>
       </div>
     );
   }
 
   if (participants.length === 0) {
-    return (
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 text-center">
-        <p className="text-sm text-stone-600">No confirmed participants yet</p>
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-          Mark Attendance
-        </h2>
-        {hasMarked && (
-          <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
-            ✓ Marked
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-2 mb-4">
-        {participants.map((participant) => {
-          const attended = attendance[participant.user_id];
-          
-          return (
-            <div
-              key={participant.user_id}
-              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
-            >
-              <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
-                {participant.user?.avatar_url ? (
-                  <img
-                    src={participant.user.avatar_url}
-                    alt={participant.user.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold">
-                    {participant.user?.name?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium text-stone-900 dark:text-white">
-                    {participant.user?.name || 'Unknown'}
-                  </p>
-                </div>
-              </Link>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => toggleAttendance(participant.user_id)}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    attended === true
-                      ? 'bg-green-500 text-white'
-                      : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
-                  }`}
-                >
-                  <CheckCircle className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => toggleAttendance(participant.user_id)}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    attended === false
-                      ? 'bg-red-500 text-white'
-                      : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
-                  }`}
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <button
-        onClick={saveAttendance}
-        disabled={saving}
-        className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
-      >
-        {saving ? 'Saving...' : hasMarked ? 'Update Attendance' : 'Save Attendance'}
-      </button>
-
-      <p className="text-xs text-stone-500 text-center mt-2">
-        Mark who actually showed up to the session
+      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
+        Mark Attendance
+      </h2>
+      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
+        Mark who attended to allow them to upload photos
       </p>
+      <div className="space-y-2">
+        {participants.map((participant) => (
+          <div
+            key={participant.user_id}
+            className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+          >
+            <div className="flex items-center gap-3">
+              {participant.user?.avatar_url ? (
+                <img
+                  src={participant.user.avatar_url}
+                  alt={participant.user.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold">
+                  {participant.user?.name?.[0]?.toUpperCase()}
+                </div>
+              )}
+              <span className="font-medium text-stone-900 dark:text-white">
+                {participant.user?.name}
+              </span>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => markAttendance(participant.user_id, true)}
+                disabled={participant.attended || sendingEmail === participant.user_id}
+                className={`p-2 rounded-lg transition ${
+                  participant.attended
+                    ? 'bg-green-500 text-white'
+                    : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
+                }`}
+                title="Mark as attended"
+              >
+                {sendingEmail === participant.user_id ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <Check className="w-5 h-5" />
+                )}
+              </button>
+              <button
+                onClick={() => markAttendance(participant.user_id, false)}
+                disabled={!participant.attended || sendingEmail === participant.user_id}
+                className={`p-2 rounded-lg transition ${
+                  !participant.attended
+                    ? 'bg-red-500 text-white'
+                    : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
+                }`}
+                title="Mark as not attended"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
