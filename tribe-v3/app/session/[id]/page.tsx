@@ -105,7 +105,6 @@ export default function SessionDetailPage() {
     
     setWasMarkedAttended(attendanceData?.attended === true);
   }
-  }
 
   async function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve) => {
