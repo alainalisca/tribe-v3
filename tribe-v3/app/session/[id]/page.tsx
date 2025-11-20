@@ -112,21 +112,33 @@ export default function SessionDetailPage() {
 
   async function loadRecapPhotos() {
     try {
+      // Fetch photos
       const { data: photosData, error } = await supabase
         .from('session_recap_photos')
-        .select(`
-          id,
-          photo_url,
-          user_id,
-          uploaded_at,
-          reported,
-          user:users(id, name, avatar_url)
-        `)
+        .select('*')
         .eq('session_id', params.id)
         .order('uploaded_at', { ascending: true });
 
       if (error) throw error;
-      setRecapPhotos(photosData || []);
+
+      // Fetch user info for each photo
+      if (photosData && photosData.length > 0) {
+        const userIds = [...new Set(photosData.map(p => p.user_id))];
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, name, avatar_url')
+          .in('id', userIds);
+
+        // Merge user data into photos
+        const photosWithUsers = photosData.map(photo => ({
+          ...photo,
+          user: usersData?.find(u => u.id === photo.user_id)
+        }));
+
+        setRecapPhotos(photosWithUsers);
+      } else {
+        setRecapPhotos([]);
+      }
 
       if (user) {
         const userPhotos = photosData?.filter(p => p.user_id === user.id) || [];
@@ -134,6 +146,8 @@ export default function SessionDetailPage() {
       }
     } catch (error) {
       console.error('Error loading recap photos:', error);
+    }
+  }
     }
   }
 
