@@ -28,7 +28,6 @@ export default function SessionDetailPage() {
   const [wasMarkedAttended, setWasMarkedAttended] = useState(false);
   const [recapPhotos, setRecapPhotos] = useState<any[]>([]);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
-  const [shouldPromptUpload, setShouldPromptUpload] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -47,14 +46,6 @@ export default function SessionDetailPage() {
   }, [lightboxOpen]);
 
 
-  useEffect(() => {
-    if (user && session && isPast && wasMarkedAttended && userPhotoCount === 0) {
-      setShouldPromptUpload(true);
-    } else {
-      setShouldPromptUpload(false);
-    }
-  }, [user, session, isPast, wasMarkedAttended, userPhotoCount]);
-  async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
   }
@@ -452,6 +443,7 @@ export default function SessionDetailPage() {
   const canKick = isCreator || isAdmin;
   const canUploadRecap = user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3;
   const canModerate = isCreator || isAdmin;
+  const shouldPromptUpload = user && isPast && wasMarkedAttended && userPhotoCount === 0;
 
   const currentPhotos = photoType === 'location' 
     ? session.photos 
