@@ -25,6 +25,7 @@ export default function SessionDetailPage() {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [uploadingRecap, setUploadingRecap] = useState(false);
+  const [wasMarkedAttended, setWasMarkedAttended] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -86,9 +87,24 @@ export default function SessionDetailPage() {
       }
     } catch (error) {
       console.error('Error loading session:', error);
+
+      await checkAttendance();
     } finally {
       setLoading(false);
     }
+
+  async function checkAttendance() {
+    if (!user) return;
+    
+    const { data: attendanceData } = await supabase
+      .from("session_attendance")
+      .select("attended")
+      .eq("session_id", params.id)
+      .eq("user_id", user.id)
+      .single();
+    
+    setWasMarkedAttended(attendanceData?.attended === true);
+  }
   }
 
   async function compressImage(file: File): Promise<Blob> {
@@ -136,7 +152,7 @@ export default function SessionDetailPage() {
 
     const currentRecapCount = session.recap_photos?.length || 0;
     if (currentRecapCount + files.length > 5) {
-      alert('Maximum 5 recap photos allowed per session');
+      alert('Maximum 6 recap photos allowed per session');
       return;
     }
 
@@ -346,7 +362,7 @@ export default function SessionDetailPage() {
   const isCreator = session.creator_id === user?.id;
   const isAdmin = user?.email === ADMIN_EMAIL;
   const canKick = isCreator || isAdmin;
-  const canUploadRecap = user && (hasJoined || isCreator) && isPast;
+  const canUploadRecap = user && wasMarkedAttended && isPast;
 
   const currentPhotos = photoType === 'location' ? session.photos : session.recap_photos;
 
@@ -583,7 +599,7 @@ export default function SessionDetailPage() {
                     ) : (
                       <>
                         <Upload className="w-5 h-5" />
-                        Upload Recap Photos ({session.recap_photos?.length || 0}/5)
+                        Upload Recap Photos ({session.recap_photos?.length || 0}/6)
                       </>
                     )}
                     <input
@@ -597,7 +613,7 @@ export default function SessionDetailPage() {
                   </label>
                 ) : (
                   <p className="text-sm text-center text-stone-500">
-                    Maximum recap photos reached (5/5)
+                    Maximum recap photos reached (6/6)
                   </p>
                 )}
               </div>
@@ -605,7 +621,7 @@ export default function SessionDetailPage() {
 
             {!canUploadRecap && (!session.recap_photos || session.recap_photos.length === 0) && (
               <p className="text-sm text-center text-stone-500 py-4">
-                No recap photos yet. Participants can upload after the session ends.
+                No recap photos yet. Only verified attendees can upload recap photos.
               </p>
             )}
           </div>
