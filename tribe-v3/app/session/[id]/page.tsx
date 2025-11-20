@@ -46,6 +46,8 @@ export default function SessionDetailPage() {
   }, [lightboxOpen]);
 
 
+  async function checkUser() {
+
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
   }
