@@ -185,10 +185,6 @@ export default function SessionDetailPage() {
       return;
     }
 
-    if (recapPhotos.length + files.length > 30) {
-      alert('Session has reached maximum of 30 recap photos');
-      return;
-    }
 
     setUploadingRecap(true);
     try {
@@ -433,7 +429,7 @@ export default function SessionDetailPage() {
   const isCreator = session.creator_id === user?.id;
   const isAdmin = user?.email === ADMIN_EMAIL;
   const canKick = isCreator || isAdmin;
-  const canUploadRecap = user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3 && recapPhotos.length < 30;
+  const canUploadRecap = user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3;
   const canModerate = isCreator || isAdmin;
 
   const currentPhotos = photoType === 'location' 
