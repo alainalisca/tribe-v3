@@ -85,14 +85,14 @@ export default function SessionDetailPage() {
         const joined = participantsData?.some(p => p.user_id === user.id);
         setHasJoined(!!joined);
       }
-    } catch (error) {
-      console.error('Error loading session:', error);
 
       await checkAttendance();
+    } catch (error) {
+      console.error('Error loading session:', error);
     } finally {
       setLoading(false);
     }
-
+  }
   async function checkAttendance() {
     if (!user) return;
     
