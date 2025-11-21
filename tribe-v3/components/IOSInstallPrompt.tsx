@@ -11,28 +11,30 @@ export default function IOSInstallPrompt() {
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const android = /Android/.test(navigator.userAgent);
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+    const hasSeenPrompt = localStorage.getItem('hasSeenInstallPrompt');
+    const hasDismissed = localStorage.getItem('installPromptDismissed');
 
     setIsIOS(iOS);
 
-    if ((iOS || android) && !isInStandaloneMode) {
-      setShow(true);
+    // Only show if:
+    // 1. On iOS/Android
+    // 2. NOT in standalone mode (not installed)
+    // 3. Haven't dismissed it permanently
+    if ((iOS || android) && !isInStandaloneMode && !hasDismissed) {
+      // Only show once per session unless they've never seen it
+      if (!hasSeenPrompt) {
+        setShow(true);
+        localStorage.setItem('hasSeenInstallPrompt', 'true');
+      }
     }
   }, []);
 
   const handleDismiss = () => {
     setShow(false);
+    localStorage.setItem('installPromptDismissed', 'true');
   };
 
   if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/90 z-[9999] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6">
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-white">Tribe<span className="text-tribe-green">.</span></span>
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Install Tribe</h2>
           <p className="text-gray-600 dark:text-gray-400">
             For the best experience, please install Tribe
           </p>

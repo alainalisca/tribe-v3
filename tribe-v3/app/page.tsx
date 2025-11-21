@@ -78,15 +78,9 @@ export default function HomePage() {
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-    } else {
-      setUser(user);
-    }
+    // Allow guests to browse - don't redirect
+    setUser(user || null);
   }
-
-  async function loadProfile() {
-    if (!user) return;
     const { data } = await supabase
       .from('users')
       .select('avatar_url, sports, safety_waiver_accepted')
