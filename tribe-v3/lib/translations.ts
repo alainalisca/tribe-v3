@@ -186,4 +186,3 @@ export const sportTranslations = {
   'BMX': { en: 'BMX', es: 'BMX' },
   'Other': { en: 'Other', es: 'Otro' }
 };
-};
