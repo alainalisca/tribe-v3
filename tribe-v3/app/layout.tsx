@@ -1,4 +1,5 @@
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { Toaster } from 'react-hot-toast';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import './globals.css';
@@ -38,6 +39,7 @@ export default function RootLayout({
         <LanguageProvider>
           <ThemeProvider>
             {children}
+            <Toaster />
           </ThemeProvider>
         </LanguageProvider>
       </body>

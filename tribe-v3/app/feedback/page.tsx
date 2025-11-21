@@ -115,7 +115,7 @@ export default function FeedbackPage() {
           <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </button>
-          <h1 className="text-xl font-bold text-theme-primary">Help Improve Tribe</h1>
+          <h1 className="text-xl font-bold text-theme-primary">Help Improve <span className="text-tribe-green">Tribe.</span></h1>
         </div>
       </div>
 
