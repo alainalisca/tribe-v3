@@ -11,21 +11,14 @@ export default function IOSInstallPrompt() {
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const android = /Android/.test(navigator.userAgent);
     const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-    const hasSeenPrompt = localStorage.getItem('hasSeenInstallPrompt');
     const hasDismissed = localStorage.getItem('installPromptDismissed');
 
     setIsIOS(iOS);
 
-    // Only show if:
-    // 1. On iOS/Android
-    // 2. NOT in standalone mode (not installed)
-    // 3. Haven't dismissed it permanently
+    // Only show if on iOS/Android, NOT installed, and hasn't dismissed
     if ((iOS || android) && !isInStandaloneMode && !hasDismissed) {
-      // Only show once per session unless they've never seen it
-      if (!hasSeenPrompt) {
-        setShow(true);
-        localStorage.setItem('hasSeenInstallPrompt', 'true');
-      }
+      // Show after 3 second delay for better UX
+      setTimeout(() => setShow(true), 3000);
     }
   }, []);
 
@@ -35,6 +28,15 @@ export default function IOSInstallPrompt() {
   };
 
   if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/90 z-[9999] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6">
+        <div className="text-center mb-6">
+          <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl font-bold text-white">Tribe<span className="text-tribe-green">.</span></span>
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">Install Tribe</h2>
           <p className="text-gray-600 dark:text-gray-400">
             For the best experience, please install Tribe
           </p>
@@ -50,7 +52,7 @@ export default function IOSInstallPrompt() {
                 <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap the Share button</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Share className="w-4 h-4" />
-                  <span>At the bottom of your screen</span>
+                  <span>at the bottom of Safari</span>
                 </div>
               </div>
             </div>
@@ -60,23 +62,10 @@ export default function IOSInstallPrompt() {
                 2
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Add to Home Screen"</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Select "Add to Home Screen"</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Plus className="w-4 h-4" />
-                  <span>Scroll down if you don't see it</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Add"</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Home className="w-4 h-4" />
-                  <span>Tribe will appear on your home screen!</span>
+                  <span>from the menu</span>
                 </div>
               </div>
             </div>
@@ -84,40 +73,27 @@ export default function IOSInstallPrompt() {
         ) : (
           <div className="space-y-4 mb-6">
             <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">
                 1
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap the Menu button</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap the menu button</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <MoreVertical className="w-4 h-4" />
-                  <span>Three dots in the top right corner</span>
+                  <span>at the top of your browser</span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">
                 2
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Add to Home screen" or "Install app"</p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Plus className="w-4 h-4" />
-                  <span>Look for these options in the menu</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap "Install" or "Add"</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Select "Add to Home screen"</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Home className="w-4 h-4" />
-                  <span>Tribe will appear on your home screen!</span>
+                  <span>or "Install app"</span>
                 </div>
               </div>
             </div>
@@ -126,14 +102,10 @@ export default function IOSInstallPrompt() {
 
         <button
           onClick={handleDismiss}
-          className="w-full mb-4 bg-tribe-green text-slate-900 font-bold py-3 rounded-lg hover:bg-[#b0d853] transition"
+          className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
-          I've Installed It - Continue
+          Not now
         </button>
-
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200 text-center">
-          ⚠️ After installing, open Tribe from your home screen
-        </div>
       </div>
     </div>
   );
