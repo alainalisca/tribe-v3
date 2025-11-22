@@ -338,7 +338,7 @@ export default function HomePage() {
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/profile">
-            <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">
+            <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
               Tribe<span className="text-tribe-green">.</span>
             </h1>
           </Link>
