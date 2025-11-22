@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Camera, Calendar, MapPin, Upload } from 'lucide-react';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function MySessionsPage() {
   const [user, setUser] = useState<any>(null);
@@ -12,6 +14,7 @@ export default function MySessionsPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+  const { language } = useLanguage();
 
   useEffect(() => {
     checkUser();
@@ -29,7 +32,6 @@ export default function MySessionsPage() {
 
   async function loadSessions(userId: string) {
     try {
-      // Get all past sessions user attended
       const { data: attendedSessions } = await supabase
         .from('session_attendance')
         .select(`
@@ -50,28 +52,25 @@ export default function MySessionsPage() {
         return;
       }
 
-      // Filter for sessions in the past
       const pastSessions = attendedSessions.filter(s => 
         s.sessions && new Date(s.sessions.date) < new Date()
       );
 
-      // Check which ones don't have user photos yet
       const sessionsWithPhotoCount = await Promise.all(
         pastSessions.map(async (s) => {
-          const { data: photoCount } = await supabase
+          const { count } = await supabase
             .from('session_recap_photos')
-            .select('id', { count: 'exact', head: true })
+            .select('*', { count: 'exact', head: true })
             .eq('session_id', s.session_id)
             .eq('user_id', userId);
 
           return {
             ...s.sessions,
-            userPhotoCount: photoCount || 0
+            userPhotoCount: count || 0
           };
         })
       );
 
-      // Only show sessions where user hasn't uploaded any photos
       const needingPhotos = sessionsWithPhotoCount.filter(s => s.userPhotoCount === 0);
       setSessionsNeedingPhotos(needingPhotos);
     } catch (error) {
@@ -84,7 +83,9 @@ export default function MySessionsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-stone-900 dark:text-white">Loading...</p>
+        <p className="text-stone-900 dark:text-white">
+          {language === 'en' ? 'Loading...' : 'Cargando...'}
+        </p>
       </div>
     );
   }
@@ -93,9 +94,13 @@ export default function MySessionsPage() {
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">My Sessions</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
+            {language === 'en' ? 'My Sessions' : 'Mis Sesiones'}
+          </h1>
           <p className="text-sm text-stone-600 dark:text-gray-300 mt-1">
-            Sessions where you can upload photos
+            {language === 'en' 
+              ? 'Sessions where you can upload photos'
+              : 'Sesiones donde puedes subir fotos'}
           </p>
         </div>
       </div>
@@ -105,14 +110,16 @@ export default function MySessionsPage() {
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center">
             <Camera className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
-              All caught up! 🎉
+              {language === 'en' ? 'All caught up! 🎉' : '¡Todo al día! 🎉'}
             </h2>
             <p className="text-stone-600 dark:text-gray-300">
-              You've shared photos for all your sessions, or there are no sessions to share.
+              {language === 'en'
+                ? "You've shared photos for all your sessions, or there are no sessions to share."
+                : 'Has compartido fotos de todas tus sesiones, o no hay sesiones para compartir.'}
             </p>
             <Link href="/">
               <button className="mt-6 px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                Browse Sessions
+                {language === 'en' ? 'Browse Sessions' : 'Ver Sesiones'}
               </button>
             </Link>
           </div>
@@ -120,10 +127,12 @@ export default function MySessionsPage() {
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-tribe-green to-lime-400 rounded-xl p-6 mb-6">
               <h2 className="text-xl font-bold text-slate-900 mb-2">
-                📸 Share Your Memories
+                📸 {language === 'en' ? 'Share Your Memories' : 'Comparte tus Recuerdos'}
               </h2>
               <p className="text-slate-800">
-                You have {sessionsNeedingPhotos.length} session{sessionsNeedingPhotos.length !== 1 ? 's' : ''} waiting for your photos!
+                {language === 'en'
+                  ? `You have ${sessionsNeedingPhotos.length} session${sessionsNeedingPhotos.length !== 1 ? 's' : ''} waiting for your photos!`
+                  : `¡Tienes ${sessionsNeedingPhotos.length} sesión${sessionsNeedingPhotos.length !== 1 ? 'es' : ''} esperando tus fotos!`}
               </p>
             </div>
 
@@ -136,7 +145,9 @@ export default function MySessionsPage() {
                     </span>
                     <div className="flex items-center gap-2 text-orange-500">
                       <Upload className="w-4 h-4" />
-                      <span className="text-xs font-medium">Upload Photos</span>
+                      <span className="text-xs font-medium">
+                        {language === 'en' ? 'Upload Photos' : 'Subir Fotos'}
+                      </span>
                     </div>
                   </div>
 
@@ -144,11 +155,11 @@ export default function MySessionsPage() {
                     <div className="flex items-center text-stone-900 dark:text-white">
                       <Calendar className="w-4 h-4 mr-2 text-stone-500" />
                       <span className="text-sm">
-                        {new Date(session.date).toLocaleDateString('en-US', {
+                        {new Date(session.date).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES', {
                           weekday: 'short',
                           month: 'short',
                           day: 'numeric'
-                        })} at {session.start_time}
+                        })} {language === 'en' ? 'at' : 'a las'} {session.start_time}
                       </span>
                     </div>
 
@@ -160,7 +171,9 @@ export default function MySessionsPage() {
 
                   <div className="mt-4 pt-4 border-t border-stone-200 dark:border-gray-600">
                     <p className="text-xs text-stone-600 dark:text-gray-400">
-                      Tap to upload up to 3 photos from this session
+                      {language === 'en'
+                        ? 'Tap to upload up to 3 photos from this session'
+                        : 'Toca para subir hasta 3 fotos de esta sesión'}
                     </p>
                   </div>
                 </div>
@@ -169,6 +182,8 @@ export default function MySessionsPage() {
           </div>
         )}
       </div>
+
+      <BottomNav />
     </div>
   );
 }

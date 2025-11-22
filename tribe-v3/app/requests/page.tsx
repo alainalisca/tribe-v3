@@ -7,6 +7,7 @@ import { ArrowLeft, Check, X, User } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import { showSuccess, showError } from '@/lib/toast';
 
 export default function RequestsPage() {
   const router = useRouter();
@@ -72,10 +73,10 @@ export default function RequestsPage() {
 
       if (error) throw error;
 
-      alert(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
+      showSuccess(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
       loadRequests(user.id);
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -88,10 +89,10 @@ export default function RequestsPage() {
 
       if (error) throw error;
 
-      alert(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
+      showSuccess(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
       loadRequests(user.id);
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
