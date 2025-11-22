@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
@@ -70,7 +71,7 @@ export default function EditProfilePage() {
     if (!file || !user) return;
 
     if (formData.photos.length >= 6) {
-      alert('Maximum 6 photos allowed');
+      showInfo('Maximum 6 photos allowed');
       return;
     }
 
@@ -97,7 +98,7 @@ export default function EditProfilePage() {
       });
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo');
+      showError('Failed to upload photo');
     } finally {
       setUploadingPhoto(false);
     }
@@ -130,11 +131,11 @@ export default function EditProfilePage() {
 
       if (error) throw error;
 
-      alert('Profile updated successfully!');
+      showSuccess('Profile updated successfully!');
       router.push('/profile');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setSaving(false);
     }

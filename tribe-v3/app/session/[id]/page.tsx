@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -195,7 +196,7 @@ export default function SessionDetailPage() {
     if (!files || files.length === 0) return;
 
     if (userPhotoCount + files.length > 3) {
-      alert('You can upload maximum 3 photos per session');
+      showInfo('You can upload maximum 3 photos per session');
       return;
     }
 
@@ -232,10 +233,10 @@ export default function SessionDetailPage() {
         if (insertError) throw insertError;
       }
 
-      alert('✅ Recap photos uploaded!');
+      showSuccess('Recap photos uploaded!');
       await loadRecapPhotos();
     } catch (error: any) {
-      alert('Error uploading photos: ' + error.message);
+      showError('Error uploading photos: ' + error.message);
     } finally {
       setUploadingRecap(false);
     }
@@ -252,10 +253,10 @@ export default function SessionDetailPage() {
 
       if (error) throw error;
 
-      alert('✅ Photo deleted');
+      showSuccess('Photo deleted');
       await loadRecapPhotos();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -274,10 +275,10 @@ export default function SessionDetailPage() {
 
       if (error) throw error;
 
-      alert('✅ Photo reported. Admin will review.');
+      showSuccess('Photo reported. Admin will review.');
       await loadRecapPhotos();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -296,7 +297,7 @@ export default function SessionDetailPage() {
         .single();
 
       if (existing) {
-        alert('You already joined this session!');
+        showInfo('You already joined this session!');
         return;
       }
 
@@ -311,10 +312,10 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants + 1 })
         .eq('id', session.id);
 
-      alert('✅ Successfully joined the session!');
+      showSuccess('Successfully joined the session!');
       await loadSession();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -335,10 +336,10 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants - 1 })
         .eq('id', session.id);
 
-      alert('✅ You have left the session');
+      showSuccess('You have left the session');
       router.push('/sessions');
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -353,10 +354,10 @@ export default function SessionDetailPage() {
 
       if (error) throw error;
 
-      alert('✅ Session cancelled');
+      showSuccess('Session cancelled');
       router.push('/sessions');
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -385,10 +386,10 @@ export default function SessionDetailPage() {
         current_participants: Math.max(0, prev.current_participants - 1)
       }));
 
-      alert('✅ User removed from session');
+      showSuccess('User removed from session');
     } catch (error: any) {
       console.error('Kick error:', error);
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 

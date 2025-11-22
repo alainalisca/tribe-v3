@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -106,7 +107,7 @@ export default function PublicProfilePage() {
           .eq('blocked_user_id', userId);
         
         setIsBlocked(false);
-        alert('✅ User unblocked');
+        showSuccess('User unblocked');
       } else {
         if (!confirm(`Block ${profile.name}? You won't see their sessions or messages.`)) return;
         
@@ -118,16 +119,16 @@ export default function PublicProfilePage() {
           });
         
         setIsBlocked(true);
-        alert('✅ User blocked');
+        showSuccess('User blocked');
       }
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
   async function handleReport() {
     if (!reportReason.trim()) {
-      alert('Please select a reason');
+      showInfo('Please select a reason');
       return;
     }
 
@@ -142,12 +143,12 @@ export default function PublicProfilePage() {
           description: reportDescription,
         });
 
-      alert('✅ Report submitted. Our team will review it.');
+      showSuccess('Report submitted. Our team will review it.');
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import OnboardingModal from '@/components/OnboardingModal';
@@ -143,10 +144,10 @@ export default function HomePage() {
       const { error } = await supabase.from("sessions").delete().eq("id", sessionId);
       if (error) throw error;
 
-      alert("Session deleted successfully!");
+      showSuccess("Session deleted successfully!");
       await loadSessions();
     } catch (error: any) {
-      alert("Error: " + error.message);
+      showError("Error: " + error.message);
     }
   }
 
@@ -215,17 +216,17 @@ export default function HomePage() {
     if (!session) return;
 
     if (session.creator_id === user.id) {
-      alert('You cannot join your own session!');
+      showInfo('You cannot join your own session!');
       return;
     }
 
     if (session.join_policy === 'invite_only') {
-      alert('This is a private session. You need a direct invitation from the host.');
+      showInfo('This is a private session. You need a direct invitation from the host.');
       return;
     }
 
     if (session.current_participants >= session.max_participants) {
-      alert(t('sessionFullMsg'));
+      showInfo(t('sessionFullMsg'));
       return;
     }
 
@@ -238,7 +239,7 @@ export default function HomePage() {
         .maybeSingle();
 
       if (existing) {
-        alert(t('alreadyJoined'));
+        showInfo(t('alreadyJoined'));
         return;
       }
 
@@ -267,11 +268,11 @@ export default function HomePage() {
         ? 'Request sent! The host will review your profile and decide.' 
         : t('joinedSuccessfully');
       
-      alert(message);
+      showSuccess(message);
       await loadSessions();
     } catch (error: any) {
       console.error('Error joining session:', error);
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -315,7 +316,7 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error('Error accepting waiver:', error);
-      alert('Error accepting waiver. Please try again.');
+      showError('Error accepting waiver. Please try again.');
     }
   }
 

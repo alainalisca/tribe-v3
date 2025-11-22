@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -36,13 +37,13 @@ export default function SettingsPage() {
 
   async function toggleNotifications() {
     if (!('Notification' in window)) {
-      alert('This browser does not support notifications');
+      showError('This browser does not support notifications');
       return;
     }
 
     if (Notification.permission === 'granted') {
       setNotificationsEnabled(false);
-      alert(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
+      showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
     } else if (Notification.permission !== 'denied') {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
@@ -55,7 +56,7 @@ export default function SettingsPage() {
         });
       }
     } else {
-      alert(language === 'en' 
+      showError(language === 'en' 
         ? 'Notifications are blocked. Please enable them in your browser settings.' 
         : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.');
     }

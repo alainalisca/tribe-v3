@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -56,7 +57,7 @@ export default function EditSessionPage() {
       if (error) throw error;
 
       if (data.creator_id !== user.id) {
-        alert('You can only edit your own sessions');
+        showError('You can only edit your own sessions');
         router.push(`/session/${sessionId}`);
         return;
       }
@@ -72,7 +73,7 @@ export default function EditSessionPage() {
       });
     } catch (error) {
       console.error('Error loading session:', error);
-      alert('Error loading session');
+      showError('Error loading session');
     } finally {
       setLoading(false);
     }
@@ -132,11 +133,11 @@ export default function EditSessionPage() {
 
       if (error) throw error;
 
-      alert('Session updated successfully!');
+      showSuccess('Session updated successfully!');
       router.push(`/session/${sessionId}`);
     } catch (error: any) {
       console.error('Error updating session:', error);
-      alert('Error updating session: ' + error.message);
+      showError('Error updating session: ' + error.message);
     } finally {
       setSaving(false);
     }

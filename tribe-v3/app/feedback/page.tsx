@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -40,7 +41,7 @@ export default function FeedbackPage() {
 
   async function submitFeedback() {
     if (!feedbackTitle.trim() || !feedbackDescription.trim()) {
-      alert('Please fill in all fields');
+      showInfo('Please fill in all fields');
       return;
     }
 
@@ -57,11 +58,11 @@ export default function FeedbackPage() {
 
       if (error) throw error;
 
-      alert('✅ Feedback submitted! We appreciate your input.');
+      showSuccess('Feedback submitted! We appreciate your input.');
       setFeedbackTitle('');
       setFeedbackDescription('');
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -69,7 +70,7 @@ export default function FeedbackPage() {
 
   async function submitBugReport() {
     if (!bugTitle.trim() || !bugDescription.trim()) {
-      alert('Please fill in all required fields');
+      showInfo('Please fill in all required fields');
       return;
     }
 
@@ -87,13 +88,13 @@ export default function FeedbackPage() {
 
       if (error) throw error;
 
-      alert('✅ Bug report submitted! We\'ll investigate this.');
+      showSuccess('Bug report submitted! We\'ll investigate this.');
       setBugTitle('');
       setBugDescription('');
       setBugSteps('');
       setBugSeverity('medium');
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }

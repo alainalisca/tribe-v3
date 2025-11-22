@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -97,7 +98,7 @@ export default function ProfilePage() {
       await loadProfile();
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert('Failed to upload image');
+      showError('Failed to upload image');
     }
   }
 
@@ -130,7 +131,7 @@ export default function ProfilePage() {
       await loadProfile();
     } catch (error) {
       console.error('Error uploading banner:', error);
-      alert('Failed to upload banner');
+      showError('Failed to upload banner');
     }
   }
 

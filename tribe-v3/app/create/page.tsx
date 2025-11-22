@@ -1,4 +1,5 @@
 'use client';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -99,7 +100,7 @@ export default function CreateSessionPage() {
     if (!files || files.length === 0) return;
 
     if (photos.length + files.length > 3) {
-      alert(language === 'es' ? 'Máximo 3 fotos permitidas' : 'Maximum 3 photos allowed');
+      showInfo(language === 'es' ? 'Máximo 3 fotos permitidas' : 'Maximum 3 photos allowed');
       return;
     }
 
@@ -134,7 +135,7 @@ export default function CreateSessionPage() {
 
       setPhotos(prev => [...prev, ...uploadedUrls]);
     } catch (error: any) {
-      alert((language === 'es' ? 'Error subiendo fotos: ' : 'Error uploading photos: ') + error.message);
+      showError((language === 'es' ? 'Error subiendo fotos: ' : 'Error uploading photos: ') + error.message);
     } finally {
       setUploadingPhotos(false);
     }
@@ -176,10 +177,10 @@ export default function CreateSessionPage() {
 
       if (error) throw error;
 
-      alert(t('sessionCreated'));
+      showSuccess(t('sessionCreated'));
       router.push('/');
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setLoading(false);
     }
