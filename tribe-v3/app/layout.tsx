@@ -1,5 +1,6 @@
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import './globals.css';
@@ -40,6 +41,7 @@ export default function RootLayout({
           <ThemeProvider>
             {children}
             <Toaster />
+        <ServiceWorkerRegistration />
           </ThemeProvider>
         </LanguageProvider>
       </body>
