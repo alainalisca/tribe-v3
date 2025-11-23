@@ -2,34 +2,55 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
-import { requestNotificationPermission, subscribeToPush } from '@/lib/notifications';
+import { requestNotificationPermission } from '@/lib/notifications';
+import { createClient } from '@/lib/supabase/client';
 
 export default function NotificationPrompt() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we should show the prompt
-    const hasAsked = localStorage.getItem('notification-prompt-shown');
-    const permission = Notification.permission;
-
-    if (!hasAsked && permission === 'default') {
-      // Show prompt after 3 seconds
-      setTimeout(() => setShow(true), 3000);
-    }
+    checkUser();
   }, []);
 
+  async function checkUser() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return;
+    
+    setUserId(user.id);
+
+    // Check if we should show the prompt
+    const hasAsked = localStorage.getItem('notification-prompt-shown');
+    const permission = typeof window !== 'undefined' && 'Notification' in window 
+      ? Notification.permission 
+      : 'denied';
+
+    if (!hasAsked && permission === 'default') {
+      // Show prompt after 5 seconds
+      setTimeout(() => setShow(true), 5000);
+    }
+  }
+
   async function handleEnable() {
+    if (!userId) return;
+    
     setLoading(true);
     
-    const granted = await requestNotificationPermission();
-    
-    if (granted) {
-      await subscribeToPush();
-      setShow(false);
-      localStorage.setItem('notification-prompt-shown', 'true');
-    } else {
-      alert('Please enable notifications in your browser settings');
+    try {
+      const subscription = await requestNotificationPermission(userId);
+      
+      if (subscription) {
+        setShow(false);
+        localStorage.setItem('notification-prompt-shown', 'true');
+      } else {
+        alert('Please enable notifications in your browser settings');
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      alert('Failed to enable notifications. Please try again.');
     }
     
     setLoading(false);
