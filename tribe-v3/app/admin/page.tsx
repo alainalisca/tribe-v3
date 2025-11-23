@@ -198,9 +198,10 @@ export default function AdminPage() {
         u.id === userId ? { ...u, banned: true } : u
       ));
       
-      alert('✅ User banned');
+      showSuccess('User banned');
+      await loadUsers();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setActionLoading(null);
     }
@@ -222,9 +223,10 @@ export default function AdminPage() {
         u.id === userId ? { ...u, banned: false } : u
       ));
       
-      alert('✅ User unbanned');
+      showSuccess('User unbanned');
+      await loadUsers();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setActionLoading(null);
     }
@@ -244,9 +246,10 @@ export default function AdminPage() {
       
       setUsers(prev => prev.filter(u => u.id !== userId));
       
-      alert('✅ User deleted');
+      showSuccess('User deleted');
+      await loadUsers();
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setActionLoading(null);
     }
@@ -267,7 +270,7 @@ export default function AdminPage() {
       
       alert(`✅ Report marked as ${status}`);
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -286,7 +289,7 @@ export default function AdminPage() {
       
       alert(`✅ Feedback marked as ${status}`);
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
@@ -305,7 +308,7 @@ export default function AdminPage() {
       
       alert(`✅ Bug marked as ${status}`);
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      showError('Error: ' + error.message);
     }
   }
 
