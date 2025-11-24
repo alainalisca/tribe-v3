@@ -80,7 +80,7 @@ export default function HomePage() {
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      router.push('/auth');
+      setUser(null); // Guests can browse
     } else {
       setUser(user);
     }
