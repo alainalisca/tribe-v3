@@ -7,12 +7,15 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { useLanguage } from '@/lib/LanguageContext';
+import { sportTranslations } from '@/lib/translations';
 
 export default function PublicProfilePage() {
   const router = useRouter();
   const params = useParams();
   const userId = params.userId as string;
   const supabase = createClient();
+  const { language } = useLanguage();
   
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({
@@ -29,6 +32,72 @@ export default function PublicProfilePage() {
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const t = language === 'es' ? {
+    loading: 'Cargando...',
+    userNotFound: 'Usuario no encontrado',
+    goBack: 'Volver',
+    block: 'Bloquear',
+    unblock: 'Desbloquear',
+    report: 'Reportar',
+    sessionsCreated: 'Sesiones Creadas',
+    sessionsJoined: 'Sesiones Unidas',
+    totalSessions: 'Total Sesiones',
+    attendanceRate: 'Tasa de Asistencia',
+    photos: 'Fotos',
+    lowAttendance: 'Baja tasa de asistencia - Este usuario tiene una tasa de asistencia del',
+    reportUser: 'Reportar Usuario',
+    reason: 'Razón',
+    selectReason: 'Selecciona una razón',
+    harassment: 'Acoso',
+    inappropriate: 'Comportamiento inapropiado',
+    spam: 'Spam',
+    fake: 'Cuenta falsa',
+    noShow: 'Ausencias repetidas',
+    other: 'Otro',
+    additionalDetails: 'Detalles adicionales (opcional)',
+    provideContext: 'Proporciona más contexto...',
+    cancel: 'Cancelar',
+    submit: 'Enviar Reporte',
+    submitting: 'Enviando...',
+    blockConfirm: '¿Bloquear a este usuario? No verás sus sesiones ni mensajes.',
+    userBlocked: 'Usuario bloqueado',
+    userUnblocked: 'Usuario desbloqueado',
+    selectReasonError: 'Por favor selecciona una razón',
+    reportSuccess: 'Reporte enviado. Nuestro equipo lo revisará.',
+  } : {
+    loading: 'Loading...',
+    userNotFound: 'User not found',
+    goBack: 'Go back',
+    block: 'Block',
+    unblock: 'Unblock',
+    report: 'Report',
+    sessionsCreated: 'Sessions Created',
+    sessionsJoined: 'Sessions Joined',
+    totalSessions: 'Total Sessions',
+    attendanceRate: 'Attendance Rate',
+    photos: 'Photos',
+    lowAttendance: 'Low attendance rate - This user has a show-up rate of',
+    reportUser: 'Report User',
+    reason: 'Reason',
+    selectReason: 'Select a reason',
+    harassment: 'Harassment',
+    inappropriate: 'Inappropriate behavior',
+    spam: 'Spam',
+    fake: 'Fake account',
+    noShow: 'Repeated no-shows',
+    other: 'Other',
+    additionalDetails: 'Additional details (optional)',
+    provideContext: 'Provide more context...',
+    cancel: 'Cancel',
+    submit: 'Submit Report',
+    submitting: 'Submitting...',
+    blockConfirm: "Block this user? You won't see their sessions or messages.",
+    userBlocked: 'User blocked',
+    userUnblocked: 'User unblocked',
+    selectReasonError: 'Please select a reason',
+    reportSuccess: 'Report submitted. Our team will review it.',
+  };
 
   useEffect(() => {
     loadProfile();
@@ -107,9 +176,9 @@ export default function PublicProfilePage() {
           .eq('blocked_user_id', userId);
         
         setIsBlocked(false);
-        showSuccess('User unblocked');
+        showSuccess(t.userUnblocked);
       } else {
-        if (!confirm(`Block ${profile.name}? You won't see their sessions or messages.`)) return;
+        if (!confirm(t.blockConfirm)) return;
         
         await supabase
           .from('blocked_users')
@@ -119,7 +188,7 @@ export default function PublicProfilePage() {
           });
         
         setIsBlocked(true);
-        showSuccess('User blocked');
+        showSuccess(t.userBlocked);
       }
     } catch (error: any) {
       showError('Error: ' + error.message);
@@ -128,7 +197,7 @@ export default function PublicProfilePage() {
 
   async function handleReport() {
     if (!reportReason.trim()) {
-      showInfo('Please select a reason');
+      showInfo(t.selectReasonError);
       return;
     }
 
@@ -143,7 +212,7 @@ export default function PublicProfilePage() {
           description: reportDescription,
         });
 
-      showSuccess('Report submitted. Our team will review it.');
+      showSuccess(t.reportSuccess);
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
@@ -157,26 +226,28 @@ export default function PublicProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+        <p className="text-theme-primary">{t.loading}</p>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">User not found</p>
+      <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center">
+        <p className="text-theme-primary mb-4">{t.userNotFound}</p>
+        <button 
+          onClick={() => router.back()}
+          className="text-tribe-green hover:underline"
+        >
+          {t.goBack}
+        </button>
       </div>
     );
   }
 
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
-  };
-
-  const sports = profile?.sports || [];
   const isOwnProfile = currentUser?.id === userId;
-  const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 70;
+  const sports = profile.sports || [];
+  const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 50;
 
   return (
     <div className="min-h-screen bg-theme-page pb-20">
@@ -186,72 +257,50 @@ export default function PublicProfilePage() {
             <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
             </button>
-            <h1 className="text-xl font-bold text-theme-primary">{profile.name}'s Profile</h1>
+            <h1 className="text-xl font-bold text-theme-primary">{profile.name}</h1>
           </div>
           
-          {!isOwnProfile && currentUser && (
+          {currentUser && !isOwnProfile && (
             <div className="flex gap-2">
               <button
                 onClick={handleBlock}
-                className={`p-2 rounded-lg transition ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                   isBlocked 
-                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                    : 'bg-red-500 text-white hover:bg-red-600'
+                    ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' 
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                 }`}
-                title={isBlocked ? 'Unblock user' : 'Block user'}
               >
-                <Shield className="w-5 h-5" />
+                <Shield className="w-4 h-4 inline mr-1" />
+                {isBlocked ? t.unblock : t.block}
               </button>
               <button
                 onClick={() => setShowReportModal(true)}
-                className="p-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
-                title="Report user"
+                className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-200 transition"
               >
-                <Flag className="w-5 h-5" />
+                <Flag className="w-4 h-4 inline mr-1" />
+                {t.report}
               </button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
-        <div className="relative h-48 bg-gradient-to-br from-tribe-green to-lime-500">
-          {profile?.banner_url && (
-            <img 
-              src={profile.banner_url} 
-              alt="Banner" 
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
-
-        <div className="px-4 -mt-16 relative z-10">
-          <div className="w-32 h-32 rounded-full border-4 border-white bg-tribe-green flex items-center justify-center overflow-hidden shadow-lg">
-            {profile?.avatar_url ? (
+      <div className="max-w-2xl mx-auto p-4">
+        <div className="bg-theme-card rounded-2xl p-6 border border-theme">
+          {profile.avatar_url && (
+            <div className="flex justify-center mb-4">
               <img 
                 src={profile.avatar_url} 
-                alt={profile.name} 
-                className="w-full h-full object-cover"
+                alt={profile.name}
+                className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green"
               />
-            ) : (
-              <span className="text-5xl font-bold text-slate-900">
-                {getInitials(profile?.name || 'User')}
-              </span>
-            )}
-          </div>
-
-          {isBlocked && (
-            <div className="mt-4 bg-red-100 border border-red-300 rounded-lg p-3">
-              <p className="text-sm text-red-700">
-                🚫 You have blocked this user. Click the shield icon to unblock.
-              </p>
             </div>
           )}
 
           {hasLowAttendance && !isOwnProfile && (
             <div className="mt-4 bg-orange-100 border border-orange-300 rounded-lg p-3">
               <p className="text-sm text-orange-700">
-                ⚠️ Low attendance rate - This user has a {stats.attendanceRate.toFixed(0)}% show-up rate
+                ⚠️ {t.lowAttendance} {stats.attendanceRate.toFixed(0)}%
               </p>
             </div>
           )}
@@ -275,15 +324,15 @@ export default function PublicProfilePage() {
           <div className="grid grid-cols-2 gap-3 mt-6">
             <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-sm text-theme-secondary mt-1">Sessions Created</p>
+              <p className="text-sm text-theme-secondary mt-1">{t.sessionsCreated}</p>
             </div>
             <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-sm text-theme-secondary mt-1">Sessions Joined</p>
+              <p className="text-sm text-theme-secondary mt-1">{t.sessionsJoined}</p>
             </div>
             <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
               <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-sm text-theme-secondary mt-1">Total Sessions</p>
+              <p className="text-sm text-theme-secondary mt-1">{t.totalSessions}</p>
             </div>
             <div className={`bg-white rounded-2xl p-4 text-center border ${
               hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
@@ -293,7 +342,7 @@ export default function PublicProfilePage() {
               }`}>
                 {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
               </p>
-              <p className="text-sm text-theme-secondary mt-1">Attendance Rate</p>
+              <p className="text-sm text-theme-secondary mt-1">{t.attendanceRate}</p>
             </div>
           </div>
 
@@ -305,7 +354,7 @@ export default function PublicProfilePage() {
 
           {profile?.photos && profile.photos.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-semibold text-theme-primary mb-3">Photos</h3>
+              <h3 className="text-lg font-semibold text-theme-primary mb-3">{t.photos}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {profile.photos.map((photo: string, index: number) => (
                   <div key={index} className="aspect-square rounded-lg overflow-hidden bg-stone-200">
@@ -328,7 +377,7 @@ export default function PublicProfilePage() {
                     key={index}
                     className="px-5 py-2.5 bg-tribe-green text-slate-900 rounded-full text-sm font-medium"
                   >
-                    {sport}
+                    {language === 'es' && sportTranslations[sport] ? sportTranslations[sport].es : sport}
                   </span>
                 ))}
               </div>
@@ -340,33 +389,33 @@ export default function PublicProfilePage() {
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Report User</h3>
+            <h3 className="text-xl font-bold mb-4">{t.reportUser}</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <label className="block text-sm font-medium mb-2">{t.reason} *</label>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border rounded-lg text-stone-900"
                 >
-                  <option value="">Select a reason</option>
-                  <option value="harassment">Harassment</option>
-                  <option value="inappropriate">Inappropriate behavior</option>
-                  <option value="spam">Spam</option>
-                  <option value="fake">Fake account</option>
-                  <option value="no-show">Repeated no-shows</option>
-                  <option value="other">Other</option>
+                  <option value="">{t.selectReason}</option>
+                  <option value="harassment">{t.harassment}</option>
+                  <option value="inappropriate">{t.inappropriate}</option>
+                  <option value="spam">{t.spam}</option>
+                  <option value="fake">{t.fake}</option>
+                  <option value="no-show">{t.noShow}</option>
+                  <option value="other">{t.other}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Additional details (optional)</label>
+                <label className="block text-sm font-medium mb-2">{t.additionalDetails}</label>
                 <textarea
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder="Provide more context..."
-                  className="w-full p-2 border rounded-lg h-24 resize-none"
+                  placeholder={t.provideContext}
+                  className="w-full p-2 border rounded-lg h-24 resize-none text-stone-900"
                 />
               </div>
             </div>
@@ -377,14 +426,14 @@ export default function PublicProfilePage() {
                 className="flex-1 px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50"
                 disabled={submitting}
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 onClick={handleReport}
                 disabled={submitting || !reportReason}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
               >
-                {submitting ? 'Submitting...' : 'Submit Report'}
+                {submitting ? t.submitting : t.submit}
               </button>
             </div>
           </div>
