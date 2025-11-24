@@ -203,6 +203,25 @@ export default function HomePage() {
     setFilteredSessions(filtered);
   }
 
+
+  function handleShareSession(session: any) {
+    const shareText = language === "es"
+      ? `¡Únete a ${session.sport} el ${new Date(session.date).toLocaleDateString("es-ES")}! Nunca entrenes solo 💪`
+      : `Join me for ${session.sport} on ${new Date(session.date).toLocaleDateString("en-US")}! Never train alone 💪`;
+    
+    const shareUrl = `${window.location.origin}/session/${session.id}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: "Tribe - " + session.sport,
+        text: shareText,
+        url: shareUrl
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareText + "\n" + shareUrl);
+      showInfo(language === "es" ? "Enlace copiado" : "Link copied!");
+    }
+  }
   async function handleJoinSession(sessionId: string) {
     if (!user) return;
 
@@ -454,8 +473,14 @@ export default function HomePage() {
           </div>
         ) : filteredSessions.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-            <p className="text-stone-600 dark:text-gray-300 mb-2">{t('noSessionsFound')}</p>
-            <p className="text-sm text-stone-500 dark:text-gray-400">{t('tryDifferentSearch')}</p>
+            <div className="text-4xl mb-4">🏃‍♂️</div>
+            <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noSessionsFound')}</p>
+            <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{t('tryDifferentSearch')}</p>
+            <Link href="/create">
+              <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
+                {language === 'es' ? 'Crear Sesión' : 'Create Session'}
+              </button>
+            </Link>
           </div>
         ) : (
           <div className="space-y-4">
@@ -468,6 +493,7 @@ export default function HomePage() {
                 currentUserId={user?.id}
                 onEdit={handleEditSession}
                 onDelete={handleDeleteSession}
+                onShare={handleShareSession}
               />
             ))}
           </div>

@@ -28,8 +28,8 @@ export const translations = {
     searchPlaceholder: 'Search sessions...',
     clearAll: 'Clear all',
     sessionsCount: 'sessions',
-    noSessionsFound: 'No sessions found',
-    tryDifferentSearch: 'Try a different search or filter',
+    noSessionsFound: 'No sessions yet',
+    tryDifferentSearch: 'Be the first! Create a session and never train alone.',
     
     // Session Card
     spots: 'spots',
@@ -106,8 +106,8 @@ export const translations = {
     searchPlaceholder: 'Buscar sesiones...',
     clearAll: 'Limpiar todo',
     sessionsCount: 'sesiones',
-    noSessionsFound: 'No se encontraron sesiones',
-    tryDifferentSearch: 'Intenta una búsqueda o filtro diferente',
+    noSessionsFound: 'Aún no hay sesiones',
+    tryDifferentSearch: '¡Sé el primero! Crea una sesión y nunca entrenes solo.',
     
     // Tarjeta de Sesión
     spots: 'espacios',

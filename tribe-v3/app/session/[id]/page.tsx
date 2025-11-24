@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, Upload, Camera, Flag } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
 const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
@@ -14,6 +15,7 @@ export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const supabase = createClient();
+  const { language } = useLanguage();
   const [session, setSession] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);
@@ -297,7 +299,7 @@ export default function SessionDetailPage() {
         .single();
 
       if (existing) {
-        showInfo('You already joined this session!');
+        showInfo(language === 'es' ? '¡Ya te uniste a esta sesión!' : 'You already joined this session!');
         return;
       }
 
@@ -312,7 +314,7 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants + 1 })
         .eq('id', session.id);
 
-      showSuccess('Successfully joined the session!');
+      showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
       await loadSession();
     } catch (error: any) {
       showError('Error: ' + error.message);
@@ -336,7 +338,7 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants - 1 })
         .eq('id', session.id);
 
-      showSuccess('You have left the session');
+      showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       router.push('/sessions');
     } catch (error: any) {
       showError('Error: ' + error.message);
@@ -354,7 +356,7 @@ export default function SessionDetailPage() {
 
       if (error) throw error;
 
-      showSuccess('Session cancelled');
+      showSuccess(language === 'es' ? 'Sesión cancelada' : 'Session cancelled');
       router.push('/sessions');
     } catch (error: any) {
       showError('Error: ' + error.message);
