@@ -38,7 +38,7 @@ export default function HomePage() {
     if (!hasSeenOnboarding && user) {
       setShowOnboarding(true);
     }
-  }, [user]);
+  }, [userChecked]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,17 +56,17 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (userChecked) {
       scheduleSessionReminders();
       loadProfile();
     }
-  }, [user]);
+  }, [userChecked]);
 
   useEffect(() => {
-    if (user) {
+    if (userChecked) {
       loadSessions();
     }
-  }, [user]);
+  }, [userChecked]);
 
   useEffect(() => {
     getUserLocation().then(loc => {
