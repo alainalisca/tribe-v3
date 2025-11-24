@@ -5,12 +5,13 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { MessageSquare, Bug, ArrowLeft, Send } from 'lucide-react';
-import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function FeedbackPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'feedback' | 'bug'>('feedback');
   const [submitting, setSubmitting] = useState(false);
@@ -25,6 +26,74 @@ export default function FeedbackPage() {
   const [bugDescription, setBugDescription] = useState('');
   const [bugSteps, setBugSteps] = useState('');
   const [bugSeverity, setBugSeverity] = useState('medium');
+
+  const t = language === 'es' ? {
+    pageTitle: 'Ayúdanos a Mejorar',
+    feedback: 'Comentarios',
+    bugReport: 'Reportar Error',
+    shareIdeas: 'Comparte Tus Ideas',
+    shareIdeasDesc: '¿Tienes una solicitud de función o comentarios? ¡Nos encantaría escucharte!',
+    type: 'Tipo',
+    featureRequest: 'Solicitud de Función',
+    general: 'Comentario General',
+    title: 'Título',
+    titlePlaceholder: 'Breve resumen de tu comentario',
+    description: 'Descripción',
+    descriptionPlaceholder: 'Cuéntanos más sobre tu idea...',
+    submitFeedback: 'Enviar Comentario',
+    submitting: 'Enviando...',
+    reportBug: 'Reportar un Error',
+    reportBugDesc: '¿Encontraste algo roto? ¡Avísanos para que lo podamos arreglar!',
+    bugTitlePlaceholder: 'Breve descripción del error',
+    whatHappened: '¿Qué pasó?',
+    whatHappenedPlaceholder: 'Describe lo que salió mal...',
+    stepsToReproduce: 'Pasos para reproducir (opcional)',
+    stepsPlaceholder: '1. Ir a...\n2. Hacer clic en...\n3. Ver error...',
+    severity: 'Gravedad',
+    low: 'Baja - Problema menor',
+    medium: 'Media - Molesto pero usable',
+    high: 'Alta - Problema mayor',
+    critical: 'Crítica - App no funciona',
+    submitBug: 'Enviar Reporte',
+    fillAll: 'Por favor completa todos los campos',
+    fillRequired: 'Por favor completa los campos requeridos',
+    feedbackSuccess: '¡Comentario enviado! Apreciamos tu aporte.',
+    bugSuccess: '¡Reporte enviado! Lo investigaremos.',
+    loading: 'Cargando...',
+  } : {
+    pageTitle: 'Help Improve',
+    feedback: 'Feedback',
+    bugReport: 'Bug Report',
+    shareIdeas: 'Share Your Ideas',
+    shareIdeasDesc: "Have a feature request or general feedback? We'd love to hear from you!",
+    type: 'Type',
+    featureRequest: 'Feature Request',
+    general: 'General Feedback',
+    title: 'Title',
+    titlePlaceholder: 'Brief summary of your feedback',
+    description: 'Description',
+    descriptionPlaceholder: 'Tell us more about your idea or feedback...',
+    submitFeedback: 'Submit Feedback',
+    submitting: 'Submitting...',
+    reportBug: 'Report a Bug',
+    reportBugDesc: 'Found something broken? Let us know so we can fix it!',
+    bugTitlePlaceholder: 'Brief description of the bug',
+    whatHappened: 'What happened?',
+    whatHappenedPlaceholder: 'Describe what went wrong...',
+    stepsToReproduce: 'Steps to reproduce (optional)',
+    stepsPlaceholder: '1. Go to...\n2. Click on...\n3. See error...',
+    severity: 'Severity',
+    low: 'Low - Minor issue',
+    medium: 'Medium - Annoying but usable',
+    high: 'High - Major problem',
+    critical: 'Critical - App is broken',
+    submitBug: 'Submit Bug Report',
+    fillAll: 'Please fill in all fields',
+    fillRequired: 'Please fill in all required fields',
+    feedbackSuccess: 'Feedback submitted! We appreciate your input.',
+    bugSuccess: "Bug report submitted! We'll investigate this.",
+    loading: 'Loading...',
+  };
 
   useEffect(() => {
     checkUser();
@@ -41,7 +110,7 @@ export default function FeedbackPage() {
 
   async function submitFeedback() {
     if (!feedbackTitle.trim() || !feedbackDescription.trim()) {
-      showInfo('Please fill in all fields');
+      showInfo(t.fillAll);
       return;
     }
 
@@ -58,7 +127,7 @@ export default function FeedbackPage() {
 
       if (error) throw error;
 
-      showSuccess('Feedback submitted! We appreciate your input.');
+      showSuccess(t.feedbackSuccess);
       setFeedbackTitle('');
       setFeedbackDescription('');
     } catch (error: any) {
@@ -70,7 +139,7 @@ export default function FeedbackPage() {
 
   async function submitBugReport() {
     if (!bugTitle.trim() || !bugDescription.trim()) {
-      showInfo('Please fill in all required fields');
+      showInfo(t.fillRequired);
       return;
     }
 
@@ -88,7 +157,7 @@ export default function FeedbackPage() {
 
       if (error) throw error;
 
-      showSuccess('Bug report submitted! We\'ll investigate this.');
+      showSuccess(t.bugSuccess);
       setBugTitle('');
       setBugDescription('');
       setBugSteps('');
@@ -103,7 +172,7 @@ export default function FeedbackPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+        <p className="text-theme-primary">{t.loading}</p>
       </div>
     );
   }
@@ -116,7 +185,7 @@ export default function FeedbackPage() {
           <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </button>
-          <h1 className="text-xl font-bold text-theme-primary">Help Improve <span className="text-tribe-green">Tribe.</span></h1>
+          <h1 className="text-xl font-bold text-theme-primary">{t.pageTitle} <span className="text-tribe-green">Tribe.</span></h1>
         </div>
       </div>
 
@@ -132,7 +201,7 @@ export default function FeedbackPage() {
             }`}
           >
             <MessageSquare className="w-5 h-5" />
-            Feedback
+            {t.feedback}
           </button>
           <button
             onClick={() => setActiveTab('bug')}
@@ -143,48 +212,48 @@ export default function FeedbackPage() {
             }`}
           >
             <Bug className="w-5 h-5" />
-            Bug Report
+            {t.bugReport}
           </button>
         </div>
 
         {/* Feedback Form */}
         {activeTab === 'feedback' && (
           <div className="bg-white rounded-xl p-6 shadow">
-            <h2 className="text-lg font-bold text-theme-primary mb-4">Share Your Ideas</h2>
+            <h2 className="text-lg font-bold text-theme-primary mb-4">{t.shareIdeas}</h2>
             <p className="text-sm text-theme-secondary mb-6">
-              Have a feature request or general feedback? We'd love to hear from you!
+              {t.shareIdeasDesc}
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Type *</label>
+                <label className="block text-sm font-medium mb-2">{t.type} *</label>
                 <select
                   value={feedbackType}
                   onChange={(e) => setFeedbackType(e.target.value)}
                   className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 >
-                  <option value="feature_request">Feature Request</option>
-                  <option value="general">General Feedback</option>
+                  <option value="feature_request">{t.featureRequest}</option>
+                  <option value="general">{t.general}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Title *</label>
+                <label className="block text-sm font-medium mb-2">{t.title} *</label>
                 <input
                   type="text"
                   value={feedbackTitle}
                   onChange={(e) => setFeedbackTitle(e.target.value)}
-                  placeholder="Brief summary of your feedback"
+                  placeholder={t.titlePlaceholder}
                   className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Description *</label>
+                <label className="block text-sm font-medium mb-2">{t.description} *</label>
                 <textarea
                   value={feedbackDescription}
                   onChange={(e) => setFeedbackDescription(e.target.value)}
-                  placeholder="Tell us more about your idea or feedback..."
+                  placeholder={t.descriptionPlaceholder}
                   className="w-full p-3 border border-stone-300 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
@@ -195,7 +264,7 @@ export default function FeedbackPage() {
                 className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Send className="w-5 h-5" />
-                {submitting ? 'Submitting...' : 'Submit Feedback'}
+                {submitting ? t.submitting : t.submitFeedback}
               </button>
             </div>
           </div>
@@ -204,54 +273,54 @@ export default function FeedbackPage() {
         {/* Bug Report Form */}
         {activeTab === 'bug' && (
           <div className="bg-white rounded-xl p-6 shadow">
-            <h2 className="text-lg font-bold text-theme-primary mb-4">Report a Bug</h2>
+            <h2 className="text-lg font-bold text-theme-primary mb-4">{t.reportBug}</h2>
             <p className="text-sm text-theme-secondary mb-6">
-              Found something broken? Let us know so we can fix it!
+              {t.reportBugDesc}
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Title *</label>
+                <label className="block text-sm font-medium mb-2">{t.title} *</label>
                 <input
                   type="text"
                   value={bugTitle}
                   onChange={(e) => setBugTitle(e.target.value)}
-                  placeholder="Brief description of the bug"
+                  placeholder={t.bugTitlePlaceholder}
                   className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">What happened? *</label>
+                <label className="block text-sm font-medium mb-2">{t.whatHappened} *</label>
                 <textarea
                   value={bugDescription}
                   onChange={(e) => setBugDescription(e.target.value)}
-                  placeholder="Describe what went wrong..."
+                  placeholder={t.whatHappenedPlaceholder}
                   className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Steps to reproduce (optional)</label>
+                <label className="block text-sm font-medium mb-2">{t.stepsToReproduce}</label>
                 <textarea
                   value={bugSteps}
                   onChange={(e) => setBugSteps(e.target.value)}
-                  placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
+                  placeholder={t.stepsPlaceholder}
                   className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Severity *</label>
+                <label className="block text-sm font-medium mb-2">{t.severity} *</label>
                 <select
                   value={bugSeverity}
                   onChange={(e) => setBugSeverity(e.target.value)}
                   className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
                 >
-                  <option value="low">Low - Minor issue</option>
-                  <option value="medium">Medium - Annoying but usable</option>
-                  <option value="high">High - Major problem</option>
-                  <option value="critical">Critical - App is broken</option>
+                  <option value="low">{t.low}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="critical">{t.critical}</option>
                 </select>
               </div>
 
@@ -261,7 +330,7 @@ export default function FeedbackPage() {
                 className="w-full py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Bug className="w-5 h-5" />
-                {submitting ? 'Submitting...' : 'Submit Bug Report'}
+                {submitting ? t.submitting : t.submitBug}
               </button>
             </div>
           </div>
