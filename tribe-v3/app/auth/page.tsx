@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
+import LanguageToggle from '@/components/LanguageToggle';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +16,27 @@ export default function AuthPage() {
   const [message, setMessage] = useState('');
   const router = useRouter();
   const supabase = createClient();
+  const { language } = useLanguage();
+
+  const t = {
+    tagline: language === 'es' ? 'Nunca Entrenes Solo' : 'Never Train Alone',
+    welcomeBack: language === 'es' ? '¡Bienvenido de nuevo!' : 'Welcome back!',
+    joinCommunity: language === 'es' ? 'Únete a la comunidad' : 'Join the community',
+    name: language === 'es' ? 'Nombre' : 'Name',
+    namePlaceholder: language === 'es' ? 'Tu nombre' : 'Your name',
+    email: language === 'es' ? 'Correo electrónico' : 'Email',
+    password: language === 'es' ? 'Contraseña' : 'Password',
+    signIn: language === 'es' ? 'Iniciar Sesión' : 'Sign In',
+    signUp: language === 'es' ? 'Registrarse' : 'Sign Up',
+    loading: language === 'es' ? 'Cargando...' : 'Loading...',
+    noAccount: language === 'es' ? '¿No tienes cuenta? Regístrate' : "Don't have an account? Sign up",
+    hasAccount: language === 'es' ? '¿Ya tienes cuenta? Inicia sesión' : 'Already have an account? Sign in',
+    forgotPassword: language === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?',
+    backHome: language === 'es' ? '← Volver al inicio' : '← Back to home',
+    verifyEmail: language === 'es' ? '⚠️ Por favor verifica tu correo antes de iniciar sesión.' : '⚠️ Please verify your email before logging in. Check your inbox.',
+    checkEmail: language === 'es' ? '✅ ¡Revisa tu correo para verificar tu cuenta!' : '✅ Check your email to verify your account!',
+    invalidEmail: language === 'es' ? '❌ Por favor ingresa un correo válido' : '❌ Please enter a valid email address',
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,7 +53,7 @@ export default function AuthPage() {
         if (error) throw error;
 
         if (!data.user?.email_confirmed_at) {
-          setMessage('⚠️ Please verify your email before logging in. Check your inbox.');
+          setMessage(t.verifyEmail);
           await supabase.auth.signOut();
           return;
         }
@@ -40,7 +63,7 @@ export default function AuthPage() {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-          setMessage('❌ Please enter a valid email address');
+          setMessage(t.invalidEmail);
           return;
         }
 
@@ -64,7 +87,7 @@ export default function AuthPage() {
             name,
           });
 
-          setMessage('✅ Check your email to verify your account!');
+          setMessage(t.checkEmail);
           setEmail('');
           setPassword('');
           setName('');
@@ -79,14 +102,21 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
+      
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-[#6B7178] rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-stone-900 dark:text-white mb-2">
+            <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">
               Tribe<span className="text-tribe-green">.</span>
             </h1>
+            <p className="text-lg font-medium text-tribe-green mb-1">
+              {t.tagline}
+            </p>
             <p className="text-stone-600 dark:text-gray-300">
-              {isLogin ? 'Welcome back!' : 'Join the community'}
+              {isLogin ? t.welcomeBack : t.joinCommunity}
             </p>
           </div>
 
@@ -94,7 +124,7 @@ export default function AuthPage() {
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                  Name
+                  {t.name}
                 </label>
                 <input
                   type="text"
@@ -102,14 +132,14 @@ export default function AuthPage() {
                   onChange={(e) => setName(e.target.value)}
                   required
                   className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-                  placeholder="Your name"
+                  placeholder={t.namePlaceholder}
                 />
               </div>
             )}
 
             <div>
               <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                Email
+                {t.email}
               </label>
               <input
                 type="email"
@@ -123,7 +153,7 @@ export default function AuthPage() {
 
             <div>
               <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                Password
+                {t.password}
               </label>
               <input
                 type="password"
@@ -151,7 +181,7 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
+              {loading ? t.loading : (isLogin ? t.signIn : t.signUp)}
             </button>
           </form>
 
@@ -163,7 +193,7 @@ export default function AuthPage() {
               }}
               className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
             >
-              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              {isLogin ? t.noAccount : t.hasAccount}
             </button>
           </div>
 
@@ -173,7 +203,7 @@ export default function AuthPage() {
                 href="/auth/reset-password"
                 className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
               >
-                Forgot password?
+                {t.forgotPassword}
               </Link>
             </div>
           )}
@@ -181,7 +211,7 @@ export default function AuthPage() {
 
         <div className="mt-6 text-center">
           <Link href="/" className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition">
-            ← Back to home
+            {t.backHome}
           </Link>
         </div>
       </div>

@@ -11,6 +11,7 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     
     // 1. SEND SESSION REMINDERS (2 hours before)
     const now = new Date();
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     
     const { data: sessions, error } = await supabase
       .from('sessions')
-      .select('*, creator:users!sessions_creator_id_fkey(id, name, email)')
+      .select('*, creator:users!sessions_creator_id_fkey(id, name, email, preferred_language)')
       .eq('status', 'active')
       .eq('reminder_sent', false)
       .gte('date', now.toISOString().split('T')[0])
@@ -36,31 +37,44 @@ export async function GET(request: Request) {
       for (const session of sessionsToRemind) {
         const { data: participants } = await supabase
           .from('session_participants')
-          .select('user_id, users!session_participants_user_id_fkey(id, name, email)')
+          .select('user_id, users!session_participants_user_id_fkey(id, name, email, preferred_language)')
           .eq('session_id', session.id)
           .eq('status', 'confirmed');
 
+        // Get host language preference
+        const hostLang = session.creator?.preferred_language || 'en';
+        const hostTitle = hostLang === 'es' ? '¡No entrenes solo hoy!' : "Don't train alone today!";
+        const hostBody = hostLang === 'es' 
+          ? `Tu sesión de ${session.sport} comienza en 2 horas en ${session.location}`
+          : `Your ${session.sport} session starts in 2 hours at ${session.location}`;
+
         // Send to host
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/notifications/send`, {
+        await fetch(`${SITE_URL}/api/notifications/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: session.creator.id,
-            title: `Session starting soon!`,
-            body: `Your ${session.sport} session starts in 2 hours at ${session.location}`,
+            title: hostTitle,
+            body: hostBody,
             url: `/session/${session.id}`
           })
         });
 
         // Send to participants
         for (const participant of (participants || [])) {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/notifications/send`, {
+          const pLang = (participant as any).users?.preferred_language || 'en';
+          const pTitle = pLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Session starting soon!';
+          const pBody = pLang === 'es'
+            ? `${session.sport} comienza en 2 horas en ${session.location}. ¡No entrenes solo!`
+            : `${session.sport} starts in 2 hours at ${session.location}. Never train alone!`;
+
+          await fetch(`${SITE_URL}/api/notifications/send`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               userId: participant.user_id,
-              title: `Session starting soon!`,
-              body: `${session.sport} session starts in 2 hours at ${session.location}`,
+              title: pTitle,
+              body: pBody,
               url: `/session/${session.id}`
             })
           });
@@ -81,7 +95,7 @@ export async function GET(request: Request) {
     const { data: users } = await supabase
       .from('users')
       .select('id, preferred_language, push_subscription')
-      .neq('push_subscription', null)
+      .not('push_subscription', 'is', null)
       .or(`last_motivation_sent.is.null,last_motivation_sent.lt.${today}`);
 
     let motivationsSent = 0;
@@ -89,11 +103,11 @@ export async function GET(request: Request) {
     if (users && users.length > 0) {
       for (const user of users) {
         const message = getRandomMessage();
-        const language = user.preferred_language || 'en';
-        const content = language === 'es' ? message.es : message.en;
+        const lang = user.preferred_language || 'en';
+        const content = lang === 'es' ? message.es : message.en;
 
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/notifications/send`, {
+          await fetch(`${SITE_URL}/api/notifications/send`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
