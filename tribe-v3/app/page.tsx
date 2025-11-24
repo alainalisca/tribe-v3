@@ -26,6 +26,7 @@ export default function HomePage() {
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
+  const [userChecked, setUserChecked] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -79,10 +80,12 @@ export default function HomePage() {
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setUser(null); // Guests can browse
+    if (!userChecked) {
+      setUser(null);
+      setUserChecked(true); // Guests can browse
     } else {
       setUser(user);
+      setUserChecked(true);
     }
   }
 
@@ -295,7 +298,7 @@ export default function HomePage() {
     }
   }
 
-  if (!user) {
+  if (!userChecked) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
         {showOnboarding && (
