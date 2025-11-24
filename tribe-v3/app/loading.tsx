@@ -1,10 +1,4 @@
-'use client';
-
-import { useLanguage } from '@/lib/LanguageContext';
-
 export default function Loading() {
-  // Note: This is a loading screen, so language context may not be available
-  // We'll show English by default, but the main app will show correct language
   return (
     <div className="fixed inset-0 bg-stone-50 dark:bg-[#52575D] flex items-center justify-center z-50">
       <div className="text-center">
