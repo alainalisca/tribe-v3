@@ -1,9 +1,19 @@
 'use client';
 
+import { useLanguage } from '@/lib/LanguageContext';
+
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function SafetyPage() {
+  const { language } = useLanguage();
+  const t = language === 'es' ? {
+    title: 'Guías de Seguridad',
+    note: 'Nota: Este documento está disponible en inglés.',
+  } : {
+    title: 'Safety Guidelines',
+    note: '',
+  };
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">

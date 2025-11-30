@@ -2,8 +2,21 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function PrivacyPage() {
+  const { language } = useLanguage();
+  
+  const t = language === 'es' ? {
+    title: 'Política de Privacidad',
+    note: 'Nota: Este documento legal está disponible en inglés.',
+    lastUpdated: 'Última actualización',
+  } : {
+    title: 'Privacy Policy',
+    note: '',
+    lastUpdated: 'Last Updated',
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
@@ -14,14 +27,19 @@ export default function PrivacyPage() {
             </button>
           </Link>
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            Privacy Policy
+            {t.title}
           </h1>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white dark:bg-[#272D34] rounded-xl p-8">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Last Updated: November 24, 2025</p>
+          {language === 'es' && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
+              <p className="text-blue-800 dark:text-blue-200">{t.note}</p>
+            </div>
+          )}
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{t.lastUpdated}: November 24, 2025</p>
           
           <div className="space-y-6 text-stone-700 dark:text-gray-300">
             <section>

@@ -1,9 +1,21 @@
 'use client';
 
+import { useLanguage } from '@/lib/LanguageContext';
+
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function TermsPage() {
+  const { language } = useLanguage();
+  const t = language === 'es' ? {
+    title: 'Términos de Servicio',
+    note: 'Nota: Este documento legal está disponible en inglés.',
+    lastUpdated: 'Última actualización',
+  } : {
+    title: 'Terms of Service',
+    note: '',
+    lastUpdated: 'Last Updated',
+  };
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
