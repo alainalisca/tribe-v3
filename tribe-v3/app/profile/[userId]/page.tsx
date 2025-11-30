@@ -322,15 +322,15 @@ export default function PublicProfilePage() {
 
           {/* Stats - 2x2 Grid Layout */}
           <div className="grid grid-cols-2 gap-3 mt-6">
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
               <p className="text-sm text-theme-secondary mt-1">{t.sessionsCreated}</p>
             </div>
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
               <p className="text-sm text-theme-secondary mt-1">{t.sessionsJoined}</p>
             </div>
-            <div className="bg-white rounded-2xl p-4 text-center border border-stone-200">
+            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-sm text-theme-secondary mt-1">{t.totalSessions}</p>
             </div>

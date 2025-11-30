@@ -33,6 +33,7 @@ export const translations = {
     
     // Session Card
     spots: 'spots',
+    spotsLeft: 'spots left',
     share: 'Share',
     chat: 'Chat',
     joined: 'Joined',
@@ -53,6 +54,8 @@ export const translations = {
     sport: 'Sport',
     date: 'Date',
     time: 'Time',
+    selectSport: 'Select a sport',
+    startTime: 'Start Time',
     location: 'Location',
     maxParticipants: 'Max Participants',
     description: 'Description',
@@ -111,6 +114,7 @@ export const translations = {
     
     // Tarjeta de Sesión
     spots: 'espacios',
+    spotsLeft: 'lugares disponibles',
     share: 'Compartir',
     chat: 'Chat',
     joined: 'Unido',
@@ -131,6 +135,8 @@ export const translations = {
     sport: 'Deporte',
     date: 'Fecha',
     time: 'Hora',
+    selectSport: 'Selecciona un deporte',
+    startTime: 'Hora de Inicio',
     location: 'Ubicación',
     maxParticipants: 'Máximo de Participantes',
     description: 'Descripción',

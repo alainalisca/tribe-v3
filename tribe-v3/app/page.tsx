@@ -362,7 +362,6 @@ export default function HomePage() {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/profile">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
-              Tribe<span className="text-tribe-green">.</span>
             </h1>
           </Link>
           <LanguageToggle />
@@ -395,7 +394,7 @@ export default function HomePage() {
             onChange={(e) => setSelectedSport(e.target.value)}
             className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           >
-            <option value="">{t('sportsActivities')}</option>
+            <option value="">{language === 'es' ? 'Todos' : 'All'}</option>
             {sports.map((sport) => (
               <option key={sport} value={sport}>
                 {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}

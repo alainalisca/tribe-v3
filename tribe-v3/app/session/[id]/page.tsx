@@ -506,7 +506,7 @@ export default function SessionDetailPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">Session Details</h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{language === 'es' ? 'Detalles de Sesión' : 'Session Details'}</h1>
         </div>
       </div>
 
@@ -620,7 +620,7 @@ export default function SessionDetailPage() {
                 className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
               >
                 <LogOut className="w-5 h-5" />
-                Leave Session
+                {language === 'es' ? 'Salir de Sesión' : 'Leave Session'}
               </button>
             ) : isPast ? (
               <button 
@@ -772,7 +772,7 @@ export default function SessionDetailPage() {
         {(creator || participants.length > 0) && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
             <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-              Participants ({participants.length + 1})
+              {language === 'es' ? 'Participantes' : 'Participants'} ({participants.length + 1})
             </h2>
             <div className="grid grid-cols-1 gap-3">
               {creator && (
@@ -791,7 +791,7 @@ export default function SessionDetailPage() {
                     )}
                     <div>
                       <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
-                      <p className="text-xs text-tribe-green font-semibold">Host</p>
+                      <p className="text-xs text-tribe-green font-semibold">{language === 'es' ? 'Anfitrión' : 'Host'}</p>
                     </div>
                   </Link>
                 </div>
