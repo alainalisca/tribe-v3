@@ -80,7 +80,7 @@ export default function HomePage() {
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!userChecked) {
+    if (!user) {
       setUser(null);
       setUserChecked(true); // Guests can browse
     } else {
@@ -298,7 +298,7 @@ export default function HomePage() {
     }
   }
 
-  if (!userChecked) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
         {showOnboarding && (
