@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { sportTranslations } from '@/lib/translations';
 
 const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
 
@@ -13,8 +15,21 @@ export default function ChatPage() {
   const params = useParams();
   const sessionId = params.id as string;
   const supabase = createClient();
+  const { language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
+
+  const t = language === 'es' ? {
+    loading: 'Cargando...',
+    chat: 'Chat',
+    admin: 'Admin',
+    host: 'Anfitrión',
+  } : {
+    loading: 'Loading...',
+    chat: 'Chat',
+    admin: 'Admin',
+    host: 'Host',
+  };
 
   useEffect(() => {
     loadData();
@@ -34,11 +49,18 @@ export default function ChatPage() {
   }
 
   if (!user || !session) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-theme-page">
+        <p className="text-theme-primary">{t.loading}</p>
+      </div>
+    );
   }
 
   const isHost = session.creator_id === user.id;
   const isAdmin = user.email === ADMIN_EMAIL;
+  const sportName = language === 'es' && sportTranslations[session.sport] 
+    ? sportTranslations[session.sport].es 
+    : session.sport;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-20">
@@ -49,11 +71,11 @@ export default function ChatPage() {
               <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
             </Link>
             <div>
-              <h1 className="text-xl font-bold">{session.sport} Chat</h1>
+              <h1 className="text-xl font-bold text-theme-primary">{sportName} {t.chat}</h1>
               <p className="text-sm text-gray-500">
                 {session.location}
-                {isAdmin && <span className="ml-2 text-red-500">• Admin</span>}
-                {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• Host</span>}
+                {isAdmin && <span className="ml-2 text-red-500">• {t.admin}</span>}
+                {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t.host}</span>}
               </p>
             </div>
           </div>
