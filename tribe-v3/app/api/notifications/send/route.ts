@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
-// Configure web-push with VAPID keys
 webpush.setVapidDetails(
   `mailto:${process.env.VAPID_EMAIL}`,
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
@@ -20,34 +19,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // Use service role to bypass RLS
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Get user's push subscription
-    const { data: subscription, error } = await supabase
-      .from('push_subscriptions')
-      .select('subscription')
-      .eq('user_id', userId)
+    // Get user's push subscription from users table
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('push_subscription')
+      .eq('id', userId)
       .single();
 
-    if (error || !subscription) {
+    if (error || !user?.push_subscription) {
       return NextResponse.json(
         { error: 'No push subscription found for user' },
         { status: 404 }
       );
     }
 
-    // Send push notification
+    // Parse the subscription (stored as JSON string)
+    const subscription = typeof user.push_subscription === 'string' 
+      ? JSON.parse(user.push_subscription) 
+      : user.push_subscription;
+
     const payload = JSON.stringify({
       title,
       body,
       url: url || '/'
     });
 
-    await webpush.sendNotification(subscription.subscription, payload);
+    await webpush.sendNotification(subscription, payload);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
