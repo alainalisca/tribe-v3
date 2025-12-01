@@ -494,7 +494,7 @@ export default function HomePage() {
       )}
 
       <BottomNav />
-      <NotificationPrompt />
+      <NotificationPrompt hideWhenOnboarding={showOnboarding} />
     </div>
   );
 }

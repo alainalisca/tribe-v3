@@ -5,7 +5,11 @@ import { Bell, X } from 'lucide-react';
 import { requestNotificationPermission } from '@/lib/notifications';
 import { createClient } from '@/lib/supabase/client';
 
-export default function NotificationPrompt() {
+interface NotificationPromptProps {
+  hideWhenOnboarding?: boolean;
+}
+
+export default function NotificationPrompt({ hideWhenOnboarding = false }: NotificationPromptProps) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -22,14 +26,12 @@ export default function NotificationPrompt() {
     
     setUserId(user.id);
 
-    // Check if we should show the prompt
     const hasAsked = localStorage.getItem('notification-prompt-shown');
     const permission = typeof window !== 'undefined' && 'Notification' in window 
       ? Notification.permission 
       : 'denied';
 
     if (!hasAsked && permission === 'default') {
-      // Show prompt after 5 seconds
       setTimeout(() => setShow(true), 5000);
     }
   }
@@ -61,7 +63,7 @@ export default function NotificationPrompt() {
     localStorage.setItem('notification-prompt-shown', 'true');
   }
 
-  if (!show) return null;
+  if (!show || hideWhenOnboarding) return null;
 
   return (
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
