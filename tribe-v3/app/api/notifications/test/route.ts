@@ -3,9 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
-    
-    // Use your actual user ID
-    const userId = '2ff3d10f-79e0-494a-a3fb-aabb8de51cd4'; // Reggie (alainalisca@gmail.com)
+    const userId = '2ff3d10f-79e0-494a-a3fb-aabb8de51cd4';
 
     const response = await fetch(`${SITE_URL}/api/notifications/send`, {
       method: 'POST',
@@ -19,12 +17,7 @@ export async function GET() {
     });
 
     const result = await response.json();
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Test notification sent!',
-      result 
-    });
+    return NextResponse.json({ success: true, result });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
