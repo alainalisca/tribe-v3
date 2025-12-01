@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Hardcode your user ID for testing
-    const userId = 'eaff348f-5df3-4df5-bd80-69ec233aad0e';
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+    
+    // Use your actual user ID
+    const userId = '2ff3d10f-79e0-494a-a3fb-aabb8de51cd4'; // Reggie (alainalisca@gmail.com)
 
-    // Send test notification
-    const response = await fetch('http://localhost:3000/api/notifications/send', {
+    const response = await fetch(`${SITE_URL}/api/notifications/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: userId,
         title: '🎉 Test Notification',
-        body: 'Push notifications are working! You\'ll get reminders 2 hours before your sessions.',
+        body: 'Push notifications are working!',
         url: '/'
       })
     });
@@ -27,4 +28,8 @@ export async function GET() {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+export async function POST() {
+  return GET();
 }
