@@ -80,6 +80,10 @@ export const translations = {
     email: 'Email',
     password: 'Password',
     forgotPassword: 'Forgot Password?',
+    
+    // Chat
+    noMessagesYet: "No messages yet",
+    startConversation: "Start the conversation!",
   },
   
   es: {
@@ -161,6 +165,10 @@ export const translations = {
     email: 'Correo Electrónico',
     password: 'Contraseña',
     forgotPassword: '¿Olvidaste tu Contraseña?',
+    
+    // Chat
+    noMessagesYet: "No hay mensajes aún",
+    startConversation: "¡Inicia la conversación!",
   }
 };
 

@@ -278,8 +278,14 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       {/* Messages List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-stone-500 dark:text-gray-400 text-sm">No messages yet. Start the conversation!</p>
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">💬</div>
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+              {t.noMessagesYet || "No messages yet"}
+            </h3>
+            <p className="text-stone-500 dark:text-gray-400 text-sm">
+              {t.startConversation || "Start the conversation!"}
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
