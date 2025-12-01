@@ -123,10 +123,21 @@ export default function RequestsPage() {
 
       <div className="max-w-2xl mx-auto p-4">
         {requests.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-stone-600 dark:text-gray-400">
-              {language === 'en' ? 'No pending requests' : 'No hay solicitudes pendientes'}
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="text-4xl mb-4">📬</div>
+            <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
+              {language === 'en' ? 'No Pending Requests' : 'Sin Solicitudes Pendientes'}
+            </h2>
+            <p className="text-stone-600 dark:text-gray-300 mb-4">
+              {language === 'en'
+                ? 'When someone wants to join your sessions, you\'ll see their requests here.'
+                : 'Cuando alguien quiera unirse a tus sesiones, verás sus solicitudes aquí.'}
             </p>
+            <Link href="/create">
+              <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
+                {language === 'en' ? 'Create a Session' : 'Crear una Sesión'}
+              </button>
+            </Link>
           </div>
         ) : (
           <div className="space-y-4">
