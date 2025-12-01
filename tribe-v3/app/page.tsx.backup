@@ -298,6 +298,32 @@ export default function HomePage() {
     }
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+        {showOnboarding && (
+          <OnboardingModal
+            onComplete={() => {
+              localStorage.setItem('hasSeenOnboarding', 'true');
+              setShowOnboarding(false);
+              setShowProfilePrompt(true);
+            }}
+          />
+        )}
+        <div className="text-center">
+          <h1 className="text-5xl font-bold text-stone-900 dark:text-white mb-2">
+            Tribe<span className="text-tribe-green">.</span>
+          </h1>
+          <p className="text-lg font-medium text-stone-600 dark:text-gray-300 mb-6">
+            {language === 'es' ? 'Nunca Entrenes Solo' : 'Never Train Alone'}
+          </p>
+          <div className="animate-pulse">
+            <div className="h-1 w-32 bg-tribe-green rounded-full mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function handleWaiverAccepted() {
     if (!user) return;

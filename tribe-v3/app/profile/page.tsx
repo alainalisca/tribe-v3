@@ -138,7 +138,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+        
       </div>
     );
   }

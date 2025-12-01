@@ -172,7 +172,7 @@ export default function FeedbackPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">{t.loading}</p>
+        
       </div>
     );
   }

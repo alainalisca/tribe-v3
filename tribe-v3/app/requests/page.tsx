@@ -100,7 +100,7 @@ export default function RequestsPage() {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
         <p className="text-stone-900 dark:text-white">
-          {language === 'en' ? 'Loading...' : 'Cargando...'}
+          
         </p>
       </div>
     );
