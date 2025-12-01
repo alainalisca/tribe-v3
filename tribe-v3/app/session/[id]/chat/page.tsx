@@ -63,7 +63,7 @@ export default function ChatPage() {
     : session.sport;
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-20">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-32">
       <div className="max-w-2xl mx-auto">
         <div className="sticky top-0 bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700 p-4 z-10">
           <div className="flex items-center gap-3">

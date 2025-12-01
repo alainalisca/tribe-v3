@@ -160,7 +160,7 @@ export default function EditSessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-tribe-darker pb-20">
+    <div className="min-h-screen bg-tribe-darker pb-32">
       <div className="bg-tribe-dark p-4 sticky top-0 z-10 border-b border-slate-700">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href={`/session/${sessionId}`}>

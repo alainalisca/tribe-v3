@@ -139,7 +139,7 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 sticky top-0 z-10 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-[#272D34] dark:text-white mb-4">{t("matches")}</h1>

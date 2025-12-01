@@ -332,7 +332,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
       {showOnboarding && (
         <OnboardingModal
           onComplete={() => {

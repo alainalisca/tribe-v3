@@ -109,7 +109,7 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-20">
+    <div className="min-h-screen bg-theme-page pb-32">
       <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-xl font-bold text-theme-primary">{t('mySessions')}</h1>

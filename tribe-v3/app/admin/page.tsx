@@ -332,7 +332,7 @@ export default function AdminPage() {
   if (!authorized) return null;
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20">
+    <div className="min-h-screen bg-stone-50 pb-32">
       <div className="w-full max-w-md mx-auto px-3 py-4">
         <Link href="/settings" className="inline-flex items-center gap-1 text-stone-600 mb-3 text-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
