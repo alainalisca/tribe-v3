@@ -28,6 +28,8 @@ export default function EditProfilePage() {
     location: '',
     sports: [] as string[],
     photos: [] as string[],
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
   });
 
   useEffect(() => {
@@ -57,6 +59,8 @@ export default function EditProfilePage() {
           location: profileData.location || '',
           sports: profileData.sports || [],
           photos: profileData.photos || [],
+          emergency_contact_name: profileData.emergency_contact_name || "",
+          emergency_contact_phone: profileData.emergency_contact_phone || "",
         });
       }
     } catch (error) {
@@ -237,6 +241,86 @@ export default function EditProfilePage() {
         </div>
 
         {/* Photos */}
+
+        {/* Emergency Contact */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
+            🚨 Emergency Contact (Optional but Recommended)
+          </h3>
+          <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">
+            {language === 'es' 
+              ? 'Información de contacto de emergencia en caso de accidente durante una sesión'
+              : 'Emergency contact information in case of an incident during a session'}
+          </p>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-semibold text-theme-primary mb-2">
+                {language === 'es' ? 'Nombre de Contacto' : 'Contact Name'}
+              </label>
+              <input
+                type="text"
+                value={formData.emergency_contact_name}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                placeholder={language === 'es' ? 'ej. Juan Pérez' : 'e.g. John Smith'}
+                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-theme-primary mb-2">
+                {language === 'es' ? 'Teléfono de Contacto' : 'Contact Phone'}
+              </label>
+              <input
+                type="tel"
+                value={formData.emergency_contact_phone}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                placeholder={language === 'es' ? 'ej. +57 300 123 4567' : 'e.g. +1 (555) 123-4567'}
+                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
+            🚨 Emergency Contact (Optional but Recommended)
+          </h3>
+          <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">
+            {language === 'es' 
+              ? 'Información de contacto de emergencia en caso de accidente durante una sesión'
+              : 'Emergency contact information in case of an incident during a session'}
+          </p>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-semibold text-theme-primary mb-2">
+                {language === 'es' ? 'Nombre de Contacto' : 'Contact Name'}
+              </label>
+              <input
+                type="text"
+                value={formData.emergency_contact_name}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                placeholder={language === 'es' ? 'ej. Juan Pérez' : 'e.g. John Smith'}
+                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-theme-primary mb-2">
+                {language === 'es' ? 'Teléfono de Contacto' : 'Contact Phone'}
+              </label>
+              <input
+                type="tel"
+                value={formData.emergency_contact_phone}
+                onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                placeholder={language === 'es' ? 'ej. +57 300 123 4567' : 'e.g. +1 (555) 123-4567'}
+                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              />
+            </div>
+          </div>
+        </div>
         <div>
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             Photos ({formData.photos.length}/6)
