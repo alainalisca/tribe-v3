@@ -26,8 +26,6 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingBugs, setLoadingBugs] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -46,7 +44,7 @@ export default function AdminPage() {
     } else if (activeTab === 'feedback') {
       loadFeedback();
     } else if (activeTab === 'bugs') {
-      loadBugs();  } else if (activeTab === 'messages') {    loadMessages();
+      loadBugs();
     }
   }, [activeTab]);
 
@@ -182,50 +180,6 @@ export default function AdminPage() {
     } finally {
       setLoadingBugs(false);
     }
-
-  async function loadMessages() {
-    setLoadingMessages(true);
-    try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(`
-          *,
-          user:users(id, name, email),
-          session:sessions(id, sport, location)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-    } finally {
-      setLoadingMessages(false);
-    }
-  }
-
-  async function deleteMessage(messageId: string) {
-    if (!confirm('Delete this message?')) return;
-    
-    setActionLoading(messageId);
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .delete()
-        .eq('id', messageId);
-
-      if (error) throw error;
-      
-      setMessages(messages.filter(m => m.id !== messageId));
-      alert('Message deleted');
-    } catch (error: any) {
-      console.error('Error deleting message:', error);
-      alert('Error: ' + error.message);
-    } finally {
-      setActionLoading(null);
-    }
-  }
   }
 
   async function banUser(userId: string) {
@@ -455,16 +409,6 @@ export default function AdminPage() {
                 {pendingBugs.length}
               </span>
             )}
-          </button>
-          <button
-            onClick={() => setActiveTab("messages")}
-            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
-              activeTab === "messages"
-                ? "border-b-2 border-[#C0E863] text-[#272D34]"
-                : "text-stone-600"
-            }`}
-          >
-            Messages
           </button>
         </div>
 
@@ -821,73 +765,6 @@ export default function AdminPage() {
           </div>
         )}
       </div>
-
-        {activeTab === 'messages' && (
-          <div className="bg-white rounded shadow">
-            <div className="p-3 border-b">
-              <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-purple-500" />
-                Recent Messages ({messages.length})
-              </h3>
-              <p className="text-xs text-stone-600 mt-1">Last 100 messages across all sessions</p>
-            </div>
-            
-            {loadingMessages ? (
-              <p className="text-center py-6 text-sm text-gray-500">Loading messages...</p>
-            ) : messages.length === 0 ? (
-              <div className="p-6 text-center">
-                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No messages yet</p>
-              </div>
-            ) : (
-              <div className="divide-y max-h-[600px] overflow-y-auto">
-                {messages.map((msg) => (
-                  <div key={msg.id} className="p-3 hover:bg-stone-50">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-xs font-medium text-[#272D34]">
-                            {msg.user?.name || 'Unknown User'}
-                          </p>
-                          <span className="text-xs text-stone-500">
-                            {msg.user?.email}
-                          </span>
-                        </div>
-                        
-                        <p className="text-sm text-stone-700 mb-2 break-words">
-                          {msg.message}
-                        </p>
-                        
-                        <div className="flex items-center gap-3 text-xs text-stone-500">
-                          <span>
-                            Session: {msg.session?.sport} @ {msg.session?.location}
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {new Date(msg.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => deleteMessage(msg.id)}
-                        disabled={actionLoading === msg.id}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-50"
-                        title="Delete message"
-                      >
-                        {actionLoading === msg.id ? (
-                          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
     </div>
   );
 }
