@@ -16,6 +16,7 @@
     "lucide-react": "^0.263.1",
     "next": "15.0.2",
     "next-intl": "^3.9.0",
+    "posthog-js": "^1.302.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0",

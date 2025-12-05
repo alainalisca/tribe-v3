@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { PostHogProvider } from '@/components/PostHogProvider';
 import './globals.css';
 import type { Metadata } from 'next';
 
@@ -28,23 +29,22 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
     <link rel="manifest" href="/manifest.json" />
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#C0E863" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Tribe" />
       </head>
       <body>
-        <IOSInstallPrompt />
-        <LanguageProvider>
+        <PostHogProvider>
           <ThemeProvider>
-            {children}
-            <Toaster />
-        <ServiceWorkerRegistration />
+            <LanguageProvider>
+              <Toaster position="top-center" />
+              <ServiceWorkerRegistration />
+              <IOSInstallPrompt />
+              {children}
+            </LanguageProvider>
           </ThemeProvider>
-        </LanguageProvider>
+        </PostHogProvider>
       </body>
     </html>
   );
