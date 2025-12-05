@@ -12,7 +12,6 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
@@ -25,10 +24,6 @@ export default function AuthPage() {
     joinCommunity: language === 'es' ? 'Únete a la comunidad' : 'Join the community',
     name: language === 'es' ? 'Nombre' : 'Name',
     namePlaceholder: language === 'es' ? 'Tu nombre' : 'Your name',
-    birthDate: language === 'es' ? 'Fecha de Nacimiento' : 'Date of Birth',
-    mustBe18: language === 'es' ? '❌ Debes tener 18 años o más para usar Tribe' : '❌ You must be 18 or older to use Tribe',
-    enterBirthDate: language === 'es' ? '❌ Por favor ingresa tu fecha de nacimiento' : '❌ Please enter your date of birth',
-    mustBe18Note: language === 'es' ? 'Debes tener 18 años o más' : 'You must be 18 or older',
     email: language === 'es' ? 'Correo electrónico' : 'Email',
     password: language === 'es' ? 'Contraseña' : 'Password',
     signIn: language === 'es' ? 'Iniciar Sesión' : 'Sign In',
@@ -42,17 +37,6 @@ export default function AuthPage() {
     checkEmail: language === 'es' ? '✅ ¡Revisa tu correo para verificar tu cuenta!' : '✅ Check your email to verify your account!',
     invalidEmail: language === 'es' ? '❌ Por favor ingresa un correo válido' : '❌ Please enter a valid email address',
   };
-
-  function calculateAge(birthDate: string): number {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,18 +67,6 @@ export default function AuthPage() {
           return;
         }
 
-        // Check age
-        if (!birthDate) {
-          setMessage(t.enterBirthDate);
-          return;
-        }
-        
-        const age = calculateAge(birthDate);
-        if (age < 18) {
-          setMessage(t.mustBe18);
-          return;
-        }
-
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -113,14 +85,12 @@ export default function AuthPage() {
             id: data.user.id,
             email: data.user.email,
             name,
-            date_of_birth: birthDate,
           });
 
           setMessage(t.checkEmail);
           setEmail('');
           setPassword('');
           setName('');
-          setBirthDate('');
         }
       }
     } catch (error: any) {
@@ -152,38 +122,19 @@ export default function AuthPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                    {t.name}
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-                    placeholder={t.namePlaceholder}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-                    {t.birthDate}
-                  </label>
-                  <input
-                    type="date"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    required
-                    max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-                  />
-                  <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
-                    {t.mustBe18Note}
-                  </p>
-                </div>
-              </>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+                  {t.name}
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+                  placeholder={t.namePlaceholder}
+                />
+              </div>
             )}
 
             <div>
@@ -248,11 +199,20 @@ export default function AuthPage() {
 
           {isLogin && (
             <div className="mt-4 text-center">
-              <Link href="/" className="text-sm text-stone-500 dark:text-gray-400 hover:text-tribe-green transition">
-                {t.backHome}
+              <Link 
+                href="/auth/reset-password"
+                className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
+              >
+                {t.forgotPassword}
               </Link>
             </div>
           )}
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link href="/" className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition">
+            {t.backHome}
+          </Link>
         </div>
       </div>
     </div>
