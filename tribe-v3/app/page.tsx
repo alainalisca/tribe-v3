@@ -451,6 +451,14 @@ export default function HomePage() {
             }}
           />
         )}
+
+        {/* Profile Completion Banner */}
+        {userProfile && (
+          <ProfileCompletionBanner
+            hasPhoto={userProfile.avatar_url ? true : false}
+            hasSports={userProfile.sports && userProfile.sports.length > 0}
+          />
+        )}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (

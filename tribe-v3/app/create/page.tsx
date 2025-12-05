@@ -20,6 +20,9 @@ export default function CreateSessionPage() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
   const [formData, setFormData] = useState({
     sport: '',
@@ -36,6 +39,7 @@ export default function CreateSessionPage() {
 
   useEffect(() => {
     checkUser();
+    loadTemplates();
   }, []);
 
   async function checkUser() {
@@ -44,6 +48,89 @@ export default function CreateSessionPage() {
       router.push('/auth');
     } else {
       setUser(user);
+    }
+  }
+
+  async function loadTemplates() {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('session_templates')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTemplates(data || []);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  }
+
+  async function saveAsTemplate() {
+    if (!user || !formData.sport || !formData.location) {
+      showInfo(language === 'es' ? 'Completa deporte y ubicación primero' : 'Fill in sport and location first');
+      return;
+    }
+
+    const templateName = prompt(
+      language === 'es' ? 'Nombre para esta plantilla:' : 'Name for this template:',
+      `${formData.sport} - ${formData.location}`
+    );
+
+    if (!templateName) return;
+
+    try {
+      setSavingTemplate(true);
+      const { error } = await supabase
+        .from('session_templates')
+        .insert({
+          user_id: user.id,
+          name: templateName,
+          sport: formData.sport,
+          location: formData.location,
+          duration: formData.duration,
+          max_participants: formData.max_participants,
+          description: formData.description,
+        });
+
+      if (error) throw error;
+      showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
+      loadTemplates();
+    } catch (error: any) {
+      showError('Error: ' + error.message);
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
+  function loadFromTemplate(template: any) {
+    setFormData({
+      ...formData,
+      sport: template.sport,
+      location: template.location,
+      duration: template.duration,
+      max_participants: template.max_participants,
+      description: template.description || '',
+    });
+    setShowTemplates(false);
+    showSuccess(language === 'es' ? 'Plantilla cargada' : 'Template loaded');
+  }
+
+  async function deleteTemplate(templateId: string) {
+    if (!confirm(language === 'es' ? '¿Eliminar plantilla?' : 'Delete template?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('session_templates')
+        .delete()
+        .eq('id', templateId);
+
+      if (error) throw error;
+      loadTemplates();
+      showSuccess(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
+    } catch (error: any) {
+      showError('Error: ' + error.message);
     }
   }
 
@@ -206,6 +293,62 @@ export default function CreateSessionPage() {
           <h1 className="text-xl font-bold text-theme-primary">{t('createSession')}</h1>
         </div>
       </div>
+
+        {/* Template Buttons */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setShowTemplates(!showTemplates)}
+            className="flex-1 py-2 px-4 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178] transition"
+          >
+            📋 {language === "es" ? "Usar Plantilla" : "Use Template"} ({templates.length})
+          </button>
+          <button
+            type="button"
+            onClick={saveAsTemplate}
+            disabled={savingTemplate}
+            className="flex-1 py-2 px-4 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
+          >
+            {savingTemplate ? "..." : (language === "es" ? "💾 Guardar Plantilla" : "💾 Save Template")}
+          </button>
+        </div>
+
+        {/* Templates List */}
+        {showTemplates && templates.length > 0 && (
+          <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
+            <h3 className="text-sm font-bold text-theme-primary mb-2">
+              {language === "es" ? "Tus Plantillas" : "Your Templates"}
+            </h3>
+            <div className="space-y-2">
+              {templates.map((template) => (
+                <div key={template.id} className="flex items-center justify-between p-2 bg-stone-50 dark:bg-[#52575D] rounded">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-theme-primary">{template.name}</p>
+                    <p className="text-xs text-stone-600 dark:text-gray-400">
+                      {template.sport} • {template.location} • {template.duration}min
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => loadFromTemplate(template)}
+                      className="px-3 py-1 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
+                    >
+                      {language === "es" ? "Usar" : "Use"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteTemplate(template.id)}
+                      className="px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs rounded"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       <div className="max-w-2xl mx-auto p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
