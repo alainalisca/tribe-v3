@@ -1,5 +1,6 @@
 'use client';
 
+import { showSuccess, showError, showInfo } from "@/lib/toast";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,6 +19,9 @@ export default function AdminPage() {
     activeSessions: 0,
     totalMessages: 0,
     newUsersToday: 0,
+    completedSessions: 0,
+    cancelledSessions: 0,
+    averageParticipants: 0,
   });
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
@@ -45,8 +49,8 @@ export default function AdminPage() {
       loadReports();
     } else if (activeTab === 'feedback') {
       loadFeedback();
-    } else if (activeTab === 'bugs') {
-      loadBugs();  } else if (activeTab === 'messages') {    loadMessages();
+    } else if (activeTab === 'bugs') {      loadBugs();    } else if (activeTab === 'messages') {      loadMessages();
+      loadBugs();
     }
   }, [activeTab]);
 
@@ -94,11 +98,27 @@ export default function AdminPage() {
         .select('id', { count: 'exact', head: true })
         .gte('created_at', todayStart.toISOString());
 
+
+      // Session analytics
+      const { data: allSessions } = await supabase
+        .from("sessions")
+        .select("id, status, date, participants_count");
+
+      const pastSessions = allSessions?.filter(s => new Date(s.date) < new Date()) || [];
+      const completedCount = pastSessions.filter(s => s.status === "completed").length;
+      const cancelledCount = pastSessions.filter(s => s.status === "cancelled").length;
+      
+      const avgParticipants = allSessions && allSessions.length > 0
+        ? Math.round(allSessions.reduce((sum, s) => sum + (s.participants_count || 0), 0) / allSessions.length)
+        : 0;
       setStats({
         totalUsers: userCount || 0,
         activeSessions: sessionCount || 0,
         totalMessages: messageCount || 0,
         newUsersToday: newUsers || 0,
+        completedSessions: completedCount,
+        cancelledSessions: cancelledCount,
+        averageParticipants: avgParticipants,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -218,10 +238,10 @@ export default function AdminPage() {
       if (error) throw error;
       
       setMessages(messages.filter(m => m.id !== messageId));
-      alert('Message deleted');
+      showSuccess('Message deleted');
     } catch (error: any) {
       console.error('Error deleting message:', error);
-      alert('Error: ' + error.message);
+      showError('Error: ' + error.message);
     } finally {
       setActionLoading(null);
     }
@@ -455,7 +475,6 @@ export default function AdminPage() {
                 {pendingBugs.length}
               </span>
             )}
-          </button>
           <button
             onClick={() => setActiveTab("messages")}
             className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
@@ -465,6 +484,7 @@ export default function AdminPage() {
             }`}
           >
             Messages
+          </button>
           </button>
         </div>
 
@@ -498,6 +518,34 @@ export default function AdminPage() {
               </div>
               <p className="text-lg font-bold">{stats.newUsersToday}</p>
             </div>
+
+          {/* Session Analytics */}
+          <div className="mt-4">
+            <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Session Analytics</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white rounded p-3 shadow">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-stone-600">Completed</p>
+                  <span className="text-green-500">✓</span>
+                </div>
+                <p className="text-lg font-bold">{stats.completedSessions}</p>
+              </div>
+              <div className="bg-white rounded p-3 shadow">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-stone-600">Cancelled</p>
+                  <span className="text-red-500">✗</span>
+                </div>
+                <p className="text-lg font-bold">{stats.cancelledSessions}</p>
+              </div>
+              <div className="bg-white rounded p-3 shadow">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-stone-600">Avg Participants</p>
+                  <Users className="w-4 h-4 text-blue-500" />
+                </div>
+                <p className="text-lg font-bold">{stats.averageParticipants}</p>
+              </div>
+            </div>
+          </div>
           </div>
         )}
 
