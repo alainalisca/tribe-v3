@@ -1,5 +1,7 @@
 'use client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { getErrorMessage } from "@/lib/errorMessages";
+import { celebrateSessionCreated } from "@/lib/confetti";
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -98,7 +100,7 @@ export default function CreateSessionPage() {
       showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
       loadTemplates();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setSavingTemplate(false);
     }
@@ -130,7 +132,7 @@ export default function CreateSessionPage() {
       loadTemplates();
       showSuccess(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'create_session', language));
     }
   }
 
@@ -222,7 +224,7 @@ export default function CreateSessionPage() {
 
       setPhotos(prev => [...prev, ...uploadedUrls]);
     } catch (error: any) {
-      showError((language === 'es' ? 'Error subiendo fotos: ' : 'Error uploading photos: ') + error.message);
+      showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingPhotos(false);
     }
@@ -266,8 +268,9 @@ export default function CreateSessionPage() {
 
       showSuccess(t('sessionCreated'));
       router.push('/');
+      celebrateSessionCreated();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setLoading(false);
     }

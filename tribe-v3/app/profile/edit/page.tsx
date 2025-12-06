@@ -1,5 +1,6 @@
 'use client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { getErrorMessage } from "@/lib/errorMessages";
 
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
@@ -102,7 +103,7 @@ export default function EditProfilePage() {
       });
     } catch (error) {
       console.error('Error uploading photo:', error);
-      showError('Failed to upload photo');
+      showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingPhoto(false);
     }
@@ -139,7 +140,7 @@ export default function EditProfilePage() {
       router.push('/profile');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'update_profile', language));
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,7 @@
 'use client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { getErrorMessage } from "@/lib/errorMessages";
+import { celebrateJoin } from "@/lib/confetti";
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -240,7 +242,7 @@ export default function SessionDetailPage() {
 
       showSuccess('Recap photos uploaded!');
       await loadRecapPhotos();
-    } catch (error: any) {
+      showError(getErrorMessage(error, 'upload_photo', language));
       showError('Error uploading photos: ' + error.message);
     } finally {
       setUploadingRecap(false);
@@ -261,7 +263,7 @@ export default function SessionDetailPage() {
       showSuccess('Photo deleted');
       await loadRecapPhotos();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'delete_session', language));
     }
   }
 
@@ -283,7 +285,7 @@ export default function SessionDetailPage() {
       showSuccess('Photo reported. Admin will review.');
       await loadRecapPhotos();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'send_message', language));
     }
   }
 
@@ -317,10 +319,11 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants + 1 })
         .eq('id', session.id);
 
+      celebrateJoin();
       showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
       await loadSession();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'join_session', language));
     }
   }
 
@@ -344,7 +347,7 @@ export default function SessionDetailPage() {
       showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       router.push('/sessions');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'join_session', language));
     }
   }
 
@@ -372,7 +375,7 @@ export default function SessionDetailPage() {
       setInviteLink(link);
       setShowInviteModal(true);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setCreatingInvite(false);
     }
@@ -409,7 +412,7 @@ export default function SessionDetailPage() {
       showSuccess(language === 'es' ? 'Sesión cancelada' : 'Session cancelled');
       router.push('/sessions');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'delete_session', language));
     }
   }
 
@@ -441,7 +444,7 @@ export default function SessionDetailPage() {
       showSuccess('User removed from session');
     } catch (error: any) {
       console.error('Kick error:', error);
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'join_session', language));
     }
   }
 
