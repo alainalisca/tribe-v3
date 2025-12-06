@@ -183,7 +183,7 @@ export default function MatchesPage() {
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
                         {request.user?.avatar_url ? (
-                          <img src={request.user.avatar_url} alt={request.user.name} className="w-full h-full object-cover" />
+                          <img loading="lazy" src={request.user.avatar_url} alt={request.user.name} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-sm font-bold text-slate-900">
                             {request.user?.name?.charAt(0).toUpperCase() || '?'}

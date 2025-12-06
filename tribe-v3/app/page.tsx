@@ -13,6 +13,7 @@ import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import LanguageToggle from '@/components/LanguageToggle';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
+import { SkeletonCard } from "@/components/Skeleton";
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -461,9 +462,9 @@ export default function HomePage() {
         )}
         {loading ? (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-white dark:bg-[#6B7178] rounded-xl animate-pulse" />
-            ))}
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </div>
         ) : filteredSessions.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">

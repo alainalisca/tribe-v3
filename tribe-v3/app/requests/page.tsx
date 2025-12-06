@@ -159,7 +159,7 @@ export default function RequestsPage() {
 
                 <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
                   {request.users?.avatar_url ? (
-                    <img 
+                    <img loading="lazy" 
                       src={request.users.avatar_url} 
                       alt={request.users.name}
                       className="w-12 h-12 rounded-full object-cover"

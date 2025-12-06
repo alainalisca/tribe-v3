@@ -289,7 +289,7 @@ export default function PublicProfilePage() {
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
           {profile.avatar_url && (
             <div className="flex justify-center mb-4">
-              <img 
+              <img loading="lazy" 
                 src={profile.avatar_url} 
                 alt={profile.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green"
@@ -358,7 +358,7 @@ export default function PublicProfilePage() {
               <div className="grid grid-cols-3 gap-2">
                 {profile.photos.map((photo: string, index: number) => (
                   <div key={index} className="aspect-square rounded-lg overflow-hidden bg-stone-200">
-                    <img 
+                    <img loading="lazy" 
                       src={photo} 
                       alt={`Photo ${index + 1}`} 
                       className="w-full h-full object-cover"

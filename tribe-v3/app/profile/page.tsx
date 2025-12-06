@@ -165,7 +165,7 @@ export default function ProfilePage() {
         <div className="relative h-48 overflow-hidden">
           <div className="w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
             {profile?.banner_url && (
-              <img 
+              <img loading="lazy" 
                 src={profile.banner_url} 
                 alt="Banner" 
                 className="w-full h-full object-cover"
@@ -191,7 +191,7 @@ export default function ProfilePage() {
           <div className="relative inline-block">
             <div className="w-32 h-32 rounded-full border-4 border-white bg-tribe-green flex items-center justify-center overflow-hidden shadow-lg">
               {profile?.avatar_url ? (
-                <img 
+                <img loading="lazy" 
                   src={profile.avatar_url} 
                   alt={profile.name} 
                   className="w-full h-full object-cover"

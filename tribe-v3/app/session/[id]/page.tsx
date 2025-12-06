@@ -521,7 +521,7 @@ export default function SessionDetailPage() {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <img
+            <img loading="lazy" loading="lazy"
               src={currentPhotos[currentPhotoIndex]}
               alt={`Photo ${currentPhotoIndex + 1}`}
               className="max-w-[90%] max-h-[90%] object-contain transition-opacity duration-300 select-none"
@@ -594,7 +594,7 @@ export default function SessionDetailPage() {
                     onClick={() => openLightbox(idx, 'location')}
                     className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
-                    <img
+                    <img loading="lazy" loading="lazy"
                       src={photo}
                       alt={`Location ${idx + 1}`}
                       className="w-full h-full object-cover"
@@ -755,7 +755,7 @@ export default function SessionDetailPage() {
                       onClick={() => openLightbox(idx, 'recap')}
                       className="w-full h-full rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                     >
-                      <img
+                      <img loading="lazy" loading="lazy"
                         src={photo.photo_url}
                         alt={`Recap ${idx + 1}`}
                         className="w-full h-full object-cover"
@@ -843,7 +843,7 @@ export default function SessionDetailPage() {
                 <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
                   <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
                     {creator.avatar_url ? (
-                      <img
+                      <img loading="lazy" loading="lazy"
                         src={creator.avatar_url}
                         alt={creator.name}
                         className="w-12 h-12 rounded-full object-cover"
@@ -865,7 +865,7 @@ export default function SessionDetailPage() {
                 <div key={participant.user_id} className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
                   <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
                     {participant.user?.avatar_url ? (
-                      <img
+                      <img loading="lazy" loading="lazy"
                         src={participant.user.avatar_url}
                         alt={participant.user.name}
                         className="w-12 h-12 rounded-full object-cover"
