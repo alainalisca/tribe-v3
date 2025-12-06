@@ -30,6 +30,8 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
@@ -244,6 +246,77 @@ export default function AdminPage() {
       showError('Error: ' + error.message);
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function loadSessions() {
+    setLoadingSessions(true);
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select(`
+          *,
+          creator:users!sessions_creator_id_fkey(id, name, email)
+        `)
+        .order('date', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setSessions(data || []);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }
+
+  async function verifySessionPhotos(sessionId: string) {
+    if (!confirm('Verify these location photos as authentic?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          photo_verified: true,
+          verified_by: user?.id,
+          verified_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setSessions(sessions.map(s => 
+        s.id === sessionId ? { ...s, photo_verified: true } : s
+      ));
+
+      alert('✅ Photos verified');
+    } catch (error: any) {
+      showError('Error: ' + error.message);
+    }
+  }
+
+  async function unverifySessionPhotos(sessionId: string) {
+    if (!confirm('Remove verification?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({
+          photo_verified: false,
+          verified_by: null,
+          verified_at: null,
+        })
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setSessions(sessions.map(s => 
+        s.id === sessionId ? { ...s, photo_verified: false } : s
+      ));
+
+      alert('Verification removed');
+    } catch (error: any) {
+      showError('Error: ' + error.message);
     }
   }
   }
@@ -484,6 +557,16 @@ export default function AdminPage() {
             }`}
           >
             Messages
+          </button>
+          <button
+            onClick={() => setActiveTab("sessions")}
+            className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
+              activeTab === "sessions"
+                ? "border-b-2 border-[#C0E863] text-[#272D34]"
+                : "text-stone-600"
+            }`}
+          >
+            Sessions
           </button>
           </button>
         </div>
@@ -936,6 +1019,87 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        {activeTab === 'sessions' && (
+          <div className="bg-white rounded shadow">
+            <div className="p-3 border-b">
+              <h3 className="text-sm font-bold text-[#272D34]">
+                Sessions Management ({sessions.length})
+              </h3>
+              <p className="text-xs text-stone-600 mt-1">Verify location photos to reduce fake sessions</p>
+            </div>
+            
+            {loadingSessions ? (
+              <p className="text-center py-6 text-sm text-gray-500">Loading sessions...</p>
+            ) : sessions.length === 0 ? (
+              <div className="p-6 text-center">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No sessions yet</p>
+              </div>
+            ) : (
+              <div className="divide-y max-h-[600px] overflow-y-auto">
+                {sessions.filter(s => s.photos && s.photos.length > 0).map((session) => (
+                  <div key={session.id} className="p-3 hover:bg-stone-50">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-[#272D34]">
+                            {session.sport} @ {session.location}
+                          </p>
+                          {session.photo_verified && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded flex items-center gap-1">
+                              ✓ Verified
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-xs text-stone-500 mb-2">
+                          <span>{session.creator?.name || 'Unknown Host'}</span>
+                          <span>•</span>
+                          <span>{new Date(session.date).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span>{session.photos?.length || 0} photos</span>
+                        </div>
+
+                        {session.photos && session.photos.length > 0 && (
+                          <div className="flex gap-2 overflow-x-auto">
+                            {session.photos.slice(0, 3).map((photo: string, idx: number) => (
+                              <img
+                                key={idx}
+                                src={photo}
+                                alt={`Photo ${idx + 1}`}
+                                className="w-16 h-16 object-cover rounded border border-stone-200"
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        {!session.photo_verified ? (
+                          <button
+                            onClick={() => verifySessionPhotos(session.id)}
+                            className="px-3 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                          >
+                            ✓ Verify
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => unverifySessionPhotos(session.id)}
+                            className="px-3 py-1.5 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
     </div>
+
   );
 }
