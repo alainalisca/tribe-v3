@@ -101,6 +101,7 @@ export default function AuthPage() {
           options: {
             data: {
               name,
+              date_of_birth: birthDate,
             },
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
@@ -108,20 +109,11 @@ export default function AuthPage() {
 
         if (error) throw error;
 
-        if (data.user) {
-          await supabase.from('users').insert({
-            id: data.user.id,
-            email: data.user.email,
-            name,
-            date_of_birth: birthDate,
-          });
-
-          setMessage(t.checkEmail);
-          setEmail('');
-          setPassword('');
-          setName('');
-          setBirthDate('');
-        }
+        setMessage(t.checkEmail);
+        setEmail('');
+        setPassword('');
+        setName('');
+        setBirthDate('');
       }
     } catch (error: any) {
       setMessage('❌ ' + error.message);
@@ -142,9 +134,7 @@ export default function AuthPage() {
             <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">
               Tribe<span className="text-tribe-green">.</span>
             </h1>
-            <p className="text-lg font-medium text-tribe-green mb-1">
-              {t.tagline}
-            </p>
+            <p className="text-tribe-green font-semibold text-lg mb-2">{t.tagline}</p>
             <p className="text-stone-600 dark:text-gray-300">
               {isLogin ? t.welcomeBack : t.joinCommunity}
             </p>
@@ -161,9 +151,9 @@ export default function AuthPage() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                     placeholder={t.namePlaceholder}
+                    required
+                    className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
                   />
                 </div>
 
@@ -177,11 +167,9 @@ export default function AuthPage() {
                     onChange={(e) => setBirthDate(e.target.value)}
                     required
                     max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                    className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+                    className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
                   />
-                  <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">
-                    {t.mustBe18Note}
-                  </p>
+                  <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{t.mustBe18Note}</p>
                 </div>
               </>
             )}
@@ -195,8 +183,7 @@ export default function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-                placeholder="you@example.com"
+                className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
               />
             </div>
 
@@ -210,16 +197,15 @@ export default function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 rounded-lg border border-stone-300 dark:border-gray-600 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
               />
             </div>
 
             {message && (
               <div className={`p-3 rounded-lg text-sm ${
                 message.includes('✅') 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300' 
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
               }`}>
                 {message}
               </div>
@@ -240,19 +226,17 @@ export default function AuthPage() {
                 setIsLogin(!isLogin);
                 setMessage('');
               }}
-              className="text-sm text-stone-600 dark:text-gray-300 hover:text-tribe-green transition"
+              className="text-sm text-tribe-green hover:underline"
             >
               {isLogin ? t.noAccount : t.hasAccount}
             </button>
           </div>
 
-          {isLogin && (
-            <div className="mt-4 text-center">
-              <Link href="/" className="text-sm text-stone-500 dark:text-gray-400 hover:text-tribe-green transition">
-                {t.backHome}
-              </Link>
-            </div>
-          )}
+          <div className="mt-4 text-center">
+            <Link href="/" className="text-sm text-stone-600 dark:text-gray-400 hover:text-tribe-green transition">
+              {t.backHome}
+            </Link>
+          </div>
         </div>
       </div>
     </div>
