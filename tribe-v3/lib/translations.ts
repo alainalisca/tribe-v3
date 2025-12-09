@@ -29,6 +29,8 @@ export const translations = {
     clearAll: 'Clear all',
     sessionsCount: 'sessions',
     noSessionsFound: 'No sessions yet',
+    noSessionsYet: 'No sessions yet',
+    createFirstSession: 'Create your first session to find training partners',
     tryDifferentSearch: 'Be the first! Create a session and never train alone.',
     
     // Session Card
@@ -118,6 +120,8 @@ export const translations = {
     clearAll: 'Limpiar todo',
     sessionsCount: 'sesiones',
     noSessionsFound: 'Aún no hay sesiones',
+    noSessionsYet: 'Aún no hay sesiones',
+    createFirstSession: 'Crea tu primera sesión para encontrar compañeros de entrenamiento',
     tryDifferentSearch: '¡Sé el primero! Crea una sesión y nunca entrenes solo.',
     
     // Tarjeta de Sesión

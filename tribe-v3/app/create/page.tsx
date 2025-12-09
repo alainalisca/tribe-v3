@@ -302,6 +302,8 @@ export default function CreateSessionPage() {
         </div>
       </div>
 
+
+      <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Template Buttons */}
         <div className="flex gap-2 mb-4">
           <button
@@ -424,6 +426,7 @@ export default function CreateSessionPage() {
             <LocationPicker
               value={formData.location}
               onChange={(location, coords) => {
+                setErrors((prev: any) => ({ ...prev, location: '' }));
                 setFormData(prev => ({
                   ...prev,
                   location,
@@ -556,6 +559,7 @@ export default function CreateSessionPage() {
             {loading ? (language === 'es' ? 'Creando...' : 'Creating...') : t('createSession')}
           </button>
         </form>
+      </div>
       </div>
 
       <BottomNav />

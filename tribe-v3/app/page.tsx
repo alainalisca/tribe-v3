@@ -439,9 +439,9 @@ export default function HomePage() {
           )}
 
           <div className="flex items-center justify-between">
-            <p className="text-sm text-stone-600 dark:text-gray-300">
+            {!loading && <p className="text-sm text-stone-600 dark:text-gray-300">
               {filteredSessions.length} {t('sessionsCount')}
-            </p>
+            </p>}
             {(searchQuery || selectedSport) && (
               <button
                 onClick={() => {
@@ -487,10 +487,9 @@ export default function HomePage() {
             onClick={() => setShowTrainingNow(true)}
             className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
           >
-            <span className="text-2xl">🏃</span>
             <div className="text-left">
               <div className="text-lg">{language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
-              <div className="text-xs font-normal opacity-75">{language === 'es' ? 'Encuentra compañeros ahora mismo' : 'Find partners right now'}</div>
+              <div className="text-xs font-normal opacity-75">{language === 'es' ? 'Conecta con personas entrenando cerca' : 'Connect with people training nearby'}</div>
             </div>
           </button>
         )}
