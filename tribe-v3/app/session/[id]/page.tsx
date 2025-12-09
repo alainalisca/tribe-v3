@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import AttendanceTracker from '@/components/AttendanceTracker';
 
+import LocationMap from '@/components/LocationMap';
 const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
 
 export default function SessionDetailPage() {
@@ -630,6 +631,15 @@ export default function SessionDetailPage() {
             <div className="flex items-start text-stone-900 dark:text-white">
               <MapPin className="w-5 h-5 mr-3 mt-0.5 text-stone-500 dark:text-gray-400" />
               <span>{session.location}</span>
+            </div>
+
+            {/* Map Section */}
+            <div className="mt-4">
+              <LocationMap
+                latitude={session.latitude}
+                longitude={session.longitude}
+                location={session.location}
+              />
             </div>
 
             {creator && (

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft, Upload, X, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -32,6 +33,8 @@ export default function CreateSessionPage() {
     start_time: '',
     duration: 60,
     location: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     description: '',
     max_participants: 10,
     join_policy: 'open',
@@ -91,6 +94,8 @@ export default function CreateSessionPage() {
           name: templateName,
           sport: formData.sport,
           location: formData.location,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
           duration: formData.duration,
           max_participants: formData.max_participants,
           description: formData.description,
@@ -416,17 +421,19 @@ export default function CreateSessionPage() {
             <label className="block text-sm font-medium text-theme-primary mb-2">
               {t('location')} *
             </label>
-            <input
-              type="text"
-              name="location"
+            <LocationPicker
               value={formData.location}
-              onChange={handleChange}
+              onChange={(location, coords) => {
+                setFormData(prev => ({
+                  ...prev,
+                  location,
+                  latitude: coords?.lat ?? null,
+                  longitude: coords?.lng ?? null,
+                }));
+              }}
               placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
-              className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
-                errors.location ? 'border-red-500' : 'border-theme'
-              }`}
+              error={errors.location}
             />
-            {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
           </div>
 
           <div>
