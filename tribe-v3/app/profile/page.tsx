@@ -258,6 +258,38 @@ export default function ProfilePage() {
             )}
           </div>
 
+
+          {/* Social Media Links */}
+          {(profile?.instagram_username || profile?.facebook_url) && (
+            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+              <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
+                🔗 {language === 'es' ? 'Redes Sociales Verificadas' : 'Verified Social Media'}
+              </h3>
+              <div className="space-y-2">
+                {profile?.instagram_username && (
+                  <a
+                    href={`https://instagram.com/${profile.instagram_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    📷 @{profile.instagram_username}
+                  </a>
+                )}
+                {profile?.facebook_url && (
+                  <a
+                    href={profile.facebook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    📘 Facebook Profile
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Photo Gallery */}
           {photos.length > 0 && (
             <div className="mt-6">

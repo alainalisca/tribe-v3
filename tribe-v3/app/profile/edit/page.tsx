@@ -31,6 +31,8 @@ export default function EditProfilePage() {
     photos: [] as string[],
     emergency_contact_name: "",
     emergency_contact_phone: "",
+    instagram_username: "",
+    facebook_url: "",
   });
 
   useEffect(() => {
@@ -62,6 +64,8 @@ export default function EditProfilePage() {
           photos: profileData.photos || [],
           emergency_contact_name: profileData.emergency_contact_name || "",
           emergency_contact_phone: profileData.emergency_contact_phone || "",
+          instagram_username: profileData.instagram_username || "",
+          facebook_url: profileData.facebook_url || "",
         });
       }
     } catch (error) {
@@ -131,6 +135,8 @@ export default function EditProfilePage() {
           location: formData.location,
           sports: formData.sports,
           photos: formData.photos,
+          instagram_username: formData.instagram_username,
+          facebook_url: formData.facebook_url,
         })
         .eq('id', user.id);
 
@@ -242,6 +248,47 @@ export default function EditProfilePage() {
         </div>
 
         {/* Photos */}
+
+        {/* Social Media Links */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
+            🔗 {language === 'es' ? 'Redes Sociales (Recomendado)' : 'Social Media (Recommended)'}
+          </h3>
+          <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">
+            {language === 'es'
+              ? 'Ayuda a otros a verificar que eres una persona real. Los compañeros de entrenamiento pueden revisar tu perfil antes de unirse.'
+              : 'Help others verify you are a real person. Training partners can check your profile before joining.'}
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-theme-secondary mb-1">
+                📷 Instagram {language === 'es' ? '(nombre de usuario)' : '(username)'}
+              </label>
+              <div className="flex items-center">
+                <span className="px-3 py-2 bg-stone-200 dark:bg-[#404549] border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">@</span>
+                <input
+                  type="text"
+                  value={formData.instagram_username}
+                  onChange={(e) => setFormData({ ...formData, instagram_username: e.target.value.replace('@', '') })}
+                  placeholder="username"
+                  className="flex-1 px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-r-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-theme-secondary mb-1">
+                📘 Facebook {language === 'es' ? '(URL del perfil)' : '(profile URL)'}
+              </label>
+              <input
+                type="url"
+                value={formData.facebook_url}
+                onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
+                placeholder="https://facebook.com/yourprofile"
+                className="w-full px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Emergency Contact */}
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
