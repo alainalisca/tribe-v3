@@ -13,6 +13,7 @@ import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import LanguageToggle from '@/components/LanguageToggle';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
+import TrainingNowModal from '@/components/TrainingNowModal';
 import { SkeletonCard } from "@/components/Skeleton";
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import { Search, X } from 'lucide-react';
@@ -27,6 +28,7 @@ export default function HomePage() {
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [user, setUser] = useState<any>(null);
+  const [showTrainingNow, setShowTrainingNow] = useState(false);
   const [userChecked, setUserChecked] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -478,6 +480,21 @@ export default function HomePage() {
             hasSports={userProfile.sports && userProfile.sports.length > 0}
           />
         )}
+
+        {/* Training Now Button */}
+        {user && (
+          <button
+            onClick={() => setShowTrainingNow(true)}
+            className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
+          >
+            <span className="text-2xl">🏃</span>
+            <div className="text-left">
+              <div className="text-lg">{language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
+              <div className="text-xs font-normal opacity-75">{language === 'es' ? 'Encuentra compañeros ahora mismo' : 'Find partners right now'}</div>
+            </div>
+          </button>
+        )}
+
         {loading ? (
           <div className="space-y-4">
             <SkeletonCard />
@@ -517,6 +534,17 @@ export default function HomePage() {
         <SafetyWaiverModal
           onAccept={handleWaiverAccepted}
           onCancel={handleWaiverCancelled}
+        />
+      )}
+
+
+      {/* Training Now Modal */}
+      {user && (
+        <TrainingNowModal
+          isOpen={showTrainingNow}
+          onClose={() => setShowTrainingNow(false)}
+          onSessionCreated={loadSessions}
+          userId={user.id}
         />
       )}
 

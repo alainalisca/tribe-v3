@@ -16,6 +16,13 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
   const { t, language } = useLanguage();
   const isPast = new Date(session.date) < new Date();
   const isFull = session.current_participants >= session.max_participants;
+  const isStartingSoon = !isPast && (() => {
+    const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
+    const now = new Date();
+    const diffMs = sessionDateTime.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours > 0 && diffHours <= 2;
+  })();
   const confirmedParticipants = session.session_participants?.filter(
     (p: any) => p.status === 'confirmed'
   ) || [];
@@ -59,6 +66,11 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
               {isFull && !isPast && (
                 <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold">
                   {t('full')}
+                </span>
+              )}
+              {isStartingSoon && !isPast && !isFull && (
+                <span className="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-semibold animate-pulse">
+                  🔥 {language === 'es' ? 'PRONTO' : 'STARTING SOON'}
                 </span>
               )}
             </div>
