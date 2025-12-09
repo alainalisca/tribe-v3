@@ -59,6 +59,7 @@ export default function HomePage() {
   useEffect(() => {
     if (userChecked) {
       scheduleSessionReminders();
+      requestNotificationPermission();
       loadProfile();
     }
   }, [userChecked]);
@@ -78,6 +79,23 @@ export default function HomePage() {
   useEffect(() => {
     filterSessions();
   }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter]);
+
+  async function requestNotificationPermission() {
+    if (!("Notification" in window)) return;
+    const hasAsked = localStorage.getItem("notificationPrompted");
+    if (hasAsked) return;
+    
+    if (Notification.permission === "default") {
+      const permission = await Notification.requestPermission();
+      localStorage.setItem("notificationPrompted", "true");
+      if (permission === "granted") {
+        new Notification("Tribe.", {
+          body: "You will now receive notifications for sessions and messages!",
+          icon: "/icon-192.png"
+        });
+      }
+    }
+  }
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -456,7 +474,7 @@ export default function HomePage() {
         {/* Profile Completion Banner */}
         {userProfile && (
           <ProfileCompletionBanner
-            hasPhoto={userProfile.avatar_url ? true : false}
+            hasPhoto={userProfile.avatar_url || (userProfile.photos && userProfile.photos.length > 0)}
             hasSports={userProfile.sports && userProfile.sports.length > 0}
           />
         )}

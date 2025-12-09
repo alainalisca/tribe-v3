@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from "@/lib/errorMessages";
 import { celebrateJoin } from "@/lib/confetti";
@@ -623,7 +624,7 @@ export default function SessionDetailPage() {
 
             <div className="flex items-center text-stone-900 dark:text-white">
               <Clock className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
-              <span>{session.start_time} • {session.duration} min</span>
+              <span>{formatTime12Hour(session.start_time)} • {session.duration} min</span>
             </div>
 
             <div className="flex items-start text-stone-900 dark:text-white">
@@ -708,17 +709,6 @@ export default function SessionDetailPage() {
                 {creatingInvite
                   ? (language === "es" ? "Generando..." : "Generating...")
                   : (language === "es" ? "👥 Invitar Amigo" : "👥 Invite Friend")}
-
-            {/* Add to Calendar Button */}
-            {hasJoined && (
-              <button
-                onClick={() => window.open(`/api/generate-calendar?sessionId=${params.id}`, '_blank')}
-                className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green font-bold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {language === 'es' ? '📅 Añadir al Calendario' : '📅 Add to Calendar'}
               </button>
             )}
 
@@ -734,11 +724,9 @@ export default function SessionDetailPage() {
                 {language === 'es' ? '📅 Añadir al Calendario' : '📅 Add to Calendar'}
               </button>
             )}
-              </button>
-            )}
-          </div>
         </div>
 
+        </div>
 
         {/* Upload Prompt Banner */}
         {shouldPromptUpload && (

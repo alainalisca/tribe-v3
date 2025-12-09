@@ -112,6 +112,23 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           };
           
           setMessages((prev) => [...prev, messageWithUser]);
+
+          // Play notification sound for messages from others
+          if (payload.new.user_id !== currentUserId) {
+            try {
+              const audio = new Audio("/sounds/notification.mp3");
+              audio.volume = 0.5;
+              audio.play().catch(() => {});
+            } catch (e) {}
+            
+            // Browser notification if tab not focused
+            if (document.hidden && Notification.permission === "granted") {
+              new Notification("New message in Tribe", {
+                body: `${userData?.name || "Someone"}: ${payload.new.message.slice(0, 50)}`,
+                icon: "/icon-192.png"
+              });
+            }
+          }
         }
       )
       .on(

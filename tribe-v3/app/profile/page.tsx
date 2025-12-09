@@ -253,7 +253,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl p-5 border border-stone-200 text-center">
-                <p className="text-theme-secondary text-sm italic">No bio yet. Click Edit Profile to add one!</p>
+                <p className="text-theme-secondary text-sm italic">{language === 'es' ? 'Sin bio aún. Haz clic en Editar Perfil para agregar una.' : 'No bio yet. Click Edit Profile to add one.'}</p>
               </div>
             )}
           </div>
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                   onClick={() => setShowAllSports(!showAllSports)}
                   className="mt-3 text-sm text-tribe-green font-medium hover:underline"
                 >
-                  {showAllSports ? 'Show Less' : `Show ${sports.length - 6} More`}
+                  {showAllSports ? (language === 'es' ? 'Mostrar Menos' : 'Show Less') : (language === 'es' ? `Mostrar ${sports.length - 6} Más` : `Show ${sports.length - 6} More`)}
                 </button>
               )}
             </div>
@@ -309,7 +309,7 @@ export default function ProfilePage() {
             onClick={() => router.push('/profile/edit')}
             className="w-full mt-8 py-4 bg-tribe-green text-slate-900 font-bold rounded-2xl hover:opacity-90 transition text-lg"
           >
-            Edit Profile
+            {language === 'es' ? 'Editar Perfil' : 'Edit Profile'}
           </button>
         </div>
       </div>

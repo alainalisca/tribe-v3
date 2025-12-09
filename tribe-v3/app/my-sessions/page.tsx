@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -159,7 +160,7 @@ export default function MySessionsPage() {
                           weekday: 'short',
                           month: 'short',
                           day: 'numeric'
-                        })} {language === 'en' ? 'at' : 'a las'} {session.start_time}
+                        })} {language === 'en' ? 'at' : 'a las'} {formatTime12Hour(session.start_time)}
                       </span>
                     </div>
 

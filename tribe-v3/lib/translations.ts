@@ -48,6 +48,10 @@ export const translations = {
     // My Sessions
     hosting: 'Hosting',
     joinedSessions: 'Joined',
+    noHostingSessions: 'No sessions yet',
+    noJoinedSessions: 'No joined sessions',
+    browseHomePage: 'Browse the home page to find sessions',
+    findSessions: 'Find Sessions',
     
     // Create Session
     createSession: 'Create Session',
@@ -133,6 +137,10 @@ export const translations = {
     // Mis Sesiones
     hosting: 'Organizando',
     joinedSessions: 'Unido',
+    noHostingSessions: 'No hay sesiones aún',
+    noJoinedSessions: 'No hay sesiones unidas',
+    browseHomePage: 'Navega la página principal para encontrar sesiones',
+    findSessions: 'Buscar Sesiones',
     
     // Crear Sesión
     createSession: 'Crear Sesión',

@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
 import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -107,7 +108,7 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
             <div className="flex items-center text-stone-900 dark:text-white">
               <Clock className="w-4 h-4 mr-2 text-tribe-green" />
               <span className="text-sm">
-                {session.start_time} • {session.duration} {language === 'es' ? 'min' : 'min'}
+                {formatTime12Hour(session.start_time)} • {session.duration} {language === 'es' ? 'min' : 'min'}
               </span>
             </div>
           </div>

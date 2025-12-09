@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -169,7 +170,7 @@ export default function InvitePage() {
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Clock className="w-4 h-4" />
-              <span>{session.start_time} • {session.duration} min</span>
+              <span>{formatTime12Hour(session.start_time)} • {session.duration} min</span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <MapPin className="w-4 h-4" />

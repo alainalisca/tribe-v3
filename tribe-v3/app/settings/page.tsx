@@ -4,7 +4,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Globe, LogOut, Shield, MessageSquare, Bug } from 'lucide-react';
+import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -33,8 +33,33 @@ export default function SettingsPage() {
     router.push('/auth');
   }
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  async function handleDeleteAccount() {
+    const confirmWord = language === 'es' ? 'ELIMINAR' : 'DELETE';
+    const input = prompt(language === 'es' 
+      ? '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
+      : 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.');
+    if (input !== confirmWord) {
+      showInfo(language === 'es' ? 'Eliminación cancelada' : 'Deletion cancelled');
+      return;
+    }
 
+    try {
+      const { error: deleteError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      await supabase.auth.signOut();
+      showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
+      router.push('/');
+    } catch (error: any) {
+      showError(error.message);
+    }
+  }
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   async function toggleNotifications() {
     if (!('Notification' in window)) {
       showError('This browser does not support notifications');
@@ -68,13 +93,6 @@ export default function SettingsPage() {
     }
   }, []);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        
-      </div>
-    );
-  }
 
   const txt = language === 'en' ? {
     settings: 'Settings',
@@ -83,6 +101,8 @@ export default function SettingsPage() {
     spanish: 'Spanish',
     account: 'Account',
     signOut: 'Sign Out',
+    deleteAccount: 'Delete Account',
+    deleteAccountConfirm: 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.',
     legal: 'Legal',
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
@@ -99,6 +119,8 @@ export default function SettingsPage() {
     spanish: 'Español',
     account: 'Cuenta',
     signOut: 'Cerrar Sesión',
+    deleteAccount: 'Eliminar Cuenta',
+    deleteAccountConfirm: '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.',
     legal: 'Legal',
     terms: 'Términos de Servicio',
     privacy: 'Política de Privacidad',
@@ -147,7 +169,7 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Link href="/feedback">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition flex items-center gap-2">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 {txt.feedback}
               </button>
@@ -158,7 +180,7 @@ export default function SettingsPage() {
                   e.preventDefault();
                   router.push('/feedback?tab=bug');
                 }}
-                className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition flex items-center gap-2"
               >
                 <Bug className="w-4 h-4" />
                 {txt.bugReport}
@@ -182,7 +204,7 @@ export default function SettingsPage() {
             className={`w-full p-4 rounded-xl text-left transition font-semibold ${
               notificationsEnabled
                 ? 'bg-tribe-green text-slate-900'
-                : 'bg-stone-100 text-theme-primary hover:bg-stone-200'
+                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
           >
             {notificationsEnabled 
@@ -204,7 +226,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'en'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 text-theme-primary hover:bg-stone-200'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
               {txt.english}
@@ -214,7 +236,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'es'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 text-theme-primary hover:bg-stone-200'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
               {txt.spanish}
@@ -227,17 +249,17 @@ export default function SettingsPage() {
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
             <Link href="/legal/terms">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
                 {txt.terms}
               </button>
             </Link>
             <Link href="/legal/privacy">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
                 {txt.privacy}
               </button>
             </Link>
             <Link href="/legal/safety">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-theme-primary hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
                 {txt.safety}
               </button>
             </Link>
@@ -253,6 +275,13 @@ export default function SettingsPage() {
           >
             <LogOut className="w-5 h-5" />
             {txt.signOut}
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 text-red-600 font-semibold rounded-xl hover:bg-stone-300 transition"
+          >
+            <Trash2 className="w-5 h-5" />
+            {txt.deleteAccount}
           </button>
         </div>
       </div>

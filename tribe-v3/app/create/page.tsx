@@ -454,7 +454,7 @@ export default function CreateSessionPage() {
               value={formData.max_participants}
               onChange={handleChange}
               min="2"
-              max="50"
+              max="100000"
               className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
             />
           </div>

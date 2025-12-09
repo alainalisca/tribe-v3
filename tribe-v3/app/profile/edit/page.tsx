@@ -179,7 +179,7 @@ export default function EditProfilePage() {
                 <ArrowLeft className="w-6 h-6 text-theme-primary" />
               </button>
             </Link>
-            <h1 className="text-xl font-bold text-theme-primary">Edit Profile</h1>
+            <h1 className="text-xl font-bold text-theme-primary">{language === 'es' ? 'Editar Perfil' : 'Edit Profile'}</h1>
           </div>
           <button
             onClick={handleSave}
@@ -201,7 +201,7 @@ export default function EditProfilePage() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Your name"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -213,7 +213,7 @@ export default function EditProfilePage() {
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             placeholder="@username"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -225,7 +225,7 @@ export default function EditProfilePage() {
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder="City, State/Country"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -237,51 +237,11 @@ export default function EditProfilePage() {
             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
             placeholder="Tell us about yourself..."
             rows={4}
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green resize-none"
+            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green resize-none"
           />
         </div>
 
         {/* Photos */}
-
-        {/* Emergency Contact */}
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-          <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
-            🚨 Emergency Contact (Optional but Recommended)
-          </h3>
-          <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">
-            {language === 'es' 
-              ? 'Información de contacto de emergencia en caso de accidente durante una sesión'
-              : 'Emergency contact information in case of an incident during a session'}
-          </p>
-          
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-semibold text-theme-primary mb-2">
-                {language === 'es' ? 'Nombre de Contacto' : 'Contact Name'}
-              </label>
-              <input
-                type="text"
-                value={formData.emergency_contact_name}
-                onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                placeholder={language === 'es' ? 'ej. Juan Pérez' : 'e.g. John Smith'}
-                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-theme-primary mb-2">
-                {language === 'es' ? 'Teléfono de Contacto' : 'Contact Phone'}
-              </label>
-              <input
-                type="tel"
-                value={formData.emergency_contact_phone}
-                onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                placeholder={language === 'es' ? 'ej. +57 300 123 4567' : 'e.g. +1 (555) 123-4567'}
-                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Emergency Contact */}
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">

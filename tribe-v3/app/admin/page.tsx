@@ -51,8 +51,12 @@ export default function AdminPage() {
       loadReports();
     } else if (activeTab === 'feedback') {
       loadFeedback();
-    } else if (activeTab === 'bugs') {      loadBugs();    } else if (activeTab === 'messages') {      loadMessages();
+    } else if (activeTab === 'bugs') {
       loadBugs();
+    } else if (activeTab === 'messages') {
+      loadMessages();
+    } else if (activeTab === 'sessions') {
+      loadSessions();
     }
   }, [activeTab]);
 
@@ -205,6 +209,7 @@ export default function AdminPage() {
       setLoadingBugs(false);
     }
 
+  }
   async function loadMessages() {
     setLoadingMessages(true);
     try {
@@ -318,7 +323,6 @@ export default function AdminPage() {
     } catch (error: any) {
       showError('Error: ' + error.message);
     }
-  }
   }
 
   async function banUser(userId: string) {
@@ -548,6 +552,7 @@ export default function AdminPage() {
                 {pendingBugs.length}
               </span>
             )}
+          </button>
           <button
             onClick={() => setActiveTab("messages")}
             className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
@@ -567,7 +572,6 @@ export default function AdminPage() {
             }`}
           >
             Sessions
-          </button>
           </button>
         </div>
 

@@ -100,8 +100,8 @@ export default function EditSessionPage() {
     if (formData.max_participants < 2) {
       newErrors.max_participants = 'Must allow at least 2 participants';
     }
-    if (formData.max_participants > 50) {
-      newErrors.max_participants = 'Maximum 50 participants allowed';
+    if (formData.max_participants > 100000) {
+      newErrors.max_participants = 'Maximum 100,000 participants allowed';
     }
 
     setErrors(newErrors);

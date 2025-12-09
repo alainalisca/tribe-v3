@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
 import { useState, useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
@@ -233,7 +234,7 @@ export default function MatchesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        <span>{session.start_time}</span>
+                        <span>{formatTime12Hour(session.start_time)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" />

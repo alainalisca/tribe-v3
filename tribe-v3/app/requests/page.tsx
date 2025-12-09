@@ -1,4 +1,5 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -152,7 +153,7 @@ export default function RequestsPage() {
                       {request.session.sport} - {request.session.location}
                     </h3>
                     <p className="text-sm text-stone-600 dark:text-gray-400">
-                      {new Date(request.session.date).toLocaleDateString()} at {request.session.start_time}
+                      {new Date(request.session.date).toLocaleDateString()} at {formatTime12Hour(request.session.start_time)}
                     </p>
                   </div>
                 </div>
