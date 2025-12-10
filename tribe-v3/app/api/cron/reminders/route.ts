@@ -152,8 +152,8 @@ export async function GET(request: Request) {
     // 2. SEND TIME-BASED ENGAGEMENT NOTIFICATIONS
     const { data: users } = await supabase
       .from('users')
-      .select('id, preferred_language, push_token')
-      .not('push_token', 'is', null);
+      .select('id, preferred_language, push_subscription')
+      .not('push_subscription', 'is', null);
 
     let engagementsSent = 0;
 

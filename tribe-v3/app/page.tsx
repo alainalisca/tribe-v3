@@ -497,7 +497,7 @@ export default function HomePage() {
             onClick={() => router.push("/training-now")}
             className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
           >
-            <div className="text-left">
+            <div className="text-center">
               <div className="text-lg">{language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
               <div className="text-xs font-normal opacity-75">{language === 'es' ? 'Conecta con personas entrenando cerca' : 'Connect with people training nearby'}</div>
             </div>
