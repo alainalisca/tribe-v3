@@ -2,27 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/reminders",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
       "schedule": "0 12 * * *"
     },
     {
-      "path": "/api/cron/reminders",
-      "schedule": "0 17 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
-      "schedule": "0 20 * * *"
-    },
-    {
-      "path": "/api/send-weekly-recap",
+      "path": "/api/cron/weekly",
       "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/send-inactive-nudge",
-      "schedule": "0 10 * * 3"
     }
   ]
 }
