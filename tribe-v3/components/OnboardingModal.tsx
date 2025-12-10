@@ -36,11 +36,11 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   ] : [
     {
       title: 'Never Train Alone',
-      description: 'Find training partners and fitness sessions in your city',
+      description: 'Never train alone. Find partners for any workout.',
       icon: Users
     },
     {
-      title: 'Find Training Partners',
+      title: 'Never Train Alone',
       description: 'Connect with people who share your fitness goals and schedule',
       icon: Users
     },

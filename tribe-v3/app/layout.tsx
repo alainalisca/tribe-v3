@@ -8,7 +8,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Tribe - Find Training Partners',
+  title: 'Tribe - Never Train Alone',
   description: 'Connect with athletes for real-time training sessions',
   manifest: '/manifest.json',
   icons: {
