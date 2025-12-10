@@ -38,6 +38,23 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     return sport;
   };
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isOpen]);
   useEffect(() => {
     if (isOpen) {
       getCurrentLocation();
@@ -216,17 +233,17 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-white dark:bg-[#404549] w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white dark:bg-[#404549] w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600">
+        <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
           <h2 className="text-lg font-bold text-theme-primary">{txt.title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full">
             <X className="w-5 h-5 text-theme-primary" />
           </button>
         </div>
 
-        <div className="p-4 space-y-5">
+        <div className="p-4 space-y-5 overflow-y-auto flex-1">
           {/* Sport Selection */}
           <div>
             <label className="block text-sm font-medium text-theme-primary mb-2">{txt.whatTraining}</label>
@@ -315,6 +332,10 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
             </div>
           </div>
 
+        </div>
+
+        {/* Sticky Submit Button */}
+        <div className="p-4 border-t border-stone-200 dark:border-gray-600 flex-shrink-0 bg-white dark:bg-[#404549]">
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
