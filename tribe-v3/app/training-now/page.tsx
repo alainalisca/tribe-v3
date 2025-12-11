@@ -65,7 +65,7 @@ export default function TrainingNowPage() {
           
           try {
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+              `/api/geocode?lat=${latitude}&lon=${longitude}`
             );
             const data = await response.json();
             if (data.display_name) {
