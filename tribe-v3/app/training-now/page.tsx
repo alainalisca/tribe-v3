@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
@@ -27,11 +27,11 @@ export default function TrainingNowPage() {
     duration: 60,
   });
 
-  const sports = Object.keys(sportTranslations);
+  const sports = Object.keys(sportTranslations).slice(0, 12);
 
   const getTranslatedSport = (sport: string) => {
-    if (language === 'es' && sportTranslations[sport]) {
-      return sportTranslations[sport];
+    if (language === 'es' && sportTranslations[sport]?.es) {
+      return sportTranslations[sport].es;
     }
     return sport;
   };
@@ -54,6 +54,7 @@ export default function TrainingNowPage() {
     try {
       if (!navigator.geolocation) {
         showError(language === 'es' ? 'Geolocalización no soportada' : 'Geolocation not supported');
+        setGettingLocation(false);
         return;
       }
 
@@ -77,6 +78,7 @@ export default function TrainingNowPage() {
         },
         (error) => {
           console.error('Error getting location:', error);
+          showError(language === 'es' ? 'No se pudo obtener ubicación' : 'Could not get location');
           setGettingLocation(false);
         },
         { enableHighAccuracy: true, timeout: 10000 }
@@ -121,14 +123,12 @@ export default function TrainingNowPage() {
 
       if (error) throw error;
 
-      // Auto-join as host
       await supabase.from('session_participants').insert({
         session_id: session.id,
         user_id: user.id,
         status: 'confirmed',
       });
 
-      // Notify nearby users
       await notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude!, formData.longitude!, formData.startIn);
 
       showSuccess(language === 'es' ? '¡Sesión creada! Notificando compañeros cercanos...' : 'Session created! Notifying nearby partners...');
@@ -203,7 +203,7 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-theme-bg pb-24">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24">
       {/* Header */}
       <div className="bg-tribe-green p-4 pt-12">
         <div className="flex items-center gap-3">
@@ -216,19 +216,19 @@ export default function TrainingNowPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-lg mx-auto">
         {/* Sport Selection */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">{txt.whatTraining}</label>
+          <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.whatTraining}</label>
           <div className="flex flex-wrap gap-2">
-            {sports.slice(0, 12).map((sport) => (
+            {sports.map((sport) => (
               <button
                 key={sport}
                 onClick={() => setFormData({ ...formData, sport })}
-                className={`px-4 py-2.5 rounded-full text-sm font-medium transition ${
+                className={`px-4 py-2.5 rounded-full text-sm font-semibold transition ${
                   formData.sport === sport
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#52575D] text-theme-secondary hover:bg-stone-100 dark:hover:bg-[#6B7178] border border-stone-200 dark:border-transparent'
+                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-[#7B8188]'
                 }`}
               >
                 {getTranslatedSport(sport)}
@@ -239,13 +239,13 @@ export default function TrainingNowPage() {
 
         {/* Location */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">{txt.where}</label>
+          <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.where}</label>
           <button
             onClick={getCurrentLocation}
             disabled={gettingLocation}
-            className="w-full py-3 px-4 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center gap-2 mb-3 font-medium"
+            className="w-full py-3 px-4 bg-tribe-green/20 text-tribe-green rounded-xl flex items-center justify-center gap-2 mb-3 font-semibold hover:bg-tribe-green/30 transition"
           >
-            <MapPin className="w-5 h-5" />
+            <Navigation className="w-5 h-5" />
             {gettingLocation ? '...' : txt.useLocation}
           </button>
           <input
@@ -253,22 +253,22 @@ export default function TrainingNowPage() {
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
-            className="w-full p-3 border border-stone-200 dark:border-gray-600 rounded-xl bg-white dark:bg-[#52575D] text-theme-primary"
+            className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-xl bg-white dark:bg-[#6B7178] text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-gray-400"
           />
         </div>
 
         {/* When Starting */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">{txt.whenStarting}</label>
+          <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.whenStarting}</label>
           <div className="grid grid-cols-3 gap-3">
             {startOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setFormData({ ...formData, startIn: option.value })}
-                className={`py-3 rounded-xl font-medium transition ${
+                className={`py-3 rounded-xl font-semibold transition ${
                   formData.startIn === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#52575D] text-theme-secondary border border-stone-200 dark:border-transparent'
+                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}
@@ -279,16 +279,16 @@ export default function TrainingNowPage() {
 
         {/* Duration */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">{txt.howLong}</label>
+          <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.howLong}</label>
           <div className="grid grid-cols-4 gap-2">
             {durationOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setFormData({ ...formData, duration: option.value })}
-                className={`py-3 rounded-xl font-medium transition text-sm ${
+                className={`py-3 rounded-xl font-semibold transition text-sm ${
                   formData.duration === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#52575D] text-theme-secondary border border-stone-200 dark:border-transparent'
+                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}
@@ -301,7 +301,7 @@ export default function TrainingNowPage() {
         <button
           onClick={handleSubmit}
           disabled={loading || !formData.sport || !formData.location}
-          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg mt-6"
+          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg mt-4"
         >
           {loading ? txt.creating : txt.notify}
         </button>

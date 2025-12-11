@@ -4,7 +4,7 @@ import { formatTime12Hour } from "@/lib/utils";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Check, X, User } from 'lucide-react';
+import { ArrowLeft, Check, X, User, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -125,7 +125,7 @@ export default function RequestsPage() {
       <div className="max-w-2xl mx-auto p-4">
         {requests.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-            <div className="text-4xl mb-4">📬</div>
+            <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-[#52575D] rounded-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-stone-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></div>
             <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
               {language === 'en' ? 'No Pending Requests' : 'Sin Solicitudes Pendientes'}
             </h2>
