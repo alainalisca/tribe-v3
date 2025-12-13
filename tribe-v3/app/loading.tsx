@@ -1,3 +1,3 @@
 export default function Loading() {
-  return null;
+  return null; // Remove loading screen, use instant transitions
 }
