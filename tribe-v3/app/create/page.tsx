@@ -255,6 +255,16 @@ export default function CreateSessionPage() {
 
     setLoading(true);
     try {
+      // Fix timezone bug: Ensure date is saved as local date, not UTC
+      const localDate = new Date(formData.date + 'T00:00:00');
+      const formattedDate = localDate.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('sessions')
+        .insert({
+          ...formData,
+          date: formattedDate, // Use timezone-corrected date
+    try {
       const { data, error } = await supabase
         .from('sessions')
         .insert({
