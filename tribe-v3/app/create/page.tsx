@@ -263,12 +263,7 @@ export default function CreateSessionPage() {
         .from('sessions')
         .insert({
           ...formData,
-          date: formattedDate, // Use timezone-corrected date
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          ...formData,
+          date: formattedDate,
           creator_id: user.id,
           current_participants: 0,
           status: 'active',
@@ -287,6 +282,9 @@ export default function CreateSessionPage() {
     } catch (error: any) {
       showError(getErrorMessage(error, 'create_session', language));
     } finally {
+      setLoading(false);
+    }
+  }
       setLoading(false);
     }
   }
