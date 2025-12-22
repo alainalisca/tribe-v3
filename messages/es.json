@@ -1,0 +1,33 @@
+{
+  "common": {
+    "appName": "Tribe",
+    "home": "Inicio",
+    "mySessions": "Mis Sesiones",
+    "matches": "Encuentros",
+    "profile": "Perfil",
+    "teams": "Equipos"
+  },
+  "home": {
+    "title": "Encuentra Compañeros de Entrenamiento",
+    "subtitle": "Únete a atletas cerca de ti para deportes y entrenamiento",
+    "createSession": "Crear Sesión",
+    "join": "Unirse",
+    "joined": "unidos",
+    "lookingFor": "Buscando",
+    "morePlayers": "más jugadores",
+    "today": "Hoy",
+    "tomorrow": "Mañana",
+    "noSessions": "No hay sesiones disponibles aún. ¡Crea la primera!"
+  },
+  "sports": {
+    "football": "Fútbol Americano",
+    "basketball": "Baloncesto",
+    "crossfit": "CrossFit",
+    "bjj": "BJJ",
+    "running": "Correr",
+    "swimming": "Natación",
+    "tennis": "Tenis",
+    "volleyball": "Voleibol",
+    "soccer": "Fútbol"
+  }
+}
