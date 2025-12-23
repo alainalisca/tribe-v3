@@ -161,6 +161,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     
     if (!newMessage.trim() || sending) return;
 
+    const messageText = newMessage.trim();
+
     try {
       setSending(true);
 
@@ -169,10 +171,38 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         .insert({
           session_id: sessionId,
           user_id: currentUserId,
-          message: newMessage.trim(),
+          message: messageText,
         });
 
       if (error) throw error;
+
+      // Notify other participants via push notification
+      const { data: participants } = await supabase
+        .from('session_participants')
+        .select('user_id')
+        .eq('session_id', sessionId)
+        .neq('user_id', currentUserId);
+
+      const { data: sender } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', currentUserId)
+        .single();
+
+      if (participants) {
+        for (const p of participants) {
+          fetch('/api/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: p.user_id,
+              title: 'New message in Tribe',
+              body: `${sender?.name || 'Someone'}: ${messageText.slice(0, 50)}`,
+              url: `/session/${sessionId}/chat`
+            })
+          }).catch(() => {});
+        }
+      }
 
       setNewMessage('');
     } catch (error) {
