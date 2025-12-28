@@ -66,6 +66,11 @@ export const translations = {
     location: 'Location',
     maxParticipants: 'Max Participants',
     description: 'Description',
+    skillLevel: 'Skill Level',
+    beginner: 'Beginner',
+    intermediate: 'Intermediate',
+    advanced: 'Advanced',
+    allLevels: 'All Levels',
     
     // Profile
     editProfile: 'Edit Profile',
@@ -176,6 +181,11 @@ export const translations = {
     location: 'Ubicación',
     maxParticipants: 'Máximo de Participantes',
     description: 'Descripción',
+    skillLevel: 'Nivel',
+    beginner: 'Principiante',
+    intermediate: 'Intermedio',
+    advanced: 'Avanzado',
+    allLevels: 'Todos los Niveles',
     
     // Perfil
     editProfile: 'Editar Perfil',

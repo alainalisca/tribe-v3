@@ -17,6 +17,20 @@ interface SessionCardProps {
   distance?: string;
 }
 
+function getSkillLevelDisplay(level: string, t: (key: string) => string) {
+  switch (level) {
+    case 'beginner':
+      return { emoji: '🌱', label: t('beginner'), color: 'bg-green-100 text-green-800' };
+    case 'intermediate':
+      return { emoji: '💪', label: t('intermediate'), color: 'bg-blue-100 text-blue-800' };
+    case 'advanced':
+      return { emoji: '🔥', label: t('advanced'), color: 'bg-orange-100 text-orange-800' };
+    case 'all_levels':
+    default:
+      return { emoji: '🌟', label: t('allLevels'), color: 'bg-purple-100 text-purple-800' };
+  }
+}
+
 export default function SessionCard({ session, onShare, distance }: SessionCardProps) {
   const { t, language } = useLanguage();
   const isPast = new Date(session.date) < new Date();
@@ -54,7 +68,17 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
               <span className="inline-block px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-sm font-bold">
                 {sportName}
               </span>
-              
+
+              {/* Skill level badge */}
+              {session.skill_level && (() => {
+                const skillLevel = getSkillLevelDisplay(session.skill_level, t);
+                return (
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${skillLevel.color}`}>
+                    {skillLevel.emoji} {skillLevel.label}
+                  </span>
+                );
+              })()}
+
               {/* Photo indicator badge */}
               {session.photos && session.photos.length > 0 && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold flex items-center gap-1">

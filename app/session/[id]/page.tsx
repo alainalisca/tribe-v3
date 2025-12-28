@@ -607,9 +607,27 @@ export default function SessionDetailPage() {
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
-            <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
-              {session.sport}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
+                {session.sport}
+              </span>
+              {session.skill_level && (
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  session.skill_level === 'beginner' ? 'bg-green-100 text-green-800' :
+                  session.skill_level === 'intermediate' ? 'bg-blue-100 text-blue-800' :
+                  session.skill_level === 'advanced' ? 'bg-orange-100 text-orange-800' :
+                  'bg-purple-100 text-purple-800'
+                }`}>
+                  {session.skill_level === 'beginner' ? '🌱' :
+                   session.skill_level === 'intermediate' ? '💪' :
+                   session.skill_level === 'advanced' ? '🔥' : '🌟'}{' '}
+                  {session.skill_level === 'beginner' ? (language === 'es' ? 'Principiante' : 'Beginner') :
+                   session.skill_level === 'intermediate' ? (language === 'es' ? 'Intermedio' : 'Intermediate') :
+                   session.skill_level === 'advanced' ? (language === 'es' ? 'Avanzado' : 'Advanced') :
+                   (language === 'es' ? 'Todos los Niveles' : 'All Levels')}
+                </span>
+              )}
+            </div>
             <div className="text-right">
               <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
                 {participants.length}/{session.max_participants} joined

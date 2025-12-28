@@ -38,6 +38,7 @@ export default function CreateSessionPage() {
     description: '',
     max_participants: 10,
     join_policy: 'open',
+    skill_level: 'all_levels',
   });
 
   const sports = Object.keys(sportTranslations);
@@ -386,6 +387,34 @@ export default function CreateSessionPage() {
               ))}
             </select>
             {errors.sport && <p className="text-red-500 text-sm mt-1">{errors.sport}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {t('skillLevel')}
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { value: 'all_levels', label: t('allLevels'), emoji: '🌟' },
+                { value: 'beginner', label: t('beginner'), emoji: '🌱' },
+                { value: 'intermediate', label: t('intermediate'), emoji: '💪' },
+                { value: 'advanced', label: t('advanced'), emoji: '🔥' },
+              ].map((level) => (
+                <button
+                  key={level.value}
+                  type="button"
+                  onClick={() => setFormData({...formData, skill_level: level.value})}
+                  className={`p-3 rounded-lg font-medium transition-all text-center ${
+                    formData.skill_level === level.value
+                      ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
+                      : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
+                  }`}
+                >
+                  <div className="text-lg mb-1">{level.emoji}</div>
+                  <div className="text-xs">{level.label}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
