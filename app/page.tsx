@@ -448,22 +448,26 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className="flex items-center justify-between">
-            {!loading && <p className="text-sm text-stone-600 dark:text-gray-300">
-              {filteredSessions.length} {t('sessionsCount')}
-            </p>}
-            {(searchQuery || selectedSport) && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedSport('');
-                }}
-                className="text-sm text-tribe-green hover:underline"
-              >
-                {t('clearAll')}
-              </button>
-            )}
-          </div>
+          {(!loading || searchQuery || selectedSport) && (
+            <div className="flex items-center justify-between">
+              {!loading && (
+                <p className="text-sm text-stone-600 dark:text-gray-300">
+                  {filteredSessions.length} {t('sessionsCount')}
+                </p>
+              )}
+              {(searchQuery || selectedSport) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedSport('');
+                  }}
+                  className="text-sm text-tribe-green hover:underline"
+                >
+                  {t('clearAll')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
