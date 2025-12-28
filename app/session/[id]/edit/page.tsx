@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 
-export default function EditSessionPage({ params }: { params: { id: string } }) {
+export default function EditSessionPage() {
   const router = useRouter();
+  const params = useParams();
   const { language } = useLanguage();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
