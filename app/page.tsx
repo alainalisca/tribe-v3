@@ -142,8 +142,6 @@ export default function HomePage() {
         .order('start_time', { ascending: true });
 
       if (error) throw error;
-      
-      console.log('Loaded sessions with participants:', data);
       setSessions(data || []);
     } catch (error) {
       console.error('Error loading sessions:', error);

@@ -17,7 +17,7 @@ interface SessionCardProps {
   distance?: string;
 }
 
-function getSkillLevelDisplay(level: string, t: (key: string) => string) {
+function getSkillLevelDisplay(level: string, t: (key: any) => string) {
   switch (level) {
     case 'beginner':
       return { emoji: '🌱', label: t('beginner'), color: 'bg-green-100 text-green-800' };
@@ -31,7 +31,7 @@ function getSkillLevelDisplay(level: string, t: (key: string) => string) {
   }
 }
 
-function getGenderDisplay(gender: string, t: (key: string) => string) {
+function getGenderDisplay(gender: string, t: (key: any) => string) {
   switch (gender) {
     case 'women_only':
       return { emoji: '👩', label: t('womenOnly'), color: 'bg-pink-100 text-pink-800' };

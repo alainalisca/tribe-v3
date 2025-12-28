@@ -14,7 +14,7 @@ import AttendanceTracker from '@/components/AttendanceTracker';
 import StarRating from '@/components/StarRating';
 
 import LocationMap from '@/components/LocationMap';
-const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
 
 export default function SessionDetailPage() {
   const params = useParams();

@@ -40,7 +40,7 @@ export default function AdminPage() {
   const [loadingBugs, setLoadingBugs] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
+  const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
 
   useEffect(() => {
     checkAdmin();

@@ -145,7 +145,7 @@ export default function MessagesPage() {
               created_at: lastMessage.created_at,
               user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user
             } : null,
-            unread_count: 0 // TODO: Implement unread tracking
+            unread_count: 0 // Future feature: unread message tracking
           });
         }
       }

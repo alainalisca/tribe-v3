@@ -9,7 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 
-const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
 
 export default function ChatPage() {
   const params = useParams();
