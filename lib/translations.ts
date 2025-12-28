@@ -6,6 +6,7 @@ export const translations = {
     home: 'Home',
     mySessions: 'My Sessions',
     create: 'Create',
+    messages: 'Messages',
     requests: 'Requests',
     profile: 'Profile',
     
@@ -90,6 +91,8 @@ export const translations = {
     // Chat
     noMessagesYet: "No messages yet",
     startConversation: "Start the conversation!",
+    noConversations: "No conversations yet",
+    joinSessionToChat: "Join a session to start chatting with other participants",
 
     // Session Actions
     sessionCreated: "Session created!",
@@ -113,6 +116,7 @@ export const translations = {
     home: 'Inicio',
     mySessions: 'Mis Sesiones',
     create: 'Crear',
+    messages: 'Mensajes',
     requests: 'Solicitudes',
     profile: 'Perfil',
     
@@ -197,6 +201,8 @@ export const translations = {
     // Chat
     noMessagesYet: "No hay mensajes aún",
     startConversation: "¡Inicia la conversación!",
+    noConversations: "No hay conversaciones aún",
+    joinSessionToChat: "Únete a una sesión para chatear con otros participantes",
 
     // Session Actions
     sessionCreated: "¡Sesión creada!",
