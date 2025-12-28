@@ -17,8 +17,9 @@ const Marker = dynamic(
   () => import('react-leaflet').then((mod) => mod.Marker),
   { ssr: false }
 );
+// @ts-ignore - useMapEvents is a hook dynamically imported
 const useMapEvents = dynamic(
-  () => import('react-leaflet').then((mod) => mod.useMapEvents),
+  () => import('react-leaflet').then((mod) => mod.useMapEvents) as any,
   { ssr: false }
 ) as any;
 

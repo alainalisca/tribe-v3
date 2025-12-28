@@ -477,7 +477,7 @@ export default function SessionDetailPage() {
       if (updateError) throw updateError;
 
       setParticipants(prev => prev.filter(p => p.user_id !== userId));
-      setSession(prev => ({
+      setSession((prev: any) => ({
         ...prev,
         current_participants: Math.max(0, prev.current_participants - 1)
       }));

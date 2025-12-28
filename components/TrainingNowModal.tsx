@@ -32,8 +32,8 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
   const sports = Object.keys(sportTranslations);
 
   const getTranslatedSport = (sport: string) => {
-    if (language === 'es' && sportTranslations[sport]) {
-      return sportTranslations[sport];
+    if (sportTranslations[sport]) {
+      return sportTranslations[sport][language];
     }
     return sport;
   };

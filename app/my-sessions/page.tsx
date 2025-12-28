@@ -53,8 +53,8 @@ export default function MySessionsPage() {
         return;
       }
 
-      const pastSessions = attendedSessions.filter(s => 
-        s.sessions && new Date(s.sessions.date) < new Date()
+      const pastSessions = attendedSessions.filter(s =>
+        s.sessions && new Date((s.sessions as any).date) < new Date()
       );
 
       const sessionsWithPhotoCount = await Promise.all(

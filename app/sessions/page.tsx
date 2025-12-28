@@ -126,7 +126,7 @@ export default function SessionsPage() {
                 : 'text-theme-secondary'
             }`}
           >
-            {t('Hosting')}
+            {t('hosting')}
           </button>
           <button
             onClick={() => setActiveTab('joined')}

@@ -328,10 +328,10 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           <div className="text-center py-12">
             <div className="text-4xl mb-4">💬</div>
             <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-              {t.noMessagesYet || "No messages yet"}
+              {t('noMessagesYet')}
             </h3>
             <p className="text-stone-500 dark:text-gray-400 text-sm">
-              {t.startConversation || "Start the conversation!"}
+              {t('startConversation')}
             </p>
           </div>
         ) : (

@@ -9,6 +9,11 @@ import { sportTranslations } from '@/lib/translations';
 interface SessionCardProps {
   session: any;
   onShare?: (session: any) => void;
+  onJoin?: (sessionId: string) => void;
+  onEdit?: (sessionId: string) => void;
+  onDelete?: (sessionId: string) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
+  currentUserId?: string;
   distance?: string;
 }
 

@@ -90,6 +90,22 @@ export const translations = {
     // Chat
     noMessagesYet: "No messages yet",
     startConversation: "Start the conversation!",
+
+    // Session Actions
+    sessionCreated: "Session created!",
+    sessionFullMsg: "This session is full",
+    alreadyJoined: "You already joined this session!",
+    joinedSuccessfully: "You're in! Never train alone.",
+    ended: "Ended",
+    duration: "Duration",
+
+    // Matches/Tribe
+    matches: "Matches",
+    myTribe: "My Tribe",
+    noJoinRequests: "No join requests",
+    newJoinRequest: "New join request",
+    userWantsToJoin: "wants to join your session",
+    noSessions: "No sessions",
   },
   
   es: {
@@ -181,13 +197,29 @@ export const translations = {
     // Chat
     noMessagesYet: "No hay mensajes aún",
     startConversation: "¡Inicia la conversación!",
+
+    // Session Actions
+    sessionCreated: "¡Sesión creada!",
+    sessionFullMsg: "Esta sesión está llena",
+    alreadyJoined: "¡Ya te uniste a esta sesión!",
+    joinedSuccessfully: "¡Estás dentro! Nunca entrenes solo.",
+    ended: "Terminado",
+    duration: "Duración",
+
+    // Matches/Tribe
+    matches: "Coincidencias",
+    myTribe: "Mi Tribu",
+    noJoinRequests: "Sin solicitudes",
+    newJoinRequest: "Nueva solicitud",
+    userWantsToJoin: "quiere unirse a tu sesión",
+    noSessions: "Sin sesiones",
   }
 };
 
 export type TranslationKey = keyof typeof translations.en;
 
 // Sport translations for Colombia/Medellín market
-export const sportTranslations = {
+export const sportTranslations: { [key: string]: { en: string; es: string } } = {
   'All': { en: 'All', es: 'Todos' },
   'Running': { en: 'Running', es: 'Correr' },
   'Hiking': { en: 'Hiking', es: 'Senderismo' },
