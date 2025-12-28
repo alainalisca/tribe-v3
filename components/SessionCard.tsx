@@ -31,6 +31,18 @@ function getSkillLevelDisplay(level: string, t: (key: string) => string) {
   }
 }
 
+function getGenderDisplay(gender: string, t: (key: string) => string) {
+  switch (gender) {
+    case 'women_only':
+      return { emoji: '👩', label: t('womenOnly'), color: 'bg-pink-100 text-pink-800' };
+    case 'men_only':
+      return { emoji: '👨', label: t('menOnly'), color: 'bg-sky-100 text-sky-800' };
+    case 'all':
+    default:
+      return null; // Don't show badge for "all welcome"
+  }
+}
+
 export default function SessionCard({ session, onShare, distance }: SessionCardProps) {
   const { t, language } = useLanguage();
   const isPast = new Date(session.date) < new Date();
@@ -75,6 +87,17 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
                 return (
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${skillLevel.color}`}>
                     {skillLevel.emoji} {skillLevel.label}
+                  </span>
+                );
+              })()}
+
+              {/* Gender preference badge */}
+              {session.gender_preference && (() => {
+                const genderDisplay = getGenderDisplay(session.gender_preference, t);
+                if (!genderDisplay) return null;
+                return (
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${genderDisplay.color}`}>
+                    {genderDisplay.emoji} {genderDisplay.label}
                   </span>
                 );
               })()}

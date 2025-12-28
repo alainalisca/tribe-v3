@@ -724,6 +724,17 @@ export default function SessionDetailPage() {
                    (language === 'es' ? 'Todos los Niveles' : 'All Levels')}
                 </span>
               )}
+              {session.gender_preference && session.gender_preference !== 'all' && (
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  session.gender_preference === 'women_only' ? 'bg-pink-100 text-pink-800' :
+                  'bg-sky-100 text-sky-800'
+                }`}>
+                  {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
+                  {session.gender_preference === 'women_only'
+                    ? (language === 'es' ? 'Solo Mujeres' : 'Women Only')
+                    : (language === 'es' ? 'Solo Hombres' : 'Men Only')}
+                </span>
+              )}
             </div>
             <div className="text-right">
               <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">

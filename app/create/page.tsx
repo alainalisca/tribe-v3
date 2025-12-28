@@ -39,6 +39,7 @@ export default function CreateSessionPage() {
     max_participants: 10,
     join_policy: 'open',
     skill_level: 'all_levels',
+    gender_preference: 'all',
   });
 
   const sports = Object.keys(sportTranslations);
@@ -412,6 +413,33 @@ export default function CreateSessionPage() {
                 >
                   <div className="text-lg mb-1">{level.emoji}</div>
                   <div className="text-xs">{level.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              {t('genderPreference')}
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: 'all', label: t('allWelcome'), emoji: '👥' },
+                { value: 'women_only', label: t('womenOnly'), emoji: '👩' },
+                { value: 'men_only', label: t('menOnly'), emoji: '👨' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setFormData({...formData, gender_preference: option.value})}
+                  className={`p-3 rounded-lg font-medium transition-all text-center ${
+                    formData.gender_preference === option.value
+                      ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
+                      : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
+                  }`}
+                >
+                  <div className="text-lg mb-1">{option.emoji}</div>
+                  <div className="text-xs">{option.label}</div>
                 </button>
               ))}
             </div>

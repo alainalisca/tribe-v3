@@ -124,6 +124,13 @@ export const translations = {
     reminderFifteenMinBody: "starts in 15 minutes. Head out now!",
     remindersEnabled: "Reminders enabled",
     remindersDisabled: "Reminders disabled",
+
+    // Gender Preferences
+    genderPreference: "Who can join",
+    allWelcome: "All Welcome",
+    womenOnly: "Women Only",
+    menOnly: "Men Only",
+    filterByGender: "Filter by gender",
   },
   
   es: {
@@ -249,6 +256,13 @@ export const translations = {
     reminderFifteenMinBody: "comienza en 15 minutos. ¡Sal ya!",
     remindersEnabled: "Recordatorios activados",
     remindersDisabled: "Recordatorios desactivados",
+
+    // Gender Preferences
+    genderPreference: "Quién puede unirse",
+    allWelcome: "Todos Bienvenidos",
+    womenOnly: "Solo Mujeres",
+    menOnly: "Solo Hombres",
+    filterByGender: "Filtrar por género",
   }
 };
 

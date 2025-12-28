@@ -47,6 +47,7 @@ export default function HomePage() {
   const [selectedSport, setSelectedSport] = useState<string>('');
   const [maxDistance, setMaxDistance] = useState<number>(50);
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [genderFilter, setGenderFilter] = useState<string>("all");
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export default function HomePage() {
 
   useEffect(() => {
     filterSessions();
-  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter]);
+  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
 
   async function requestNotificationPermission() {
     if (!("Notification" in window)) return;
@@ -231,6 +232,14 @@ export default function HomePage() {
       filtered = filtered.filter((s) => {
         const sessionDate = new Date(s.date);
         return sessionDate >= today && sessionDate <= endDate;
+      });
+    }
+
+    // Gender filter
+    if (genderFilter !== "all") {
+      filtered = filtered.filter((s) => {
+        // Show sessions that match the filter OR sessions open to all
+        return s.gender_preference === genderFilter || s.gender_preference === 'all' || !s.gender_preference;
       });
     }
     }
@@ -417,16 +426,28 @@ export default function HomePage() {
             ))}
           </select>
 
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-          >
-            <option value="all">{language === 'es' ? 'Todas las fechas' : 'All dates'}</option>
-            <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
-            <option value="week">{language === 'es' ? 'Esta semana' : 'This week'}</option>
-            <option value="month">{language === 'es' ? 'Este mes' : 'This month'}</option>
-          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            >
+              <option value="all">{language === 'es' ? 'Todas las fechas' : 'All dates'}</option>
+              <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
+              <option value="week">{language === 'es' ? 'Esta semana' : 'This week'}</option>
+              <option value="month">{language === 'es' ? 'Este mes' : 'This month'}</option>
+            </select>
+
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            >
+              <option value="all">{language === 'es' ? 'Todos' : 'All'} 👥</option>
+              <option value="women_only">{language === 'es' ? 'Solo Mujeres' : 'Women Only'} 👩</option>
+              <option value="men_only">{language === 'es' ? 'Solo Hombres' : 'Men Only'} 👨</option>
+            </select>
+          </div>
 
           {userLocation && (
             <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-4 py-2">
