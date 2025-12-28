@@ -43,6 +43,8 @@ export default function AuthPage() {
     noAccount: language === 'es' ? '¿No tienes cuenta? Regístrate' : "Don't have an account? Sign up",
     hasAccount: language === 'es' ? '¿Ya tienes cuenta? Inicia sesión' : 'Already have an account? Sign in',
     forgotPassword: language === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?',
+    resetEmailSent: language === 'es' ? '✅ Te enviamos un enlace para restablecer tu contraseña' : '✅ Password reset link sent to your email',
+    enterEmailFirst: language === 'es' ? '❌ Ingresa tu correo electrónico primero' : '❌ Please enter your email first',
     backHome: language === 'es' ? '← Volver al inicio' : '← Back to home',
     verifyEmail: language === 'es' ? '⚠️ Por favor verifica tu correo antes de iniciar sesión.' : '⚠️ Please verify your email before logging in. Check your inbox.',
     checkEmail: language === 'es' ? '✅ ¡Revisa tu correo para verificar tu cuenta!' : '✅ Check your email to verify your account!',
@@ -122,6 +124,30 @@ export default function AuthPage() {
         setName('');
         setBirthDate('');
       }
+    } catch (error: any) {
+      setMessage('❌ ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email) {
+      setMessage(t.enterEmailFirst);
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+
+      if (error) throw error;
+
+      setMessage(t.resetEmailSent);
     } catch (error: any) {
       setMessage('❌ ' + error.message);
     } finally {
@@ -223,6 +249,16 @@ export default function AuthPage() {
                 minLength={6}
                 className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
               />
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="mt-2 text-sm text-tribe-green hover:underline disabled:opacity-50"
+                >
+                  {t.forgotPassword}
+                </button>
+              )}
             </div>
 
             {message && (
