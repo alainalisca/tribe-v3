@@ -19,7 +19,7 @@ import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import { calculateDistance } from '@/lib/distance';
+import { calculateDistance, formatDistance } from '@/lib/distance';
 import { sportTranslations } from '@/lib/translations';
 
 export default function HomePage() {
@@ -528,14 +528,26 @@ export default function HomePage() {
                 const diffMins = Math.round(diffMs / 60000);
                 const sessionEnd = new Date(sessionStart.getTime() + (session.duration || 60) * 60000);
                 const minsLeft = Math.round((sessionEnd.getTime() - now.getTime()) / 60000);
-                
+
                 let statusText = "";
                 if (diffMins > 0) {
                   statusText = language === "es" ? `Empieza en ${diffMins} min` : `Starting in ${diffMins} min`;
                 } else {
                   statusText = language === "es" ? `${minsLeft} min restantes` : `${minsLeft} min left`;
                 }
-                
+
+                // Calculate distance for live sessions
+                let liveDistanceText = "";
+                if (userLocation && session.latitude && session.longitude) {
+                  const distanceKm = calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    session.latitude,
+                    session.longitude
+                  );
+                  liveDistanceText = formatDistance(distanceKm, language);
+                }
+
                 return (
                   <Link key={session.id} href={`/session/${session.id}`}>
                     <div className="bg-gradient-to-r from-green-50 to-lime-50 dark:from-green-900/20 dark:to-lime-900/20 border-2 border-green-400 dark:border-green-600 rounded-xl p-4 hover:shadow-lg transition cursor-pointer">
@@ -546,7 +558,14 @@ export default function HomePage() {
                           </div>
                           <div>
                             <div className="font-bold text-theme-primary">{session.creator?.name || "Someone"} - {session.sport}</div>
-                            <div className="text-sm text-theme-secondary truncate max-w-[200px]">{session.location}</div>
+                            <div className="text-sm text-theme-secondary truncate max-w-[200px]">
+                              {session.location}
+                              {liveDistanceText && (
+                                <span className="ml-2 text-xs text-green-600 dark:text-green-400 font-medium">
+                                  ({liveDistanceText})
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="text-right">
@@ -583,18 +602,33 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredSessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                onJoin={handleJoinSession}
-                userLocation={userLocation}
-                currentUserId={user?.id}
-                onEdit={handleEditSession}
-                onDelete={handleDeleteSession}
-                onShare={handleShareSession}
-              />
-            ))}
+            {filteredSessions.map((session) => {
+              // Calculate distance if user location and session coordinates are available
+              let distanceText: string | undefined;
+              if (userLocation && session.latitude && session.longitude) {
+                const distanceKm = calculateDistance(
+                  userLocation.latitude,
+                  userLocation.longitude,
+                  session.latitude,
+                  session.longitude
+                );
+                distanceText = formatDistance(distanceKm, language);
+              }
+
+              return (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onJoin={handleJoinSession}
+                  userLocation={userLocation}
+                  currentUserId={user?.id}
+                  onEdit={handleEditSession}
+                  onDelete={handleDeleteSession}
+                  onShare={handleShareSession}
+                  distance={distanceText}
+                />
+              );
+            })}
           </div>
         )}
       </div>

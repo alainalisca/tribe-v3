@@ -24,12 +24,35 @@ function toRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-export function formatDistance(km: number, language: string = 'en'): string {
-  const rounded = Math.round(km); // Whole number
-  
-  if (language === 'es') {
-    return `${rounded} km`;
+export function formatDistance(km: number, language: string = 'en', unit: 'km' | 'mi' = 'km'): string {
+  let value: number;
+  let unitLabel: string;
+
+  if (unit === 'mi') {
+    // Convert km to miles (1 km = 0.621371 miles)
+    value = km * 0.621371;
+    unitLabel = 'mi';
+  } else {
+    value = km;
+    unitLabel = 'km';
   }
-  
-  return `${rounded} km`;
+
+  // Show one decimal for distances under 10, otherwise round
+  let formatted: string;
+  if (value < 1) {
+    // Show as meters for very short distances
+    if (unit === 'km') {
+      const meters = Math.round(km * 1000);
+      formatted = `${meters} m`;
+      return formatted;
+    } else {
+      formatted = value.toFixed(1);
+    }
+  } else if (value < 10) {
+    formatted = value.toFixed(1);
+  } else {
+    formatted = Math.round(value).toString();
+  }
+
+  return `${formatted} ${unitLabel}`;
 }
