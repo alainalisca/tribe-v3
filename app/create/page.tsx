@@ -459,7 +459,7 @@ export default function CreateSessionPage() {
                       : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
                   }`}
                 >
-                  {mins < 60 ? `${mins}m` : `${mins/60}h${mins % 60 ? (mins % 60) + 'm' : ''}`}
+                  {mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h${mins % 60 ? ` ${mins % 60}m` : ''}`}
                 </button>
               ))}
             </div>
