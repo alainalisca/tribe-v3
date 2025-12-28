@@ -136,6 +136,17 @@ export const translations = {
     equipment: "Equipment Needed",
     equipmentPlaceholder: "e.g. Yoga mat, running shoes, water bottle",
     equipmentNeeded: "Equipment needed",
+
+    // Ratings & Reviews
+    rateThisSession: "Rate this session",
+    howWasYourExperience: "How was your experience with the host?",
+    leaveAComment: "Leave a comment (optional)",
+    submitReview: "Submit Review",
+    thankYouForReview: "Thank you for your review!",
+    alreadyReviewed: "You already reviewed this session",
+    hostRating: "Host Rating",
+    reviews: "reviews",
+    noReviewsYet: "No reviews yet",
   },
   
   es: {
@@ -273,6 +284,17 @@ export const translations = {
     equipment: "Equipo Necesario",
     equipmentPlaceholder: "ej. Tapete de yoga, tenis, botella de agua",
     equipmentNeeded: "Equipo necesario",
+
+    // Ratings & Reviews
+    rateThisSession: "Califica esta sesión",
+    howWasYourExperience: "¿Cómo fue tu experiencia con el anfitrión?",
+    leaveAComment: "Deja un comentario (opcional)",
+    submitReview: "Enviar Reseña",
+    thankYouForReview: "¡Gracias por tu reseña!",
+    alreadyReviewed: "Ya calificaste esta sesión",
+    hostRating: "Calificación del Anfitrión",
+    reviews: "reseñas",
+    noReviewsYet: "Sin reseñas aún",
   }
 };
 

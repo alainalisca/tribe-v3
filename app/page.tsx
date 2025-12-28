@@ -130,11 +130,11 @@ export default function HomePage() {
         .select(`
           *,
           participants:session_participants(
-            user_id, 
+            user_id,
             status,
             user:users(id, name, avatar_url)
           ),
-          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
+          creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
         `)
         .eq('status', 'active')
         .gte('date', today)

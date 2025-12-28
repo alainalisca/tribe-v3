@@ -1,7 +1,7 @@
 'use client';
 import { formatTime12Hour } from "@/lib/utils";
 
-import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -211,17 +211,25 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
 
           {/* Creator with Thumbnail */}
           {session.creator && (
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-6 h-6 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs">
-                {session.creator.avatar_url ? (
-                  <img src={session.creator.avatar_url} alt={session.creator.name} className="w-6 h-6 rounded-full object-cover" />
-                ) : (
-                  session.creator.name?.[0]?.toUpperCase() || 'U'
-                )}
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs">
+                  {session.creator.avatar_url ? (
+                    <img src={session.creator.avatar_url} alt={session.creator.name} className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    session.creator.name?.[0]?.toUpperCase() || 'U'
+                  )}
+                </div>
+                <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
+                  {t('hostedBy')} {session.creator.name}
+                </p>
               </div>
-              <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
-                {t('hostedBy')} {session.creator.name}
-              </p>
+              {session.creator.average_rating && Number(session.creator.average_rating) > 0 && (
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                  <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                  <span>{Number(session.creator.average_rating).toFixed(1)}</span>
+                </div>
+              )}
             </div>
           )}
 

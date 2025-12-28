@@ -7,10 +7,11 @@ import { celebrateJoin } from "@/lib/confetti";
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, Upload, Camera, Flag, MessageCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, ArrowLeft, Trash2, LogOut, UserX, X, Upload, Camera, Flag, MessageCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import AttendanceTracker from '@/components/AttendanceTracker';
+import StarRating from '@/components/StarRating';
 
 import LocationMap from '@/components/LocationMap';
 const ADMIN_EMAIL = 'alainalisca@aplusfitnessllc.com';
@@ -43,12 +44,73 @@ export default function SessionDetailPage() {
   const [userPhotoCount, setUserPhotoCount] = useState(0);
   const [guestHasJoined, setGuestHasJoined] = useState(false);
   const [guestParticipantId, setGuestParticipantId] = useState<string | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     checkUser();
     loadSession();
     checkGuestParticipation();
   }, [params.id]);
+
+  useEffect(() => {
+    if (user && session) {
+      checkUserReview();
+    }
+  }, [user, session]);
+
+  async function checkUserReview() {
+    if (!user || !session) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('reviewer_id', user.id)
+        .single();
+
+      if (data) {
+        setHasReviewed(true);
+      }
+    } catch (error) {
+      // No review found, which is fine
+    }
+  }
+
+  async function submitReview() {
+    if (!user || !session || userRating === 0) return;
+
+    try {
+      setSubmittingReview(true);
+
+      const { error } = await supabase
+        .from('reviews')
+        .insert({
+          session_id: session.id,
+          reviewer_id: user.id,
+          host_id: session.creator_id,
+          rating: userRating,
+          comment: reviewComment.trim() || null,
+        });
+
+      if (error) throw error;
+
+      setHasReviewed(true);
+      setShowRatingModal(false);
+      showSuccess(language === 'es' ? '¡Gracias por tu reseña!' : 'Thank you for your review!');
+
+      // Reload creator to get updated rating
+      loadSession();
+    } catch (error: any) {
+      showError(getErrorMessage(error, 'send_message', language));
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
 
   // Check if guest has already joined this session
   async function checkGuestParticipation() {
@@ -89,7 +151,7 @@ export default function SessionDetailPage() {
   }
 
   useEffect(() => {
-    if (lightboxOpen || showGuestModal) {
+    if (lightboxOpen || showGuestModal || showRatingModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -97,7 +159,7 @@ export default function SessionDetailPage() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [lightboxOpen, showGuestModal]);
+  }, [lightboxOpen, showGuestModal, showRatingModal]);
 
 
   async function checkUser() {
@@ -120,7 +182,7 @@ export default function SessionDetailPage() {
 
       const { data: creatorData } = await supabase
         .from('users')
-        .select('id, name, avatar_url')
+        .select('id, name, avatar_url, average_rating, total_reviews')
         .eq('id', sessionData.creator_id)
         .single();
 
@@ -820,9 +882,20 @@ export default function SessionDetailPage() {
             </div>
 
             {creator && (
-              <div className="flex items-center text-stone-900 dark:text-white">
-                <Users className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
-                <span>Hosted by {creator.name}</span>
+              <div className="flex items-center justify-between text-stone-900 dark:text-white">
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
+                  <span>Hosted by {creator.name}</span>
+                </div>
+                {creator.average_rating && creator.average_rating > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                    <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                    <span>{Number(creator.average_rating).toFixed(1)}</span>
+                    {creator.total_reviews > 0 && (
+                      <span className="text-yellow-600 text-xs">({creator.total_reviews})</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -978,6 +1051,33 @@ export default function SessionDetailPage() {
                   You attended this session - upload up to 3 photos to share with the community!
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rate This Session Prompt */}
+        {user && isPast && hasJoined && !isCreator && !hasReviewed && (
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-6 shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <Star className="w-6 h-6 text-slate-900" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 mb-1">
+                  {language === 'es' ? '¿Cómo estuvo la sesión?' : 'How was the session?'}
+                </h3>
+                <p className="text-sm text-slate-800">
+                  {language === 'es'
+                    ? 'Tu opinión ayuda a otros a encontrar buenos anfitriones'
+                    : 'Your feedback helps others find great hosts'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className="px-4 py-2 bg-white text-slate-900 font-bold rounded-lg hover:bg-stone-100 transition"
+              >
+                {language === 'es' ? 'Calificar' : 'Rate'}
+              </button>
             </div>
           </div>
         )}
@@ -1199,17 +1299,17 @@ export default function SessionDetailPage() {
                 <X className="w-5 h-5 text-theme-primary" />
               </button>
             </div>
-            
+
             <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
               {language === "es"
                 ? "Comparte este enlace con amigos para que se unan sin necesidad de crear cuenta"
                 : "Share this link with friends so they can join without creating an account"}
             </p>
-            
+
             <div className="bg-stone-50 dark:bg-[#52575D] p-3 rounded-lg mb-4 break-all text-sm">
               {inviteLink}
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 onClick={copyInviteLink}
@@ -1224,6 +1324,59 @@ export default function SessionDetailPage() {
                 📤 {language === "es" ? "Compartir" : "Share"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-theme-primary">
+                {language === 'es' ? 'Califica esta sesión' : 'Rate this session'}
+              </h3>
+              <button onClick={() => setShowRatingModal(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded">
+                <X className="w-5 h-5 text-theme-primary" />
+              </button>
+            </div>
+
+            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
+              {language === 'es'
+                ? '¿Cómo fue tu experiencia con el anfitrión?'
+                : 'How was your experience with the host?'}
+            </p>
+
+            <div className="flex justify-center mb-6">
+              <StarRating
+                rating={userRating}
+                onRatingChange={setUserRating}
+                size="lg"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-theme-primary mb-2">
+                {language === 'es' ? 'Deja un comentario (opcional)' : 'Leave a comment (optional)'}
+              </label>
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                placeholder={language === 'es' ? 'Comparte tu experiencia...' : 'Share your experience...'}
+                rows={3}
+                className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary resize-none"
+              />
+            </div>
+
+            <button
+              onClick={submitReview}
+              disabled={submittingReview || userRating === 0}
+              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              {submittingReview
+                ? (language === 'es' ? 'Enviando...' : 'Submitting...')
+                : (language === 'es' ? 'Enviar Reseña' : 'Submit Review')}
+            </button>
           </div>
         </div>
       )}
