@@ -256,14 +256,13 @@ export default function CreateSessionPage() {
     setLoading(true);
     try {
       // Fix timezone bug: Ensure date is saved as local date, not UTC
-      const localDate = new Date(formData.date + 'T00:00:00');
-      const formattedDate = localDate.toISOString().split('T')[0];
+      // Just use the date directly - no timezone conversion needed
 
       const { data, error } = await supabase
         .from('sessions')
         .insert({
           ...formData,
-          date: formattedDate,
+          date: formData.date,
           creator_id: user.id,
           current_participants: 0,
           status: 'active',
