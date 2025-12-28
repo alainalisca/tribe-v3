@@ -82,7 +82,8 @@ export default function AuthPage() {
           return;
         }
 
-        router.push('/');
+        // Use hard redirect for Safari compatibility
+        window.location.href = '/';
       } else {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
