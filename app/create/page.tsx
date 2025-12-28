@@ -40,6 +40,7 @@ export default function CreateSessionPage() {
     join_policy: 'open',
     skill_level: 'all_levels',
     gender_preference: 'all',
+    equipment: '',
   });
 
   const sports = Object.keys(sportTranslations);
@@ -564,6 +565,20 @@ export default function CreateSessionPage() {
               rows={4}
               placeholder={language === 'es' ? 'Describe tu sesión...' : 'Describe your session...'}
               className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-theme-primary mb-2">
+              🎒 {t('equipment')}
+            </label>
+            <input
+              type="text"
+              name="equipment"
+              value={formData.equipment}
+              onChange={handleChange}
+              placeholder={t('equipmentPlaceholder')}
+              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
             />
           </div>
 

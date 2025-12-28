@@ -798,6 +798,18 @@ export default function SessionDetailPage() {
               <span>{session.location}</span>
             </div>
 
+            {session.equipment && (
+              <div className="flex items-start text-stone-900 dark:text-white">
+                <span className="w-5 h-5 mr-3 mt-0.5 text-lg">🎒</span>
+                <div>
+                  <p className="text-xs text-stone-500 dark:text-gray-400 mb-0.5">
+                    {language === 'es' ? 'Equipo necesario' : 'Equipment needed'}
+                  </p>
+                  <span>{session.equipment}</span>
+                </div>
+              </div>
+            )}
+
             {/* Map Section */}
             <div className="mt-4">
               <LocationMap

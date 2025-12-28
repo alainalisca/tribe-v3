@@ -192,6 +192,16 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
             </div>
           </div>
 
+          {/* Equipment */}
+          {session.equipment && (
+            <div className="flex items-start mt-2">
+              <span className="text-sm mr-2">🎒</span>
+              <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">
+                {session.equipment}
+              </span>
+            </div>
+          )}
+
           {/* Description */}
           {session.description && (
             <p className="text-sm text-stone-700 dark:text-[#E0E0E0] mt-2 line-clamp-2">

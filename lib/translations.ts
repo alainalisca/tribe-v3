@@ -131,6 +131,11 @@ export const translations = {
     womenOnly: "Women Only",
     menOnly: "Men Only",
     filterByGender: "Filter by gender",
+
+    // Equipment
+    equipment: "Equipment Needed",
+    equipmentPlaceholder: "e.g. Yoga mat, running shoes, water bottle",
+    equipmentNeeded: "Equipment needed",
   },
   
   es: {
@@ -263,6 +268,11 @@ export const translations = {
     womenOnly: "Solo Mujeres",
     menOnly: "Solo Hombres",
     filterByGender: "Filtrar por género",
+
+    // Equipment
+    equipment: "Equipo Necesario",
+    equipmentPlaceholder: "ej. Tapete de yoga, tenis, botella de agua",
+    equipmentNeeded: "Equipo necesario",
   }
 };
 
