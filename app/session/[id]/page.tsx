@@ -247,8 +247,8 @@ export default function SessionDetailPage() {
 
       showSuccess('Recap photos uploaded!');
       await loadRecapPhotos();
+    } catch (error: any) {
       showError(getErrorMessage(error, 'upload_photo', language));
-      showError('Error uploading photos: ' + error.message);
     } finally {
       setUploadingRecap(false);
     }
