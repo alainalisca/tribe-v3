@@ -41,11 +41,52 @@ export default function SessionDetailPage() {
   const [guestData, setGuestData] = useState({ name: '', phone: '', email: '' });
   const [joiningAsGuest, setJoiningAsGuest] = useState(false);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
+  const [guestHasJoined, setGuestHasJoined] = useState(false);
+  const [guestParticipantId, setGuestParticipantId] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
     loadSession();
+    checkGuestParticipation();
   }, [params.id]);
+
+  // Check if guest has already joined this session
+  async function checkGuestParticipation() {
+    const storedGuestPhone = localStorage.getItem(`guest_phone_${params.id}`);
+    const storedGuestEmail = localStorage.getItem(`guest_email_${params.id}`);
+
+    if (!storedGuestPhone && !storedGuestEmail) return;
+
+    try {
+      // Check if guest is still a participant
+      let query = supabase
+        .from('session_participants')
+        .select('id')
+        .eq('session_id', params.id)
+        .eq('is_guest', true);
+
+      if (storedGuestPhone) {
+        query = query.eq('guest_phone', storedGuestPhone);
+      } else if (storedGuestEmail) {
+        query = query.eq('guest_email', storedGuestEmail);
+      }
+
+      const { data, error } = await query.single();
+
+      if (!error && data) {
+        setGuestHasJoined(true);
+        setGuestParticipantId(data.id);
+      } else {
+        // Guest participation not found, clear localStorage
+        localStorage.removeItem(`guest_phone_${params.id}`);
+        localStorage.removeItem(`guest_email_${params.id}`);
+        setGuestHasJoined(false);
+        setGuestParticipantId(null);
+      }
+    } catch (error) {
+      console.error('Error checking guest participation:', error);
+    }
+  }
 
   useEffect(() => {
     if (lightboxOpen || showGuestModal) {
@@ -340,7 +381,7 @@ export default function SessionDetailPage() {
     }
     try {
       setJoiningAsGuest(true);
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("session_participants")
         .insert({
           session_id: session.id,
@@ -350,12 +391,23 @@ export default function SessionDetailPage() {
           guest_phone: guestData.phone,
           guest_email: guestData.email || null,
           status: "confirmed",
-        });
+        })
+        .select('id')
+        .single();
       if (error) throw error;
       await supabase
         .from("sessions")
         .update({ current_participants: session.current_participants + 1 })
         .eq("id", session.id);
+
+      // Store guest info in localStorage for unjoin capability
+      localStorage.setItem(`guest_phone_${session.id}`, guestData.phone);
+      if (guestData.email) {
+        localStorage.setItem(`guest_email_${session.id}`, guestData.email);
+      }
+      setGuestHasJoined(true);
+      setGuestParticipantId(data.id);
+
       showSuccess(language === "es" ? "¡Confirmado! Te esperamos" : "Confirmed! See you there");
       setShowGuestModal(false);
       celebrateJoin();
@@ -364,6 +416,51 @@ export default function SessionDetailPage() {
       showError(error.message);
     } finally {
       setJoiningAsGuest(false);
+    }
+  }
+
+  async function handleGuestLeave() {
+    if (!confirm(language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?')) return;
+
+    const storedGuestPhone = localStorage.getItem(`guest_phone_${params.id}`);
+    const storedGuestEmail = localStorage.getItem(`guest_email_${params.id}`);
+
+    if (!storedGuestPhone && !storedGuestEmail) {
+      showError(language === 'es' ? 'No se encontró la información del invitado' : 'Guest information not found');
+      return;
+    }
+
+    try {
+      // Delete guest participation
+      let query = supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', params.id)
+        .eq('is_guest', true);
+
+      if (storedGuestPhone) {
+        query = query.eq('guest_phone', storedGuestPhone);
+      }
+
+      const { error } = await query;
+      if (error) throw error;
+
+      // Update participant count
+      await supabase
+        .from('sessions')
+        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .eq('id', session.id);
+
+      // Clear localStorage
+      localStorage.removeItem(`guest_phone_${params.id}`);
+      localStorage.removeItem(`guest_email_${params.id}`);
+      setGuestHasJoined(false);
+      setGuestParticipantId(null);
+
+      showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
+      loadSession();
+    } catch (error: any) {
+      showError(getErrorMessage(error, 'join_session', language));
     }
   }
   async function handleLeave() {
@@ -715,12 +812,36 @@ export default function SessionDetailPage() {
 
           <div className="space-y-2">
             {!user ? (
-              <button 
-                onClick={() => setShowGuestModal(true)}
-                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-              >
-                {language === 'es' ? 'Unirse como Invitado' : 'Join as Guest'}
-              </button>
+              guestHasJoined ? (
+                <button
+                  onClick={handleGuestLeave}
+                  className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-5 h-5" />
+                  {language === 'es' ? 'Salir de Sesión' : 'Leave Session'}
+                </button>
+              ) : isPast ? (
+                <button
+                  disabled
+                  className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+                >
+                  {language === 'es' ? 'Sesión Terminada' : 'Session Ended'}
+                </button>
+              ) : isFull ? (
+                <button
+                  disabled
+                  className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+                >
+                  {language === 'es' ? 'Sesión Llena' : 'Session Full'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowGuestModal(true)}
+                  className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+                >
+                  {language === 'es' ? 'Unirse como Invitado' : 'Join as Guest'}
+                </button>
+              )
             ) : isCreator ? (
               <>
                 <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">
