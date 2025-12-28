@@ -60,6 +60,34 @@ export default function SettingsPage() {
   }
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [sessionRemindersEnabled, setSessionRemindersEnabled] = useState(true);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+
+  async function toggleSessionReminders() {
+    if (!user) return;
+    setLoadingReminders(true);
+    try {
+      const newValue = !sessionRemindersEnabled;
+      const { error } = await supabase
+        .from('users')
+        .update({ session_reminders_enabled: newValue })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setSessionRemindersEnabled(newValue);
+      showSuccess(
+        newValue
+          ? (language === 'es' ? 'Recordatorios activados' : 'Reminders enabled')
+          : (language === 'es' ? 'Recordatorios desactivados' : 'Reminders disabled')
+      );
+    } catch (error: any) {
+      showError(error.message);
+    } finally {
+      setLoadingReminders(false);
+    }
+  }
+
   async function toggleNotifications() {
     if (!('Notification' in window)) {
       showError('This browser does not support notifications');
@@ -92,6 +120,23 @@ export default function SettingsPage() {
       setNotificationsEnabled(Notification.permission === 'granted');
     }
   }, []);
+
+  // Load user's reminder preference
+  useEffect(() => {
+    async function loadReminderPreference() {
+      if (!user) return;
+      const { data } = await supabase
+        .from('users')
+        .select('session_reminders_enabled')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        setSessionRemindersEnabled(data.session_reminders_enabled !== false);
+      }
+    }
+    loadReminderPreference();
+  }, [user]);
 
 
   const txt = language === 'en' ? {
@@ -199,18 +244,51 @@ export default function SettingsPage() {
               {language === 'en' ? 'Push Notifications' : 'Notificaciones Push'}
             </h2>
           </div>
-          <button
-            onClick={toggleNotifications}
-            className={`w-full p-4 rounded-xl text-left transition font-semibold ${
-              notificationsEnabled
-                ? 'bg-tribe-green text-slate-900'
-                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-            }`}
-          >
-            {notificationsEnabled 
-              ? (language === 'en' ? '✓ Notifications Enabled' : '✓ Notificaciones Activadas')
-              : (language === 'en' ? 'Enable Notifications' : 'Activar Notificaciones')}
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={toggleNotifications}
+              className={`w-full p-4 rounded-xl text-left transition font-semibold ${
+                notificationsEnabled
+                  ? 'bg-tribe-green text-slate-900'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+              }`}
+            >
+              {notificationsEnabled
+                ? (language === 'en' ? '✓ Notifications Enabled' : '✓ Notificaciones Activadas')
+                : (language === 'en' ? 'Enable Notifications' : 'Activar Notificaciones')}
+            </button>
+
+            {/* Session Reminders Toggle */}
+            <button
+              onClick={toggleSessionReminders}
+              disabled={loadingReminders || !notificationsEnabled}
+              className={`w-full p-4 rounded-xl text-left transition font-semibold ${
+                !notificationsEnabled
+                  ? 'bg-stone-50 text-stone-400 cursor-not-allowed'
+                  : sessionRemindersEnabled
+                    ? 'bg-tribe-green text-slate-900'
+                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold">
+                    {sessionRemindersEnabled
+                      ? (language === 'en' ? '✓ Session Reminders' : '✓ Recordatorios de Sesión')
+                      : (language === 'en' ? 'Session Reminders' : 'Recordatorios de Sesión')}
+                  </div>
+                  <div className={`text-xs mt-1 ${!notificationsEnabled ? 'text-stone-400' : sessionRemindersEnabled ? 'text-slate-700' : 'text-stone-500'}`}>
+                    {language === 'en'
+                      ? '1 hour & 15 min before your sessions'
+                      : '1 hora y 15 min antes de tus sesiones'}
+                  </div>
+                </div>
+                {loadingReminders && (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                )}
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Language Section */}

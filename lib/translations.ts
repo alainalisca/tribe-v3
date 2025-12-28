@@ -114,6 +114,16 @@ export const translations = {
     newJoinRequest: "New join request",
     userWantsToJoin: "wants to join your session",
     noSessions: "No sessions",
+
+    // Session Reminders
+    sessionReminders: "Session Reminders",
+    sessionRemindersDesc: "1 hour & 15 min before your sessions",
+    reminderOneHourTitle: "Session in 1 hour!",
+    reminderOneHourBody: "starts in 1 hour. Get ready!",
+    reminderFifteenMinTitle: "Session starting soon!",
+    reminderFifteenMinBody: "starts in 15 minutes. Head out now!",
+    remindersEnabled: "Reminders enabled",
+    remindersDisabled: "Reminders disabled",
   },
   
   es: {
@@ -229,6 +239,16 @@ export const translations = {
     newJoinRequest: "Nueva solicitud",
     userWantsToJoin: "quiere unirse a tu sesión",
     noSessions: "Sin sesiones",
+
+    // Session Reminders
+    sessionReminders: "Recordatorios de Sesión",
+    sessionRemindersDesc: "1 hora y 15 min antes de tus sesiones",
+    reminderOneHourTitle: "¡Sesión en 1 hora!",
+    reminderOneHourBody: "comienza en 1 hora. ¡Prepárate!",
+    reminderFifteenMinTitle: "¡La sesión empieza pronto!",
+    reminderFifteenMinBody: "comienza en 15 minutos. ¡Sal ya!",
+    remindersEnabled: "Recordatorios activados",
+    remindersDisabled: "Recordatorios desactivados",
   }
 };
 
