@@ -27,7 +27,7 @@ export default function TrainingNowPage() {
     duration: 60,
   });
 
-  const sports = Object.keys(sportTranslations).slice(0, 12);
+  const sports = Object.keys(sportTranslations).filter(s => s !== 'All');
 
   const getTranslatedSport = (sport: string) => {
     if (language === 'es' && sportTranslations[sport]?.es) {

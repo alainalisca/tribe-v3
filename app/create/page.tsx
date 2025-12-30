@@ -43,7 +43,7 @@ export default function CreateSessionPage() {
     equipment: '',
   });
 
-  const sports = Object.keys(sportTranslations);
+  const sports = Object.keys(sportTranslations).filter(s => s !== 'All');
 
   useEffect(() => {
     checkUser();

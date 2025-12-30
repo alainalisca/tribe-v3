@@ -68,7 +68,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="text"
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
               required
             />
           </div>
@@ -81,7 +81,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
               required
             />
           </div>
@@ -94,7 +94,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="time"
               value={formData.start_time}
               onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -107,7 +107,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="number"
               value={formData.duration}
               onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -120,7 +120,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -133,7 +133,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="number"
               value={formData.max_participants}
               onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -145,7 +145,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 bg-stone-50 dark:bg-[#52575D] border border-stone-300 dark:border-[#404549] rounded-lg text-stone-900 dark:text-white"
+              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
               rows={3}
             />
           </div>

@@ -4,7 +4,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -32,6 +32,8 @@ export default function PublicProfilePage() {
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const t = language === 'es' ? {
     loading: 'Cargando...',
@@ -289,10 +291,11 @@ export default function PublicProfilePage() {
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
           {profile.avatar_url && (
             <div className="flex justify-center mb-4">
-              <img loading="lazy" 
-                src={profile.avatar_url} 
+              <img loading="lazy"
+                src={profile.avatar_url}
                 alt={profile.name}
-                className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green"
+                onClick={() => setLightboxPhoto(profile.avatar_url)}
+                className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
               />
             </div>
           )}
@@ -389,10 +392,17 @@ export default function PublicProfilePage() {
               <h3 className="text-lg font-semibold text-theme-primary mb-3">{t.photos}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {profile.photos.map((photo: string, index: number) => (
-                  <div key={index} className="aspect-square rounded-lg overflow-hidden bg-stone-200">
-                    <img loading="lazy" 
-                      src={photo} 
-                      alt={`Photo ${index + 1}`} 
+                  <div
+                    key={index}
+                    className="aspect-square rounded-lg overflow-hidden bg-stone-200 cursor-pointer hover:opacity-90 transition"
+                    onClick={() => {
+                      setLightboxPhoto(photo);
+                      setLightboxIndex(index);
+                    }}
+                  >
+                    <img loading="lazy"
+                      src={photo}
+                      alt={`Photo ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -417,6 +427,55 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Photo Lightbox */}
+      {lightboxPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <button
+            onClick={() => setLightboxPhoto(null)}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full transition z-10"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {profile?.photos && profile.photos.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newIndex = (lightboxIndex - 1 + profile.photos.length) % profile.photos.length;
+                  setLightboxIndex(newIndex);
+                  setLightboxPhoto(profile.photos[newIndex]);
+                }}
+                className="absolute left-4 p-2 text-white hover:bg-white/10 rounded-full transition"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const newIndex = (lightboxIndex + 1) % profile.photos.length;
+                  setLightboxIndex(newIndex);
+                  setLightboxPhoto(profile.photos[newIndex]);
+                }}
+                className="absolute right-4 p-2 text-white hover:bg-white/10 rounded-full transition"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            </>
+          )}
+
+          <img
+            src={lightboxPhoto}
+            alt="Full size"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+          />
+        </div>
+      )}
 
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

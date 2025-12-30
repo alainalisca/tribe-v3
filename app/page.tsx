@@ -4,7 +4,6 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import OnboardingModal from '@/components/OnboardingModal';
 import EditSessionModal from '@/components/EditSessionModal';
-import ProfilePrompt from '@/components/ProfilePrompt';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -31,7 +30,6 @@ export default function HomePage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [editingSession, setEditingSession] = useState<any>(null);
 
   useEffect(() => {
@@ -174,15 +172,15 @@ export default function HomePage() {
   }
 
   function filterSessions() {
-    // Filter Live Now sessions (is_training_now = true AND happening now)
+    // Filter Live Now sessions (is_training_now = true AND happening soon or active)
     const now = new Date();
     const liveFiltered = sessions.filter(s => {
       if (!s.is_training_now) return false;
       const sessionStart = new Date(`${s.date}T${s.start_time}`);
       const sessionEnd = new Date(sessionStart.getTime() + (s.duration || 60) * 60000);
-      // Show if starting within 30 min OR currently active
-      const thirtyMinFromNow = new Date(now.getTime() + 30 * 60000);
-      return sessionStart <= thirtyMinFromNow && sessionEnd > now;
+      // Show if starting within 2 hours OR currently active (expanded from 30 min)
+      const twoHoursFromNow = new Date(now.getTime() + 120 * 60000);
+      return sessionStart <= twoHoursFromNow && sessionEnd > now;
     });
     setLiveNowSessions(liveFiltered);
     let filtered = [...sessions];
@@ -376,7 +374,6 @@ export default function HomePage() {
           onComplete={() => {
             localStorage.setItem('hasSeenOnboarding', 'true');
             setShowOnboarding(false);
-            setShowProfilePrompt(true);
           }}
         />
       )}
@@ -496,10 +493,6 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
-        {showProfilePrompt && userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
-          <ProfilePrompt onDismiss={() => setShowProfilePrompt(false)} />
-        )}
-
         {editingSession && (
           <EditSessionModal
             session={editingSession}
