@@ -15,7 +15,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import { SkeletonCard } from "@/components/Skeleton";
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
-import { Search, X } from 'lucide-react';
+import { Search, X, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
@@ -386,7 +386,12 @@ export default function HomePage() {
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
             </h1>
           </Link>
-          <LanguageToggle />
+          <div className="flex items-center gap-3">
+            <Link href="/messages" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
+              <MessageCircle className="w-6 h-6" />
+            </Link>
+            <LanguageToggle />
+          </div>
         </div>
       </div>
 
@@ -491,7 +496,7 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4">
-        {showProfilePrompt && (
+        {showProfilePrompt && userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
           <ProfilePrompt onDismiss={() => setShowProfilePrompt(false)} />
         )}
 
@@ -506,10 +511,10 @@ export default function HomePage() {
           />
         )}
 
-        {/* Profile Completion Banner */}
-        {userProfile && (
+        {/* Profile Completion Banner - only show if profile is incomplete */}
+        {userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
           <ProfileCompletionBanner
-            hasPhoto={userProfile.avatar_url || (userProfile.photos && userProfile.photos.length > 0)}
+            hasPhoto={!!userProfile.avatar_url}
             hasSports={userProfile.sports && userProfile.sports.length > 0}
           />
         )}

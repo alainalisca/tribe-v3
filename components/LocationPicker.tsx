@@ -168,7 +168,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && searchLocation()}
                   placeholder="Search address..."
-                  className="flex-1 p-2 border rounded-lg text-sm"
+                  className="flex-1 p-2 border rounded-lg text-sm bg-white dark:bg-gray-700 text-stone-900 dark:text-gray-100 border-stone-300 dark:border-gray-600"
                 />
                 <button
                   onClick={searchLocation}

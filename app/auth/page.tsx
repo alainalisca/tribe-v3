@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import LanguageToggle from '@/components/LanguageToggle';
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
   const [isLogin, setIsLogin] = useState(true);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [acceptedTos, setAcceptedTos] = useState(false);
@@ -19,6 +23,12 @@ export default function AuthPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language } = useLanguage();
+
+  useEffect(() => {
+    if (mode === 'reset-password') {
+      setIsResetPassword(true);
+    }
+  }, [mode]);
 
   const t = {
     tagline: language === 'es' ? 'Nunca Entrenes Solo' : 'Never Train Alone',
@@ -49,6 +59,12 @@ export default function AuthPage() {
     verifyEmail: language === 'es' ? '⚠️ Por favor verifica tu correo antes de iniciar sesión.' : '⚠️ Please verify your email before logging in. Check your inbox.',
     checkEmail: language === 'es' ? '✅ ¡Revisa tu correo para verificar tu cuenta!' : '✅ Check your email to verify your account!',
     invalidEmail: language === 'es' ? '❌ Por favor ingresa un correo válido' : '❌ Please enter a valid email address',
+    resetPassword: language === 'es' ? 'Restablecer Contraseña' : 'Reset Password',
+    newPassword: language === 'es' ? 'Nueva Contraseña' : 'New Password',
+    confirmPassword: language === 'es' ? 'Confirmar Contraseña' : 'Confirm Password',
+    passwordsNoMatch: language === 'es' ? '❌ Las contraseñas no coinciden' : '❌ Passwords do not match',
+    passwordUpdated: language === 'es' ? '✅ ¡Contraseña actualizada exitosamente!' : '✅ Password updated successfully!',
+    updatePassword: language === 'es' ? 'Actualizar Contraseña' : 'Update Password',
   };
 
   function calculateAge(birthDate: string): number {
@@ -143,12 +159,39 @@ export default function AuthPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
       });
 
       if (error) throw error;
 
       setMessage(t.resetEmailSent);
+    } catch (error: any) {
+      setMessage('❌ ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (password !== confirmPassword) {
+      setMessage(t.passwordsNoMatch);
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) throw error;
+
+      setMessage(t.passwordUpdated);
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
     } catch (error: any) {
       setMessage('❌ ' + error.message);
     } finally {
@@ -170,10 +213,61 @@ export default function AuthPage() {
             </h1>
             <p className="text-tribe-green font-semibold text-lg mb-2">{t.tagline}</p>
             <p className="text-stone-600 dark:text-gray-300">
-              {isLogin ? t.welcomeBack : t.joinCommunity}
+              {isResetPassword ? t.resetPassword : (isLogin ? t.welcomeBack : t.joinCommunity)}
             </p>
           </div>
 
+          {isResetPassword ? (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+                  {t.newPassword}
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+                  {t.confirmPassword}
+                </label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+                />
+              </div>
+
+              {message && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  message.includes('✅')
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                }`}>
+                  {message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? t.loading : t.updatePassword}
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <>
@@ -280,18 +374,21 @@ export default function AuthPage() {
               {loading ? t.loading : (isLogin ? t.signIn : t.signUp)}
             </button>
           </form>
+          )}
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setMessage('');
-              }}
-              className="text-sm text-tribe-green hover:underline"
-            >
-              {isLogin ? t.noAccount : t.hasAccount}
-            </button>
-          </div>
+          {!isResetPassword && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setMessage('');
+                }}
+                className="text-sm text-tribe-green hover:underline"
+              >
+                {isLogin ? t.noAccount : t.hasAccount}
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 text-center">
             <Link href="/" className="text-sm text-stone-600 dark:text-gray-400 hover:text-tribe-green transition">
