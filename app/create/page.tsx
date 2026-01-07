@@ -26,7 +26,6 @@ export default function CreateSessionPage() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
-  const [coordinates, setCoordinates] = useState<{latitude: number; longitude: number} | null>(null);
   const [formData, setFormData] = useState({
     sport: '',
     date: '',
@@ -119,6 +118,8 @@ export default function CreateSessionPage() {
       ...formData,
       sport: template.sport,
       location: template.location,
+      latitude: template.latitude || null,
+      longitude: template.longitude || null,
       duration: template.duration,
       max_participants: template.max_participants,
       description: template.description || '',
@@ -269,8 +270,6 @@ export default function CreateSessionPage() {
           creator_id: user.id,
           current_participants: 0,
           status: 'active',
-          latitude: coordinates?.latitude,
-          longitude: coordinates?.longitude,
           photos: photos.length > 0 ? photos : null,
         })
         .select()
