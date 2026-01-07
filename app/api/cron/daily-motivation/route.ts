@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { getRandomMessage } from '@/lib/motivational-messages';
+import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 
 export async function GET(request: Request) {
   try {
@@ -11,10 +11,10 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
-    
+
     // Get users who haven't received motivation today and have notifications enabled
     const today = new Date().toISOString().split('T')[0];
-    
+
     const { data: users, error } = await supabase
       .from('users')
       .select('id, preferred_language, push_subscription')
@@ -31,9 +31,9 @@ export async function GET(request: Request) {
 
     // Send motivation to each user
     for (const user of users) {
-      const message = getRandomMessage();
-      const language = user.preferred_language || 'en';
-      const content = language === 'es' ? message.es : message.en;
+      const { message } = getRandomMessage('morning_motivation');
+      const language = (user.preferred_language || 'en') as 'en' | 'es';
+      const content = getMessageContent(message, language);
 
       try {
         // Send push notification
