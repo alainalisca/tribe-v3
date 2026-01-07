@@ -1,21 +1,74 @@
 {
-  "name": "Tribe.",
-  "short_name": "Tribe.",
-  "description": "Find training partners instantly",
+  "name": "Tribe - Never Train Alone",
+  "short_name": "Tribe",
+  "description": "Find training partners instantly. Connect with athletes nearby and never work out alone again.",
   "start_url": "/",
+  "id": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#C0E863",
+  "categories": ["fitness", "sports", "social"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Home screen showing available training sessions"
+    },
+    {
+      "src": "/screenshots/create.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Create a new training session"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create Session",
+      "short_name": "Create",
+      "description": "Create a new training session",
+      "url": "/create",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Sessions",
+      "short_name": "Sessions",
+      "description": "View your training sessions",
+      "url": "/my-sessions",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

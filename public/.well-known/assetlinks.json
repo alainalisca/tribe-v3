@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.tribe.app",
+      "sha256_cert_fingerprints": [
+        "C4:8D:D8:84:2C:6C:DF:45:4A:05:33:F6:20:BE:BF:A6:0C:D4:0E:A1:83:3E:AF:3A:5F:72:09:F4:53:C1:76:62"
+      ]
+    }
+  }
+]
