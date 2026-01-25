@@ -8,10 +8,11 @@ import { useLanguage } from '@/lib/LanguageContext';
 interface ProfileCompletionBannerProps {
   hasPhoto: boolean;
   hasSports: boolean;
+  hasName?: boolean;
   userId?: string;
 }
 
-export default function ProfileCompletionBanner({ hasPhoto, hasSports, userId }: ProfileCompletionBannerProps) {
+export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName = true, userId }: ProfileCompletionBannerProps) {
   const [dismissed, setDismissed] = useState(false);
   const { language } = useLanguage();
 
@@ -25,7 +26,11 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, userId }:
     }
   }, [userId]);
 
-  if (dismissed || (hasPhoto && hasSports)) return null;
+  // Profile is complete if user has name, photo, and sports
+  const isProfileComplete = hasName && hasPhoto && hasSports;
+
+  // Don't show if dismissed OR if profile is complete
+  if (dismissed || isProfileComplete) return null;
 
   const message = language === 'es' 
     ? '¡Completa tu perfil para ayudar a otros a encontrarte!'
@@ -36,7 +41,12 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, userId }:
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-stone-900 dark:text-white font-medium">{message}</p>
-          <div className="flex gap-4 mt-2 text-sm">
+          <div className="flex flex-wrap gap-4 mt-2 text-sm">
+            {!hasName && (
+              <Link href="/profile/edit" className="text-tribe-green hover:underline">
+                {language === 'es' ? '+ Agregar nombre' : '+ Add name'}
+              </Link>
+            )}
             {!hasPhoto && (
               <Link href="/profile/edit" className="text-tribe-green hover:underline">
                 {language === 'es' ? '+ Agregar foto' : '+ Add photo'}

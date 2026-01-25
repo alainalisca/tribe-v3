@@ -33,13 +33,23 @@ export default function HomePage() {
   const [editingSession, setEditingSession] = useState<any>(null);
 
   useEffect(() => {
-    if (!user) return;
-    // Use user-specific key so each user gets their own onboarding
+    if (!user || !userProfile) return;
+
+    // Check if profile is complete (has photo AND sports)
+    const isProfileComplete = userProfile.avatar_url && userProfile.sports?.length > 0;
+
+    // If profile is complete, never show onboarding
+    if (isProfileComplete) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    // Only show onboarding if user hasn't seen it AND profile is incomplete
     const hasSeenOnboarding = localStorage.getItem(`hasSeenOnboarding_${user.id}`);
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
-  }, [userChecked, user]);
+  }, [userChecked, user, userProfile]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
   const [liveNowSessions, setLiveNowSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +124,7 @@ export default function HomePage() {
     if (!user) return;
     const { data } = await supabase
       .from('users')
-      .select('avatar_url, sports, safety_waiver_accepted')
+      .select('name, avatar_url, bio, sports, safety_waiver_accepted')
       .eq('id', user.id)
       .maybeSingle();
     setUserProfile(data);
@@ -507,10 +517,11 @@ export default function HomePage() {
         )}
 
         {/* Profile Completion Banner - only show if profile is incomplete */}
-        {user && userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
+        {user && userProfile && (
           <ProfileCompletionBanner
             hasPhoto={!!userProfile.avatar_url}
             hasSports={userProfile.sports && userProfile.sports.length > 0}
+            hasName={!!userProfile.name}
             userId={user.id}
           />
         )}
