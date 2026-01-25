@@ -70,8 +70,9 @@ body {
     }
   }
 
+  /* !important needed to override other padding styles */
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 
   .safe-area-left {
