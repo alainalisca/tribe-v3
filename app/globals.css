@@ -58,14 +58,15 @@ body {
 
   /* Safe area utilities for iOS notch/home indicator */
   /* Use max() to ensure at least 44px on mobile for status bar */
+  /* !important needed to override Tailwind's p-4 utility class */
   .safe-area-top {
-    padding-top: max(env(safe-area-inset-top, 0px), 44px);
+    padding-top: max(env(safe-area-inset-top, 0px), 44px) !important;
   }
 
   /* Reset on desktop/tablet where status bar padding isn't needed */
   @media (min-width: 768px) {
     .safe-area-top {
-      padding-top: 0px;
+      padding-top: 0px !important;
     }
   }
 
