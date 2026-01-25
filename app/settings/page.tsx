@@ -178,7 +178,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
       <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center">
           <Link href="/profile">

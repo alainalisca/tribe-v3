@@ -152,7 +152,7 @@ export default function ProfilePage() {
   const displayedSports = showAllSports ? sports : sports.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
       {/* Header */}
       <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center justify-between">

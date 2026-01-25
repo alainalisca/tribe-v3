@@ -708,7 +708,7 @@ export default function SessionDetailPage() {
     : recapPhotos.map(p => p.photo_url);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
       {lightboxOpen && currentPhotos && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center overflow-hidden">
           <button

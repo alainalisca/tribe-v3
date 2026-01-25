@@ -252,7 +252,7 @@ export default function PublicProfilePage() {
   const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 50;
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
       <div className="bg-theme-card p-4 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center">

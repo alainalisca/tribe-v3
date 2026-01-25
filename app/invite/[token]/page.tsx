@@ -146,7 +146,7 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20 safe-area-top">
       <div className="bg-tribe-green p-6 text-center">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
           {language === 'es' ? '¡Estás invitado!' : "You're Invited!"}

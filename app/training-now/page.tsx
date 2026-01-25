@@ -203,9 +203,9 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24 safe-area-top">
       {/* Header */}
-      <div className="bg-tribe-green p-4 pt-12">
+      <div className="bg-tribe-green p-4">
         <div className="flex items-center gap-3">
           <Link href="/">
             <button className="p-2 hover:bg-lime-500 rounded-full transition">

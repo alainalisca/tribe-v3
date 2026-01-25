@@ -148,7 +148,7 @@ export default function MySessionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">

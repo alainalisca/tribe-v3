@@ -175,7 +175,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
+    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
       {/* Header */}
       <div className="bg-theme-card p-4 sticky top-0 z-10 border-b border-theme">
         <div className="max-w-2xl mx-auto flex items-center justify-between">

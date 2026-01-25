@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.aplusfitnessllc.tribe",
+      "package_name": "prod.tribe.android",
       "sha256_cert_fingerprints": [
-        "16:49:1F:E2:1A:E3:50:AD:16:59:BD:D8:B7:73:3C:63:A0:54:D1:AB:4D:14:0C:9A:22:61:CB:0A:5E:B1:6C:FB"
+        "35:E4:9C:56:E3:65:FC:1F:0F:48:E0:3F:67:54:89:97:D6:98:4C:7D:22:1F:1D:F7:20:70:8A:63:31:23:A2:0D"
       ]
     }
   }

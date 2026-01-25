@@ -8,17 +8,28 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.aplusfitnessllc.tribe"
+    namespace = "prod.tribe.android"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.aplusfitnessllc.tribe"
+        applicationId "prod.tribe.android"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 10
+        versionName "2.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+        // Support 64-bit architecture for Android 15+ 16KB page size requirement
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    // 16KB page size alignment for Android 15+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
         }
     }
     

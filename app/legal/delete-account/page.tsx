@@ -112,7 +112,7 @@ export default function DeleteAccountPage() {
   const contactEmail = 'alainalisca@aplusfitnesslls.com';
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Link href="/settings">

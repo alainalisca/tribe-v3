@@ -1,4 +1,4 @@
-package com.aplusfitnessllc.tribe;
+package prod.tribe.android;
 
 import com.getcapacitor.BridgeActivity;
 
