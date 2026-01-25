@@ -1,18 +1,29 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface ProfileCompletionBannerProps {
   hasPhoto: boolean;
   hasSports: boolean;
+  userId?: string;
 }
 
-export default function ProfileCompletionBanner({ hasPhoto, hasSports }: ProfileCompletionBannerProps) {
+export default function ProfileCompletionBanner({ hasPhoto, hasSports, userId }: ProfileCompletionBannerProps) {
   const [dismissed, setDismissed] = useState(false);
   const { language } = useLanguage();
+
+  // Check localStorage for persistent dismissal on mount
+  useEffect(() => {
+    if (userId) {
+      const wasDismissed = localStorage.getItem(`profileBannerDismissed_${userId}`);
+      if (wasDismissed) {
+        setDismissed(true);
+      }
+    }
+  }, [userId]);
 
   if (dismissed || (hasPhoto && hasSports)) return null;
 
@@ -38,7 +49,15 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports }: Profile
             )}
           </div>
         </div>
-        <button onClick={() => setDismissed(true)} className="text-stone-500 hover:text-stone-700">
+        <button
+          onClick={() => {
+            setDismissed(true);
+            if (userId) {
+              localStorage.setItem(`profileBannerDismissed_${userId}`, 'true');
+            }
+          }}
+          className="text-stone-500 hover:text-stone-700"
+        >
           <X className="w-5 h-5" />
         </button>
       </div>

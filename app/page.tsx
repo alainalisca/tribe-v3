@@ -33,11 +33,13 @@ export default function HomePage() {
   const [editingSession, setEditingSession] = useState<any>(null);
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    if (!hasSeenOnboarding && user) {
+    if (!user) return;
+    // Use user-specific key so each user gets their own onboarding
+    const hasSeenOnboarding = localStorage.getItem(`hasSeenOnboarding_${user.id}`);
+    if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
-  }, [userChecked]);
+  }, [userChecked, user]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
   const [liveNowSessions, setLiveNowSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -369,15 +371,15 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
-      {showOnboarding && (
+      {showOnboarding && user && (
         <OnboardingModal
           onComplete={() => {
-            localStorage.setItem('hasSeenOnboarding', 'true');
+            localStorage.setItem(`hasSeenOnboarding_${user.id}`, 'true');
             setShowOnboarding(false);
           }}
         />
       )}
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
+      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black safe-area-top">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link href="/profile">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
@@ -505,10 +507,11 @@ export default function HomePage() {
         )}
 
         {/* Profile Completion Banner - only show if profile is incomplete */}
-        {userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
+        {user && userProfile && (!userProfile.avatar_url || !userProfile.sports?.length) && (
           <ProfileCompletionBanner
             hasPhoto={!!userProfile.avatar_url}
             hasSports={userProfile.sports && userProfile.sports.length > 0}
+            userId={user.id}
           />
         )}
 
