@@ -70,9 +70,17 @@ body {
     }
   }
 
+  /* Use max() to ensure at least 34px on mobile for home indicator */
   /* !important needed to override other padding styles */
   .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 34px) !important;
+  }
+
+  /* Reset on desktop/tablet where home indicator padding isn't needed */
+  @media (min-width: 768px) {
+    .safe-area-bottom {
+      padding-bottom: 0px !important;
+    }
   }
 
   .safe-area-left {
