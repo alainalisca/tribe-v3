@@ -31,25 +31,6 @@ export default function HomePage() {
   const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [editingSession, setEditingSession] = useState<any>(null);
-
-  useEffect(() => {
-    if (!user || !userProfile) return;
-
-    // Check if profile is complete (has photo AND sports)
-    const isProfileComplete = userProfile.avatar_url && userProfile.sports?.length > 0;
-
-    // If profile is complete, never show onboarding
-    if (isProfileComplete) {
-      setShowOnboarding(false);
-      return;
-    }
-
-    // Only show onboarding if user hasn't seen it AND profile is incomplete
-    const hasSeenOnboarding = localStorage.getItem(`hasSeenOnboarding_${user.id}`);
-    if (!hasSeenOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, [userChecked, user, userProfile]);
   const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
   const [liveNowSessions, setLiveNowSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +56,26 @@ export default function HomePage() {
       loadProfile();
     }
   }, [userChecked]);
+
+  // Check onboarding status after profile is loaded
+  useEffect(() => {
+    if (!user || !userProfile) return;
+
+    // Check if profile is complete (has photo AND sports)
+    const isProfileComplete = userProfile.avatar_url && userProfile.sports?.length > 0;
+
+    // If profile is complete, never show onboarding
+    if (isProfileComplete) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    // Only show onboarding if user hasn't seen it AND profile is incomplete
+    const hasSeenOnboarding = localStorage.getItem(`hasSeenOnboarding_${user.id}`);
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     if (userChecked) {
