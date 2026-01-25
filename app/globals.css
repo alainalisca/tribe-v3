@@ -5,11 +5,21 @@
 :root {
   --background: #f5f5f4;
   --foreground: #292524;
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
 .dark {
   --background: #52575D;
   --foreground: #ffffff;
+}
+
+html {
+  /* Ensure safe area insets are available */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: 0; /* Reset - we'll handle padding per-element */
 }
 
 body {
@@ -21,28 +31,67 @@ body {
   .bg-theme-page {
     @apply bg-stone-50 dark:bg-[#52575D];
   }
-  
+
   .bg-theme-header {
     @apply bg-stone-200 dark:bg-[#272D34];
   }
-  
+
   .bg-theme-card {
     @apply bg-white dark:bg-[#404549];
   }
-  
+
   .bg-theme-input {
     @apply bg-white dark:bg-[#404549];
   }
-  
+
   .text-theme-primary {
     @apply text-stone-900 dark:text-white;
   }
-  
+
   .text-theme-secondary {
     @apply text-stone-600 dark:text-gray-300;
   }
-  
+
   .border-theme {
     @apply border-stone-300 dark:border-[#52575D];
+  }
+
+  /* Safe area utilities for iOS notch/home indicator */
+  /* Use max() to ensure at least 44px on mobile for status bar */
+  .safe-area-top {
+    padding-top: max(env(safe-area-inset-top, 0px), 44px);
+  }
+
+  /* Reset on desktop/tablet where status bar padding isn't needed */
+  @media (min-width: 768px) {
+    .safe-area-top {
+      padding-top: 0px;
+    }
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .safe-area-y {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-area-all {
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
 }

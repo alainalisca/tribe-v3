@@ -1,12 +1,18 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.aplusfitnessllc.tribe',
+  appId: 'prod.tribe.android',
   appName: 'Tribe',
   webDir: 'public',
   server: {
     url: 'https://tribe-v3.vercel.app',
     cleartext: true
+  },
+  android: {
+    buildOptions: {
+      keystorePath: 'app.keystore',
+      keystoreAlias: 'upload',
+    }
   }
 };
 

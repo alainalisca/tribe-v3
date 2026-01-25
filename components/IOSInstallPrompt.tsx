@@ -12,15 +12,18 @@ export default function IOSInstallPrompt() {
       const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const android = /Android/.test(navigator.userAgent);
       const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
-      
+
+      // Check if running in Capacitor native app
+      const isNativePlatform = (window as any).Capacitor?.isNativePlatform?.() === true;
+
       // Check if already dismissed (session-based, not persistent)
       const sessionDismissed = sessionStorage.getItem('installPromptDismissed');
       const permanentDismiss = localStorage.getItem('installPromptPermanentDismiss');
 
       setIsIOS(iOS);
 
-      // Only show if: mobile, not installed, and not dismissed
-      if ((iOS || android) && !isInStandaloneMode && !sessionDismissed && !permanentDismiss) {
+      // Only show if: mobile, not installed, not native app, and not dismissed
+      if ((iOS || android) && !isInStandaloneMode && !isNativePlatform && !sessionDismissed && !permanentDismiss) {
         // Delay to avoid annoying immediate popup
         const timer = setTimeout(() => setShow(true), 5000);
         return () => clearTimeout(timer);
