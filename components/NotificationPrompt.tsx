@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
-import { requestNotificationPermission } from '@/lib/notifications';
+import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
 
 interface NotificationPromptProps {
@@ -38,23 +38,25 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
   async function handleEnable() {
     if (!userId) return;
-    
+
     setLoading(true);
-    
+
     try {
-      const subscription = await requestNotificationPermission(userId);
-      
-      if (subscription) {
+      console.log('[FCM] NotificationPrompt: enabling for user:', userId);
+      const success = await registerForPushNotifications(userId);
+      console.log('[FCM] NotificationPrompt: registration result:', success);
+
+      if (success) {
         setShow(false);
         localStorage.setItem('notification-prompt-shown', 'true');
       } else {
-        alert('Please enable notifications in your browser settings');
+        alert('Please enable notifications in your browser/device settings');
       }
     } catch (error) {
-      console.error('Error enabling notifications:', error);
+      console.error('[FCM] NotificationPrompt: error enabling notifications:', error);
       alert('Failed to enable notifications. Please try again.');
     }
-    
+
     setLoading(false);
   }
 

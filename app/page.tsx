@@ -20,6 +20,7 @@ import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { sportTranslations } from '@/lib/translations';
+import { registerForPushNotifications } from '@/lib/firebase-messaging';
 
 export default function HomePage() {
   const router = useRouter();
@@ -52,7 +53,9 @@ export default function HomePage() {
   useEffect(() => {
     if (userChecked) {
       scheduleSessionReminders();
-      requestNotificationPermission();
+      if (user) {
+        tryRegisterPushNotifications(user.id);
+      }
       loadProfile();
     }
   }, [userChecked]);
@@ -93,20 +96,27 @@ export default function HomePage() {
     filterSessions();
   }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
 
-  async function requestNotificationPermission() {
-    if (!("Notification" in window)) return;
-    const hasAsked = localStorage.getItem("notificationPrompted");
-    if (hasAsked) return;
-    
-    if (Notification.permission === "default") {
-      const permission = await Notification.requestPermission();
-      localStorage.setItem("notificationPrompted", "true");
-      if (permission === "granted") {
-        new Notification("Tribe.", {
-          body: "You will now receive notifications for sessions and messages!",
-          icon: "/icon-192.png"
-        });
+  async function tryRegisterPushNotifications(userId: string) {
+    try {
+      console.log('[FCM] tryRegisterPushNotifications called for user:', userId);
+      // On native apps, always try to register (handles permission + token)
+      // On web, only auto-register if permission already granted
+      const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform();
+
+      if (isNative) {
+        console.log('[FCM] Native platform detected, registering...');
+        const success = await registerForPushNotifications(userId);
+        console.log('[FCM] Native registration result:', success);
+      } else {
+        // Web: if permission already granted, re-register to ensure token is saved
+        if ('Notification' in window && Notification.permission === 'granted') {
+          console.log('[FCM] Web: permission already granted, registering push...');
+          const success = await registerForPushNotifications(userId);
+          console.log('[FCM] Web registration result:', success);
+        }
       }
+    } catch (error) {
+      console.error('[FCM] Error in tryRegisterPushNotifications:', error);
     }
   }
 

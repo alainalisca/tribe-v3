@@ -8,6 +8,7 @@ import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lu
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import { registerForPushNotifications, removeFcmToken } from '@/lib/firebase-messaging';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -29,6 +30,10 @@ export default function SettingsPage() {
   }
 
   async function handleSignOut() {
+    if (user) {
+      console.log('[FCM] Removing FCM token on sign out for user:', user.id);
+      await removeFcmToken(user.id);
+    }
     await supabase.auth.signOut();
     router.push('/auth');
   }
@@ -89,29 +94,52 @@ export default function SettingsPage() {
   }
 
   async function toggleNotifications() {
-    if (!('Notification' in window)) {
-      showError('This browser does not support notifications');
-      return;
-    }
+    if (!user) return;
 
-    if (Notification.permission === 'granted') {
-      setNotificationsEnabled(false);
-      showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
-    } else if (Notification.permission !== 'denied') {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setNotificationsEnabled(true);
-        new Notification('Tribe', {
-          body: language === 'en' 
-            ? 'Notifications enabled! You\'ll receive updates about your sessions.' 
-            : '¡Notificaciones activadas! Recibirás actualizaciones sobre tus sesiones.',
-          icon: '/icon-192x192.png'
-        });
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      const isNative = Capacitor.isNativePlatform();
+
+      if (isNative) {
+        // Native: use unified registration which handles permission + FCM token
+        console.log('[FCM] Settings: toggling notifications for native user:', user.id);
+        const success = await registerForPushNotifications(user.id);
+        if (success) {
+          setNotificationsEnabled(true);
+          showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+        } else {
+          showError(language === 'en'
+            ? 'Could not enable notifications. Check your device settings.'
+            : 'No se pudieron activar las notificaciones. Revisa la configuración de tu dispositivo.');
+        }
+        return;
       }
-    } else {
-      showError(language === 'en' 
-        ? 'Notifications are blocked. Please enable them in your browser settings.' 
-        : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.');
+
+      // Web path
+      if (!('Notification' in window)) {
+        showError('This browser does not support notifications');
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(false);
+        showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
+      } else if (Notification.permission !== 'denied') {
+        console.log('[FCM] Settings: requesting web push for user:', user.id);
+        const success = await registerForPushNotifications(user.id);
+        console.log('[FCM] Settings: web push registration result:', success);
+        if (success) {
+          setNotificationsEnabled(true);
+          showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+        }
+      } else {
+        showError(language === 'en'
+          ? 'Notifications are blocked. Please enable them in your browser settings.'
+          : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.');
+      }
+    } catch (error) {
+      console.error('[FCM] Settings: error toggling notifications:', error);
+      showError(language === 'en' ? 'Error enabling notifications' : 'Error al activar notificaciones');
     }
   }
 
