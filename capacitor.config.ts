@@ -3,7 +3,11 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'prod.tribe.android',
   appName: 'Tribe',
-  webDir: 'out',
+  webDir: 'public',
+  server: {
+    url: 'https://tribe-v3.vercel.app',
+    cleartext: true
+  },
   android: {
     buildOptions: {
       keystorePath: 'app.keystore',
