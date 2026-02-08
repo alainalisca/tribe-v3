@@ -11,22 +11,30 @@ webpush.setVapidDetails(
 );
 
 // Initialize Firebase Admin SDK (singleton)
+let firebaseInitError: string | null = null;
+
 function getFirebaseAdmin() {
   if (admin.apps.length === 0) {
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
     if (!serviceAccount) {
-      console.warn('FIREBASE_SERVICE_ACCOUNT_KEY not set, FCM will be disabled');
+      firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT_KEY not set';
+      console.warn(firebaseInitError);
       return null;
     }
+
+    // Log the first 20 chars to help debug truncated env vars
+    console.log(`FIREBASE_SERVICE_ACCOUNT_KEY starts with: "${serviceAccount.substring(0, 20)}..." (length: ${serviceAccount.length})`);
 
     try {
       const parsedServiceAccount = JSON.parse(serviceAccount);
       admin.initializeApp({
         credential: admin.credential.cert(parsedServiceAccount)
       });
-    } catch (error) {
-      console.error('Error initializing Firebase Admin:', error);
+      firebaseInitError = null;
+    } catch (error: any) {
+      firebaseInitError = `Firebase init failed: ${error.message}`;
+      console.error(firebaseInitError);
       return null;
     }
   }
@@ -40,11 +48,11 @@ async function sendFcmNotification(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const firebaseAdmin = getFirebaseAdmin();
 
   if (!firebaseAdmin) {
-    return false;
+    return { success: false, error: firebaseInitError || 'Firebase Admin not initialized' };
   }
 
   try {
@@ -77,9 +85,10 @@ async function sendFcmNotification(
 
     const response = await firebaseAdmin.messaging().send(message);
     console.log('FCM notification sent successfully:', response);
-    return true;
+    return { success: true };
   } catch (error: any) {
-    console.error('Error sending FCM notification:', error);
+    const errorDetail = `FCM send error: ${error.code || 'unknown'} - ${error.message}`;
+    console.error(errorDetail, error);
 
     // Handle invalid token error - should remove from database
     if (
@@ -89,7 +98,7 @@ async function sendFcmNotification(
       console.log('Invalid FCM token, should be removed from database');
     }
 
-    return false;
+    return { success: false, error: errorDetail };
   }
 }
 
@@ -99,7 +108,7 @@ async function sendWebPushNotification(
   title: string,
   body: string,
   url?: string
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     const payload = JSON.stringify({
       title,
@@ -109,16 +118,17 @@ async function sendWebPushNotification(
 
     await webpush.sendNotification(subscription, payload);
     console.log('Web push notification sent successfully');
-    return true;
+    return { success: true };
   } catch (error: any) {
-    console.error('Error sending web push notification:', error);
+    const errorDetail = `Web push error: ${error.statusCode || 'unknown'} - ${error.message}`;
+    console.error(errorDetail, error);
 
     // Handle expired subscription
     if (error.statusCode === 410) {
       console.log('Web push subscription expired, should be removed from database');
     }
 
-    return false;
+    return { success: false, error: errorDetail };
   }
 }
 
@@ -166,12 +176,16 @@ export async function POST(request: Request) {
       ...(data || {})
     };
 
-    let fcmSuccess = false;
-    let webPushSuccess = false;
+    const errors: string[] = [];
+    let fcmResult: { success: boolean; error?: string } = { success: false, error: 'not attempted' };
+    let webPushResult: { success: boolean; error?: string } = { success: false, error: 'not attempted' };
+
+    // Log what credentials the user has
+    console.log(`User ${userId}: fcm_token=${user.fcm_token ? 'yes' : 'no'}, push_subscription=${user.push_subscription ? 'yes' : 'no'}, platform=${user.fcm_platform || 'none'}`);
 
     // Try FCM first (for native apps)
     if (user.fcm_token) {
-      fcmSuccess = await sendFcmNotification(
+      fcmResult = await sendFcmNotification(
         user.fcm_token,
         title,
         body,
@@ -179,7 +193,8 @@ export async function POST(request: Request) {
       );
 
       // If FCM failed due to invalid token, clear it
-      if (!fcmSuccess) {
+      if (!fcmResult.success) {
+        errors.push(`FCM: ${fcmResult.error}`);
         await supabase
           .from('users')
           .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
@@ -188,13 +203,13 @@ export async function POST(request: Request) {
     }
 
     // Try Web Push (for browser users)
-    if (user.push_subscription && !fcmSuccess) {
+    if (user.push_subscription && !fcmResult.success) {
       const subscription =
         typeof user.push_subscription === 'string'
           ? JSON.parse(user.push_subscription)
           : user.push_subscription;
 
-      webPushSuccess = await sendWebPushNotification(
+      webPushResult = await sendWebPushNotification(
         subscription,
         title,
         body,
@@ -202,7 +217,8 @@ export async function POST(request: Request) {
       );
 
       // If web push failed due to expired subscription, clear it
-      if (!webPushSuccess) {
+      if (!webPushResult.success) {
+        errors.push(`WebPush: ${webPushResult.error}`);
         await supabase
           .from('users')
           .update({ push_subscription: null })
@@ -210,16 +226,22 @@ export async function POST(request: Request) {
       }
     }
 
-    if (fcmSuccess || webPushSuccess) {
+    if (fcmResult.success || webPushResult.success) {
       return NextResponse.json({
         success: true,
-        method: fcmSuccess ? 'fcm' : 'web-push',
+        method: fcmResult.success ? 'fcm' : 'web-push',
         platform: user.fcm_platform || 'web'
       });
     }
 
     return NextResponse.json(
-      { error: 'Failed to send notification via any method' },
+      {
+        error: 'Failed to send notification via any method',
+        details: errors,
+        userHasFcmToken: !!user.fcm_token,
+        userHasPushSubscription: !!user.push_subscription,
+        fcmPlatform: user.fcm_platform || null
+      },
       { status: 500 }
     );
   } catch (error: any) {
@@ -295,14 +317,14 @@ export async function PUT(request: Request) {
 
       // Try FCM first
       if (user.fcm_token) {
-        const success = await sendFcmNotification(
+        const fcmResult = await sendFcmNotification(
           user.fcm_token,
           title,
           body,
           notificationData
         );
 
-        if (success) {
+        if (fcmResult.success) {
           results.fcm.sent++;
           sent = true;
         } else {
@@ -318,9 +340,9 @@ export async function PUT(request: Request) {
             ? JSON.parse(user.push_subscription)
             : user.push_subscription;
 
-        const success = await sendWebPushNotification(subscription, title, body, url);
+        const wpResult = await sendWebPushNotification(subscription, title, body, url);
 
-        if (success) {
+        if (wpResult.success) {
           results.webPush.sent++;
         } else {
           results.webPush.failed++;

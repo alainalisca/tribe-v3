@@ -18,8 +18,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
 
-        // Register for remote notifications
-        application.registerForRemoteNotifications()
+        // Request notification permission, then register for APNs
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            print("Notification permission granted: \(granted)")
+            if let error = error {
+                print("Notification permission error: \(error)")
+            }
+            DispatchQueue.main.async {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        }
 
         return true
     }
@@ -62,11 +70,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
     // MARK: - Push Notification Registration
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        // Pass APNs token to Firebase FIRST, before anything else
         Messaging.messaging().apnsToken = deviceToken
+        print("APNs token set on Firebase Messaging")
+
+        // Now that APNs token is set, Firebase can generate the FCM token
+        Messaging.messaging().token { token, error in
+            if let error = error {
+                print("FCM token fetch error: \(error)")
+            } else if let token = token {
+                print("FCM token: \(token)")
+            }
+        }
+
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("Failed to register for remote notifications: \(error)")
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
