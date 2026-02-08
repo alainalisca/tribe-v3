@@ -192,13 +192,16 @@ export async function POST(request: Request) {
         notificationData
       );
 
-      // If FCM failed due to invalid token, clear it
       if (!fcmResult.success) {
         errors.push(`FCM: ${fcmResult.error}`);
-        await supabase
-          .from('users')
-          .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
-          .eq('id', userId);
+        // Only clear token if it's actually invalid, not for server-side init errors
+        if (fcmResult.error?.includes('invalid-registration-token') ||
+            fcmResult.error?.includes('registration-token-not-registered')) {
+          await supabase
+            .from('users')
+            .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
+            .eq('id', userId);
+        }
       }
     }
 
@@ -329,7 +332,11 @@ export async function PUT(request: Request) {
           sent = true;
         } else {
           results.fcm.failed++;
-          invalidFcmTokenUserIds.push(user.id);
+          // Only mark token as invalid for token-specific errors
+          if (fcmResult.error?.includes('invalid-registration-token') ||
+              fcmResult.error?.includes('registration-token-not-registered')) {
+            invalidFcmTokenUserIds.push(user.id);
+          }
         }
       }
 
