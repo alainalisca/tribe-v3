@@ -109,7 +109,7 @@ export default function DeleteAccountPage() {
     questionsDesc: 'If you have questions about deleting your account or your data, contact us at:',
   };
 
-  const contactEmail = 'alainalisca@aplusfitnesslls.com';
+  const contactEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">

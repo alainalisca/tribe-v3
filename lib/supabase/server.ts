@@ -15,15 +15,17 @@ export async function createClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // Handle error
+          } catch {
+            // Called from a Server Component where cookies can't be set.
+            // This is expected during SSR and can be safely ignored.
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // Handle error
+          } catch {
+            // Called from a Server Component where cookies can't be set.
+            // This is expected during SSR and can be safely ignored.
           }
         },
       },
