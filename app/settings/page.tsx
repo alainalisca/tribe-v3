@@ -8,7 +8,6 @@ import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lu
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
-import { registerForPushNotifications, removeFcmToken } from '@/lib/firebase-messaging';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -31,8 +30,13 @@ export default function SettingsPage() {
 
   async function handleSignOut() {
     if (user) {
-      console.log('[FCM] Removing FCM token on sign out for user:', user.id);
-      await removeFcmToken(user.id);
+      try {
+        console.log('[FCM] Removing FCM token on sign out for user:', user.id);
+        const { removeFcmToken } = await import('@/lib/firebase-messaging');
+        await removeFcmToken(user.id);
+      } catch (error) {
+        console.error('[FCM] Error removing token on sign out:', error);
+      }
     }
     await supabase.auth.signOut();
     router.push('/auth');
@@ -103,6 +107,7 @@ export default function SettingsPage() {
       if (isNative) {
         // Native: use unified registration which handles permission + FCM token
         console.log('[FCM] Settings: toggling notifications for native user:', user.id);
+        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
         const success = await registerForPushNotifications(user.id);
         if (success) {
           setNotificationsEnabled(true);
@@ -126,6 +131,7 @@ export default function SettingsPage() {
         showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
       } else if (Notification.permission !== 'denied') {
         console.log('[FCM] Settings: requesting web push for user:', user.id);
+        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
         const success = await registerForPushNotifications(user.id);
         console.log('[FCM] Settings: web push registration result:', success);
         if (success) {
