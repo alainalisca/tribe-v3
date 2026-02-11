@@ -12,3 +12,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 android/keystore.properties
+
+# Security - API keys and keystores
+android/app/app.keystore
+**/google-services.json
+**/GoogleService-Info.plist
+*.keystore
+*.jks
