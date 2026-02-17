@@ -153,7 +153,7 @@ export default function RequestsPage() {
                       {request.session.sport} - {request.session.location}
                     </h3>
                     <p className="text-sm text-stone-600 dark:text-gray-400">
-                      {new Date(request.session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')} at {formatTime12Hour(request.session.start_time)}
+                      {new Date(request.session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')} at {formatTime12Hour(request.session.start_time)}
                     </p>
                   </div>
                 </div>

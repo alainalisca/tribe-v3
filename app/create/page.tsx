@@ -281,7 +281,10 @@ export default function CreateSessionPage() {
       router.push('/');
       celebrateSessionCreated();
     } catch (error: any) {
-      showError(getErrorMessage(error, 'create_session', language));
+      console.error('Session creation error:', error);
+      const detail = error?.message || error?.code || JSON.stringify(error);
+      const userMessage = getErrorMessage(error, 'create_session', language);
+      showError(`${userMessage} (${detail})`);
     } finally {
       setLoading(false);
     }
@@ -455,7 +458,7 @@ export default function CreateSessionPage() {
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
-                min={new Date().toISOString().split('T')[0]}
+                min={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
                 className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${
                   errors.date ? 'border-red-500' : 'border-theme'
                 }`}

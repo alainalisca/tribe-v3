@@ -694,7 +694,7 @@ export default function SessionDetailPage() {
     );
   }
 
-  const isPast = new Date(session.date) < new Date();
+  const isPast = new Date(session.date + 'T00:00:00') < new Date();
   const isFull = session.current_participants >= session.max_participants;
   const isCreator = session.creator_id === user?.id;
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -841,7 +841,7 @@ export default function SessionDetailPage() {
             <div className="flex items-center text-stone-900 dark:text-white">
               <Calendar className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
               <span className="font-medium">
-                {new Date(session.date).toLocaleDateString('en-US', {
+                {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
                   weekday: 'long',
                   month: 'long',
                   day: 'numeric',

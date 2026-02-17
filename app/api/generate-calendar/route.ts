@@ -23,10 +23,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Parse date and time
-    const sessionDate = new Date(session.date);
+    // Parse date and time - use T00:00:00 to avoid UTC interpretation of date-only strings
+    const sessionDate = new Date(session.date + 'T00:00:00');
     const [hours, minutes] = session.start_time.split(':');
-    
+
     const startDateTime = new Date(sessionDate);
     startDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
     

@@ -37,7 +37,8 @@ export default function MySessionsPage() {
 
   async function loadSessions(userId: string) {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       // Load sessions I'm hosting (upcoming)
       const { data: hosting } = await supabase
@@ -67,7 +68,7 @@ export default function MySessionsPage() {
       const upcomingJoined = joined?.filter(j => {
         const session = j.session as any;
         if (!session) return false;
-        return new Date(session.date) >= new Date(today) && session.creator_id !== userId;
+        return new Date(session.date + 'T00:00:00') >= new Date(today + 'T00:00:00') && session.creator_id !== userId;
       }).map(j => j.session as any) || [];
 
       // Load past sessions (both hosted and joined)
@@ -82,7 +83,7 @@ export default function MySessionsPage() {
       const pastJoinedData = joined?.filter(j => {
         const session = j.session as any;
         if (!session) return false;
-        return new Date(session.date) < new Date(today);
+        return new Date(session.date + 'T00:00:00') < new Date(today + 'T00:00:00');
       }).map(j => ({ ...(j.session as any), wasParticipant: true })) || [];
 
       // Combine and dedupe past sessions
@@ -93,7 +94,7 @@ export default function MySessionsPage() {
         }
         return acc;
       }, []);
-      uniquePast.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      uniquePast.sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
 
       setHostingSessions(hosting || []);
       setJoinedSessions(upcomingJoined);
@@ -294,7 +295,7 @@ function SessionCard({ session, getSportName, txt, language, isHost = false, isP
             <div className="space-y-1">
               <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
                 <Calendar className="w-4 h-4 mr-2 text-stone-400" />
-                {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+                {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric'

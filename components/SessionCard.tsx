@@ -45,7 +45,7 @@ function getGenderDisplay(gender: string, t: (key: any) => string) {
 
 export default function SessionCard({ session, onShare, distance }: SessionCardProps) {
   const { t, language } = useLanguage();
-  const isPast = new Date(session.date) < new Date();
+  const isPast = new Date(session.date + 'T00:00:00') < new Date();
   const isFull = session.current_participants >= session.max_participants;
   const isStartingSoon = !isPast && (() => {
     const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
@@ -161,7 +161,7 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
             <div className="flex items-center text-stone-900 dark:text-white">
               <Calendar className="w-4 h-4 mr-2 text-tribe-green" />
               <span className="text-sm font-medium">
-                {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+                {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric'

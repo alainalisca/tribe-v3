@@ -86,7 +86,7 @@ export async function POST(request: Request) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${participatedHeader}</h3><ul style="color: #374151;">`;
           participatedSessions.forEach((item: any) => {
             const session = item.session;
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date).toLocaleDateString()})</li>`;
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
           });
           sessionsHTML += '</ul>';
         }
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         if (hostedSessions && hostedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${hostedHeader}</h3><ul style="color: #374151;">`;
           hostedSessions.forEach((session: any) => {
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date).toLocaleDateString()})</li>`;
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
           });
           sessionsHTML += '</ul>';
         }

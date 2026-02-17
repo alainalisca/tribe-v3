@@ -101,7 +101,8 @@ export default function MatchesPage() {
 
   async function loadTribeSessions() {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       const { data: participations } = await supabase
         .from('session_participants')
@@ -230,7 +231,7 @@ export default function MatchesPage() {
                     <div className="space-y-2 text-sm text-stone-600 dark:text-gray-300">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        <span>{format(parseISO(session.date), 'EEE, MMM d', { locale: language === 'es' ? es : undefined })}</span>
+                        <span>{format(parseISO(session.date + 'T00:00:00'), 'EEE, MMM d', { locale: language === 'es' ? es : undefined })}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />

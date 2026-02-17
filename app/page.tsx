@@ -144,7 +144,8 @@ export default function HomePage() {
   async function loadSessions() {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       const { data, error } = await supabase
         .from('sessions')
@@ -249,7 +250,7 @@ export default function HomePage() {
       }
       
       filtered = filtered.filter((s) => {
-        const sessionDate = new Date(s.date);
+        const sessionDate = new Date(s.date + 'T00:00:00');
         return sessionDate >= today && sessionDate <= endDate;
       });
     }
@@ -268,8 +269,8 @@ export default function HomePage() {
 
   function handleShareSession(session: any) {
     const shareText = language === "es"
-      ? `¡Únete a ${session.sport} el ${new Date(session.date).toLocaleDateString("es-ES")}! Nunca entrenes solo 💪`
-      : `Join me for ${session.sport} on ${new Date(session.date).toLocaleDateString("en-US")}! Never train alone 💪`;
+      ? `¡Únete a ${session.sport} el ${new Date(session.date + 'T00:00:00').toLocaleDateString("es-ES")}! Nunca entrenes solo 💪`
+      : `Join me for ${session.sport} on ${new Date(session.date + 'T00:00:00').toLocaleDateString("en-US")}! Never train alone 💪`;
     
     const shareUrl = `${window.location.origin}/session/${session.id}`;
     

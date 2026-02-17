@@ -88,7 +88,8 @@ export default function AdminPage() {
         .from('users')
         .select('id', { count: 'exact', head: true });
 
-      const today = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const { count: sessionCount } = await supabase
         .from('sessions')
         .select('id', { count: 'exact', head: true })
@@ -112,7 +113,7 @@ export default function AdminPage() {
         .from("sessions")
         .select("id, status, date, participants_count");
 
-      const pastSessions = allSessions?.filter(s => new Date(s.date) < new Date()) || [];
+      const pastSessions = allSessions?.filter(s => new Date(s.date + 'T00:00:00') < new Date()) || [];
       const completedCount = pastSessions.filter(s => s.status === "completed").length;
       const cancelledCount = pastSessions.filter(s => s.status === "cancelled").length;
       
@@ -1062,7 +1063,7 @@ export default function AdminPage() {
                         <div className="flex items-center gap-3 text-xs text-stone-500 mb-2">
                           <span>{session.creator?.name || 'Unknown Host'}</span>
                           <span>•</span>
-                          <span>{new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}</span>
+                          <span>{new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}</span>
                           <span>•</span>
                           <span>{session.photos?.length || 0} photos</span>
                         </div>
