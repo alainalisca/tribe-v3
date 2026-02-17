@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       url: `https://tribe-v3.vercel.app/session/${sessionId}`,
       status: 'CONFIRMED',
       busyStatus: 'BUSY',
-      organizer: { name: session.creator?.name || 'Tribe', email: 'notifications@resend.dev' },
+      organizer: { name: session.creator?.name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },
     };
 
     const { error: icsError, value } = createEvents([event as any]);

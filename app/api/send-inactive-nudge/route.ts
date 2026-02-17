@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         const tagline = isSpanish ? 'Nunca Entrenes Solo' : 'Never Train Alone';
 
         await resend.emails.send({
-          from: 'Tribe <notifications@resend.dev>',
+          from: 'Tribe <tribe@aplusfitnessllc.com>',
           to: user.email,
           subject: subject,
           html: `

@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     
     // Send email
     await resend.emails.send({
-      from: 'Tribe <notifications@resend.dev>',
+      from: 'Tribe <tribe@aplusfitnessllc.com>',
       to: user.email,
       subject: subject,
       html: `
