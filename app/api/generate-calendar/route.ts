@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { createEvents } from 'ics';
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -50,9 +52,9 @@ export async function GET(request: Request) {
         endDateTime.getMinutes()
       ] as [number, number, number, number, number],
       title: `${session.sport} - Tribe`,
-      description: `${session.description || ''}\n\nHosted by: ${session.creator?.name || 'Tribe Community'}\n\nNever Train Alone!\n\nhttps://tribe-v3.vercel.app/session/${sessionId}`,
+      description: `${session.description || ''}\n\nHosted by: ${session.creator?.name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
       location: session.location,
-      url: `https://tribe-v3.vercel.app/session/${sessionId}`,
+      url: `${SITE_URL}/session/${sessionId}`,
       status: 'CONFIRMED',
       busyStatus: 'BUSY',
       organizer: { name: session.creator?.name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },

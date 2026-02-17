@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 export async function POST(request: Request) {
   try {
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
                 <p style="color: #374151; line-height: 1.6; font-weight: 600;">${cta}</p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://tribe-v3.vercel.app/sessions" 
+                  <a href="${SITE_URL}/sessions" 
                      style="display: inline-block; background: #9EE551; color: #1e293b; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                     ${buttonText}
                   </a>

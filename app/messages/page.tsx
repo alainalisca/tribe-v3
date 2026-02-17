@@ -89,65 +89,67 @@ export default function MessagesPage() {
         return;
       }
 
-      // Get sessions with their last message
-      const conversationsData: Conversation[] = [];
+      // Batch: get all sessions in one query
+      const { data: sessions } = await supabase
+        .from('sessions')
+        .select(`
+          id,
+          sport,
+          date,
+          location,
+          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
+        `)
+        .in('id', sessionIds);
 
-      for (const sessionId of sessionIds) {
-        // Get session details
-        const { data: session } = await supabase
-          .from('sessions')
-          .select(`
-            id,
-            sport,
-            date,
-            location,
-            creator:users!sessions_creator_id_fkey(id, name, avatar_url)
-          `)
-          .eq('id', sessionId)
-          .single();
+      if (!sessions || sessions.length === 0) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
 
-        if (!session) continue;
+      // Batch: get the latest message per session in one query
+      const { data: allMessages } = await supabase
+        .from('chat_messages')
+        .select(`
+          session_id,
+          message,
+          created_at,
+          user:users!chat_messages_user_id_fkey(name)
+        `)
+        .in('session_id', sessionIds)
+        .eq('deleted', false)
+        .order('created_at', { ascending: false });
 
-        // Get last message for this session
-        const { data: lastMessage } = await supabase
-          .from('chat_messages')
-          .select(`
-            message,
-            created_at,
-            user:users!chat_messages_user_id_fkey(name)
-          `)
-          .eq('session_id', sessionId)
-          .eq('deleted', false)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        // Get message count (for sessions with messages)
-        const { count } = await supabase
-          .from('chat_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('session_id', sessionId)
-          .eq('deleted', false);
-
-        // Only include sessions that have messages
-        if (count && count > 0) {
-          conversationsData.push({
-            session_id: sessionId,
-            session: {
-              id: session.id,
-              sport: session.sport,
-              date: session.date,
-              location: session.location,
-              creator: Array.isArray(session.creator) ? session.creator[0] : session.creator
-            },
-            last_message: lastMessage ? {
-              message: lastMessage.message,
-              created_at: lastMessage.created_at,
-              user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user
-            } : null,
-            unread_count: 0 // Future feature: unread message tracking
-          });
+      // Group: find the last message per session and check if messages exist
+      const lastMessageBySession = new Map<string, any>();
+      for (const msg of allMessages || []) {
+        if (!lastMessageBySession.has(msg.session_id)) {
+          lastMessageBySession.set(msg.session_id, msg);
         }
+      }
+
+      // Build conversations — only include sessions that have messages
+      const conversationsData: Conversation[] = [];
+      for (const session of sessions) {
+        const lastMessage = lastMessageBySession.get(session.id);
+        if (!lastMessage) continue; // Skip sessions with no messages
+
+        conversationsData.push({
+          session_id: session.id,
+          session: {
+            id: session.id,
+            sport: session.sport,
+            date: session.date,
+            location: session.location,
+            creator: Array.isArray(session.creator) ? session.creator[0] : session.creator
+          },
+          last_message: {
+            message: lastMessage.message,
+            created_at: lastMessage.created_at,
+            user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user
+          },
+          unread_count: 0
+        });
       }
 
       // Sort by last message date
