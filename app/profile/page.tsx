@@ -29,6 +29,17 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
+  // Close lightbox on browser/device back button
+  useEffect(() => {
+    function handlePopState() {
+      if (selectedPhoto) {
+        setSelectedPhoto(null);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedPhoto]);
+
   async function loadProfile() {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -298,7 +309,7 @@ export default function ProfilePage() {
                 {photos.map((photo: string, index: number) => (
                   <div
                     key={index}
-                    onClick={() => setSelectedPhoto(photo)}
+                    onClick={() => { setSelectedPhoto(photo); history.pushState({ lightbox: true }, ''); }}
                     className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
                   >
                     <img
@@ -348,13 +359,13 @@ export default function ProfilePage() {
 
       {/* Full-Screen Photo Modal */}
       {selectedPhoto && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedPhoto(null)}
+          onClick={() => history.back()}
         >
           <button
             className="absolute top-4 right-4 bg-white p-2 rounded-full hover:bg-gray-200 transition"
-            onClick={() => setSelectedPhoto(null)}
+            onClick={() => history.back()}
           >
             <X className="w-6 h-6 text-slate-900" />
           </button>

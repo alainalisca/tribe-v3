@@ -106,6 +106,17 @@ export default function PublicProfilePage() {
     checkCurrentUser();
   }, [userId]);
 
+  // Close lightbox on browser/device back button
+  useEffect(() => {
+    function handlePopState() {
+      if (lightboxPhoto) {
+        setLightboxPhoto(null);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [lightboxPhoto]);
+
   async function checkCurrentUser() {
     const { data: { user } } = await supabase.auth.getUser();
     setCurrentUser(user);
@@ -294,7 +305,7 @@ export default function PublicProfilePage() {
               <img loading="lazy"
                 src={profile.avatar_url}
                 alt={profile.name}
-                onClick={() => setLightboxPhoto(profile.avatar_url)}
+                onClick={() => { setLightboxPhoto(profile.avatar_url); history.pushState({ lightbox: true }, ''); }}
                 className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
               />
             </div>
@@ -398,6 +409,7 @@ export default function PublicProfilePage() {
                     onClick={() => {
                       setLightboxPhoto(photo);
                       setLightboxIndex(index);
+                      history.pushState({ lightbox: true }, '');
                     }}
                   >
                     <img loading="lazy"
@@ -432,10 +444,10 @@ export default function PublicProfilePage() {
       {lightboxPhoto && (
         <div
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
-          onClick={() => setLightboxPhoto(null)}
+          onClick={() => history.back()}
         >
           <button
-            onClick={() => setLightboxPhoto(null)}
+            onClick={() => history.back()}
             className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full transition z-10"
           >
             <X className="w-8 h-8" />

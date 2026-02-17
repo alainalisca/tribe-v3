@@ -652,7 +652,19 @@ export default function SessionDetailPage() {
     setCurrentPhotoIndex(index);
     setPhotoType(type);
     setLightboxOpen(true);
+    history.pushState({ lightbox: true }, '');
   }
+
+  // Close lightbox on browser/device back button
+  useEffect(() => {
+    function handlePopState() {
+      if (lightboxOpen) {
+        setLightboxOpen(false);
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [lightboxOpen]);
 
   function handleTouchStart(e: React.TouchEvent) {
     setTouchStart(e.targetTouches[0].clientX);
@@ -712,7 +724,7 @@ export default function SessionDetailPage() {
       {lightboxOpen && currentPhotos && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center overflow-hidden">
           <button
-            onClick={() => setLightboxOpen(false)}
+            onClick={() => history.back()}
             className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
           >
             <X className="w-6 h-6 text-white" />
