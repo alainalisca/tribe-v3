@@ -52,6 +52,10 @@ export default function CreateSessionPage() {
     if (user) loadTemplates();
   }, [user]);
 
+  useEffect(() => {
+    console.log('templates state changed:', templates.length, 'templates:', JSON.stringify(templates));
+  }, [templates]);
+
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {

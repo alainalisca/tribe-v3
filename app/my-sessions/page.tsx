@@ -35,12 +35,27 @@ export default function MySessionsPage() {
     await loadSessions(user.id);
   }
 
+  function isSessionPast(session: any): boolean {
+    const sessionDate = new Date(session.date + 'T00:00:00');
+    if (session.start_time) {
+      const [hours, minutes] = session.start_time.split(':').map(Number);
+      sessionDate.setHours(hours, minutes, 0, 0);
+      sessionDate.setMinutes(sessionDate.getMinutes() + (session.duration || 60));
+    } else {
+      sessionDate.setHours(23, 59, 59, 999);
+    }
+    return sessionDate < new Date();
+  }
+
   async function loadSessions(userId: string) {
     try {
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-      // Load sessions I'm hosting (upcoming)
+      // Load sessions I'm hosting (upcoming) - include today's sessions
       const { data: hosting } = await supabase
         .from('sessions')
         .select(`
@@ -51,6 +66,9 @@ export default function MySessionsPage() {
         .gte('date', today)
         .eq('status', 'active')
         .order('date', { ascending: true });
+
+      // Filter out hosting sessions that have actually ended (today's sessions past their end time)
+      const upcomingHosting = (hosting || []).filter(s => !isSessionPast(s));
 
       // Load sessions I've joined (upcoming)
       const { data: joined } = await supabase
@@ -64,30 +82,33 @@ export default function MySessionsPage() {
         .eq('user_id', userId)
         .eq('status', 'confirmed');
 
-      // Filter joined sessions to only upcoming ones
+      // Filter joined sessions to only upcoming ones (not past their end time)
       const upcomingJoined = joined?.filter(j => {
         const session = j.session as any;
         if (!session) return false;
-        return new Date(session.date + 'T00:00:00') >= new Date(today + 'T00:00:00') && session.creator_id !== userId;
+        return !isSessionPast(session) && session.creator_id !== userId;
       }).map(j => j.session as any) || [];
 
-      // Load past sessions (both hosted and joined)
+      // Load past sessions (both hosted and joined) - include yesterday to catch recently ended
       const { data: pastHosted } = await supabase
         .from('sessions')
         .select('*')
         .eq('creator_id', userId)
-        .lt('date', today)
+        .lte('date', today)
         .order('date', { ascending: false })
         .limit(20);
+
+      // Filter to only actually past sessions
+      const pastHostedFiltered = (pastHosted || []).filter(s => isSessionPast(s));
 
       const pastJoinedData = joined?.filter(j => {
         const session = j.session as any;
         if (!session) return false;
-        return new Date(session.date + 'T00:00:00') < new Date(today + 'T00:00:00');
+        return isSessionPast(session);
       }).map(j => ({ ...(j.session as any), wasParticipant: true })) || [];
 
       // Combine and dedupe past sessions
-      const allPast = [...(pastHosted || []), ...pastJoinedData];
+      const allPast = [...pastHostedFiltered, ...pastJoinedData];
       const uniquePast = allPast.reduce((acc: any[], curr) => {
         if (!acc.find(s => s.id === curr.id)) {
           acc.push(curr);
@@ -96,7 +117,7 @@ export default function MySessionsPage() {
       }, []);
       uniquePast.sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
 
-      setHostingSessions(hosting || []);
+      setHostingSessions(upcomingHosting);
       setJoinedSessions(upcomingJoined);
       setPastSessions(uniquePast.slice(0, 20));
     } catch (error) {
@@ -149,8 +170,8 @@ export default function MySessionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black safe-area-top">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
             {txt.mySessions}

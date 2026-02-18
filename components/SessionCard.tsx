@@ -45,7 +45,17 @@ function getGenderDisplay(gender: string, t: (key: any) => string) {
 
 export default function SessionCard({ session, onShare, distance }: SessionCardProps) {
   const { t, language } = useLanguage();
-  const isPast = new Date(session.date + 'T00:00:00') < new Date();
+  const isPast = (() => {
+    const sessionDate = new Date(session.date + 'T00:00:00');
+    if (session.start_time) {
+      const [hours, minutes] = session.start_time.split(':').map(Number);
+      sessionDate.setHours(hours, minutes, 0, 0);
+      sessionDate.setMinutes(sessionDate.getMinutes() + (session.duration || 60));
+    } else {
+      sessionDate.setHours(23, 59, 59, 999);
+    }
+    return sessionDate < new Date();
+  })();
   const isFull = session.current_participants >= session.max_participants;
   const isStartingSoon = !isPast && (() => {
     const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
