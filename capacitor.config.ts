@@ -14,6 +14,9 @@ const config: CapacitorConfig = {
       keystoreAlias: 'upload',
     }
   },
+  ios: {
+    scrollEnabled: false,
+  },
   plugins: {
     FirebaseMessaging: {
       // Present notifications when app is in foreground
