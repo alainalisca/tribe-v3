@@ -64,19 +64,24 @@ export default function CreateSessionPage() {
   async function loadTemplates() {
     if (!user) return;
     try {
+      console.log('loadTemplates called for user:', user.id);
       const { data, error } = await supabase
         .from('session_templates')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log('loadTemplates response - data:', JSON.stringify(data), 'error:', JSON.stringify(error));
+
       if (error) {
         console.error('Error loading templates:', error.message, error.code, error);
+        showError(language === 'es' ? `Error cargando plantillas: ${error.message}` : `Error loading templates: ${error.message}`);
         return;
       }
       setTemplates(data || []);
     } catch (error: any) {
       console.error('Template load exception:', error);
+      showError(language === 'es' ? `Error cargando plantillas: ${error.message}` : `Error loading templates: ${error.message}`);
     }
   }
 
@@ -111,7 +116,7 @@ export default function CreateSessionPage() {
 
       if (error) throw error;
       showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
-      loadTemplates();
+      await loadTemplates();
     } catch (error: any) {
       console.error('Template save error:', error);
       const detail = error?.message || error?.code || 'Unknown error';
