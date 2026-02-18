@@ -655,15 +655,34 @@ export default function SessionDetailPage() {
     history.pushState({ lightbox: true }, '');
   }
 
-  // Close lightbox on browser/device back button
+  // Lock body scroll and handle back button when lightbox is open
   useEffect(() => {
     function handlePopState() {
       if (lightboxOpen) {
         setLightboxOpen(false);
       }
     }
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    if (lightboxOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (lightboxOpen) {
+        const scrollY = document.body.style.top;
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    };
   }, [lightboxOpen]);
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -722,7 +741,7 @@ export default function SessionDetailPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
       {lightboxOpen && currentPhotos && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 bg-black z-[60] flex items-center justify-center overflow-hidden">
           <button
             onClick={() => history.back()}
             className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"

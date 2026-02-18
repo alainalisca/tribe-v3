@@ -29,15 +29,34 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  // Close lightbox on browser/device back button
+  // Lock body scroll and handle back button when lightbox is open
   useEffect(() => {
     function handlePopState() {
       if (selectedPhoto) {
         setSelectedPhoto(null);
       }
     }
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    if (selectedPhoto) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (selectedPhoto) {
+        const scrollY = document.body.style.top;
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    };
   }, [selectedPhoto]);
 
   async function loadProfile() {
@@ -360,19 +379,19 @@ export default function ProfilePage() {
       {/* Full-Screen Photo Modal */}
       {selectedPhoto && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black z-[60] flex items-center justify-center p-4 overflow-hidden"
           onClick={() => history.back()}
         >
           <button
-            className="absolute top-4 right-4 bg-white p-2 rounded-full hover:bg-gray-200 transition"
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
             onClick={() => history.back()}
           >
-            <X className="w-6 h-6 text-slate-900" />
+            <X className="w-6 h-6 text-white" />
           </button>
           <img
             src={selectedPhoto}
             alt="Full size"
-            className="max-w-full max-h-full object-contain"
+            className="max-w-[90vw] max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         </div>

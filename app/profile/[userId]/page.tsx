@@ -106,15 +106,34 @@ export default function PublicProfilePage() {
     checkCurrentUser();
   }, [userId]);
 
-  // Close lightbox on browser/device back button
+  // Lock body scroll and handle back button when lightbox is open
   useEffect(() => {
     function handlePopState() {
       if (lightboxPhoto) {
         setLightboxPhoto(null);
       }
     }
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+
+    if (lightboxPhoto) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+      window.addEventListener('popstate', handlePopState);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (lightboxPhoto) {
+        const scrollY = document.body.style.top;
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    };
   }, [lightboxPhoto]);
 
   async function checkCurrentUser() {
@@ -443,12 +462,12 @@ export default function PublicProfilePage() {
       {/* Photo Lightbox */}
       {lightboxPhoto && (
         <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black z-[60] flex items-center justify-center overflow-hidden"
           onClick={() => history.back()}
         >
           <button
             onClick={() => history.back()}
-            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full transition z-10"
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
           >
             <X className="w-8 h-8" />
           </button>

@@ -70,10 +70,13 @@ export default function CreateSessionPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading templates:', error.message, error.code, error);
+        return;
+      }
       setTemplates(data || []);
-    } catch (error) {
-      console.error('Error loading templates:', error);
+    } catch (error: any) {
+      console.error('Template load exception:', error);
     }
   }
 
@@ -110,7 +113,9 @@ export default function CreateSessionPage() {
       showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
       loadTemplates();
     } catch (error: any) {
-      showError(getErrorMessage(error, 'create_session', language));
+      console.error('Template save error:', error);
+      const detail = error?.message || error?.code || 'Unknown error';
+      showError(language === 'es' ? `Error al guardar plantilla: ${detail}` : `Error saving template: ${detail}`);
     } finally {
       setSavingTemplate(false);
     }
@@ -262,19 +267,19 @@ export default function CreateSessionPage() {
 
     setLoading(true);
     try {
-      // Fix timezone bug: Ensure date is saved as local date, not UTC
-      // Just use the date directly - no timezone conversion needed
+      const insertData = {
+        ...formData,
+        date: formData.date,
+        creator_id: user.id,
+        current_participants: 0,
+        status: 'active',
+        photos: photos.length > 0 ? photos : null,
+      };
+      console.log('Creating session with data:', JSON.stringify(insertData, null, 2));
 
       const { data, error } = await supabase
         .from('sessions')
-        .insert({
-          ...formData,
-          date: formData.date,
-          creator_id: user.id,
-          current_participants: 0,
-          status: 'active',
-          photos: photos.length > 0 ? photos : null,
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -284,10 +289,15 @@ export default function CreateSessionPage() {
       router.push('/');
       celebrateSessionCreated();
     } catch (error: any) {
-      console.error('Session creation error:', error);
-      const detail = error?.message || error?.code || JSON.stringify(error);
-      const userMessage = getErrorMessage(error, 'create_session', language);
-      showError(`${userMessage} (${detail})`);
+      console.error('Session creation error:', JSON.stringify(error, null, 2));
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error details:', error?.details);
+      console.error('Error hint:', error?.hint);
+      const errorMsg = error?.message || error?.code || error?.details || JSON.stringify(error);
+      showError(language === 'es'
+        ? `Error al crear sesión: ${errorMsg}`
+        : `Session creation failed: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
