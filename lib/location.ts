@@ -31,23 +31,22 @@ export async function getUserLocation(): Promise<Location | null> {
   });
 }
 
-// Geocode text address to lat/lng using a free API
+// Geocode text address to lat/lng using Google Maps Geocoder
 export async function geocodeAddress(address: string): Promise<Location | null> {
   try {
-    // Using Nominatim (OpenStreetMap) - free, no API key needed
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-    );
-    
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
+    const { loadGoogleMaps } = await import('@/lib/google-maps');
+    await loadGoogleMaps();
+
+    const geocoder = new google.maps.Geocoder();
+    const { results } = await geocoder.geocode({ address });
+
+    if (results?.[0]?.geometry?.location) {
       return {
-        latitude: parseFloat(data[0].lat),
-        longitude: parseFloat(data[0].lon),
+        latitude: results[0].geometry.location.lat(),
+        longitude: results[0].geometry.location.lng(),
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error('Geocoding error:', error);

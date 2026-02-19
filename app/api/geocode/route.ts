@@ -9,22 +9,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing lat/lon' }, { status: 400 });
   }
 
+  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY;
+  if (!key) {
+    return NextResponse.json({ error: 'Google API key not configured' }, { status: 500 });
+  }
+
   try {
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
-      {
-        headers: {
-          'User-Agent': 'Tribe App (contact@tribe.app)'
-        }
-      }
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${key}`
     );
-    
+
     if (!response.ok) {
       throw new Error('Geocoding failed');
     }
-    
+
     const data = await response.json();
-    return NextResponse.json(data);
+    const result = data.results?.[0];
+
+    return NextResponse.json({
+      display_name: result?.formatted_address || null,
+      lat,
+      lon,
+    });
   } catch (error) {
     console.error('Geocoding error:', error);
     return NextResponse.json({ error: 'Geocoding failed' }, { status: 500 });

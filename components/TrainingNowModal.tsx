@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { sportTranslations } from '@/lib/translations';
+import { reverseGeocodeGoogle } from '@/lib/google-maps';
 
 interface TrainingNowModalProps {
   isOpen: boolean;
@@ -72,14 +73,9 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         
         // Reverse geocode to get address
         try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await response.json();
-          if (data?.display_name) {
-            // Shorten the address
-            const parts = data.display_name.split(',').slice(0, 3).join(',');
-            setFormData(prev => ({ ...prev, location: parts }));
+          const name = await reverseGeocodeGoogle(latitude, longitude);
+          if (name) {
+            setFormData(prev => ({ ...prev, location: name }));
           }
         } catch (e) {
           console.error('Geocode error:', e);

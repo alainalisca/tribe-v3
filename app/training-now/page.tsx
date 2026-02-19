@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
 import { sportTranslations } from '@/lib/translations';
+import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import Link from 'next/link';
@@ -64,12 +65,9 @@ export default function TrainingNowPage() {
           setFormData(prev => ({ ...prev, latitude, longitude }));
           
           try {
-            const response = await fetch(
-              `/api/geocode?lat=${latitude}&lon=${longitude}`
-            );
-            const data = await response.json();
-            if (data.display_name) {
-              setFormData(prev => ({ ...prev, location: data.display_name }));
+            const name = await reverseGeocodeGoogle(latitude, longitude);
+            if (name) {
+              setFormData(prev => ({ ...prev, location: name }));
             }
           } catch (error) {
             console.error('Error getting address:', error);

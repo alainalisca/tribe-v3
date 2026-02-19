@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, Navigation, Loader2, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MapPin, Navigation, Loader2, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { loadGoogleMaps, reverseGeocodeGoogle } from '@/lib/google-maps';
 
 interface LocationPickerProps {
   value: string;
@@ -11,152 +12,113 @@ interface LocationPickerProps {
   error?: string;
 }
 
-interface SearchResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
 export default function LocationPicker({ value, onChange, placeholder, error }: LocationPickerProps) {
   const { language } = useLanguage();
   const [showMap, setShowMap] = useState(false);
   const [position, setPosition] = useState<[number, number] | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [showResults, setShowResults] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [reverseGeocoding, setReverseGeocoding] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [mapComponents, setMapComponents] = useState<any>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [googleReady, setGoogleReady] = useState(false);
   const mapRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  // Default to Medellin
+  // Default to Medellín
   const defaultCenter: [number, number] = [6.2442, -75.5812];
 
-  // Load Leaflet components
+  // Load Google Maps script
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Load Leaflet CSS
-      const existingLink = document.querySelector('link[href*="leaflet"]');
-      if (!existingLink) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
-
-      // Load Leaflet and react-leaflet
-      Promise.all([
-        import('leaflet'),
-        import('react-leaflet')
-      ]).then(([L, reactLeaflet]) => {
-        // Fix default marker icon
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        });
-
-        setMapComponents({
-          MapContainer: reactLeaflet.MapContainer,
-          TileLayer: reactLeaflet.TileLayer,
-          Marker: reactLeaflet.Marker,
-          useMapEvents: reactLeaflet.useMapEvents,
-          useMap: reactLeaflet.useMap,
-        });
-        setMapReady(true);
-      });
-    }
+    loadGoogleMaps()
+      .then(() => setGoogleReady(true))
+      .catch((err) => console.error('Google Maps load error:', err));
   }, []);
 
-  // Debounced search for address suggestions
-  const searchAddress = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 3) {
-      setSearchResults([]);
-      return;
+  // Initialize Google Places Autocomplete
+  useEffect(() => {
+    if (!googleReady || !inputRef.current || autocompleteRef.current) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+      types: ['establishment', 'geocode'],
+      fields: ['formatted_address', 'name', 'geometry'],
+      componentRestrictions: { country: 'co' },
+    });
+
+    // Bias results to Medellín area (~50km)
+    autocomplete.setBounds(
+      new google.maps.LatLngBounds(
+        new google.maps.LatLng(6.2442 - 0.45, -75.5812 - 0.45),
+        new google.maps.LatLng(6.2442 + 0.45, -75.5812 + 0.45)
+      )
+    );
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (place.geometry?.location) {
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        const name = place.name || place.formatted_address || '';
+        setPosition([lat, lng]);
+        onChange(name, { lat, lng });
+        setShowMap(true);
+      }
+    });
+
+    autocompleteRef.current = autocomplete;
+  }, [googleReady, onChange]);
+
+  // Load Leaflet components for the map
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const existingLink = document.querySelector('link[href*="leaflet"]');
+    if (!existingLink) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
     }
 
-    setSearching(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=co`,
-        { headers: { 'Accept-Language': language } }
-      );
-      const data = await response.json();
-      setSearchResults(data || []);
-      setShowResults(true);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  }, [language]);
+    Promise.all([
+      import('leaflet'),
+      import('react-leaflet')
+    ]).then(([L, reactLeaflet]) => {
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
 
-  // Handle text input changes with debounce
+      setMapComponents({
+        MapContainer: reactLeaflet.MapContainer,
+        TileLayer: reactLeaflet.TileLayer,
+        Marker: reactLeaflet.Marker,
+        useMapEvents: reactLeaflet.useMapEvents,
+        useMap: reactLeaflet.useMap,
+      });
+      setMapReady(true);
+    });
+  }, []);
+
+  // Handle text input changes (typed, not selected from autocomplete)
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const newValue = e.target.value;
-    onChange(newValue);
-    setSearchQuery(newValue);
-
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    // Debounce search
-    searchTimeoutRef.current = setTimeout(() => {
-      searchAddress(newValue);
-    }, 500);
+    onChange(e.target.value);
   }
 
-  // Select a search result
-  function selectSearchResult(result: SearchResult) {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-
-    // Extract shorter location name
-    const shortName = formatLocationName(result.display_name);
-
-    setPosition([lat, lng]);
-    onChange(shortName, { lat, lng });
-    setSearchResults([]);
-    setShowResults(false);
-    setSearchQuery('');
-
-    // Open map to show selected location
-    setShowMap(true);
-  }
-
-  // Format location name to be shorter and more readable
-  function formatLocationName(fullName: string): string {
-    const parts = fullName.split(',').map(p => p.trim());
-    // Return first 2-3 meaningful parts
-    if (parts.length <= 2) return fullName;
-    return parts.slice(0, 3).join(', ');
-  }
-
-  // Reverse geocode coordinates to address
+  // Reverse geocode coordinates to address via Google
   async function reverseGeocode(lat: number, lng: number) {
     setReverseGeocoding(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`,
-        { headers: { 'Accept-Language': language } }
-      );
-      const data = await response.json();
-      if (data && data.display_name) {
-        const shortName = formatLocationName(data.display_name);
-        onChange(shortName, { lat, lng });
+      const name = await reverseGeocodeGoogle(lat, lng);
+      if (name) {
+        onChange(name, { lat, lng });
       } else {
-        // If no address found, just use coordinates
         onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
       }
-    } catch (error) {
-      console.error('Reverse geocode error:', error);
+    } catch (err) {
+      console.error('Reverse geocode error:', err);
       onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
     } finally {
       setReverseGeocoding(false);
@@ -175,7 +137,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
     reverseGeocode(lat, lng);
   }
 
-  // Get user's current location (optional, user-initiated)
+  // Get user's current location
   function getCurrentLocation() {
     if (!navigator.geolocation) {
       alert(language === 'es' ? 'Geolocalización no disponible' : 'Geolocation not available');
@@ -191,8 +153,8 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
         setShowMap(true);
         setGettingLocation(false);
       },
-      (error) => {
-        console.error('Geolocation error:', error);
+      (err) => {
+        console.error('Geolocation error:', err);
         setGettingLocation(false);
         alert(language === 'es'
           ? 'No se pudo obtener tu ubicación. Por favor, selecciona en el mapa.'
@@ -213,12 +175,10 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       },
     });
 
-    // Store map reference
     useEffect(() => {
       mapRef.current = map;
     }, [map]);
 
-    // Fly to position when it changes
     useEffect(() => {
       if (position && map) {
         map.flyTo(position, 16, { duration: 0.5 });
@@ -256,23 +216,20 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
 
   return (
     <div className="space-y-2">
-      {/* Text input with search */}
+      {/* Text input with Google Places Autocomplete */}
       <div className="relative">
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <input
+              ref={inputRef}
               type="text"
               value={value}
               onChange={handleInputChange}
-              onFocus={() => searchResults.length > 0 && setShowResults(true)}
               placeholder={placeholder}
               className={`w-full p-3 pr-10 border rounded-lg bg-theme-card text-theme-primary ${
                 error ? 'border-red-500' : 'border-theme'
               }`}
             />
-            {searching && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 animate-spin" />
-            )}
           </div>
           <button
             type="button"
@@ -287,27 +244,6 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
             <MapPin className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Search results dropdown */}
-        {showResults && searchResults.length > 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#404549] border border-stone-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            {searchResults.map((result, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => selectSearchResult(result)}
-                className="w-full text-left px-4 py-3 hover:bg-stone-100 dark:hover:bg-[#52575D] border-b border-stone-100 dark:border-gray-700 last:border-b-0"
-              >
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-tribe-green flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-theme-primary line-clamp-2">
-                    {result.display_name}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
