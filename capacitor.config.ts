@@ -4,12 +4,13 @@ const config: CapacitorConfig = {
   appId: 'prod.tribe.android',
   appName: 'Tribe',
   webDir: 'out',
-  // server.url removed for production — app loads from bundled web assets.
-  // To test against a live server during development, uncomment:
-  // server: {
-  //   url: 'https://tribe-v3.vercel.app',
-  //   cleartext: true
-  // },
+  // Required: the app uses 15+ API routes (notifications, cron, geocode, etc.)
+  // hosted on Vercel. Without server.url, relative fetch('/api/...') calls fail
+  // because bundled assets have no backend. Post-launch we can migrate to
+  // bundled assets + absolute API URLs.
+  server: {
+    url: 'https://tribe-v3.vercel.app',
+  },
   android: {
     buildOptions: {
       keystorePath: 'app.keystore',
