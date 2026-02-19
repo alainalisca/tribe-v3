@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import webpush from 'web-push';
-
-webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL}`,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
+  const a =
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
@@ -38,11 +31,10 @@ export async function POST(request: Request) {
 
     const creatorName = creator?.name || 'Someone';
 
-    // Get users with push subscriptions
+    // Get users with either push_subscription OR fcm_token
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, name, push_subscription, sports, latitude, longitude, preferred_language')
-      .not('push_subscription', 'is', null)
+      .select('id, name, push_subscription, fcm_token, sports, latitude, longitude, preferred_language')
       .neq('id', creatorId);
 
     if (error) {
@@ -50,15 +42,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
-    if (!users || users.length === 0) {
-      return NextResponse.json({ notified: 0 });
-    }
+    // Filter: must have at least one notification channel, match sport, and be nearby
+    const nearbyUsers = (users || []).filter(user => {
+      if (!user.push_subscription && !user.fcm_token) return false;
 
-    // Filter nearby users who have matching sports
-    const nearbyUsers = users.filter(user => {
       const userSports = user.sports || [];
       const hasSport = userSports.length === 0 || userSports.includes(sport);
-      
+
       if (user.latitude && user.longitude && latitude && longitude) {
         const distance = getDistanceInKm(latitude, longitude, user.latitude, user.longitude);
         return hasSport && distance <= 10; // 10km radius
@@ -70,44 +60,52 @@ export async function POST(request: Request) {
       return NextResponse.json({ notified: 0 });
     }
 
-    // Send notifications
+    // Build per-language notification groups and send via the unified endpoint
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || `https://${request.headers.get('host')}`;
+    const url = `/session/${sessionId}`;
     let notifiedCount = 0;
-    
+
+    // Batch users by language to minimize request payloads
+    const byLang: Record<string, string[]> = { es: [], en: [] };
     for (const user of nearbyUsers) {
-      try {
-        const isSpanish = user.preferred_language === 'es';
-        const startText = startIn === 0 
-          ? (isSpanish ? 'ahora' : 'now')
-          : (isSpanish ? `en ${startIn} min` : `in ${startIn} min`);
+      const lang = user.preferred_language === 'es' ? 'es' : 'en';
+      byLang[lang].push(user.id);
+    }
 
-        const title = isSpanish 
-          ? `🏋️ ${creatorName} quiere entrenar ${sport}!`
-          : `🏋️ ${creatorName} wants to train ${sport}!`;
-        
-        const body = isSpanish
-          ? `Empieza ${startText} en ${location}. ¡Únete ahora!`
-          : `Starting ${startText} at ${location}. Join now!`;
+    for (const [lang, userIds] of Object.entries(byLang)) {
+      if (userIds.length === 0) continue;
 
-        const subscription = typeof user.push_subscription === 'string' 
-          ? JSON.parse(user.push_subscription) 
-          : user.push_subscription;
+      const isSpanish = lang === 'es';
+      const startText = startIn === 0
+        ? (isSpanish ? 'ahora' : 'now')
+        : (isSpanish ? `en ${startIn} min` : `in ${startIn} min`);
 
-        const payload = JSON.stringify({
-          title,
-          body,
-          url: `/session/${sessionId}`
-        });
+      const title = isSpanish
+        ? `🏋️ ${creatorName} quiere entrenar ${sport}!`
+        : `🏋️ ${creatorName} wants to train ${sport}!`;
 
-        await webpush.sendNotification(subscription, payload);
-        notifiedCount++;
-      } catch (err) {
-        console.error(`Failed to notify user ${user.id}:`, err);
+      const body = isSpanish
+        ? `Empieza ${startText} en ${location}. ¡Únete ahora!`
+        : `Starting ${startText} at ${location}. Join now!`;
+
+      // Use PUT for batch send to the unified notification endpoint
+      const response = await fetch(`${SITE_URL}/api/notifications/send`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds, title, body, url }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        notifiedCount += (result.results?.fcm?.sent || 0) + (result.results?.webPush?.sent || 0);
+      } else {
+        console.error(`Batch notify failed for ${lang} users:`, await response.text());
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       notified: notifiedCount,
-      total: nearbyUsers.length 
+      total: nearbyUsers.length
     });
 
   } catch (error: any) {
