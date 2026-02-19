@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import AttendanceTracker from '@/components/AttendanceTracker';
 import StarRating from '@/components/StarRating';
+import StoryUpload from '@/components/StoryUpload';
 
 import LocationMap from '@/components/LocationMap';
 
@@ -49,6 +50,7 @@ export default function SessionDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [hasReviewed, setHasReviewed] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [showStoryUpload, setShowStoryUpload] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -151,7 +153,7 @@ export default function SessionDetailPage() {
   }
 
   useEffect(() => {
-    if (lightboxOpen || showGuestModal || showRatingModal) {
+    if (lightboxOpen || showGuestModal || showRatingModal || showStoryUpload) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -159,7 +161,7 @@ export default function SessionDetailPage() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [lightboxOpen, showGuestModal, showRatingModal]);
+  }, [lightboxOpen, showGuestModal, showRatingModal, showStoryUpload]);
 
 
   async function checkUser() {
@@ -808,7 +810,16 @@ export default function SessionDetailPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{language === 'es' ? 'Detalles de Sesión' : 'Session Details'}</h1>
+          <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">{language === 'es' ? 'Detalles de Sesión' : 'Session Details'}</h1>
+          {user && (hasJoined || isCreator) && (
+            <button
+              onClick={() => setShowStoryUpload(true)}
+              className="p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition"
+              title={language === 'es' ? 'Agregar Historia' : 'Add Story'}
+            >
+              <Camera className="w-6 h-6 text-tribe-green" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1375,6 +1386,15 @@ export default function SessionDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Story Upload Modal */}
+      {showStoryUpload && user && (
+        <StoryUpload
+          sessionId={session.id}
+          userId={user.id}
+          onClose={() => setShowStoryUpload(false)}
+        />
       )}
 
       {/* Rating Modal */}
