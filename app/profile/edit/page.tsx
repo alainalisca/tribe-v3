@@ -9,7 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Upload, X } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EditProfilePage() {
@@ -199,6 +199,18 @@ export default function EditProfilePage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Welcome Banner - shown for incomplete profiles */}
+        {!formData.bio && formData.sports.length === 0 && formData.photos.length === 0 && (
+          <div className="bg-tribe-green rounded-xl p-4 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-slate-900 mt-0.5 flex-shrink-0" />
+            <p className="text-slate-900 font-medium text-sm">
+              {language === 'es'
+                ? '¡Bienvenido a Tribe! Completa tu perfil para encontrar compañeros de entrenamiento cerca de ti.'
+                : 'Welcome to Tribe! Complete your profile to find training partners near you.'}
+            </p>
+          </div>
+        )}
+
         {/* Name */}
         <div>
           <label className="block text-sm font-semibold text-theme-primary mb-2">Name</label>

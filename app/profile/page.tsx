@@ -259,6 +259,36 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Profile Completeness */}
+          {(() => {
+            const fields = [
+              !!profile?.name,
+              !!profile?.avatar_url,
+              !!profile?.bio,
+              (profile?.sports?.length || 0) > 0,
+              (profile?.photos?.length || 0) > 0,
+              !!profile?.location,
+            ];
+            const filled = fields.filter(Boolean).length;
+            const pct = Math.round((filled / fields.length) * 100);
+            if (pct >= 100) return null;
+            return (
+              <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4 border border-stone-200 dark:border-[#52575D]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-theme-primary">
+                    {language === 'es' ? `Perfil: ${pct}% completo` : `Profile: ${pct}% complete`}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-tribe-green rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
