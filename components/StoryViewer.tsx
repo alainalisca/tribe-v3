@@ -1,0 +1,324 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
+import Link from 'next/link';
+
+interface Story {
+  id: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  thumbnail_url: string | null;
+  caption: string | null;
+  created_at: string;
+  user_id: string;
+  user_name: string;
+  user_avatar: string | null;
+}
+
+interface StoryGroup {
+  sessionId: string;
+  sport: string;
+  stories: Story[];
+}
+
+interface StoryViewerProps {
+  groups: StoryGroup[];
+  startGroupIndex: number;
+  onClose: () => void;
+  onStorySeen: (ids: string[]) => void;
+}
+
+function timeAgo(dateStr: string, lang: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(diffMs / 3600000);
+
+  if (mins < 1) return lang === 'es' ? 'ahora' : 'just now';
+  if (mins < 60) return `${mins}m`;
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
+export default function StoryViewer({ groups, startGroupIndex, onClose, onStorySeen }: StoryViewerProps) {
+  const { language } = useLanguage();
+  const [groupIdx, setGroupIdx] = useState(startGroupIndex);
+  const [storyIdx, setStoryIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  const startTimeRef = useRef(0);
+  const elapsedRef = useRef(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const touchStartY = useRef(0);
+  const DURATION = 5000; // 5s for images
+
+  const group = groups[groupIdx];
+  const story = group?.stories[storyIdx];
+
+  // Mark current story as seen
+  useEffect(() => {
+    if (story) {
+      onStorySeen([story.id]);
+    }
+  }, [story?.id]);
+
+  // Lock body scroll
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${scrollY}px`;
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (!group) return;
+    if (storyIdx < group.stories.length - 1) {
+      setStoryIdx(storyIdx + 1);
+      setProgress(0);
+      elapsedRef.current = 0;
+    } else if (groupIdx < groups.length - 1) {
+      setGroupIdx(groupIdx + 1);
+      setStoryIdx(0);
+      setProgress(0);
+      elapsedRef.current = 0;
+    } else {
+      onClose();
+    }
+  }, [group, storyIdx, groupIdx, groups.length, onClose]);
+
+  const goPrev = useCallback(() => {
+    if (storyIdx > 0) {
+      setStoryIdx(storyIdx - 1);
+      setProgress(0);
+      elapsedRef.current = 0;
+    } else if (groupIdx > 0) {
+      setGroupIdx(groupIdx - 1);
+      const prevGroup = groups[groupIdx - 1];
+      setStoryIdx(prevGroup.stories.length - 1);
+      setProgress(0);
+      elapsedRef.current = 0;
+    }
+  }, [storyIdx, groupIdx, groups]);
+
+  // Auto-advance timer for images
+  useEffect(() => {
+    if (!story || story.media_type === 'video' || paused) {
+      return;
+    }
+
+    startTimeRef.current = Date.now();
+    const remaining = DURATION - elapsedRef.current;
+
+    const animate = () => {
+      if (paused) return;
+      const now = Date.now();
+      const totalElapsed = elapsedRef.current + (now - startTimeRef.current);
+      const pct = Math.min(totalElapsed / DURATION, 1);
+      setProgress(pct);
+      if (pct >= 1) {
+        goNext();
+      } else {
+        timerRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    timerRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (timerRef.current) cancelAnimationFrame(timerRef.current);
+      // Capture elapsed when cleaning up
+      elapsedRef.current += Date.now() - startTimeRef.current;
+    };
+  }, [story?.id, paused, goNext]);
+
+  // Reset elapsed when story changes
+  useEffect(() => {
+    elapsedRef.current = 0;
+    setProgress(0);
+  }, [story?.id]);
+
+  // Video progress tracking
+  useEffect(() => {
+    if (!story || story.media_type !== 'video') return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onTimeUpdate = () => {
+      if (video.duration) {
+        setProgress(video.currentTime / video.duration);
+      }
+    };
+    const onEnded = () => goNext();
+
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
+    };
+  }, [story?.id, goNext]);
+
+  // Pause/resume video when paused state changes
+  useEffect(() => {
+    if (story?.media_type !== 'video' || !videoRef.current) return;
+    if (paused) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [paused, story?.id]);
+
+  function handleTap(e: React.MouseEvent | React.TouchEvent) {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    let clientX: number;
+    if ('touches' in e) {
+      // For touch, we handle in touchEnd
+      return;
+    } else {
+      clientX = (e as React.MouseEvent).clientX;
+    }
+    const third = rect.width / 3;
+    const relativeX = clientX - rect.left;
+    if (relativeX < third) {
+      goPrev();
+    } else if (relativeX > third * 2) {
+      goNext();
+    }
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartY.current = e.touches[0].clientY;
+    setPaused(true);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    setPaused(false);
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffY = touchEndY - touchStartY.current;
+
+    // Swipe down to close
+    if (diffY > 100) {
+      onClose();
+      return;
+    }
+
+    // Left/right tap navigation
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const clientX = e.changedTouches[0].clientX;
+    const third = rect.width / 3;
+    const relativeX = clientX - rect.left;
+    if (relativeX < third) {
+      goPrev();
+    } else if (relativeX > third * 2) {
+      goNext();
+    }
+  }
+
+  if (!group || !story) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black z-[70] flex flex-col">
+      {/* Progress bars */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-2 pt-2 safe-area-top">
+        <div className="flex gap-1">
+          {group.stories.map((s, i) => (
+            <div key={s.id} className="flex-1 h-[3px] rounded-full bg-white/30 overflow-hidden">
+              <div
+                className="h-full bg-tribe-green rounded-full transition-none"
+                style={{
+                  width: `${
+                    i < storyIdx ? 100 :
+                    i === storyIdx ? progress * 100 :
+                    0
+                  }%`,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* User info */}
+        <div className="flex items-center gap-3 mt-3 px-1">
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-stone-600 flex items-center justify-center flex-shrink-0">
+            {story.user_avatar ? (
+              <img src={story.user_avatar} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-sm font-bold text-white">{story.user_name[0]?.toUpperCase()}</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-semibold truncate">{story.user_name}</span>
+              <span className="text-white/60 text-xs flex-shrink-0">{timeAgo(story.created_at, language)}</span>
+            </div>
+            <span className="text-white/50 text-xs">{group.sport}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-white/10 rounded-full transition flex-shrink-0"
+          >
+            <X className="w-6 h-6 text-white" />
+          </button>
+        </div>
+      </div>
+
+      {/* Media */}
+      <div
+        className="flex-1 flex items-center justify-center"
+        onClick={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={() => setPaused(true)}
+        onMouseUp={() => setPaused(false)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        {story.media_type === 'image' ? (
+          <img
+            key={story.id}
+            src={story.media_url}
+            alt=""
+            className="w-full h-full object-cover select-none"
+            draggable={false}
+          />
+        ) : (
+          <video
+            key={story.id}
+            ref={videoRef}
+            src={story.media_url}
+            className="w-full h-full object-cover"
+            playsInline
+            autoPlay
+            muted={false}
+          />
+        )}
+      </div>
+
+      {/* Bottom overlay: caption + view session */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-6 pt-16">
+        {story.caption && (
+          <p className="text-white text-sm mb-3 leading-relaxed">{story.caption}</p>
+        )}
+        <Link
+          href={`/session/${group.sessionId}`}
+          onClick={onClose}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm font-semibold rounded-full hover:bg-white/30 transition border border-white/20"
+        >
+          {language === 'es' ? 'Ver Sesión' : 'View Session'}
+        </Link>
+      </div>
+    </div>
+  );
+}

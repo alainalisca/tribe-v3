@@ -14,6 +14,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import { SkeletonCard } from "@/components/Skeleton";
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
+import StoriesRow from '@/components/StoriesRow';
 import { Search, X, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
@@ -527,6 +528,9 @@ export default function HomePage() {
             }}
           />
         )}
+
+        {/* Stories Row */}
+        <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} />
 
         {/* Profile Completion Banner - only show if profile is incomplete */}
         {user && userProfile && (
