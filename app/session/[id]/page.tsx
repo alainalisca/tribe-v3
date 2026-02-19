@@ -14,7 +14,6 @@ import AttendanceTracker from '@/components/AttendanceTracker';
 import StarRating from '@/components/StarRating';
 
 import LocationMap from '@/components/LocationMap';
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -26,6 +25,7 @@ export default function SessionDetailPage() {
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -163,9 +163,17 @@ export default function SessionDetailPage() {
 
 
   async function checkUser() {
-
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      setUserIsAdmin(!!profile?.is_admin);
+    }
   }
 
   async function loadSession() {
@@ -738,7 +746,7 @@ export default function SessionDetailPage() {
   })();
   const isFull = session.current_participants >= session.max_participants;
   const isCreator = session.creator_id === user?.id;
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = userIsAdmin;
   const canKick = isCreator || isAdmin;
   const canUploadRecap = user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3;
   const canModerate = isCreator || isAdmin;
@@ -1292,7 +1300,7 @@ export default function SessionDetailPage() {
           <AttendanceTracker
             sessionId={params.id as string}
             isHost={session.creator_id === user.id}
-            isAdmin={user.email === ADMIN_EMAIL}
+            isAdmin={userIsAdmin}
             sessionDate={session.date}
           />
         )}

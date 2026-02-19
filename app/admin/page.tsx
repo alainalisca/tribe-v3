@@ -40,8 +40,6 @@ export default function AdminPage() {
   const [loadingBugs, setLoadingBugs] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
-
   useEffect(() => {
     checkAdmin();
   }, []);
@@ -64,13 +62,19 @@ export default function AdminPage() {
 
   async function checkAdmin() {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       router.push('/auth');
       return;
     }
 
-    if (user.email !== ADMIN_EMAIL) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
       alert('Unauthorized access');
       router.push('/');
       return;

@@ -9,8 +9,6 @@ import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com';
-
 export default function ChatPage() {
   const params = useParams();
   const sessionId = params.id as string;
@@ -18,6 +16,7 @@ export default function ChatPage() {
   const { language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
 
   const t = language === 'es' ? {
     loading: 'Cargando...',
@@ -39,12 +38,21 @@ export default function ChatPage() {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
 
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      setUserIsAdmin(!!profile?.is_admin);
+    }
+
     const { data: sessionData } = await supabase
       .from('sessions')
       .select('*')
       .eq('id', sessionId)
       .single();
-    
+
     setSession(sessionData);
   }
 
@@ -57,7 +65,7 @@ export default function ChatPage() {
   }
 
   const isHost = session.creator_id === user.id;
-  const isAdmin = user.email === ADMIN_EMAIL;
+  const isAdmin = userIsAdmin;
   const sportName = language === 'es' && sportTranslations[session.sport] 
     ? sportTranslations[session.sport].es 
     : session.sport;

@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const supabase = createClient();
   const { language, setLanguage } = useLanguage();
   const [user, setUser] = useState<any>(null);
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -25,6 +26,12 @@ export default function SettingsPage() {
       router.push('/auth');
     } else {
       setUser(user);
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      setUserIsAdmin(!!profile?.is_admin);
     }
   }
 
@@ -226,7 +233,7 @@ export default function SettingsPage() {
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
         {/* Admin Section - Only for admin */}
-        {user?.email === (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'alainalisca@aplusfitnessllc.com') && (
+        {userIsAdmin && (
           <div className="bg-white rounded-2xl p-5 border border-stone-200">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-tribe-green" />
