@@ -14,7 +14,6 @@ export async function GET(request: Request) {
 
       if (error) {
         console.error('Auth callback error:', error);
-        // Redirect to auth page with error on failure
         return NextResponse.redirect(`${origin}/auth?error=callback_failed`);
       }
 
@@ -22,12 +21,45 @@ export async function GET(request: Request) {
       if (type === 'recovery') {
         return NextResponse.redirect(`${origin}/auth?mode=reset-password`);
       }
+
+      // Check if OAuth user has a profile in public.users
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: existingProfile } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          // Create profile for OAuth user (safety net if trigger didn't fire)
+          const name = user.user_metadata?.full_name
+            || user.user_metadata?.name
+            || user.email?.split('@')[0]
+            || 'User';
+
+          const { error: insertError } = await supabase.from('users').insert({
+            id: user.id,
+            email: user.email,
+            name,
+            avatar_url: user.user_metadata?.avatar_url || null,
+          });
+
+          if (insertError) {
+            console.error('Failed to create user profile:', insertError);
+          }
+
+          // New user — send to profile to complete setup
+          return NextResponse.redirect(`${origin}/profile`);
+        }
+      }
     } catch (error) {
       console.error('Auth callback exception:', error);
       return NextResponse.redirect(`${origin}/auth?error=callback_failed`);
     }
   }
 
-  // Use origin for more reliable redirect on Safari
+  // Existing user — go home
   return NextResponse.redirect(`${origin}/`);
 }

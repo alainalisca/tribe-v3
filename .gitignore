@@ -19,3 +19,5 @@ android/app/app.keystore
 **/GoogleService-Info.plist
 *.keystore
 *.jks
+*.p8
+generate-apple-secret.js
