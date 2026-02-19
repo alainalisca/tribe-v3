@@ -1487,8 +1487,10 @@ export default function SessionDetailPage() {
             })),
           }]}
           startGroupIndex={0}
+          currentUserId={user?.id}
           onClose={() => setShowStoryViewer(false)}
           onStorySeen={(ids) => markStoriesSeen(ids)}
+          onStoryDeleted={() => loadSessionStories()}
         />
       )}
 

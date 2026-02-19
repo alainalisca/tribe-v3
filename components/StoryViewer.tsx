@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import Link from 'next/link';
 
@@ -26,8 +28,10 @@ interface StoryGroup {
 interface StoryViewerProps {
   groups: StoryGroup[];
   startGroupIndex: number;
+  currentUserId?: string | null;
   onClose: () => void;
   onStorySeen: (ids: string[]) => void;
+  onStoryDeleted?: () => void;
 }
 
 function timeAgo(dateStr: string, lang: string): string {
@@ -44,12 +48,16 @@ function timeAgo(dateStr: string, lang: string): string {
   return `${days}d`;
 }
 
-export default function StoryViewer({ groups, startGroupIndex, onClose, onStorySeen }: StoryViewerProps) {
+export default function StoryViewer({ groups: initialGroups, startGroupIndex, currentUserId, onClose, onStorySeen, onStoryDeleted }: StoryViewerProps) {
+  const supabase = createClient();
   const { language } = useLanguage();
+  const [groups, setGroups] = useState(initialGroups);
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef(0);
   const elapsedRef = useRef(0);
@@ -59,6 +67,7 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
 
   const group = groups[groupIdx];
   const story = group?.stories[storyIdx];
+  const isOwnStory = currentUserId && story?.user_id === currentUserId;
 
   // Mark current story as seen
   useEffect(() => {
@@ -116,15 +125,14 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
 
   // Auto-advance timer for images
   useEffect(() => {
-    if (!story || story.media_type === 'video' || paused) {
+    if (!story || story.media_type === 'video' || paused || showDeleteConfirm) {
       return;
     }
 
     startTimeRef.current = Date.now();
-    const remaining = DURATION - elapsedRef.current;
 
     const animate = () => {
-      if (paused) return;
+      if (paused || showDeleteConfirm) return;
       const now = Date.now();
       const totalElapsed = elapsedRef.current + (now - startTimeRef.current);
       const pct = Math.min(totalElapsed / DURATION, 1);
@@ -139,10 +147,9 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
     timerRef.current = requestAnimationFrame(animate);
     return () => {
       if (timerRef.current) cancelAnimationFrame(timerRef.current);
-      // Capture elapsed when cleaning up
       elapsedRef.current += Date.now() - startTimeRef.current;
     };
-  }, [story?.id, paused, goNext]);
+  }, [story?.id, paused, showDeleteConfirm, goNext]);
 
   // Reset elapsed when story changes
   useEffect(() => {
@@ -171,21 +178,95 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
     };
   }, [story?.id, goNext]);
 
-  // Pause/resume video when paused state changes
+  // Pause/resume video when paused state changes or delete confirm shown
   useEffect(() => {
     if (story?.media_type !== 'video' || !videoRef.current) return;
-    if (paused) {
+    if (paused || showDeleteConfirm) {
       videoRef.current.pause();
     } else {
       videoRef.current.play().catch(() => {});
     }
-  }, [paused, story?.id]);
+  }, [paused, showDeleteConfirm, story?.id]);
+
+  async function handleDeleteStory() {
+    if (!story) return;
+    setDeleting(true);
+
+    try {
+      // Extract storage path from the media URL
+      // URL format: .../storage/v1/object/public/session-stories/{sessionId}/{userId}/{filename}
+      const urlPath = new URL(story.media_url).pathname;
+      const bucketPrefix = '/storage/v1/object/public/session-stories/';
+      const storagePath = urlPath.startsWith(bucketPrefix)
+        ? urlPath.slice(bucketPrefix.length)
+        : null;
+
+      // Delete the file from storage
+      if (storagePath) {
+        await supabase.storage.from('session-stories').remove([decodeURIComponent(storagePath)]);
+        // Also delete thumbnail if it exists
+        if (story.thumbnail_url) {
+          const thumbPath = new URL(story.thumbnail_url).pathname;
+          const thumbStoragePath = thumbPath.startsWith(bucketPrefix)
+            ? thumbPath.slice(bucketPrefix.length)
+            : null;
+          if (thumbStoragePath) {
+            await supabase.storage.from('session-stories').remove([decodeURIComponent(thumbStoragePath)]);
+          }
+        }
+      }
+
+      // Delete the row from session_stories
+      const { error } = await supabase
+        .from('session_stories')
+        .delete()
+        .eq('id', story.id);
+
+      if (error) throw error;
+
+      showSuccess(language === 'es' ? 'Historia eliminada' : 'Story deleted');
+      setShowDeleteConfirm(false);
+      onStoryDeleted?.();
+
+      // Remove from local state and navigate
+      const updatedStories = group.stories.filter(s => s.id !== story.id);
+
+      if (updatedStories.length === 0) {
+        // No more stories in this group
+        const updatedGroups = groups.filter((_, i) => i !== groupIdx);
+        if (updatedGroups.length === 0) {
+          onClose();
+          return;
+        }
+        setGroups(updatedGroups);
+        const newGroupIdx = Math.min(groupIdx, updatedGroups.length - 1);
+        setGroupIdx(newGroupIdx);
+        setStoryIdx(0);
+      } else {
+        // Update group with remaining stories
+        const updatedGroups = groups.map((g, i) =>
+          i === groupIdx ? { ...g, stories: updatedStories } : g
+        );
+        setGroups(updatedGroups);
+        const newStoryIdx = Math.min(storyIdx, updatedStories.length - 1);
+        setStoryIdx(newStoryIdx);
+      }
+
+      elapsedRef.current = 0;
+      setProgress(0);
+    } catch (error: any) {
+      console.error('Error deleting story:', error);
+      showError(language === 'es' ? 'Error al eliminar' : 'Failed to delete');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   function handleTap(e: React.MouseEvent | React.TouchEvent) {
+    if (showDeleteConfirm) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     let clientX: number;
     if ('touches' in e) {
-      // For touch, we handle in touchEnd
       return;
     } else {
       clientX = (e as React.MouseEvent).clientX;
@@ -200,22 +281,22 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    if (showDeleteConfirm) return;
     touchStartY.current = e.touches[0].clientY;
     setPaused(true);
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
+    if (showDeleteConfirm) return;
     setPaused(false);
     const touchEndY = e.changedTouches[0].clientY;
     const diffY = touchEndY - touchStartY.current;
 
-    // Swipe down to close
     if (diffY > 100) {
       onClose();
       return;
     }
 
-    // Left/right tap navigation
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const clientX = e.changedTouches[0].clientX;
     const third = rect.width / 3;
@@ -266,12 +347,22 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
             </div>
             <span className="text-white/50 text-xs">{group.sport}</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-white/10 rounded-full transition flex-shrink-0"
-          >
-            <X className="w-6 h-6 text-white" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isOwnStory && (
+              <button
+                onClick={() => { setPaused(true); setShowDeleteConfirm(true); }}
+                className="p-1.5 hover:bg-white/10 rounded-full transition"
+              >
+                <Trash2 className="w-5 h-5 text-white/70" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-white/10 rounded-full transition"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -281,9 +372,9 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
         onClick={handleTap}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        onMouseDown={() => setPaused(true)}
-        onMouseUp={() => setPaused(false)}
-        onMouseLeave={() => setPaused(false)}
+        onMouseDown={() => { if (!showDeleteConfirm) setPaused(true); }}
+        onMouseUp={() => { if (!showDeleteConfirm) setPaused(false); }}
+        onMouseLeave={() => { if (!showDeleteConfirm) setPaused(false); }}
       >
         {story.media_type === 'image' ? (
           <img
@@ -319,6 +410,40 @@ export default function StoryViewer({ groups, startGroupIndex, onClose, onStoryS
           {language === 'es' ? 'Ver Sesión' : 'View Session'}
         </Link>
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
+          <div className="bg-white dark:bg-[#2C3137] rounded-2xl p-6 mx-6 max-w-sm w-full">
+            <p className="text-lg font-bold text-theme-primary text-center mb-4">
+              {language === 'es' ? '¿Eliminar esta historia?' : 'Delete this story?'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setPaused(false); }}
+                disabled={deleting}
+                className="flex-1 py-3 bg-stone-200 dark:bg-[#3D4349] text-theme-primary font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
+              >
+                {language === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleDeleteStory}
+                disabled={deleting}
+                className="flex-1 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    {language === 'es' ? 'Eliminar' : 'Delete'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

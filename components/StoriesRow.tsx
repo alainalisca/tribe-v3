@@ -297,8 +297,10 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
         <StoryViewer
           groups={groups}
           startGroupIndex={viewerStartIndex}
+          currentUserId={userId}
           onClose={() => setViewerOpen(false)}
           onStorySeen={handleStoryViewed}
+          onStoryDeleted={() => { sessionStorage.removeItem(CACHE_KEY); loadStories(); }}
         />
       )}
     </>
