@@ -47,6 +47,16 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Tribe needs camera access to take photos and videos for session stories and your profile. / Tribe necesita acceso a la cámara para tomar fotos y videos de historias de sesiones y tu perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Tribe needs photo library access to select photos for session stories and your profile. / Tribe necesita acceso a la galería para seleccionar fotos de historias de sesiones y tu perfil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Tribe needs access to save photos to your library. / Tribe necesita acceso para guardar fotos en tu galería.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tribe uses your location to find training sessions and workout partners near you. / Tribe usa tu ubicación para encontrar sesiones de entrenamiento y compañeros cerca de ti.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tribe needs microphone access to record video with audio for session stories. / Tribe necesita acceso al micrófono para grabar video con audio en historias de sesiones.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
