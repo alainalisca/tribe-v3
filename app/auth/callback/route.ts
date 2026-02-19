@@ -22,35 +22,41 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/auth?mode=reset-password`);
       }
 
-      // Check if OAuth user has a profile in public.users
+      // Ensure OAuth user has a complete profile in public.users
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
         const { data: existingProfile } = await supabase
           .from('users')
-          .select('id')
+          .select('id, avatar_url, created_at')
           .eq('id', user.id)
           .maybeSingle();
 
-        if (!existingProfile) {
-          // Create profile for OAuth user (safety net if trigger didn't fire)
-          const name = user.user_metadata?.full_name
-            || user.user_metadata?.name
-            || user.email?.split('@')[0]
-            || 'User';
+        const avatarUrl = user.user_metadata?.avatar_url || null;
+        const name = user.user_metadata?.full_name
+          || user.user_metadata?.name
+          || user.email?.split('@')[0]
+          || 'User';
 
-          const { error: insertError } = await supabase.from('users').insert({
-            id: user.id,
-            email: user.email,
-            name,
-            avatar_url: user.user_metadata?.avatar_url || null,
-          });
+        // Upsert to handle both cases:
+        // - Trigger already created the row: updates avatar_url from OAuth
+        // - Trigger didn't fire: creates the row as a safety net
+        const { error: upsertError } = await supabase.from('users').upsert({
+          id: user.id,
+          email: user.email!,
+          name,
+          avatar_url: avatarUrl,
+        }, { onConflict: 'id' });
 
-          if (insertError) {
-            console.error('Failed to create user profile:', insertError);
-          }
+        if (upsertError) {
+          console.error('Failed to upsert user profile:', upsertError);
+        }
 
-          // New user — send to profile to complete setup
+        // Detect new user: account created within the last 60 seconds
+        const isNewUser = !existingProfile
+          || (Date.now() - new Date(user.created_at).getTime()) < 60_000;
+
+        if (isNewUser) {
           return NextResponse.redirect(`${origin}/profile`);
         }
       }
