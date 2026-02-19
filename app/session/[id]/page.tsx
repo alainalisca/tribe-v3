@@ -13,6 +13,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import AttendanceTracker from '@/components/AttendanceTracker';
 import StarRating from '@/components/StarRating';
 import StoryUpload from '@/components/StoryUpload';
+import StoryViewer from '@/components/StoryViewer';
+import { markStoriesSeen } from '@/components/StoriesRow';
 
 import LocationMap from '@/components/LocationMap';
 
@@ -51,6 +53,8 @@ export default function SessionDetailPage() {
   const [hasReviewed, setHasReviewed] = useState(false);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [showStoryUpload, setShowStoryUpload] = useState(false);
+  const [sessionStories, setSessionStories] = useState<any[]>([]);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -153,7 +157,7 @@ export default function SessionDetailPage() {
   }
 
   useEffect(() => {
-    if (lightboxOpen || showGuestModal || showRatingModal || showStoryUpload) {
+    if (lightboxOpen || showGuestModal || showRatingModal || showStoryUpload || showStoryViewer) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -161,7 +165,7 @@ export default function SessionDetailPage() {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [lightboxOpen, showGuestModal, showRatingModal, showStoryUpload]);
+  }, [lightboxOpen, showGuestModal, showRatingModal, showStoryUpload, showStoryViewer]);
 
 
   async function checkUser() {
@@ -218,6 +222,7 @@ export default function SessionDetailPage() {
 
       await checkAttendance();
       await loadRecapPhotos();
+      await loadSessionStories();
     } catch (error) {
       console.error('Error loading session:', error);
     } finally {
@@ -274,6 +279,32 @@ export default function SessionDetailPage() {
       }
     } catch (error) {
       console.error('Error loading recap photos:', error);
+    }
+  }
+
+  async function loadSessionStories() {
+    try {
+      const { data, error } = await supabase
+        .from('session_stories')
+        .select(`
+          id,
+          session_id,
+          user_id,
+          media_url,
+          media_type,
+          thumbnail_url,
+          caption,
+          created_at,
+          user:users!session_stories_user_id_fkey(name, avatar_url)
+        `)
+        .eq('session_id', params.id)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setSessionStories(data || []);
+    } catch (error) {
+      console.error('Error loading session stories:', error);
     }
   }
 
@@ -814,10 +845,15 @@ export default function SessionDetailPage() {
           {user && (hasJoined || isCreator) && (
             <button
               onClick={() => setShowStoryUpload(true)}
-              className="p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition"
+              className="relative p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition"
               title={language === 'es' ? 'Agregar Historia' : 'Add Story'}
             >
               <Camera className="w-6 h-6 text-tribe-green" />
+              {sessionStories.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-tribe-green text-slate-900 text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  {sessionStories.length}
+                </span>
+              )}
             </button>
           )}
         </div>
@@ -1245,6 +1281,40 @@ export default function SessionDetailPage() {
           </div>
         )}
 
+        {/* Session Stories Thumbnails */}
+        {sessionStories.length > 0 && (
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow-lg">
+            <h2 className="text-sm font-bold text-stone-900 dark:text-white mb-3">
+              {language === 'es' ? 'Historias' : 'Stories'} ({sessionStories.length})
+            </h2>
+            <div
+              className="flex gap-2 overflow-x-auto pb-1"
+              style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {sessionStories.map((story: any, idx: number) => (
+                <button
+                  key={story.id}
+                  onClick={() => setShowStoryViewer(true)}
+                  className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-stone-200 dark:border-gray-600 hover:border-tribe-green transition active:scale-95 relative"
+                >
+                  {story.media_type === 'video' && story.thumbnail_url ? (
+                    <img src={story.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                  ) : story.media_type === 'video' ? (
+                    <div className="w-full h-full bg-stone-800 flex items-center justify-center">
+                      <span className="text-white text-xl">▶</span>
+                    </div>
+                  ) : (
+                    <img src={story.media_url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+                    <span className="text-white text-[9px] truncate block">{(story.user as any)?.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {(creator || participants.length > 0) && (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
             <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
@@ -1394,6 +1464,31 @@ export default function SessionDetailPage() {
           sessionId={session.id}
           userId={user.id}
           onClose={() => setShowStoryUpload(false)}
+          onUploaded={() => loadSessionStories()}
+        />
+      )}
+
+      {/* Story Viewer */}
+      {showStoryViewer && sessionStories.length > 0 && session && (
+        <StoryViewer
+          groups={[{
+            sessionId: session.id,
+            sport: session.sport,
+            stories: sessionStories.map((s: any) => ({
+              id: s.id,
+              media_url: s.media_url,
+              media_type: s.media_type,
+              thumbnail_url: s.thumbnail_url,
+              caption: s.caption,
+              created_at: s.created_at,
+              user_id: s.user_id,
+              user_name: (s.user as any)?.name || '?',
+              user_avatar: (s.user as any)?.avatar_url || null,
+            })),
+          }]}
+          startGroupIndex={0}
+          onClose={() => setShowStoryViewer(false)}
+          onStorySeen={(ids) => markStoriesSeen(ids)}
         />
       )}
 

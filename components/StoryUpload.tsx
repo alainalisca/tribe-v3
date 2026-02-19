@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { X, Camera, Image, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface StoryUploadProps {
@@ -33,6 +33,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     posting: 'Publicando...',
     success: '¡Historia publicada!',
     errorUpload: 'Error al subir la historia',
+    fileTooLarge: 'Archivo muy grande. Máximo 10MB para fotos, 50MB para videos.',
     or: 'o',
   } : {
     addStory: 'Add Story',
@@ -44,14 +45,25 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     posting: 'Posting...',
     success: 'Story posted!',
     errorUpload: 'Failed to upload story',
+    fileTooLarge: 'File too large. Max 10MB for photos, 50MB for videos.',
     or: 'or',
   };
+
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (!selected) return;
 
     const isVideo = selected.type.startsWith('video/');
+    const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (selected.size > limit) {
+      showInfo(t.fileTooLarge);
+      e.target.value = '';
+      return;
+    }
+
     setMediaType(isVideo ? 'video' : 'image');
     setFile(selected);
 

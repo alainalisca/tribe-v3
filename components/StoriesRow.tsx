@@ -41,6 +41,27 @@ export function markStoriesSeen(ids: string[]) {
   localStorage.setItem('tribe_seen_stories', JSON.stringify(arr));
 }
 
+const CACHE_KEY = 'tribe_stories_cache';
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+function getCachedStories(): SessionStoryGroup[] | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) return null;
+    return data as SessionStoryGroup[];
+  } catch {
+    return null;
+  }
+}
+
+function setCachedStories(data: SessionStoryGroup[]) {
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+  } catch {}
+}
+
 interface StoriesRowProps {
   userId: string | null;
   userAvatar?: string | null;
@@ -58,7 +79,13 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    loadStories();
+    const cached = getCachedStories();
+    if (cached) {
+      setGroups(cached);
+      setLoaded(true);
+    } else {
+      loadStories();
+    }
     setSeenIds(getSeenStories());
     if (userId) loadLatestSession();
   }, [userId]);
@@ -124,6 +151,7 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
 
       if (!data || data.length === 0) {
         setGroups([]);
+        setCachedStories([]);
         setLoaded(true);
         return;
       }
@@ -161,6 +189,7 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
       }
 
       setGroups(grouped);
+      setCachedStories(grouped);
     } catch (err) {
       console.error('Error in loadStories:', err);
     } finally {
