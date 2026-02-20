@@ -182,15 +182,15 @@ export default function ProfilePage() {
   const displayedSports = showAllSports ? sports : sports.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
+    <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
-      <div className="bg-theme-card p-4 border-b border-theme">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/"><h1 className="text-xl font-bold text-theme-primary cursor-pointer">Tribe<span className="text-tribe-green">.</span></h1></Link><Link href="/settings"><button className="p-2 hover:bg-stone-200 rounded-lg transition"><Settings className="w-6 h-6 text-theme-primary" /></button></Link>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="pt-header max-w-2xl mx-auto">
         {/* Banner */}
         <div className="relative h-48 overflow-hidden">
           <div className="w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">

@@ -71,25 +71,25 @@ export default function ChatPage() {
     : session.sport;
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-32 safe-area-top">
-      <div className="max-w-2xl mx-auto">
-        <div className="sticky top-0 bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700 p-4 z-10">
-          <div className="flex items-center gap-3">
-            <Link href={`/session/${sessionId}`}>
-              <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-theme-primary">{sportName} {t.chat}</h1>
-              <p className="text-sm text-gray-500">
-                {session.location}
-                {isAdmin && <span className="ml-2 text-red-500">• {t.admin}</span>}
-                {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t.host}</span>}
-              </p>
-            </div>
+    <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+          <Link href={`/session/${sessionId}`}>
+            <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
+          </Link>
+          <div>
+            <h1 className="text-lg font-bold text-theme-primary leading-tight">{sportName} {t.chat}</h1>
+            <p className="text-xs text-gray-500 leading-tight">
+              {session.location}
+              {isAdmin && <span className="ml-2 text-red-500">• {t.admin}</span>}
+              {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t.host}</span>}
+            </p>
           </div>
         </div>
+      </div>
 
-        <div className="p-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="pt-header p-4">
           <SessionChat 
             sessionId={sessionId} 
             currentUserId={user.id}

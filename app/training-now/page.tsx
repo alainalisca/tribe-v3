@@ -201,10 +201,10 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24 safe-area-top">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24">
       {/* Header */}
-      <div className="bg-tribe-green p-4">
-        <div className="flex items-center gap-3">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
+        <div className="max-w-lg mx-auto h-14 flex items-center gap-3 px-4">
           <Link href="/">
             <button className="p-2 hover:bg-lime-500 rounded-full transition">
               <ArrowLeft className="w-6 h-6 text-slate-900" />
@@ -214,7 +214,7 @@ export default function TrainingNowPage() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="pt-header p-4 space-y-6 max-w-lg mx-auto">
         {/* Sport Selection */}
         <div>
           <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.whatTraining}</label>

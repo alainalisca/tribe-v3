@@ -282,23 +282,23 @@ export default function PublicProfilePage() {
   const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 50;
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
-      <div className="bg-theme-card p-4 border-b border-theme">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+    <div className="min-h-screen bg-theme-page pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
             </button>
             <h1 className="text-xl font-bold text-theme-primary">{profile.name}</h1>
           </div>
-          
+
           {currentUser && !isOwnProfile && (
             <div className="flex gap-2">
               <button
                 onClick={handleBlock}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  isBlocked 
-                    ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' 
+                  isBlocked
+                    ? 'bg-stone-200 text-stone-700 hover:bg-stone-300'
                     : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                 }`}
               >
@@ -317,7 +317,7 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl mx-auto p-4">
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
           {profile.avatar_url && (
             <div className="flex justify-center mb-4">

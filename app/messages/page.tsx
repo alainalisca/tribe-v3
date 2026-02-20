@@ -195,15 +195,15 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
-        <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
-          <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+          <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white">
               {t('messages')}
             </h1>
           </div>
         </div>
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="pt-header max-w-2xl mx-auto p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white dark:bg-[#6B7178] rounded-xl p-4 animate-pulse">
@@ -224,16 +224,16 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32 safe-area-top">
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
-        <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">
             {t('messages')}
           </h1>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl mx-auto p-4">
         {conversations.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
             <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">

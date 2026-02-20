@@ -110,14 +110,14 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
-      <div className="bg-theme-card p-4 border-b border-theme">
-        <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-theme-page pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-xl font-bold text-theme-primary">{t('mySessions')}</h1>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl mx-auto p-4">
         <div className="flex gap-4 mb-6 border-b border-theme">
           <button
             onClick={() => setActiveTab('Hosting')}

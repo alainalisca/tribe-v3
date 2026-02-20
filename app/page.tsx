@@ -393,7 +393,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D] safe-area-top">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
       {showOnboarding && user && (
         <OnboardingModal
           onComplete={() => {
@@ -402,8 +402,8 @@ export default function HomePage() {
           }}
         />
       )}
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/profile">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
             </h1>
@@ -417,7 +417,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 sticky top-0 z-10 border-b border-stone-300 dark:border-black">
+      <div className="pt-header">
+      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
@@ -678,6 +679,7 @@ export default function HomePage() {
             })}
           </div>
         )}
+      </div>
       </div>
 
       {showSafetyWaiver && (

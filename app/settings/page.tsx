@@ -219,9 +219,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 safe-area-top">
-      <div className="bg-theme-card p-4 border-b border-theme">
-        <div className="max-w-2xl mx-auto flex items-center">
+    <div className="min-h-screen bg-theme-page pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -231,7 +231,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
         {/* Admin Section - Only for admin */}
         {userIsAdmin && (
           <div className="bg-white rounded-2xl p-5 border border-stone-200">
