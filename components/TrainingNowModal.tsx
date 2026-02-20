@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, MapPin, Clock, Users } from 'lucide-react';
+import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { sportTranslations } from '@/lib/translations';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
+import LocationPicker from '@/components/LocationPicker';
 
 interface TrainingNowModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     duration: 60, // minutes
   });
 
-  const sports = Object.keys(sportTranslations);
+  const sports = Object.keys(sportTranslations).filter(s => s !== 'All');
 
   const getTranslatedSport = (sport: string) => {
     if (sportTranslations[sport]) {
@@ -270,12 +271,17 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
             >
               {gettingLocation ? txt.gettingLocation : txt.useLocation}
             </button>
-            <input
-              type="text"
+            <LocationPicker
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              onChange={(location, coords) => {
+                setFormData(prev => ({
+                  ...prev,
+                  location,
+                  latitude: coords?.lat ?? prev.latitude,
+                  longitude: coords?.lng ?? prev.longitude,
+                }));
+              }}
               placeholder={txt.locationPlaceholder}
-              className="w-full p-3 border border-stone-300 dark:border-gray-600 rounded-xl bg-white dark:bg-[#52575D] text-theme-primary placeholder-gray-500"
             />
           </div>
 

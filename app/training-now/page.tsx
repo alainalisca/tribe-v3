@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Navigation } from 'lucide-react';
+import { ArrowLeft, Navigation } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
@@ -9,6 +9,7 @@ import { sportTranslations } from '@/lib/translations';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import LocationPicker from '@/components/LocationPicker';
 import Link from 'next/link';
 
 export default function TrainingNowPage() {
@@ -18,7 +19,7 @@ export default function TrainingNowPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     sport: '',
     location: '',
@@ -63,7 +64,7 @@ export default function TrainingNowPage() {
         async (position) => {
           const { latitude, longitude } = position.coords;
           setFormData(prev => ({ ...prev, latitude, longitude }));
-          
+
           try {
             const name = await reverseGeocodeGoogle(latitude, longitude);
             if (name) {
@@ -96,7 +97,7 @@ export default function TrainingNowPage() {
     try {
       const now = new Date();
       const startTime = new Date(now.getTime() + formData.startIn * 60000);
-      
+
       const { data: session, error } = await supabase
         .from('sessions')
         .insert({
@@ -110,7 +111,7 @@ export default function TrainingNowPage() {
           longitude: formData.longitude,
           max_participants: 10,
           join_policy: 'open',
-          description: language === 'es' 
+          description: language === 'es'
             ? `¡Sesión espontánea de ${formData.sport}! Únete ahora.`
             : `Spontaneous ${formData.sport} session! Join now.`,
           status: 'active',
@@ -201,10 +202,10 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-24">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
-        <div className="max-w-lg mx-auto h-14 flex items-center gap-3 px-4">
+        <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
           <Link href="/">
             <button className="p-2 hover:bg-lime-500 rounded-full transition">
               <ArrowLeft className="w-6 h-6 text-slate-900" />
@@ -214,7 +215,7 @@ export default function TrainingNowPage() {
         </div>
       </div>
 
-      <div className="pt-header p-4 space-y-6 max-w-lg mx-auto">
+      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
         {/* Sport Selection */}
         <div>
           <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.whatTraining}</label>
@@ -235,7 +236,7 @@ export default function TrainingNowPage() {
           </div>
         </div>
 
-        {/* Location */}
+        {/* Location with autocomplete */}
         <div>
           <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.where}</label>
           <button
@@ -246,12 +247,17 @@ export default function TrainingNowPage() {
             <Navigation className="w-5 h-5" />
             {gettingLocation ? '...' : txt.useLocation}
           </button>
-          <input
-            type="text"
+          <LocationPicker
             value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            onChange={(location, coords) => {
+              setFormData(prev => ({
+                ...prev,
+                location,
+                latitude: coords?.lat ?? prev.latitude,
+                longitude: coords?.lng ?? prev.longitude,
+              }));
+            }}
             placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
-            className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-xl bg-white dark:bg-[#6B7178] text-stone-800 dark:text-white placeholder-stone-400 dark:placeholder-gray-400"
           />
         </div>
 
@@ -299,7 +305,7 @@ export default function TrainingNowPage() {
         <button
           onClick={handleSubmit}
           disabled={loading || !formData.sport || !formData.location}
-          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg mt-4"
+          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg"
         >
           {loading ? txt.creating : txt.notify}
         </button>
