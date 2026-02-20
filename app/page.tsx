@@ -15,7 +15,7 @@ import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import { SkeletonCard } from "@/components/Skeleton";
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import StoriesRow from '@/components/StoriesRow';
-import { Search, X, MessageCircle } from 'lucide-react';
+import { Search, X, MessageCircle, Film } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
@@ -409,6 +409,9 @@ export default function HomePage() {
             </h1>
           </Link>
           <div className="flex items-center gap-3">
+            <Link href="/stories" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
+              <Film className="w-6 h-6" />
+            </Link>
             <Link href="/messages" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
               <MessageCircle className="w-6 h-6" />
             </Link>

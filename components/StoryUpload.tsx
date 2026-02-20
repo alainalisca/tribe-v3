@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Camera, Image, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
@@ -49,6 +49,22 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     or: 'or',
   };
 
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${scrollY}px`;
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -73,14 +89,16 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
   function openFilePicker(accept: string) {
     if (fileInputRef.current) {
+      fileInputRef.current.value = '';
       fileInputRef.current.accept = accept;
-      fileInputRef.current.capture = '';
+      fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.click();
     }
   }
 
   function openCamera() {
     if (fileInputRef.current) {
+      fileInputRef.current.value = '';
       fileInputRef.current.accept = 'image/*';
       fileInputRef.current.capture = 'environment';
       fileInputRef.current.click();

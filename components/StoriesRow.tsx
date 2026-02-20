@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
-import { Plus } from 'lucide-react';
+import { Plus, X, MapPin, Calendar } from 'lucide-react';
+import { showInfo } from '@/lib/toast';
+import { sportTranslations } from '@/lib/translations';
 import StoryViewer from './StoryViewer';
+import StoryUpload from './StoryUpload';
 
 interface SessionStoryGroup {
   sessionId: string;
@@ -62,6 +64,18 @@ function setCachedStories(data: SessionStoryGroup[]) {
   } catch {}
 }
 
+function getSportEmoji(sport: string): string {
+  const map: Record<string, string> = {
+    Running: '\u{1F3C3}', Cycling: '\u{1F6B4}', Swimming: '\u{1F3CA}', CrossFit: '\u{1F3CB}\uFE0F',
+    Boxing: '\u{1F94A}', 'Jiu-Jitsu': '\u{1F94B}', Soccer: '\u26BD', Basketball: '\u{1F3C0}',
+    Volleyball: '\u{1F3D0}', Yoga: '\u{1F9D8}', Tennis: '\u{1F3BE}', Hiking: '\u{1F97E}',
+    Dance: '\u{1F483}', Padel: '\u{1F3BE}', Skateboarding: '\u{1F6F9}', BMX: '\u{1F6B2}',
+    Surfing: '\u{1F3C4}', 'Rock Climbing': '\u{1F9D7}', Golf: '\u26F3', Rugby: '\u{1F3C9}',
+    Calisthenics: '\u{1F4AA}', 'Martial Arts': '\u{1F94B}',
+  };
+  return map[sport] || '\u{1F4AA}';
+}
+
 interface StoriesRowProps {
   userId: string | null;
   userAvatar?: string | null;
@@ -69,14 +83,18 @@ interface StoriesRowProps {
 
 export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
   const supabase = createClient();
-  const router = useRouter();
   const { language } = useLanguage();
   const [groups, setGroups] = useState<SessionStoryGroup[]>([]);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
-  const [latestSessionId, setLatestSessionId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  // Session picker + upload states
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const cached = getCachedStories();
@@ -87,42 +105,54 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
       loadStories();
     }
     setSeenIds(getSeenStories());
-    if (userId) loadLatestSession();
+    if (userId) loadActiveSessions();
   }, [userId]);
 
-  async function loadLatestSession() {
+  async function loadActiveSessions() {
     if (!userId) return;
 
-    // Find the user's most recent joined or created session
+    // Get all active sessions user created
     const { data: created } = await supabase
       .from('sessions')
-      .select('id, date, start_time')
+      .select('id, sport, date, start_time, location')
       .eq('creator_id', userId)
       .eq('status', 'active')
-      .order('date', { ascending: false })
-      .order('start_time', { ascending: false })
-      .limit(1);
+      .order('date', { ascending: false });
 
+    // Get all active sessions user joined
     const { data: joined } = await supabase
       .from('session_participants')
-      .select('session_id, sessions!inner(id, date, start_time, status)')
+      .select('session_id, sessions!inner(id, sport, date, start_time, location, status)')
       .eq('user_id', userId)
-      .eq('sessions.status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .eq('sessions.status', 'active');
 
-    const createdSession = created?.[0];
-    const joinedSession = (joined as any)?.[0]?.sessions;
+    const sessionsMap = new Map<string, any>();
 
-    if (createdSession && joinedSession) {
-      const cDate = createdSession.date + 'T' + (createdSession.start_time || '00:00');
-      const jDate = joinedSession.date + 'T' + (joinedSession.start_time || '00:00');
-      setLatestSessionId(cDate >= jDate ? createdSession.id : joinedSession.id);
-    } else if (createdSession) {
-      setLatestSessionId(createdSession.id);
-    } else if (joinedSession) {
-      setLatestSessionId(joinedSession.id);
+    // Add created sessions
+    if (created) {
+      for (const s of created) {
+        sessionsMap.set(s.id, s);
+      }
     }
+
+    // Add joined sessions (deduplicate)
+    if (joined) {
+      for (const row of joined) {
+        const s = (row as any).sessions;
+        if (s && !sessionsMap.has(s.id)) {
+          sessionsMap.set(s.id, s);
+        }
+      }
+    }
+
+    // Sort by date descending
+    const all = [...sessionsMap.values()].sort((a, b) => {
+      const dateA = a.date + 'T' + (a.start_time || '00:00');
+      const dateB = b.date + 'T' + (b.start_time || '00:00');
+      return dateB.localeCompare(dateA);
+    });
+
+    setActiveSessions(all);
   }
 
   async function loadStories() {
@@ -207,6 +237,20 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
     setViewerOpen(true);
   }
 
+  function handleYourStoryClick() {
+    if (!userId) return;
+    if (activeSessions.length === 0) {
+      showInfo(language === 'es'
+        ? 'Únete o crea una sesión primero para publicar una historia'
+        : 'Join or create a session first to post a story');
+    } else if (activeSessions.length === 1) {
+      setSelectedSessionId(activeSessions[0].id);
+      setShowUpload(true);
+    } else {
+      setShowSessionPicker(true);
+    }
+  }
+
   // Don't render anything until loaded, and hide if no stories and no user "+" circle
   if (!loaded) return null;
   if (groups.length === 0 && !userId) return null;
@@ -230,13 +274,7 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
           {/* Current user's "+" circle */}
           {userId && (
             <button
-              onClick={() => {
-                if (latestSessionId) {
-                  router.push(`/session/${latestSessionId}`);
-                } else {
-                  router.push('/sessions');
-                }
-              }}
+              onClick={handleYourStoryClick}
               className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]"
             >
               <div className="relative">
@@ -301,6 +339,69 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
           onClose={() => setViewerOpen(false)}
           onStorySeen={handleStoryViewed}
           onStoryDeleted={() => { sessionStorage.removeItem(CACHE_KEY); loadStories(); }}
+        />
+      )}
+
+      {/* Session Picker bottom sheet */}
+      {showSessionPicker && (
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50" onClick={() => setShowSessionPicker(false)}>
+          <div
+            className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[70vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-theme-primary">
+                {language === 'es' ? 'Elegir Sesión' : 'Choose Session'}
+              </h3>
+              <button onClick={() => setShowSessionPicker(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition">
+                <X className="w-5 h-5 text-theme-primary" />
+              </button>
+            </div>
+            <div className="p-2">
+              {activeSessions.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setSelectedSessionId(s.id);
+                    setShowSessionPicker(false);
+                    setShowUpload(true);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-stone-100 dark:hover:bg-[#3D4349] rounded-xl transition"
+                >
+                  <div className="w-10 h-10 bg-stone-100 dark:bg-[#3D4349] rounded-full flex items-center justify-center text-lg">
+                    {getSportEmoji(s.sport)}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="font-semibold text-theme-primary text-sm">
+                      {language === 'es' ? (sportTranslations[s.sport]?.es || s.sport) : s.sport}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-theme-secondary">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(s.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                      {s.location && (
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{s.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Story Upload modal */}
+      {showUpload && selectedSessionId && userId && (
+        <StoryUpload
+          sessionId={selectedSessionId}
+          userId={userId}
+          onClose={() => { setShowUpload(false); setSelectedSessionId(null); }}
+          onUploaded={() => { sessionStorage.removeItem(CACHE_KEY); loadStories(); }}
         />
       )}
     </>

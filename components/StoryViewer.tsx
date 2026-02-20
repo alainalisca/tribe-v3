@@ -376,13 +376,21 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
         onMouseUp={() => { if (!showDeleteConfirm) setPaused(false); }}
         onMouseLeave={() => { if (!showDeleteConfirm) setPaused(false); }}
       >
-        {story.media_type === 'image' ? (
+        {!story.media_url ? (
+          <div className="w-full h-full flex items-center justify-center bg-stone-800">
+            <p className="text-white/60">{language === 'es' ? 'Medio no disponible' : 'Media unavailable'}</p>
+          </div>
+        ) : story.media_type === 'image' ? (
           <img
             key={story.id}
             src={story.media_url}
             alt=""
             className="w-full h-full object-cover select-none"
             draggable={false}
+            onError={(e) => {
+              console.error('Story image failed to load:', story.media_url);
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
         ) : (
           <video
@@ -393,6 +401,9 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
             playsInline
             autoPlay
             muted={false}
+            onError={() => {
+              console.error('Story video failed to load:', story.media_url);
+            }}
           />
         )}
       </div>
