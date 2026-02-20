@@ -10,6 +10,10 @@ const config: CapacitorConfig = {
   // bundled assets + absolute API URLs.
   server: {
     url: 'https://tribe-v3.vercel.app',
+    // Allow OAuth domains to navigate within the WKWebView instead of
+    // opening in Safari. Required for Apple/Google Sign-In to redirect
+    // back to the app after authentication.
+    allowNavigation: ['*.supabase.co', '*.google.com', '*.apple.com', '*.googleapis.com'],
   },
   android: {
     buildOptions: {

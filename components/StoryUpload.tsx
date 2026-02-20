@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { X, Camera, Image, Video, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Camera, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -16,7 +16,6 @@ interface StoryUploadProps {
 export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: StoryUploadProps) {
   const supabase = createClient();
   const { language } = useLanguage();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
@@ -25,8 +24,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
   const t = language === 'es' ? {
     addStory: 'Agregar Historia',
-    takePhoto: 'Tomar Foto',
-    choosePhoto: 'Elegir Foto',
+    takePhoto: 'Foto o Cámara',
     chooseVideo: 'Elegir Video',
     caption: 'Escribe un pie de foto...',
     post: 'Publicar Historia',
@@ -34,11 +32,9 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     success: '¡Historia publicada!',
     errorUpload: 'Error al subir la historia',
     fileTooLarge: 'Archivo muy grande. Máximo 10MB para fotos, 50MB para videos.',
-    or: 'o',
   } : {
     addStory: 'Add Story',
-    takePhoto: 'Take Photo',
-    choosePhoto: 'Choose Photo',
+    takePhoto: 'Photo or Camera',
     chooseVideo: 'Choose Video',
     caption: 'Write a caption...',
     post: 'Post Story',
@@ -46,7 +42,6 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     success: 'Story posted!',
     errorUpload: 'Failed to upload story',
     fileTooLarge: 'File too large. Max 10MB for photos, 50MB for videos.',
-    or: 'or',
   };
 
   // Lock body scroll while modal is open
@@ -92,37 +87,6 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     }
   }
 
-  function openFilePicker(accept: string) {
-    try {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        fileInputRef.current.accept = accept;
-        fileInputRef.current.removeAttribute('capture');
-        fileInputRef.current.click();
-      }
-    } catch (error) {
-      console.error('File picker error:', error);
-      showError(language === 'es' ? 'No se pudo abrir el selector de archivos' : 'Could not open file picker');
-    }
-  }
-
-  function openCamera() {
-    try {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-        // Use accept="image/*" without capture attribute — iOS will show
-        // a native picker with Camera and Photo Library options.
-        // Setting capture="environment" crashes WKWebView on some iOS devices.
-        fileInputRef.current.accept = 'image/*';
-        fileInputRef.current.removeAttribute('capture');
-        fileInputRef.current.click();
-      }
-    } catch (error) {
-      console.error('Camera error:', error);
-      showError(language === 'es' ? 'No se pudo abrir la cámara' : 'Could not open camera');
-    }
-  }
-
   function clearSelection() {
     if (preview) URL.revokeObjectURL(preview);
     setFile(null);
@@ -164,27 +128,41 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   }
 
   async function compressImage(imageFile: File): Promise<Blob> {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX = 1200;
-          let w = img.width;
-          let h = img.height;
-          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-          else { if (h > MAX) { w *= MAX / h; h = MAX; } }
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, w, h);
-          canvas.toBlob((blob) => resolve(blob as Blob), 'image/jpeg', 0.85);
+    try {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('FileReader failed'));
+        reader.onload = (e) => {
+          const img = new window.Image();
+          img.onerror = () => reject(new Error('Image decode failed'));
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              const MAX = 1200;
+              let w = img.width;
+              let h = img.height;
+              if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+              else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) { resolve(imageFile); return; }
+              ctx.drawImage(img, 0, 0, w, h);
+              canvas.toBlob(
+                (blob) => resolve(blob || imageFile),
+                'image/jpeg',
+                0.85
+              );
+            } catch { resolve(imageFile); }
+          };
+          img.src = e.target?.result as string;
         };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(imageFile);
-    });
+        reader.readAsDataURL(imageFile);
+      });
+    } catch (err) {
+      console.warn('Image compression failed, using original:', err);
+      return imageFile;
+    }
   }
 
   async function handlePost() {
@@ -262,7 +240,8 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -273,37 +252,30 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
           </button>
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-
         {!preview ? (
-          /* Selection buttons */
+          /* Selection buttons — use native <label> triggers instead of
+             programmatic .click() which crashes iOS WKWebView */
           <div className="p-6 space-y-3">
-            <button
-              onClick={openCamera}
-              className="w-full flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold hover:opacity-90 transition"
-            >
+            <label className="w-full flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold hover:opacity-90 transition cursor-pointer">
               <Camera className="w-5 h-5" />
               {t.takePhoto}
-            </button>
-            <button
-              onClick={() => openFilePicker('image/*')}
-              className="w-full flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition"
-            >
-              <Image className="w-5 h-5" />
-              {t.choosePhoto}
-            </button>
-            <button
-              onClick={() => openFilePicker('video/*')}
-              className="w-full flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition"
-            >
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleFileSelect}
+              />
+            </label>
+            <label className="w-full flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition cursor-pointer">
               <Video className="w-5 h-5" />
               {t.chooseVideo}
-            </button>
+              <input
+                type="file"
+                accept="video/*"
+                className="sr-only"
+                onChange={handleFileSelect}
+              />
+            </label>
           </div>
         ) : (
           /* Preview + caption */
