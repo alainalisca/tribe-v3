@@ -8,24 +8,45 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
 
   if (code) {
+    // Step 1: Exchange code for session — this is the CRITICAL step
+    let supabase;
     try {
-      const supabase = await createClient();
+      supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
-        console.error('Auth callback error:', error);
+        console.error('Auth callback: exchangeCodeForSession failed:', error);
         return NextResponse.redirect(`${origin}/auth?error=callback_failed`);
       }
+    } catch (error) {
+      console.error('Auth callback: exchange exception:', error);
+      return NextResponse.redirect(`${origin}/auth?error=callback_failed`);
+    }
 
-      // If this is a password recovery flow, redirect to reset password page
-      if (type === 'recovery') {
-        return NextResponse.redirect(`${origin}/auth?mode=reset-password`);
+    // At this point the user IS authenticated — never redirect to /auth again
+    // All errors below are non-fatal: log them but always redirect to / or /profile
+
+    // If this is a password recovery flow, redirect to reset password page
+    if (type === 'recovery') {
+      return NextResponse.redirect(`${origin}/auth?mode=reset-password`);
+    }
+
+    // Step 2: Get user info (non-fatal if it fails)
+    let user;
+    try {
+      const { data, error: getUserError } = await supabase.auth.getUser();
+      if (getUserError) {
+        console.error('Auth callback: getUser error (non-fatal):', getUserError);
       }
+      user = data?.user;
+    } catch (error) {
+      console.error('Auth callback: getUser exception (non-fatal):', error);
+    }
 
-      // Ensure OAuth user has a complete profile in public.users
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (user) {
+    if (user) {
+      // Step 3: Check existing profile + upsert (non-fatal if it fails)
+      let isNewUser = false;
+      try {
         const { data: existingProfile } = await supabase
           .from('users')
           .select('id, avatar_url, created_at')
@@ -38,34 +59,37 @@ export async function GET(request: Request) {
           || user.email?.split('@')[0]
           || 'User';
 
-        // Upsert to handle both cases:
-        // - Trigger already created the row: updates avatar_url from OAuth
-        // - Trigger didn't fire: creates the row as a safety net
-        const { error: upsertError } = await supabase.from('users').upsert({
+        // Build upsert payload — handle Apple's potential null email
+        const upsertPayload: Record<string, any> = {
           id: user.id,
-          email: user.email!,
           name,
           avatar_url: avatarUrl,
-        }, { onConflict: 'id' });
+        };
+        if (user.email) {
+          upsertPayload.email = user.email;
+        }
+
+        const { error: upsertError } = await supabase
+          .from('users')
+          .upsert(upsertPayload, { onConflict: 'id' });
 
         if (upsertError) {
-          console.error('Failed to upsert user profile:', upsertError);
+          console.error('Auth callback: upsert error (non-fatal):', upsertError);
         }
 
-        // Detect new user: account created within the last 60 seconds
-        const isNewUser = !existingProfile
+        // Detect new user: no existing profile or account created within last 60s
+        isNewUser = !existingProfile
           || (Date.now() - new Date(user.created_at).getTime()) < 60_000;
-
-        if (isNewUser) {
-          return NextResponse.redirect(`${origin}/profile`);
-        }
+      } catch (error) {
+        console.error('Auth callback: profile upsert exception (non-fatal):', error);
       }
-    } catch (error) {
-      console.error('Auth callback exception:', error);
-      return NextResponse.redirect(`${origin}/auth?error=callback_failed`);
+
+      if (isNewUser) {
+        return NextResponse.redirect(`${origin}/profile`);
+      }
     }
   }
 
-  // Existing user — go home
+  // Existing user or fallback — go home
   return NextResponse.redirect(`${origin}/`);
 }
