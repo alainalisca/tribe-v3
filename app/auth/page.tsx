@@ -10,6 +10,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 export default function AuthPage() {
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode');
+  const errorParam = searchParams.get('error');
   const [isLogin, setIsLogin] = useState(true);
   const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -26,11 +27,30 @@ export default function AuthPage() {
   const supabase = createClient();
   const { language } = useLanguage();
 
+  // If user is already authenticated, redirect to home
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && !mode) {
+        router.replace('/');
+      }
+    });
+  }, []);
+
   useEffect(() => {
     if (mode === 'reset-password') {
       setIsResetPassword(true);
     }
   }, [mode]);
+
+  // Display error from callback redirect
+  useEffect(() => {
+    if (errorParam) {
+      const decoded = decodeURIComponent(errorParam);
+      setMessage(language === 'es'
+        ? `❌ Error de autenticación: ${decoded}`
+        : `❌ Authentication error: ${decoded}`);
+    }
+  }, [errorParam]);
 
   const t = {
     tagline: language === 'es' ? 'Nunca Entrenes Solo' : 'Never Train Alone',

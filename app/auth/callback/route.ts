@@ -7,6 +7,15 @@ export async function GET(request: Request) {
   const type = requestUrl.searchParams.get('type');
   const origin = requestUrl.origin;
 
+  // Handle error params from Supabase OAuth redirect
+  const errorParam = requestUrl.searchParams.get('error');
+  const errorDescription = requestUrl.searchParams.get('error_description');
+  if (errorParam && !code) {
+    console.error('Auth callback: OAuth error from provider:', errorParam, errorDescription);
+    const msg = encodeURIComponent(errorDescription || errorParam);
+    return NextResponse.redirect(`${origin}/auth?error=${msg}`);
+  }
+
   if (code) {
     // Step 1: Exchange code for session — this is the CRITICAL step
     let supabase;
