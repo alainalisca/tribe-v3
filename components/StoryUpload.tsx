@@ -69,39 +69,57 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+    try {
+      const selected = e.target.files?.[0];
+      if (!selected) return;
 
-    const isVideo = selected.type.startsWith('video/');
-    const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-    if (selected.size > limit) {
-      showInfo(t.fileTooLarge);
-      e.target.value = '';
-      return;
+      const isVideo = selected.type.startsWith('video/');
+      const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+      if (selected.size > limit) {
+        showInfo(t.fileTooLarge);
+        e.target.value = '';
+        return;
+      }
+
+      setMediaType(isVideo ? 'video' : 'image');
+      setFile(selected);
+
+      const url = URL.createObjectURL(selected);
+      setPreview(url);
+    } catch (error) {
+      console.error('File select error:', error);
+      showError(language === 'es' ? 'Error al seleccionar archivo' : 'Error selecting file');
     }
-
-    setMediaType(isVideo ? 'video' : 'image');
-    setFile(selected);
-
-    const url = URL.createObjectURL(selected);
-    setPreview(url);
   }
 
   function openFilePicker(accept: string) {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.accept = accept;
-      fileInputRef.current.removeAttribute('capture');
-      fileInputRef.current.click();
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.accept = accept;
+        fileInputRef.current.removeAttribute('capture');
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('File picker error:', error);
+      showError(language === 'es' ? 'No se pudo abrir el selector de archivos' : 'Could not open file picker');
     }
   }
 
   function openCamera() {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.accept = 'image/*';
-      fileInputRef.current.capture = 'environment';
-      fileInputRef.current.click();
+    try {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        // Use accept="image/*" without capture attribute — iOS will show
+        // a native picker with Camera and Photo Library options.
+        // Setting capture="environment" crashes WKWebView on some iOS devices.
+        fileInputRef.current.accept = 'image/*';
+        fileInputRef.current.removeAttribute('capture');
+        fileInputRef.current.click();
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      showError(language === 'es' ? 'No se pudo abrir la cámara' : 'Could not open camera');
     }
   }
 

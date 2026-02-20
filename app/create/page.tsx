@@ -52,9 +52,6 @@ export default function CreateSessionPage() {
     if (user) loadTemplates();
   }, [user]);
 
-  useEffect(() => {
-    console.log('templates state changed:', templates.length, 'templates:', JSON.stringify(templates));
-  }, [templates]);
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,24 +65,21 @@ export default function CreateSessionPage() {
   async function loadTemplates() {
     if (!user) return;
     try {
-      console.log('loadTemplates called for user:', user.id);
       const { data, error } = await supabase
         .from('session_templates')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      console.log('loadTemplates response - data:', JSON.stringify(data), 'error:', JSON.stringify(error));
-
       if (error) {
-        console.error('Error loading templates:', error.message, error.code, error);
-        showError(language === 'es' ? `Error cargando plantillas: ${error.message}` : `Error loading templates: ${error.message}`);
+        console.warn('Templates load failed (non-critical):', error.message);
+        setTemplates([]);
         return;
       }
       setTemplates(data || []);
     } catch (error: any) {
-      console.error('Template load exception:', error);
-      showError(language === 'es' ? `Error cargando plantillas: ${error.message}` : `Error loading templates: ${error.message}`);
+      console.warn('Templates load exception (non-critical):', error.message);
+      setTemplates([]);
     }
   }
 

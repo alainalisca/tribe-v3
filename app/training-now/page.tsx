@@ -128,7 +128,8 @@ export default function TrainingNowPage() {
         status: 'confirmed',
       });
 
-      await notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude!, formData.longitude!, formData.startIn);
+      // Fire-and-forget: don't block navigation waiting for notifications
+      notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude!, formData.longitude!, formData.startIn);
 
       showSuccess(language === 'es' ? '¡Sesión creada! Notificando compañeros cercanos...' : 'Session created! Notifying nearby partners...');
       router.push(`/session/${session.id}`);

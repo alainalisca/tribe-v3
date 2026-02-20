@@ -753,7 +753,7 @@ export default function SessionDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-stone-900 dark:text-white">Loading...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green"></div>
       </div>
     );
   }

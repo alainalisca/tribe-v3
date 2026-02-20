@@ -553,7 +553,9 @@ export default function HomePage() {
         )}
 
         {/* Stories Row */}
-        <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} />
+        <div className="mt-1">
+          <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} />
+        </div>
 
         {/* Profile Completion Banner - only show if profile is incomplete */}
         {user && userProfile && (

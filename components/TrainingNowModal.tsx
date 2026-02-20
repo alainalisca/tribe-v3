@@ -139,9 +139,9 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         status: 'confirmed',
       });
 
-      // Send notifications to nearby users
+      // Fire-and-forget: don't block UI waiting for notifications
       if (formData.latitude && formData.longitude) {
-        await notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude, formData.longitude, formData.startIn);
+        notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude, formData.longitude, formData.startIn);
       }
 
       showSuccess(language === 'es' ? '¡Sesión creada! Notificando a compañeros cercanos...' : 'Session created! Notifying nearby partners...');
