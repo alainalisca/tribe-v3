@@ -241,7 +241,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
                   {t('hostedBy')} {session.creator.name}
                 </p>
               </div>
-              {session.creator.average_rating && Number(session.creator.average_rating) > 0 && (
+              {Number(session.creator.average_rating) > 0 && (
                 <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
                   <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
                   <span>{Number(session.creator.average_rating).toFixed(1)}</span>

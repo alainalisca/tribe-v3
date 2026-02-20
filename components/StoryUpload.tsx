@@ -238,14 +238,17 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col" onClick={onClose}>
+      {/* Spacer pushes content to bottom on picker screen, centers on preview */}
+      <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
+
       <div
-        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl overflow-y-auto"
+        style={{ maxHeight: '92vh', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-[#2C3137]">
           <h3 className="text-lg font-bold text-theme-primary">{t.addStory}</h3>
           <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition">
             <X className="w-5 h-5 text-theme-primary" />
@@ -280,7 +283,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         ) : (
           /* Preview + caption */
           <div className="p-4 space-y-4">
-            <div className="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
+            <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
               {mediaType === 'image' ? (
                 <img src={preview} alt="Preview" className="w-full h-full object-contain" />
               ) : (
