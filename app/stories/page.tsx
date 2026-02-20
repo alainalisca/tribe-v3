@@ -8,8 +8,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
-import StoryViewer from '@/components/StoryViewer';
-import { markStoriesSeen } from '@/components/StoriesRow';
 
 interface Story {
   id: string;
@@ -21,6 +19,8 @@ interface Story {
   user_id: string;
   user_name: string;
   user_avatar: string | null;
+  sessionId: string;
+  sport: string;
 }
 
 interface StoryGroup {
@@ -29,18 +29,24 @@ interface StoryGroup {
   stories: Story[];
 }
 
-function timeAgo(dateStr: string, lang: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
+function timeAgo(dateStr: string | null, lang: string): string {
+  if (!dateStr) return '';
+  try {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    if (isNaN(then)) return '';
+    const diffMs = now - then;
+    const mins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMs / 3600000);
 
-  if (mins < 1) return lang === 'es' ? 'ahora' : 'just now';
-  if (mins < 60) return `${mins}m`;
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
+    if (mins < 1) return lang === 'es' ? 'ahora' : 'just now';
+    if (mins < 60) return `${mins}m`;
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+  } catch {
+    return '';
+  }
 }
 
 export default function StoriesPage() {
@@ -49,21 +55,40 @@ export default function StoriesPage() {
   const { language } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
-  const [allStories, setAllStories] = useState<(Story & { sessionId: string; sport: string })[]>([]);
+  const [allStories, setAllStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
+  const [StoryViewerComp, setStoryViewerComp] = useState<any>(null);
 
   const t = language === 'es' ? {
     stories: 'Historias',
     noStories: 'No hay historias aún',
     noStoriesDesc: 'Las historias de sesiones aparecerán aquí. ¡Sé el primero en compartir tu entrenamiento!',
-    storiesCount: 'historias',
   } : {
     stories: 'Stories',
     noStories: 'No stories yet',
     noStoriesDesc: 'Session stories will appear here. Be the first to share your training!',
-    storiesCount: 'stories',
+  };
+
+  // Lazy-load StoryViewer to avoid potential import issues
+  useEffect(() => {
+    import('@/components/StoryViewer').then(mod => {
+      setStoryViewerComp(() => mod.default);
+    }).catch(err => {
+      console.error('Failed to load StoryViewer:', err);
+    });
+  }, []);
+
+  // Lazy-load markStoriesSeen
+  const markStoriesSeen = (ids: string[]) => {
+    try {
+      const raw = localStorage.getItem('tribe_seen_stories');
+      const seen = new Set(raw ? JSON.parse(raw) : []);
+      ids.forEach(id => seen.add(id));
+      const arr = [...seen].slice(-500);
+      localStorage.setItem('tribe_seen_stories', JSON.stringify(arr));
+    } catch {}
   };
 
   useEffect(() => {
@@ -75,11 +100,16 @@ export default function StoriesPage() {
   }, [user]);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth');
+      } else {
+        setUser(user);
+      }
+    } catch (err) {
+      console.error('Auth check failed:', err);
       router.push('/auth');
-    } else {
-      setUser(user);
     }
   }
 
@@ -104,6 +134,8 @@ export default function StoriesPage() {
 
       if (error) {
         console.error('Error loading stories:', error);
+        setGroups([]);
+        setAllStories([]);
         return;
       }
 
@@ -113,29 +145,35 @@ export default function StoriesPage() {
         return;
       }
 
-      // Build flat list for the grid (most recent first)
-      const flat: (Story & { sessionId: string; sport: string })[] = data.map((row) => {
-        const u = row.user as any;
-        const s = row.session as any;
-        return {
-          id: row.id,
-          media_url: row.media_url,
-          media_type: row.media_type as 'image' | 'video',
-          thumbnail_url: row.thumbnail_url,
-          caption: row.caption,
-          created_at: row.created_at,
-          user_id: row.user_id,
-          user_name: u?.name || '?',
-          user_avatar: u?.avatar_url || null,
-          sessionId: row.session_id,
-          sport: s?.sport || '?',
-        };
-      });
+      // Build flat list for the grid
+      const flat: Story[] = [];
+      for (const row of data) {
+        try {
+          const u = row.user as any;
+          const s = row.session as any;
+          flat.push({
+            id: row.id,
+            media_url: row.media_url || '',
+            media_type: (row.media_type === 'video' ? 'video' : 'image') as 'image' | 'video',
+            thumbnail_url: row.thumbnail_url || null,
+            caption: row.caption || null,
+            created_at: row.created_at || '',
+            user_id: row.user_id || '',
+            user_name: u?.name || '?',
+            user_avatar: u?.avatar_url || null,
+            sessionId: row.session_id || '',
+            sport: s?.sport || '?',
+          });
+        } catch {
+          // Skip malformed rows
+        }
+      }
       setAllStories(flat);
 
       // Group by session_id for the StoryViewer
       const map = new Map<string, StoryGroup>();
       for (const story of flat) {
+        if (!story.sessionId) continue;
         if (!map.has(story.sessionId)) {
           map.set(story.sessionId, {
             sessionId: story.sessionId,
@@ -148,18 +186,23 @@ export default function StoriesPage() {
 
       const grouped = [...map.values()];
       for (const g of grouped) {
-        g.stories.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        g.stories.sort((a, b) => {
+          const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return ta - tb;
+        });
       }
       setGroups(grouped);
     } catch (err) {
       console.error('Error loading stories:', err);
+      setGroups([]);
+      setAllStories([]);
     } finally {
       setLoading(false);
     }
   }
 
-  function openStoryViewer(story: Story & { sessionId: string }) {
-    // Find the group index that contains this story
+  function openStoryViewer(story: Story) {
     const groupIdx = groups.findIndex(g => g.sessionId === story.sessionId);
     if (groupIdx >= 0) {
       setViewerStartIndex(groupIdx);
@@ -174,6 +217,8 @@ export default function StoriesPage() {
       </div>
     );
   }
+
+  const StoryViewer = StoryViewerComp;
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
@@ -221,21 +266,18 @@ export default function StoriesPage() {
                   onClick={() => openStoryViewer(story)}
                   className="relative aspect-[3/4] rounded-xl overflow-hidden bg-stone-200 dark:bg-[#3D4349]"
                 >
-                  {story.media_type === 'image' ? (
+                  {thumbnail ? (
                     <img
                       src={thumbnail}
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
-                    />
-                  ) : (
-                    <img
-                      src={story.thumbnail_url || ''}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-3xl">📷</span>
+                    </div>
                   )}
 
                   {/* Play icon for videos */}
@@ -258,7 +300,7 @@ export default function StoriesPage() {
                           <img src={story.user_avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-[10px] text-white font-bold">
-                            {story.user_name[0]?.toUpperCase()}
+                            {(story.user_name || '?')[0]?.toUpperCase()}
                           </span>
                         )}
                       </div>
@@ -276,13 +318,13 @@ export default function StoriesPage() {
         )}
       </div>
 
-      {viewerOpen && groups.length > 0 && (
+      {viewerOpen && StoryViewer && groups.length > 0 && (
         <StoryViewer
           groups={groups}
           startGroupIndex={viewerStartIndex}
           currentUserId={user?.id}
           onClose={() => setViewerOpen(false)}
-          onStorySeen={(ids) => markStoriesSeen(ids)}
+          onStorySeen={(ids: string[]) => markStoriesSeen(ids)}
           onStoryDeleted={() => loadStories()}
         />
       )}

@@ -115,32 +115,33 @@ export default function SessionsPage() {
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-xl font-bold text-theme-primary">{t('mySessions')}</h1>
         </div>
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="flex gap-4 border-b border-theme">
+            <button
+              onClick={() => setActiveTab('Hosting')}
+              className={`pb-2 px-1 font-medium transition ${
+                activeTab === 'Hosting'
+                  ? 'border-b-2 border-tribe-green text-theme-primary'
+                  : 'text-theme-secondary'
+              }`}
+            >
+              {t('hosting')}
+            </button>
+            <button
+              onClick={() => setActiveTab('joined')}
+              className={`pb-2 px-1 font-medium transition ${
+                activeTab === 'joined'
+                  ? 'border-b-2 border-tribe-green text-theme-primary'
+                  : 'text-theme-secondary'
+              }`}
+            >
+              {t('joined')}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4">
-        <div className="flex gap-4 mb-6 border-b border-theme">
-          <button
-            onClick={() => setActiveTab('Hosting')}
-            className={`pb-2 px-1 font-medium transition ${
-              activeTab === 'Hosting'
-                ? 'border-b-2 border-tribe-green text-theme-primary'
-                : 'text-theme-secondary'
-            }`}
-          >
-            {t('hosting')}
-          </button>
-          <button
-            onClick={() => setActiveTab('joined')}
-            className={`pb-2 px-1 font-medium transition ${
-              activeTab === 'joined'
-                ? 'border-b-2 border-tribe-green text-theme-primary'
-                : 'text-theme-secondary'
-            }`}
-          >
-            {t('joined')}
-          </button>
-        </div>
-
+      <div className="pt-header max-w-2xl mx-auto p-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem + 2.5rem)' }}>
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (

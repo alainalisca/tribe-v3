@@ -1,7 +1,7 @@
 'use client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import OnboardingModal from '@/components/OnboardingModal';
 import EditSessionModal from '@/components/EditSessionModal';
 import { createClient } from '@/lib/supabase/client';
@@ -44,6 +44,25 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+
+  const fixedAreaRef = useRef<HTMLDivElement>(null);
+  const [fixedHeight, setFixedHeight] = useState(0);
+
+  // Measure the fixed header+filters area and set content padding
+  const measureFixed = useCallback(() => {
+    if (fixedAreaRef.current) {
+      setFixedHeight(fixedAreaRef.current.offsetHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    measureFixed();
+    window.addEventListener('resize', measureFixed);
+    return () => window.removeEventListener('resize', measureFixed);
+  }, [measureFixed]);
+
+  // Re-measure when userLocation changes (distance slider appears/disappears)
+  useEffect(() => { measureFixed(); }, [userLocation, measureFixed]);
 
   const sports = Object.keys(sportTranslations);
 
@@ -402,13 +421,13 @@ export default function HomePage() {
           }}
         />
       )}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+      <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
         <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/profile">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
             </h1>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link href="/stories" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
               <Film className="w-6 h-6" />
             </Link>
@@ -418,109 +437,109 @@ export default function HomePage() {
             <LanguageToggle />
           </div>
         </div>
-      </div>
 
-      <div className="pt-header">
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
-        <div className="max-w-2xl mx-auto space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
-            <input
-              type="text"
-              placeholder={t('searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-stone-900 dark:hover:text-gray-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          <select
-            value={selectedSport}
-            onChange={(e) => setSelectedSport(e.target.value)}
-            className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-          >
-            <option value="">{language === 'es' ? 'Todos' : 'All'}</option>
-            {sports.map((sport) => (
-              <option key={sport} value={sport}>
-                {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
-              </option>
-            ))}
-          </select>
-
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-            >
-              <option value="all">{language === 'es' ? 'Todas las fechas' : 'All dates'}</option>
-              <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
-              <option value="week">{language === 'es' ? 'Esta semana' : 'This week'}</option>
-              <option value="month">{language === 'es' ? 'Este mes' : 'This month'}</option>
-            </select>
-
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full p-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green"
-            >
-              <option value="all">{language === 'es' ? 'Todos' : 'All'} 👥</option>
-              <option value="women_only">{language === 'es' ? 'Solo Mujeres' : 'Women Only'} 👩</option>
-              <option value="men_only">{language === 'es' ? 'Solo Hombres' : 'Men Only'} 👨</option>
-            </select>
-          </div>
-
-          {userLocation && (
-            <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-4 py-2">
-              <label className="text-sm font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
-                {language === 'es' ? 'Distancia' : 'Distance'}:
-              </label>
+        <div className="border-t border-stone-300 dark:border-black p-4 pb-3">
+          <div className="max-w-2xl mx-auto space-y-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
               <input
-                type="range"
-                min="5"
-                max="100"
-                step="5"
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
+                type="text"
+                placeholder={t('searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
               />
-              <span className="text-sm font-semibold text-tribe-green min-w-[60px] text-right">
-                {maxDistance === 100 ? (language === 'es' ? 'Todas' : 'All') : `${maxDistance}km`}
-              </span>
-            </div>
-          )}
-
-          {(!loading || searchQuery || selectedSport) && (
-            <div className="flex items-center justify-between">
-              {!loading && (
-                <p className="text-sm text-stone-600 dark:text-gray-300">
-                  {filteredSessions.length} {t('sessionsCount')}
-                </p>
-              )}
-              {(searchQuery || selectedSport) && (
+              {searchQuery && (
                 <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedSport('');
-                  }}
-                  className="text-sm text-tribe-green hover:underline"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-stone-900 dark:hover:text-gray-100"
                 >
-                  {t('clearAll')}
+                  <X className="w-5 h-5" />
                 </button>
               )}
             </div>
-          )}
+
+            <div className="grid grid-cols-3 gap-2">
+              <select
+                value={selectedSport}
+                onChange={(e) => setSelectedSport(e.target.value)}
+                className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              >
+                <option value="">{language === 'es' ? 'Deporte' : 'Sport'}</option>
+                {sports.map((sport) => (
+                  <option key={sport} value={sport}>
+                    {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              >
+                <option value="all">{language === 'es' ? 'Fecha' : 'Date'}</option>
+                <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
+                <option value="week">{language === 'es' ? 'Semana' : 'Week'}</option>
+                <option value="month">{language === 'es' ? 'Mes' : 'Month'}</option>
+              </select>
+
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              >
+                <option value="all">👥 {language === 'es' ? 'Todos' : 'All'}</option>
+                <option value="women_only">👩 {language === 'es' ? 'Mujeres' : 'Women'}</option>
+                <option value="men_only">👨 {language === 'es' ? 'Hombres' : 'Men'}</option>
+              </select>
+            </div>
+
+            {userLocation && (
+              <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-3 py-1.5">
+                <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
+                  {language === 'es' ? 'Dist.' : 'Dist.'}
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="100"
+                  step="5"
+                  value={maxDistance}
+                  onChange={(e) => setMaxDistance(Number(e.target.value))}
+                  className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
+                />
+                <span className="text-xs font-semibold text-tribe-green min-w-[40px] text-right">
+                  {maxDistance === 100 ? (language === 'es' ? 'Todo' : 'All') : `${maxDistance}km`}
+                </span>
+              </div>
+            )}
+
+            {(!loading || searchQuery || selectedSport) && (
+              <div className="flex items-center justify-between">
+                {!loading && (
+                  <p className="text-xs text-stone-600 dark:text-gray-300">
+                    {filteredSessions.length} {t('sessionsCount')}
+                  </p>
+                )}
+                {(searchQuery || selectedSport) && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedSport('');
+                    }}
+                    className="text-xs text-tribe-green hover:underline"
+                  >
+                    {t('clearAll')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
+      <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-header'}>
       <div className="max-w-2xl mx-auto p-4">
         {editingSession && (
           <EditSessionModal

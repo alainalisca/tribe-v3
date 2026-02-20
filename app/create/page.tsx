@@ -333,11 +333,11 @@ export default function CreateSessionPage() {
 
       <div className="pt-header max-w-2xl mx-auto px-4 py-6">
         {/* Template Buttons */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-3 mb-4">
           <button
             type="button"
             onClick={() => setShowTemplates(!showTemplates)}
-            className="flex-1 py-2 px-4 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178] transition"
+            className="flex-1 py-3 px-3 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178] transition text-sm"
           >
             📋 {language === "es" ? "Usar Plantilla" : "Use Template"} ({templates.length})
           </button>
@@ -345,9 +345,9 @@ export default function CreateSessionPage() {
             type="button"
             onClick={saveAsTemplate}
             disabled={savingTemplate}
-            className="flex-1 py-2 px-4 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
+            className="flex-1 py-3 px-3 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
           >
-            {savingTemplate ? "..." : (language === "es" ? "💾 Guardar Plantilla" : "💾 Save Template")}
+            {savingTemplate ? "..." : (language === "es" ? "💾 Guardar" : "💾 Save Template")}
           </button>
         </div>
 
