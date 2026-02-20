@@ -15,6 +15,7 @@ interface SessionCardProps {
   userLocation?: { latitude: number; longitude: number } | null;
   currentUserId?: string;
   distance?: string;
+  liveData?: { count: number; users: Array<{ name: string; avatar_url: string | null }> };
 }
 
 function getSkillLevelDisplay(level: string, t: (key: any) => string) {
@@ -43,7 +44,7 @@ function getGenderDisplay(gender: string, t: (key: any) => string) {
   }
 }
 
-export default function SessionCard({ session, onShare, distance }: SessionCardProps) {
+export default function SessionCard({ session, onShare, distance, liveData }: SessionCardProps) {
   const { t, language } = useLanguage();
   const isPast = (() => {
     const sessionDate = new Date(session.date + 'T00:00:00');
@@ -133,6 +134,12 @@ export default function SessionCard({ session, onShare, distance }: SessionCardP
               {isStartingSoon && !isPast && !isFull && (
                 <span className="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-semibold animate-pulse">
                   🔥 {language === 'es' ? 'PRONTO' : 'STARTING SOON'}
+                </span>
+              )}
+              {liveData && liveData.count > 0 && (
+                <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold flex items-center gap-1 animate-pulse">
+                  <span className="w-2 h-2 bg-white rounded-full"></span>
+                  {liveData.count} {language === 'es' ? 'en vivo' : 'live'}
                 </span>
               )}
             </div>

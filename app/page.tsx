@@ -44,6 +44,8 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [liveStatusMap, setLiveStatusMap] = useState<Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }>>({});
+  const [liveUserIdSet, setLiveUserIdSet] = useState<Set<string>>(new Set());
 
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const [fixedHeight, setFixedHeight] = useState(0);
@@ -185,10 +187,52 @@ export default function HomePage() {
 
       if (error) throw error;
       setSessions(data || []);
+
+      // Batch load live statuses for all session IDs
+      const ids = (data || []).map((s: any) => s.id);
+      loadLiveStatuses(ids);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadLiveStatuses(sessionIds: string[]) {
+    if (sessionIds.length === 0) return;
+    try {
+      const { data, error } = await supabase
+        .from('live_status')
+        .select(`
+          session_id,
+          user_id,
+          user:users(name, avatar_url)
+        `)
+        .in('session_id', sessionIds)
+        .gt('expires_at', new Date().toISOString());
+
+      if (error || !data) return;
+
+      const map: Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }> = {};
+      const userIds = new Set<string>();
+      for (const row of data) {
+        const sid = (row as any).session_id;
+        const uid = (row as any).user_id;
+        const userInfo = (row as any).user;
+        userIds.add(uid);
+        if (!map[sid]) {
+          map[sid] = { count: 0, users: [] };
+        }
+        map[sid].count++;
+        map[sid].users.push({
+          name: userInfo?.name || 'Unknown',
+          avatar_url: userInfo?.avatar_url || null,
+        });
+      }
+      setLiveStatusMap(map);
+      setLiveUserIdSet(userIds);
+    } catch (error) {
+      console.error('Error loading live statuses:', error);
     }
   }
 
@@ -554,7 +598,7 @@ export default function HomePage() {
 
         {/* Stories Row */}
         <div className="mt-1">
-          <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} />
+          <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} liveUserIds={liveUserIdSet} />
         </div>
 
         {/* Profile Completion Banner - only show if profile is incomplete */}
@@ -698,6 +742,7 @@ export default function HomePage() {
                   onDelete={handleDeleteSession}
                   onShare={handleShareSession}
                   distance={distanceText}
+                  liveData={liveStatusMap[session.id]}
                 />
               );
             })}

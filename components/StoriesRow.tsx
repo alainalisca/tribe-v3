@@ -79,9 +79,10 @@ function getSportEmoji(sport: string): string {
 interface StoriesRowProps {
   userId: string | null;
   userAvatar?: string | null;
+  liveUserIds?: Set<string>;
 }
 
-export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
+export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesRowProps) {
   const supabase = createClient();
   const { language } = useLanguage();
   const [groups, setGroups] = useState<SessionStoryGroup[]>([]);
@@ -299,6 +300,7 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
           {groups.map((group, i) => {
             const firstStory = group.stories[0];
             const unseen = hasUnseen(group);
+            const hasLiveAuthor = liveUserIds ? group.stories.some(s => liveUserIds.has(s.user_id)) : false;
             return (
               <button
                 key={group.sessionId}
@@ -307,9 +309,11 @@ export default function StoriesRow({ userId, userAvatar }: StoriesRowProps) {
               >
                 <div
                   className={`w-14 h-14 rounded-full p-[2.5px] ${
-                    unseen
-                      ? 'bg-gradient-to-br from-tribe-green to-lime-400'
-                      : 'bg-stone-300 dark:bg-gray-500'
+                    hasLiveAuthor
+                      ? 'bg-gradient-to-br from-red-500 to-red-400 animate-pulse'
+                      : unseen
+                        ? 'bg-gradient-to-br from-tribe-green to-lime-400'
+                        : 'bg-stone-300 dark:bg-gray-500'
                   }`}
                 >
                   <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-[#3D4349] flex items-center justify-center">
