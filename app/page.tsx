@@ -456,7 +456,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D] overflow-x-hidden">
       {showOnboarding && user && (
         <OnboardingModal
           onComplete={() => {
@@ -471,7 +471,7 @@ export default function HomePage() {
             <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
             </h1>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Link href="/stories" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
               <Film className="w-6 h-6" />
             </Link>
@@ -553,7 +553,7 @@ export default function HomePage() {
                   onChange={(e) => setMaxDistance(Number(e.target.value))}
                   className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
                 />
-                <span className="text-xs font-semibold text-tribe-green min-w-[40px] text-right">
+                <span className="text-xs font-semibold text-tribe-green min-w-[48px] text-right flex-shrink-0">
                   {maxDistance === 100 ? (language === 'es' ? 'Todo' : 'All') : `${maxDistance}km`}
                 </span>
               </div>

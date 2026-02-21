@@ -32,6 +32,8 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     success: '¡Historia publicada!',
     errorUpload: 'Error al subir la historia',
     fileTooLarge: 'Archivo muy grande. Máximo 10MB para fotos, 50MB para videos.',
+    videoTooLong: 'Video muy largo. Máximo 60 segundos.',
+    uploadTimeout: 'La subida tardó demasiado. Intenta con un archivo más pequeño.',
   } : {
     addStory: 'Add Story',
     takePhoto: 'Photo or Camera',
@@ -42,6 +44,8 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
     success: 'Story posted!',
     errorUpload: 'Failed to upload story',
     fileTooLarge: 'File too large. Max 10MB for photos, 50MB for videos.',
+    videoTooLong: 'Video too long. Maximum 60 seconds.',
+    uploadTimeout: 'Upload took too long. Try a smaller file.',
   };
 
   // Lock body scroll while modal is open
@@ -62,6 +66,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
   const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+  const MAX_VIDEO_DURATION = 60; // seconds
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     try {
@@ -76,7 +81,46 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         return;
       }
 
-      setMediaType(isVideo ? 'video' : 'image');
+      // For videos, check duration before accepting
+      if (isVideo) {
+        const videoEl = document.createElement('video');
+        videoEl.preload = 'metadata';
+        let handled = false;
+        const metadataTimeout = setTimeout(() => {
+          if (handled) return;
+          handled = true;
+          URL.revokeObjectURL(videoEl.src);
+          // Timeout — allow upload anyway rather than blocking
+          setMediaType('video');
+          setFile(selected);
+          setPreview(URL.createObjectURL(selected));
+        }, 3000);
+        videoEl.onloadedmetadata = () => {
+          if (handled) return;
+          handled = true;
+          clearTimeout(metadataTimeout);
+          URL.revokeObjectURL(videoEl.src);
+          if (videoEl.duration > MAX_VIDEO_DURATION) {
+            showInfo(t.videoTooLong);
+            e.target.value = '';
+            return;
+          }
+          setMediaType('video');
+          setFile(selected);
+          setPreview(URL.createObjectURL(selected));
+        };
+        videoEl.onerror = () => {
+          if (handled) return;
+          handled = true;
+          clearTimeout(metadataTimeout);
+          URL.revokeObjectURL(videoEl.src);
+          showError(language === 'es' ? 'Error al leer el video' : 'Error reading video');
+        };
+        videoEl.src = URL.createObjectURL(selected);
+        return;
+      }
+
+      setMediaType('image');
       setFile(selected);
 
       const url = URL.createObjectURL(selected);
@@ -96,6 +140,10 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
   async function generateVideoThumbnail(videoFile: File): Promise<Blob | null> {
     return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(null);
+      }, 5000);
+
       const video = document.createElement('video');
       video.preload = 'metadata';
       video.muted = true;
@@ -106,6 +154,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       };
 
       video.onseeked = () => {
+        clearTimeout(timeout);
         const canvas = document.createElement('canvas');
         canvas.width = Math.min(video.videoWidth, 480);
         canvas.height = Math.min(video.videoHeight, 480);
@@ -119,6 +168,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       };
 
       video.onerror = () => {
+        clearTimeout(timeout);
         URL.revokeObjectURL(video.src);
         resolve(null);
       };
@@ -168,6 +218,13 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   async function handlePost() {
     if (!file) return;
 
+    // Pre-flight size check
+    const sizeLimit = mediaType === 'video' ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > sizeLimit) {
+      showInfo(t.fileTooLarge);
+      return;
+    }
+
     setUploading(true);
     try {
       const timestamp = Date.now();
@@ -180,12 +237,18 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         uploadData = await compressImage(file);
       }
 
-      const { error: uploadError } = await supabase.storage
+      // Upload with timeout — 2 min for video, 30s for images
+      const uploadTimeoutMs = mediaType === 'video' ? 120000 : 30000;
+      const uploadPromise = supabase.storage
         .from('session-stories')
         .upload(storagePath, uploadData, {
           cacheControl: '3600',
           upsert: false,
         });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('UPLOAD_TIMEOUT')), uploadTimeoutMs)
+      );
+      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
       if (uploadError) throw uploadError;
 
@@ -231,7 +294,11 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       onClose();
     } catch (error: any) {
       console.error('Story upload error:', error);
-      showError(t.errorUpload);
+      if (error?.message === 'UPLOAD_TIMEOUT') {
+        showError(t.uploadTimeout);
+      } else {
+        showError(t.errorUpload);
+      }
     } finally {
       setUploading(false);
     }

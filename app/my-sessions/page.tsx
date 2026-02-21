@@ -22,7 +22,7 @@ export default function MySessionsPage() {
   const { t, language } = useLanguage();
 
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(140);
+  const [headerHeight, setHeaderHeight] = useState(180);
 
   const measureHeader = useCallback(() => {
     if (headerRef.current) {
@@ -39,6 +39,14 @@ export default function MySessionsPage() {
   useEffect(() => {
     measureHeader();
   }, [activeTab, measureHeader]);
+
+  // Re-measure after loading completes and DOM has content
+  useEffect(() => {
+    if (!loading) {
+      measureHeader();
+      requestAnimationFrame(() => measureHeader());
+    }
+  }, [loading, measureHeader]);
 
   useEffect(() => {
     checkUser();
