@@ -38,7 +38,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
-  const [maxDistance, setMaxDistance] = useState<number>(50);
+  const [maxDistance, setMaxDistance] = useState<number>(100);
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [genderFilter, setGenderFilter] = useState<string>("all");
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -298,12 +298,13 @@ export default function HomePage() {
         );
         return distance <= maxDistance;
       });
+    }
 
     // Date filter
     if (dateFilter !== "all") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       let endDate = new Date();
       if (dateFilter === "today") {
         endDate.setHours(23, 59, 59, 999);
@@ -312,7 +313,7 @@ export default function HomePage() {
       } else if (dateFilter === "month") {
         endDate.setMonth(today.getMonth() + 1);
       }
-      
+
       filtered = filtered.filter((s) => {
         const sessionDate = new Date(s.date + 'T00:00:00');
         return sessionDate >= today && sessionDate <= endDate;
@@ -325,7 +326,6 @@ export default function HomePage() {
         // Show sessions that match the filter OR sessions open to all
         return s.gender_preference === genderFilter || s.gender_preference === 'all' || !s.gender_preference;
       });
-    }
     }
     setFilteredSessions(filtered);
   }

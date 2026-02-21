@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast';
 
 export const showSuccess = (message: string) => {
+  toast.dismiss();
   toast.success(message, {
     duration: 3000,
     position: 'top-center',
@@ -15,6 +16,7 @@ export const showSuccess = (message: string) => {
 };
 
 export const showError = (message: string) => {
+  toast.dismiss();
   toast.error(message, {
     duration: 4000,
     position: 'top-center',
@@ -29,6 +31,7 @@ export const showError = (message: string) => {
 };
 
 export const showInfo = (message: string) => {
+  toast.dismiss();
   toast(message, {
     duration: 3000,
     position: 'top-center',
