@@ -265,12 +265,12 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen max-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4 overflow-y-auto">
+    <div className="h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4 overflow-hidden">
       <div className="absolute top-0 right-4 pt-4">
         <LanguageToggle />
       </div>
       
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
         <div className="bg-white dark:bg-[#6B7178] rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">

@@ -238,13 +238,13 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[60] flex flex-col" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] bg-black/80 flex flex-col" onClick={onClose}>
       {/* Spacer pushes content to bottom on picker screen, centers on preview */}
       <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
 
       <div
-        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl overflow-y-auto"
-        style={{ maxHeight: '92vh', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)' }}
+        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -256,29 +256,33 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         </div>
 
         {!preview ? (
-          /* Selection buttons — use native <label> triggers instead of
-             programmatic .click() which crashes iOS WKWebView */
+          /* Invisible file inputs overlapping styled buttons — iOS WKWebView
+             registers the tap as a direct user gesture on the file input */
           <div className="p-6 space-y-3">
-            <label className="w-full flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold hover:opacity-90 transition cursor-pointer">
-              <Camera className="w-5 h-5" />
-              {t.takePhoto}
+            <div className="relative w-full">
+              <div className="flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold">
+                <Camera className="w-5 h-5" />
+                {t.takePhoto}
+              </div>
               <input
                 type="file"
                 accept="image/*"
-                className="sr-only"
                 onChange={handleFileSelect}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-            </label>
-            <label className="w-full flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition cursor-pointer">
-              <Video className="w-5 h-5" />
-              {t.chooseVideo}
+            </div>
+            <div className="relative w-full">
+              <div className="flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold">
+                <Video className="w-5 h-5" />
+                {t.chooseVideo}
+              </div>
               <input
                 type="file"
                 accept="video/*"
-                className="sr-only"
                 onChange={handleFileSelect}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
-            </label>
+            </div>
           </div>
         ) : (
           /* Preview + caption */
