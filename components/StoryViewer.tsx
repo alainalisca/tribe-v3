@@ -129,6 +129,9 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       return;
     }
 
+    // Reset before starting — eliminates race with a separate reset effect
+    elapsedRef.current = 0;
+    setProgress(0);
     startTimeRef.current = Date.now();
 
     const animate = () => {
@@ -150,12 +153,6 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       elapsedRef.current += Date.now() - startTimeRef.current;
     };
   }, [story?.id, paused, showDeleteConfirm, goNext]);
-
-  // Reset elapsed when story changes
-  useEffect(() => {
-    elapsedRef.current = 0;
-    setProgress(0);
-  }, [story?.id]);
 
   // Video progress tracking
   useEffect(() => {
