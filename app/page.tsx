@@ -63,8 +63,11 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', measureFixed);
   }, [measureFixed]);
 
-  // Re-measure when userLocation changes (distance slider appears/disappears)
-  useEffect(() => { measureFixed(); }, [userLocation, measureFixed]);
+  // Re-measure when fixed header content changes (distance slider, session count, filters)
+  useEffect(() => {
+    measureFixed();
+    requestAnimationFrame(() => measureFixed());
+  }, [userLocation, loading, searchQuery, selectedSport, filteredSessions.length, measureFixed]);
 
   const sports = Object.keys(sportTranslations);
 
