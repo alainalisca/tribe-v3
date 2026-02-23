@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
     }
   },
   ios: {
-    scrollEnabled: false,
+    scrollEnabled: true,
   },
   plugins: {
     FirebaseMessaging: {
