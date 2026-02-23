@@ -413,10 +413,27 @@ export default function HomePage() {
         if (updateError) throw updateError;
       }
 
-      const message = session.join_policy === 'curated' 
-        ? 'Request sent! The host will review your profile and decide.' 
+      // Notify the host (fire and forget — don't block UI)
+      const joinerName = userProfile?.name || user.email || 'Someone';
+      const isRequest = session.join_policy === 'curated';
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session.creator_id,
+          title: isRequest ? '📩 New Join Request' : '🎉 New Training Partner!',
+          body: isRequest
+            ? `${joinerName} wants to join your ${session.sport} session`
+            : `${joinerName} joined your ${session.sport} session`,
+          url: `/session/${sessionId}`,
+          data: { sessionId, type: 'join' }
+        })
+      }).catch(err => console.error('Failed to notify host:', err));
+
+      const message = session.join_policy === 'curated'
+        ? 'Request sent! The host will review your profile and decide.'
         : t('joinedSuccessfully');
-      
+
       showSuccess(message);
       await loadSessions();
     } catch (error: any) {

@@ -641,6 +641,20 @@ export default function SessionDetailPage() {
         .update({ current_participants: session.current_participants + 1 })
         .eq('id', session.id);
 
+      // Notify the host (fire and forget)
+      const joinerName = user.user_metadata?.name || user.email || 'Someone';
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session.creator_id,
+          title: '🎉 New Training Partner!',
+          body: `${joinerName} joined your ${session.sport} session`,
+          url: `/session/${session.id}`,
+          data: { sessionId: session.id, type: 'join' }
+        })
+      }).catch(err => console.error('Failed to notify host:', err));
+
       celebrateJoin();
       showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
       await loadSession();
@@ -683,6 +697,19 @@ export default function SessionDetailPage() {
       }
       setGuestHasJoined(true);
       setGuestParticipantId(data.id);
+
+      // Notify the host about guest join (fire and forget)
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session.creator_id,
+          title: '🎉 New Training Partner!',
+          body: `${guestData.name} (guest) joined your ${session.sport} session`,
+          url: `/session/${session.id}`,
+          data: { sessionId: session.id, type: 'guest_join' }
+        })
+      }).catch(err => console.error('Failed to notify host:', err));
 
       showSuccess(language === "es" ? "¡Confirmado! Te esperamos" : "Confirmed! See you there");
       setShowGuestModal(false);
