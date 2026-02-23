@@ -232,7 +232,7 @@ export default function MySessionsPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4" style={{ paddingTop: Math.max(headerHeight + 16, 200) }}>
+      <div className="max-w-2xl mx-auto p-4" style={{ paddingTop: Math.max(headerHeight + 16, 260) }}>
         {activeTab === 'upcoming' ? (
           <>
             {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
