@@ -14,29 +14,29 @@ webpush.setVapidDetails(
 let firebaseInitError: string | null = null;
 
 function getFirebaseAdmin() {
-  if (admin.apps.length === 0) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  // Always reinitialize to pick up fresh credentials
+  // (Vercel warm instances can cache stale credentials)
+  if (admin.apps.length > 0) {
+    admin.apps.forEach(app => app?.delete());
+  }
 
-    if (!serviceAccount) {
-      firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT_KEY not set';
-      console.warn(firebaseInitError);
-      return null;
-    }
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!serviceAccount) {
+    firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT_KEY not set';
+    console.warn(firebaseInitError);
+    return null;
+  }
 
-    // Log the first 20 chars to help debug truncated env vars
-    console.log(`FIREBASE_SERVICE_ACCOUNT_KEY starts with: "${serviceAccount.substring(0, 20)}..." (length: ${serviceAccount.length})`);
-
-    try {
-      const parsedServiceAccount = JSON.parse(serviceAccount);
-      admin.initializeApp({
-        credential: admin.credential.cert(parsedServiceAccount)
-      });
-      firebaseInitError = null;
-    } catch (error: any) {
-      firebaseInitError = `Firebase init failed: ${error.message}`;
-      console.error(firebaseInitError);
-      return null;
-    }
+  try {
+    const parsedServiceAccount = JSON.parse(serviceAccount);
+    admin.initializeApp({
+      credential: admin.credential.cert(parsedServiceAccount)
+    });
+    firebaseInitError = null;
+  } catch (error: any) {
+    firebaseInitError = `Firebase init failed: ${error.message}`;
+    console.error(firebaseInitError);
+    return null;
   }
 
   return admin;
