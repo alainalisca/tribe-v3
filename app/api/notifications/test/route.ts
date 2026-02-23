@@ -88,6 +88,44 @@ export async function GET() {
       emailSet: !!process.env.VAPID_EMAIL,
     };
 
+    // Direct OAuth2 token test — bypasses Firebase Admin SDK
+    let oauth2Test: any = { status: 'untested' };
+    try {
+      const jwt = require('jsonwebtoken');
+      const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
+
+      const now = Math.floor(Date.now() / 1000);
+      const token = jwt.sign(
+        {
+          iss: parsed.client_email,
+          sub: parsed.client_email,
+          aud: 'https://oauth2.googleapis.com/token',
+          iat: now,
+          exp: now + 3600,
+          scope: 'https://www.googleapis.com/auth/firebase.messaging'
+        },
+        parsed.private_key,
+        { algorithm: 'RS256' }
+      );
+
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${token}`
+      });
+
+      const tokenData = await tokenResponse.json();
+      oauth2Test = {
+        status: tokenResponse.status,
+        hasAccessToken: !!tokenData.access_token,
+        tokenType: tokenData.token_type || null,
+        error: tokenData.error || null,
+        errorDescription: tokenData.error_description || null,
+      };
+    } catch (e: any) {
+      oauth2Test = { status: 'error', message: e.message };
+    }
+
     // If user has FCM token, try a direct send
     let fcmTestResult: Record<string, any> | null = null;
     if (userRecord?.fcm_token && firebaseDiag.initSuccess) {
@@ -126,6 +164,7 @@ export async function GET() {
       diagnostics,
       firebase: firebaseDiag,
       vapid: vapidDiag,
+      oauth2Test,
       fcmDirectTest: fcmTestResult,
       sendPipelineResult: sendResult,
       sendPipelineStatus: response.status,
