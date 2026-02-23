@@ -79,7 +79,7 @@ export default function ChatPage() {
           </Link>
           <div>
             <h1 className="text-lg font-bold text-theme-primary leading-tight">{sportName} {t.chat}</h1>
-            <p className="text-xs text-gray-500 leading-tight">
+            <p className="text-xs text-gray-500 leading-tight truncate max-w-[250px]">
               {session.location}
               {isAdmin && <span className="ml-2 text-red-500">• {t.admin}</span>}
               {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t.host}</span>}

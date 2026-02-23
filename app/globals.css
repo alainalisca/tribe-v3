@@ -92,12 +92,12 @@ body {
 
   /* Spacer for fixed header: safe-area-top + h-14 (56px) */
   .pt-header {
-    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem) !important;
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem + 0.5rem) !important;
   }
 
   @media (min-width: 768px) {
     .pt-header {
-      padding-top: 3.5rem !important;
+      padding-top: calc(3.5rem + 0.5rem) !important;
     }
   }
 
