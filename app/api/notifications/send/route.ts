@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
-import admin from 'firebase-admin';
 import { createClient } from '@supabase/supabase-js';
+
+const jwt = require('jsonwebtoken');
 
 // Initialize web-push with VAPID details
 webpush.setVapidDetails(
@@ -10,95 +11,101 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 );
 
-// Initialize Firebase Admin SDK (singleton)
-let firebaseInitError: string | null = null;
-
-function getFirebaseAdmin() {
-  // Always reinitialize to pick up fresh credentials
-  // (Vercel warm instances can cache stale credentials)
-  if (admin.apps.length > 0) {
-    admin.apps.forEach(app => app?.delete());
-  }
-
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccount) {
-    firebaseInitError = 'FIREBASE_SERVICE_ACCOUNT_KEY not set';
-    console.warn(firebaseInitError);
-    return null;
-  }
-
+// Get FCM access token via direct OAuth2 JWT exchange
+async function getFcmAccessToken(): Promise<string | null> {
   try {
-    const parsedServiceAccount = JSON.parse(serviceAccount);
-    admin.initializeApp({
-      credential: admin.credential.cert(parsedServiceAccount)
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (!serviceAccount) return null;
+
+    const parsed = JSON.parse(serviceAccount);
+    const now = Math.floor(Date.now() / 1000);
+    const token = jwt.sign(
+      {
+        iss: parsed.client_email,
+        sub: parsed.client_email,
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: now,
+        exp: now + 3600,
+        scope: 'https://www.googleapis.com/auth/firebase.messaging'
+      },
+      parsed.private_key,
+      { algorithm: 'RS256' }
+    );
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${token}`
     });
-    firebaseInitError = null;
-  } catch (error: any) {
-    firebaseInitError = `Firebase init failed: ${error.message}`;
-    console.error(firebaseInitError);
+
+    const data = await response.json();
+    return data.access_token || null;
+  } catch (error) {
+    console.error('Failed to get FCM access token:', error);
     return null;
   }
-
-  return admin;
 }
 
-// Send notification via FCM
+// Send notification via FCM HTTP v1 API (bypasses Firebase Admin SDK)
 async function sendFcmNotification(
   fcmToken: string,
   title: string,
   body: string,
   data?: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> {
-  const firebaseAdmin = getFirebaseAdmin();
-
-  if (!firebaseAdmin) {
-    return { success: false, error: firebaseInitError || 'Firebase Admin not initialized' };
+  const accessToken = await getFcmAccessToken();
+  if (!accessToken) {
+    return { success: false, error: 'Failed to obtain FCM access token' };
   }
 
   try {
-    const message: admin.messaging.Message = {
-      token: fcmToken,
-      notification: {
-        title,
-        body
-      },
-      data: data || {},
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          channelId: 'tribe_notifications'
-        }
-      },
-      apns: {
-        headers: {
-          'apns-priority': '10'
+    const projectId = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!).project_id;
+
+    const message = {
+      message: {
+        token: fcmToken,
+        notification: { title, body },
+        data: data || {},
+        android: {
+          priority: 'high',
+          notification: { sound: 'default', channel_id: 'tribe_notifications' }
         },
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1
-          }
+        apns: {
+          headers: { 'apns-priority': '10' },
+          payload: { aps: { sound: 'default', badge: 1 } }
         }
       }
     };
 
-    const response = await firebaseAdmin.messaging().send(message);
-    console.log('FCM notification sent successfully:', response);
-    return { success: true };
-  } catch (error: any) {
-    const errorDetail = `FCM send error: ${error.code || 'unknown'} - ${error.message}`;
-    console.error(errorDetail, error);
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      }
+    );
 
-    // Handle invalid token error - should remove from database
-    if (
-      error.code === 'messaging/invalid-registration-token' ||
-      error.code === 'messaging/registration-token-not-registered'
-    ) {
-      console.log('Invalid FCM token, should be removed from database');
+    const result = await response.json();
+
+    if (!response.ok) {
+      const errorMsg = result.error?.message || JSON.stringify(result);
+      console.error('FCM HTTP v1 error:', errorMsg);
+
+      if (result.error?.code === 404 || result.error?.code === 400) {
+        console.log('Invalid FCM token, should be removed from database');
+      }
+
+      return { success: false, error: errorMsg };
     }
 
-    return { success: false, error: errorDetail };
+    console.log('FCM notification sent via HTTP v1:', result.name);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: `FCM HTTP error: ${error.message}` };
   }
 }
 
@@ -195,8 +202,9 @@ export async function POST(request: Request) {
       if (!fcmResult.success) {
         errors.push(`FCM: ${fcmResult.error}`);
         // Only clear token if it's actually invalid, not for server-side init errors
-        if (fcmResult.error?.includes('invalid-registration-token') ||
-            fcmResult.error?.includes('registration-token-not-registered')) {
+        if (fcmResult.error?.includes('NOT_FOUND') ||
+            fcmResult.error?.includes('INVALID_ARGUMENT') ||
+            fcmResult.error?.includes('UNREGISTERED')) {
           await supabase
             .from('users')
             .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
@@ -333,8 +341,9 @@ export async function PUT(request: Request) {
         } else {
           results.fcm.failed++;
           // Only mark token as invalid for token-specific errors
-          if (fcmResult.error?.includes('invalid-registration-token') ||
-              fcmResult.error?.includes('registration-token-not-registered')) {
+          if (fcmResult.error?.includes('NOT_FOUND') ||
+              fcmResult.error?.includes('INVALID_ARGUMENT') ||
+              fcmResult.error?.includes('UNREGISTERED')) {
             invalidFcmTokenUserIds.push(user.id);
           }
         }
