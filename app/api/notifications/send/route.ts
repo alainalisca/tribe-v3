@@ -77,6 +77,10 @@ async function sendFcmNotification(
       }
     };
 
+    console.log('[FCM HTTP v1] accessToken obtained:', !!accessToken, 'length:', accessToken?.length);
+    console.log('[FCM HTTP v1] projectId:', projectId);
+    console.log('[FCM HTTP v1] URL:', `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`);
+
     const response = await fetch(
       `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
       {
@@ -90,6 +94,8 @@ async function sendFcmNotification(
     );
 
     const result = await response.json();
+    console.log('[FCM HTTP v1] response status:', response.status);
+    console.log('[FCM HTTP v1] response body:', JSON.stringify(result));
 
     if (!response.ok) {
       const errorMsg = result.error?.message || JSON.stringify(result);
