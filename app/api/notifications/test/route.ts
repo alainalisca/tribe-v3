@@ -67,6 +67,20 @@ export async function GET() {
       }
     }
 
+    // Test private key signing
+    const crypto = require('crypto');
+    let keyTest = 'untested';
+    try {
+      const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update('test');
+      sign.sign(parsed.private_key, 'base64');
+      keyTest = 'valid — private key can sign';
+    } catch (e: any) {
+      keyTest = `invalid — ${e.message}`;
+    }
+    firebaseDiag.keyTest = keyTest;
+
     // VAPID / web-push diagnostics
     const vapidDiag = {
       publicKeySet: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
