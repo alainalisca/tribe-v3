@@ -142,7 +142,7 @@ export default function SessionsPage() {
       </div>
 
       {/* Spacer to push content below fixed header */}
-      <div style={{ height: '180px' }} aria-hidden="true" />
+      <div style={{ height: '155px' }} aria-hidden="true" />
 
       <div className="max-w-2xl mx-auto px-4 pb-4">
         {loading ? (
