@@ -116,7 +116,7 @@ function setupNotificationTapListener(): void {
   FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
     console.log('Notification tapped:', event);
 
-    const data = event.notification?.data;
+    const data = event.notification?.data as Record<string, string> | undefined;
 
     // Handle navigation based on notification data
     if (data?.url) {
