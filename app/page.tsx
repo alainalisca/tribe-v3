@@ -22,6 +22,7 @@ import { scheduleSessionReminders } from '@/lib/reminders';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { sportTranslations } from '@/lib/translations';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
+import { joinSession } from '@/lib/sessions';
 
 export default function HomePage() {
   const router = useRouter();
@@ -361,76 +362,28 @@ export default function HomePage() {
       return;
     }
 
-    const session = sessions.find((s) => s.id === sessionId);
-    if (!session) return;
-
-    if (session.creator_id === user.id) {
-      showInfo('You cannot join your own session!');
-      return;
-    }
-
-    if (session.join_policy === 'invite_only') {
-      showInfo('This is a private session. You need a direct invitation from the host.');
-      return;
-    }
-
-    if (session.current_participants >= session.max_participants) {
-      showInfo(t('sessionFullMsg'));
-      return;
-    }
-
     try {
-      const { data: existing } = await supabase
-        .from('session_participants')
-        .select('id, status')
-        .eq('session_id', sessionId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const result = await joinSession({
+        supabase,
+        sessionId,
+        userId: user.id,
+        userName: userProfile?.name || user.email || 'Someone',
+      });
 
-      if (existing) {
-        showInfo(t('alreadyJoined'));
+      if (!result.success) {
+        const errorMessages: Record<string, string> = {
+          session_not_found: 'Session not found',
+          session_not_active: 'This session is no longer active',
+          self_join: 'You cannot join your own session!',
+          already_joined: t('alreadyJoined'),
+          capacity_full: t('sessionFullMsg'),
+          invite_only: 'This is a private session. You need a direct invitation from the host.',
+        };
+        showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
         return;
       }
 
-      const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
-
-      const { error: joinError } = await supabase
-        .from('session_participants')
-        .insert({
-          session_id: sessionId,
-          user_id: user.id,
-          status: status,
-        });
-
-      if (joinError) throw joinError;
-
-      if (status === 'confirmed') {
-        const { error: updateError } = await supabase
-          .from('sessions')
-          .update({ current_participants: session.current_participants + 1 })
-          .eq('id', sessionId);
-
-        if (updateError) throw updateError;
-      }
-
-      // Notify the host (fire and forget — don't block UI)
-      const joinerName = userProfile?.name || user.email || 'Someone';
-      const isRequest = session.join_policy === 'curated';
-      fetch('/api/notifications/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: session.creator_id,
-          title: isRequest ? '📩 New Join Request' : '🎉 New Training Partner!',
-          body: isRequest
-            ? `${joinerName} wants to join your ${session.sport} session`
-            : `${joinerName} joined your ${session.sport} session`,
-          url: `/session/${sessionId}`,
-          data: { sessionId, type: 'join' }
-        })
-      }).catch(err => console.error('Failed to notify host:', err));
-
-      const message = session.join_policy === 'curated'
+      const message = result.status === 'pending'
         ? 'Request sent! The host will review your profile and decide.'
         : t('joinedSuccessfully');
 

@@ -17,6 +17,7 @@ import StoryViewer from '@/components/StoryViewer';
 import { markStoriesSeen } from '@/components/StoriesRow';
 
 import LocationMap from '@/components/LocationMap';
+import { joinSession } from '@/lib/sessions';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -618,45 +619,32 @@ export default function SessionDetailPage() {
     }
 
     try {
-      const { data: existing } = await supabase
-        .from('session_participants')
-        .select('id')
-        .eq('session_id', session.id)
-        .eq('user_id', user.id)
-        .single();
+      const result = await joinSession({
+        supabase,
+        sessionId: session.id,
+        userId: user.id,
+        userName: user.user_metadata?.name || user.email || 'Someone',
+      });
 
-      if (existing) {
-        showInfo(language === 'es' ? '¡Ya te uniste a esta sesión!' : 'You already joined this session!');
+      if (!result.success) {
+        const errorMessages: Record<string, string> = {
+          session_not_found: language === 'es' ? 'Sesión no encontrada' : 'Session not found',
+          session_not_active: language === 'es' ? 'Esta sesión ya no está activa' : 'This session is no longer active',
+          self_join: language === 'es' ? '¡No puedes unirte a tu propia sesión!' : 'You cannot join your own session!',
+          already_joined: language === 'es' ? '¡Ya te uniste a esta sesión!' : 'You already joined this session!',
+          capacity_full: language === 'es' ? 'Esta sesión está llena' : 'This session is full',
+          invite_only: language === 'es' ? 'Sesión privada. Necesitas una invitación del organizador.' : 'This is a private session. You need a direct invitation from the host.',
+        };
+        showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
         return;
       }
 
-      await supabase.from('session_participants').insert({
-        session_id: session.id,
-        user_id: user.id,
-        status: 'confirmed'
-      });
-
-      await supabase
-        .from('sessions')
-        .update({ current_participants: session.current_participants + 1 })
-        .eq('id', session.id);
-
-      // Notify the host (fire and forget)
-      const joinerName = user.user_metadata?.name || user.email || 'Someone';
-      fetch('/api/notifications/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: session.creator_id,
-          title: '🎉 New Training Partner!',
-          body: `${joinerName} joined your ${session.sport} session`,
-          url: `/session/${session.id}`,
-          data: { sessionId: session.id, type: 'join' }
-        })
-      }).catch(err => console.error('Failed to notify host:', err));
-
-      celebrateJoin();
-      showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
+      if (result.status === 'pending') {
+        showSuccess(language === 'es' ? '¡Solicitud enviada! El organizador revisará tu perfil.' : 'Request sent! The host will review your profile and decide.');
+      } else {
+        celebrateJoin();
+        showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
+      }
       await loadSession();
     } catch (error: any) {
       showError(getErrorMessage(error, 'join_session', language));
