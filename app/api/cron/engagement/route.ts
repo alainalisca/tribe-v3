@@ -115,7 +115,7 @@ export async function GET(request: Request) {
                 userId: user.id,
                 title: content.title,
                 body: content.body,
-                url: '/my-sessions'
+                url: '/sessions'
               })
             });
 

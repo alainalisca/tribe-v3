@@ -1,99 +1,122 @@
 'use client';
+import { formatTime12Hour } from "@/lib/utils";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import BottomNav from '@/components/BottomNav';
-import SessionCard from '@/components/SessionCard';
-import { Calendar } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Calendar, MapPin, Users, Clock, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
+import { sportTranslations } from '@/lib/translations';
 
 export default function SessionsPage() {
+  const [user, setUser] = useState<any>(null);
+  const [hostingSessions, setHostingSessions] = useState<any[]>([]);
+  const [joinedSessions, setJoinedSessions] = useState<any[]>([]);
+  const [pastSessions, setPastSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const router = useRouter();
   const supabase = createClient();
-  const { t } = useLanguage();
-  const [user, setUser] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'Hosting' | 'joined'>('Hosting');
-  const [HostingSessions, setHostingSessions] = useState<any[]>([]);
-  const [joinedSessions, setJoinedSessions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     checkUser();
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      loadSessions();
-    }
-  }, [user]);
-
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth');
-    } else {
-      setUser(user);
+      return;
     }
+    setUser(user);
+    await loadSessions(user.id);
   }
 
-  async function loadSessions() {
+  function isSessionPast(session: any): boolean {
+    const sessionDate = new Date(session.date + 'T00:00:00');
+    if (session.start_time) {
+      const [hours, minutes] = session.start_time.split(':').map(Number);
+      sessionDate.setHours(hours, minutes, 0, 0);
+      sessionDate.setMinutes(sessionDate.getMinutes() + (session.duration || 60));
+    } else {
+      sessionDate.setHours(23, 59, 59, 999);
+    }
+    return sessionDate < new Date();
+  }
+
+  async function loadSessions(userId: string) {
     try {
-      setLoading(true);
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const { data: Hosting, error: HostingError } = await supabase
+      // Load sessions I'm hosting (upcoming) - include today's sessions
+      const { data: hosting } = await supabase
         .from('sessions')
         .select(`
           *,
-          participants:session_participants(
-            user_id, 
-            status,
-            user:users(id, name, avatar_url)
-          ),
-          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
+          participants:session_participants(user_id, status)
         `)
-        .eq('creator_id', user.id)
-        .eq('status', 'active')
+        .eq('creator_id', userId)
         .gte('date', today)
+        .eq('status', 'active')
         .order('date', { ascending: true });
 
-      if (HostingError) throw HostingError;
+      // Filter out hosting sessions that have actually ended (today's sessions past their end time)
+      const upcomingHosting = (hosting || []).filter(s => !isSessionPast(s));
 
-      const { data: participations, error: partError } = await supabase
+      // Load sessions I've joined (upcoming)
+      const { data: joined } = await supabase
         .from('session_participants')
-        .select('session_id')
-        .eq('user_id', user.id)
+        .select(`
+          session:sessions(
+            *,
+            creator:users!sessions_creator_id_fkey(name, avatar_url)
+          )
+        `)
+        .eq('user_id', userId)
         .eq('status', 'confirmed');
 
-      if (partError) throw partError;
+      // Filter joined sessions to only upcoming ones (not past their end time)
+      const upcomingJoined = joined?.filter(j => {
+        const session = j.session as any;
+        if (!session) return false;
+        return !isSessionPast(session) && session.creator_id !== userId;
+      }).map(j => j.session as any) || [];
 
-      if (participations && participations.length > 0) {
-        const sessionIds = participations.map(p => p.session_id);
-        
-        const { data: joined, error: joinedError } = await supabase
-          .from('sessions')
-          .select(`
-            *,
-            participants:session_participants(
-              user_id, 
-              status,
-              user:users(id, name, avatar_url)
-            ),
-            creator:users!sessions_creator_id_fkey(id, name, avatar_url)
-          `)
-          .in('id', sessionIds)
-          .eq('status', 'active')
-          .gte('date', today)
-          .order('date', { ascending: true });
+      // Load past sessions (both hosted and joined)
+      const { data: pastHosted } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('creator_id', userId)
+        .lte('date', today)
+        .order('date', { ascending: false })
+        .limit(20);
 
-        if (joinedError) throw joinedError;
-        setJoinedSessions(joined || []);
-      }
+      // Filter to only actually past sessions
+      const pastHostedFiltered = (pastHosted || []).filter(s => isSessionPast(s));
 
-      setHostingSessions(Hosting || []);
+      const pastJoinedData = joined?.filter(j => {
+        const session = j.session as any;
+        if (!session) return false;
+        return isSessionPast(session);
+      }).map(j => ({ ...(j.session as any), wasParticipant: true })) || [];
+
+      // Combine and dedupe past sessions
+      const allPast = [...pastHostedFiltered, ...pastJoinedData];
+      const uniquePast = allPast.reduce((acc: any[], curr) => {
+        if (!acc.find(s => s.id === curr.id)) {
+          acc.push(curr);
+        }
+        return acc;
+      }, []);
+      uniquePast.sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime());
+
+      setHostingSessions(upcomingHosting);
+      setJoinedSessions(upcomingJoined);
+      setPastSessions(uniquePast.slice(0, 20));
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
@@ -101,41 +124,79 @@ export default function SessionsPage() {
     }
   }
 
-  if (!user) {
+  const txt = language === 'es' ? {
+    mySessions: 'Mis Sesiones',
+    upcoming: 'Próximas',
+    past: 'Historial',
+    hosting: 'Organizando',
+    joined: 'Unido',
+    noUpcoming: 'No tienes sesiones próximas',
+    noPast: 'No tienes sesiones pasadas',
+    browseHome: 'Explora sesiones para unirte',
+    createSession: 'Crear Sesión',
+    browseSessions: 'Ver Sesiones',
+    spots: 'lugares',
+    ended: 'Terminada',
+  } : {
+    mySessions: 'My Sessions',
+    upcoming: 'Upcoming',
+    past: 'History',
+    hosting: 'Hosting',
+    joined: 'Joined',
+    noUpcoming: 'No upcoming sessions',
+    noPast: 'No past sessions',
+    browseHome: 'Browse sessions to join',
+    createSession: 'Create Session',
+    browseSessions: 'Browse Sessions',
+    spots: 'spots',
+    ended: 'Ended',
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+        <div className="animate-pulse text-stone-500 dark:text-gray-400">
+          <div className="w-8 h-8 border-4 border-tribe-green border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        </div>
       </div>
     );
   }
 
+  const getSportName = (sport: string) => {
+    return language === 'es' ? (sportTranslations[sport]?.es || sport) : sport;
+  };
+
   return (
-    <div className="min-h-screen bg-theme-page pb-32">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <h1 className="text-xl font-bold text-theme-primary">{t('mySessions')}</h1>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
+            {txt.mySessions}
+          </h1>
         </div>
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="flex gap-4 border-b border-theme">
+
+        {/* Tabs */}
+        <div className="border-t border-stone-300 dark:border-black">
+          <div className="max-w-2xl mx-auto flex">
             <button
-              onClick={() => setActiveTab('Hosting')}
-              className={`pb-2 px-1 font-medium transition ${
-                activeTab === 'Hosting'
-                  ? 'border-b-2 border-tribe-green text-theme-primary'
-                  : 'text-theme-secondary'
+              onClick={() => setActiveTab('upcoming')}
+              className={`flex-1 py-3 text-sm font-semibold transition ${
+                activeTab === 'upcoming'
+                  ? 'text-tribe-green border-b-2 border-tribe-green'
+                  : 'text-stone-600 dark:text-gray-400'
               }`}
             >
-              {t('hosting')}
+              {txt.upcoming} ({hostingSessions.length + joinedSessions.length})
             </button>
             <button
-              onClick={() => setActiveTab('joined')}
-              className={`pb-2 px-1 font-medium transition ${
-                activeTab === 'joined'
-                  ? 'border-b-2 border-tribe-green text-theme-primary'
-                  : 'text-theme-secondary'
+              onClick={() => setActiveTab('past')}
+              className={`flex-1 py-3 text-sm font-semibold transition ${
+                activeTab === 'past'
+                  ? 'text-tribe-green border-b-2 border-tribe-green'
+                  : 'text-stone-600 dark:text-gray-400'
               }`}
             >
-              {t('joined')}
+              {txt.past} ({pastSessions.length})
             </button>
           </div>
         </div>
@@ -145,66 +206,77 @@ export default function SessionsPage() {
       <div style={{ height: '140px' }} aria-hidden="true" />
 
       <div className="max-w-2xl mx-auto px-4 pb-4">
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-theme-card rounded-xl animate-pulse" />
-            ))}
-          </div>
+        {activeTab === 'upcoming' ? (
+          <>
+            {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
+              <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
+                <Calendar className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
+                  {txt.noUpcoming}
+                </h2>
+                <p className="text-stone-600 dark:text-gray-300 mb-6">
+                  {txt.browseHome}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Link href="/create">
+                    <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
+                      {txt.createSession}
+                    </button>
+                  </Link>
+                  <Link href="/">
+                    <button className="px-6 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition">
+                      {txt.browseSessions}
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Hosting Section */}
+                {hostingSessions.length > 0 && (
+                  <div>
+                    <h2 className="text-sm font-bold text-stone-600 dark:text-gray-400 uppercase tracking-wide mb-3">
+                      {txt.hosting} ({hostingSessions.length})
+                    </h2>
+                    <div className="space-y-3">
+                      {hostingSessions.map((session) => (
+                        <SessionCard key={session.id} session={session} getSportName={getSportName} txt={txt} language={language} isHost />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Joined Section */}
+                {joinedSessions.length > 0 && (
+                  <div>
+                    <h2 className="text-sm font-bold text-stone-600 dark:text-gray-400 uppercase tracking-wide mb-3">
+                      {txt.joined} ({joinedSessions.length})
+                    </h2>
+                    <div className="space-y-3">
+                      {joinedSessions.map((session) => (
+                        <SessionCard key={session.id} session={session} getSportName={getSportName} txt={txt} language={language} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         ) : (
           <>
-            {activeTab === 'Hosting' && (
-              <>
-                {HostingSessions.length === 0 ? (
-                  <div className="bg-theme-card rounded-xl p-8 text-center border border-theme">
-                    <Calendar className="w-12 h-12 text-theme-secondary mx-auto mb-3" />
-                    <p className="text-theme-secondary mb-2">{t('noHostingSessions')}</p>
-                    <p className="text-sm text-theme-secondary mb-4">{t('createFirstSession')}</p>
-                    <Link href="/create">
-                      <button className="px-6 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-lime-500 transition">
-                        {t('createSession')}
-                      </button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {HostingSessions.map((session) => (
-                      <SessionCard
-                        key={session.id}
-                        session={session}
-                        currentUserId={user?.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {activeTab === 'joined' && (
-              <>
-                {joinedSessions.length === 0 ? (
-                  <div className="bg-theme-card rounded-xl p-8 text-center border border-theme">
-                    <Calendar className="w-12 h-12 text-theme-secondary mx-auto mb-3" />
-                    <p className="text-theme-secondary mb-2">{t('noJoinedSessions')}</p>
-                    <p className="text-sm text-theme-secondary mb-4">{t('browseHomePage')}</p>
-                    <Link href="/">
-                      <button className="px-6 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-lime-500 transition">
-                        {t('findSessions')}
-                      </button>
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {joinedSessions.map((session) => (
-                      <SessionCard
-                        key={session.id}
-                        session={session}
-                        currentUserId={user?.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
+            {pastSessions.length === 0 ? (
+              <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
+                <Clock className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
+                  {txt.noPast}
+                </h2>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pastSessions.map((session) => (
+                  <SessionCard key={session.id} session={session} getSportName={getSportName} txt={txt} language={language} isPast />
+                ))}
+              </div>
             )}
           </>
         )}
@@ -212,5 +284,59 @@ export default function SessionsPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+function SessionCard({ session, getSportName, txt, language, isHost = false, isPast = false }: any) {
+  return (
+    <Link href={`/session/${session.id}`}>
+      <div className={`bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer ${isPast ? 'opacity-75' : ''}`}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                isPast
+                  ? 'bg-stone-200 dark:bg-[#52575D] text-stone-600 dark:text-gray-400'
+                  : 'bg-tribe-green text-slate-900'
+              }`}>
+                {getSportName(session.sport)}
+              </span>
+              {isHost && (
+                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                  {txt.hosting}
+                </span>
+              )}
+              {isPast && (
+                <span className="text-xs text-stone-500 dark:text-gray-400">
+                  {txt.ended}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
+                <Calendar className="w-4 h-4 mr-2 text-stone-400" />
+                {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric'
+                })} • {formatTime12Hour(session.start_time)}
+              </div>
+              <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
+                <MapPin className="w-4 h-4 mr-2 text-stone-400" />
+                <span className="truncate">{session.location}</span>
+              </div>
+              {!isPast && (
+                <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
+                  <Users className="w-4 h-4 mr-2 text-stone-400" />
+                  {session.current_participants || 1}/{session.max_participants} {txt.spots}
+                </div>
+              )}
+            </div>
+          </div>
+          <ChevronRight className="w-5 h-5 text-stone-400 flex-shrink-0 ml-2" />
+        </div>
+      </div>
+    </Link>
   );
 }

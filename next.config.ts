@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
     unoptimized: true
   },
   trailingSlash: true,
+  async redirects() {
+    return [
+      {
+        source: '/my-sessions',
+        destination: '/sessions',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
