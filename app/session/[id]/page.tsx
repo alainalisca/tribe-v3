@@ -45,6 +45,7 @@ export default function SessionDetailPage() {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [guestData, setGuestData] = useState({ name: '', phone: '', email: '' });
   const [joiningAsGuest, setJoiningAsGuest] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
   const [guestHasJoined, setGuestHasJoined] = useState(false);
   const [guestParticipantId, setGuestParticipantId] = useState<string | null>(null);
@@ -617,6 +618,8 @@ export default function SessionDetailPage() {
       setShowGuestModal(true);
       return;
     }
+    if (joining) return;
+    setJoining(true);
 
     try {
       const result = await joinSession({
@@ -648,6 +651,8 @@ export default function SessionDetailPage() {
       await loadSession();
     } catch (error: any) {
       showError(getErrorMessage(error, 'join_session', language));
+    } finally {
+      setJoining(false);
     }
   }
 
@@ -1337,11 +1342,12 @@ export default function SessionDetailPage() {
                 Session Full
               </button>
             ) : (
-              <button 
+              <button
                 onClick={handleJoin}
-                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+                disabled={joining}
+                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 transition"
               >
-                Join Session
+                {joining ? (language === 'es' ? 'Uniéndose...' : 'Joining...') : (language === 'es' ? 'Unirse a la Sesión' : 'Join Session')}
               </button>
             )}
 
