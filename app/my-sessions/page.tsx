@@ -1,7 +1,7 @@
 'use client';
 import { formatTime12Hour } from "@/lib/utils";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, Users, Clock, ChevronRight } from 'lucide-react';
@@ -20,33 +20,6 @@ export default function MySessionsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-
-  const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(180);
-
-  const measureHeader = useCallback(() => {
-    if (headerRef.current) {
-      setHeaderHeight(headerRef.current.offsetHeight);
-    }
-  }, []);
-
-  useEffect(() => {
-    measureHeader();
-    window.addEventListener('resize', measureHeader);
-    return () => window.removeEventListener('resize', measureHeader);
-  }, [measureHeader]);
-
-  useEffect(() => {
-    measureHeader();
-  }, [activeTab, measureHeader]);
-
-  // Re-measure after loading completes and DOM has content
-  useEffect(() => {
-    if (!loading) {
-      measureHeader();
-      requestAnimationFrame(() => measureHeader());
-    }
-  }, [loading, measureHeader]);
 
   useEffect(() => {
     checkUser();
@@ -198,7 +171,7 @@ export default function MySessionsPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
             {txt.mySessions}
@@ -232,7 +205,7 @@ export default function MySessionsPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pb-4" style={{ paddingTop: Math.max(headerHeight + 16, 200) }}>
+      <div className="max-w-2xl mx-auto px-4 pb-4 pt-header-tabs">
         {activeTab === 'upcoming' ? (
           <>
             {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
