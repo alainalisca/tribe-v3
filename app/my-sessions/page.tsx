@@ -206,7 +206,7 @@ export default function MySessionsPage() {
       </div>
 
       {/* Spacer to push content below fixed header — safe-area + title (56px) + tabs (48px) + gap (16px) */}
-      <div className="safe-area-top" style={{ paddingTop: 'calc(56px + 48px + 40px)' }} aria-hidden="true" />
+      <div style={{ height: 'calc(env(safe-area-inset-top, 44px) + 56px + 48px + 16px)' }} aria-hidden="true" />
 
       <div className="max-w-2xl mx-auto px-4 pb-4">
         {activeTab === 'upcoming' ? (
