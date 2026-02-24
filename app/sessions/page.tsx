@@ -141,7 +141,10 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 44px) + 3.5rem + 2.5rem)' }}>
+      {/* Spacer to push content below fixed header */}
+      <div style={{ height: '180px', background: 'red' }} aria-hidden="true" />
+
+      <div className="max-w-2xl mx-auto px-4 pb-4">
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
