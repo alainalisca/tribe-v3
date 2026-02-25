@@ -19,6 +19,10 @@ All new code MUST:
 - Follow the fixed header spacing conventions in CONVENTIONS.md
 - Be under 300 lines per file (split into focused components/modules if larger)
 
+## Skills
+
+Project-specific skills live in `.claude/skills/`. Before writing code in a domain (API routes, components, migrations, tests, i18n, etc.), read the relevant `SKILL.md` file for enforced patterns and checklists. Run `/session-briefing` at the start of a new session to get oriented.
+
 ## Commands
 
 ```bash
