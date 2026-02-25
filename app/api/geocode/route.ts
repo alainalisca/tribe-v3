@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 export async function GET(request: Request) {
   // AUTH: prevent bots from exhausting Google geocoding quota
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
       lon,
     });
   } catch (error) {
-    console.error('Geocoding error:', error);
+    logError(error, { route: '/api/geocode', action: 'reverse_geocode' });
     return NextResponse.json({ error: 'Geocoding failed' }, { status: 500 });
   }
 }

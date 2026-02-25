@@ -1,3 +1,5 @@
+import { logError } from '@/lib/logger';
+
 export async function joinSession({
   supabase,
   sessionId,
@@ -100,10 +102,11 @@ export async function joinSession({
         url: `/session/${sessionId}`,
         data: { sessionId, type: 'join' },
       }),
-    }).catch(err => console.error('Failed to notify host:', err));
+    }).catch(err => logError(err, { action: 'notify_host', sessionId }));
 
     return { success: true, status };
   } catch (error: any) {
+    logError(error, { action: 'joinSession', userId, sessionId });
     return { success: false, error: error.message };
   }
 }

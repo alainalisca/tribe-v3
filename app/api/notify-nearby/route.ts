@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error in notify-nearby:', error);
+    logError(error, { route: '/api/notify-nearby', action: 'send_nearby_notifications' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

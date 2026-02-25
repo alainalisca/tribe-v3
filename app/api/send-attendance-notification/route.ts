@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Email send error:', error);
+    logError(error, { route: '/api/send-attendance-notification', action: 'send_email' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

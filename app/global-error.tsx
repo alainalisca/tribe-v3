@@ -1,5 +1,7 @@
 'use client';
 
+import { logError } from '@/lib/logger';
+
 export default function GlobalError({
   error,
   reset,
@@ -7,6 +9,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  logError(error, { action: 'error_boundary', route: 'app/global-error' });
+
   return (
     <html>
       <body>
