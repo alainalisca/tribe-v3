@@ -187,7 +187,7 @@ export default function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-      <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
+      <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
             {txt.mySessions}
@@ -222,7 +222,7 @@ export default function SessionsPage() {
       </div>
 
       <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-[200px]'}>
-      <div className="max-w-2xl mx-auto px-4 pb-4">
+      <div className="max-w-2xl mx-auto p-4">
         {activeTab === 'upcoming' ? (
           <>
             {hostingSessions.length === 0 && joinedSessions.length === 0 ? (

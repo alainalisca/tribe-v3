@@ -4,7 +4,27 @@
 
 **NEVER use hardcoded padding to clear fixed headers.** This has caused recurring clipping bugs across multiple pages.
 
-### The correct pattern:
+### Header clearing: two approaches
+
+**Simple headers** (single title bar, fixed height):
+Use the `pt-header` CSS class. This works for headers that are always the same height.
+
+```tsx
+<div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+  <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+    <h1>Title</h1>
+  </div>
+</div>
+
+<div className="pt-header max-w-2xl mx-auto p-4">
+  {/* Scrollable content */}
+</div>
+```
+
+Pages using this: `requests`, `messages`, `profile`, `create`, `matches`
+
+**Multi-part headers** (title + tabs, title + filters, variable height):
+Use dynamic ref measurement. Required when header height varies by content, device, or state.
 
 ```tsx
 const fixedAreaRef = useRef<HTMLDivElement>(null);
@@ -22,7 +42,6 @@ useEffect(() => {
   return () => window.removeEventListener('resize', measureFixed);
 }, [measureFixed]);
 
-// Re-measure when content that affects header height changes
 useEffect(() => {
   measureFixed();
   requestAnimationFrame(() => measureFixed());
@@ -30,20 +49,26 @@ useEffect(() => {
 
 return (
   <>
-    <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top ...">
+    <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top ... border-b border-stone-300 dark:border-black">
       {/* Header content */}
     </div>
     <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-[200px]'}>
-      {/* Scrollable content */}
+      <div className="max-w-2xl mx-auto p-4">
+        {/* Scrollable content */}
+      </div>
     </div>
   </>
 );
 ```
 
-### Pages using this pattern:
+Pages using this: `app/page.tsx` (home via FilterBar), `app/sessions/page.tsx`
 
-- `app/page.tsx` (home) — via `FilterBar` component with `onFixedHeightChange` callback
-- `app/sessions/page.tsx` — direct ref measurement
+### Standard spacing rules
+
+1. **Fixed header div**: Always include `border-b border-stone-300 dark:border-black` for visual separation
+2. **Content container**: Always use `p-4` (16px all sides) for the content div inside the clearing wrapper. This creates a consistent 16px gap between header bottom and first content element.
+3. **Never** use `px-4 pb-4` or `px-4` alone — always include top padding via `p-4` or `pt-4`
+4. **Exception**: Profile page uses no top padding because the banner image is meant to sit flush against the header
 
 ### Why not hardcoded values:
 
