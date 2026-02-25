@@ -276,7 +276,6 @@ export default function CreateSessionPage() {
         status: 'active',
         photos: photos.length > 0 ? photos : null,
       };
-      console.log('Creating session with data:', JSON.stringify(insertData, null, 2));
 
       const { data, error } = await supabase
         .from('sessions')
