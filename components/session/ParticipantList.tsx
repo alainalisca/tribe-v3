@@ -3,13 +3,37 @@
 import { UserX } from 'lucide-react';
 import Link from 'next/link';
 
+interface CreatorInfo {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  average_rating: number | null;
+  total_reviews: number | null;
+}
+
+interface ParticipantInfo {
+  user_id: string | null;
+  status: string | null;
+  is_guest?: boolean | null;
+  guest_name?: string | null;
+  user?: { id: string; name: string; avatar_url: string | null } | null;
+}
+
+interface ParticipantListProps {
+  creator: CreatorInfo | null;
+  participants: ParticipantInfo[];
+  canKick: boolean;
+  language: 'en' | 'es';
+  onKickUser: (userId: string, userName: string) => void;
+}
+
 export default function ParticipantList({
   creator,
   participants,
   canKick,
   language,
   onKickUser,
-}: any) {
+}: ParticipantListProps) {
   if (!creator && participants.length === 0) return null;
 
   return (
@@ -40,7 +64,7 @@ export default function ParticipantList({
           </div>
         )}
 
-        {participants.map((participant: any) => (
+        {participants.map((participant) => (
           <div key={participant.user_id} className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
             <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
               {participant.user?.avatar_url ? (
@@ -61,7 +85,7 @@ export default function ParticipantList({
 
             {canKick && (
               <button
-                onClick={() => onKickUser(participant.user_id, participant.user?.name)}
+                onClick={() => participant.user_id && onKickUser(participant.user_id, participant.user?.name || 'Unknown')}
                 className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                 title="Remove from session"
               >

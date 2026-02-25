@@ -5,6 +5,27 @@ import { Camera, Upload, Trash2, Flag } from 'lucide-react';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 
+interface RecapPhoto {
+  id: string;
+  photo_url: string;
+  user_id: string | null;
+  reported?: boolean | null;
+}
+
+interface RecapPhotosProps {
+  session: { id: string };
+  recapPhotos: RecapPhoto[];
+  user: { id: string } | null;
+  isPast: boolean;
+  canUploadRecap: boolean;
+  canModerate: boolean;
+  shouldPromptUpload: boolean;
+  userPhotoCount: number;
+  language: 'en' | 'es';
+  onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
+  onPhotosChanged: () => void;
+}
+
 export default function RecapPhotos({
   session,
   recapPhotos,
@@ -17,7 +38,7 @@ export default function RecapPhotos({
   language,
   onOpenLightbox,
   onPhotosChanged,
-}: any) {
+}: RecapPhotosProps) {
   const [uploadingRecap, setUploadingRecap] = useState(false);
 
   async function compressImage(file: File): Promise<Blob> {
@@ -60,6 +81,7 @@ export default function RecapPhotos({
   }
 
   async function handleRecapUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!user) return;
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -134,6 +156,7 @@ export default function RecapPhotos({
   }
 
   async function reportRecapPhoto(photoId: string) {
+    if (!user) return;
     const reason = prompt('Report reason (optional):');
 
     try {

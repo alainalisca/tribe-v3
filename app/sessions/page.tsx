@@ -305,7 +305,24 @@ export default function SessionsPage() {
   );
 }
 
-function SessionCard({ session, getSportName, txt, language, isHost = false, isPast = false }: any) {
+interface SessionCardProps {
+  session: {
+    id: string;
+    sport: string;
+    date: string;
+    start_time: string;
+    location: string;
+    current_participants: number | null;
+    max_participants: number;
+  };
+  getSportName: (sport: string) => string;
+  txt: { hosting: string; ended: string; spots: string };
+  language: 'en' | 'es';
+  isHost?: boolean;
+  isPast?: boolean;
+}
+
+function SessionCard({ session, getSportName, txt, language, isHost = false, isPast = false }: SessionCardProps) {
   return (
     <Link href={`/session/${session.id}`}>
       <div className={`bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer ${isPast ? 'opacity-75' : ''}`}>

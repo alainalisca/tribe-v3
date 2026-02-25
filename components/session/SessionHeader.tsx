@@ -3,6 +3,15 @@
 import { ArrowLeft, Camera } from 'lucide-react';
 import Link from 'next/link';
 
+interface SessionHeaderProps {
+  language: 'en' | 'es';
+  isCreator: boolean;
+  hasJoined: boolean;
+  user: { id: string } | null;
+  sessionStories: { id: string }[];
+  onAddStory: () => void;
+}
+
 export default function SessionHeader({
   language,
   isCreator,
@@ -10,7 +19,7 @@ export default function SessionHeader({
   user,
   sessionStories,
   onAddStory,
-}: any) {
+}: SessionHeaderProps) {
   return (
     <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
       <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">

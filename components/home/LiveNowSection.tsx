@@ -2,12 +2,19 @@
 
 import Link from 'next/link';
 import { calculateDistance, formatDistance } from '@/lib/distance';
+import type { Session } from '@/lib/database.types';
+
+interface LiveNowSectionProps {
+  liveNowSessions: Session[];
+  userLocation: { latitude: number; longitude: number } | null;
+  language: 'en' | 'es';
+}
 
 export default function LiveNowSection({
   liveNowSessions,
   userLocation,
   language,
-}: any) {
+}: LiveNowSectionProps) {
   if (liveNowSessions.length === 0) return null;
 
   return (

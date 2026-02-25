@@ -4,7 +4,26 @@ import { useRef, useEffect, useCallback } from 'react';
 import { Search, X, MessageCircle, Film } from 'lucide-react';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
-import { sportTranslations } from '@/lib/translations';
+import { sportTranslations, TranslationKey } from '@/lib/translations';
+
+interface FilterBarProps {
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  selectedSport: string;
+  setSelectedSport: (sport: string) => void;
+  dateFilter: string;
+  setDateFilter: (filter: string) => void;
+  genderFilter: string;
+  setGenderFilter: (filter: string) => void;
+  maxDistance: number;
+  setMaxDistance: (distance: number) => void;
+  userLocation: { latitude: number; longitude: number } | null;
+  loading: boolean;
+  filteredCount: number;
+  language: 'en' | 'es';
+  t: (key: TranslationKey) => string;
+  onFixedHeightChange: (height: number) => void;
+}
 
 export default function FilterBar({
   searchQuery,
@@ -23,7 +42,7 @@ export default function FilterBar({
   language,
   t,
   onFixedHeightChange,
-}: any) {
+}: FilterBarProps) {
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const sports = Object.keys(sportTranslations);
 

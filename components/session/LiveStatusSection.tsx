@@ -3,6 +3,26 @@
 import { Camera } from 'lucide-react';
 import Link from 'next/link';
 
+interface LiveUser {
+  user_id: string;
+  name: string;
+  avatar_url: string | null;
+  started_at: string;
+}
+
+interface LiveStatusSectionProps {
+  canGoLive: boolean;
+  isLive: boolean;
+  liveCountdown: string;
+  liveUsers: LiveUser[];
+  goingLive: boolean;
+  language: 'en' | 'es';
+  onGoLive: () => void;
+  onEndLive: () => void;
+  onRenewLive: () => void;
+  onShareMoment: () => void;
+}
+
 export default function LiveStatusSection({
   canGoLive,
   isLive,
@@ -14,7 +34,7 @@ export default function LiveStatusSection({
   onEndLive,
   onRenewLive,
   onShareMoment,
-}: any) {
+}: LiveStatusSectionProps) {
   return (
     <>
       {/* Go Live / Live Controls */}

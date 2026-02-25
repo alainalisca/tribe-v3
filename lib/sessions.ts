@@ -1,16 +1,25 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+
+interface JoinSessionParams {
+  supabase: SupabaseClient;
+  sessionId: string;
+  userId: string;
+  userName: string;
+}
+
+interface JoinSessionResult {
+  success: boolean;
+  status?: 'confirmed' | 'pending';
+  error?: string;
+}
 
 export async function joinSession({
   supabase,
   sessionId,
   userId,
   userName,
-}: {
-  supabase: any;
-  sessionId: string;
-  userId: string;
-  userName: string;
-}): Promise<{ success: boolean; status?: 'confirmed' | 'pending'; error?: string }> {
+}: JoinSessionParams): Promise<JoinSessionResult> {
   try {
     // 1. Fetch the session
     const { data: session, error: sessionError } = await supabase
@@ -105,8 +114,8 @@ export async function joinSession({
     }).catch(err => logError(err, { action: 'notify_host', sessionId }));
 
     return { success: true, status };
-  } catch (error: any) {
+  } catch (error) {
     logError(error, { action: 'joinSession', userId, sessionId });
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

@@ -3,6 +3,30 @@
 import { formatTime12Hour } from '@/lib/utils';
 import { Calendar, Clock, MapPin, Users, Star } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
+import type { Session } from '@/lib/database.types';
+
+interface CreatorInfo {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+  average_rating: number | null;
+  total_reviews: number | null;
+}
+
+interface ParticipantInfo {
+  user_id: string | null;
+  status: string | null;
+  user?: { id: string; name: string; avatar_url: string | null } | null;
+}
+
+interface SessionDetailsProps {
+  session: Session;
+  creator: CreatorInfo | null;
+  participants: ParticipantInfo[];
+  isFull: boolean;
+  language: 'en' | 'es';
+  onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
+}
 
 export default function SessionDetails({
   session,
@@ -11,7 +35,7 @@ export default function SessionDetails({
   isFull,
   language,
   onOpenLightbox,
-}: any) {
+}: SessionDetailsProps) {
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -139,7 +163,7 @@ export default function SessionDetails({
               <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
                 <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                 <span>{Number(creator.average_rating).toFixed(1)}</span>
-                {creator.total_reviews > 0 && (
+                {(creator.total_reviews ?? 0) > 0 && (
                   <span className="text-yellow-600 text-xs">({creator.total_reviews})</span>
                 )}
               </div>

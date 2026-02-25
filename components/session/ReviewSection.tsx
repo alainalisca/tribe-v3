@@ -6,6 +6,17 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import StarRating from '@/components/StarRating';
 
+interface ReviewSectionProps {
+  session: { id: string; creator_id: string };
+  user: { id: string } | null;
+  isCreator: boolean;
+  hasJoined: boolean;
+  isPast: boolean;
+  hasReviewed: boolean;
+  language: 'en' | 'es';
+  onReviewSubmitted: () => void;
+}
+
 export default function ReviewSection({
   session,
   user,
@@ -15,7 +26,7 @@ export default function ReviewSection({
   hasReviewed,
   language,
   onReviewSubmitted,
-}: any) {
+}: ReviewSectionProps) {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [userRating, setUserRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');

@@ -1,5 +1,6 @@
-export function getErrorMessage(error: any, context: string, language: 'en' | 'es' = 'en'): string {
-  const errorCode = error?.code || error?.message || '';
+export function getErrorMessage(error: unknown, context: string, language: 'en' | 'es' = 'en'): string {
+  const err = error as Record<string, unknown> | null;
+  const errorCode = String(err?.code || err?.message || '');
   
   // Common Supabase/Postgres errors
   const errorMap: Record<string, { en: string; es: string }> = {
