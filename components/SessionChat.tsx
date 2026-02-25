@@ -67,7 +67,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           )
         `)
         .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(200);
 
       if (error) throw error;
       const messagesWithUser = data?.map(msg => ({

@@ -366,7 +366,7 @@ export default function SessionDetailPage() {
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {sessionStories.map((story: any) => (
                 <button key={story.id} onClick={() => setShowStoryViewer(true)} className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-stone-200 dark:border-gray-600 hover:border-tribe-green transition active:scale-95 relative">
-                  {story.media_type === 'video' && story.thumbnail_url ? <img src={story.thumbnail_url} alt="" className="w-full h-full object-cover" /> : story.media_type === 'video' ? <div className="w-full h-full bg-stone-800 flex items-center justify-center"><span className="text-white text-xl">▶</span></div> : <img src={story.media_url} alt="" className="w-full h-full object-cover" />}
+                  {story.media_type === 'video' && story.thumbnail_url ? <img loading="lazy" src={story.thumbnail_url} alt="" className="w-full h-full object-cover" /> : story.media_type === 'video' ? <div className="w-full h-full bg-stone-800 flex items-center justify-center"><span className="text-white text-xl">▶</span></div> : <img loading="lazy" src={story.media_url} alt="" className="w-full h-full object-cover" />}
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5"><span className="text-white text-[9px] truncate block">{(story.user as any)?.name}</span></div>
                 </button>
               ))}

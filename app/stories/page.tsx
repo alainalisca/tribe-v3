@@ -297,7 +297,7 @@ export default function StoriesPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-6 h-6 rounded-full overflow-hidden bg-stone-600 flex-shrink-0 flex items-center justify-center">
                         {story.user_avatar ? (
-                          <img src={story.user_avatar} alt="" className="w-full h-full object-cover" />
+                          <img loading="lazy" src={story.user_avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-[10px] text-white font-bold">
                             {(story.user_name || '?')[0]?.toUpperCase()}

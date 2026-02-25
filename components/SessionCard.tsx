@@ -232,7 +232,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs">
                   {session.creator.avatar_url ? (
-                    <img src={session.creator.avatar_url} alt={session.creator.name} className="w-6 h-6 rounded-full object-cover" />
+                    <img loading="lazy" src={session.creator.avatar_url} alt={session.creator.name} className="w-6 h-6 rounded-full object-cover" />
                   ) : (
                     session.creator.name?.[0]?.toUpperCase() || 'U'
                   )}

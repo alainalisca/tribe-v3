@@ -63,6 +63,7 @@ export default function SessionManagement({
                         {session.photos.slice(0, 3).map((photo: string, idx: number) => (
                           <img
                             key={idx}
+                            loading="lazy"
                             src={photo}
                             alt={`Photo ${idx + 1}`}
                             className="w-16 h-16 object-cover rounded border border-stone-200"

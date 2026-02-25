@@ -25,6 +25,8 @@ import { joinSession } from '@/lib/sessions';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUpcomingSessions, deleteSession as dalDeleteSession } from '@/lib/dal';
 
+const PAGE_SIZE = 20;
+
 export default function HomePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -49,6 +51,7 @@ export default function HomePage() {
   const [liveStatusMap, setLiveStatusMap] = useState<Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }>>({});
   const [liveUserIdSet, setLiveUserIdSet] = useState<Set<string>>(new Set());
   const [fixedHeight, setFixedHeight] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => { checkUser(); }, []);
 
@@ -70,7 +73,7 @@ export default function HomePage() {
 
   useEffect(() => { if (userChecked) loadSessions(); }, [userChecked]);
   useEffect(() => { getUserLocation().then(loc => { if (loc) setUserLocation(loc); }); }, []);
-  useEffect(() => { filterSessions(); }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
+  useEffect(() => { filterSessions(); setVisibleCount(PAGE_SIZE); }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
 
   async function tryRegisterPushNotifications(userId: string) {
     try {
@@ -346,7 +349,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredSessions.map((session) => {
+            {filteredSessions.slice(0, visibleCount).map((session) => {
               let distanceText: string | undefined;
               if (userLocation && session.latitude && session.longitude) {
                 distanceText = formatDistance(
@@ -377,6 +380,16 @@ export default function HomePage() {
                 />
               );
             })}
+            {visibleCount < filteredSessions.length && (
+              <button
+                onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
+                className="w-full py-3 bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-[#52575D] hover:bg-stone-100 dark:hover:bg-[#7D8490] transition"
+              >
+                {language === 'es'
+                  ? `Mostrar más (${filteredSessions.length - visibleCount} restantes)`
+                  : `Show more (${filteredSessions.length - visibleCount} remaining)`}
+              </button>
+            )}
           </div>
         )}
       </div>
