@@ -22,7 +22,7 @@ import ParticipantList from '@/components/session/ParticipantList';
 import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
-import { fetchSessionWithDetails, cancelSession } from '@/lib/dal';
+import { fetchSessionWithDetails, cancelSession, fetchConfirmedCount } from '@/lib/dal';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -305,6 +305,11 @@ export default function SessionDetailPage() {
     if (!guestData.name || !guestData.phone) { showError(language === "es" ? "Completa nombre y teléfono" : "Fill in name and phone"); return; }
     try {
       setJoiningAsGuest(true);
+      const countResult = await fetchConfirmedCount(supabase, session.id);
+      if (countResult.success && (countResult.data ?? 0) >= session.max_participants) {
+        showError(language === "es" ? "Esta sesión está llena" : "This session is full");
+        return;
+      }
       const { data, error } = await supabase.from("session_participants").insert({ session_id: session.id, user_id: null, is_guest: true, guest_name: guestData.name, guest_phone: guestData.phone, guest_email: guestData.email || null, status: "confirmed" }).select('id').single();
       if (error) throw error;
       await supabase.from("sessions").update({ current_participants: session.current_participants + 1 }).eq("id", session.id);
