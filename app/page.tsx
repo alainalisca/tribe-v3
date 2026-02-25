@@ -178,7 +178,7 @@ export default function HomePage() {
     if (dateFilter !== "all") {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      let endDate = new Date();
+      const endDate = new Date();
       if (dateFilter === "today") endDate.setHours(23, 59, 59, 999);
       else if (dateFilter === "week") endDate.setDate(today.getDate() + 7);
       else if (dateFilter === "month") endDate.setMonth(today.getMonth() + 1);

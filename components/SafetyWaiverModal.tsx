@@ -92,7 +92,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
               className="mt-1 w-5 h-5 accent-tribe-green"
             />
             <span className="text-sm text-stone-700 dark:text-gray-300 group-hover:text-stone-900 dark:group-hover:text-white">
-              I'm 18 or older and physically able to participate in the activities I join
+              I&apos;m 18 or older and physically able to participate in the activities I join
             </span>
           </label>
         </div>

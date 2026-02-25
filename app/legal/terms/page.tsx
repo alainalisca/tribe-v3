@@ -38,7 +38,7 @@ export default function TermsPage() {
           <div className="space-y-6">
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">1. ACCEPTANCE OF TERMS</h2>
-              <p className="text-stone-700 dark:text-gray-300 mb-3">By accessing, downloading, or using the Tribe mobile application, website, or related services (collectively, the "Platform"), you agree to be bound by these Terms of Service ("Terms") and our Privacy Policy, which is incorporated herein by reference.</p>
+              <p className="text-stone-700 dark:text-gray-300 mb-3">By accessing, downloading, or using the Tribe mobile application, website, or related services (collectively, the &quot;Platform&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;) and our Privacy Policy, which is incorporated herein by reference.</p>
               <p className="text-stone-700 dark:text-gray-300 mb-3">If you do not agree to these Terms, you must not access or use Tribe.</p>
             </section>
 

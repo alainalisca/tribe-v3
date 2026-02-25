@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const jwt = require('jsonwebtoken');
 
 // Initialize web-push with VAPID details

@@ -308,7 +308,7 @@ export default function SessionDetailPage() {
             )
           ) : isCreator ? (
             <>
-              <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">You're hosting this session</div>
+              <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">You&apos;re hosting this session</div>
               {!isPast && (
                 <>
                   <button onClick={() => router.push(`/session/${params.id}/edit`)} className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition flex items-center justify-center gap-2">

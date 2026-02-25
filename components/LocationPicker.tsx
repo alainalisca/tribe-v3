@@ -166,17 +166,18 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
 
   // Map click handler component
   function MapClickHandler() {
-    if (!mapComponents) return null;
-    const { useMapEvents, useMap } = mapComponents;
-
-    const map = useMapEvents({
-      click(e: any) {
-        handleMapClick(e.latlng.lat, e.latlng.lng);
-      },
-    });
+    // REASON: mapComponents is dynamically imported — hooks must still be called unconditionally
+    const hookFns = mapComponents;
+    const map = hookFns?.useMapEvents
+      ? hookFns.useMapEvents({
+          click(e: any) {
+            handleMapClick(e.latlng.lat, e.latlng.lng);
+          },
+        })
+      : null;
 
     useEffect(() => {
-      mapRef.current = map;
+      if (map) mapRef.current = map;
     }, [map]);
 
     useEffect(() => {
@@ -190,9 +191,10 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
 
   // Draggable marker component
   function DraggableMarker() {
+    const markerRef = useRef<any>(null);
+
     if (!mapComponents || !position) return null;
     const { Marker } = mapComponents;
-    const markerRef = useRef<any>(null);
 
     const eventHandlers = {
       dragend() {

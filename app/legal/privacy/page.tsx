@@ -108,7 +108,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">7. Children's Privacy</h2>
+              <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">7. Children&apos;s Privacy</h2>
               <p>Tribe is not intended for users under 18. We do not knowingly collect information from children under 18. If we learn we have collected such information, we will delete it immediately.</p>
             </section>
 

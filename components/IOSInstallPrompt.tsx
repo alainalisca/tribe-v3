@@ -118,7 +118,7 @@ export default function IOSInstallPrompt() {
                 <p className="font-semibold mb-1 text-gray-900 dark:text-white">Install app</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Home className="w-4 h-4" />
-                  <span>or "Add to Home screen"</span>
+                  <span>or &quot;Add to Home screen&quot;</span>
                 </div>
               </div>
             </div>

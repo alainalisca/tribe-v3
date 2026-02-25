@@ -50,11 +50,11 @@ export default function SafetyPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
-                  <span>Tell someone where you're going, who you're meeting, and when you'll be back</span>
+                  <span>Tell someone where you&apos;re going, who you&apos;re meeting, and when you&apos;ll be back</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
-                  <span>Trust your instincts - if something feels off, don't go</span>
+                  <span>Trust your instincts - if something feels off, don&apos;t go</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
@@ -80,7 +80,7 @@ export default function SafetyPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
-                  <span>Listen to your body and don't push beyond your limits</span>
+                  <span>Listen to your body and don&apos;t push beyond your limits</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
@@ -143,7 +143,7 @@ export default function SafetyPage() {
               <ol className="list-decimal pl-6 space-y-2">
                 <li>Leave the situation immediately if you feel unsafe</li>
                 <li>Block and report the user in the app</li>
-                <li>Contact local authorities if you're in immediate danger</li>
+                <li>Contact local authorities if you&apos;re in immediate danger</li>
                 <li>Email us with details: <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">admin@aplusfitnessllc.com</a></li>
               </ol>
             </section>
