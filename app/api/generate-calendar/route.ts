@@ -4,6 +4,7 @@ import { createEvents } from 'ics';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
+// PUBLIC: Calendar .ics files are shared via link — no auth required
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -73,8 +74,8 @@ export async function GET(request: Request) {
         'Content-Disposition': `attachment; filename="tribe-${session.sport.toLowerCase()}-${session.date}.ics"`,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Calendar generation error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

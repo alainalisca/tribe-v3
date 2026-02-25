@@ -7,9 +7,14 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 
 export async function POST(request: Request) {
   try {
-    const { sessionId, userId } = await request.json();
-    
+    // AUTH: verify the caller is authenticated
     const supabase = await createClient();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { sessionId, userId } = await request.json();
     
     // Get session details
     const { data: session } = await supabase
@@ -106,8 +111,8 @@ export async function POST(request: Request) {
     });
     
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Email send error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

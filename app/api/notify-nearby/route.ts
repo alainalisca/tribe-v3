@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -15,9 +16,22 @@ function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number)
 
 export async function POST(request: Request) {
   try {
+    // AUTH: verify the caller is authenticated
+    const supabaseAuth = await createClient();
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { sessionId, sport, location, latitude, longitude, startIn, creatorId } = await request.json();
 
-    const supabase = createClient(
+    // AUTHORIZATION: only the session creator can trigger nearby notifications
+    if (user.id !== creatorId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Service role client needed to read all users' push tokens and locations
+    const supabase = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
@@ -108,8 +122,8 @@ export async function POST(request: Request) {
       total: nearbyUsers.length
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in notify-nearby:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
