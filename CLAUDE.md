@@ -6,6 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Tribe is a mobile-first PWA for connecting athletes to train together. Users can create/join training sessions, chat with participants, and find workout partners nearby. The app supports English and Spanish localization and targets the Colombia/Medellín market.
 
+## Code Quality Standards
+
+Before writing ANY code, consult these two files:
+- `engineering-standards.md` — Senior-engineer-level SOPs for all code quality decisions
+- `CONVENTIONS.md` — Project-specific UI and spacing conventions
+
+All new code MUST:
+- Use typed props and return types (no `any` without a comment explaining why)
+- Use the data access layer pattern (lib/dal/) for database operations — no inline Supabase calls in components
+- Include proper error handling (never empty catch blocks, use lib/logger.ts when available)
+- Follow the fixed header spacing conventions in CONVENTIONS.md
+- Be under 300 lines per file (split into focused components/modules if larger)
+
 ## Commands
 
 ```bash
