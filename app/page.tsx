@@ -22,6 +22,7 @@ import { scheduleSessionReminders } from '@/lib/reminders';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { joinSession } from '@/lib/sessions';
+import { getErrorMessage } from '@/lib/errorMessages';
 
 export default function HomePage() {
   const router = useRouter();
@@ -255,7 +256,7 @@ export default function HomePage() {
       await loadSessions();
     } catch (error: any) {
       console.error('Error joining session:', error);
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'join_session', language));
     }
   }
 
@@ -272,7 +273,7 @@ export default function HomePage() {
       if (pendingSessionId) { await handleJoinSession(pendingSessionId); setPendingSessionId(null); }
     } catch (error) {
       console.error('Error accepting waiver:', error);
-      showError('Error accepting waiver. Please try again.');
+      showError(getErrorMessage(error, 'accept_waiver', language));
     }
   }
 
@@ -385,7 +386,7 @@ export default function HomePage() {
                       if (error) throw error;
                       showSuccess("Session deleted successfully!");
                       await loadSessions();
-                    } catch (error: any) { showError("Error: " + error.message); }
+                    } catch (error: any) { showError(getErrorMessage(error, 'delete_session', language)); }
                   }}
                   onShare={handleShareSession}
                   distance={distanceText}

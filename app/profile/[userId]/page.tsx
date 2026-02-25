@@ -8,6 +8,7 @@ import { ArrowLeft, MapPin, Shield, Flag, X, ChevronLeft, ChevronRight } from 'l
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
 
 export default function PublicProfilePage() {
@@ -223,7 +224,7 @@ export default function PublicProfilePage() {
         showSuccess(t.userBlocked);
       }
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 
@@ -249,7 +250,7 @@ export default function PublicProfilePage() {
       setReportReason('');
       setReportDescription('');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'submit_feedback', language));
     } finally {
       setSubmitting(false);
     }

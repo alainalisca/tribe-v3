@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
 
@@ -116,7 +117,7 @@ export default function InvitePage() {
         router.push('/');
       }, 3000);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'accept_invite', language));
     } finally {
       setJoining(false);
     }

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
 
 export default function SettingsPage() {
@@ -71,7 +72,7 @@ export default function SettingsPage() {
       showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
       router.push('/');
     } catch (error: any) {
-      showError(error.message);
+      showError(getErrorMessage(error, 'update_settings', language));
     }
   }
 
@@ -98,7 +99,7 @@ export default function SettingsPage() {
           : (language === 'es' ? 'Recordatorios desactivados' : 'Reminders disabled')
       );
     } catch (error: any) {
-      showError(error.message);
+      showError(getErrorMessage(error, 'update_settings', language));
     } finally {
       setLoadingReminders(false);
     }

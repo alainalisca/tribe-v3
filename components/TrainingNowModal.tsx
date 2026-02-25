@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { sportTranslations } from '@/lib/translations';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
@@ -159,7 +160,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
       });
     } catch (error: any) {
       console.error('Error creating session:', error);
-      showError(error.message || 'Error creating session');
+      showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setLoading(false);
     }

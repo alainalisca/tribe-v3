@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Check, X, User, Inbox } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
 
@@ -77,7 +78,7 @@ export default function RequestsPage() {
       showSuccess(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
       loadRequests(user.id);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'handle_request', language));
     }
   }
 
@@ -93,7 +94,7 @@ export default function RequestsPage() {
       showSuccess(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
       loadRequests(user.id);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'handle_request', language));
     }
   }
 

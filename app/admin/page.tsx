@@ -1,5 +1,6 @@
 'use client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 
 import { showSuccess, showError, showInfo } from "@/lib/toast";
 import { useEffect, useState } from 'react';
@@ -255,7 +256,7 @@ export default function AdminPage() {
       showSuccess('Message deleted');
     } catch (error: any) {
       console.error('Error deleting message:', error);
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
     }
@@ -303,7 +304,7 @@ export default function AdminPage() {
 
       alert('✅ Photos verified');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 
@@ -328,7 +329,7 @@ export default function AdminPage() {
 
       alert('Verification removed');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 
@@ -351,7 +352,7 @@ export default function AdminPage() {
       showSuccess('User banned');
       await loadUsers();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
     }
@@ -376,7 +377,7 @@ export default function AdminPage() {
       showSuccess('User unbanned');
       await loadUsers();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
     }
@@ -399,7 +400,7 @@ export default function AdminPage() {
       showSuccess('User deleted');
       await loadUsers();
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
     }
@@ -420,7 +421,7 @@ export default function AdminPage() {
       
       alert(`✅ Report marked as ${status}`);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 
@@ -439,7 +440,7 @@ export default function AdminPage() {
       
       alert(`✅ Feedback marked as ${status}`);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 
@@ -458,7 +459,7 @@ export default function AdminPage() {
       
       alert(`✅ Bug marked as ${status}`);
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     }
   }
 

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { MessageSquare, Bug, ArrowLeft, Send } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getErrorMessage } from '@/lib/errorMessages';
 
 export default function FeedbackPage() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function FeedbackPage() {
       setFeedbackTitle('');
       setFeedbackDescription('');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'submit_feedback', language));
     } finally {
       setSubmitting(false);
     }
@@ -163,7 +164,7 @@ export default function FeedbackPage() {
       setBugSteps('');
       setBugSeverity('medium');
     } catch (error: any) {
-      showError('Error: ' + error.message);
+      showError(getErrorMessage(error, 'submit_feedback', language));
     } finally {
       setSubmitting(false);
     }

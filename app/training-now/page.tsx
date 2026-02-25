@@ -5,6 +5,7 @@ import { ArrowLeft, Navigation } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import { useRouter } from 'next/navigation';
@@ -135,7 +136,7 @@ export default function TrainingNowPage() {
       router.push(`/session/${session.id}`);
     } catch (error: any) {
       console.error('Error creating session:', error);
-      showError(error.message || 'Failed to create session');
+      showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setLoading(false);
     }

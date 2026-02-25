@@ -323,7 +323,7 @@ export default function SessionDetailPage() {
       setShowGuestModal(false);
       celebrateJoin();
       loadSession();
-    } catch (error: any) { showError(error.message); }
+    } catch (error: any) { showError(getErrorMessage(error, 'join_session', language)); }
     finally { setJoiningAsGuest(false); }
   }
 

@@ -64,6 +64,38 @@ export function getErrorMessage(error: any, context: string, language: 'en' | 'e
       en: 'Could not send message. Please try again.',
       es: 'No se pudo enviar el mensaje. Inténtalo de nuevo.'
     },
+    update_session: {
+      en: 'Could not update session. Please try again.',
+      es: 'No se pudo actualizar la sesión. Inténtalo de nuevo.'
+    },
+    submit_feedback: {
+      en: 'Could not submit feedback. Please try again.',
+      es: 'No se pudo enviar el comentario. Inténtalo de nuevo.'
+    },
+    submit_review: {
+      en: 'Could not submit review. Please try again.',
+      es: 'No se pudo enviar la reseña. Inténtalo de nuevo.'
+    },
+    accept_invite: {
+      en: 'Could not accept invitation. Please try again.',
+      es: 'No se pudo aceptar la invitación. Inténtalo de nuevo.'
+    },
+    handle_request: {
+      en: 'Could not process request. Please try again.',
+      es: 'No se pudo procesar la solicitud. Inténtalo de nuevo.'
+    },
+    update_settings: {
+      en: 'Could not save settings. Please try again.',
+      es: 'No se pudo guardar la configuración. Inténtalo de nuevo.'
+    },
+    admin_action: {
+      en: 'Action failed. Please try again.',
+      es: 'Acción fallida. Inténtalo de nuevo.'
+    },
+    accept_waiver: {
+      en: 'Could not accept waiver. Please try again.',
+      es: 'No se pudo aceptar la exención. Inténtalo de nuevo.'
+    },
   };
 
   // Check if we have a specific error mapping

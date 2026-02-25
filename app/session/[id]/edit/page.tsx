@@ -8,6 +8,7 @@ import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { showSuccess, showError } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
 
 export default function EditSessionPage() {
   const router = useRouter();
@@ -144,7 +145,7 @@ export default function EditSessionPage() {
       showSuccess(txt.updated);
       router.push(`/session/${params.id}`);
     } catch (error: any) {
-      showError(error.message);
+      showError(getErrorMessage(error, 'update_session', language));
     } finally {
       setSaving(false);
     }
