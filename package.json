@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint app/ lib/ components/",
+    "lint:fix": "eslint app/ lib/ components/ --fix",
+    "format": "prettier --write 'app/**/*.{ts,tsx}' 'lib/**/*.{ts,tsx}' 'components/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'app/**/*.{ts,tsx}' 'lib/**/*.{ts,tsx}' 'components/**/*.{ts,tsx}'",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",
@@ -46,14 +50,24 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/web-push": "^3.6.4",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "canvas": "^3.2.1",
     "eslint": "^8",
     "eslint-config-next": "15.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
+    "lint-staged": "^16.2.7",
     "postcss": "^8",
+    "prettier": "^3.8.1",
     "puppeteer": "^24.34.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+    "*.{json,md,css}": ["prettier --write"]
   }
 }
