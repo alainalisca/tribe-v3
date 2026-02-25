@@ -1,74 +1,140 @@
-import { Users, Calendar, MessageSquare, TrendingUp } from 'lucide-react';
+import { Users, Calendar, MessageSquare, TrendingUp, Activity, Award, BarChart3 } from 'lucide-react';
 
 interface AdminStatsProps {
   stats: {
     totalUsers: number;
+    activeUsers: number;
     activeSessions: number;
+    totalSessions: number;
+    sessionsThisWeek: number;
+    sessionsThisMonth: number;
     totalMessages: number;
     newUsersToday: number;
     completedSessions: number;
     cancelledSessions: number;
     averageParticipants: number;
+    topSport: string;
+    topSportCount: number;
+    avgSessionsPerUser: number;
+    retentionPercent: number;
+    totalCreated: number;
+    totalJoined: number;
   };
+}
+
+function StatCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded p-3 shadow">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-stone-600">{label}</p>
+        {icon}
+      </div>
+      <p className="text-lg font-bold text-[#272D34]">{value}</p>
+    </div>
+  );
 }
 
 export default function AdminStats({ stats }: AdminStatsProps) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="bg-white rounded p-3 shadow">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-stone-600">Users</p>
-          <Users className="w-4 h-4 text-blue-500" />
-        </div>
-        <p className="text-lg font-bold">{stats.totalUsers}</p>
-      </div>
-      <div className="bg-white rounded p-3 shadow">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-stone-600">Sessions</p>
-          <Calendar className="w-4 h-4 text-green-500" />
-        </div>
-        <p className="text-lg font-bold">{stats.activeSessions}</p>
-      </div>
-      <div className="bg-white rounded p-3 shadow">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-stone-600">Messages</p>
-          <MessageSquare className="w-4 h-4 text-purple-500" />
-        </div>
-        <p className="text-lg font-bold">{stats.totalMessages}</p>
-      </div>
-      <div className="bg-white rounded p-3 shadow">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-xs text-stone-600">New Today</p>
-          <TrendingUp className="w-4 h-4 text-orange-500" />
-        </div>
-        <p className="text-lg font-bold">{stats.newUsersToday}</p>
+    <div className="space-y-4">
+      {/* Row 1: Core Metrics */}
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard label="Users" value={stats.totalUsers} icon={<Users className="w-4 h-4 text-blue-500" />} />
+        <StatCard
+          label="Active Users"
+          value={stats.activeUsers}
+          icon={<Activity className="w-4 h-4 text-green-500" />}
+        />
+        <StatCard
+          label="Active Sessions"
+          value={stats.activeSessions}
+          icon={<Calendar className="w-4 h-4 text-green-500" />}
+        />
+        <StatCard
+          label="Messages"
+          value={stats.totalMessages}
+          icon={<MessageSquare className="w-4 h-4 text-purple-500" />}
+        />
       </div>
 
-      {/* Session Analytics */}
-      <div className="mt-4">
+      {/* Row 2: Activity */}
+      <div>
+        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Activity</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard
+            label="New Today"
+            value={stats.newUsersToday}
+            icon={<TrendingUp className="w-4 h-4 text-orange-500" />}
+          />
+          <StatCard
+            label="This Week"
+            value={stats.sessionsThisWeek}
+            icon={<Calendar className="w-4 h-4 text-blue-500" />}
+          />
+          <StatCard
+            label="This Month"
+            value={stats.sessionsThisMonth}
+            icon={<Calendar className="w-4 h-4 text-indigo-500" />}
+          />
+          <StatCard
+            label="Avg/User"
+            value={stats.avgSessionsPerUser}
+            icon={<BarChart3 className="w-4 h-4 text-teal-500" />}
+          />
+        </div>
+      </div>
+
+      {/* Row 3: Session Analytics */}
+      <div>
         <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Session Analytics</h3>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-white rounded p-3 shadow">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-stone-600">Completed</p>
-              <span className="text-green-500">&#10003;</span>
-            </div>
-            <p className="text-lg font-bold">{stats.completedSessions}</p>
-          </div>
-          <div className="bg-white rounded p-3 shadow">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-stone-600">Cancelled</p>
-              <span className="text-red-500">&#10007;</span>
-            </div>
-            <p className="text-lg font-bold">{stats.cancelledSessions}</p>
-          </div>
-          <div className="bg-white rounded p-3 shadow">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-stone-600">Avg Participants</p>
-              <Users className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-lg font-bold">{stats.averageParticipants}</p>
-          </div>
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard
+            label="Total Sessions"
+            value={stats.totalSessions}
+            icon={<Calendar className="w-4 h-4 text-stone-500" />}
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completedSessions}
+            icon={<span className="text-green-500 text-sm">&#10003;</span>}
+          />
+          <StatCard
+            label="Cancelled"
+            value={stats.cancelledSessions}
+            icon={<span className="text-red-500 text-sm">&#10007;</span>}
+          />
+          <StatCard
+            label="Avg Participants"
+            value={stats.averageParticipants}
+            icon={<Users className="w-4 h-4 text-blue-500" />}
+          />
+        </div>
+      </div>
+
+      {/* Row 4: Engagement */}
+      <div>
+        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Engagement</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <StatCard
+            label="Top Sport"
+            value={stats.topSport ? `${stats.topSport} (${stats.topSportCount})` : '-'}
+            icon={<Award className="w-4 h-4 text-yellow-500" />}
+          />
+          <StatCard
+            label="Retention"
+            value={`${stats.retentionPercent}%`}
+            icon={<TrendingUp className="w-4 h-4 text-green-500" />}
+          />
+          <StatCard
+            label="Sessions Created"
+            value={stats.totalCreated}
+            icon={<Calendar className="w-4 h-4 text-blue-500" />}
+          />
+          <StatCard
+            label="Sessions Joined"
+            value={stats.totalJoined}
+            icon={<Users className="w-4 h-4 text-purple-500" />}
+          />
         </div>
       </div>
     </div>

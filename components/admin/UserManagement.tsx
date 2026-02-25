@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Search, Calendar, Users } from 'lucide-react';
 
 interface UserManagementProps {
   users: any[];
@@ -34,15 +34,16 @@ export default function UserManagement({
           <Search className="absolute left-2 top-2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search by name or email..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#C0E863]"
           />
         </div>
+        <p className="text-xs text-stone-500 mt-1">{filteredUsers.length} users</p>
       </div>
 
-      <div className="divide-y max-h-96 overflow-y-auto">
+      <div className="divide-y max-h-[500px] overflow-y-auto">
         {loading ? (
           <p className="text-center py-6 text-sm text-gray-500">Loading...</p>
         ) : filteredUsers.length === 0 ? (
@@ -50,22 +51,46 @@ export default function UserManagement({
         ) : (
           filteredUsers.map((u) => (
             <div key={u.id} className={`p-3 ${u.banned ? 'bg-red-50' : ''}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-9 h-9 rounded-full bg-[#C0E863] flex items-center justify-center text-sm font-bold flex-shrink-0">
-                  {u.name?.[0]?.toUpperCase() || 'U'}
+              <div className="flex items-start gap-2 mb-2">
+                <div className="w-10 h-10 rounded-full bg-[#C0E863] flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
+                  {u.avatar_url ? (
+                    <img loading="lazy" src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    u.name?.[0]?.toUpperCase() || 'U'
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <p className="text-sm font-medium truncate">{u.name || 'No name'}</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <p className="text-sm font-bold text-[#272D34] truncate">{u.name || 'No name'}</p>
                     {u.banned && (
-                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded flex-shrink-0">BANNED</span>
+                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded flex-shrink-0">
+                        BANNED
+                      </span>
                     )}
                   </div>
-                  <p className="text-xs text-stone-600 truncate">{u.email}</p>
+                  <p className="text-xs text-stone-500 truncate">{u.email}</p>
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* User stats row */}
+              <div className="flex items-center gap-3 text-xs text-stone-500 mb-2 ml-12">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(u.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: '2-digit',
+                  })}
+                </span>
+                <span className="flex items-center gap-1" title="Sessions created">
+                  <span className="font-medium text-blue-600">{u.sessions_created ?? 0}</span> created
+                </span>
+                <span className="flex items-center gap-1" title="Sessions joined">
+                  <span className="font-medium text-green-600">{u.sessions_joined ?? 0}</span> joined
+                </span>
+              </div>
+
+              <div className="flex gap-2 ml-12">
                 {u.banned ? (
                   <button
                     onClick={() => onUnban(u.id)}

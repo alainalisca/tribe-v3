@@ -26,12 +26,22 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState({
     totalUsers: 0,
+    activeUsers: 0,
     activeSessions: 0,
+    totalSessions: 0,
+    sessionsThisWeek: 0,
+    sessionsThisMonth: 0,
     totalMessages: 0,
     newUsersToday: 0,
     completedSessions: 0,
     cancelledSessions: 0,
     averageParticipants: 0,
+    topSport: '',
+    topSportCount: 0,
+    avgSessionsPerUser: 0,
+    retentionPercent: 0,
+    totalCreated: 0,
+    totalJoined: 0,
   });
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
@@ -83,37 +93,99 @@ export default function AdminPage() {
 
   async function loadStats() {
     try {
-      const { count: userCount } = await supabase.from('users').select('id', { count: 'exact', head: true });
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const { count: sessionCount } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('date', today);
-      const { count: messageCount } = await supabase.from('chat_messages').select('id', { count: 'exact', head: true });
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const { count: newUsers } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .gte('created_at', todayStart.toISOString());
-      const { data: allSessions } = await supabase.from('sessions').select('id, status, date, participants_count');
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const weekStart = new Date(now);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+      const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+      // Parallel fetches
+      const [
+        { count: userCount },
+        { count: activeSessionCount },
+        { count: messageCount },
+        { count: newUsers },
+        { data: allSessions },
+        { data: allSessionCreators },
+        { data: allParticipants },
+      ] = await Promise.all([
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase
+          .from('sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .gte('date', today),
+        supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+        supabase.from('sessions').select('id, status, date, participants_count, sport, creator_id'),
+        supabase.from('sessions').select('creator_id'),
+        supabase.from('session_participants').select('user_id'),
+      ]);
+
+      const totalSessions = allSessions?.length || 0;
       const pastSessions = allSessions?.filter((s) => new Date(s.date + 'T00:00:00') < new Date()) || [];
       const completedCount = pastSessions.filter((s) => s.status === 'completed').length;
       const cancelledCount = pastSessions.filter((s) => s.status === 'cancelled').length;
       const avgParticipants =
-        allSessions && allSessions.length > 0
-          ? Math.round(allSessions.reduce((sum, s) => sum + (s.participants_count || 0), 0) / allSessions.length)
+        totalSessions > 0
+          ? Math.round((allSessions || []).reduce((sum, s) => sum + (s.participants_count || 0), 0) / totalSessions)
           : 0;
+
+      // Sessions this week/month
+      const sessionsThisWeek = allSessions?.filter((s) => s.date >= weekStr).length || 0;
+      const sessionsThisMonth = allSessions?.filter((s) => s.date >= monthStr).length || 0;
+
+      // Most popular sport
+      const sportCounts: Record<string, number> = {};
+      allSessions?.forEach((s) => {
+        sportCounts[s.sport] = (sportCounts[s.sport] || 0) + 1;
+      });
+      const topSportEntry = Object.entries(sportCounts).sort((a, b) => b[1] - a[1])[0];
+
+      // Active users (created or joined in last 30 days)
+      const activeCreatorIds = new Set<string>();
+      allSessions?.forEach((s) => {
+        if (new Date(s.date + 'T00:00:00') >= new Date(thirtyDaysAgo)) activeCreatorIds.add(s.creator_id);
+      });
+      const activeParticipantIds = new Set<string>();
+      // We can't filter participants by date easily, so count unique users
+      allParticipants?.forEach((p) => activeParticipantIds.add(p.user_id));
+      const activeUsers = new Set([...activeCreatorIds, ...activeParticipantIds]).size;
+
+      // Retention: % of creators who made >1 session
+      const creatorCounts = new Map<string, number>();
+      allSessionCreators?.forEach((s) => {
+        creatorCounts.set(s.creator_id, (creatorCounts.get(s.creator_id) || 0) + 1);
+      });
+      const creatorsWithMultiple = [...creatorCounts.values()].filter((c) => c > 1).length;
+      const retentionPercent =
+        creatorCounts.size > 0 ? Math.round((creatorsWithMultiple / creatorCounts.size) * 100) : 0;
+
+      // Avg sessions per user
+      const avgSessionsPerUser = (userCount || 0) > 0 ? Math.round((totalSessions / (userCount || 1)) * 10) / 10 : 0;
+
       setStats({
         totalUsers: userCount || 0,
-        activeSessions: sessionCount || 0,
+        activeUsers,
+        activeSessions: activeSessionCount || 0,
+        totalSessions,
+        sessionsThisWeek,
+        sessionsThisMonth,
         totalMessages: messageCount || 0,
         newUsersToday: newUsers || 0,
         completedSessions: completedCount,
         cancelledSessions: cancelledCount,
         averageParticipants: avgParticipants,
+        topSport: topSportEntry?.[0] || '-',
+        topSportCount: topSportEntry?.[1] || 0,
+        avgSessionsPerUser,
+        retentionPercent,
+        totalCreated: allSessionCreators?.length || 0,
+        totalJoined: allParticipants?.length || 0,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -123,13 +195,28 @@ export default function AdminPage() {
   async function loadUsers() {
     setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
+        supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('sessions').select('creator_id'),
+        supabase.from('session_participants').select('user_id'),
+      ]);
       if (error) throw error;
-      setUsers(data || []);
+
+      const createdMap = new Map<string, number>();
+      sessionCounts?.forEach((s) => {
+        createdMap.set(s.creator_id, (createdMap.get(s.creator_id) || 0) + 1);
+      });
+      const joinedMap = new Map<string, number>();
+      participantCounts?.forEach((p) => {
+        if (p.user_id) joinedMap.set(p.user_id, (joinedMap.get(p.user_id) || 0) + 1);
+      });
+
+      const enrichedUsers = (data || []).map((u) => ({
+        ...u,
+        sessions_created: createdMap.get(u.id) || 0,
+        sessions_joined: joinedMap.get(u.id) || 0,
+      }));
+      setUsers(enrichedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -385,12 +472,15 @@ export default function AdminPage() {
         <h1 className="text-lg font-bold text-[#272D34] mb-1">Admin Panel</h1>
         <p className="text-xs text-stone-600 mb-4 truncate">{user?.email}</p>
 
-        <div className="flex gap-2 mb-4 border-b border-stone-300 overflow-x-auto">
+        <div
+          className="flex gap-1 mb-4 border-b border-stone-300 overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+        >
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap relative ${
+              className={`px-2 py-1.5 text-xs font-medium whitespace-nowrap relative ${
                 activeTab === tab.id ? 'border-b-2 border-[#C0E863] text-[#272D34]' : 'text-stone-600'
               }`}
             >
