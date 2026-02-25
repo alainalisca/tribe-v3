@@ -23,6 +23,7 @@ import { calculateDistance, formatDistance } from '@/lib/distance';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { joinSession } from '@/lib/sessions';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { fetchUpcomingSessions, deleteSession as dalDeleteSession } from '@/lib/dal';
 
 export default function HomePage() {
   const router = useRouter();
@@ -103,28 +104,10 @@ export default function HomePage() {
   async function loadSessions() {
     try {
       setLoading(true);
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(`
-          *,
-          participants:session_participants(
-            user_id,
-            status,
-            user:users(id, name, avatar_url)
-          ),
-          creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
-        `)
-        .eq('status', 'active')
-        .gte('date', today)
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true });
-
-      if (error) throw error;
-      setSessions(data || []);
-      loadLiveStatuses((data || []).map((s: any) => s.id));
+      const result = await fetchUpcomingSessions(supabase);
+      if (!result.success) throw new Error(result.error);
+      setSessions(result.data || []);
+      loadLiveStatuses((result.data || []).map((s: any) => s.id));
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
@@ -382,8 +365,8 @@ export default function HomePage() {
                   onDelete={async (id: string) => {
                     if (!confirm("Are you sure you want to delete this session? This cannot be undone.")) return;
                     try {
-                      const { error } = await supabase.from("sessions").delete().eq("id", id);
-                      if (error) throw error;
+                      const result = await dalDeleteSession(supabase, id);
+                      if (!result.success) throw new Error(result.error);
                       showSuccess("Session deleted successfully!");
                       await loadSessions();
                     } catch (error: any) { showError(getErrorMessage(error, 'delete_session', language)); }

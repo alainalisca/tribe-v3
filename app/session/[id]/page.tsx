@@ -22,6 +22,7 @@ import ParticipantList from '@/components/session/ParticipantList';
 import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
+import { fetchSessionWithDetails, cancelSession } from '@/lib/dal';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -175,22 +176,15 @@ export default function SessionDetailPage() {
   async function loadSession() {
     try {
       setLoading(true);
-      const { data: sessionData, error } = await supabase.from('sessions').select('*').eq('id', params.id).single();
-      if (error) throw error;
-      setSession(sessionData);
+      const result = await fetchSessionWithDetails(supabase, params.id as string);
+      if (!result.success || !result.data) throw new Error(result.error);
 
-      const { data: creatorData } = await supabase.from('users').select('id, name, avatar_url, average_rating, total_reviews').eq('id', sessionData.creator_id).single();
-      setCreator(creatorData);
-
-      const { data: participantsData } = await supabase
-        .from('session_participants')
-        .select('user_id, status, is_guest, guest_name, user:users(id, name, avatar_url)')
-        .eq('session_id', params.id)
-        .eq('status', 'confirmed');
-      setParticipants(participantsData || []);
+      setSession(result.data.session);
+      setCreator(result.data.creator);
+      setParticipants(result.data.participants);
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setHasJoined(!!participantsData?.some(p => p.user_id === user.id));
+      if (user) setHasJoined(!!result.data.participants.some(p => p.user_id === user.id));
 
       await checkAttendance();
       await loadRecapPhotos();
@@ -357,8 +351,8 @@ export default function SessionDetailPage() {
   async function handleCancel() {
     if (!confirm('⚠️ Cancel this session? All participants will be notified. This cannot be undone.')) return;
     try {
-      const { error } = await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', session.id);
-      if (error) throw error;
+      const result = await cancelSession(supabase, session.id);
+      if (!result.success) throw new Error(result.error);
       showSuccess(language === 'es' ? 'Sesión cancelada' : 'Session cancelled');
       router.push('/sessions');
     } catch (error: any) { showError(getErrorMessage(error, 'delete_session', language)); }
