@@ -44,21 +44,22 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
         return;
       }
 
-      const participantsWithAttendance = await Promise.all(
-        participantsData.map(async (p) => {
-          const { data: attendanceData } = await supabase
-            .from('session_attendance')
-            .select('attended')
-            .eq('session_id', sessionId)
-            .eq('user_id', p.user_id)
-            .single();
+      const userIds = participantsData.map(p => p.user_id).filter(Boolean);
+      const { data: allAttendance } = await supabase
+        .from('session_attendance')
+        .select('user_id, attended')
+        .eq('session_id', sessionId)
+        .in('user_id', userIds);
 
-          return {
-            ...p,
-            attended: attendanceData?.attended || false
-          };
-        })
-      );
+      const attendanceByUser = (allAttendance || []).reduce((acc, row) => {
+        acc[(row as { user_id: string }).user_id] = (row as { attended: boolean }).attended;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      const participantsWithAttendance = participantsData.map(p => ({
+        ...p,
+        attended: attendanceByUser[p.user_id] || false,
+      }));
 
       setParticipants(participantsWithAttendance);
     } catch (error) {
