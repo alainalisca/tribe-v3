@@ -485,7 +485,7 @@ export default function AdminPage() {
               }`}
             >
               {tab.label}
-              {tab.badge && tab.badge > 0 && (
+              {tab.badge != null && tab.badge > 0 && (
                 <span
                   className={`absolute -top-1 -right-1 ${tab.badgeColor} text-white text-xs rounded-full w-5 h-5 flex items-center justify-center`}
                 >
