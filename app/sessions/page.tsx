@@ -1,7 +1,7 @@
 'use client';
 import { formatTime12Hour } from "@/lib/utils";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, Users, Clock, ChevronRight } from 'lucide-react';
@@ -20,6 +20,25 @@ export default function SessionsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
+  const fixedAreaRef = useRef<HTMLDivElement>(null);
+  const [fixedHeight, setFixedHeight] = useState(0);
+
+  const measureFixed = useCallback(() => {
+    if (fixedAreaRef.current) {
+      setFixedHeight(fixedAreaRef.current.offsetHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    measureFixed();
+    window.addEventListener('resize', measureFixed);
+    return () => window.removeEventListener('resize', measureFixed);
+  }, [measureFixed]);
+
+  useEffect(() => {
+    measureFixed();
+    requestAnimationFrame(() => measureFixed());
+  }, [activeTab, loading, hostingSessions.length, joinedSessions.length, pastSessions.length, measureFixed]);
 
   useEffect(() => {
     checkUser();
@@ -168,7 +187,7 @@ export default function SessionsPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
+      <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
             {txt.mySessions}
@@ -202,9 +221,7 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      {/* Spacer to push content below fixed header */}
-      <div style={{ height: '140px' }} aria-hidden="true" />
-
+      <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-[200px]'}>
       <div className="max-w-2xl mx-auto px-4 pb-4">
         {activeTab === 'upcoming' ? (
           <>
@@ -280,6 +297,7 @@ export default function SessionsPage() {
             )}
           </>
         )}
+      </div>
       </div>
 
       <BottomNav />
