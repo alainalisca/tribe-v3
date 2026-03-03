@@ -55,6 +55,7 @@ export default function HomePage() {
   const [liveUserIdSet, setLiveUserIdSet] = useState<Set<string>>(new Set());
   const [fixedHeight, setFixedHeight] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -126,12 +127,14 @@ export default function HomePage() {
   async function loadSessions() {
     try {
       setLoading(true);
+      setFetchError(false);
       const result = await fetchUpcomingSessions(supabase);
       if (!result.success) throw new Error(result.error);
       setSessions(result.data || []);
       loadLiveStatuses((result.data || []).map((s: any) => s.id));
     } catch (error) {
       logError(error, { action: 'loadSessions' });
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -338,6 +341,27 @@ export default function HomePage() {
             <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} liveUserIds={liveUserIdSet} />
           </div>
 
+          {user && !userLocation && !loading && (
+            <button
+              onClick={async () => {
+                const loc = await getUserLocation();
+                if (loc) setUserLocation(loc);
+                else
+                  showInfo(
+                    language === 'es'
+                      ? 'Activa la ubicación en la configuración de tu navegador'
+                      : 'Enable location in your browser settings'
+                  );
+              }}
+              className="w-full mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+            >
+              📍{' '}
+              {language === 'es'
+                ? 'Activa tu ubicación para ver sesiones cercanas'
+                : 'Enable location to see sessions near you'}
+            </button>
+          )}
+
           {user && userProfile && (
             <ProfileCompletionBanner
               hasPhoto={!!userProfile.avatar_url}
@@ -368,6 +392,24 @@ export default function HomePage() {
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
+            </div>
+          ) : fetchError ? (
+            <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
+              <div className="text-4xl mb-4">⚠️</div>
+              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                {language === 'es' ? 'No se pudieron cargar las sesiones' : 'Could not load sessions'}
+              </p>
+              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">
+                {language === 'es'
+                  ? 'Verifica tu conexión e inténtalo de nuevo'
+                  : 'Check your connection and try again'}
+              </p>
+              <button
+                onClick={() => loadSessions()}
+                className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+              >
+                {language === 'es' ? 'Reintentar' : 'Retry'}
+              </button>
             </div>
           ) : filteredSessions.length === 0 ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">

@@ -68,7 +68,8 @@ export default function FilterBar({
     <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
       <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
         <Link href="/profile">
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">Tribe<span className="text-tribe-green">.</span>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">
+            Tribe<span className="text-tribe-green">.</span>
           </h1>
         </Link>
         <div className="flex items-center gap-3">
@@ -91,6 +92,8 @@ export default function FilterBar({
               placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+              enterKeyHint="search"
               className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             />
             {searchQuery && (
@@ -112,7 +115,7 @@ export default function FilterBar({
               <option value="">{language === 'es' ? 'Deporte' : 'Sport'}</option>
               {sports.map((sport) => (
                 <option key={sport} value={sport}>
-                  {language === 'es' ? (sportTranslations[sport]?.es || sport) : sport}
+                  {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
                 </option>
               ))}
             </select>
@@ -166,11 +169,13 @@ export default function FilterBar({
                   {filteredCount} {t('sessionsCount')}
                 </p>
               )}
-              {(searchQuery || selectedSport) && (
+              {(searchQuery || selectedSport || dateFilter !== 'all' || genderFilter !== 'all') && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedSport('');
+                    setDateFilter('all');
+                    setGenderFilter('all');
                   }}
                   className="text-xs text-tribe-green hover:underline"
                 >

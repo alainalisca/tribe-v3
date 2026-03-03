@@ -258,6 +258,8 @@ export default function EditProfilePage() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder={tr.namePlaceholder}
+            autoComplete="name"
+            enterKeyHint="next"
             className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
@@ -270,6 +272,8 @@ export default function EditProfilePage() {
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             placeholder="@username"
+            autoComplete="username"
+            enterKeyHint="next"
             className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
@@ -282,6 +286,8 @@ export default function EditProfilePage() {
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder={tr.locationPlaceholder}
+            autoComplete="address-level2"
+            enterKeyHint="next"
             className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
@@ -363,6 +369,8 @@ export default function EditProfilePage() {
                 value={formData.emergency_contact_phone}
                 onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
                 placeholder={tr.contactPhonePlaceholder}
+                autoComplete="tel"
+                enterKeyHint="done"
                 className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
               />
             </div>

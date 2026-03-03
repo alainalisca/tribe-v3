@@ -16,7 +16,10 @@ interface ToastNotificationProps {
 
 export default function ToastNotification({ toasts, onRemove }: ToastNotificationProps) {
   return (
-    <div className="fixed top-20 right-4 z-50 space-y-2">
+    <div
+      className="fixed right-4 z-50 space-y-2"
+      style={{ top: 'max(5rem, calc(env(safe-area-inset-top, 0px) + 4rem))' }}
+    >
       {toasts.map((toast) => (
         <div
           key={toast.id}
@@ -31,9 +34,9 @@ export default function ToastNotification({ toasts, onRemove }: ToastNotificatio
             </div>
             <button
               onClick={() => onRemove(toast.id)}
-              className="text-gray-400 hover:text-white transition"
+              className="text-gray-400 hover:text-white transition min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 -mt-2"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

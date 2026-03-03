@@ -5,6 +5,7 @@ import { Bell, X } from 'lucide-react';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
+import { showInfo, showError as showErrorToast } from '@/lib/toast';
 
 interface NotificationPromptProps {
   hideWhenOnboarding?: boolean;
@@ -51,11 +52,11 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
         setShow(false);
         localStorage.setItem('notification-prompt-shown', 'true');
       } else {
-        alert('Please enable notifications in your browser/device settings');
+        showInfo('Please enable notifications in your browser/device settings');
       }
     } catch (error) {
       logError(error, { action: 'handleEnable', userId: userId ?? undefined });
-      alert('Failed to enable notifications. Please try again.');
+      showErrorToast('Failed to enable notifications. Please try again.');
     }
 
     setLoading(false);
@@ -72,9 +73,9 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
       <button
         onClick={handleDismiss}
-        className="absolute top-2 right-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+        className="absolute top-1 right-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
       >
-        <X className="w-4 h-4" />
+        <X className="w-5 h-5" />
       </button>
 
       <div className="flex items-start gap-3">

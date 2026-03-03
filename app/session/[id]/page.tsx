@@ -24,6 +24,7 @@ import LiveStatusSection from '@/components/session/LiveStatusSection';
 import { fetchSessionWithDetails } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
+import { downloadICS } from '@/lib/calendar';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -337,7 +338,8 @@ export default function SessionDetailPage() {
         <div className="fixed inset-0 bg-black z-[60] flex items-center justify-center overflow-hidden">
           <button
             onClick={() => history.back()}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
+            className="absolute right-4 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition z-10"
+            style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))' }}
           >
             <X className="w-6 h-6 text-white" />
           </button>
@@ -531,7 +533,18 @@ export default function SessionDetailPage() {
           )}
           {hasJoined && (
             <button
-              onClick={() => window.open(`/api/generate-calendar?sessionId=${params.id}`, '_blank')}
+              onClick={() =>
+                downloadICS({
+                  sport: session.sport,
+                  date: session.date,
+                  start_time: session.start_time,
+                  duration: session.duration,
+                  location: session.location,
+                  description: session.description,
+                  creatorName: session.creator?.name,
+                  sessionId: session.id,
+                })
+              }
               className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green font-bold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

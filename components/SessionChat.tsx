@@ -436,6 +436,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             disabled={sending}
+            autoComplete="off"
+            enterKeyHint="send"
             className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C0E863] disabled:opacity-50"
           />
           <button

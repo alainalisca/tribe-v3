@@ -53,7 +53,7 @@ export default function IOSInstallPrompt() {
       <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6 relative">
         <button
           onClick={() => handleDismiss(true)}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+          className="absolute top-2 right-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
         >
           <X className="w-5 h-5" />
         </button>

@@ -3,6 +3,7 @@ import { formatTime12Hour } from '@/lib/utils';
 
 import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 
@@ -44,7 +45,8 @@ function getGenderDisplay(gender: string, t: (key: any) => string) {
   }
 }
 
-export default function SessionCard({ session, onShare, distance, liveData }: SessionCardProps) {
+export default function SessionCard({ session, onShare, distance, liveData, currentUserId }: SessionCardProps) {
+  const router = useRouter();
   const { t, language } = useLanguage();
   const isPast = (() => {
     const sessionDate = new Date(session.date + 'T00:00:00');
@@ -81,7 +83,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
   }
 
   return (
-    <div onClick={() => (window.location.href = `/session/${session.id}`)} className="cursor-pointer">
+    <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
       <div className="bg-white dark:bg-[#6B7178] rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-stone-200 dark:border-[#52575D]">
         <div className="p-5">
           {/* Header */}
@@ -277,18 +279,22 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
               className="flex-1 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-lime-500 transition-colors text-sm"
               onClick={(e) => {
                 e.preventDefault();
-                window.location.href = `/session/${session.id}`;
+                router.push(`/session/${session.id}`);
               }}
             >
               {t('viewDetails')}
             </button>
-            <Link
-              href={`/session/${session.id}/chat`}
-              onClick={(e) => e.stopPropagation()}
-              className="px-4 py-2 bg-stone-100 dark:bg-[#52575D] rounded-lg hover:bg-stone-200 dark:hover:bg-[#404549] transition-colors flex items-center justify-center"
-            >
-              <MessageCircle className="w-5 h-5 text-stone-700 dark:text-[#E0E0E0]" />
-            </Link>
+            {currentUserId &&
+              (session.creator_id === currentUserId ||
+                confirmedParticipants.some((p: any) => p.user_id === currentUserId)) && (
+                <Link
+                  href={`/session/${session.id}/chat`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-4 py-2 bg-stone-100 dark:bg-[#52575D] rounded-lg hover:bg-stone-200 dark:hover:bg-[#404549] transition-colors flex items-center justify-center"
+                >
+                  <MessageCircle className="w-5 h-5 text-stone-700 dark:text-[#E0E0E0]" />
+                </Link>
+              )}
           </div>
         </div>
       </div>
