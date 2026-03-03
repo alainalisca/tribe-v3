@@ -5,6 +5,13 @@ import { log, logError } from '@/lib/logger';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
+/**
+ * @description Generates a downloadable ICS calendar file for a given training session, including sport, location, time, and organizer details.
+ * @method GET
+ * @auth Optional - no authentication required; calendar links are publicly shareable.
+ * @param {string} request.searchParams.sessionId - The UUID of the session to generate a calendar event for.
+ * @returns {text/calendar} An ICS file attachment on success, or a JSON error if the session is not found.
+ */
 // PUBLIC: Calendar .ics files are shared via link — no auth required
 export async function GET(request: Request) {
   try {

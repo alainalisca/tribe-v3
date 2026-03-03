@@ -1,3 +1,4 @@
+/** Page: /create — Create a new training session with sport, location, date, and settings */
 'use client';
 import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';

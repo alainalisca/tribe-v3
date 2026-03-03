@@ -14,6 +14,13 @@ function calculateAge(birthDate: string): number {
   return age;
 }
 
+/**
+ * @description Registers a new user with server-side validation for age (18+), email format, and Terms of Service acceptance.
+ * @method POST
+ * @auth Optional - rate limited by IP address (5 requests per minute). No authentication required.
+ * @param {Object} request.body - JSON body with `email`, `password`, `name`, `birthDate` (YYYY-MM-DD), `acceptedTos` (boolean), and `language` ('en' | 'es').
+ * @returns {{ success: boolean, data: Object }} The Supabase auth sign-up result on success, or a localized error message on failure.
+ */
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';

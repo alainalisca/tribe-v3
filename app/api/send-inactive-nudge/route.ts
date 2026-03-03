@@ -6,6 +6,13 @@ import { logError } from '@/lib/logger';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
+/**
+ * @description Sends re-engagement emails to users who have been inactive for 14+ days, encouraging them to return and browse sessions.
+ * @method POST
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @param {void} request.body - No request body expected; users are selected automatically based on inactivity criteria.
+ * @returns {{ success: boolean, emailsSent: number, errors: number, totalUsers: number }} Summary of emails sent and any failures.
+ */
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');

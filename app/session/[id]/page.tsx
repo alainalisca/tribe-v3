@@ -1,3 +1,4 @@
+/** Page: /session/[id] — Session detail with participants, chat, live status, and actions */
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';

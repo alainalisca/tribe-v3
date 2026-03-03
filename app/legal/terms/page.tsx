@@ -1,3 +1,4 @@
+/** Page: /legal/terms — Terms of Service */
 'use client';
 
 import { useLanguage } from '@/lib/LanguageContext';

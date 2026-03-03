@@ -1,3 +1,4 @@
+/** Page: /admin — Admin dashboard for managing users, sessions, reports, and feedback */
 'use client';
 import { logError } from '@/lib/logger';
 import { useLanguage } from '@/lib/LanguageContext';

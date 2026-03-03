@@ -1,3 +1,4 @@
+/** Page: / — Home feed with session discovery, filters, and stories */
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';

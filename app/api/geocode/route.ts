@@ -2,10 +2,21 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 
+/**
+ * @description Reverse geocodes latitude/longitude coordinates into a human-readable address using the Google Geocoding API.
+ * @method GET
+ * @auth Required - validates the caller is authenticated via Supabase auth to prevent quota abuse.
+ * @param {string} request.searchParams.lat - Latitude coordinate.
+ * @param {string} request.searchParams.lon - Longitude coordinate.
+ * @returns {{ display_name: string | null, lat: string, lon: string }} The formatted address and echoed coordinates.
+ */
 export async function GET(request: Request) {
   // AUTH: prevent bots from exhausting Google geocoding quota
   const supabase = await createClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -24,9 +35,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${key}`
-    );
+    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${key}`);
 
     if (!response.ok) {
       throw new Error('Geocoding failed');

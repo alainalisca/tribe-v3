@@ -1,3 +1,4 @@
+/** Page: /legal/privacy — Privacy Policy */
 'use client';
 
 import Link from 'next/link';
@@ -6,16 +7,19 @@ import { useLanguage } from '@/lib/LanguageContext';
 
 export default function PrivacyPage() {
   const { language } = useLanguage();
-  
-  const t = language === 'es' ? {
-    title: 'Política de Privacidad',
-    note: 'Nota: Este documento legal está disponible en inglés.',
-    lastUpdated: 'Última actualización',
-  } : {
-    title: 'Privacy Policy',
-    note: '',
-    lastUpdated: 'Last Updated',
-  };
+
+  const t =
+    language === 'es'
+      ? {
+          title: 'Política de Privacidad',
+          note: 'Nota: Este documento legal está disponible en inglés.',
+          lastUpdated: 'Última actualización',
+        }
+      : {
+          title: 'Privacy Policy',
+          note: '',
+          lastUpdated: 'Last Updated',
+        };
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">
@@ -26,9 +30,7 @@ export default function PrivacyPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            {t.title}
-          </h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.title}</h1>
         </div>
       </div>
 
@@ -40,7 +42,7 @@ export default function PrivacyPage() {
             </div>
           )}
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{t.lastUpdated}: November 24, 2025</p>
-          
+
           <div className="space-y-6 text-stone-700 dark:text-gray-300">
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">1. Information We Collect</h2>
@@ -69,12 +71,21 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">3. Information Sharing</h2>
               <p className="mb-2">We share your information with:</p>
               <ul className="list-disc pl-6 space-y-1">
-                <li><strong>Other users:</strong> Profile information (name, photo, bio, sports, location) is visible to other users</li>
-                <li><strong>Service providers:</strong> Hosting (Vercel), database (Supabase), analytics (PostHog)</li>
-                <li><strong>Legal requirements:</strong> When required by law or to protect rights and safety</li>
+                <li>
+                  <strong>Other users:</strong> Profile information (name, photo, bio, sports, location) is visible to
+                  other users
+                </li>
+                <li>
+                  <strong>Service providers:</strong> Hosting (Vercel), database (Supabase), analytics (PostHog)
+                </li>
+                <li>
+                  <strong>Legal requirements:</strong> When required by law or to protect rights and safety
+                </li>
               </ul>
               <div className="bg-lime-50 dark:bg-lime-900/20 border-l-4 border-lime-500 p-4 mt-4">
-                <p className="font-semibold text-lime-900 dark:text-lime-200">We DO NOT sell your personal information to third parties.</p>
+                <p className="font-semibold text-lime-900 dark:text-lime-200">
+                  We DO NOT sell your personal information to third parties.
+                </p>
               </div>
             </section>
 
@@ -92,7 +103,11 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">5. Data Retention</h2>
-              <p>We keep your data while your account is active. After you delete your account, we retain data for 30 days for recovery purposes, then permanently delete it. Some data may be retained longer if required by law.</p>
+              <p>
+                We keep your data while your account is active. After you delete your account, we retain data for 30
+                days for recovery purposes, then permanently delete it. Some data may be retained longer if required by
+                law.
+              </p>
             </section>
 
             <section>
@@ -109,19 +124,30 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">7. Children&apos;s Privacy</h2>
-              <p>Tribe is not intended for users under 18. We do not knowingly collect information from children under 18. If we learn we have collected such information, we will delete it immediately.</p>
+              <p>
+                Tribe is not intended for users under 18. We do not knowingly collect information from children under
+                18. If we learn we have collected such information, we will delete it immediately.
+              </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">8. Changes to This Policy</h2>
-              <p>We may update this Privacy Policy from time to time. We will notify you of significant changes via email or in-app notification.</p>
+              <p>
+                We may update this Privacy Policy from time to time. We will notify you of significant changes via email
+                or in-app notification.
+              </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">9. Contact Us</h2>
               <div className="bg-gray-100 dark:bg-[#52575D] p-4 rounded-lg">
                 <p>Privacy questions or requests:</p>
-                <p className="font-semibold mt-2">Email: <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">admin@aplusfitnessllc.com</a></p>
+                <p className="font-semibold mt-2">
+                  Email:{' '}
+                  <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">
+                    admin@aplusfitnessllc.com
+                  </a>
+                </p>
                 <p className="text-sm mt-2">Business Name: A Plus Fitness LLC</p>
               </div>
             </section>

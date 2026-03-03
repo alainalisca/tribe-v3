@@ -1,3 +1,4 @@
+/** Page: /stories — Upload and manage training story photos/videos */
 'use client';
 import { logError } from '@/lib/logger';
 

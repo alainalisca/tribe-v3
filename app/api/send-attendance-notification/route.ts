@@ -6,67 +6,75 @@ import { logError } from '@/lib/logger';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
+/**
+ * @description Sends a post-session attendance notification email prompting the user to upload photos from their training session.
+ * @method POST
+ * @auth Required - validates the caller is authenticated via Supabase auth.
+ * @param {Object} request.body - JSON body with `sessionId` (string) and `userId` (string) identifying the session and recipient.
+ * @returns {{ success: boolean }} 200 on success, 401 if unauthenticated, 400 if session or user email is missing.
+ */
 export async function POST(request: Request) {
   try {
     // AUTH: verify the caller is authenticated
     const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { sessionId, userId } = await request.json();
-    
+
     // Get session details
     const { data: session } = await supabase
       .from('sessions')
       .select('*, creator:users!creator_id(name)')
       .eq('id', sessionId)
       .single();
-    
+
     // Get user details including language preference
     const { data: user } = await supabase
       .from('users')
       .select('name, email, preferred_language')
       .eq('id', userId)
       .single();
-    
+
     if (!session || !user?.email) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
     const lang = user.preferred_language || 'en';
     const isSpanish = lang === 'es';
-    
+
     // Bilingual content
-    const subject = isSpanish 
+    const subject = isSpanish
       ? `🎉 ¡Comparte tus fotos de ${session.sport}!`
       : `🎉 Share your ${session.sport} session photos!`;
-    
-    const greeting = isSpanish
-      ? `¡Gran sesión, ${user.name}! 🎉`
-      : `Great session, ${user.name}! 🎉`;
-    
+
+    const greeting = isSpanish ? `¡Gran sesión, ${user.name}! 🎉` : `Great session, ${user.name}! 🎉`;
+
     const thanks = isSpanish
       ? `Gracias por unirte a <strong>${session.sport}</strong> en ${session.location}. ¡Nunca entrenes solo!`
       : `Thanks for joining <strong>${session.sport}</strong> at ${session.location}. Never train alone!`;
-    
+
     const sharePrompt = isSpanish
       ? `Comparte tus fotos de la sesión de hoy para ayudar a construir nuestra comunidad.`
       : `Share your photos from today's session to help build our community.`;
-    
+
     const buttonText = isSpanish ? 'Subir Fotos' : 'Upload Photos';
-    
+
     const photoLimit = isSpanish
       ? `Puedes subir hasta 3 fotos de esta sesión.`
       : `You can upload up to 3 photos from this session.`;
-    
+
     const hostedBy = isSpanish
       ? `Organizado por ${session.creator?.name || 'Comunidad Tribe'}`
       : `Hosted by ${session.creator?.name || 'Tribe Community'}`;
-    
+
     const tagline = isSpanish ? 'Nunca Entrenes Solo' : 'Never Train Alone';
-    
+
     // Send email
     await resend.emails.send({
       from: 'Tribe <tribe@aplusfitnessllc.com>',
@@ -108,9 +116,9 @@ export async function POST(request: Request) {
             © ${new Date().getFullYear()} Tribe · ${tagline}
           </p>
         </div>
-      `
+      `,
     });
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logError(error, { route: '/api/send-attendance-notification', action: 'send_email' });

@@ -24,6 +24,12 @@ function isSundayEveningWindow(): boolean {
   return dayOfWeek === 0 && hour === 18;
 }
 
+/**
+ * @description Handles two engagement tasks based on Colombia timezone: (1) weekly recap push notifications on Sunday evenings, and (2) re-engagement notifications for users inactive 3+ days.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, colombiaTime: Object, isSundayEvening: boolean, weeklyRecapsSent: number, reEngagementsSent: number }} Counts of notifications sent per category.
+ */
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');

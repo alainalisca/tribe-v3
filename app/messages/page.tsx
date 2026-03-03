@@ -1,3 +1,4 @@
+/** Page: /messages — Chat conversations list for joined sessions */
 'use client';
 
 import { logError } from '@/lib/logger';

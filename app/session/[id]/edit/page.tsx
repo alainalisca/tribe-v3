@@ -1,3 +1,4 @@
+/** Page: /session/[id]/edit — Edit an existing session's details */
 'use client';
 
 import { useEffect, useState } from 'react';

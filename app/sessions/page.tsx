@@ -1,3 +1,4 @@
+/** Page: /sessions — My sessions: hosting, joined, and past sessions */
 'use client';
 import { logError } from '@/lib/logger';
 import { formatTime12Hour } from '@/lib/utils';

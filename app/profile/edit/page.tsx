@@ -1,3 +1,4 @@
+/** Page: /profile/edit — Edit profile details, photos, sports, and emergency contact */
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';

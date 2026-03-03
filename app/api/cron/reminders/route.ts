@@ -21,6 +21,12 @@ function isMorningWindow(): boolean {
   return hour === 8;
 }
 
+/**
+ * @description Sends session reminder push notifications 2 hours before start to hosts and participants, and sends morning motivational messages at 8 AM Colombia time to active users.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, colombiaHour: number, isMorningWindow: boolean, sessionReminders: number, morningMotivation: number }} Counts of reminders and motivational messages sent.
+ */
 export async function GET(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');

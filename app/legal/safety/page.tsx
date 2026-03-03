@@ -1,3 +1,4 @@
+/** Page: /legal/safety — Safety guidelines for meeting training partners */
 'use client';
 
 import { useLanguage } from '@/lib/LanguageContext';

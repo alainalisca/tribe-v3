@@ -1,3 +1,4 @@
+/** Page: /auth — Sign in, sign up, password reset with Google/Apple OAuth */
 'use client';
 
 import { useState, useEffect } from 'react';

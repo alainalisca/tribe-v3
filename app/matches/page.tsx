@@ -1,3 +1,4 @@
+/** Page: /matches — Browse and manage training partner matches */
 'use client';
 import { logError } from '@/lib/logger';
 import { formatTime12Hour } from '@/lib/utils';

@@ -1,3 +1,4 @@
+/** Page: /session/[id]/chat — Real-time chat for session participants */
 'use client';
 
 import { useParams } from 'next/navigation';

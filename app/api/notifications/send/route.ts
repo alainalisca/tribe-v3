@@ -170,6 +170,13 @@ async function sendWebPushNotification(
   }
 }
 
+/**
+ * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
+ * @method POST
+ * @auth Optional - rate limited by IP address (30 requests per minute). No user authentication required.
+ * @param {Object} request.body - JSON body with `userId` (string), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
+ * @returns {{ success: boolean, method: 'fcm' | 'web-push', platform: string }} Delivery method used on success, or error details on failure.
+ */
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -279,6 +286,13 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * @description Batch sends push notifications to multiple users via FCM or Web Push, with automatic fallback and stale token/subscription cleanup.
+ * @method PUT
+ * @auth Optional - no authentication required. Intended for internal service-to-service calls.
+ * @param {Object} request.body - JSON body with `userIds` (string[]), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
+ * @returns {{ success: boolean, results: { total: number, fcm: Object, webPush: Object, noSubscription: number } }} Breakdown of send results per notification channel.
+ */
 // Batch send notifications to multiple users
 export async function PUT(request: Request) {
   try {

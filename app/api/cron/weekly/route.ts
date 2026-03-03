@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 
+/**
+ * @description Weekly cron orchestrator that triggers both the weekly recap emails and inactive user re-engagement nudges in parallel.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, message: string, results: string[] }} Execution status and settled promise statuses for each sub-task.
+ */
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

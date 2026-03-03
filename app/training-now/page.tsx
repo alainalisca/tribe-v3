@@ -1,3 +1,4 @@
+/** Page: /training-now — Find and join live training sessions nearby */
 'use client';
 import { log, logError } from '@/lib/logger';
 

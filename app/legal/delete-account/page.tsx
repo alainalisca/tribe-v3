@@ -1,3 +1,4 @@
+/** Page: /legal/delete-account — Account deletion request page */
 'use client';
 
 import Link from 'next/link';
@@ -7,107 +8,115 @@ import { useLanguage } from '@/lib/LanguageContext';
 export default function DeleteAccountPage() {
   const { language } = useLanguage();
 
-  const t = language === 'es' ? {
-    title: 'Eliminar Cuenta',
-    subtitle: 'Instrucciones para Eliminación de Cuenta',
-    note: 'Nota: Este documento legal está disponible en inglés.',
-    intro: 'Respetamos tu derecho a eliminar tu cuenta y todos los datos asociados. Esta página explica qué sucede cuando eliminas tu cuenta y cómo solicitar la eliminación.',
-    whatDeleted: 'Qué Se Elimina',
-    whatDeletedDesc: 'Cuando eliminas tu cuenta de Tribe, los siguientes datos se eliminan permanentemente:',
-    profileInfo: 'Información de perfil (nombre, correo electrónico, foto de perfil, biografía)',
-    sessionData: 'Historial de sesiones de entrenamiento y participación',
-    messages: 'Mensajes y conversaciones',
-    locationData: 'Datos de ubicación e historial de búsqueda',
-    preferences: 'Preferencias y configuración de la aplicación',
-    notifications: 'Tokens de notificaciones push',
-    retention: 'Período de Retención de Datos',
-    retentionDesc: 'Después de la solicitud de eliminación:',
-    retentionDays: 'Tus datos se eliminan permanentemente dentro de 30 días',
-    retentionRecovery: 'Durante este período, puedes contactarnos para cancelar la solicitud de eliminación',
-    retentionLegal: 'Algunos datos pueden conservarse más tiempo si lo requiere la ley (por ejemplo, registros de transacciones)',
-    howToDelete: 'Cómo Eliminar Tu Cuenta',
-    option1Title: 'Opción 1: A través de la App (Recomendado)',
-    option1Steps: [
-      'Abre Tribe e inicia sesión',
-      'Ve a Perfil → Configuración',
-      'Desplázate hacia abajo hasta "Eliminar Cuenta"',
-      'Confirma tu decisión',
-      'Tu cuenta se programará para eliminación'
-    ],
-    option2Title: 'Opción 2: Solicitud por Correo Electrónico',
-    option2Desc: 'Si no puedes acceder a tu cuenta o prefieres solicitar la eliminación por correo electrónico:',
-    emailSubject: 'Asunto',
-    emailSubjectText: 'Solicitud de Eliminación de Cuenta - Tribe',
-    emailInclude: 'Incluir en tu correo',
-    emailIncludeItems: [
-      'Tu nombre completo',
-      'Dirección de correo electrónico asociada a tu cuenta de Tribe',
-      'Motivo de la eliminación (opcional)'
-    ],
-    emailSendTo: 'Envía tu solicitud a:',
-    responseTime: 'Tiempo de Respuesta',
-    responseTimeDesc: 'Procesaremos tu solicitud dentro de 7 días hábiles y te enviaremos un correo de confirmación una vez que tu cuenta haya sido eliminada.',
-    beforeDelete: 'Antes de Eliminar',
-    beforeDeleteDesc: 'Por favor considera:',
-    beforeDeleteItems: [
-      'La eliminación es permanente e irreversible después del período de 30 días',
-      'Perderás acceso a todas las sesiones y conversaciones',
-      'Otros usuarios ya no podrán ver tu perfil',
-      'Cualquier sesión activa que estés organizando será cancelada'
-    ],
-    questions: 'Preguntas?',
-    questionsDesc: 'Si tienes preguntas sobre la eliminación de tu cuenta o tus datos, contáctanos en:',
-  } : {
-    title: 'Delete Account',
-    subtitle: 'Account Deletion Instructions',
-    note: '',
-    intro: 'We respect your right to delete your account and all associated data. This page explains what happens when you delete your account and how to request deletion.',
-    whatDeleted: 'What Gets Deleted',
-    whatDeletedDesc: 'When you delete your Tribe account, the following data is permanently removed:',
-    profileInfo: 'Profile information (name, email, profile photo, bio)',
-    sessionData: 'Workout session history and participation records',
-    messages: 'Messages and conversations',
-    locationData: 'Location data and search history',
-    preferences: 'App preferences and settings',
-    notifications: 'Push notification tokens',
-    retention: 'Data Retention Period',
-    retentionDesc: 'After deletion request:',
-    retentionDays: 'Your data is permanently deleted within 30 days',
-    retentionRecovery: 'During this period, you can contact us to cancel the deletion request',
-    retentionLegal: 'Some data may be retained longer if required by law (e.g., transaction records)',
-    howToDelete: 'How to Delete Your Account',
-    option1Title: 'Option 1: Through the App (Recommended)',
-    option1Steps: [
-      'Open Tribe and sign in to your account',
-      'Go to Profile → Settings',
-      'Scroll down to "Delete Account"',
-      'Confirm your decision',
-      'Your account will be scheduled for deletion'
-    ],
-    option2Title: 'Option 2: Email Request',
-    option2Desc: 'If you cannot access your account or prefer to request deletion via email:',
-    emailSubject: 'Subject',
-    emailSubjectText: 'Account Deletion Request - Tribe',
-    emailInclude: 'Include in your email',
-    emailIncludeItems: [
-      'Your full name',
-      'Email address associated with your Tribe account',
-      'Reason for deletion (optional)'
-    ],
-    emailSendTo: 'Send your request to:',
-    responseTime: 'Response Time',
-    responseTimeDesc: 'We will process your request within 7 business days and send you a confirmation email once your account has been deleted.',
-    beforeDelete: 'Before You Delete',
-    beforeDeleteDesc: 'Please consider:',
-    beforeDeleteItems: [
-      'Deletion is permanent and irreversible after the 30-day period',
-      'You will lose access to all sessions and conversations',
-      'Other users will no longer be able to see your profile',
-      'Any active sessions you are hosting will be cancelled'
-    ],
-    questions: 'Questions?',
-    questionsDesc: 'If you have questions about deleting your account or your data, contact us at:',
-  };
+  const t =
+    language === 'es'
+      ? {
+          title: 'Eliminar Cuenta',
+          subtitle: 'Instrucciones para Eliminación de Cuenta',
+          note: 'Nota: Este documento legal está disponible en inglés.',
+          intro:
+            'Respetamos tu derecho a eliminar tu cuenta y todos los datos asociados. Esta página explica qué sucede cuando eliminas tu cuenta y cómo solicitar la eliminación.',
+          whatDeleted: 'Qué Se Elimina',
+          whatDeletedDesc: 'Cuando eliminas tu cuenta de Tribe, los siguientes datos se eliminan permanentemente:',
+          profileInfo: 'Información de perfil (nombre, correo electrónico, foto de perfil, biografía)',
+          sessionData: 'Historial de sesiones de entrenamiento y participación',
+          messages: 'Mensajes y conversaciones',
+          locationData: 'Datos de ubicación e historial de búsqueda',
+          preferences: 'Preferencias y configuración de la aplicación',
+          notifications: 'Tokens de notificaciones push',
+          retention: 'Período de Retención de Datos',
+          retentionDesc: 'Después de la solicitud de eliminación:',
+          retentionDays: 'Tus datos se eliminan permanentemente dentro de 30 días',
+          retentionRecovery: 'Durante este período, puedes contactarnos para cancelar la solicitud de eliminación',
+          retentionLegal:
+            'Algunos datos pueden conservarse más tiempo si lo requiere la ley (por ejemplo, registros de transacciones)',
+          howToDelete: 'Cómo Eliminar Tu Cuenta',
+          option1Title: 'Opción 1: A través de la App (Recomendado)',
+          option1Steps: [
+            'Abre Tribe e inicia sesión',
+            'Ve a Perfil → Configuración',
+            'Desplázate hacia abajo hasta "Eliminar Cuenta"',
+            'Confirma tu decisión',
+            'Tu cuenta se programará para eliminación',
+          ],
+          option2Title: 'Opción 2: Solicitud por Correo Electrónico',
+          option2Desc: 'Si no puedes acceder a tu cuenta o prefieres solicitar la eliminación por correo electrónico:',
+          emailSubject: 'Asunto',
+          emailSubjectText: 'Solicitud de Eliminación de Cuenta - Tribe',
+          emailInclude: 'Incluir en tu correo',
+          emailIncludeItems: [
+            'Tu nombre completo',
+            'Dirección de correo electrónico asociada a tu cuenta de Tribe',
+            'Motivo de la eliminación (opcional)',
+          ],
+          emailSendTo: 'Envía tu solicitud a:',
+          responseTime: 'Tiempo de Respuesta',
+          responseTimeDesc:
+            'Procesaremos tu solicitud dentro de 7 días hábiles y te enviaremos un correo de confirmación una vez que tu cuenta haya sido eliminada.',
+          beforeDelete: 'Antes de Eliminar',
+          beforeDeleteDesc: 'Por favor considera:',
+          beforeDeleteItems: [
+            'La eliminación es permanente e irreversible después del período de 30 días',
+            'Perderás acceso a todas las sesiones y conversaciones',
+            'Otros usuarios ya no podrán ver tu perfil',
+            'Cualquier sesión activa que estés organizando será cancelada',
+          ],
+          questions: 'Preguntas?',
+          questionsDesc: 'Si tienes preguntas sobre la eliminación de tu cuenta o tus datos, contáctanos en:',
+        }
+      : {
+          title: 'Delete Account',
+          subtitle: 'Account Deletion Instructions',
+          note: '',
+          intro:
+            'We respect your right to delete your account and all associated data. This page explains what happens when you delete your account and how to request deletion.',
+          whatDeleted: 'What Gets Deleted',
+          whatDeletedDesc: 'When you delete your Tribe account, the following data is permanently removed:',
+          profileInfo: 'Profile information (name, email, profile photo, bio)',
+          sessionData: 'Workout session history and participation records',
+          messages: 'Messages and conversations',
+          locationData: 'Location data and search history',
+          preferences: 'App preferences and settings',
+          notifications: 'Push notification tokens',
+          retention: 'Data Retention Period',
+          retentionDesc: 'After deletion request:',
+          retentionDays: 'Your data is permanently deleted within 30 days',
+          retentionRecovery: 'During this period, you can contact us to cancel the deletion request',
+          retentionLegal: 'Some data may be retained longer if required by law (e.g., transaction records)',
+          howToDelete: 'How to Delete Your Account',
+          option1Title: 'Option 1: Through the App (Recommended)',
+          option1Steps: [
+            'Open Tribe and sign in to your account',
+            'Go to Profile → Settings',
+            'Scroll down to "Delete Account"',
+            'Confirm your decision',
+            'Your account will be scheduled for deletion',
+          ],
+          option2Title: 'Option 2: Email Request',
+          option2Desc: 'If you cannot access your account or prefer to request deletion via email:',
+          emailSubject: 'Subject',
+          emailSubjectText: 'Account Deletion Request - Tribe',
+          emailInclude: 'Include in your email',
+          emailIncludeItems: [
+            'Your full name',
+            'Email address associated with your Tribe account',
+            'Reason for deletion (optional)',
+          ],
+          emailSendTo: 'Send your request to:',
+          responseTime: 'Response Time',
+          responseTimeDesc:
+            'We will process your request within 7 business days and send you a confirmation email once your account has been deleted.',
+          beforeDelete: 'Before You Delete',
+          beforeDeleteDesc: 'Please consider:',
+          beforeDeleteItems: [
+            'Deletion is permanent and irreversible after the 30-day period',
+            'You will lose access to all sessions and conversations',
+            'Other users will no longer be able to see your profile',
+            'Any active sessions you are hosting will be cancelled',
+          ],
+          questions: 'Questions?',
+          questionsDesc: 'If you have questions about deleting your account or your data, contact us at:',
+        };
 
   const contactEmail = 'tribe@aplusfitnessllc.com';
 
@@ -120,9 +129,7 @@ export default function DeleteAccountPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            {t.title}
-          </h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.title}</h1>
         </div>
       </div>
 
@@ -245,10 +252,7 @@ export default function DeleteAccountPage() {
             <section className="border-t border-gray-200 dark:border-gray-600 pt-6">
               <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-3">{t.questions}</h3>
               <p className="mb-3">{t.questionsDesc}</p>
-              <a
-                href={`mailto:${contactEmail}`}
-                className="text-tribe-green hover:underline font-semibold"
-              >
+              <a href={`mailto:${contactEmail}`} className="text-tribe-green hover:underline font-semibold">
                 {contactEmail}
               </a>
             </section>

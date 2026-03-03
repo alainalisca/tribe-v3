@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { logError } from '@/lib/logger';
 
+/**
+ * @description Sends daily motivational push notifications to users who have push subscriptions and haven't received one today.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, message: string, count: number }} Number of motivational messages sent.
+ */
 export async function GET(request: Request) {
   try {
     // Verify this is from Vercel Cron

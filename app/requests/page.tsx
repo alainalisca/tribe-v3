@@ -1,3 +1,4 @@
+/** Page: /requests — Manage incoming join requests for curated sessions */
 'use client';
 import { logError } from '@/lib/logger';
 import { formatTime12Hour } from '@/lib/utils';

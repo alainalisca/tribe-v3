@@ -1,3 +1,4 @@
+/** Page: /profile — Current user's profile with stats, reviews, and settings */
 'use client';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';

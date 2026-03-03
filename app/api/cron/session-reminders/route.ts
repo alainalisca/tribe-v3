@@ -26,6 +26,12 @@ const reminderMessages = {
   },
 };
 
+/**
+ * @description Sends session reminder push notifications at two intervals: 1 hour and 15 minutes before session start, to both hosts and confirmed participants.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, timestamp: string, oneHourRemindersSent: number, fifteenMinRemindersSent: number }} Counts of reminders sent at each interval.
+ */
 export async function GET(request: Request) {
   try {
     // Verify cron secret

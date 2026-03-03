@@ -1,3 +1,4 @@
+/** Page: /profile/[userId] — Public profile view for other users */
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';

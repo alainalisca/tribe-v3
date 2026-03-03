@@ -1,3 +1,4 @@
+/** Page: /settings — App settings: notifications, theme, language, account */
 'use client';
 import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';

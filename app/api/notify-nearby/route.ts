@@ -14,6 +14,13 @@ function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number)
   return R * c;
 }
 
+/**
+ * @description Sends push notifications to nearby users (within 10km) who match the session's sport, informing them about a new or upcoming training session.
+ * @method POST
+ * @auth Required - validates the caller is authenticated via Supabase auth and must be the session creator.
+ * @param {Object} request.body - JSON body with `sessionId`, `sport`, `location`, `latitude`, `longitude`, `startIn` (minutes until start), and `creatorId`.
+ * @returns {{ notified: number, total: number }} Count of users successfully notified and total nearby users found.
+ */
 export async function POST(request: Request) {
   try {
     // AUTH: verify the caller is authenticated

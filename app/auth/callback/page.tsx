@@ -1,3 +1,4 @@
+/** Page: /auth/callback — OAuth callback handler for web-based sign-in */
 'use client';
 
 import { useEffect, useState } from 'react';

@@ -1,3 +1,4 @@
+/** Page: /feedback — Submit app feedback and bug reports */
 'use client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 

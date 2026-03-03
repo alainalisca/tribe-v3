@@ -2,6 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 
+/**
+ * @description Sends post-session follow-up emails to attendees of sessions that ended within the last 2 hours, prompting them to share photos.
+ * @method GET
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @returns {{ success: boolean, message: string, count: number }} Number of follow-up emails sent and sessions processed.
+ */
 export async function GET(request: Request) {
   try {
     // Verify this is from Vercel Cron

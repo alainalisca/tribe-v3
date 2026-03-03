@@ -6,6 +6,13 @@ import { logError } from '@/lib/logger';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
+/**
+ * @description Sends weekly recap emails to all users who participated in or hosted sessions during the past week, summarizing their activity.
+ * @method POST
+ * @auth Required - validates CRON_SECRET via Bearer token in the Authorization header.
+ * @param {void} request.body - No request body expected; all active users are processed automatically.
+ * @returns {{ success: boolean, emailsSent: number, errors: number, totalUsers: number }} Summary of emails sent and any failures.
+ */
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');

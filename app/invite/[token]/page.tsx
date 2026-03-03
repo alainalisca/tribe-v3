@@ -1,3 +1,4 @@
+/** Page: /invite/[token] — Accept a session invitation via shared link */
 'use client';
 import { logError } from '@/lib/logger';
 import { formatTime12Hour } from '@/lib/utils';
