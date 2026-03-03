@@ -1,7 +1,14 @@
 import { MessageSquare, Trash2 } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
+type AdminMessage = ChatMessageRow & {
+  user: { id: string; name: string | null; email: string } | null;
+  session: { id: string; sport: string; location: string } | null;
+};
 
 interface MessageListProps {
-  messages: any[];
+  messages: AdminMessage[];
   loading: boolean;
   actionLoading: string | null;
   onDelete: (messageId: string) => void;
@@ -43,7 +50,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
                       Session: {msg.session?.sport} @ {msg.session?.location}
                     </span>
                     <span>&bull;</span>
-                    <span>{new Date(msg.created_at).toLocaleString()}</span>
+                    <span>{new Date(msg.created_at ?? '').toLocaleString()}</span>
                   </div>
                 </div>
 

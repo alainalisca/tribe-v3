@@ -1,7 +1,11 @@
-import { Search, Calendar, Users } from 'lucide-react';
+import { Search, Calendar } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type UserRow = Database['public']['Tables']['users']['Row'];
+type AdminUser = UserRow & { sessions_created: number; sessions_joined: number };
 
 interface UserManagementProps {
-  users: any[];
+  users: AdminUser[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   loading: boolean;
@@ -76,7 +80,7 @@ export default function UserManagement({
               <div className="flex items-center gap-3 text-xs text-stone-500 mb-2 ml-12">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(u.created_at).toLocaleDateString('en-US', {
+                  {new Date(u.created_at ?? '').toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: '2-digit',

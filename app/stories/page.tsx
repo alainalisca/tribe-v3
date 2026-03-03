@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import type { User } from '@supabase/supabase-js';
 
 interface Story {
   id: string;
@@ -54,13 +55,20 @@ export default function StoriesPage() {
   const supabase = createClient();
   const router = useRouter();
   const { language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [groups, setGroups] = useState<StoryGroup[]>([]);
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
-  const [StoryViewerComp, setStoryViewerComp] = useState<any>(null);
+  const [StoryViewerComp, setStoryViewerComp] = useState<React.ComponentType<{
+    groups: StoryGroup[];
+    startGroupIndex: number;
+    currentUserId?: string | null;
+    onClose: () => void;
+    onStorySeen: (ids: string[]) => void;
+    onStoryDeleted?: () => void;
+  }> | null>(null);
 
   const t =
     language === 'es'
@@ -101,10 +109,12 @@ export default function StoriesPage() {
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
     if (user) loadStories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [user]);
 
   async function checkUser() {
@@ -161,8 +171,8 @@ export default function StoriesPage() {
       const flat: Story[] = [];
       for (const row of data) {
         try {
-          const u = row.user as any;
-          const s = row.session as any;
+          const u = row.user as unknown as Record<string, string | null> | null;
+          const s = row.session as unknown as Record<string, string | null> | null;
           flat.push({
             id: row.id,
             media_url: row.media_url || '',

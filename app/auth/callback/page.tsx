@@ -12,6 +12,7 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     handleCallback();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function handleCallback() {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, X, Shield } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { log, logError } from '@/lib/logger';
+import { logError } from '@/lib/logger';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import Link from 'next/link';
@@ -48,6 +48,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     loadMessages();
     const cleanup = subscribeToMessages();
     return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [sessionId]);
 
   useEffect(() => {
@@ -232,7 +233,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
       setSelectedMessage(null);
       showSuccess(language === 'es' ? 'Mensaje eliminado' : 'Message deleted');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'deleteMessage', messageId });
       showError(getErrorMessage(error, 'send_message', language));
     }
@@ -270,7 +271,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       setReportReason('');
       setReportDescription('');
       setReportingMessageId(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'submitReport', messageId: reportingMessageId ?? undefined });
       showError(getErrorMessage(error, 'send_message', language));
     }

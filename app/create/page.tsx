@@ -13,18 +13,23 @@ import { ArrowLeft, Upload, X, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User as AuthUser } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
+type FormErrors = Partial<Record<'sport' | 'date' | 'start_time' | 'location', string>>;
 
 export default function CreateSessionPage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<any>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
 
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<SessionTemplateRow[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [formData, setFormData] = useState({
@@ -47,10 +52,12 @@ export default function CreateSessionPage() {
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
     if (user) loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [user]);
 
   async function checkUser() {
@@ -79,8 +86,11 @@ export default function CreateSessionPage() {
         return;
       }
       setTemplates(data || []);
-    } catch (error: any) {
-      log('warn', 'Templates load exception (non-critical)', { action: 'loadTemplates', error: error.message });
+    } catch (error: unknown) {
+      log('warn', 'Templates load exception (non-critical)', {
+        action: 'loadTemplates',
+        error: error instanceof Error ? error.message : String(error),
+      });
       setTemplates([]);
     }
   }
@@ -113,16 +123,16 @@ export default function CreateSessionPage() {
       if (error) throw error;
       showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
       await loadTemplates();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'saveAsTemplate' });
-      const detail = error?.message || error?.code || 'Unknown error';
+      const detail = error instanceof Error ? error.message : String(error);
       showError(language === 'es' ? `Error al guardar plantilla: ${detail}` : `Error saving template: ${detail}`);
     } finally {
       setSavingTemplate(false);
     }
   }
 
-  function loadFromTemplate(template: any) {
+  function loadFromTemplate(template: SessionTemplateRow) {
     setFormData({
       ...formData,
       sport: template.sport,
@@ -146,16 +156,16 @@ export default function CreateSessionPage() {
       if (error) throw error;
       loadTemplates();
       showSuccess(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'create_session', language));
     }
   }
 
-  function handleChange(e: any) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev: any) => ({ ...prev, [name]: '' }));
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev: FormErrors) => ({ ...prev, [name]: '' }));
     }
   }
 
@@ -223,9 +233,9 @@ export default function CreateSessionPage() {
         const compressedBlob = await compressImage(file);
 
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}-${i}.${fileExt}`;
+        const fileName = `${user!.id}/${Date.now()}-${i}.${fileExt}`;
 
-        const { data, error } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
+        const { error } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
           cacheControl: '3600',
           upsert: false,
         });
@@ -240,7 +250,7 @@ export default function CreateSessionPage() {
       }
 
       setPhotos((prev) => [...prev, ...uploadedUrls]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingPhotos(false);
@@ -252,7 +262,7 @@ export default function CreateSessionPage() {
   }
 
   function validate() {
-    const newErrors: any = {};
+    const newErrors: FormErrors = {};
     if (!formData.sport) newErrors.sport = language === 'es' ? 'El deporte es requerido' : 'Sport is required';
     if (!formData.date) newErrors.date = language === 'es' ? 'La fecha es requerida' : 'Date is required';
     if (!formData.start_time)
@@ -272,22 +282,28 @@ export default function CreateSessionPage() {
       const insertData = {
         ...formData,
         date: formData.date,
-        creator_id: user.id,
+        creator_id: user!.id,
         current_participants: 0,
         status: 'active',
         photos: photos.length > 0 ? photos : null,
       };
 
-      const { data, error } = await supabase.from('sessions').insert(insertData).select().single();
+      const { error } = await supabase.from('sessions').insert(insertData).select().single();
 
       if (error) throw error;
 
       showSuccess(t('sessionCreated'));
       router.push('/');
       celebrateSessionCreated();
-    } catch (error: any) {
-      logError(error, { action: 'handleSubmit', code: error?.code, details: error?.details, hint: error?.hint });
-      const errorMsg = error?.message || error?.code || error?.details || JSON.stringify(error);
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown> | null;
+      logError(error, {
+        action: 'handleSubmit',
+        code: String(err?.code ?? ''),
+        details: String(err?.details ?? ''),
+        hint: String(err?.hint ?? ''),
+      });
+      const errorMsg = (err?.message ?? err?.code ?? err?.details ?? JSON.stringify(error)) as string;
       showError(language === 'es' ? `Error al crear sesión: ${errorMsg}` : `Session creation failed: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -480,7 +496,7 @@ export default function CreateSessionPage() {
               <LocationPicker
                 value={formData.location}
                 onChange={(location, coords) => {
-                  setErrors((prev: any) => ({ ...prev, location: '' }));
+                  setErrors((prev: FormErrors) => ({ ...prev, location: '' }));
                   setFormData((prev) => ({
                     ...prev,
                     location,

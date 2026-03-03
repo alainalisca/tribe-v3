@@ -1,7 +1,13 @@
 import { Calendar } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type SessionRow = Database['public']['Tables']['sessions']['Row'];
+type AdminSession = SessionRow & {
+  creator: { id: string; name: string | null; email: string } | null;
+};
 
 interface SessionManagementProps {
-  sessions: any[];
+  sessions: AdminSession[];
   loading: boolean;
   language: string;
   onVerify: (sessionId: string) => void;

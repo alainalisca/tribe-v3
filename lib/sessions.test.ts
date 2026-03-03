@@ -27,8 +27,6 @@ interface MockSessionData {
 }
 
 function createJoinSessionMock(config: MockSessionData) {
-  let sessionParticipantsCallCount = 0;
-
   return {
     from: (table: string) => {
       if (table === 'sessions') {
@@ -48,9 +46,6 @@ function createJoinSessionMock(config: MockSessionData) {
       }
 
       if (table === 'session_participants') {
-        sessionParticipantsCallCount++;
-        const callNum = sessionParticipantsCallCount;
-
         return {
           select: (_cols?: string, opts?: { count?: string; head?: boolean }) => {
             if (opts?.count === 'exact') {
@@ -75,8 +70,7 @@ function createJoinSessionMock(config: MockSessionData) {
           },
           insert: () => ({
             error: config.insertError ?? null,
-            then: (resolve: (v: unknown) => void) =>
-              resolve({ error: config.insertError ?? null }),
+            then: (resolve: (v: unknown) => void) => resolve({ error: config.insertError ?? null }),
           }),
         };
       }

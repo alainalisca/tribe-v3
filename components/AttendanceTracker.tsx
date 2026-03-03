@@ -3,10 +3,16 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, X } from 'lucide-react';
-import { log, logError } from '@/lib/logger';
+import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
+
+interface AttendanceParticipant {
+  user_id: string;
+  user: { id: string; name: string; avatar_url: string | null } | null;
+  attended: boolean;
+}
 
 interface AttendanceTrackerProps {
   sessionId: string;
@@ -18,7 +24,7 @@ interface AttendanceTrackerProps {
 export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionDate }: AttendanceTrackerProps) {
   const supabase = createClient();
   const { language } = useLanguage();
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<AttendanceParticipant[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
@@ -31,6 +37,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depends on sessionId via closure
   }, [sessionId, canManageAttendance, sessionHasPassed]);
 
   async function loadParticipants() {
@@ -66,10 +73,15 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
         {} as Record<string, boolean>
       );
 
-      const participantsWithAttendance = participantsData.map((p) => ({
-        ...p,
-        attended: attendanceByUser[p.user_id] || false,
-      }));
+      const participantsWithAttendance = participantsData.map((p) => {
+        const rawUser = p.user;
+        const userObj = Array.isArray(rawUser) ? rawUser[0] : rawUser;
+        return {
+          user_id: p.user_id,
+          user: userObj as { id: string; name: string; avatar_url: string | null },
+          attended: attendanceByUser[p.user_id] || false,
+        };
+      });
 
       setParticipants(participantsWithAttendance);
     } catch (error) {
@@ -119,7 +131,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
       }
 
       await loadParticipants();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setSendingEmail(null);

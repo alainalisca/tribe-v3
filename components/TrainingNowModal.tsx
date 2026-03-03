@@ -170,7 +170,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         startIn: 30,
         duration: 60,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handleSubmit' });
       showError(getErrorMessage(error, 'create_session', language));
     } finally {

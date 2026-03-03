@@ -1,6 +1,6 @@
 'use client';
 import { logError } from '@/lib/logger';
-import { showSuccess, showError } from '@/lib/toast';
+import { showError } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -10,13 +10,17 @@ import { Camera, MapPin, X, Settings } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
-  const { t, language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const { language } = useLanguage();
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
@@ -28,6 +32,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   // Lock body scroll and handle back button when lightbox is open
@@ -216,7 +221,7 @@ export default function ProfilePage() {
                 <img
                   loading="lazy"
                   src={profile.avatar_url}
-                  alt={profile.name}
+                  alt={profile.name ?? undefined}
                   className="w-full h-full object-cover"
                 />
               ) : (

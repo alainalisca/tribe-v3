@@ -82,6 +82,7 @@ export default function StoryViewer({
     if (story) {
       onStorySeen([story.id]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- derived from currentIndex
   }, [story?.id]);
 
   // Lock body scroll
@@ -160,6 +161,7 @@ export default function StoryViewer({
       if (timerRef.current) cancelAnimationFrame(timerRef.current);
       elapsedRef.current += Date.now() - startTimeRef.current;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- derived from currentIndex
   }, [story?.id, paused, showDeleteConfirm, goNext]);
 
   // Video progress tracking
@@ -181,6 +183,7 @@ export default function StoryViewer({
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('ended', onEnded);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- derived from currentIndex
   }, [story?.id, goNext]);
 
   // Pause/resume video when paused state changes or delete confirm shown
@@ -191,6 +194,7 @@ export default function StoryViewer({
     } else {
       videoRef.current.play().catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- derived from currentIndex
   }, [paused, showDeleteConfirm, story?.id]);
 
   async function handleDeleteStory() {
@@ -250,7 +254,7 @@ export default function StoryViewer({
 
       elapsedRef.current = 0;
       setProgress(0);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handleDeleteStory', storyId: story.id });
       showError(language === 'es' ? 'Error al eliminar' : 'Failed to delete');
     } finally {

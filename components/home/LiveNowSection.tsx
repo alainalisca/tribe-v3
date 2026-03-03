@@ -2,19 +2,15 @@
 
 import Link from 'next/link';
 import { calculateDistance, formatDistance } from '@/lib/distance';
-import type { Session } from '@/lib/database.types';
+import type { SessionWithRelations } from '@/lib/dal';
 
 interface LiveNowSectionProps {
-  liveNowSessions: Session[];
+  liveNowSessions: SessionWithRelations[];
   userLocation: { latitude: number; longitude: number } | null;
   language: 'en' | 'es';
 }
 
-export default function LiveNowSection({
-  liveNowSessions,
-  userLocation,
-  language,
-}: LiveNowSectionProps) {
+export default function LiveNowSection({ liveNowSessions, userLocation, language }: LiveNowSectionProps) {
   if (liveNowSessions.length === 0) return null;
 
   return (
@@ -25,11 +21,11 @@ export default function LiveNowSection({
           <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
         </div>
         <h2 className="text-lg font-bold text-theme-primary">
-          {language === "es" ? "EN VIVO AHORA" : "LIVE NOW"} ({liveNowSessions.length})
+          {language === 'es' ? 'EN VIVO AHORA' : 'LIVE NOW'} ({liveNowSessions.length})
         </h2>
       </div>
       <div className="space-y-3">
-        {liveNowSessions.map((session: any) => {
+        {liveNowSessions.map((session) => {
           const sessionStart = new Date(`${session.date}T${session.start_time}`);
           const now = new Date();
           const diffMs = sessionStart.getTime() - now.getTime();
@@ -37,14 +33,14 @@ export default function LiveNowSection({
           const sessionEnd = new Date(sessionStart.getTime() + (session.duration || 60) * 60000);
           const minsLeft = Math.round((sessionEnd.getTime() - now.getTime()) / 60000);
 
-          let statusText = "";
+          let statusText = '';
           if (diffMins > 0) {
-            statusText = language === "es" ? `Empieza en ${diffMins} min` : `Starting in ${diffMins} min`;
+            statusText = language === 'es' ? `Empieza en ${diffMins} min` : `Starting in ${diffMins} min`;
           } else {
-            statusText = language === "es" ? `${minsLeft} min restantes` : `${minsLeft} min left`;
+            statusText = language === 'es' ? `${minsLeft} min restantes` : `${minsLeft} min left`;
           }
 
-          let liveDistanceText = "";
+          let liveDistanceText = '';
           if (userLocation && session.latitude && session.longitude) {
             const distanceKm = calculateDistance(
               userLocation.latitude,
@@ -55,7 +51,20 @@ export default function LiveNowSection({
             liveDistanceText = formatDistance(distanceKm, language);
           }
 
-          const sportEmoji = session.sport === "Running" ? "🏃" : session.sport === "CrossFit" ? "🏋️" : session.sport === "Swimming" ? "🏊" : session.sport === "Cycling" ? "🚴" : session.sport === "Boxing" ? "🥊" : session.sport === "Jiu-Jitsu" ? "🥋" : "💪";
+          const sportEmoji =
+            session.sport === 'Running'
+              ? '🏃'
+              : session.sport === 'CrossFit'
+                ? '🏋️'
+                : session.sport === 'Swimming'
+                  ? '🏊'
+                  : session.sport === 'Cycling'
+                    ? '🚴'
+                    : session.sport === 'Boxing'
+                      ? '🥊'
+                      : session.sport === 'Jiu-Jitsu'
+                        ? '🥋'
+                        : '💪';
 
           return (
             <Link key={session.id} href={`/session/${session.id}`}>
@@ -66,7 +75,9 @@ export default function LiveNowSection({
                       {sportEmoji}
                     </div>
                     <div>
-                      <div className="font-bold text-theme-primary">{session.creator?.name || "Someone"} - {session.sport}</div>
+                      <div className="font-bold text-theme-primary">
+                        {session.creator?.name || 'Someone'} - {session.sport}
+                      </div>
                       <div className="text-sm text-theme-secondary truncate max-w-[200px]">
                         {session.location}
                         {liveDistanceText && (
@@ -80,7 +91,7 @@ export default function LiveNowSection({
                   <div className="text-right">
                     <div className="text-xs font-medium text-green-600 dark:text-green-400">{statusText}</div>
                     <button className="mt-1 px-4 py-1.5 bg-tribe-green text-slate-900 text-sm font-bold rounded-full hover:bg-lime-500 transition">
-                      {language === "es" ? "Unirse" : "Join"}
+                      {language === 'es' ? 'Unirse' : 'Join'}
                     </button>
                   </div>
                 </div>

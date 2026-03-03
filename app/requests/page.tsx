@@ -5,23 +5,46 @@ import { formatTime12Hour } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ArrowLeft, Check, X, User, Inbox } from 'lucide-react';
+import { ArrowLeft, Check, X, User } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
+import type { User as AuthUser } from '@supabase/supabase-js';
+
+interface JoinRequest {
+  id: string;
+  session_id: string;
+  user_id: string | null;
+  status: string | null;
+  users: {
+    name: string | null;
+    avatar_url: string | null;
+    sports: string[] | null;
+  } | null;
+  session:
+    | {
+        id: string;
+        sport: string;
+        date: string;
+        start_time: string;
+        location: string;
+      }
+    | undefined;
+}
 
 export default function RequestsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
-  const [requests, setRequests] = useState<any[]>([]);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function checkUser() {
@@ -77,8 +100,8 @@ export default function RequestsPage() {
       if (error) throw error;
 
       showSuccess(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
-      loadRequests(user.id);
-    } catch (error: any) {
+      loadRequests(user!.id);
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'handle_request', language));
     }
   }
@@ -90,8 +113,8 @@ export default function RequestsPage() {
       if (error) throw error;
 
       showSuccess(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
-      loadRequests(user.id);
-    } catch (error: any) {
+      loadRequests(user!.id);
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'handle_request', language));
     }
   }
@@ -159,13 +182,14 @@ export default function RequestsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="font-bold text-stone-900 dark:text-white">
-                      {request.session.sport} - {request.session.location}
+                      {request.session?.sport} - {request.session?.location}
                     </h3>
                     <p className="text-sm text-stone-600 dark:text-gray-400">
-                      {new Date(request.session.date + 'T00:00:00').toLocaleDateString(
-                        language === 'es' ? 'es-ES' : 'en-US'
-                      )}{' '}
-                      at {formatTime12Hour(request.session.start_time)}
+                      {request.session &&
+                        new Date(request.session.date + 'T00:00:00').toLocaleDateString(
+                          language === 'es' ? 'es-ES' : 'en-US'
+                        )}{' '}
+                      {request.session && <>at {formatTime12Hour(request.session.start_time)}</>}
                     </p>
                   </div>
                 </div>
@@ -175,7 +199,7 @@ export default function RequestsPage() {
                     <img
                       loading="lazy"
                       src={request.users.avatar_url}
-                      alt={request.users.name}
+                      alt={request.users.name ?? undefined}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                   ) : (

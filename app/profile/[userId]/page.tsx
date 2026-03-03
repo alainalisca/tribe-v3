@@ -6,11 +6,14 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Shield, Flag, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export default function PublicProfilePage() {
   const router = useRouter();
@@ -19,7 +22,7 @@ export default function PublicProfilePage() {
   const supabase = createClient();
   const { language } = useLanguage();
 
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
@@ -27,7 +30,7 @@ export default function PublicProfilePage() {
     attendanceRate: 0,
     totalAttendance: 0,
   });
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -109,6 +112,7 @@ export default function PublicProfilePage() {
   useEffect(() => {
     loadProfile();
     checkCurrentUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [userId]);
 
   // Lock body scroll and handle back button when lightbox is open
@@ -218,7 +222,7 @@ export default function PublicProfilePage() {
         setIsBlocked(true);
         showSuccess(t.userBlocked);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }
@@ -232,7 +236,7 @@ export default function PublicProfilePage() {
     setSubmitting(true);
     try {
       await supabase.from('reported_users').insert({
-        reporter_id: currentUser.id,
+        reporter_id: currentUser!.id,
         reported_user_id: userId,
         reason: reportReason,
         description: reportDescription,
@@ -242,7 +246,7 @@ export default function PublicProfilePage() {
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'submit_feedback', language));
     } finally {
       setSubmitting(false);
@@ -315,7 +319,7 @@ export default function PublicProfilePage() {
               <img
                 loading="lazy"
                 src={profile.avatar_url}
-                alt={profile.name}
+                alt={profile.name ?? undefined}
                 onClick={() => {
                   setLightboxPhoto(profile.avatar_url);
                   history.pushState({ lightbox: true }, '');
@@ -465,9 +469,9 @@ export default function PublicProfilePage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  const newIndex = (lightboxIndex - 1 + profile.photos.length) % profile.photos.length;
+                  const newIndex = (lightboxIndex - 1 + profile.photos!.length) % profile.photos!.length;
                   setLightboxIndex(newIndex);
-                  setLightboxPhoto(profile.photos[newIndex]);
+                  setLightboxPhoto(profile.photos![newIndex]);
                 }}
                 className="absolute left-4 p-2 text-white hover:bg-white/10 rounded-full transition"
               >
@@ -476,9 +480,9 @@ export default function PublicProfilePage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  const newIndex = (lightboxIndex + 1) % profile.photos.length;
+                  const newIndex = (lightboxIndex + 1) % profile.photos!.length;
                   setLightboxIndex(newIndex);
-                  setLightboxPhoto(profile.photos[newIndex]);
+                  setLightboxPhoto(profile.photos![newIndex]);
                 }}
                 className="absolute right-4 p-2 text-white hover:bg-white/10 rounded-full transition"
               >

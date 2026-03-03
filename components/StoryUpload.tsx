@@ -230,7 +230,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         };
         reader.readAsDataURL(imageFile);
       });
-    } catch (err) {
+    } catch {
       log('warn', 'Image compression failed, using original', { action: 'compressImage' });
       return imageFile;
     }
@@ -309,9 +309,9 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       showSuccess(t.success);
       onUploaded?.();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handlePost', sessionId });
-      if (error?.message === 'UPLOAD_TIMEOUT') {
+      if (error instanceof Error && error.message === 'UPLOAD_TIMEOUT') {
         showError(t.uploadTimeout);
       } else {
         showError(t.errorUpload);

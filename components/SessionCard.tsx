@@ -1,15 +1,16 @@
 'use client';
 import { formatTime12Hour } from '@/lib/utils';
 
-import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon, Star } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
-import { sportTranslations } from '@/lib/translations';
+import { sportTranslations, TranslationKey } from '@/lib/translations';
+import type { SessionWithRelations } from '@/lib/dal';
 
 interface SessionCardProps {
-  session: any;
-  onShare?: (session: any) => void;
+  session: SessionWithRelations;
+  onShare?: (session: SessionWithRelations) => void;
   onJoin?: (sessionId: string) => void;
   onEdit?: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
@@ -19,7 +20,7 @@ interface SessionCardProps {
   liveData?: { count: number; users: Array<{ name: string; avatar_url: string | null }> };
 }
 
-function getSkillLevelDisplay(level: string, t: (key: any) => string) {
+function getSkillLevelDisplay(level: string, t: (key: TranslationKey) => string) {
   switch (level) {
     case 'beginner':
       return { emoji: '🌱', label: t('beginner'), color: 'bg-green-100 text-green-800' };
@@ -33,7 +34,7 @@ function getSkillLevelDisplay(level: string, t: (key: any) => string) {
   }
 }
 
-function getGenderDisplay(gender: string, t: (key: any) => string) {
+function getGenderDisplay(gender: string, t: (key: TranslationKey) => string) {
   switch (gender) {
     case 'women_only':
       return { emoji: '👩', label: t('womenOnly'), color: 'bg-pink-100 text-pink-800' };
@@ -59,7 +60,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
     }
     return sessionDate < new Date();
   })();
-  const isFull = session.current_participants >= session.max_participants;
+  const isFull = (session.current_participants ?? 0) >= session.max_participants;
   const isStartingSoon =
     !isPast &&
     (() => {
@@ -69,7 +70,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
       const diffHours = diffMs / (1000 * 60 * 60);
       return diffHours > 0 && diffHours <= 2;
     })();
-  const confirmedParticipants = session.session_participants?.filter((p: any) => p.status === 'confirmed') || [];
+  const confirmedParticipants = session.participants?.filter((p) => p.status === 'confirmed') || [];
 
   const sportName =
     language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
@@ -254,7 +255,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           {confirmedParticipants.length > 0 && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex -space-x-2">
-                {confirmedParticipants.slice(0, 5).map((p: any, idx: number) => (
+                {confirmedParticipants.slice(0, 5).map((p, idx) => (
                   <Link key={idx} href={`/profile/${p.user_id}`}>
                     <div
                       className="w-8 h-8 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110"
@@ -286,7 +287,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
             </button>
             {currentUserId &&
               (session.creator_id === currentUserId ||
-                confirmedParticipants.some((p: any) => p.user_id === currentUserId)) && (
+                confirmedParticipants.some((p) => p.user_id === currentUserId)) && (
                 <Link
                   href={`/session/${session.id}/chat`}
                   onClick={(e) => e.stopPropagation()}

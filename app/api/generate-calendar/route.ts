@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { createEvents } from 'ics';
+import { createEvents, type EventAttributes } from 'ics';
 import { log, logError } from '@/lib/logger';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     endDateTime.setMinutes(endDateTime.getMinutes() + (session.duration || 60));
 
     // Create calendar event
-    const event = {
+    const event: EventAttributes = {
       start: [
         startDateTime.getFullYear(),
         startDateTime.getMonth() + 1,
@@ -57,12 +57,12 @@ export async function GET(request: Request) {
       description: `${session.description || ''}\n\nHosted by: ${session.creator?.name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
       location: session.location,
       url: `${SITE_URL}/session/${sessionId}`,
-      status: 'CONFIRMED',
-      busyStatus: 'BUSY',
+      status: 'CONFIRMED' as const,
+      busyStatus: 'BUSY' as const,
       organizer: { name: session.creator?.name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },
     };
 
-    const { error: icsError, value } = createEvents([event as any]);
+    const { error: icsError, value } = createEvents([event]);
 
     if (icsError) {
       log('error', 'ICS generation error', { route: '/api/generate-calendar', error: String(icsError), sessionId });

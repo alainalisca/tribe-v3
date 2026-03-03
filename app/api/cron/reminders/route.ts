@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     const twoHoursFifteenMinsFromNow = new Date(now.getTime() + 2.25 * 60 * 60 * 1000);
 
-    const { data: sessions, error } = await supabase
+    const { data: sessions } = await supabase
       .from('sessions')
       .select('*, creator:users!sessions_creator_id_fkey(id, name, email, preferred_language)')
       .eq('status', 'active')
@@ -79,7 +79,10 @@ export async function GET(request: Request) {
         });
 
         for (const participant of participants || []) {
-          const pLang = (participant as any).users?.preferred_language || 'en';
+          // Supabase types nested joins as arrays, but single-row joins return an object at runtime
+          const pLang =
+            (participant as unknown as { users: { preferred_language: string | null } | null }).users
+              ?.preferred_language || 'en';
           const pTitle = pLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Session starting soon!';
           const pBody =
             pLang === 'es'
@@ -182,7 +185,7 @@ export async function GET(request: Request) {
       sessionReminders: remindersSent,
       morningMotivation: morningMotivationSent,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/cron/reminders', action: 'reminders_cron' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

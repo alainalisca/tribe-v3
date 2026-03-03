@@ -6,14 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function SafetyPage() {
-  const { language } = useLanguage();
-  const t = language === 'es' ? {
-    title: 'Guías de Seguridad',
-    note: 'Nota: Este documento está disponible en inglés.',
-  } : {
-    title: 'Safety Guidelines',
-    note: '',
-  };
+  useLanguage();
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
@@ -23,17 +16,20 @@ export default function SafetyPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            Safety Guidelines
-          </h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">Safety Guidelines</h1>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-white dark:bg-[#272D34] rounded-xl p-8">
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 mb-6">
-            <p className="font-semibold text-yellow-900 dark:text-yellow-200 mb-1">⚠️ Your Safety is Your Responsibility</p>
-            <p className="text-sm text-yellow-800 dark:text-yellow-300">Tribe connects people but cannot verify identities or supervise sessions. Follow these guidelines to stay safe.</p>
+            <p className="font-semibold text-yellow-900 dark:text-yellow-200 mb-1">
+              ⚠️ Your Safety is Your Responsibility
+            </p>
+            <p className="text-sm text-yellow-800 dark:text-yellow-300">
+              Tribe connects people but cannot verify identities or supervise sessions. Follow these guidelines to stay
+              safe.
+            </p>
           </div>
 
           <div className="space-y-6 text-stone-700 dark:text-gray-300">
@@ -50,7 +46,9 @@ export default function SafetyPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
-                  <span>Tell someone where you&apos;re going, who you&apos;re meeting, and when you&apos;ll be back</span>
+                  <span>
+                    Tell someone where you&apos;re going, who you&apos;re meeting, and when you&apos;ll be back
+                  </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-tribe-green font-bold">✓</span>
@@ -108,7 +106,9 @@ export default function SafetyPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">🚩 Red Flags - Be Cautious If Someone:</h2>
+              <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-3">
+                🚩 Red Flags - Be Cautious If Someone:
+              </h2>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
                   <span className="text-red-500 font-bold">🚩</span>
@@ -144,7 +144,12 @@ export default function SafetyPage() {
                 <li>Leave the situation immediately if you feel unsafe</li>
                 <li>Block and report the user in the app</li>
                 <li>Contact local authorities if you&apos;re in immediate danger</li>
-                <li>Email us with details: <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">admin@aplusfitnessllc.com</a></li>
+                <li>
+                  Email us with details:{' '}
+                  <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">
+                    admin@aplusfitnessllc.com
+                  </a>
+                </li>
               </ol>
             </section>
 
@@ -160,7 +165,10 @@ export default function SafetyPage() {
             <section>
               <div className="bg-lime-50 dark:bg-lime-900/20 border-l-4 border-lime-500 p-4">
                 <p className="font-semibold text-lime-900 dark:text-lime-200 mb-2">Remember:</p>
-                <p className="text-lime-800 dark:text-lime-300">Most Tribe users are genuine people looking for training partners. By following these guidelines and trusting your instincts, you can enjoy safe, productive training sessions.</p>
+                <p className="text-lime-800 dark:text-lime-300">
+                  Most Tribe users are genuine people looking for training partners. By following these guidelines and
+                  trusting your instincts, you can enjoy safe, productive training sessions.
+                </p>
               </div>
             </section>
           </div>

@@ -1,7 +1,13 @@
 import { MessageSquare } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type UserFeedbackRow = Database['public']['Tables']['user_feedback']['Row'];
+type AdminFeedback = UserFeedbackRow & {
+  user: { id: string; name: string | null; email: string } | null;
+};
 
 interface FeedbackListProps {
-  feedback: any[];
+  feedback: AdminFeedback[];
   loading: boolean;
   language: string;
   onUpdateStatus: (feedbackId: string, status: string) => void;
@@ -47,7 +53,7 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
               <p className="text-xs text-stone-700 mb-2 p-2 bg-stone-50 rounded">{item.description}</p>
 
               <div className="text-xs text-stone-500 mb-3">
-                {new Date(item.created_at).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                {new Date(item.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
               </div>
 
               <div className="flex gap-2">

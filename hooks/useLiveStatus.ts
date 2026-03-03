@@ -51,14 +51,20 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
         .eq('session_id', sessionId)
         .gt('expires_at', new Date().toISOString());
       if (liveData) {
-        // REASON: Supabase joined query returns untyped nested objects
         setLiveUsers(
-          liveData.map((row: any) => ({
-            user_id: row.user_id,
-            name: (row.user as any)?.name || 'Unknown',
-            avatar_url: (row.user as any)?.avatar_url || null,
-            started_at: row.started_at,
-          }))
+          liveData.map((row) => {
+            const rawUser = row.user;
+            const userObj = (Array.isArray(rawUser) ? rawUser[0] : rawUser) as {
+              name: string;
+              avatar_url: string | null;
+            } | null;
+            return {
+              user_id: row.user_id,
+              name: userObj?.name || 'Unknown',
+              avatar_url: userObj?.avatar_url || null,
+              started_at: row.started_at,
+            };
+          })
         );
       }
     } catch (error) {
@@ -81,6 +87,7 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
       }
     }, 60000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: deps tracked via isLive and user
   }, [isLive, user]);
 
   // Countdown timer every 1s while live
@@ -100,6 +107,7 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
       setLiveCountdown(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
     }, 1000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional countdown expiry effect
   }, [isLive, liveExpiresAt]);
 
   // Poll live users every 30s for today's sessions
@@ -110,6 +118,7 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
     if (sessionDate !== todayStr) return;
     const interval = setInterval(() => loadLiveStatus(), 30000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: polls on sessionDate change
   }, [sessionDate]);
 
   async function handleGoLive() {

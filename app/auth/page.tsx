@@ -45,6 +45,7 @@ export default function AuthPage() {
         }
       })
       .catch(() => setCheckingAuth(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only auth check
   }, []);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function AuthPage() {
       const decoded = decodeURIComponent(errorParam);
       setMessage(language === 'es' ? `❌ Error de autenticación: ${decoded}` : `❌ Authentication error: ${decoded}`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [errorParam]);
 
   const t = {

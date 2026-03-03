@@ -125,8 +125,9 @@ async function sendFcmNotification(
       messageName: result.name,
     });
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: `FCM HTTP error: ${error.message}` };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `FCM HTTP error: ${message}` };
   }
 }
 
@@ -150,12 +151,15 @@ async function sendWebPushNotification(
       action: 'web_push_sent',
     });
     return { success: true };
-  } catch (error: any) {
-    const errorDetail = `Web push error: ${error.statusCode || 'unknown'} - ${error.message}`;
-    logError(error, { route: '/api/notifications/send', action: 'web_push_send', statusCode: error.statusCode });
+  } catch (error: unknown) {
+    const statusCode =
+      error instanceof Error && 'statusCode' in error ? (error as { statusCode: number }).statusCode : undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    const errorDetail = `Web push error: ${statusCode || 'unknown'} - ${message}`;
+    logError(error, { route: '/api/notifications/send', action: 'web_push_send', statusCode });
 
     // Handle expired subscription
-    if (error.statusCode === 410) {
+    if (statusCode === 410) {
       log('warn', 'Web push subscription expired, should be removed from database', {
         route: '/api/notifications/send',
         action: 'web_push_expired',
@@ -269,7 +273,7 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/notifications/send', action: 'send_notification' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -377,7 +381,7 @@ export async function PUT(request: Request) {
       success: true,
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/notifications/send', action: 'batch_send_notification' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

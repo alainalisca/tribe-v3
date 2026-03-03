@@ -12,11 +12,12 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import type { User } from '@supabase/supabase-js';
 
 export default function EditProfilePage() {
   const router = useRouter();
   const supabase = createClient();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const getTranslatedSport = (sport: string) => (language === 'es' ? sportTranslations[sport]?.es || sport : sport);
 
   const tr = {
@@ -62,7 +63,7 @@ export default function EditProfilePage() {
     contactPhonePlaceholder: language === 'es' ? 'ej. +57 300 123 4567' : 'e.g. +1 (555) 123-4567',
   };
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -82,6 +83,7 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function loadProfile() {
@@ -187,7 +189,7 @@ export default function EditProfilePage() {
 
       showSuccess(tr.profileUpdated);
       router.push('/profile');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handleSave' });
       showError(getErrorMessage(error, 'update_profile', language));
     } finally {

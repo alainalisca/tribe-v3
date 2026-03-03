@@ -1,8 +1,15 @@
 import { useRouter } from 'next/navigation';
 import { Flag, AlertTriangle } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type ReportedUserRow = Database['public']['Tables']['reported_users']['Row'];
+type AdminReport = ReportedUserRow & {
+  reporter: { id: string; name: string | null; email: string } | null;
+  reported: { id: string; name: string | null; email: string } | null;
+};
 
 interface ReportedMessagesProps {
-  reports: any[];
+  reports: AdminReport[];
   loading: boolean;
   language: string;
   onBanUser: (userId: string) => void;
@@ -57,7 +64,9 @@ export default function ReportedMessages({
 
               <div className="flex items-center justify-between text-xs text-stone-500 mb-3">
                 <span>By: {report.reporter?.name}</span>
-                <span>{new Date(report.created_at).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}</span>
+                <span>
+                  {new Date(report.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                </span>
               </div>
 
               <div className="flex gap-2">
@@ -68,7 +77,7 @@ export default function ReportedMessages({
                   View Profile
                 </button>
                 <button
-                  onClick={() => onBanUser(report.reported_user_id)}
+                  onClick={() => onBanUser(report.reported_user_id ?? '')}
                   className="flex-1 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600"
                 >
                   Ban User

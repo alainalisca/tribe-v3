@@ -10,6 +10,7 @@ interface RecapPhoto {
   photo_url: string;
   user_id: string | null;
   reported?: boolean | null;
+  user?: { id: string; name: string | null; avatar_url: string | null };
 }
 
 interface RecapPhotosProps {
@@ -70,9 +71,13 @@ export default function RecapPhotos({
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          canvas.toBlob((blob) => {
-            resolve(blob as Blob);
-          }, 'image/jpeg', 0.8);
+          canvas.toBlob(
+            (blob) => {
+              resolve(blob as Blob);
+            },
+            'image/jpeg',
+            0.8
+          );
         };
         img.src = e.target?.result as string;
       };
@@ -101,33 +106,29 @@ export default function RecapPhotos({
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${Date.now()}-recap-${i}.${fileExt}`;
 
-        const { error } = await supabase.storage
-          .from('session-photos')
-          .upload(fileName, compressedBlob, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        const { error } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
         if (error) throw error;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('session-photos')
-          .getPublicUrl(fileName);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('session-photos').getPublicUrl(fileName);
 
-        const { error: insertError } = await supabase
-          .from('session_recap_photos')
-          .insert({
-            session_id: session.id,
-            user_id: user.id,
-            photo_url: publicUrl
-          });
+        const { error: insertError } = await supabase.from('session_recap_photos').insert({
+          session_id: session.id,
+          user_id: user.id,
+          photo_url: publicUrl,
+        });
 
         if (insertError) throw insertError;
       }
 
       showSuccess('Recap photos uploaded!');
       onPhotosChanged();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingRecap(false);
@@ -141,16 +142,13 @@ export default function RecapPhotos({
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
 
-      const { error } = await supabase
-        .from('session_recap_photos')
-        .delete()
-        .eq('id', photoId);
+      const { error } = await supabase.from('session_recap_photos').delete().eq('id', photoId);
 
       if (error) throw error;
 
       showSuccess('Photo deleted');
       onPhotosChanged();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'delete_session', language));
     }
   }
@@ -168,7 +166,7 @@ export default function RecapPhotos({
         .update({
           reported: true,
           reported_by: user.id,
-          reported_reason: reason || 'No reason provided'
+          reported_reason: reason || 'No reason provided',
         })
         .eq('id', photoId);
 
@@ -176,7 +174,7 @@ export default function RecapPhotos({
 
       showSuccess('Photo reported. Admin will review.');
       onPhotosChanged();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'send_message', language));
     }
   }
@@ -191,9 +189,7 @@ export default function RecapPhotos({
               <Camera className="w-6 h-6 text-slate-900" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-slate-900 mb-1">
-                Share Your Experience! 📸
-              </h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">Share Your Experience! 📸</h3>
               <p className="text-sm text-slate-800">
                 You attended this session - upload up to 3 photos to share with the community!
               </p>
@@ -208,26 +204,21 @@ export default function RecapPhotos({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-tribe-green" />
-              <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-                Session Recap
-              </h2>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Session Recap</h2>
             </div>
-            {canUploadRecap && (
-              <span className="text-xs text-stone-500">
-                {userPhotoCount}/3 uploaded
-              </span>
-            )}
+            {canUploadRecap && <span className="text-xs text-stone-500">{userPhotoCount}/3 uploaded</span>}
           </div>
 
           {recapPhotos.length > 0 && (
             <div className="grid grid-cols-3 gap-2 mb-4">
-              {recapPhotos.map((photo: any, idx: number) => (
+              {recapPhotos.map((photo, idx) => (
                 <div key={photo.id} className="relative aspect-square group">
                   <button
                     onClick={() => onOpenLightbox(idx, 'recap')}
                     className="w-full h-full rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
-                    <img loading="lazy"
+                    <img
+                      loading="lazy"
                       src={photo.photo_url}
                       alt={`Recap ${idx + 1}`}
                       className="w-full h-full object-cover"

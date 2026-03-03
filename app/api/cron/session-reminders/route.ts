@@ -109,7 +109,11 @@ export async function GET(request: Request) {
 
         // Add participants if reminders enabled
         for (const participant of participants || []) {
-          const userData = (participant as any).user;
+          const userData = (
+            participant as unknown as {
+              user: { id: string; preferred_language: string | null; session_reminders_enabled: boolean | null };
+            }
+          ).user;
           if (userData && userData.session_reminders_enabled !== false) {
             usersToNotify.push({
               id: participant.user_id,
@@ -170,7 +174,7 @@ export async function GET(request: Request) {
       oneHourRemindersSent,
       fifteenMinRemindersSent,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/cron/session-reminders', action: 'session_reminders_cron' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

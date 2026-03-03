@@ -77,7 +77,9 @@ export async function GET(request: Request) {
           // Calculate total training hours
           let totalMinutes = 0;
           participations?.forEach((p) => {
-            totalMinutes += (p.sessions as any)?.duration || 0;
+            // Supabase types nested joins as arrays, but single-row inner joins return an object at runtime
+            const sessions = p.sessions as unknown as { date: string; sport: string; duration: number | null } | null;
+            totalMinutes += sessions?.duration || 0;
           });
           hostedSessions?.forEach((s) => {
             totalMinutes += s.duration || 0;
@@ -131,7 +133,6 @@ export async function GET(request: Request) {
     // 2. RE-ENGAGEMENT (Users inactive for 3+ days)
     // Run this check every time the cron runs, but only send once per 3 days to inactive users
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // Get users who:
     // - Have push subscriptions
@@ -199,7 +200,7 @@ export async function GET(request: Request) {
       weeklyRecapsSent,
       reEngagementsSent,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/cron/engagement', action: 'engagement_cron' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

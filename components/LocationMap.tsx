@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
-import dynamic from 'next/dynamic';
 
 interface LocationMapProps {
   latitude?: number | null;
@@ -12,9 +11,10 @@ interface LocationMapProps {
 
 export default function LocationMap({ latitude, longitude, location }: LocationMapProps) {
   const [mapReady, setMapReady] = useState(false);
-  const [MapContainer, setMapContainer] = useState<any>(null);
-  const [TileLayer, setTileLayer] = useState<any>(null);
-  const [Marker, setMarker] = useState<any>(null);
+  // REASON: react-leaflet components are dynamically imported and their generic types are complex — using broad ComponentType
+  const [MapContainer, setMapContainer] = useState<React.ComponentType<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [TileLayer, setTileLayer] = useState<React.ComponentType<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [Marker, setMarker] = useState<React.ComponentType<any> | null>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   useEffect(() => {
     if (typeof window !== 'undefined' && latitude && longitude) {
@@ -33,7 +33,8 @@ export default function LocationMap({ latitude, longitude, location }: LocationM
 
       // Fix default marker icon
       import('leaflet').then((L) => {
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        // REASON: Leaflet's _getIconUrl is a private property not in type defs — must delete to fix default marker icons
+        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
         L.Icon.Default.mergeOptions({
           iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -81,10 +82,7 @@ export default function LocationMap({ latitude, longitude, location }: LocationM
             dragging={false}
             zoomControl={false}
           >
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <Marker position={[latitude, longitude]} />
           </MapContainer>
         ) : (

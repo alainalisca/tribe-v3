@@ -2,7 +2,7 @@
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import OnboardingModal from '@/components/OnboardingModal';
 import EditSessionModal from '@/components/EditSessionModal';
 import { createClient } from '@/lib/supabase/client';
@@ -25,6 +25,17 @@ import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { joinSession } from '@/lib/sessions';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUpcomingSessions, deleteSession as dalDeleteSession } from '@/lib/dal';
+import type { User } from '@supabase/supabase-js';
+import type { SessionWithRelations } from '@/lib/dal';
+
+/** Subset of user profile fields loaded on the home page */
+interface UserProfile {
+  name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  sports: string[] | null;
+  safety_waiver_accepted: boolean | null;
+}
 
 const PAGE_SIZE = 20;
 
@@ -32,21 +43,21 @@ export default function HomePage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userChecked, setUserChecked] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionWithRelations[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [editingSession, setEditingSession] = useState<any>(null);
-  const [filteredSessions, setFilteredSessions] = useState<any[]>([]);
-  const [liveNowSessions, setLiveNowSessions] = useState<any[]>([]);
+  const [editingSession, setEditingSession] = useState<SessionWithRelations | null>(null);
+  const [filteredSessions, setFilteredSessions] = useState<SessionWithRelations[]>([]);
+  const [liveNowSessions, setLiveNowSessions] = useState<SessionWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string>('');
   const [maxDistance, setMaxDistance] = useState<number>(100);
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [liveStatusMap, setLiveStatusMap] = useState<
@@ -59,6 +70,7 @@ export default function HomePage() {
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
@@ -67,11 +79,12 @@ export default function HomePage() {
       if (user) tryRegisterPushNotifications(user.id);
       loadProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user is set
   }, [userChecked]);
 
   useEffect(() => {
     if (!user || !userProfile) return;
-    const isProfileComplete = userProfile.avatar_url && userProfile.sports?.length > 0;
+    const isProfileComplete = userProfile.avatar_url && (userProfile.sports?.length ?? 0) > 0;
     if (isProfileComplete) {
       setShowOnboarding(false);
       return;
@@ -82,6 +95,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (userChecked) loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user/location set
   }, [userChecked]);
   useEffect(() => {
     getUserLocation().then((loc) => {
@@ -91,6 +105,7 @@ export default function HomePage() {
   useEffect(() => {
     filterSessions();
     setVisibleCount(PAGE_SIZE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filter deps tracked explicitly
   }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
 
   async function tryRegisterPushNotifications(userId: string) {
@@ -131,7 +146,7 @@ export default function HomePage() {
       const result = await fetchUpcomingSessions(supabase);
       if (!result.success) throw new Error(result.error);
       setSessions(result.data || []);
-      loadLiveStatuses((result.data || []).map((s: any) => s.id));
+      loadLiveStatuses((result.data || []).map((s) => s.id));
     } catch (error) {
       logError(error, { action: 'loadSessions' });
       setFetchError(true);
@@ -154,9 +169,14 @@ export default function HomePage() {
       const map: Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }> = {};
       const userIds = new Set<string>();
       for (const row of data) {
-        const sid = (row as any).session_id;
-        const uid = (row as any).user_id;
-        const userInfo = (row as any).user;
+        const typed = row as unknown as {
+          session_id: string;
+          user_id: string;
+          user: { name: string; avatar_url: string | null } | null;
+        };
+        const sid = typed.session_id;
+        const uid = typed.user_id;
+        const userInfo = typed.user;
         userIds.add(uid);
         if (!map[sid]) map[sid] = { count: 0, users: [] };
         map[sid].count++;
@@ -222,7 +242,7 @@ export default function HomePage() {
     setFilteredSessions(filtered);
   }
 
-  function handleShareSession(session: any) {
+  function handleShareSession(session: SessionWithRelations) {
     const shareText =
       language === 'es'
         ? `¡Únete a ${session.sport} el ${new Date(session.date + 'T00:00:00').toLocaleDateString('es-ES')}! Nunca entrenes solo 💪`
@@ -268,7 +288,7 @@ export default function HomePage() {
           : t('joinedSuccessfully')
       );
       await loadSessions();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handleJoinSession' });
       showError(getErrorMessage(error, 'join_session', language));
     }
@@ -282,7 +302,7 @@ export default function HomePage() {
         .update({ safety_waiver_accepted: true, safety_waiver_accepted_at: new Date().toISOString() })
         .eq('id', user.id);
       if (error) throw error;
-      setUserProfile({ ...userProfile, safety_waiver_accepted: true });
+      if (userProfile) setUserProfile({ ...userProfile, safety_waiver_accepted: true });
       setShowSafetyWaiver(false);
       if (pendingSessionId) {
         await handleJoinSession(pendingSessionId);
@@ -365,7 +385,7 @@ export default function HomePage() {
           {user && userProfile && (
             <ProfileCompletionBanner
               hasPhoto={!!userProfile.avatar_url}
-              hasSports={userProfile.sports && userProfile.sports.length > 0}
+              hasSports={!!userProfile.sports && userProfile.sports.length > 0}
               hasName={!!userProfile.name}
               userId={user.id}
             />
@@ -455,7 +475,7 @@ export default function HomePage() {
                         if (!result.success) throw new Error(result.error);
                         showSuccess('Session deleted successfully!');
                         await loadSessions();
-                      } catch (error: any) {
+                      } catch (error: unknown) {
                         showError(getErrorMessage(error, 'delete_session', language));
                       }
                     }}

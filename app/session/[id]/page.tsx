@@ -1,7 +1,6 @@
 'use client';
 import { logError } from '@/lib/logger';
-import { formatTime12Hour } from '@/lib/utils';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 
 import { useEffect, useState } from 'react';
@@ -25,6 +24,25 @@ import { fetchSessionWithDetails } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { downloadICS } from '@/lib/calendar';
+import type { User as AuthUser } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type RecapPhotoRow = Database['public']['Tables']['session_recap_photos']['Row'];
+type RecapPhotoWithUser = RecapPhotoRow & {
+  user: { id: string; name: string | null; avatar_url: string | null } | undefined;
+};
+
+type SessionStoryJoined = {
+  id: string;
+  session_id: string;
+  user_id: string;
+  media_url: string;
+  media_type: string;
+  thumbnail_url: string | null;
+  caption: string | null;
+  created_at: string | null;
+  user: { name: string | null; avatar_url: string | null } | null;
+};
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -36,7 +54,7 @@ export default function SessionDetailPage() {
   const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -48,11 +66,11 @@ export default function SessionDetailPage() {
   const [inviteLink, setInviteLink] = useState('');
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [wasMarkedAttended, setWasMarkedAttended] = useState(false);
-  const [recapPhotos, setRecapPhotos] = useState<any[]>([]);
+  const [recapPhotos, setRecapPhotos] = useState<RecapPhotoWithUser[]>([]);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
   const [hasReviewed, setHasReviewed] = useState(false);
   const [showStoryUpload, setShowStoryUpload] = useState(false);
-  const [sessionStories, setSessionStories] = useState<any[]>([]);
+  const [sessionStories, setSessionStories] = useState<SessionStoryJoined[]>([]);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
 
   // --- Hooks ---
@@ -81,14 +99,17 @@ export default function SessionDetailPage() {
     checkUser();
     loadSession();
     sessionActions.checkGuestParticipation(params.id as string);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [params.id]);
 
   useEffect(() => {
     if (user && session) checkUserReview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when session loaded
   }, [user, session]);
 
   useEffect(() => {
     if (session && !loading) liveStatus.loadLiveStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when session loaded
   }, [session, user, loading]);
 
   // Lock body scroll for modals
@@ -209,7 +230,7 @@ export default function SessionDetailPage() {
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: true });
       if (error) throw error;
-      setSessionStories(data || []);
+      setSessionStories((data as unknown as SessionStoryJoined[]) || []);
     } catch (error) {
       logError(error, { action: 'loadSessionStories', sessionId: params.id as string });
     }
@@ -282,7 +303,7 @@ export default function SessionDetailPage() {
     setTouchEnd(e.targetTouches[0].clientX);
   }
   function handleTouchEnd() {
-    const photos = photoType === 'location' ? session.photos : recapPhotos.map((p: any) => p.photo_url);
+    const photos = photoType === 'location' ? session.photos : recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
     if (!photos) return;
     const minSwipeDistance = 50;
     const distance = touchStart - touchEnd;
@@ -318,9 +339,9 @@ export default function SessionDetailPage() {
   const isFull = session.current_participants >= session.max_participants;
   const isCreator = session.creator_id === user?.id;
   const canKick = isCreator || userIsAdmin;
-  const canUploadRecap = user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3;
+  const canUploadRecap = !!user && (isCreator || wasMarkedAttended) && isPast && userPhotoCount < 3;
   const canModerate = isCreator || userIsAdmin;
-  const shouldPromptUpload = user && isPast && wasMarkedAttended && userPhotoCount === 0;
+  const shouldPromptUpload = !!user && isPast && wasMarkedAttended && userPhotoCount === 0;
   const isToday = (() => {
     const now = new Date();
     return (
@@ -328,8 +349,9 @@ export default function SessionDetailPage() {
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     );
   })();
-  const canGoLive = user && (hasJoined || isCreator) && isToday && !isPast;
-  const currentPhotos = photoType === 'location' ? session.photos : recapPhotos.map((p: any) => p.photo_url);
+  const canGoLive = !!user && (hasJoined || isCreator) && isToday && !isPast;
+  const currentPhotos =
+    photoType === 'location' ? session.photos : recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
@@ -358,7 +380,7 @@ export default function SessionDetailPage() {
             />
           </div>
           <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2">
-            {currentPhotos.map((_: any, idx: number) => (
+            {currentPhotos.map((_: string, idx: number) => (
               <button
                 key={idx}
                 onClick={() => setCurrentPhotoIndex(idx)}
@@ -600,7 +622,7 @@ export default function SessionDetailPage() {
               className="flex gap-2 overflow-x-auto pb-1"
               style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {sessionStories.map((story: any) => (
+              {sessionStories.map((story: SessionStoryJoined) => (
                 <button
                   key={story.id}
                   onClick={() => setShowStoryViewer(true)}
@@ -616,7 +638,7 @@ export default function SessionDetailPage() {
                     <img loading="lazy" src={story.media_url} alt="" className="w-full h-full object-cover" />
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
-                    <span className="text-white text-[9px] truncate block">{(story.user as any)?.name}</span>
+                    <span className="text-white text-[9px] truncate block">{story.user?.name}</span>
                   </div>
                 </button>
               ))}
@@ -766,16 +788,16 @@ export default function SessionDetailPage() {
             {
               sessionId: session.id,
               sport: session.sport,
-              stories: sessionStories.map((s: any) => ({
+              stories: sessionStories.map((s: SessionStoryJoined) => ({
                 id: s.id,
                 media_url: s.media_url,
-                media_type: s.media_type,
+                media_type: s.media_type as 'image' | 'video',
                 thumbnail_url: s.thumbnail_url,
                 caption: s.caption,
-                created_at: s.created_at,
+                created_at: s.created_at || '',
                 user_id: s.user_id,
-                user_name: (s.user as any)?.name || '?',
-                user_avatar: (s.user as any)?.avatar_url || null,
+                user_name: s.user?.name || '?',
+                user_avatar: s.user?.avatar_url || null,
               })),
             },
           ]}

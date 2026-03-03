@@ -1,7 +1,13 @@
 import { Bug } from 'lucide-react';
+import type { Database } from '@/lib/database.types';
+
+type BugReportRow = Database['public']['Tables']['bug_reports']['Row'];
+type AdminBug = BugReportRow & {
+  user: { id: string; name: string | null; email: string } | null;
+};
 
 interface BugReportsProps {
-  bugs: any[];
+  bugs: AdminBug[];
   loading: boolean;
   language: string;
   onUpdateStatus: (bugId: string, status: string) => void;
@@ -63,7 +69,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
               )}
 
               <div className="text-xs text-stone-500 mb-3">
-                {new Date(bug.created_at).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                {new Date(bug.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
               </div>
 
               <div className="flex gap-2">

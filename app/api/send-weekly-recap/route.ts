@@ -82,18 +82,30 @@ export async function POST(request: Request) {
 
         if (participatedSessions && participatedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${participatedHeader}</h3><ul style="color: #374151;">`;
-          participatedSessions.forEach((item: any) => {
-            const session = item.session;
+          for (const item of participatedSessions) {
+            // Supabase types nested joins as arrays, but single-row joins return an object at runtime
+            const session = (
+              item as unknown as {
+                session: {
+                  id: string;
+                  sport: string;
+                  location: string;
+                  date: string;
+                  start_time: string;
+                  creator: { name: string };
+                };
+              }
+            ).session;
             sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
-          });
+          }
           sessionsHTML += '</ul>';
         }
 
         if (hostedSessions && hostedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${hostedHeader}</h3><ul style="color: #374151;">`;
-          hostedSessions.forEach((session: any) => {
+          for (const session of hostedSessions) {
             sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
-          });
+          }
           sessionsHTML += '</ul>';
         }
 
@@ -139,7 +151,7 @@ export async function POST(request: Request) {
         });
 
         emailsSent++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         logError(error, { route: '/api/send-weekly-recap', action: 'send_recap_email', userId: user.id });
         errors++;
       }
@@ -151,7 +163,7 @@ export async function POST(request: Request) {
       errors,
       totalUsers: users.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/send-weekly-recap', action: 'weekly_recap' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

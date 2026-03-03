@@ -16,7 +16,7 @@ interface DalResult<T> {
 
 // --- Query return types (with joined relations) ---
 
-interface SessionParticipantWithUser {
+export interface SessionParticipantWithUser {
   user_id: string | null;
   status: string | null;
   is_guest?: boolean | null;
@@ -24,7 +24,7 @@ interface SessionParticipantWithUser {
   user: { id: string; name: string; avatar_url: string | null } | null;
 }
 
-interface SessionWithRelations extends Session {
+export interface SessionWithRelations extends Session {
   participants: SessionParticipantWithUser[];
   creator: {
     id: string;
@@ -35,25 +35,14 @@ interface SessionWithRelations extends Session {
   } | null;
 }
 
-interface SessionWithCreator extends Session {
-  creator: { name: string } | null;
-}
-
 // --- Read operations ---
 
 /**
  * Fetches a single session by ID with all columns.
  */
-export async function fetchSession(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<DalResult<Session>> {
+export async function fetchSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<Session>> {
   try {
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
+    const { data, error } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -70,13 +59,15 @@ export async function fetchSession(
 export async function fetchSessionWithDetails(
   supabase: SupabaseClient,
   sessionId: string
-): Promise<DalResult<{ session: Session; creator: SessionWithRelations['creator']; participants: SessionWithRelations['participants'] }>> {
+): Promise<
+  DalResult<{
+    session: Session;
+    creator: SessionWithRelations['creator'];
+    participants: SessionWithRelations['participants'];
+  }>
+> {
   try {
-    const { data: session, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
+    const { data: session, error } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
 
     if (error) return { success: false, error: error.message };
 
@@ -110,16 +101,15 @@ export async function fetchSessionWithDetails(
  * Fetches upcoming active sessions with participants and creator info.
  * Used by the home page feed.
  */
-export async function fetchUpcomingSessions(
-  supabase: SupabaseClient
-): Promise<DalResult<SessionWithRelations[]>> {
+export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<DalResult<SessionWithRelations[]>> {
   try {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('sessions')
-      .select(`
+      .select(
+        `
         *,
         participants:session_participants(
           user_id,
@@ -127,7 +117,8 @@ export async function fetchUpcomingSessions(
           user:users(id, name, avatar_url)
         ),
         creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
-      `)
+      `
+      )
       .eq('status', 'active')
       .gte('date', today)
       .order('date', { ascending: true })
@@ -145,10 +136,7 @@ export async function fetchUpcomingSessions(
  * Fetches the confirmed participant count for a session.
  * Used for capacity checks.
  */
-export async function fetchConfirmedCount(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<DalResult<number>> {
+export async function fetchConfirmedCount(supabase: SupabaseClient, sessionId: string): Promise<DalResult<number>> {
   try {
     const { count, error } = await supabase
       .from('session_participants')
@@ -169,15 +157,9 @@ export async function fetchConfirmedCount(
 /**
  * Cancels (soft-deletes) a session by setting status to 'cancelled'.
  */
-export async function cancelSession(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<DalResult<null>> {
+export async function cancelSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('sessions')
-      .update({ status: 'cancelled' })
-      .eq('id', sessionId);
+    const { error } = await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', sessionId);
 
     if (error) return { success: false, error: error.message };
     return { success: true };
@@ -190,15 +172,9 @@ export async function cancelSession(
 /**
  * Permanently deletes a session.
  */
-export async function deleteSession(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<DalResult<null>> {
+export async function deleteSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('sessions')
-      .delete()
-      .eq('id', sessionId);
+    const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
 
     if (error) return { success: false, error: error.message };
     return { success: true };

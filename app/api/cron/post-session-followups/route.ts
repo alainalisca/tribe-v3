@@ -78,7 +78,7 @@ export async function GET(request: Request) {
       message: `Sent ${sentCount} follow-up emails for ${endedSessions.length} sessions`,
       count: sentCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/cron/post-session-followups', action: 'post_session_followups' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

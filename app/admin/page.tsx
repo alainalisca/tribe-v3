@@ -16,11 +16,39 @@ import {
   MessageList,
   SessionManagement,
 } from '@/components/admin';
+import type { User as AuthUser } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type UserRow = Database['public']['Tables']['users']['Row'];
+type SessionRow = Database['public']['Tables']['sessions']['Row'];
+type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
+type ReportedUserRow = Database['public']['Tables']['reported_users']['Row'];
+type UserFeedbackRow = Database['public']['Tables']['user_feedback']['Row'];
+type BugReportRow = Database['public']['Tables']['bug_reports']['Row'];
+
+type AdminUser = UserRow & { sessions_created: number; sessions_joined: number };
+type AdminReport = ReportedUserRow & {
+  reporter: { id: string; name: string | null; email: string } | null;
+  reported: { id: string; name: string | null; email: string } | null;
+};
+type AdminFeedback = UserFeedbackRow & {
+  user: { id: string; name: string | null; email: string } | null;
+};
+type AdminBug = BugReportRow & {
+  user: { id: string; name: string | null; email: string } | null;
+};
+type AdminSession = SessionRow & {
+  creator: { id: string; name: string | null; email: string } | null;
+};
+type AdminMessage = ChatMessageRow & {
+  user: { id: string; name: string | null; email: string } | null;
+  session: { id: string; sport: string; location: string } | null;
+};
 
 export default function AdminPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const { language } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
@@ -44,16 +72,16 @@ export default function AdminPage() {
     totalCreated: 0,
     totalJoined: 0,
   });
-  const [users, setUsers] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
-  const [feedback, setFeedback] = useState<any[]>([]);
-  const [bugs, setBugs] = useState<any[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [reports, setReports] = useState<AdminReport[]>([]);
+  const [feedback, setFeedback] = useState<AdminFeedback[]>([]);
+  const [bugs, setBugs] = useState<AdminBug[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingBugs, setLoadingBugs] = useState(false);
@@ -61,6 +89,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     checkAdmin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
@@ -70,6 +99,7 @@ export default function AdminPage() {
     else if (activeTab === 'bugs') loadBugs();
     else if (activeTab === 'messages') loadMessages();
     else if (activeTab === 'sessions') loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once after admin check
   }, [activeTab]);
 
   async function checkAdmin() {
@@ -318,7 +348,7 @@ export default function AdminPage() {
       if (error) throw error;
       setMessages(messages.filter((m) => m.id !== messageId));
       showSuccess('Message deleted');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
@@ -335,7 +365,7 @@ export default function AdminPage() {
       if (error) throw error;
       setSessions(sessions.map((s) => (s.id === sessionId ? { ...s, photo_verified: true } : s)));
       showSuccess('Photos verified');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }
@@ -350,7 +380,7 @@ export default function AdminPage() {
       if (error) throw error;
       setSessions(sessions.map((s) => (s.id === sessionId ? { ...s, photo_verified: false } : s)));
       showSuccess('Verification removed');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }
@@ -363,7 +393,7 @@ export default function AdminPage() {
       if (error) throw error;
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, banned: true } : u)));
       showSuccess('User banned');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
@@ -378,7 +408,7 @@ export default function AdminPage() {
       if (error) throw error;
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, banned: false } : u)));
       showSuccess('User unbanned');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
@@ -396,7 +426,7 @@ export default function AdminPage() {
       if (error) throw error;
       setUsers((prev) => prev.filter((u) => u.id !== userId));
       showSuccess('User deleted');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setActionLoading(null);
@@ -409,7 +439,7 @@ export default function AdminPage() {
       if (error) throw error;
       setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status } : r)));
       showSuccess(`Report marked as ${status}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }
@@ -420,7 +450,7 @@ export default function AdminPage() {
       if (error) throw error;
       setFeedback((prev) => prev.map((f) => (f.id === feedbackId ? { ...f, status } : f)));
       showSuccess(`Feedback marked as ${status}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }
@@ -431,7 +461,7 @@ export default function AdminPage() {
       if (error) throw error;
       setBugs((prev) => prev.map((b) => (b.id === bugId ? { ...b, status } : b)));
       showSuccess(`Bug marked as ${status}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
   }

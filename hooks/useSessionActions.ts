@@ -8,18 +8,26 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
 import { joinSession } from '@/lib/sessions';
 import { cancelSession, fetchConfirmedCount } from '@/lib/dal';
+import type { Session } from '@/lib/database.types';
+
+interface Participant {
+  user_id: string | null;
+  status: string | null;
+  is_guest?: boolean | null;
+  guest_name?: string | null;
+  user?: { id: string; name: string; avatar_url: string | null } | null;
+}
 
 interface UseSessionActionsParams {
   supabase: SupabaseClient;
   sessionId: string;
-  // REASON: Session shape is complex with many optional fields from DB
-  session: any;
+  session: Session;
   user: { id: string; email?: string; user_metadata?: { name?: string } } | null;
   language: 'en' | 'es';
   onSessionUpdated: () => Promise<void>;
   onNavigate: (path: string) => void;
-  setParticipants: React.Dispatch<React.SetStateAction<any[]>>;
-  setSession: React.Dispatch<React.SetStateAction<any>>;
+  setParticipants: React.Dispatch<React.SetStateAction<Participant[]>>;
+  setSession: React.Dispatch<React.SetStateAction<Session | null>>;
 }
 
 export function useSessionActions({
@@ -117,7 +125,7 @@ export function useSessionActions({
       if (error) throw error;
       await supabase
         .from('sessions')
-        .update({ current_participants: session.current_participants + 1 })
+        .update({ current_participants: (session.current_participants ?? 0) + 1 })
         .eq('id', session.id);
       localStorage.setItem(`guest_phone_${session.id}`, guestData.phone);
       if (guestData.email) localStorage.setItem(`guest_email_${session.id}`, guestData.email);
@@ -167,7 +175,7 @@ export function useSessionActions({
       if (error) throw error;
       await supabase
         .from('sessions')
-        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .update({ current_participants: Math.max(0, (session.current_participants ?? 0) - 1) })
         .eq('id', session.id);
       localStorage.removeItem(`guest_phone_${sessionId}`);
       localStorage.removeItem(`guest_email_${sessionId}`);
@@ -197,7 +205,7 @@ export function useSessionActions({
       if (error) throw error;
       await supabase
         .from('sessions')
-        .update({ current_participants: session.current_participants - 1 })
+        .update({ current_participants: (session.current_participants ?? 0) - 1 })
         .eq('id', session.id);
       showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       onNavigate('/sessions');
@@ -239,11 +247,12 @@ export function useSessionActions({
       if (deleteError) throw deleteError;
       await supabase
         .from('sessions')
-        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .update({ current_participants: Math.max(0, (session.current_participants ?? 0) - 1) })
         .eq('id', session.id);
       setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
-      // REASON: Session state is untyped — full typing deferred to future migration
-      setSession((prev: any) => ({ ...prev, current_participants: Math.max(0, prev.current_participants - 1) }));
+      setSession((prev) =>
+        prev ? { ...prev, current_participants: Math.max(0, (prev.current_participants ?? 0) - 1) } : prev
+      );
       showSuccess(language === 'es' ? 'Usuario eliminado de la sesión' : 'User removed from session');
     } catch (error) {
       showError(getErrorMessage(error, 'join_session', language));

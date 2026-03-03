@@ -10,17 +10,35 @@ import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
+import type { Session } from '@/lib/database.types';
+
+/** Session with optional participant list (from hosting query) */
+interface HostingSession extends Session {
+  participants: { user_id: string | null; status: string | null }[];
+}
+
+/** Session with optional creator info (from joined query) */
+interface JoinedSession extends Session {
+  creator: { name: string; avatar_url: string | null } | null;
+}
+
+/** Past session may come from either hosting or joined queries */
+interface PastSession extends Session {
+  wasParticipant?: boolean;
+  creator?: { name: string; avatar_url: string | null } | null;
+}
 
 export default function SessionsPage() {
-  const [user, setUser] = useState<any>(null);
-  const [hostingSessions, setHostingSessions] = useState<any[]>([]);
-  const [joinedSessions, setJoinedSessions] = useState<any[]>([]);
-  const [pastSessions, setPastSessions] = useState<any[]>([]);
+  const [, setUser] = useState<User | null>(null);
+  const [hostingSessions, setHostingSessions] = useState<HostingSession[]>([]);
+  const [joinedSessions, setJoinedSessions] = useState<JoinedSession[]>([]);
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const router = useRouter();
   const supabase = createClient();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const [fixedHeight, setFixedHeight] = useState(0);
 
@@ -43,6 +61,7 @@ export default function SessionsPage() {
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function checkUser() {
@@ -57,7 +76,7 @@ export default function SessionsPage() {
     await loadSessions(user.id);
   }
 
-  function isSessionPast(session: any): boolean {
+  function isSessionPast(session: { date: string; start_time?: string; duration?: number }): boolean {
     const sessionDate = new Date(session.date + 'T00:00:00');
     if (session.start_time) {
       const [hours, minutes] = session.start_time.split(':').map(Number);
@@ -109,11 +128,11 @@ export default function SessionsPage() {
       const upcomingJoined =
         joined
           ?.filter((j) => {
-            const session = j.session as any;
+            const session = j.session as unknown as JoinedSession | null;
             if (!session) return false;
             return !isSessionPast(session) && session.creator_id !== userId;
           })
-          .map((j) => j.session as any) || [];
+          .map((j) => j.session as unknown as JoinedSession) || [];
 
       // Load past sessions (both hosted and joined)
       const { data: pastHosted } = await supabase
@@ -130,15 +149,15 @@ export default function SessionsPage() {
       const pastJoinedData =
         joined
           ?.filter((j) => {
-            const session = j.session as any;
+            const session = j.session as unknown as JoinedSession | null;
             if (!session) return false;
             return isSessionPast(session);
           })
-          .map((j) => ({ ...(j.session as any), wasParticipant: true })) || [];
+          .map((j) => ({ ...(j.session as unknown as JoinedSession), wasParticipant: true })) || [];
 
       // Combine and dedupe past sessions
       const allPast = [...pastHostedFiltered, ...pastJoinedData];
-      const uniquePast = allPast.reduce((acc: any[], curr) => {
+      const uniquePast = allPast.reduce((acc: PastSession[], curr) => {
         if (!acc.find((s) => s.id === curr.id)) {
           acc.push(curr);
         }

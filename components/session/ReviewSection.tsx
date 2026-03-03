@@ -42,22 +42,20 @@ export default function ReviewSection({
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
 
-      const { error } = await supabase
-        .from('reviews')
-        .insert({
-          session_id: session.id,
-          reviewer_id: user.id,
-          host_id: session.creator_id,
-          rating: userRating,
-          comment: reviewComment.trim() || null,
-        });
+      const { error } = await supabase.from('reviews').insert({
+        session_id: session.id,
+        reviewer_id: user.id,
+        host_id: session.creator_id,
+        rating: userRating,
+        comment: reviewComment.trim() || null,
+      });
 
       if (error) throw error;
 
       setShowRatingModal(false);
       showSuccess(language === 'es' ? '¡Gracias por tu reseña!' : 'Thank you for your review!');
       onReviewSubmitted();
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'send_message', language));
     } finally {
       setSubmittingReview(false);
@@ -99,7 +97,10 @@ export default function ReviewSection({
               <h3 className="text-lg font-bold text-theme-primary">
                 {language === 'es' ? 'Califica esta sesión' : 'Rate this session'}
               </h3>
-              <button onClick={() => setShowRatingModal(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded">
+              <button
+                onClick={() => setShowRatingModal(false)}
+                className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded"
+              >
                 <X className="w-5 h-5 text-theme-primary" />
               </button>
             </div>
@@ -111,11 +112,7 @@ export default function ReviewSection({
             </p>
 
             <div className="flex justify-center mb-6">
-              <StarRating
-                rating={userRating}
-                onRatingChange={setUserRating}
-                size="lg"
-              />
+              <StarRating rating={userRating} onRatingChange={setUserRating} size="lg" />
             </div>
 
             <div className="mb-4">
@@ -137,8 +134,12 @@ export default function ReviewSection({
               className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               {submittingReview
-                ? (language === 'es' ? 'Enviando...' : 'Submitting...')
-                : (language === 'es' ? 'Enviar Reseña' : 'Submit Review')}
+                ? language === 'es'
+                  ? 'Enviando...'
+                  : 'Submitting...'
+                : language === 'es'
+                  ? 'Enviar Reseña'
+                  : 'Submit Review'}
             </button>
           </div>
         </div>

@@ -13,12 +13,13 @@ import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
 import Link from 'next/link';
+import type { User } from '@supabase/supabase-js';
 
 export default function TrainingNowPage() {
   const supabase = createClient();
   const router = useRouter();
   const { language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
@@ -53,6 +54,7 @@ export default function TrainingNowPage() {
     }
     getUser();
     getCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function getCurrentLocation() {
@@ -86,7 +88,7 @@ export default function TrainingNowPage() {
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
-    } catch (error) {
+    } catch {
       setGettingLocation(false);
     }
   }
@@ -149,7 +151,7 @@ export default function TrainingNowPage() {
           : 'Session created! Notifying nearby partners...'
       );
       router.push(`/session/${session.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logError(error, { action: 'handleSubmit' });
       showError(getErrorMessage(error, 'create_session', language));
     } finally {
@@ -176,7 +178,7 @@ export default function TrainingNowPage() {
           latitude: lat,
           longitude: lng,
           startIn,
-          creatorId: user.id,
+          creatorId: user!.id,
         }),
       });
 

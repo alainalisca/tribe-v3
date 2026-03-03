@@ -113,7 +113,7 @@ export default function LiveStatusSection({
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-3">
-            {liveUsers.map((liveUser: any) => {
+            {liveUsers.map((liveUser) => {
               const startedAt = new Date(liveUser.started_at);
               const minsLive = Math.max(1, Math.round((Date.now() - startedAt.getTime()) / 60000));
               return (

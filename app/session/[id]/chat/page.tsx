@@ -8,50 +8,52 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+
+type SessionRow = Database['public']['Tables']['sessions']['Row'];
 
 export default function ChatPage() {
   const params = useParams();
   const sessionId = params.id as string;
   const supabase = createClient();
   const { language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
-  const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<SessionRow | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
 
-  const t = language === 'es' ? {
-    loading: 'Cargando...',
-    chat: 'Chat',
-    admin: 'Admin',
-    host: 'Anfitrión',
-  } : {
-    loading: 'Loading...',
-    chat: 'Chat',
-    admin: 'Admin',
-    host: 'Host',
-  };
+  const t =
+    language === 'es'
+      ? {
+          loading: 'Cargando...',
+          chat: 'Chat',
+          admin: 'Admin',
+          host: 'Anfitrión',
+        }
+      : {
+          loading: 'Loading...',
+          chat: 'Chat',
+          admin: 'Admin',
+          host: 'Host',
+        };
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function loadData() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     setUser(user);
 
     if (user) {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
+      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
       setUserIsAdmin(!!profile?.is_admin);
     }
 
-    const { data: sessionData } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .single();
+    const { data: sessionData } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
 
     setSession(sessionData);
   }
@@ -66,9 +68,8 @@ export default function ChatPage() {
 
   const isHost = session.creator_id === user.id;
   const isAdmin = userIsAdmin;
-  const sportName = language === 'es' && sportTranslations[session.sport] 
-    ? sportTranslations[session.sport].es 
-    : session.sport;
+  const sportName =
+    language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-32">
@@ -78,7 +79,9 @@ export default function ChatPage() {
             <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
           </Link>
           <div>
-            <h1 className="text-lg font-bold text-theme-primary leading-tight">{sportName} {t.chat}</h1>
+            <h1 className="text-lg font-bold text-theme-primary leading-tight">
+              {sportName} {t.chat}
+            </h1>
             <p className="text-xs text-gray-500 leading-tight truncate max-w-[250px]">
               {session.location}
               {isAdmin && <span className="ml-2 text-red-500">• {t.admin}</span>}
@@ -90,12 +93,7 @@ export default function ChatPage() {
 
       <div className="max-w-2xl mx-auto">
         <div className="pt-header p-4">
-          <SessionChat 
-            sessionId={sessionId} 
-            currentUserId={user.id}
-            isHost={isHost}
-            isAdmin={isAdmin}
-          />
+          <SessionChat sessionId={sessionId} currentUserId={user.id} isHost={isHost} isAdmin={isAdmin} />
         </div>
       </div>
     </div>

@@ -10,16 +10,18 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
+import type { User } from '@supabase/supabase-js';
 
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language, setLanguage } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function checkUser() {
@@ -62,14 +64,14 @@ export default function SettingsPage() {
     }
 
     try {
-      const { error: deleteError } = await supabase.from('users').delete().eq('id', user.id);
+      const { error: deleteError } = await supabase.from('users').delete().eq('id', user!.id);
 
       if (deleteError) throw deleteError;
 
       await supabase.auth.signOut();
       showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
       router.push('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'update_settings', language));
     }
   }
@@ -97,7 +99,7 @@ export default function SettingsPage() {
             ? 'Recordatorios desactivados'
             : 'Reminders disabled'
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'update_settings', language));
     } finally {
       setLoadingReminders(false);
@@ -177,6 +179,7 @@ export default function SettingsPage() {
       }
     }
     loadReminderPreference();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only (supabase is stable)
   }, [user]);
 
   const txt =

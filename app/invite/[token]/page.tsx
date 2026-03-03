@@ -10,6 +10,14 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
+import type { Database } from '@/lib/database.types';
+
+type SessionRow = Database['public']['Tables']['sessions']['Row'];
+
+interface InviterInfo {
+  name: string | null;
+  avatar_url: string | null;
+}
 
 export default function InvitePage() {
   const router = useRouter();
@@ -19,8 +27,8 @@ export default function InvitePage() {
   const { language } = useLanguage();
 
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
-  const [inviter, setInviter] = useState<any>(null);
+  const [session, setSession] = useState<SessionRow | null>(null);
+  const [inviter, setInviter] = useState<InviterInfo | null>(null);
   const [isGuest, setIsGuest] = useState(true);
   const [joining, setJoining] = useState(false);
 
@@ -32,6 +40,7 @@ export default function InvitePage() {
 
   useEffect(() => {
     loadInvite();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [token]);
 
   async function loadInvite() {
@@ -82,12 +91,13 @@ export default function InvitePage() {
       showError(language === 'es' ? 'Completa nombre y teléfono' : 'Fill in name and phone');
       return;
     }
+    if (!session) return;
 
     try {
       setJoining(true);
 
       // Check if session is full
-      if (session.current_participants >= session.max_participants) {
+      if ((session.current_participants ?? 0) >= session.max_participants) {
         showError(language === 'es' ? 'Sesión llena' : 'Session full');
         return;
       }
@@ -108,7 +118,7 @@ export default function InvitePage() {
       // Update participant count
       await supabase
         .from('sessions')
-        .update({ current_participants: session.current_participants + 1 })
+        .update({ current_participants: (session.current_participants ?? 0) + 1 })
         .eq('id', session.id);
 
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
@@ -117,7 +127,7 @@ export default function InvitePage() {
       setTimeout(() => {
         router.push('/');
       }, 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       showError(getErrorMessage(error, 'accept_invite', language));
     } finally {
       setJoining(false);

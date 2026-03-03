@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       message: `Sent ${sentCount} motivational messages`,
       count: sentCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/cron/daily-motivation', action: 'daily_motivation' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/client';
 
 export async function scheduleSessionReminders() {
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
 
   // Get user's joined sessions for today and tomorrow
@@ -12,7 +14,8 @@ export async function scheduleSessionReminders() {
 
   const { data: joinedSessions } = await supabase
     .from('session_participants')
-    .select(`
+    .select(
+      `
       session_id,
       sessions:session_id (
         id,
@@ -21,7 +24,8 @@ export async function scheduleSessionReminders() {
         start_time,
         location
       )
-    `)
+    `
+    )
     .eq('user_id', user.id)
     .eq('status', 'confirmed')
     .gte('sessions.date', today.toISOString().split('T')[0])
@@ -30,7 +34,15 @@ export async function scheduleSessionReminders() {
   if (!joinedSessions) return;
 
   // Schedule notifications for each session (1 hour before)
-  joinedSessions.forEach(({ sessions: session }: any) => {
+  joinedSessions.forEach((row) => {
+    const rawSession = row.sessions;
+    const session = (Array.isArray(rawSession) ? rawSession[0] : rawSession) as {
+      id: string;
+      sport: string;
+      date: string;
+      start_time: string;
+      location: string;
+    } | null;
     if (!session) return;
 
     const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
@@ -39,7 +51,7 @@ export async function scheduleSessionReminders() {
 
     if (reminderTime > now) {
       const timeUntilReminder = reminderTime.getTime() - now.getTime();
-      
+
       setTimeout(() => {
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification('Tribe Session Reminder', {

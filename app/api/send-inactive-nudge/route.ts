@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         });
 
         emailsSent++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         logError(error, { route: '/api/send-inactive-nudge', action: 'send_nudge_email', userId: user.id });
         errors++;
       }
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
       errors,
       totalUsers: users.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logError(error, { route: '/api/send-inactive-nudge', action: 'inactive_nudge' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

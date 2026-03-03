@@ -9,6 +9,7 @@ import { MessageCircle, ChevronRight } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
 
 interface Conversation {
   session_id: string;
@@ -37,12 +38,13 @@ export default function MessagesPage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const [user, setUser] = useState<any>(null);
+  const [, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   async function checkUser() {
@@ -128,7 +130,15 @@ export default function MessagesPage() {
         .order('created_at', { ascending: false });
 
       // Group: find the last message per session and check if messages exist
-      const lastMessageBySession = new Map<string, any>();
+      const lastMessageBySession = new Map<
+        string,
+        {
+          session_id: string;
+          message: string;
+          created_at: string | null;
+          user: { name: string | null } | { name: string | null }[] | null;
+        }
+      >();
       for (const msg of allMessages || []) {
         if (!lastMessageBySession.has(msg.session_id)) {
           lastMessageBySession.set(msg.session_id, msg);
@@ -152,8 +162,11 @@ export default function MessagesPage() {
           },
           last_message: {
             message: lastMessage.message,
-            created_at: lastMessage.created_at,
-            user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user,
+            created_at: lastMessage.created_at ?? '',
+            user: (() => {
+              const u = Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user;
+              return { name: u?.name ?? '' };
+            })(),
           },
           unread_count: 0,
         });

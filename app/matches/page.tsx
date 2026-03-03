@@ -12,25 +12,51 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import type { User } from '@supabase/supabase-js';
+
+interface JoinRequestItem {
+  id: string;
+  user_id: string | null;
+  session_id: string;
+  joined_at: string | null;
+  status: string | null;
+  // REASON: Supabase join via !session_participants_user_id_fkey returns a single object at runtime,
+  // but generated types may infer an array. We type as single object to match actual usage.
+  user: { id: string; name: string | null; avatar_url: string | null } | null;
+  session: { id: string; sport: string; date: string; start_time: string; location: string } | undefined;
+}
+
+interface TribeSession {
+  id: string;
+  sport: string;
+  date: string;
+  start_time: string;
+  location: string;
+  creator_id: string;
+  current_participants: number | null;
+  max_participants: number;
+}
 
 export default function MatchesPage() {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'requests' | 'tribe'>('tribe');
-  const [joinRequests, setJoinRequests] = useState<any[]>([]);
-  const [tribeSessions, setTribeSessions] = useState<any[]>([]);
+  const [joinRequests, setJoinRequests] = useState<JoinRequestItem[]>([]);
+  const [tribeSessions, setTribeSessions] = useState<TribeSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
     if (user) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [user, activeTab]);
 
   async function checkUser() {
@@ -64,7 +90,7 @@ export default function MatchesPage() {
       const { data: mySessions, error: sessError } = await supabase
         .from('sessions')
         .select('id, sport, date, start_time, location')
-        .eq('creator_id', user.id)
+        .eq('creator_id', user!.id)
         .eq('status', 'active');
 
       if (sessError) throw sessError;
@@ -94,6 +120,7 @@ export default function MatchesPage() {
 
       const requestsWithSession = (participants || []).map((p) => ({
         ...p,
+        user: (Array.isArray(p.user) ? p.user[0] : p.user) as JoinRequestItem['user'],
         session: mySessions.find((s) => s.id === p.session_id),
       }));
 
@@ -112,7 +139,7 @@ export default function MatchesPage() {
       const { data: participations } = await supabase
         .from('session_participants')
         .select('session_id, joined_at')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .eq('status', 'confirmed');
 
       if (!participations || participations.length === 0) {
@@ -196,7 +223,7 @@ export default function MatchesPage() {
                             <img
                               loading="lazy"
                               src={request.user.avatar_url}
-                              alt={request.user.name}
+                              alt={request.user.name ?? undefined}
                               className="w-full h-full object-cover"
                             />
                           ) : (

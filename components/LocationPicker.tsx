@@ -1,10 +1,20 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import type { Map as LeafletMap, Marker as LeafletMarker, LeafletMouseEvent } from 'leaflet';
 import { MapPin, Navigation, Loader2, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { loadGoogleMaps, reverseGeocodeGoogle } from '@/lib/google-maps';
 import { logError } from '@/lib/logger';
+
+interface LeafletMapComponents {
+  // REASON: react-leaflet components have complex generic props — using broad ComponentType to avoid re-declaring all prop types
+  MapContainer: React.ComponentType<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  TileLayer: React.ComponentType<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  Marker: React.ComponentType<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  useMapEvents: (handlers: Record<string, (e: LeafletMouseEvent) => void>) => LeafletMap;
+  useMap: () => LeafletMap;
+}
 
 interface LocationPickerProps {
   value: string;
@@ -20,9 +30,9 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
   const [mapReady, setMapReady] = useState(false);
   const [reverseGeocoding, setReverseGeocoding] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
-  const [mapComponents, setMapComponents] = useState<any>(null);
+  const [mapComponents, setMapComponents] = useState<LeafletMapComponents | null>(null);
   const [googleReady, setGoogleReady] = useState(false);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
@@ -82,7 +92,8 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
     }
 
     Promise.all([import('leaflet'), import('react-leaflet')]).then(([L, reactLeaflet]) => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      // REASON: Leaflet's _getIconUrl is a private property not in type defs — must delete to fix default marker icons
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -170,7 +181,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
     const hookFns = mapComponents;
     const map = hookFns?.useMapEvents
       ? hookFns.useMapEvents({
-          click(e: any) {
+          click(e: LeafletMouseEvent) {
             handleMapClick(e.latlng.lat, e.latlng.lng);
           },
         })
@@ -184,14 +195,14 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       if (position && map) {
         map.flyTo(position, 16, { duration: 0.5 });
       }
-    }, [position, map]);
+    }, [map]);
 
     return null;
   }
 
   // Draggable marker component
   function DraggableMarker() {
-    const markerRef = useRef<any>(null);
+    const markerRef = useRef<LeafletMarker | null>(null);
 
     if (!mapComponents || !position) return null;
     const { Marker } = mapComponents;

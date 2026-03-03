@@ -95,6 +95,15 @@ function getSportEmoji(sport: string): string {
   return map[sport] || '\u{1F4AA}';
 }
 
+/** Subset of session fields used in the story upload session picker */
+interface ActiveSession {
+  id: string;
+  sport: string;
+  date: string;
+  start_time: string;
+  location: string;
+}
+
 interface StoriesRowProps {
   userId: string | null;
   userAvatar?: string | null;
@@ -111,7 +120,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
   const [loaded, setLoaded] = useState(false);
 
   // Session picker + upload states
-  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
@@ -126,6 +135,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
     }
     setSeenIds(getSeenStories());
     if (userId) loadActiveSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [userId]);
 
   async function loadActiveSessions() {
@@ -146,7 +156,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
       .eq('user_id', userId)
       .eq('sessions.status', 'active');
 
-    const sessionsMap = new Map<string, any>();
+    const sessionsMap = new Map<string, ActiveSession>();
 
     // Add created sessions
     if (created) {
@@ -158,7 +168,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
     // Add joined sessions (deduplicate)
     if (joined) {
       for (const row of joined) {
-        const s = (row as any).sessions;
+        const s = (row as unknown as { sessions: ActiveSession | null }).sessions;
         if (s && !sessionsMap.has(s.id)) {
           sessionsMap.set(s.id, s);
         }
@@ -212,8 +222,8 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
       const map = new Map<string, SessionStoryGroup>();
       for (const row of data) {
         const sid = row.session_id;
-        const user = row.user as any;
-        const session = row.session as any;
+        const user = row.user as unknown as { name: string; avatar_url: string | null } | null;
+        const session = row.session as unknown as { sport: string } | null;
         if (!map.has(sid)) {
           map.set(sid, {
             sessionId: sid,

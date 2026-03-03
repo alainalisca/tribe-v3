@@ -15,7 +15,9 @@ export default function IOSInstallPrompt() {
       const isInStandaloneMode = 'standalone' in window.navigator && window.navigator.standalone;
 
       // Check if running in Capacitor native app
-      const isNativePlatform = (window as any).Capacitor?.isNativePlatform?.() === true;
+      const isNativePlatform =
+        (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.() ===
+        true;
 
       // Check if already dismissed (session-based, not persistent)
       const sessionDismissed = sessionStorage.getItem('installPromptDismissed');
