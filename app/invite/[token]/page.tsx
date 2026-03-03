@@ -1,5 +1,6 @@
 'use client';
-import { formatTime12Hour } from "@/lib/utils";
+import { logError } from '@/lib/logger';
+import { formatTime12Hour } from '@/lib/utils';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -16,13 +17,13 @@ export default function InvitePage() {
   const token = params.token as string;
   const supabase = createClient();
   const { language } = useLanguage();
-  
+
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   const [inviter, setInviter] = useState<any>(null);
   const [isGuest, setIsGuest] = useState(true);
   const [joining, setJoining] = useState(false);
-  
+
   const [guestData, setGuestData] = useState({
     name: '',
     phone: '',
@@ -36,7 +37,9 @@ export default function InvitePage() {
   async function loadInvite() {
     try {
       // Check if user is logged in
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setIsGuest(false);
       }
@@ -67,7 +70,7 @@ export default function InvitePage() {
 
       setInviter(inviterData);
     } catch (error) {
-      console.error('Error loading invite:', error);
+      logError(error, { action: 'loadInvite' });
       showError(language === 'es' ? 'Invitación inválida' : 'Invalid invite');
     } finally {
       setLoading(false);
@@ -90,17 +93,15 @@ export default function InvitePage() {
       }
 
       // Add guest to participants
-      const { error } = await supabase
-        .from('session_participants')
-        .insert({
-          session_id: session.id,
-          user_id: null,
-          is_guest: true,
-          guest_name: guestData.name,
-          guest_phone: guestData.phone,
-          guest_email: guestData.email || null,
-          status: 'confirmed',
-        });
+      const { error } = await supabase.from('session_participants').insert({
+        session_id: session.id,
+        user_id: null,
+        is_guest: true,
+        guest_name: guestData.name,
+        guest_phone: guestData.phone,
+        guest_email: guestData.email || null,
+        status: 'confirmed',
+      });
 
       if (error) throw error;
 
@@ -111,7 +112,7 @@ export default function InvitePage() {
         .eq('id', session.id);
 
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
-      
+
       // Show success message with session details
       setTimeout(() => {
         router.push('/');
@@ -163,15 +164,19 @@ export default function InvitePage() {
         {/* Session Details */}
         <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 mb-4 shadow">
           <h2 className="text-xl font-bold text-theme-primary mb-3">{session.sport}</h2>
-          
+
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Calendar className="w-4 h-4" />
-              <span>{new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}</span>
+              <span>
+                {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Clock className="w-4 h-4" />
-              <span>{formatTime12Hour(session.start_time)} • {session.duration} min</span>
+              <span>
+                {formatTime12Hour(session.start_time)} • {session.duration} min
+              </span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <MapPin className="w-4 h-4" />
@@ -179,7 +184,10 @@ export default function InvitePage() {
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Users className="w-4 h-4" />
-              <span>{session.current_participants}/{session.max_participants} {language === 'es' ? 'confirmados' : 'confirmed'}</span>
+              <span>
+                {session.current_participants}/{session.max_participants}{' '}
+                {language === 'es' ? 'confirmados' : 'confirmed'}
+              </span>
             </div>
           </div>
 
@@ -196,7 +204,7 @@ export default function InvitePage() {
             <h3 className="text-lg font-bold text-theme-primary mb-3">
               {language === 'es' ? 'Confirma tu asistencia' : 'Confirm your spot'}
             </h3>
-            
+
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-theme-primary mb-1">
@@ -242,13 +250,17 @@ export default function InvitePage() {
                 disabled={joining}
                 className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
               >
-                {joining 
-                  ? (language === 'es' ? 'Confirmando...' : 'Confirming...') 
-                  : (language === 'es' ? 'Confirmar asistencia' : 'Confirm attendance')}
+                {joining
+                  ? language === 'es'
+                    ? 'Confirmando...'
+                    : 'Confirming...'
+                  : language === 'es'
+                    ? 'Confirmar asistencia'
+                    : 'Confirm attendance'}
               </button>
 
               <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
-                {language === 'es' 
+                {language === 'es'
                   ? 'Tu info se compartirá con el organizador'
                   : 'Your info will be shared with the organizer'}
               </p>
@@ -257,11 +269,9 @@ export default function InvitePage() {
         ) : (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow text-center">
             <p className="text-theme-primary mb-4">
-              {language === 'es' 
-                ? 'Ya tienes cuenta. ¡Únete desde la app!'
-                : 'You have an account. Join from the app!'}
+              {language === 'es' ? 'Ya tienes cuenta. ¡Únete desde la app!' : 'You have an account. Join from the app!'}
             </p>
-            <Link 
+            <Link
               href={`/session/${session.id}`}
               className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
             >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Share, Plus, Home, MoreVertical, X } from 'lucide-react';
+import { logError } from '@/lib/logger';
 
 export default function IOSInstallPrompt() {
   const [show, setShow] = useState(false);
@@ -11,7 +12,7 @@ export default function IOSInstallPrompt() {
     try {
       const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const android = /Android/.test(navigator.userAgent);
-      const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+      const isInStandaloneMode = 'standalone' in window.navigator && window.navigator.standalone;
 
       // Check if running in Capacitor native app
       const isNativePlatform = (window as any).Capacitor?.isNativePlatform?.() === true;
@@ -29,7 +30,7 @@ export default function IOSInstallPrompt() {
         return () => clearTimeout(timer);
       }
     } catch (error) {
-      console.error('Install prompt error:', error);
+      logError(error, { action: 'IOSInstallPrompt.init' });
     }
   }, []);
 
@@ -41,7 +42,7 @@ export default function IOSInstallPrompt() {
         localStorage.setItem('installPromptPermanentDismiss', 'true');
       }
     } catch (error) {
-      console.error('Storage error:', error);
+      logError(error, { action: 'handleDismiss' });
     }
   };
 
@@ -59,12 +60,12 @@ export default function IOSInstallPrompt() {
 
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-white">Tribe<span className="text-tribe-green">.</span></span>
+            <span className="text-3xl font-bold text-white">
+              Tribe<span className="text-tribe-green">.</span>
+            </span>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">Install Tribe</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Get the full app experience
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">Get the full app experience</p>
         </div>
 
         {isIOS ? (

@@ -1,4 +1,5 @@
 'use client';
+import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -100,7 +101,7 @@ export default function HomePage() {
         await registerForPushNotifications(userId);
       }
     } catch (error) {
-      console.error('[FCM] Error in tryRegisterPushNotifications:', error);
+      logError(error, { action: 'tryRegisterPushNotifications' });
     }
   }
 
@@ -130,7 +131,7 @@ export default function HomePage() {
       setSessions(result.data || []);
       loadLiveStatuses((result.data || []).map((s: any) => s.id));
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      logError(error, { action: 'loadSessions' });
     } finally {
       setLoading(false);
     }
@@ -161,7 +162,7 @@ export default function HomePage() {
       setLiveStatusMap(map);
       setLiveUserIdSet(userIds);
     } catch (error) {
-      console.error('Error loading live statuses:', error);
+      logError(error, { action: 'loadLiveStatuses' });
     }
   }
 
@@ -265,7 +266,7 @@ export default function HomePage() {
       );
       await loadSessions();
     } catch (error: any) {
-      console.error('Error joining session:', error);
+      logError(error, { action: 'handleJoinSession' });
       showError(getErrorMessage(error, 'join_session', language));
     }
   }
@@ -285,7 +286,7 @@ export default function HomePage() {
         setPendingSessionId(null);
       }
     } catch (error) {
-      console.error('Error accepting waiver:', error);
+      logError(error, { action: 'handleWaiverAccepted' });
       showError(getErrorMessage(error, 'accept_waiver', language));
     }
   }

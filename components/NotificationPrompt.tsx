@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
+import { log, logError } from '@/lib/logger';
 
 interface NotificationPromptProps {
   hideWhenOnboarding?: boolean;
@@ -20,16 +21,16 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
   async function checkUser() {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     if (!user) return;
-    
+
     setUserId(user.id);
 
     const hasAsked = localStorage.getItem('notification-prompt-shown');
-    const permission = typeof window !== 'undefined' && 'Notification' in window 
-      ? Notification.permission 
-      : 'denied';
+    const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied';
 
     if (!hasAsked && permission === 'default') {
       setTimeout(() => setShow(true), 5000);
@@ -42,9 +43,9 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
     setLoading(true);
 
     try {
-      console.log('[FCM] NotificationPrompt: enabling for user:', userId);
+      log('debug', 'NotificationPrompt: enabling for user', { userId });
       const success = await registerForPushNotifications(userId);
-      console.log('[FCM] NotificationPrompt: registration result:', success);
+      log('debug', 'NotificationPrompt: registration result', { userId, success });
 
       if (success) {
         setShow(false);
@@ -53,7 +54,7 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
         alert('Please enable notifications in your browser/device settings');
       }
     } catch (error) {
-      console.error('[FCM] NotificationPrompt: error enabling notifications:', error);
+      logError(error, { action: 'handleEnable', userId: userId ?? undefined });
       alert('Failed to enable notifications. Please try again.');
     }
 
@@ -80,15 +81,13 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
         <div className="p-2 bg-tribe-green rounded-lg">
           <Bell className="w-6 h-6 text-slate-900" />
         </div>
-        
+
         <div className="flex-1">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-1">
-            Stay Updated
-          </h3>
+          <h3 className="font-bold text-gray-900 dark:text-white mb-1">Stay Updated</h3>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
             Get notified about new matches, join requests, and session reminders.
           </p>
-          
+
           <div className="flex gap-2">
             <button
               onClick={handleEnable}

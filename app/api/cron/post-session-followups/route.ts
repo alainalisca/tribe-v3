@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -10,11 +11,11 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
-    
+
     // Get sessions that ended in the last 2 hours and haven't sent follow-ups
     const now = new Date();
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-    
+
     const { data: sessions, error } = await supabase
       .from('sessions')
       .select('id, sport, location, date, start_time, duration')
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     }
 
     // Filter for sessions that actually ended
-    const endedSessions = sessions.filter(session => {
+    const endedSessions = sessions.filter((session) => {
       const sessionStart = new Date(`${session.date}T${session.start_time}`);
       const sessionEnd = new Date(sessionStart.getTime() + session.duration * 60 * 1000);
       return sessionEnd <= now && sessionEnd >= twoHoursAgo;
@@ -49,35 +50,36 @@ export async function GET(request: Request) {
       // Send email to each attendee
       for (const attendee of attendees) {
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/send-attendance-notification`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               sessionId: session.id,
-              userId: attendee.user_id
-            })
+              userId: attendee.user_id,
+            }),
           });
           sentCount++;
         } catch (err) {
-          console.error(`Failed to send email for session ${session.id}, user ${attendee.user_id}:`, err);
+          logError(err, {
+            route: '/api/cron/post-session-followups',
+            action: 'send_followup_email',
+            sessionId: session.id,
+            userId: attendee.user_id,
+          });
         }
       }
 
       // Mark follow-up as sent
-      await supabase
-        .from('sessions')
-        .update({ followup_sent: true })
-        .eq('id', session.id);
+      await supabase.from('sessions').update({ followup_sent: true }).eq('id', session.id);
     }
 
     return NextResponse.json({
       success: true,
       message: `Sent ${sentCount} follow-up emails for ${endedSessions.length} sessions`,
-      count: sentCount
+      count: sentCount,
     });
-
   } catch (error: any) {
-    console.error('Post-session follow-up cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/cron/post-session-followups', action: 'post_session_followups' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

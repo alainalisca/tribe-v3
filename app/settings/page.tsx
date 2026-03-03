@@ -1,4 +1,5 @@
 'use client';
+import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
@@ -22,16 +23,14 @@ export default function SettingsPage() {
   }, []);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth');
     } else {
       setUser(user);
-      const { data: profile } = await supabase
-        .from('users')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single();
+      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
       setUserIsAdmin(!!profile?.is_admin);
     }
   }
@@ -39,11 +38,11 @@ export default function SettingsPage() {
   async function handleSignOut() {
     if (user) {
       try {
-        console.log('[FCM] Removing FCM token on sign out for user:', user.id);
+        log('debug', 'Removing FCM token on sign out', { userId: user.id, action: 'handleSignOut' });
         const { removeFcmToken } = await import('@/lib/firebase-messaging');
         await removeFcmToken(user.id);
       } catch (error) {
-        console.error('[FCM] Error removing token on sign out:', error);
+        logError(error, { action: 'handleSignOut', userId: user.id });
       }
     }
     await supabase.auth.signOut();
@@ -52,19 +51,18 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount() {
     const confirmWord = language === 'es' ? 'ELIMINAR' : 'DELETE';
-    const input = prompt(language === 'es' 
-      ? '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
-      : 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.');
+    const input = prompt(
+      language === 'es'
+        ? '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
+        : 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.'
+    );
     if (input !== confirmWord) {
       showInfo(language === 'es' ? 'Eliminación cancelada' : 'Deletion cancelled');
       return;
     }
 
     try {
-      const { error: deleteError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', user.id);
+      const { error: deleteError } = await supabase.from('users').delete().eq('id', user.id);
 
       if (deleteError) throw deleteError;
 
@@ -85,18 +83,19 @@ export default function SettingsPage() {
     setLoadingReminders(true);
     try {
       const newValue = !sessionRemindersEnabled;
-      const { error } = await supabase
-        .from('users')
-        .update({ session_reminders_enabled: newValue })
-        .eq('id', user.id);
+      const { error } = await supabase.from('users').update({ session_reminders_enabled: newValue }).eq('id', user.id);
 
       if (error) throw error;
 
       setSessionRemindersEnabled(newValue);
       showSuccess(
         newValue
-          ? (language === 'es' ? 'Recordatorios activados' : 'Reminders enabled')
-          : (language === 'es' ? 'Recordatorios desactivados' : 'Reminders disabled')
+          ? language === 'es'
+            ? 'Recordatorios activados'
+            : 'Reminders enabled'
+          : language === 'es'
+            ? 'Recordatorios desactivados'
+            : 'Reminders disabled'
       );
     } catch (error: any) {
       showError(getErrorMessage(error, 'update_settings', language));
@@ -114,16 +113,18 @@ export default function SettingsPage() {
 
       if (isNative) {
         // Native: use unified registration which handles permission + FCM token
-        console.log('[FCM] Settings: toggling notifications for native user:', user.id);
+        log('debug', 'Toggling notifications for native user', { userId: user.id, action: 'toggleNotifications' });
         const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
         const success = await registerForPushNotifications(user.id);
         if (success) {
           setNotificationsEnabled(true);
           showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
         } else {
-          showError(language === 'en'
-            ? 'Could not enable notifications. Check your device settings.'
-            : 'No se pudieron activar las notificaciones. Revisa la configuración de tu dispositivo.');
+          showError(
+            language === 'en'
+              ? 'Could not enable notifications. Check your device settings.'
+              : 'No se pudieron activar las notificaciones. Revisa la configuración de tu dispositivo.'
+          );
         }
         return;
       }
@@ -138,21 +139,23 @@ export default function SettingsPage() {
         setNotificationsEnabled(false);
         showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
       } else if (Notification.permission !== 'denied') {
-        console.log('[FCM] Settings: requesting web push for user:', user.id);
+        log('debug', 'Requesting web push for user', { userId: user.id, action: 'toggleNotifications' });
         const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
         const success = await registerForPushNotifications(user.id);
-        console.log('[FCM] Settings: web push registration result:', success);
+        log('debug', 'Web push registration result', { success, action: 'toggleNotifications' });
         if (success) {
           setNotificationsEnabled(true);
           showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
         }
       } else {
-        showError(language === 'en'
-          ? 'Notifications are blocked. Please enable them in your browser settings.'
-          : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.');
+        showError(
+          language === 'en'
+            ? 'Notifications are blocked. Please enable them in your browser settings.'
+            : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.'
+        );
       }
     } catch (error) {
-      console.error('[FCM] Settings: error toggling notifications:', error);
+      logError(error, { action: 'toggleNotifications' });
       showError(language === 'en' ? 'Error enabling notifications' : 'Error al activar notificaciones');
     }
   }
@@ -167,11 +170,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadReminderPreference() {
       if (!user) return;
-      const { data } = await supabase
-        .from('users')
-        .select('session_reminders_enabled')
-        .eq('id', user.id)
-        .single();
+      const { data } = await supabase.from('users').select('session_reminders_enabled').eq('id', user.id).single();
 
       if (data) {
         setSessionRemindersEnabled(data.session_reminders_enabled !== false);
@@ -180,44 +179,48 @@ export default function SettingsPage() {
     loadReminderPreference();
   }, [user]);
 
-
-  const txt = language === 'en' ? {
-    settings: 'Settings',
-    language: 'Language',
-    english: 'English',
-    spanish: 'Spanish',
-    account: 'Account',
-    signOut: 'Sign Out',
-    deleteAccount: 'Delete Account',
-    deleteAccountConfirm: 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.',
-    legal: 'Legal',
-    terms: 'Terms of Service',
-    privacy: 'Privacy Policy',
-    safety: 'Safety Guidelines',
-    admin: 'Admin',
-    adminPanel: 'Admin Panel',
-    help: 'Help & Feedback',
-    feedback: 'Send Feedback',
-    bugReport: 'Report a Bug',
-  } : {
-    settings: 'Configuración',
-    language: 'Idioma',
-    english: 'Inglés',
-    spanish: 'Español',
-    account: 'Cuenta',
-    signOut: 'Cerrar Sesión',
-    deleteAccount: 'Eliminar Cuenta',
-    deleteAccountConfirm: '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.',
-    legal: 'Legal',
-    terms: 'Términos de Servicio',
-    privacy: 'Política de Privacidad',
-    safety: 'Guías de Seguridad',
-    admin: 'Administrador',
-    adminPanel: 'Panel de Administrador',
-    help: 'Ayuda y Comentarios',
-    feedback: 'Enviar Comentarios',
-    bugReport: 'Reportar un Error',
-  };
+  const txt =
+    language === 'en'
+      ? {
+          settings: 'Settings',
+          language: 'Language',
+          english: 'English',
+          spanish: 'Spanish',
+          account: 'Account',
+          signOut: 'Sign Out',
+          deleteAccount: 'Delete Account',
+          deleteAccountConfirm:
+            'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.',
+          legal: 'Legal',
+          terms: 'Terms of Service',
+          privacy: 'Privacy Policy',
+          safety: 'Safety Guidelines',
+          admin: 'Admin',
+          adminPanel: 'Admin Panel',
+          help: 'Help & Feedback',
+          feedback: 'Send Feedback',
+          bugReport: 'Report a Bug',
+        }
+      : {
+          settings: 'Configuración',
+          language: 'Idioma',
+          english: 'Inglés',
+          spanish: 'Español',
+          account: 'Cuenta',
+          signOut: 'Cerrar Sesión',
+          deleteAccount: 'Eliminar Cuenta',
+          deleteAccountConfirm:
+            '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.',
+          legal: 'Legal',
+          terms: 'Términos de Servicio',
+          privacy: 'Política de Privacidad',
+          safety: 'Guías de Seguridad',
+          admin: 'Administrador',
+          adminPanel: 'Panel de Administrador',
+          help: 'Ayuda y Comentarios',
+          feedback: 'Enviar Comentarios',
+          bugReport: 'Reportar un Error',
+        };
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -262,7 +265,7 @@ export default function SettingsPage() {
               </button>
             </Link>
             <Link href="/feedback">
-              <button 
+              <button
                 onClick={(e) => {
                   e.preventDefault();
                   router.push('/feedback?tab=bug');
@@ -280,7 +283,12 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl p-5 border border-stone-200">
           <div className="flex items-center gap-3 mb-4">
             <svg className="w-5 h-5 text-tribe-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+              />
             </svg>
             <h2 className="text-lg font-bold text-theme-primary">
               {language === 'en' ? 'Push Notifications' : 'Notificaciones Push'}
@@ -296,8 +304,12 @@ export default function SettingsPage() {
               }`}
             >
               {notificationsEnabled
-                ? (language === 'en' ? '✓ Notifications Enabled' : '✓ Notificaciones Activadas')
-                : (language === 'en' ? 'Enable Notifications' : 'Activar Notificaciones')}
+                ? language === 'en'
+                  ? '✓ Notifications Enabled'
+                  : '✓ Notificaciones Activadas'
+                : language === 'en'
+                  ? 'Enable Notifications'
+                  : 'Activar Notificaciones'}
             </button>
 
             {/* Session Reminders Toggle */}
@@ -316,10 +328,16 @@ export default function SettingsPage() {
                 <div>
                   <div className="font-semibold">
                     {sessionRemindersEnabled
-                      ? (language === 'en' ? '✓ Session Reminders' : '✓ Recordatorios de Sesión')
-                      : (language === 'en' ? 'Session Reminders' : 'Recordatorios de Sesión')}
+                      ? language === 'en'
+                        ? '✓ Session Reminders'
+                        : '✓ Recordatorios de Sesión'
+                      : language === 'en'
+                        ? 'Session Reminders'
+                        : 'Recordatorios de Sesión'}
                   </div>
-                  <div className={`text-xs mt-1 ${!notificationsEnabled ? 'text-stone-400' : sessionRemindersEnabled ? 'text-slate-700' : 'text-stone-500'}`}>
+                  <div
+                    className={`text-xs mt-1 ${!notificationsEnabled ? 'text-stone-400' : sessionRemindersEnabled ? 'text-slate-700' : 'text-stone-500'}`}
+                  >
                     {language === 'en'
                       ? '1 hour & 15 min before your sessions'
                       : '1 hora y 15 min antes de tus sesiones'}
@@ -339,7 +357,7 @@ export default function SettingsPage() {
             <Globe className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.language}</h2>
           </div>
-          
+
           <div className="space-y-2">
             <button
               onClick={() => setLanguage('en')}

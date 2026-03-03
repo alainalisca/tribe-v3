@@ -1,4 +1,5 @@
 'use client';
+import { logError } from '@/lib/logger';
 import { formatTime12Hour } from '@/lib/utils';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -158,7 +159,7 @@ export default function SessionDetailPage() {
       await loadRecapPhotos();
       await loadSessionStories();
     } catch (error) {
-      console.error('Error loading session:', error);
+      logError(error, { action: 'loadSession', sessionId: params.id as string });
     } finally {
       setLoading(false);
     }
@@ -192,7 +193,7 @@ export default function SessionDetailPage() {
       }
       if (user) setUserPhotoCount(photosData?.filter((p) => p.user_id === user.id).length || 0);
     } catch (error) {
-      console.error('Error loading recap photos:', error);
+      logError(error, { action: 'loadRecapPhotos', sessionId: params.id as string });
     }
   }
 
@@ -209,7 +210,7 @@ export default function SessionDetailPage() {
       if (error) throw error;
       setSessionStories(data || []);
     } catch (error) {
-      console.error('Error loading session stories:', error);
+      logError(error, { action: 'loadSessionStories', sessionId: params.id as string });
     }
   }
 
@@ -223,7 +224,9 @@ export default function SessionDetailPage() {
         .eq('reviewer_id', user.id)
         .single();
       if (data) setHasReviewed(true);
-    } catch {}
+    } catch {
+      // Review check is best-effort; defaults to not reviewed
+    }
   }
 
   async function generateInviteLink() {

@@ -1,4 +1,5 @@
 'use client';
+import { logError } from '@/lib/logger';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { showSuccess, showError } from '@/lib/toast';
@@ -188,7 +189,7 @@ export default function AdminPage() {
         totalJoined: allParticipants?.length || 0,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      logError(error, { action: 'loadStats' });
     }
   }
 
@@ -218,7 +219,7 @@ export default function AdminPage() {
       }));
       setUsers(enrichedUsers);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logError(error, { action: 'loadUsers' });
     } finally {
       setLoadingUsers(false);
     }
@@ -237,7 +238,7 @@ export default function AdminPage() {
       if (error) throw error;
       setReports(data || []);
     } catch (error) {
-      console.error('Error loading reports:', error);
+      logError(error, { action: 'loadReports' });
     } finally {
       setLoadingReports(false);
     }
@@ -253,7 +254,7 @@ export default function AdminPage() {
       if (error) throw error;
       setFeedback(data || []);
     } catch (error) {
-      console.error('Error loading feedback:', error);
+      logError(error, { action: 'loadFeedback' });
     } finally {
       setLoadingFeedback(false);
     }
@@ -269,7 +270,7 @@ export default function AdminPage() {
       if (error) throw error;
       setBugs(data || []);
     } catch (error) {
-      console.error('Error loading bugs:', error);
+      logError(error, { action: 'loadBugs' });
     } finally {
       setLoadingBugs(false);
     }
@@ -286,7 +287,7 @@ export default function AdminPage() {
       if (error) throw error;
       setMessages(data || []);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      logError(error, { action: 'loadMessages' });
     } finally {
       setLoadingMessages(false);
     }
@@ -303,7 +304,7 @@ export default function AdminPage() {
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
-      console.error('Error loading sessions:', error);
+      logError(error, { action: 'loadSessions' });
     } finally {
       setLoadingSessions(false);
     }

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Navigation, Loader2, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { loadGoogleMaps, reverseGeocodeGoogle } from '@/lib/google-maps';
+import { logError } from '@/lib/logger';
 
 interface LocationPickerProps {
   value: string;
@@ -32,7 +33,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
   useEffect(() => {
     loadGoogleMaps()
       .then(() => setGoogleReady(true))
-      .catch((err) => console.error('Google Maps load error:', err));
+      .catch((err) => logError(err, { action: 'loadGoogleMaps' }));
   }, []);
 
   // Initialize Google Places Autocomplete
@@ -80,10 +81,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       document.head.appendChild(link);
     }
 
-    Promise.all([
-      import('leaflet'),
-      import('react-leaflet')
-    ]).then(([L, reactLeaflet]) => {
+    Promise.all([import('leaflet'), import('react-leaflet')]).then(([L, reactLeaflet]) => {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -118,7 +116,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
         onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
       }
     } catch (err) {
-      console.error('Reverse geocode error:', err);
+      logError(err, { action: 'reverseGeocode' });
       onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
     } finally {
       setReverseGeocoding(false);
@@ -154,11 +152,13 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
         setGettingLocation(false);
       },
       (err) => {
-        console.error('Geolocation error:', err);
+        logError(err, { action: 'getCurrentLocation' });
         setGettingLocation(false);
-        alert(language === 'es'
-          ? 'No se pudo obtener tu ubicación. Por favor, selecciona en el mapa.'
-          : 'Could not get your location. Please select on the map.');
+        alert(
+          language === 'es'
+            ? 'No se pudo obtener tu ubicación. Por favor, selecciona en el mapa.'
+            : 'Could not get your location. Please select on the map.'
+        );
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -206,14 +206,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       },
     };
 
-    return (
-      <Marker
-        draggable={true}
-        eventHandlers={eventHandlers}
-        position={position}
-        ref={markerRef}
-      />
-    );
+    return <Marker draggable={true} eventHandlers={eventHandlers} position={position} ref={markerRef} />;
   }
 
   return (
@@ -283,9 +276,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
                 zoomControl={true}
                 attributionControl={false}
               >
-                <mapComponents.TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                <mapComponents.TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <MapClickHandler />
                 <DraggableMarker />
               </mapComponents.MapContainer>

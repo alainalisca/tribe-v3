@@ -1,6 +1,7 @@
 'use client';
+import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
-import { getErrorMessage } from "@/lib/errorMessages";
+import { getErrorMessage } from '@/lib/errorMessages';
 
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
@@ -16,12 +17,12 @@ export default function EditProfilePage() {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const getTranslatedSport = (sport: string) => language === "es" ? (sportTranslations[sport]?.es || sport) : sport;
+  const getTranslatedSport = (sport: string) => (language === 'es' ? sportTranslations[sport]?.es || sport : sport);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -29,10 +30,10 @@ export default function EditProfilePage() {
     location: '',
     sports: [] as string[],
     photos: [] as string[],
-    emergency_contact_name: "",
-    emergency_contact_phone: "",
-    instagram_username: "",
-    facebook_url: "",
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    instagram_username: '',
+    facebook_url: '',
   });
 
   useEffect(() => {
@@ -41,18 +42,16 @@ export default function EditProfilePage() {
 
   async function loadProfile() {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
       if (!authUser) {
         router.push('/auth');
         return;
       }
       setUser(authUser);
 
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single();
+      const { data: profileData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
 
       if (profileData) {
         setFormData({
@@ -62,14 +61,14 @@ export default function EditProfilePage() {
           location: profileData.location || '',
           sports: profileData.sports || [],
           photos: profileData.photos || [],
-          emergency_contact_name: profileData.emergency_contact_name || "",
-          emergency_contact_phone: profileData.emergency_contact_phone || "",
-          instagram_username: profileData.instagram_username || "",
-          facebook_url: profileData.facebook_url || "",
+          emergency_contact_name: profileData.emergency_contact_name || '',
+          emergency_contact_phone: profileData.emergency_contact_phone || '',
+          instagram_username: profileData.instagram_username || '',
+          facebook_url: profileData.facebook_url || '',
         });
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      logError(error, { action: 'loadProfile' });
     } finally {
       setLoading(false);
     }
@@ -91,22 +90,20 @@ export default function EditProfilePage() {
       const fileName = `photo-${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `photos/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('profile-images')
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-images')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
       setFormData({
         ...formData,
         photos: [...formData.photos, publicUrl],
       });
     } catch (error) {
-      console.error('Error uploading photo:', error);
+      logError(error, { action: 'handlePhotoUpload' });
       showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingPhoto(false);
@@ -135,6 +132,8 @@ export default function EditProfilePage() {
           location: formData.location,
           sports: formData.sports,
           photos: formData.photos,
+          emergency_contact_name: formData.emergency_contact_name,
+          emergency_contact_phone: formData.emergency_contact_phone,
           instagram_username: formData.instagram_username,
           facebook_url: formData.facebook_url,
         })
@@ -145,7 +144,7 @@ export default function EditProfilePage() {
       showSuccess('Profile updated successfully!');
       router.push('/profile');
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      logError(error, { action: 'handleSave' });
       showError(getErrorMessage(error, 'update_profile', language));
     } finally {
       setSaving(false);
@@ -156,7 +155,7 @@ export default function EditProfilePage() {
     if (formData.sports.includes(sport)) {
       setFormData({
         ...formData,
-        sports: formData.sports.filter(s => s !== sport),
+        sports: formData.sports.filter((s) => s !== sport),
       });
     } else {
       setFormData({
@@ -185,7 +184,9 @@ export default function EditProfilePage() {
                 <ArrowLeft className="w-6 h-6 text-theme-primary" />
               </button>
             </Link>
-            <h1 className="text-xl font-bold text-theme-primary">{language === 'es' ? 'Editar Perfil' : 'Edit Profile'}</h1>
+            <h1 className="text-xl font-bold text-theme-primary">
+              {language === 'es' ? 'Editar Perfil' : 'Edit Profile'}
+            </h1>
           </div>
           <button
             onClick={handleSave}
@@ -277,7 +278,9 @@ export default function EditProfilePage() {
                 📷 Instagram {language === 'es' ? '(nombre de usuario)' : '(username)'}
               </label>
               <div className="flex items-center">
-                <span className="px-3 py-2 bg-stone-200 dark:bg-[#404549] border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">@</span>
+                <span className="px-3 py-2 bg-stone-200 dark:bg-[#404549] border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">
+                  @
+                </span>
                 <input
                   type="text"
                   value={formData.instagram_username}
@@ -308,11 +311,11 @@ export default function EditProfilePage() {
             🚨 Emergency Contact (Optional but Recommended)
           </h3>
           <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">
-            {language === 'es' 
+            {language === 'es'
               ? 'Información de contacto de emergencia en caso de accidente durante una sesión'
               : 'Emergency contact information in case of an incident during a session'}
           </p>
-          
+
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-semibold text-theme-primary mb-2">
@@ -348,11 +351,7 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             {formData.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
-                <img
-                  src={photo}
-                  alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-cover rounded-lg"
-                />
+                <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
                 <button
                   onClick={() => removePhoto(index)}
                   className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition"

@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/logger';
 import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
@@ -60,16 +61,25 @@ export function useSessionActions({
           self_join: language === 'es' ? '¡No puedes unirte a tu propia sesión!' : 'You cannot join your own session!',
           already_joined: language === 'es' ? '¡Ya te uniste a esta sesión!' : 'You already joined this session!',
           capacity_full: language === 'es' ? 'Esta sesión está llena' : 'This session is full',
-          invite_only: language === 'es' ? 'Sesión privada. Necesitas una invitación del organizador.' : 'This is a private session. You need a direct invitation from the host.',
+          invite_only:
+            language === 'es'
+              ? 'Sesión privada. Necesitas una invitación del organizador.'
+              : 'This is a private session. You need a direct invitation from the host.',
         };
         showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
         return;
       }
       if (result.status === 'pending') {
-        showSuccess(language === 'es' ? '¡Solicitud enviada! El organizador revisará tu perfil.' : 'Request sent! The host will review your profile and decide.');
+        showSuccess(
+          language === 'es'
+            ? '¡Solicitud enviada! El organizador revisará tu perfil.'
+            : 'Request sent! The host will review your profile and decide.'
+        );
       } else {
         celebrateJoin();
-        showSuccess(language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone.");
+        showSuccess(
+          language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone."
+        );
       }
       await onSessionUpdated();
     } catch (error) {
@@ -105,7 +115,10 @@ export function useSessionActions({
         .select('id')
         .single();
       if (error) throw error;
-      await supabase.from('sessions').update({ current_participants: session.current_participants + 1 }).eq('id', session.id);
+      await supabase
+        .from('sessions')
+        .update({ current_participants: session.current_participants + 1 })
+        .eq('id', session.id);
       localStorage.setItem(`guest_phone_${session.id}`, guestData.phone);
       if (guestData.email) localStorage.setItem(`guest_email_${session.id}`, guestData.email);
       setGuestHasJoined(true);
@@ -120,7 +133,7 @@ export function useSessionActions({
           url: `/session/${session.id}`,
           data: { sessionId: session.id, type: 'guest_join' },
         }),
-      }).catch(err => console.error('Failed to notify host:', err));
+      }).catch((err) => logError(err, { action: 'handleGuestJoin', sessionId: session.id }));
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
       setShowGuestModal(false);
       celebrateJoin();
@@ -133,16 +146,29 @@ export function useSessionActions({
   }
 
   async function handleGuestLeave() {
-    if (!confirm(language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?')) return;
+    if (
+      !confirm(
+        language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?'
+      )
+    )
+      return;
     const storedGuestPhone = localStorage.getItem(`guest_phone_${sessionId}`);
     if (!storedGuestPhone) {
       showError(language === 'es' ? 'No se encontró la información del invitado' : 'Guest information not found');
       return;
     }
     try {
-      const { error } = await supabase.from('session_participants').delete().eq('session_id', sessionId).eq('is_guest', true).eq('guest_phone', storedGuestPhone);
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', sessionId)
+        .eq('is_guest', true)
+        .eq('guest_phone', storedGuestPhone);
       if (error) throw error;
-      await supabase.from('sessions').update({ current_participants: Math.max(0, session.current_participants - 1) }).eq('id', session.id);
+      await supabase
+        .from('sessions')
+        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .eq('id', session.id);
       localStorage.removeItem(`guest_phone_${sessionId}`);
       localStorage.removeItem(`guest_email_${sessionId}`);
       setGuestHasJoined(false);
@@ -158,9 +184,16 @@ export function useSessionActions({
     if (!confirm('Are you sure you want to leave this session?')) return;
     if (!user) return;
     try {
-      const { error } = await supabase.from('session_participants').delete().eq('session_id', session.id).eq('user_id', user.id);
+      const { error } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', session.id)
+        .eq('user_id', user.id);
       if (error) throw error;
-      await supabase.from('sessions').update({ current_participants: session.current_participants - 1 }).eq('id', session.id);
+      await supabase
+        .from('sessions')
+        .update({ current_participants: session.current_participants - 1 })
+        .eq('id', session.id);
       showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       onNavigate('/sessions');
     } catch (error) {
@@ -183,10 +216,17 @@ export function useSessionActions({
   async function handleKickUser(userId: string, userName: string) {
     if (!confirm(`Remove ${userName} from this session?`)) return;
     try {
-      const { error: deleteError } = await supabase.from('session_participants').delete().eq('session_id', session.id).eq('user_id', userId);
+      const { error: deleteError } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', session.id)
+        .eq('user_id', userId);
       if (deleteError) throw deleteError;
-      await supabase.from('sessions').update({ current_participants: Math.max(0, session.current_participants - 1) }).eq('id', session.id);
-      setParticipants(prev => prev.filter(p => p.user_id !== userId));
+      await supabase
+        .from('sessions')
+        .update({ current_participants: Math.max(0, session.current_participants - 1) })
+        .eq('id', session.id);
+      setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
       // REASON: Session state is untyped — full typing deferred to future migration
       setSession((prev: any) => ({ ...prev, current_participants: Math.max(0, prev.current_participants - 1) }));
       showSuccess('User removed from session');
@@ -216,7 +256,7 @@ export function useSessionActions({
           setGuestParticipantId(null);
         }
       } catch (error) {
-        console.error('Error checking guest participation:', error);
+        logError(error, { action: 'checkGuestParticipation', sessionId: paramId });
       }
     })();
   }

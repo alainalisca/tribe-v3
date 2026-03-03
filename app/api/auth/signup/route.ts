@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 
 function calculateAge(birthDate: string): number {
   const today = new Date();
@@ -14,6 +16,12 @@ function calculateAge(birthDate: string): number {
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 5, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const { email, password, name, birthDate, acceptedTos } = await request.json();
 
     // Server-side validation
@@ -39,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -55,11 +63,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message || 'Signup failed' }, { status: 400 });
     }
 
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    logError(error, { route: '/api/auth/signup', action: 'signup' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

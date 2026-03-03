@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { createEvents } from 'ics';
+import { log, logError } from '@/lib/logger';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
@@ -9,19 +10,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
-    
+
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
     const supabase = await createClient();
-    
+
     const { data: session } = await supabase
       .from('sessions')
       .select('*, creator:users!creator_id(name)')
       .eq('id', sessionId)
       .single();
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
 
     const startDateTime = new Date(sessionDate);
     startDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
-    
+
     const endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + (session.duration || 60));
 
@@ -43,14 +44,14 @@ export async function GET(request: Request) {
         startDateTime.getMonth() + 1,
         startDateTime.getDate(),
         startDateTime.getHours(),
-        startDateTime.getMinutes()
+        startDateTime.getMinutes(),
       ] as [number, number, number, number, number],
       end: [
         endDateTime.getFullYear(),
         endDateTime.getMonth() + 1,
         endDateTime.getDate(),
         endDateTime.getHours(),
-        endDateTime.getMinutes()
+        endDateTime.getMinutes(),
       ] as [number, number, number, number, number],
       title: `${session.sport} - Tribe`,
       description: `${session.description || ''}\n\nHosted by: ${session.creator?.name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
@@ -62,9 +63,9 @@ export async function GET(request: Request) {
     };
 
     const { error: icsError, value } = createEvents([event as any]);
-    
+
     if (icsError) {
-      console.error('ICS generation error:', icsError);
+      log('error', 'ICS generation error', { route: '/api/generate-calendar', error: String(icsError), sessionId });
       return NextResponse.json({ error: 'Failed to generate calendar file' }, { status: 500 });
     }
 
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Calendar generation error:', error);
+    logError(error, { route: '/api/generate-calendar', action: 'generate_calendar' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

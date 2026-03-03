@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { createClient } from '@/lib/supabase/client';
+import { log, logError } from '@/lib/logger';
 
 // Check if running in native Capacitor app
 export const isNativeApp = () => {
@@ -15,34 +16,40 @@ export const getPlatform = () => {
 // Initialize Firebase Messaging for native apps
 export async function initializeFirebaseMessaging(userId: string): Promise<string | null> {
   if (!isNativeApp()) {
-    console.log('[FCM] Not a native app, use web push instead');
+    log('debug', 'Not a native app, use web push instead', { action: 'initializeFirebaseMessaging' });
     return null;
   }
 
   try {
-    console.log('[FCM] Requesting notification permissions...');
+    log('debug', 'Requesting notification permissions', { action: 'initializeFirebaseMessaging', userId });
     // Request permission for notifications
     const permissionResult = await FirebaseMessaging.requestPermissions();
-    console.log('[FCM] Permission result:', JSON.stringify(permissionResult));
+    log('debug', 'Permission result received', {
+      action: 'initializeFirebaseMessaging',
+      permissionResult: JSON.stringify(permissionResult),
+    });
 
     if (permissionResult.receive !== 'granted') {
-      console.log('[FCM] Push notification permission denied');
+      log('debug', 'Push notification permission denied', { action: 'initializeFirebaseMessaging', userId });
       return null;
     }
 
     // Get the FCM token
-    console.log('[FCM] Getting FCM token...');
+    log('debug', 'Getting FCM token', { action: 'initializeFirebaseMessaging', userId });
     const tokenResult = await FirebaseMessaging.getToken();
     const token = tokenResult.token;
-    console.log('[FCM] Token received:', token ? `${token.substring(0, 20)}...` : 'null');
+    log('debug', 'FCM token received', {
+      action: 'initializeFirebaseMessaging',
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
+    });
 
     if (!token) {
-      console.error('[FCM] Failed to get FCM token - token is empty');
+      log('error', 'Failed to get FCM token - token is empty', { action: 'initializeFirebaseMessaging', userId });
       return null;
     }
 
     // Save token to Supabase
-    console.log('[FCM] Saving token to Supabase for user:', userId);
+    log('debug', 'Saving FCM token to Supabase', { action: 'initializeFirebaseMessaging', userId });
     await saveFcmToken(userId, token);
 
     // Set up token refresh listener
@@ -54,10 +61,10 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
     // Set up notification tap listener
     setupNotificationTapListener();
 
-    console.log('[FCM] Firebase Messaging initialized successfully');
+    log('info', 'Firebase Messaging initialized successfully', { action: 'initializeFirebaseMessaging', userId });
     return token;
   } catch (error) {
-    console.error('[FCM] Error initializing Firebase Messaging:', error);
+    logError(error, { action: 'initializeFirebaseMessaging', userId });
     return null;
   }
 }
@@ -67,29 +74,44 @@ async function saveFcmToken(userId: string, token: string): Promise<void> {
   const supabase = createClient();
   const platform = getPlatform();
 
-  console.log('[FCM] saveFcmToken called - userId:', userId, 'platform:', platform, 'token:', token.substring(0, 20) + '...');
+  log('debug', 'saveFcmToken called', {
+    action: 'saveFcmToken',
+    userId,
+    platform,
+    tokenPreview: token.substring(0, 20) + '...',
+  });
 
   const { data, error } = await supabase
     .from('users')
     .update({
       fcm_token: token,
       fcm_platform: platform,
-      fcm_updated_at: new Date().toISOString()
+      fcm_updated_at: new Date().toISOString(),
     })
     .eq('id', userId)
     .select('id, fcm_token, fcm_platform');
 
   if (error) {
-    console.error('[FCM] Error saving FCM token:', error.message, error.details, error.hint);
+    log('error', 'Error saving FCM token', {
+      action: 'saveFcmToken',
+      userId,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      errorHint: error.hint,
+    });
   } else {
-    console.log('[FCM] FCM token saved successfully. Updated row:', JSON.stringify(data));
+    log('info', 'FCM token saved successfully', { action: 'saveFcmToken', userId, updatedRow: JSON.stringify(data) });
   }
 }
 
 // Set up listener for token refresh
 function setupTokenRefreshListener(userId: string): void {
   FirebaseMessaging.addListener('tokenReceived', async (event) => {
-    console.log('FCM token refreshed:', event.token);
+    log('info', 'FCM token refreshed', {
+      action: 'setupTokenRefreshListener',
+      userId,
+      tokenPreview: event.token.substring(0, 20) + '...',
+    });
     await saveFcmToken(userId, event.token);
   });
 }
@@ -97,7 +119,10 @@ function setupTokenRefreshListener(userId: string): void {
 // Set up listener for foreground notifications
 function setupForegroundNotificationListener(): void {
   FirebaseMessaging.addListener('notificationReceived', (event) => {
-    console.log('Notification received in foreground:', event.notification);
+    log('debug', 'Notification received in foreground', {
+      action: 'setupForegroundNotificationListener',
+      notification: JSON.stringify(event.notification),
+    });
 
     // You can show a local notification or update UI here
     // For now, we'll let the system handle it
@@ -106,7 +131,11 @@ function setupForegroundNotificationListener(): void {
     // Optionally show a toast or in-app notification
     if (notification.title) {
       // Could trigger a toast notification here
-      console.log(`[Notification] ${notification.title}: ${notification.body}`);
+      log('debug', 'Foreground notification displayed', {
+        action: 'setupForegroundNotificationListener',
+        title: notification.title,
+        body: notification.body,
+      });
     }
   });
 }
@@ -114,7 +143,7 @@ function setupForegroundNotificationListener(): void {
 // Set up listener for notification taps
 function setupNotificationTapListener(): void {
   FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-    console.log('Notification tapped:', event);
+    log('debug', 'Notification tapped', { action: 'setupNotificationTapListener', event: JSON.stringify(event) });
 
     const data = event.notification?.data as Record<string, string> | undefined;
 
@@ -147,16 +176,16 @@ export async function removeFcmToken(userId: string): Promise<void> {
       .update({
         fcm_token: null,
         fcm_platform: null,
-        fcm_updated_at: null
+        fcm_updated_at: null,
       })
       .eq('id', userId);
 
     // Remove all listeners
     await FirebaseMessaging.removeAllListeners();
 
-    console.log('FCM token removed successfully');
+    log('info', 'FCM token removed successfully', { action: 'removeFcmToken', userId });
   } catch (error) {
-    console.error('Error removing FCM token:', error);
+    logError(error, { action: 'removeFcmToken', userId });
   }
 }
 
@@ -188,7 +217,7 @@ export async function getCurrentFcmToken(): Promise<string | null> {
     const result = await FirebaseMessaging.getToken();
     return result.token || null;
   } catch (error) {
-    console.error('Error getting current FCM token:', error);
+    logError(error, { action: 'getCurrentFcmToken' });
     return null;
   }
 }
@@ -199,9 +228,9 @@ export async function subscribeToTopic(topic: string): Promise<void> {
 
   try {
     await FirebaseMessaging.subscribeToTopic({ topic });
-    console.log(`Subscribed to topic: ${topic}`);
+    log('info', 'Subscribed to topic', { action: 'subscribeToTopic', topic });
   } catch (error) {
-    console.error(`Error subscribing to topic ${topic}:`, error);
+    logError(error, { action: 'subscribeToTopic', topic });
   }
 }
 
@@ -211,27 +240,40 @@ export async function unsubscribeFromTopic(topic: string): Promise<void> {
 
   try {
     await FirebaseMessaging.unsubscribeFromTopic({ topic });
-    console.log(`Unsubscribed from topic: ${topic}`);
+    log('info', 'Unsubscribed from topic', { action: 'unsubscribeFromTopic', topic });
   } catch (error) {
-    console.error(`Error unsubscribing from topic ${topic}:`, error);
+    logError(error, { action: 'unsubscribeFromTopic', topic });
   }
 }
 
 // Unified notification registration that handles both native and web
 export async function registerForPushNotifications(userId: string): Promise<boolean> {
-  console.log('[FCM] registerForPushNotifications called - userId:', userId, 'isNative:', isNativeApp(), 'platform:', getPlatform());
+  log('debug', 'registerForPushNotifications called', {
+    action: 'registerForPushNotifications',
+    userId,
+    isNative: isNativeApp(),
+    platform: getPlatform(),
+  });
 
   if (isNativeApp()) {
     // Use FCM for native apps
     const token = await initializeFirebaseMessaging(userId);
-    console.log('[FCM] Native registration complete - token obtained:', token !== null);
+    log('debug', 'Native registration complete', {
+      action: 'registerForPushNotifications',
+      userId,
+      tokenObtained: token !== null,
+    });
     return token !== null;
   } else {
     // Use web push for browser
-    console.log('[FCM] Using web push for browser');
+    log('debug', 'Using web push for browser', { action: 'registerForPushNotifications', userId });
     const { requestNotificationPermission } = await import('@/lib/notifications');
     const subscription = await requestNotificationPermission(userId);
-    console.log('[FCM] Web push registration complete - subscription:', subscription !== null);
+    log('debug', 'Web push registration complete', {
+      action: 'registerForPushNotifications',
+      userId,
+      subscriptionObtained: subscription !== null,
+    });
     return subscription !== null;
   }
 }

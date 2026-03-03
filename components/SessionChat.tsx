@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, X, Shield } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { log, logError } from '@/lib/logger';
+import { showError, showSuccess, showInfo } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
 import Link from 'next/link';
 
 interface Message {
@@ -37,7 +40,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const canModerate = isHost || isAdmin;
 
@@ -80,7 +83,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         })) || [];
       setMessages(messagesWithUser);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      logError(error, { action: 'loadMessages', sessionId });
     } finally {
       setLoading(false);
     }
@@ -123,7 +126,9 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
               const audio = new Audio('/sounds/notification.mp3');
               audio.volume = 0.5;
               audio.play().catch(() => {});
-            } catch (e) {}
+            } catch {
+              // Audio play is best-effort; silent fail is fine
+            }
 
             // Browser notification if tab not focused
             if (document.hidden && Notification.permission === 'granted') {
@@ -200,8 +205,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
       setNewMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Failed to send message');
+      logError(error, { action: 'sendMessage', sessionId });
+      showError(getErrorMessage(error, 'send_message', language));
     } finally {
       setSending(false);
     }
@@ -221,15 +226,15 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         .eq('id', messageId);
 
       if (error) {
-        console.error('Delete error:', error);
+        logError(error, { action: 'deleteMessage', messageId });
         throw error;
       }
 
       setSelectedMessage(null);
-      alert('✅ Message deleted');
+      showSuccess(language === 'es' ? 'Mensaje eliminado' : 'Message deleted');
     } catch (error: any) {
-      console.error('Full error:', error);
-      alert('❌ Error: ' + error.message);
+      logError(error, { action: 'deleteMessage', messageId });
+      showError(getErrorMessage(error, 'send_message', language));
     }
   }
 
@@ -241,7 +246,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   async function submitReport() {
     if (!reportReason) {
-      alert('Please select a reason');
+      showInfo(language === 'es' ? 'Selecciona una razón' : 'Please select a reason');
       return;
     }
 
@@ -256,13 +261,18 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
       if (error) throw error;
 
-      alert('✅ Message reported. Admins will review it.');
+      showSuccess(
+        language === 'es'
+          ? 'Mensaje reportado. Los administradores lo revisarán.'
+          : 'Message reported. Admins will review it.'
+      );
       setShowReportModal(false);
       setReportReason('');
       setReportDescription('');
       setReportingMessageId(null);
     } catch (error: any) {
-      alert('❌ Error: ' + error.message);
+      logError(error, { action: 'submitReport', messageId: reportingMessageId ?? undefined });
+      showError(getErrorMessage(error, 'send_message', language));
     }
   }
 

@@ -1,10 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import {
-  getRandomMessage,
-  getMessageContent,
-  replaceMessageVariables
-} from '@/lib/motivational-messages';
+import { getRandomMessage, getMessageContent, replaceMessageVariables } from '@/lib/motivational-messages';
+import { logError } from '@/lib/logger';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -12,10 +9,12 @@ const COLOMBIA_TZ_OFFSET = -5;
 function getColombiaTime(): { hour: number; dayOfWeek: number } {
   const now = new Date();
   // Get Colombia time
-  const colombiaTime = new Date(now.getTime() + (COLOMBIA_TZ_OFFSET * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+  const colombiaTime = new Date(
+    now.getTime() + COLOMBIA_TZ_OFFSET * 60 * 60 * 1000 - now.getTimezoneOffset() * 60 * 1000
+  );
   return {
     hour: colombiaTime.getUTCHours(),
-    dayOfWeek: colombiaTime.getUTCDay() // 0 = Sunday
+    dayOfWeek: colombiaTime.getUTCDay(), // 0 = Sunday
   };
 }
 
@@ -33,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
-    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const now = new Date();
     const { hour, dayOfWeek } = getColombiaTime();
 
@@ -77,17 +76,17 @@ export async function GET(request: Request) {
 
           // Calculate total training hours
           let totalMinutes = 0;
-          participations?.forEach(p => {
+          participations?.forEach((p) => {
             totalMinutes += (p.sessions as any)?.duration || 0;
           });
-          hostedSessions?.forEach(s => {
+          hostedSessions?.forEach((s) => {
             totalMinutes += s.duration || 0;
           });
-          const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+          const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
           // Calculate how many people the user helped (attendees at their hosted sessions)
           let peopleHelped = 0;
-          hostedSessions?.forEach(s => {
+          hostedSessions?.forEach((s) => {
             peopleHelped += (s.current_participants || 1) - 1; // Exclude host
           });
 
@@ -104,29 +103,26 @@ export async function GET(request: Request) {
             others: peopleHelped,
             next_goal: totalSessions + 1,
             streak: totalSessions > 0 ? totalSessions : 1,
-            new_connections: sessionsJoined
+            new_connections: sessionsJoined,
           });
 
           try {
             await fetch(`${SITE_URL}/api/notifications/send`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 userId: user.id,
                 title: content.title,
                 body: content.body,
-                url: '/sessions'
-              })
+                url: '/sessions',
+              }),
             });
 
-            await supabase
-              .from('users')
-              .update({ last_weekly_recap_sent: new Date().toISOString() })
-              .eq('id', user.id);
+            await supabase.from('users').update({ last_weekly_recap_sent: new Date().toISOString() }).eq('id', user.id);
 
             weeklyRecapsSent++;
           } catch (err) {
-            console.error(`Failed to send weekly recap to user ${user.id}:`, err);
+            logError(err, { route: '/api/cron/engagement', action: 'send_weekly_recap', userId: user.id });
           }
         }
       }
@@ -172,29 +168,26 @@ export async function GET(request: Request) {
         // Replace variables
         content = replaceMessageVariables(content, {
           days: daysSinceActive,
-          count: availableSessions || 0
+          count: availableSessions || 0,
         });
 
         try {
           await fetch(`${SITE_URL}/api/notifications/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userId: user.id,
               title: content.title,
               body: content.body,
-              url: '/'
-            })
+              url: '/',
+            }),
           });
 
-          await supabase
-            .from('users')
-            .update({ last_reengagement_sent: new Date().toISOString() })
-            .eq('id', user.id);
+          await supabase.from('users').update({ last_reengagement_sent: new Date().toISOString() }).eq('id', user.id);
 
           reEngagementsSent++;
         } catch (err) {
-          console.error(`Failed to send re-engagement to user ${user.id}:`, err);
+          logError(err, { route: '/api/cron/engagement', action: 'send_re_engagement', userId: user.id });
         }
       }
     }
@@ -204,11 +197,10 @@ export async function GET(request: Request) {
       colombiaTime: { hour, dayOfWeek },
       isSundayEvening: isSundayEveningWindow(),
       weeklyRecapsSent,
-      reEngagementsSent
+      reEngagementsSent,
     });
-
   } catch (error: any) {
-    console.error('Engagement cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/cron/engagement', action: 'engagement_cron' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

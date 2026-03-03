@@ -1,5 +1,6 @@
 'use client';
-import { formatTime12Hour } from "@/lib/utils";
+import { logError } from '@/lib/logger';
+import { formatTime12Hour } from '@/lib/utils';
 
 import { useState, useEffect } from 'react';
 import BottomNav from '@/components/BottomNav';
@@ -33,7 +34,9 @@ export default function MatchesPage() {
   }, [user, activeTab]);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth');
     } else {
@@ -50,7 +53,7 @@ export default function MatchesPage() {
         await loadTribeSessions();
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      logError(error, { action: 'loadData' });
     } finally {
       setLoading(false);
     }
@@ -71,30 +74,32 @@ export default function MatchesPage() {
         return;
       }
 
-      const sessionIds = mySessions.map(s => s.id);
+      const sessionIds = mySessions.map((s) => s.id);
 
       const { data: participants } = await supabase
         .from('session_participants')
-        .select(`
+        .select(
+          `
           id, 
           user_id, 
           session_id, 
           joined_at, 
           status,
           user:users!session_participants_user_id_fkey(id, name, avatar_url)
-        `)
+        `
+        )
         .in('session_id', sessionIds)
         .eq('status', 'confirmed')
         .order('joined_at', { ascending: false });
 
-      const requestsWithSession = (participants || []).map(p => ({
+      const requestsWithSession = (participants || []).map((p) => ({
         ...p,
-        session: mySessions.find(s => s.id === p.session_id)
+        session: mySessions.find((s) => s.id === p.session_id),
       }));
 
       setJoinRequests(requestsWithSession);
     } catch (error) {
-      console.error('Error loading join requests:', error);
+      logError(error, { action: 'loadJoinRequests' });
       setJoinRequests([]);
     }
   }
@@ -115,7 +120,7 @@ export default function MatchesPage() {
         return;
       }
 
-      const sessionIds = participations.map(p => p.session_id);
+      const sessionIds = participations.map((p) => p.session_id);
 
       const { data: sessions } = await supabase
         .from('sessions')
@@ -127,7 +132,7 @@ export default function MatchesPage() {
 
       setTribeSessions(sessions || []);
     } catch (error) {
-      console.error('Error loading tribe sessions:', error);
+      logError(error, { action: 'loadTribeSessions' });
       setTribeSessions([]);
     }
   }
@@ -144,12 +149,12 @@ export default function MatchesPage() {
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <h1 className="text-2xl font-bold text-[#272D34] dark:text-white">{t("matches")}</h1>
+          <h1 className="text-2xl font-bold text-[#272D34] dark:text-white">{t('matches')}</h1>
         </div>
       </div>
 
       <div className="pt-header">
-      <div className="max-w-2xl mx-auto px-4 pt-4">
+        <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => setActiveTab('requests')}
@@ -159,7 +164,7 @@ export default function MatchesPage() {
                   : 'bg-white dark:bg-[#6B7178] text-stone-600 dark:text-gray-300'
               }`}
             >
-              {t("joinRequests")} {joinRequests.length > 0 && `(${joinRequests.length})`}
+              {t('joinRequests')} {joinRequests.length > 0 && `(${joinRequests.length})`}
             </button>
             <button
               onClick={() => setActiveTab('tribe')}
@@ -169,53 +174,60 @@ export default function MatchesPage() {
                   : 'bg-white dark:bg-[#6B7178] text-stone-600 dark:text-gray-300'
               }`}
             >
-              {t("myTribe")}
+              {t('myTribe')}
             </button>
           </div>
-      </div>
+        </div>
 
-      <div className="max-w-2xl mx-auto p-4">
-        {loading ? (
-          <p className="text-center text-stone-600 dark:text-gray-300"></p>
-        ) : activeTab === 'requests' ? (
-          joinRequests.length === 0 ? (
-            <p className="text-center text-stone-600 dark:text-gray-300 mt-8">{t('noJoinRequests')}</p>
-          ) : (
-            <div className="space-y-3">
-              {joinRequests.map((request) => (
-                <Link key={request.id} href={`/session/${request.session_id}`}>
-                  <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
-                        {request.user?.avatar_url ? (
-                          <img loading="lazy" src={request.user.avatar_url} alt={request.user.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-sm font-bold text-slate-900">
-                            {request.user?.name?.charAt(0).toUpperCase() || '?'}
-                          </span>
-                        )}
+        <div className="max-w-2xl mx-auto p-4">
+          {loading ? (
+            <p className="text-center text-stone-600 dark:text-gray-300"></p>
+          ) : activeTab === 'requests' ? (
+            joinRequests.length === 0 ? (
+              <p className="text-center text-stone-600 dark:text-gray-300 mt-8">{t('noJoinRequests')}</p>
+            ) : (
+              <div className="space-y-3">
+                {joinRequests.map((request) => (
+                  <Link key={request.id} href={`/session/${request.session_id}`}>
+                    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
+                          {request.user?.avatar_url ? (
+                            <img
+                              loading="lazy"
+                              src={request.user.avatar_url}
+                              alt={request.user.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-bold text-slate-900">
+                              {request.user?.name?.charAt(0).toUpperCase() || '?'}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[#272D34] dark:text-white font-semibold">
+                            {request.user?.name || t('newJoinRequest')}
+                          </p>
+                          <p className="text-sm text-stone-600 dark:text-gray-300">{t('userWantsToJoin')}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[#272D34] dark:text-white font-semibold">
-                          {request.user?.name || t('newJoinRequest')}
-                        </p>
-                        <p className="text-sm text-stone-600 dark:text-gray-300">
-                          {t('userWantsToJoin')}
-                        </p>
-                      </div>
+                      {request.session && (
+                        <div className="mt-2 pt-2 border-t border-stone-200 dark:border-[#52575D] text-sm text-stone-600 dark:text-gray-300">
+                          <span className="font-medium">
+                            {language === 'es'
+                              ? sportTranslations[request.session.sport]?.es || request.session.sport
+                              : request.session.sport}
+                          </span>{' '}
+                          • {request.session.location}
+                        </div>
+                      )}
                     </div>
-                    {request.session && (
-                      <div className="mt-2 pt-2 border-t border-stone-200 dark:border-[#52575D] text-sm text-stone-600 dark:text-gray-300">
-                        <span className="font-medium">{language === 'es' ? (sportTranslations[request.session.sport]?.es || request.session.sport) : request.session.sport}</span> • {request.session.location}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )
-        ) : (
-          tribeSessions.length === 0 ? (
+                  </Link>
+                ))}
+              </div>
+            )
+          ) : tribeSessions.length === 0 ? (
             <p className="text-center text-stone-600 dark:text-gray-300 mt-8">{t('noSessions')}</p>
           ) : (
             <div className="space-y-3">
@@ -224,17 +236,23 @@ export default function MatchesPage() {
                   <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
                     <div className="flex items-start justify-between mb-3">
                       <span className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full text-sm font-medium">
-                        {language === 'es' ? (sportTranslations[session.sport]?.es || session.sport) : session.sport}
+                        {language === 'es' ? sportTranslations[session.sport]?.es || session.sport : session.sport}
                       </span>
                       <div className="flex items-center gap-1 text-stone-600 dark:text-gray-300 text-sm">
                         <Users className="w-4 h-4" />
-                        <span>{session.current_participants}/{session.max_participants}</span>
+                        <span>
+                          {session.current_participants}/{session.max_participants}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-2 text-sm text-stone-600 dark:text-gray-300">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        <span>{format(parseISO(session.date + 'T00:00:00'), 'EEE, MMM d', { locale: language === 'es' ? es : undefined })}</span>
+                        <span>
+                          {format(parseISO(session.date + 'T00:00:00'), 'EEE, MMM d', {
+                            locale: language === 'es' ? es : undefined,
+                          })}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
@@ -249,9 +267,8 @@ export default function MatchesPage() {
                 </Link>
               ))}
             </div>
-          )
-        )}
-      </div>
+          )}
+        </div>
       </div>
 
       <BottomNav />

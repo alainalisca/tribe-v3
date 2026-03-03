@@ -1,4 +1,5 @@
 'use client';
+import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 
 import { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ export default function PublicProfilePage() {
   const userId = params.userId as string;
   const supabase = createClient();
   const { language } = useLanguage();
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
@@ -36,71 +37,74 @@ export default function PublicProfilePage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const t = language === 'es' ? {
-    loading: 'Cargando...',
-    userNotFound: 'Usuario no encontrado',
-    goBack: 'Volver',
-    block: 'Bloquear',
-    unblock: 'Desbloquear',
-    report: 'Reportar',
-    sessionsCreated: 'Sesiones Creadas',
-    sessionsJoined: 'Sesiones Unidas',
-    totalSessions: 'Total Sesiones',
-    attendanceRate: 'Tasa de Asistencia',
-    photos: 'Fotos',
-    lowAttendance: 'Baja tasa de asistencia - Este usuario tiene una tasa de asistencia del',
-    reportUser: 'Reportar Usuario',
-    reason: 'Razón',
-    selectReason: 'Selecciona una razón',
-    harassment: 'Acoso',
-    inappropriate: 'Comportamiento inapropiado',
-    spam: 'Spam',
-    fake: 'Cuenta falsa',
-    noShow: 'Ausencias repetidas',
-    other: 'Otro',
-    additionalDetails: 'Detalles adicionales (opcional)',
-    provideContext: 'Proporciona más contexto...',
-    cancel: 'Cancelar',
-    submit: 'Enviar Reporte',
-    submitting: 'Enviando...',
-    blockConfirm: '¿Bloquear a este usuario? No verás sus sesiones ni mensajes.',
-    userBlocked: 'Usuario bloqueado',
-    userUnblocked: 'Usuario desbloqueado',
-    selectReasonError: 'Por favor selecciona una razón',
-    reportSuccess: 'Reporte enviado. Nuestro equipo lo revisará.',
-  } : {
-    loading: 'Loading...',
-    userNotFound: 'User not found',
-    goBack: 'Go back',
-    block: 'Block',
-    unblock: 'Unblock',
-    report: 'Report',
-    sessionsCreated: 'Sessions Created',
-    sessionsJoined: 'Sessions Joined',
-    totalSessions: 'Total Sessions',
-    attendanceRate: 'Attendance Rate',
-    photos: 'Photos',
-    lowAttendance: 'Low attendance rate - This user has a show-up rate of',
-    reportUser: 'Report User',
-    reason: 'Reason',
-    selectReason: 'Select a reason',
-    harassment: 'Harassment',
-    inappropriate: 'Inappropriate behavior',
-    spam: 'Spam',
-    fake: 'Fake account',
-    noShow: 'Repeated no-shows',
-    other: 'Other',
-    additionalDetails: 'Additional details (optional)',
-    provideContext: 'Provide more context...',
-    cancel: 'Cancel',
-    submit: 'Submit Report',
-    submitting: 'Submitting...',
-    blockConfirm: "Block this user? You won't see their sessions or messages.",
-    userBlocked: 'User blocked',
-    userUnblocked: 'User unblocked',
-    selectReasonError: 'Please select a reason',
-    reportSuccess: 'Report submitted. Our team will review it.',
-  };
+  const t =
+    language === 'es'
+      ? {
+          loading: 'Cargando...',
+          userNotFound: 'Usuario no encontrado',
+          goBack: 'Volver',
+          block: 'Bloquear',
+          unblock: 'Desbloquear',
+          report: 'Reportar',
+          sessionsCreated: 'Sesiones Creadas',
+          sessionsJoined: 'Sesiones Unidas',
+          totalSessions: 'Total Sesiones',
+          attendanceRate: 'Tasa de Asistencia',
+          photos: 'Fotos',
+          lowAttendance: 'Baja tasa de asistencia - Este usuario tiene una tasa de asistencia del',
+          reportUser: 'Reportar Usuario',
+          reason: 'Razón',
+          selectReason: 'Selecciona una razón',
+          harassment: 'Acoso',
+          inappropriate: 'Comportamiento inapropiado',
+          spam: 'Spam',
+          fake: 'Cuenta falsa',
+          noShow: 'Ausencias repetidas',
+          other: 'Otro',
+          additionalDetails: 'Detalles adicionales (opcional)',
+          provideContext: 'Proporciona más contexto...',
+          cancel: 'Cancelar',
+          submit: 'Enviar Reporte',
+          submitting: 'Enviando...',
+          blockConfirm: '¿Bloquear a este usuario? No verás sus sesiones ni mensajes.',
+          userBlocked: 'Usuario bloqueado',
+          userUnblocked: 'Usuario desbloqueado',
+          selectReasonError: 'Por favor selecciona una razón',
+          reportSuccess: 'Reporte enviado. Nuestro equipo lo revisará.',
+        }
+      : {
+          loading: 'Loading...',
+          userNotFound: 'User not found',
+          goBack: 'Go back',
+          block: 'Block',
+          unblock: 'Unblock',
+          report: 'Report',
+          sessionsCreated: 'Sessions Created',
+          sessionsJoined: 'Sessions Joined',
+          totalSessions: 'Total Sessions',
+          attendanceRate: 'Attendance Rate',
+          photos: 'Photos',
+          lowAttendance: 'Low attendance rate - This user has a show-up rate of',
+          reportUser: 'Report User',
+          reason: 'Reason',
+          selectReason: 'Select a reason',
+          harassment: 'Harassment',
+          inappropriate: 'Inappropriate behavior',
+          spam: 'Spam',
+          fake: 'Fake account',
+          noShow: 'Repeated no-shows',
+          other: 'Other',
+          additionalDetails: 'Additional details (optional)',
+          provideContext: 'Provide more context...',
+          cancel: 'Cancel',
+          submit: 'Submit Report',
+          submitting: 'Submitting...',
+          blockConfirm: "Block this user? You won't see their sessions or messages.",
+          userBlocked: 'User blocked',
+          userUnblocked: 'User unblocked',
+          selectReasonError: 'Please select a reason',
+          reportSuccess: 'Report submitted. Our team will review it.',
+        };
 
   useEffect(() => {
     loadProfile();
@@ -138,9 +142,11 @@ export default function PublicProfilePage() {
   }, [lightboxPhoto]);
 
   async function checkCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     setCurrentUser(user);
-    
+
     if (user) {
       const { data } = await supabase
         .from('blocked_users')
@@ -148,18 +154,14 @@ export default function PublicProfilePage() {
         .eq('user_id', user.id)
         .eq('blocked_user_id', userId)
         .single();
-      
+
       setIsBlocked(!!data);
     }
   }
 
   async function loadProfile() {
     try {
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data: profileData } = await supabase.from('users').select('*').eq('id', userId).single();
 
       setProfile(profileData);
 
@@ -174,13 +176,12 @@ export default function PublicProfilePage() {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
 
-      const { data: attendanceData } = await supabase
-        .rpc('get_user_attendance_stats', { user_uuid: userId });
+      const { data: attendanceData } = await supabase.rpc('get_user_attendance_stats', { user_uuid: userId });
 
-      const attendance = attendanceData?.[0] || { 
-        total_sessions: 0, 
-        attended_sessions: 0, 
-        attendance_rate: 0 
+      const attendance = attendanceData?.[0] || {
+        total_sessions: 0,
+        attended_sessions: 0,
+        attendance_rate: 0,
       };
 
       setStats({
@@ -191,7 +192,7 @@ export default function PublicProfilePage() {
         totalAttendance: Number(attendance.total_sessions) || 0,
       });
     } catch (error) {
-      console.error('Error loading profile:', error);
+      logError(error, { action: 'loadProfile' });
     } finally {
       setLoading(false);
     }
@@ -202,24 +203,18 @@ export default function PublicProfilePage() {
 
     try {
       if (isBlocked) {
-        await supabase
-          .from('blocked_users')
-          .delete()
-          .eq('user_id', currentUser.id)
-          .eq('blocked_user_id', userId);
-        
+        await supabase.from('blocked_users').delete().eq('user_id', currentUser.id).eq('blocked_user_id', userId);
+
         setIsBlocked(false);
         showSuccess(t.userUnblocked);
       } else {
         if (!confirm(t.blockConfirm)) return;
-        
-        await supabase
-          .from('blocked_users')
-          .insert({
-            user_id: currentUser.id,
-            blocked_user_id: userId,
-          });
-        
+
+        await supabase.from('blocked_users').insert({
+          user_id: currentUser.id,
+          blocked_user_id: userId,
+        });
+
         setIsBlocked(true);
         showSuccess(t.userBlocked);
       }
@@ -236,14 +231,12 @@ export default function PublicProfilePage() {
 
     setSubmitting(true);
     try {
-      await supabase
-        .from('reported_users')
-        .insert({
-          reporter_id: currentUser.id,
-          reported_user_id: userId,
-          reason: reportReason,
-          description: reportDescription,
-        });
+      await supabase.from('reported_users').insert({
+        reporter_id: currentUser.id,
+        reported_user_id: userId,
+        reason: reportReason,
+        description: reportDescription,
+      });
 
       showSuccess(t.reportSuccess);
       setShowReportModal(false);
@@ -268,10 +261,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center">
         <p className="text-theme-primary mb-4">{t.userNotFound}</p>
-        <button 
-          onClick={() => router.back()}
-          className="text-tribe-green hover:underline"
-        >
+        <button onClick={() => router.back()} className="text-tribe-green hover:underline">
           {t.goBack}
         </button>
       </div>
@@ -322,10 +312,14 @@ export default function PublicProfilePage() {
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
           {profile.avatar_url && (
             <div className="flex justify-center mb-4">
-              <img loading="lazy"
+              <img
+                loading="lazy"
                 src={profile.avatar_url}
                 alt={profile.name}
-                onClick={() => { setLightboxPhoto(profile.avatar_url); history.pushState({ lightbox: true }, ''); }}
+                onClick={() => {
+                  setLightboxPhoto(profile.avatar_url);
+                  history.pushState({ lightbox: true }, '');
+                }}
                 className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
               />
             </div>
@@ -342,9 +336,7 @@ export default function PublicProfilePage() {
           <div className="mt-4">
             <h2 className="text-2xl font-bold text-theme-primary">{profile?.name}</h2>
             <div className="flex items-center gap-3 mt-2">
-              {profile?.username && (
-                <span className="text-sm text-theme-secondary">@{profile.username}</span>
-              )}
+              {profile?.username && <span className="text-sm text-theme-secondary">@{profile.username}</span>}
               {profile?.location && (
                 <div className="flex items-center gap-1">
                   <MapPin className="w-4 h-4 text-tribe-green" />
@@ -368,12 +360,12 @@ export default function PublicProfilePage() {
               <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-sm text-theme-secondary mt-1">{t.totalSessions}</p>
             </div>
-            <div className={`bg-white rounded-2xl p-4 text-center border ${
-              hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
-            }`}>
-              <p className={`text-4xl font-bold ${
-                hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'
-              }`}>
+            <div
+              className={`bg-white rounded-2xl p-4 text-center border ${
+                hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
+              }`}
+            >
+              <p className={`text-4xl font-bold ${hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'}`}>
                 {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
               </p>
               <p className="text-sm text-theme-secondary mt-1">{t.attendanceRate}</p>
@@ -385,7 +377,6 @@ export default function PublicProfilePage() {
               <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
             </div>
           )}
-
 
           {/* Social Media Links */}
           {(profile?.instagram_username || profile?.facebook_url) && (
@@ -432,11 +423,7 @@ export default function PublicProfilePage() {
                       history.pushState({ lightbox: true }, '');
                     }}
                   >
-                    <img loading="lazy"
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    <img loading="lazy" src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>
@@ -447,7 +434,7 @@ export default function PublicProfilePage() {
             <div className="mt-6">
               <div className="flex flex-wrap gap-2">
                 {sports.map((sport: string, index: number) => (
-                  <span 
+                  <span
                     key={index}
                     className="px-5 py-2.5 bg-tribe-green text-slate-900 rounded-full text-sm font-medium"
                   >
@@ -513,7 +500,7 @@ export default function PublicProfilePage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-4">{t.reportUser}</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">{t.reason} *</label>

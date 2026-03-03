@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { log, logError } from '@/lib/logger';
 import { sportTranslations } from '@/lib/translations';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import LocationPicker from '@/components/LocationPicker';
@@ -22,7 +23,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
   const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     sport: '',
     location: '',
@@ -32,7 +33,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     duration: 60, // minutes
   });
 
-  const sports = Object.keys(sportTranslations).filter(s => s !== 'All');
+  const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   const getTranslatedSport = (sport: string) => {
     if (sportTranslations[sport]) {
@@ -66,26 +67,26 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
 
   async function getCurrentLocation() {
     if (!navigator.geolocation) return;
-    
+
     setGettingLocation(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        setFormData(prev => ({ ...prev, latitude, longitude }));
-        
+        setFormData((prev) => ({ ...prev, latitude, longitude }));
+
         // Reverse geocode to get address
         try {
           const name = await reverseGeocodeGoogle(latitude, longitude);
           if (name) {
-            setFormData(prev => ({ ...prev, location: name }));
+            setFormData((prev) => ({ ...prev, location: name }));
           }
         } catch (e) {
-          console.error('Geocode error:', e);
+          logError(e, { action: 'reverseGeocode' });
         }
         setGettingLocation(false);
       },
       (error) => {
-        console.error('Location error:', error);
+        logError(error, { action: 'getCurrentLocation' });
         setGettingLocation(false);
       },
       { enableHighAccuracy: true }
@@ -107,7 +108,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
       // Calculate start time
       const startTime = new Date();
       startTime.setMinutes(startTime.getMinutes() + formData.startIn);
-      
+
       const sessionDate = startTime.toISOString().split('T')[0];
       const sessionTime = startTime.toTimeString().slice(0, 5);
 
@@ -142,13 +143,24 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
 
       // Fire-and-forget: don't block UI waiting for notifications
       if (formData.latitude && formData.longitude) {
-        notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude, formData.longitude, formData.startIn);
+        notifyNearbyUsers(
+          session.id,
+          formData.sport,
+          formData.location,
+          formData.latitude,
+          formData.longitude,
+          formData.startIn
+        );
       }
 
-      showSuccess(language === 'es' ? '¡Sesión creada! Notificando a compañeros cercanos...' : 'Session created! Notifying nearby partners...');
+      showSuccess(
+        language === 'es'
+          ? '¡Sesión creada! Notificando a compañeros cercanos...'
+          : 'Session created! Notifying nearby partners...'
+      );
       onSessionCreated();
       onClose();
-      
+
       // Reset form
       setFormData({
         sport: '',
@@ -159,14 +171,21 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         duration: 60,
       });
     } catch (error: any) {
-      console.error('Error creating session:', error);
+      logError(error, { action: 'handleSubmit' });
       showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setLoading(false);
     }
   }
 
-  async function notifyNearbyUsers(sessionId: string, sport: string, location: string, lat: number, lng: number, startIn: number) {
+  async function notifyNearbyUsers(
+    sessionId: string,
+    sport: string,
+    location: string,
+    lat: number,
+    lng: number,
+    startIn: number
+  ) {
     try {
       const response = await fetch('/api/notify-nearby', {
         method: 'POST',
@@ -181,57 +200,63 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
           creatorId: userId,
         }),
       });
-      
+
       if (!response.ok) {
-        console.error('Failed to notify nearby users');
+        log('error', 'Failed to notify nearby users', { action: 'notifyNearbyUsers', sessionId });
       }
     } catch (error) {
-      console.error('Notification error:', error);
+      logError(error, { action: 'notifyNearbyUsers', sessionId });
     }
   }
 
   if (!isOpen) return null;
 
-  const txt = language === 'es' ? {
-    title: 'Entrenar Ahora',
-    whatTraining: '¿Qué vas a entrenar?',
-    where: '¿Dónde?',
-    useLocation: '📍 Usar mi ubicación',
-    gettingLocation: 'Obteniendo ubicación...',
-    locationPlaceholder: 'ej. Bodytech Poblado',
-    when: '¿Cuándo empiezas?',
-    now: 'Ahora',
-    min30: '30 min',
-    hour1: '1 hora',
-    howLong: '¿Cuánto tiempo?',
-    min30dur: '30 min',
-    hour1dur: '1 hora',
-    hour15dur: '1.5 hrs',
-    hour2dur: '2 horas',
-    notify: '🔔 NOTIFICAR COMPAÑEROS CERCANOS',
-    creating: 'Creando...',
-  } : {
-    title: 'Training Now',
-    whatTraining: 'What are you training?',
-    where: 'Where?',
-    useLocation: '📍 Use my location',
-    gettingLocation: 'Getting location...',
-    locationPlaceholder: 'e.g. Central Park',
-    when: 'When are you starting?',
-    now: 'Now',
-    min30: '30 min',
-    hour1: '1 hour',
-    howLong: 'How long?',
-    min30dur: '30 min',
-    hour1dur: '1 hour',
-    hour15dur: '1.5 hrs',
-    hour2dur: '2 hours',
-    notify: '🔔 NOTIFY NEARBY PARTNERS',
-    creating: 'Creating...',
-  };
+  const txt =
+    language === 'es'
+      ? {
+          title: 'Entrenar Ahora',
+          whatTraining: '¿Qué vas a entrenar?',
+          where: '¿Dónde?',
+          useLocation: '📍 Usar mi ubicación',
+          gettingLocation: 'Obteniendo ubicación...',
+          locationPlaceholder: 'ej. Bodytech Poblado',
+          when: '¿Cuándo empiezas?',
+          now: 'Ahora',
+          min30: '30 min',
+          hour1: '1 hora',
+          howLong: '¿Cuánto tiempo?',
+          min30dur: '30 min',
+          hour1dur: '1 hora',
+          hour15dur: '1.5 hrs',
+          hour2dur: '2 horas',
+          notify: '🔔 NOTIFICAR COMPAÑEROS CERCANOS',
+          creating: 'Creando...',
+        }
+      : {
+          title: 'Training Now',
+          whatTraining: 'What are you training?',
+          where: 'Where?',
+          useLocation: '📍 Use my location',
+          gettingLocation: 'Getting location...',
+          locationPlaceholder: 'e.g. Central Park',
+          when: 'When are you starting?',
+          now: 'Now',
+          min30: '30 min',
+          hour1: '1 hour',
+          howLong: 'How long?',
+          min30dur: '30 min',
+          hour1dur: '1 hour',
+          hour15dur: '1.5 hrs',
+          hour2dur: '2 hours',
+          notify: '🔔 NOTIFY NEARBY PARTNERS',
+          creating: 'Creating...',
+        };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="bg-white dark:bg-[#404549] w-full max-w-md rounded-2xl max-h-[80vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
@@ -275,7 +300,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
             <LocationPicker
               value={formData.location}
               onChange={(location, coords) => {
-                setFormData(prev => ({
+                setFormData((prev) => ({
                   ...prev,
                   location,
                   latitude: coords?.lat ?? prev.latitude,
@@ -334,7 +359,6 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
               ))}
             </div>
           </div>
-
         </div>
 
         {/* Sticky Submit Button */}

@@ -5,6 +5,7 @@ import { X, Camera, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { log, logError } from '@/lib/logger';
 
 interface StoryUploadProps {
   sessionId: string;
@@ -22,31 +23,34 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const t = language === 'es' ? {
-    addStory: 'Agregar Historia',
-    takePhoto: 'Foto o Cámara',
-    chooseVideo: 'Elegir Video',
-    caption: 'Escribe un pie de foto...',
-    post: 'Publicar Historia',
-    posting: 'Publicando...',
-    success: '¡Historia publicada!',
-    errorUpload: 'Error al subir la historia',
-    fileTooLarge: 'Archivo muy grande. Máximo 10MB para fotos, 50MB para videos.',
-    videoTooLong: 'Video muy largo. Máximo 60 segundos.',
-    uploadTimeout: 'La subida tardó demasiado. Intenta con un archivo más pequeño.',
-  } : {
-    addStory: 'Add Story',
-    takePhoto: 'Photo or Camera',
-    chooseVideo: 'Choose Video',
-    caption: 'Write a caption...',
-    post: 'Post Story',
-    posting: 'Posting...',
-    success: 'Story posted!',
-    errorUpload: 'Failed to upload story',
-    fileTooLarge: 'File too large. Max 10MB for photos, 50MB for videos.',
-    videoTooLong: 'Video too long. Maximum 60 seconds.',
-    uploadTimeout: 'Upload took too long. Try a smaller file.',
-  };
+  const t =
+    language === 'es'
+      ? {
+          addStory: 'Agregar Historia',
+          takePhoto: 'Foto o Cámara',
+          chooseVideo: 'Elegir Video',
+          caption: 'Escribe un pie de foto...',
+          post: 'Publicar Historia',
+          posting: 'Publicando...',
+          success: '¡Historia publicada!',
+          errorUpload: 'Error al subir la historia',
+          fileTooLarge: 'Archivo muy grande. Máximo 10MB para fotos, 50MB para videos.',
+          videoTooLong: 'Video muy largo. Máximo 60 segundos.',
+          uploadTimeout: 'La subida tardó demasiado. Intenta con un archivo más pequeño.',
+        }
+      : {
+          addStory: 'Add Story',
+          takePhoto: 'Photo or Camera',
+          chooseVideo: 'Choose Video',
+          caption: 'Write a caption...',
+          post: 'Post Story',
+          posting: 'Posting...',
+          success: 'Story posted!',
+          errorUpload: 'Failed to upload story',
+          fileTooLarge: 'File too large. Max 10MB for photos, 50MB for videos.',
+          videoTooLong: 'Video too long. Maximum 60 seconds.',
+          uploadTimeout: 'Upload took too long. Try a smaller file.',
+        };
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -126,7 +130,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       const url = URL.createObjectURL(selected);
       setPreview(url);
     } catch (error) {
-      console.error('File select error:', error);
+      logError(error, { action: 'handleFileSelect' });
       showError(language === 'es' ? 'Error al seleccionar archivo' : 'Error selecting file');
     }
   }
@@ -159,12 +163,19 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         canvas.width = Math.min(video.videoWidth, 480);
         canvas.height = Math.min(video.videoHeight, 480);
         const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(null); return; }
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          URL.revokeObjectURL(video.src);
-          resolve(blob);
-        }, 'image/jpeg', 0.7);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(video.src);
+            resolve(blob);
+          },
+          'image/jpeg',
+          0.7
+        );
       };
 
       video.onerror = () => {
@@ -191,26 +202,36 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               const MAX = 1200;
               let w = img.width;
               let h = img.height;
-              if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
-              else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+              if (w > h) {
+                if (w > MAX) {
+                  h *= MAX / w;
+                  w = MAX;
+                }
+              } else {
+                if (h > MAX) {
+                  w *= MAX / h;
+                  h = MAX;
+                }
+              }
               canvas.width = w;
               canvas.height = h;
               const ctx = canvas.getContext('2d');
-              if (!ctx) { resolve(imageFile); return; }
+              if (!ctx) {
+                resolve(imageFile);
+                return;
+              }
               ctx.drawImage(img, 0, 0, w, h);
-              canvas.toBlob(
-                (blob) => resolve(blob || imageFile),
-                'image/jpeg',
-                0.85
-              );
-            } catch { resolve(imageFile); }
+              canvas.toBlob((blob) => resolve(blob || imageFile), 'image/jpeg', 0.85);
+            } catch {
+              resolve(imageFile);
+            }
           };
           img.src = e.target?.result as string;
         };
         reader.readAsDataURL(imageFile);
       });
     } catch (err) {
-      console.warn('Image compression failed, using original:', err);
+      log('warn', 'Image compression failed, using original', { action: 'compressImage' });
       return imageFile;
     }
   }
@@ -239,12 +260,10 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
       // Upload with timeout — 2 min for video, 30s for images
       const uploadTimeoutMs = mediaType === 'video' ? 120000 : 30000;
-      const uploadPromise = supabase.storage
-        .from('session-stories')
-        .upload(storagePath, uploadData, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const uploadPromise = supabase.storage.from('session-stories').upload(storagePath, uploadData, {
+        cacheControl: '3600',
+        upsert: false,
+      });
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('UPLOAD_TIMEOUT')), uploadTimeoutMs)
       );
@@ -252,9 +271,9 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl: mediaUrl } } = supabase.storage
-        .from('session-stories')
-        .getPublicUrl(storagePath);
+      const {
+        data: { publicUrl: mediaUrl },
+      } = supabase.storage.from('session-stories').getPublicUrl(storagePath);
 
       // Generate and upload video thumbnail
       let thumbnailUrl: string | null = null;
@@ -267,25 +286,23 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
             .upload(thumbPath, thumbBlob, { cacheControl: '3600', upsert: false });
 
           if (!thumbError) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('session-stories')
-              .getPublicUrl(thumbPath);
+            const {
+              data: { publicUrl },
+            } = supabase.storage.from('session-stories').getPublicUrl(thumbPath);
             thumbnailUrl = publicUrl;
           }
         }
       }
 
       // Insert row
-      const { error: insertError } = await supabase
-        .from('session_stories')
-        .insert({
-          session_id: sessionId,
-          user_id: userId,
-          media_url: mediaUrl,
-          media_type: mediaType,
-          thumbnail_url: thumbnailUrl,
-          caption: caption.trim() || null,
-        });
+      const { error: insertError } = await supabase.from('session_stories').insert({
+        session_id: sessionId,
+        user_id: userId,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        thumbnail_url: thumbnailUrl,
+        caption: caption.trim() || null,
+      });
 
       if (insertError) throw insertError;
 
@@ -293,7 +310,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       onUploaded?.();
       onClose();
     } catch (error: any) {
-      console.error('Story upload error:', error);
+      logError(error, { action: 'handlePost', sessionId });
       if (error?.message === 'UPLOAD_TIMEOUT') {
         showError(t.uploadTimeout);
       } else {

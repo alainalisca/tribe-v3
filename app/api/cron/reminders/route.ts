@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import {
-  getRandomMessage,
-  getMessageContent
-} from '@/lib/motivational-messages';
+import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
+import { logError } from '@/lib/logger';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -31,7 +29,7 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createClient();
-    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const colombiaHour = getColombiaHour();
 
     // 1. SEND SESSION REMINDERS (2 hours before)
@@ -50,7 +48,7 @@ export async function GET(request: Request) {
     let remindersSent = 0;
 
     if (sessions && sessions.length > 0) {
-      const sessionsToRemind = sessions.filter(session => {
+      const sessionsToRemind = sessions.filter((session) => {
         const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
         return sessionDateTime >= twoHoursFromNow && sessionDateTime <= twoHoursFifteenMinsFromNow;
       });
@@ -64,44 +62,43 @@ export async function GET(request: Request) {
 
         const hostLang = session.creator?.preferred_language || 'en';
         const hostTitle = hostLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Your session starts soon!';
-        const hostBody = hostLang === 'es'
-          ? `${session.sport} comienza en 2 horas en ${session.location}`
-          : `${session.sport} starts in 2 hours at ${session.location}`;
+        const hostBody =
+          hostLang === 'es'
+            ? `${session.sport} comienza en 2 horas en ${session.location}`
+            : `${session.sport} starts in 2 hours at ${session.location}`;
 
         await fetch(`${SITE_URL}/api/notifications/send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: session.creator.id,
             title: hostTitle,
             body: hostBody,
-            url: `/session/${session.id}`
-          })
+            url: `/session/${session.id}`,
+          }),
         });
 
-        for (const participant of (participants || [])) {
+        for (const participant of participants || []) {
           const pLang = (participant as any).users?.preferred_language || 'en';
           const pTitle = pLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Session starting soon!';
-          const pBody = pLang === 'es'
-            ? `${session.sport} comienza en 2 horas. ¡Nunca entrenes solo!`
-            : `${session.sport} starts in 2 hours. Never train alone!`;
+          const pBody =
+            pLang === 'es'
+              ? `${session.sport} comienza en 2 horas. ¡Nunca entrenes solo!`
+              : `${session.sport} starts in 2 hours. Never train alone!`;
 
           await fetch(`${SITE_URL}/api/notifications/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userId: participant.user_id,
               title: pTitle,
               body: pBody,
-              url: `/session/${session.id}`
-            })
+              url: `/session/${session.id}`,
+            }),
           });
         }
 
-        await supabase
-          .from('sessions')
-          .update({ reminder_sent: true })
-          .eq('id', session.id);
+        await supabase.from('sessions').update({ reminder_sent: true }).eq('id', session.id);
 
         remindersSent++;
       }
@@ -120,7 +117,9 @@ export async function GET(request: Request) {
       // - Have been active in the last 30 days
       const { data: users } = await supabase
         .from('users')
-        .select('id, preferred_language, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at')
+        .select(
+          'id, preferred_language, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at'
+        )
         .not('push_subscription', 'is', null)
         .or(`last_motivation_sent.is.null,last_motivation_sent.lt.${today}`)
         .gte('updated_at', thirtyDaysAgo);
@@ -148,14 +147,14 @@ export async function GET(request: Request) {
 
           try {
             await fetch(`${SITE_URL}/api/notifications/send`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 userId: user.id,
                 title: content.title,
                 body: content.body,
-                url: '/'
-              })
+                url: '/',
+              }),
             });
 
             // Update tracking: add new message ID and update timestamp
@@ -164,13 +163,13 @@ export async function GET(request: Request) {
               .from('users')
               .update({
                 last_motivation_sent: new Date().toISOString(),
-                last_motivation_message_id: JSON.stringify(newUsedIds)
+                last_motivation_message_id: JSON.stringify(newUsedIds),
               })
               .eq('id', user.id);
 
             morningMotivationSent++;
           } catch (err) {
-            console.error(`Failed to send morning motivation to user ${user.id}:`, err);
+            logError(err, { route: '/api/cron/reminders', action: 'send_morning_motivation', userId: user.id });
           }
         }
       }
@@ -181,11 +180,10 @@ export async function GET(request: Request) {
       colombiaHour,
       isMorningWindow: isMorningWindow(),
       sessionReminders: remindersSent,
-      morningMotivation: morningMotivationSent
+      morningMotivation: morningMotivationSent,
     });
-
   } catch (error: any) {
-    console.error('Reminders cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/cron/reminders', action: 'reminders_cron' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

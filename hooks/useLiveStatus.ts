@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/logger';
 import { useEffect, useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
@@ -51,15 +52,17 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
         .gt('expires_at', new Date().toISOString());
       if (liveData) {
         // REASON: Supabase joined query returns untyped nested objects
-        setLiveUsers(liveData.map((row: any) => ({
-          user_id: row.user_id,
-          name: (row.user as any)?.name || 'Unknown',
-          avatar_url: (row.user as any)?.avatar_url || null,
-          started_at: row.started_at,
-        })));
+        setLiveUsers(
+          liveData.map((row: any) => ({
+            user_id: row.user_id,
+            name: (row.user as any)?.name || 'Unknown',
+            avatar_url: (row.user as any)?.avatar_url || null,
+            started_at: row.started_at,
+          }))
+        );
       }
     } catch (error) {
-      console.error('Error loading live status:', error);
+      logError(error, { action: 'loadLiveStatus', sessionId });
     }
   }
 
@@ -73,7 +76,9 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
           .update({ last_ping: new Date().toISOString() })
           .eq('user_id', user.id)
           .eq('session_id', sessionId);
-      } catch {}
+      } catch {
+        // Heartbeat ping is fire-and-forget; next interval will retry
+      }
     }, 60000);
     return () => clearInterval(interval);
   }, [isLive, user]);

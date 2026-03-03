@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface EditSessionModalProps {
   session: any;
@@ -12,6 +15,7 @@ interface EditSessionModalProps {
 
 export default function EditSessionModal({ session, onClose, onSave }: EditSessionModalProps) {
   const supabase = createClient();
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sport: session.sport,
@@ -28,18 +32,15 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .update(formData)
-        .eq('id', session.id);
+      const { error } = await supabase.from('sessions').update(formData).eq('id', session.id);
 
       if (error) throw error;
 
-      alert('Session updated successfully!');
+      showSuccess(language === 'es' ? 'Sesión actualizada exitosamente' : 'Session updated successfully!');
       onSave();
       onClose();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError(getErrorMessage(error, 'update_session', language));
     } finally {
       setLoading(false);
     }
@@ -55,15 +56,11 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           <X className="w-5 h-5 text-stone-600 dark:text-gray-400" />
         </button>
 
-        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-6">
-          Edit Session
-        </h2>
+        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-6">Edit Session</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Sport
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Sport</label>
             <input
               type="text"
               value={formData.sport}
@@ -74,9 +71,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Date
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Date</label>
             <input
               type="date"
               value={formData.date}
@@ -87,9 +82,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Start Time
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Start Time</label>
             <input
               type="time"
               value={formData.start_time}
@@ -113,9 +106,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Location
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Location</label>
             <input
               type="text"
               value={formData.location}
@@ -126,9 +117,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Max Participants
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Max Participants</label>
             <input
               type="number"
               value={formData.max_participants}
@@ -139,9 +128,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

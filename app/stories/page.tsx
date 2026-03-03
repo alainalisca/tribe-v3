@@ -1,4 +1,5 @@
 'use client';
+import { logError } from '@/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
@@ -81,7 +82,7 @@ export default function StoriesPage() {
         setStoryViewerComp(() => mod.default);
       })
       .catch((err) => {
-        console.error('Failed to load StoryViewer:', err);
+        logError(err, { action: 'loadStoryViewer' });
       });
   }, []);
 
@@ -93,7 +94,9 @@ export default function StoriesPage() {
       ids.forEach((id) => seen.add(id));
       const arr = [...seen].slice(-500);
       localStorage.setItem('tribe_seen_stories', JSON.stringify(arr));
-    } catch {}
+    } catch {
+      // localStorage write is best-effort; missing seen-state is harmless
+    }
   };
 
   useEffect(() => {
@@ -115,7 +118,7 @@ export default function StoriesPage() {
         setUser(user);
       }
     } catch (err) {
-      console.error('Auth check failed:', err);
+      logError(err, { action: 'checkUser' });
       router.push('/auth');
     }
   }
@@ -142,7 +145,7 @@ export default function StoriesPage() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading stories:', error);
+        logError(error, { action: 'loadStories' });
         setGroups([]);
         setAllStories([]);
         return;
@@ -203,7 +206,7 @@ export default function StoriesPage() {
       }
       setGroups(grouped);
     } catch (err) {
-      console.error('Error loading stories:', err);
+      logError(err, { action: 'loadStories' });
       setGroups([]);
       setAllStories([]);
     } finally {

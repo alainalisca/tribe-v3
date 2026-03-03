@@ -268,8 +268,9 @@ export default function AuthPage() {
         setName('');
         setBirthDate('');
       }
-    } catch (error: any) {
-      setMessage('❌ ' + error.message);
+    } catch (error: unknown) {
+      logError(error, { action: 'handleEmailAuth' });
+      setMessage('❌ ' + getErrorMessage(error, 'email_auth', language));
     } finally {
       setLoading(false);
     }
@@ -292,8 +293,9 @@ export default function AuthPage() {
       if (error) throw error;
 
       setMessage(t.resetEmailSent);
-    } catch (error: any) {
-      setMessage('❌ ' + error.message);
+    } catch (error: unknown) {
+      logError(error, { action: 'handleForgotPassword' });
+      setMessage('❌ ' + getErrorMessage(error, 'forgot_password', language));
     } finally {
       setLoading(false);
     }
@@ -319,8 +321,9 @@ export default function AuthPage() {
       setTimeout(() => {
         router.push('/');
       }, 2000);
-    } catch (error: any) {
-      setMessage('❌ ' + error.message);
+    } catch (error: unknown) {
+      logError(error, { action: 'handleResetPassword' });
+      setMessage('❌ ' + getErrorMessage(error, 'reset_password', language));
     } finally {
       setLoading(false);
     }

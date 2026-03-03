@@ -107,6 +107,18 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       en: 'Could not sign in with Apple. Please try again.',
       es: 'No se pudo iniciar sesión con Apple. Inténtalo de nuevo.',
     },
+    email_auth: {
+      en: 'Sign in failed. Please check your credentials and try again.',
+      es: 'Error al iniciar sesión. Verifica tus credenciales e inténtalo de nuevo.',
+    },
+    forgot_password: {
+      en: 'Could not send reset email. Please try again.',
+      es: 'No se pudo enviar el email de restablecimiento. Inténtalo de nuevo.',
+    },
+    reset_password: {
+      en: 'Could not reset password. Please try again.',
+      es: 'No se pudo restablecer la contraseña. Inténtalo de nuevo.',
+    },
   };
 
   // Check if we have a specific error mapping

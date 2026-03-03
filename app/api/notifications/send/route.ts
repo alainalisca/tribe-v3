@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { log, logError } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jwt = require('jsonwebtoken');
@@ -27,7 +29,7 @@ async function getFcmAccessToken(): Promise<string | null> {
         aud: 'https://oauth2.googleapis.com/token',
         iat: now,
         exp: now + 3600,
-        scope: 'https://www.googleapis.com/auth/firebase.messaging'
+        scope: 'https://www.googleapis.com/auth/firebase.messaging',
       },
       parsed.private_key,
       { algorithm: 'RS256' }
@@ -36,13 +38,13 @@ async function getFcmAccessToken(): Promise<string | null> {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${token}`
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${token}`,
     });
 
     const data = await response.json();
     return data.access_token || null;
   } catch (error) {
-    console.error('Failed to get FCM access token:', error);
+    logError(error, { route: '/api/notifications/send', action: 'get_fcm_access_token' });
     return null;
   }
 }
@@ -69,47 +71,59 @@ async function sendFcmNotification(
         data: data || {},
         android: {
           priority: 'high',
-          notification: { sound: 'default', channel_id: 'tribe_notifications' }
+          notification: { sound: 'default', channel_id: 'tribe_notifications' },
         },
         apns: {
           headers: { 'apns-priority': '10' },
-          payload: { aps: { sound: 'default', badge: 1 } }
-        }
-      }
+          payload: { aps: { sound: 'default', badge: 1 } },
+        },
+      },
     };
 
-    console.log('[FCM HTTP v1] accessToken obtained:', !!accessToken, 'length:', accessToken?.length);
-    console.log('[FCM HTTP v1] projectId:', projectId);
-    console.log('[FCM HTTP v1] URL:', `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`);
+    log('debug', 'FCM HTTP v1 request prepared', {
+      route: '/api/notifications/send',
+      action: 'fcm_send',
+      hasAccessToken: !!accessToken,
+      tokenLength: accessToken?.length,
+      projectId,
+    });
 
-    const response = await fetch(
-      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      }
-    );
+    const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    });
 
     const result = await response.json();
-    console.log('[FCM HTTP v1] response status:', response.status);
-    console.log('[FCM HTTP v1] response body:', JSON.stringify(result));
+    log('debug', 'FCM HTTP v1 response received', {
+      route: '/api/notifications/send',
+      action: 'fcm_response',
+      status: response.status,
+      result,
+    });
 
     if (!response.ok) {
       const errorMsg = result.error?.message || JSON.stringify(result);
-      console.error('FCM HTTP v1 error:', errorMsg);
+      log('error', 'FCM HTTP v1 error', { route: '/api/notifications/send', action: 'fcm_send', error: errorMsg });
 
       if (result.error?.code === 404 || result.error?.code === 400) {
-        console.log('Invalid FCM token, should be removed from database');
+        log('warn', 'Invalid FCM token, should be removed from database', {
+          route: '/api/notifications/send',
+          action: 'fcm_token_invalid',
+        });
       }
 
       return { success: false, error: errorMsg };
     }
 
-    console.log('FCM notification sent via HTTP v1:', result.name);
+    log('info', 'FCM notification sent via HTTP v1', {
+      route: '/api/notifications/send',
+      action: 'fcm_sent',
+      messageName: result.name,
+    });
     return { success: true };
   } catch (error: any) {
     return { success: false, error: `FCM HTTP error: ${error.message}` };
@@ -127,19 +141,25 @@ async function sendWebPushNotification(
     const payload = JSON.stringify({
       title,
       body,
-      url: url || '/'
+      url: url || '/',
     });
 
     await webpush.sendNotification(subscription, payload);
-    console.log('Web push notification sent successfully');
+    log('info', 'Web push notification sent successfully', {
+      route: '/api/notifications/send',
+      action: 'web_push_sent',
+    });
     return { success: true };
   } catch (error: any) {
     const errorDetail = `Web push error: ${error.statusCode || 'unknown'} - ${error.message}`;
-    console.error(errorDetail, error);
+    logError(error, { route: '/api/notifications/send', action: 'web_push_send', statusCode: error.statusCode });
 
     // Handle expired subscription
     if (error.statusCode === 410) {
-      console.log('Web push subscription expired, should be removed from database');
+      log('warn', 'Web push subscription expired, should be removed from database', {
+        route: '/api/notifications/send',
+        action: 'web_push_expired',
+      });
     }
 
     return { success: false, error: errorDetail };
@@ -148,19 +168,19 @@ async function sendWebPushNotification(
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 30, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const { userId, title, body, url, data } = await request.json();
 
     if (!userId || !title || !body) {
-      return NextResponse.json(
-        { error: 'Missing required fields: userId, title, body' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields: userId, title, body' }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get user's notification credentials
     const { data: user, error } = await supabase
@@ -170,24 +190,18 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error('Error fetching user:', error);
-      return NextResponse.json(
-        { error: 'Error fetching user data' },
-        { status: 500 }
-      );
+      logError(error, { route: '/api/notifications/send', action: 'fetch_user', userId });
+      return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
 
     if (!user?.push_subscription && !user?.fcm_token) {
-      return NextResponse.json(
-        { error: 'No push subscription or FCM token found for user' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'No push subscription or FCM token found for user' }, { status: 404 });
     }
 
     // Prepare notification data payload
     const notificationData: Record<string, string> = {
       url: url || '/',
-      ...(data || {})
+      ...(data || {}),
     };
 
     const errors: string[] = [];
@@ -195,23 +209,26 @@ export async function POST(request: Request) {
     let webPushResult: { success: boolean; error?: string } = { success: false, error: 'not attempted' };
 
     // Log what credentials the user has
-    console.log(`User ${userId}: fcm_token=${user.fcm_token ? 'yes' : 'no'}, push_subscription=${user.push_subscription ? 'yes' : 'no'}, platform=${user.fcm_platform || 'none'}`);
+    log('debug', 'User notification credentials', {
+      route: '/api/notifications/send',
+      userId,
+      hasFcmToken: !!user.fcm_token,
+      hasPushSubscription: !!user.push_subscription,
+      platform: user.fcm_platform || 'none',
+    });
 
     // Try FCM first (for native apps)
     if (user.fcm_token) {
-      fcmResult = await sendFcmNotification(
-        user.fcm_token,
-        title,
-        body,
-        notificationData
-      );
+      fcmResult = await sendFcmNotification(user.fcm_token, title, body, notificationData);
 
       if (!fcmResult.success) {
         errors.push(`FCM: ${fcmResult.error}`);
         // Only clear token if it's actually invalid, not for server-side init errors
-        if (fcmResult.error?.includes('NOT_FOUND') ||
-            fcmResult.error?.includes('INVALID_ARGUMENT') ||
-            fcmResult.error?.includes('UNREGISTERED')) {
+        if (
+          fcmResult.error?.includes('NOT_FOUND') ||
+          fcmResult.error?.includes('INVALID_ARGUMENT') ||
+          fcmResult.error?.includes('UNREGISTERED')
+        ) {
           await supabase
             .from('users')
             .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
@@ -223,24 +240,14 @@ export async function POST(request: Request) {
     // Try Web Push (for browser users)
     if (user.push_subscription && !fcmResult.success) {
       const subscription =
-        typeof user.push_subscription === 'string'
-          ? JSON.parse(user.push_subscription)
-          : user.push_subscription;
+        typeof user.push_subscription === 'string' ? JSON.parse(user.push_subscription) : user.push_subscription;
 
-      webPushResult = await sendWebPushNotification(
-        subscription,
-        title,
-        body,
-        url
-      );
+      webPushResult = await sendWebPushNotification(subscription, title, body, url);
 
       // If web push failed due to expired subscription, clear it
       if (!webPushResult.success) {
         errors.push(`WebPush: ${webPushResult.error}`);
-        await supabase
-          .from('users')
-          .update({ push_subscription: null })
-          .eq('id', userId);
+        await supabase.from('users').update({ push_subscription: null }).eq('id', userId);
       }
     }
 
@@ -248,7 +255,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         method: fcmResult.success ? 'fcm' : 'web-push',
-        platform: user.fcm_platform || 'web'
+        platform: user.fcm_platform || 'web',
       });
     }
 
@@ -258,16 +265,13 @@ export async function POST(request: Request) {
         details: errors,
         userHasFcmToken: !!user.fcm_token,
         userHasPushSubscription: !!user.push_subscription,
-        fcmPlatform: user.fcm_platform || null
+        fcmPlatform: user.fcm_platform || null,
       },
       { status: 500 }
     );
   } catch (error: any) {
-    console.error('Error in notification send API:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    logError(error, { route: '/api/notifications/send', action: 'send_notification' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -277,23 +281,14 @@ export async function PUT(request: Request) {
     const { userIds, title, body, url, data } = await request.json();
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing or invalid userIds array' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing or invalid userIds array' }, { status: 400 });
     }
 
     if (!title || !body) {
-      return NextResponse.json(
-        { error: 'Missing required fields: title, body' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields: title, body' }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get all users' notification credentials
     const { data: users, error } = await supabase
@@ -302,23 +297,20 @@ export async function PUT(request: Request) {
       .in('id', userIds);
 
     if (error) {
-      console.error('Error fetching users:', error);
-      return NextResponse.json(
-        { error: 'Error fetching user data' },
-        { status: 500 }
-      );
+      logError(error, { route: '/api/notifications/send', action: 'fetch_users_batch' });
+      return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
 
     const notificationData: Record<string, string> = {
       url: url || '/',
-      ...(data || {})
+      ...(data || {}),
     };
 
     const results = {
       total: userIds.length,
       fcm: { sent: 0, failed: 0 },
       webPush: { sent: 0, failed: 0 },
-      noSubscription: 0
+      noSubscription: 0,
     };
 
     const invalidFcmTokenUserIds: string[] = [];
@@ -335,12 +327,7 @@ export async function PUT(request: Request) {
 
       // Try FCM first
       if (user.fcm_token) {
-        const fcmResult = await sendFcmNotification(
-          user.fcm_token,
-          title,
-          body,
-          notificationData
-        );
+        const fcmResult = await sendFcmNotification(user.fcm_token, title, body, notificationData);
 
         if (fcmResult.success) {
           results.fcm.sent++;
@@ -348,9 +335,11 @@ export async function PUT(request: Request) {
         } else {
           results.fcm.failed++;
           // Only mark token as invalid for token-specific errors
-          if (fcmResult.error?.includes('NOT_FOUND') ||
-              fcmResult.error?.includes('INVALID_ARGUMENT') ||
-              fcmResult.error?.includes('UNREGISTERED')) {
+          if (
+            fcmResult.error?.includes('NOT_FOUND') ||
+            fcmResult.error?.includes('INVALID_ARGUMENT') ||
+            fcmResult.error?.includes('UNREGISTERED')
+          ) {
             invalidFcmTokenUserIds.push(user.id);
           }
         }
@@ -359,9 +348,7 @@ export async function PUT(request: Request) {
       // Try Web Push if FCM didn't work
       if (!sent && user.push_subscription) {
         const subscription =
-          typeof user.push_subscription === 'string'
-            ? JSON.parse(user.push_subscription)
-            : user.push_subscription;
+          typeof user.push_subscription === 'string' ? JSON.parse(user.push_subscription) : user.push_subscription;
 
         const wpResult = await sendWebPushNotification(subscription, title, body, url);
 
@@ -383,21 +370,15 @@ export async function PUT(request: Request) {
     }
 
     if (invalidWebPushUserIds.length > 0) {
-      await supabase
-        .from('users')
-        .update({ push_subscription: null })
-        .in('id', invalidWebPushUserIds);
+      await supabase.from('users').update({ push_subscription: null }).in('id', invalidWebPushUserIds);
     }
 
     return NextResponse.json({
       success: true,
-      results
+      results,
     });
   } catch (error: any) {
-    console.error('Error in batch notification send API:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    logError(error, { route: '/api/notifications/send', action: 'batch_send_notification' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

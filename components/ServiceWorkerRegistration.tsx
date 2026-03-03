@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { log, logError } from '@/lib/logger';
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -13,42 +14,44 @@ export default function ServiceWorkerRegistration() {
   async function registerAndSubscribe() {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered:', registration);
+      log('debug', 'Service Worker registered', { scope: registration.scope });
       await navigator.serviceWorker.ready;
 
       let subscription = await registration.pushManager.getSubscription();
-      
+
       if (!subscription) {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
-          console.log('Notification permission denied');
+          log('debug', 'Notification permission denied', { action: 'registerAndSubscribe' });
           return;
         }
 
         const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidPublicKey) {
-          console.error('VAPID public key not found');
+          log('error', 'VAPID public key not found', { action: 'registerAndSubscribe' });
           return;
         }
 
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
         });
       }
 
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (user) {
         await supabase
           .from('users')
           .update({ push_subscription: JSON.stringify(subscription) })
           .eq('id', user.id);
-        console.log('Push subscription saved');
+        log('debug', 'Push subscription saved', { userId: user.id });
       }
     } catch (error) {
-      console.error('Push registration failed:', error);
+      logError(error, { action: 'registerAndSubscribe' });
     }
   }
 
@@ -56,7 +59,7 @@ export default function ServiceWorkerRegistration() {
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);

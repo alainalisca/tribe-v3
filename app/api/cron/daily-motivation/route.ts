@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
+import { logError } from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -37,37 +38,33 @@ export async function GET(request: Request) {
 
       try {
         // Send push notification
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/notifications/send`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/notifications/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: user.id,
             title: content.title,
             body: content.body,
-            url: '/'
-          })
+            url: '/',
+          }),
         });
 
         // Update last motivation sent timestamp
-        await supabase
-          .from('users')
-          .update({ last_motivation_sent: new Date().toISOString() })
-          .eq('id', user.id);
+        await supabase.from('users').update({ last_motivation_sent: new Date().toISOString() }).eq('id', user.id);
 
         sentCount++;
       } catch (err) {
-        console.error(`Failed to send motivation to user ${user.id}:`, err);
+        logError(err, { route: '/api/cron/daily-motivation', action: 'send_motivation', userId: user.id });
       }
     }
 
     return NextResponse.json({
       success: true,
       message: `Sent ${sentCount} motivational messages`,
-      count: sentCount
+      count: sentCount,
     });
-
   } catch (error: any) {
-    console.error('Daily motivation cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/cron/daily-motivation', action: 'daily_motivation' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

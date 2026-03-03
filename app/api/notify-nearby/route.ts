@@ -1,17 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -19,7 +18,10 @@ export async function POST(request: Request) {
   try {
     // AUTH: verify the caller is authenticated
     const supabaseAuth = await createClient();
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -32,17 +34,10 @@ export async function POST(request: Request) {
     }
 
     // Service role client needed to read all users' push tokens and locations
-    const supabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get creator name
-    const { data: creator } = await supabase
-      .from('users')
-      .select('name')
-      .eq('id', creatorId)
-      .single();
+    const { data: creator } = await supabase.from('users').select('name').eq('id', creatorId).single();
 
     const creatorName = creator?.name || 'Someone';
 
@@ -53,12 +48,12 @@ export async function POST(request: Request) {
       .neq('id', creatorId);
 
     if (error) {
-      console.error('Error fetching users:', error);
+      logError(error, { route: '/api/notify-nearby', action: 'fetch_users' });
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
 
     // Filter: must have at least one notification channel, match sport, and be nearby
-    const nearbyUsers = (users || []).filter(user => {
+    const nearbyUsers = (users || []).filter((user) => {
       if (!user.push_subscription && !user.fcm_token) return false;
 
       const userSports = user.sports || [];
@@ -91,9 +86,8 @@ export async function POST(request: Request) {
       if (userIds.length === 0) continue;
 
       const isSpanish = lang === 'es';
-      const startText = startIn === 0
-        ? (isSpanish ? 'ahora' : 'now')
-        : (isSpanish ? `en ${startIn} min` : `in ${startIn} min`);
+      const startText =
+        startIn === 0 ? (isSpanish ? 'ahora' : 'now') : isSpanish ? `en ${startIn} min` : `in ${startIn} min`;
 
       const title = isSpanish
         ? `🏋️ ${creatorName} quiere entrenar ${sport}!`
@@ -114,15 +108,19 @@ export async function POST(request: Request) {
         const result = await response.json();
         notifiedCount += (result.results?.fcm?.sent || 0) + (result.results?.webPush?.sent || 0);
       } else {
-        console.error(`Batch notify failed for ${lang} users:`, await response.text());
+        log('error', `Batch notify failed for ${lang} users`, {
+          route: '/api/notify-nearby',
+          action: 'batch_notify',
+          lang,
+          responseBody: await response.text(),
+        });
       }
     }
 
     return NextResponse.json({
       notified: notifiedCount,
-      total: nearbyUsers.length
+      total: nearbyUsers.length,
     });
-
   } catch (error) {
     logError(error, { route: '/api/notify-nearby', action: 'send_nearby_notifications' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -45,7 +46,9 @@ export default function MessagesPage() {
   }, []);
 
   async function checkUser() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       router.push('/auth');
       return;
@@ -78,9 +81,9 @@ export default function MessagesPage() {
       // Combine session IDs
       const sessionIds = [
         ...new Set([
-          ...(participantSessions?.map(p => p.session_id) || []),
-          ...(createdSessions?.map(s => s.id) || [])
-        ])
+          ...(participantSessions?.map((p) => p.session_id) || []),
+          ...(createdSessions?.map((s) => s.id) || []),
+        ]),
       ];
 
       if (sessionIds.length === 0) {
@@ -92,13 +95,15 @@ export default function MessagesPage() {
       // Batch: get all sessions in one query
       const { data: sessions } = await supabase
         .from('sessions')
-        .select(`
+        .select(
+          `
           id,
           sport,
           date,
           location,
           creator:users!sessions_creator_id_fkey(id, name, avatar_url)
-        `)
+        `
+        )
         .in('id', sessionIds);
 
       if (!sessions || sessions.length === 0) {
@@ -110,12 +115,14 @@ export default function MessagesPage() {
       // Batch: get the latest message per session in one query
       const { data: allMessages } = await supabase
         .from('chat_messages')
-        .select(`
+        .select(
+          `
           session_id,
           message,
           created_at,
           user:users!chat_messages_user_id_fkey(name)
-        `)
+        `
+        )
         .in('session_id', sessionIds)
         .eq('deleted', false)
         .order('created_at', { ascending: false });
@@ -141,14 +148,14 @@ export default function MessagesPage() {
             sport: session.sport,
             date: session.date,
             location: session.location,
-            creator: Array.isArray(session.creator) ? session.creator[0] : session.creator
+            creator: Array.isArray(session.creator) ? session.creator[0] : session.creator,
           },
           last_message: {
             message: lastMessage.message,
             created_at: lastMessage.created_at,
-            user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user
+            user: Array.isArray(lastMessage.user) ? lastMessage.user[0] : lastMessage.user,
           },
-          unread_count: 0
+          unread_count: 0,
         });
       }
 
@@ -161,7 +168,7 @@ export default function MessagesPage() {
 
       setConversations(conversationsData);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      logError(error, { action: 'loadConversations' });
     } finally {
       setLoading(false);
     }
@@ -182,7 +189,7 @@ export default function MessagesPage() {
 
     return date.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
@@ -198,9 +205,7 @@ export default function MessagesPage() {
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
           <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-            <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-              {t('messages')}
-            </h1>
+            <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('messages')}</h1>
           </div>
         </div>
         <div className="pt-header max-w-2xl mx-auto p-4">
@@ -227,9 +232,7 @@ export default function MessagesPage() {
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            {t('messages')}
-          </h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('messages')}</h1>
         </div>
       </div>
 
@@ -239,12 +242,8 @@ export default function MessagesPage() {
             <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
               <MessageCircle className="w-8 h-8 text-stone-400" />
             </div>
-            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-              {t('noConversations')}
-            </h3>
-            <p className="text-stone-500 dark:text-gray-400 mb-4">
-              {t('joinSessionToChat')}
-            </p>
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
+            <p className="text-stone-500 dark:text-gray-400 mb-4">{t('joinSessionToChat')}</p>
             <Link href="/">
               <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
                 {t('findSessions')}
@@ -254,23 +253,31 @@ export default function MessagesPage() {
         ) : (
           <div className="space-y-2">
             {conversations.map((conv) => (
-              <Link
-                key={conv.session_id}
-                href={`/session/${conv.session_id}/chat`}
-              >
+              <Link key={conv.session_id} href={`/session/${conv.session_id}/chat`}>
                 <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:border-tribe-green transition cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-tribe-green rounded-full flex items-center justify-center text-lg flex-shrink-0">
-                      {conv.session.sport === 'Running' ? '🏃' :
-                       conv.session.sport === 'Cycling' ? '🚴' :
-                       conv.session.sport === 'Swimming' ? '🏊' :
-                       conv.session.sport === 'CrossFit' ? '🏋️' :
-                       conv.session.sport === 'Boxing' ? '🥊' :
-                       conv.session.sport === 'Yoga' ? '🧘' :
-                       conv.session.sport === 'Hiking' ? '🥾' :
-                       conv.session.sport === 'Basketball' ? '🏀' :
-                       conv.session.sport === 'Soccer' ? '⚽' :
-                       conv.session.sport === 'Tennis' ? '🎾' : '💪'}
+                      {conv.session.sport === 'Running'
+                        ? '🏃'
+                        : conv.session.sport === 'Cycling'
+                          ? '🚴'
+                          : conv.session.sport === 'Swimming'
+                            ? '🏊'
+                            : conv.session.sport === 'CrossFit'
+                              ? '🏋️'
+                              : conv.session.sport === 'Boxing'
+                                ? '🥊'
+                                : conv.session.sport === 'Yoga'
+                                  ? '🧘'
+                                  : conv.session.sport === 'Hiking'
+                                    ? '🥾'
+                                    : conv.session.sport === 'Basketball'
+                                      ? '🏀'
+                                      : conv.session.sport === 'Soccer'
+                                        ? '⚽'
+                                        : conv.session.sport === 'Tennis'
+                                          ? '🎾'
+                                          : '💪'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
@@ -283,9 +290,7 @@ export default function MessagesPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-stone-500 dark:text-gray-400 truncate mb-1">
-                        {conv.session.location}
-                      </p>
+                      <p className="text-sm text-stone-500 dark:text-gray-400 truncate mb-1">{conv.session.location}</p>
                       {conv.last_message && (
                         <p className="text-sm text-stone-600 dark:text-gray-300 truncate">
                           <span className="font-medium">{conv.last_message.user.name}:</span>{' '}

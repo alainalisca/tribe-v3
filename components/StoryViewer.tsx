@@ -5,6 +5,7 @@ import { X, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { log, logError } from '@/lib/logger';
 import Link from 'next/link';
 
 interface Story {
@@ -48,7 +49,14 @@ function timeAgo(dateStr: string, lang: string): string {
   return `${days}d`;
 }
 
-export default function StoryViewer({ groups: initialGroups, startGroupIndex, currentUserId, onClose, onStorySeen, onStoryDeleted }: StoryViewerProps) {
+export default function StoryViewer({
+  groups: initialGroups,
+  startGroupIndex,
+  currentUserId,
+  onClose,
+  onStorySeen,
+  onStoryDeleted,
+}: StoryViewerProps) {
   const supabase = createClient();
   const { language } = useLanguage();
   const [groups, setGroups] = useState(initialGroups);
@@ -194,9 +202,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       // URL format: .../storage/v1/object/public/session-stories/{sessionId}/{userId}/{filename}
       const urlPath = new URL(story.media_url).pathname;
       const bucketPrefix = '/storage/v1/object/public/session-stories/';
-      const storagePath = urlPath.startsWith(bucketPrefix)
-        ? urlPath.slice(bucketPrefix.length)
-        : null;
+      const storagePath = urlPath.startsWith(bucketPrefix) ? urlPath.slice(bucketPrefix.length) : null;
 
       // Delete the file from storage
       if (storagePath) {
@@ -204,9 +210,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
         // Also delete thumbnail if it exists
         if (story.thumbnail_url) {
           const thumbPath = new URL(story.thumbnail_url).pathname;
-          const thumbStoragePath = thumbPath.startsWith(bucketPrefix)
-            ? thumbPath.slice(bucketPrefix.length)
-            : null;
+          const thumbStoragePath = thumbPath.startsWith(bucketPrefix) ? thumbPath.slice(bucketPrefix.length) : null;
           if (thumbStoragePath) {
             await supabase.storage.from('session-stories').remove([decodeURIComponent(thumbStoragePath)]);
           }
@@ -214,10 +218,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       }
 
       // Delete the row from session_stories
-      const { error } = await supabase
-        .from('session_stories')
-        .delete()
-        .eq('id', story.id);
+      const { error } = await supabase.from('session_stories').delete().eq('id', story.id);
 
       if (error) throw error;
 
@@ -226,7 +227,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       onStoryDeleted?.();
 
       // Remove from local state and navigate
-      const updatedStories = group.stories.filter(s => s.id !== story.id);
+      const updatedStories = group.stories.filter((s) => s.id !== story.id);
 
       if (updatedStories.length === 0) {
         // No more stories in this group
@@ -241,9 +242,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
         setStoryIdx(0);
       } else {
         // Update group with remaining stories
-        const updatedGroups = groups.map((g, i) =>
-          i === groupIdx ? { ...g, stories: updatedStories } : g
-        );
+        const updatedGroups = groups.map((g, i) => (i === groupIdx ? { ...g, stories: updatedStories } : g));
         setGroups(updatedGroups);
         const newStoryIdx = Math.min(storyIdx, updatedStories.length - 1);
         setStoryIdx(newStoryIdx);
@@ -252,7 +251,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
       elapsedRef.current = 0;
       setProgress(0);
     } catch (error: any) {
-      console.error('Error deleting story:', error);
+      logError(error, { action: 'handleDeleteStory', storyId: story.id });
       showError(language === 'es' ? 'Error al eliminar' : 'Failed to delete');
     } finally {
       setDeleting(false);
@@ -317,11 +316,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
               <div
                 className="h-full bg-tribe-green rounded-full transition-none"
                 style={{
-                  width: `${
-                    i < storyIdx ? 100 :
-                    i === storyIdx ? progress * 100 :
-                    0
-                  }%`,
+                  width: `${i < storyIdx ? 100 : i === storyIdx ? progress * 100 : 0}%`,
                 }}
               />
             </div>
@@ -347,16 +342,16 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
           <div className="flex items-center gap-1 flex-shrink-0">
             {isOwnStory && (
               <button
-                onClick={() => { setPaused(true); setShowDeleteConfirm(true); }}
+                onClick={() => {
+                  setPaused(true);
+                  setShowDeleteConfirm(true);
+                }}
                 className="p-1.5 hover:bg-white/10 rounded-full transition"
               >
                 <Trash2 className="w-5 h-5 text-white/70" />
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-white/10 rounded-full transition"
-            >
+            <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition">
               <X className="w-6 h-6 text-white" />
             </button>
           </div>
@@ -369,9 +364,15 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
         onClick={handleTap}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        onMouseDown={() => { if (!showDeleteConfirm) setPaused(true); }}
-        onMouseUp={() => { if (!showDeleteConfirm) setPaused(false); }}
-        onMouseLeave={() => { if (!showDeleteConfirm) setPaused(false); }}
+        onMouseDown={() => {
+          if (!showDeleteConfirm) setPaused(true);
+        }}
+        onMouseUp={() => {
+          if (!showDeleteConfirm) setPaused(false);
+        }}
+        onMouseLeave={() => {
+          if (!showDeleteConfirm) setPaused(false);
+        }}
       >
         {!story.media_url ? (
           <div className="w-full h-full flex items-center justify-center bg-stone-800">
@@ -385,7 +386,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
             className="w-full h-full object-cover select-none"
             draggable={false}
             onError={(e) => {
-              console.error('Story image failed to load:', story.media_url);
+              log('error', 'Story image failed to load', { action: 'StoryViewer', mediaUrl: story.media_url });
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
@@ -399,7 +400,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
             autoPlay
             muted={false}
             onError={() => {
-              console.error('Story video failed to load:', story.media_url);
+              log('error', 'Story video failed to load', { action: 'StoryViewer', mediaUrl: story.media_url });
             }}
           />
         )}
@@ -407,9 +408,7 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
 
       {/* Bottom overlay: caption + view session */}
       <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-6 pt-16">
-        {story.caption && (
-          <p className="text-white text-sm mb-3 leading-relaxed">{story.caption}</p>
-        )}
+        {story.caption && <p className="text-white text-sm mb-3 leading-relaxed">{story.caption}</p>}
         <Link
           href={`/session/${group.sessionId}`}
           onClick={onClose}
@@ -428,7 +427,10 @@ export default function StoryViewer({ groups: initialGroups, startGroupIndex, cu
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => { setShowDeleteConfirm(false); setPaused(false); }}
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setPaused(false);
+                }}
                 disabled={deleting}
                 className="flex-1 py-3 bg-stone-200 dark:bg-[#3D4349] text-theme-primary font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
               >

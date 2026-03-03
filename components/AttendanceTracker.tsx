@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, X } from 'lucide-react';
+import { log, logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
+import { getErrorMessage } from '@/lib/errorMessages';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface AttendanceTrackerProps {
   sessionId: string;
@@ -13,6 +17,7 @@ interface AttendanceTrackerProps {
 
 export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionDate }: AttendanceTrackerProps) {
   const supabase = createClient();
+  const { language } = useLanguage();
   const [participants, setParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
@@ -32,10 +37,12 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
     try {
       const { data: participantsData } = await supabase
         .from('session_participants')
-        .select(`
+        .select(
+          `
           user_id,
           user:users(id, name, avatar_url)
-        `)
+        `
+        )
         .eq('session_id', sessionId)
         .eq('status', 'confirmed');
 
@@ -44,26 +51,29 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
         return;
       }
 
-      const userIds = participantsData.map(p => p.user_id).filter(Boolean);
+      const userIds = participantsData.map((p) => p.user_id).filter(Boolean);
       const { data: allAttendance } = await supabase
         .from('session_attendance')
         .select('user_id, attended')
         .eq('session_id', sessionId)
         .in('user_id', userIds);
 
-      const attendanceByUser = (allAttendance || []).reduce((acc, row) => {
-        acc[(row as { user_id: string }).user_id] = (row as { attended: boolean }).attended;
-        return acc;
-      }, {} as Record<string, boolean>);
+      const attendanceByUser = (allAttendance || []).reduce(
+        (acc, row) => {
+          acc[(row as { user_id: string }).user_id] = (row as { attended: boolean }).attended;
+          return acc;
+        },
+        {} as Record<string, boolean>
+      );
 
-      const participantsWithAttendance = participantsData.map(p => ({
+      const participantsWithAttendance = participantsData.map((p) => ({
         ...p,
         attended: attendanceByUser[p.user_id] || false,
       }));
 
       setParticipants(participantsWithAttendance);
     } catch (error) {
-      console.error('Error loading participants:', error);
+      logError(error, { action: 'loadParticipants', sessionId });
     } finally {
       setLoading(false);
     }
@@ -72,7 +82,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
   async function markAttendance(userId: string, attended: boolean) {
     try {
       setSendingEmail(userId);
-      
+
       const { data: existing } = await supabase
         .from('session_attendance')
         .select('id')
@@ -87,13 +97,11 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
           .eq('session_id', sessionId)
           .eq('user_id', userId);
       } else {
-        await supabase
-          .from('session_attendance')
-          .insert({
-            session_id: sessionId,
-            user_id: userId,
-            attended
-          });
+        await supabase.from('session_attendance').insert({
+          session_id: sessionId,
+          user_id: userId,
+          attended,
+        });
       }
 
       // Send email notification if marking as attended
@@ -102,17 +110,17 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
           await fetch('/api/send-attendance-notification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId, userId })
+            body: JSON.stringify({ sessionId, userId }),
           });
         } catch (emailError) {
-          console.error('Failed to send email:', emailError);
+          logError(emailError, { action: 'sendAttendanceEmail', sessionId, userId });
           // Don't fail the whole operation if email fails
         }
       }
 
       await loadParticipants();
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      showError(getErrorMessage(error, 'admin_action', language));
     } finally {
       setSendingEmail(null);
     }
@@ -136,12 +144,8 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
 
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-        Mark Attendance
-      </h2>
-      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
-        Mark who attended to allow them to upload photos
-      </p>
+      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">Mark Attendance</h2>
+      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">Mark who attended to allow them to upload photos</p>
       <div className="space-y-2">
         {participants.map((participant) => (
           <div
@@ -160,9 +164,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
                   {participant.user?.name?.[0]?.toUpperCase()}
                 </div>
               )}
-              <span className="font-medium text-stone-900 dark:text-white">
-                {participant.user?.name}
-              </span>
+              <span className="font-medium text-stone-900 dark:text-white">{participant.user?.name}</span>
             </div>
 
             <div className="flex gap-2">

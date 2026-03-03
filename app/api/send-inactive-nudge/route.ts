@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -13,12 +14,12 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    
+
     const { data: users } = await supabase
       .from('users')
       .select('id, name, email, preferred_language, created_at')
       .not('email', 'is', null);
-    
+
     if (!users) {
       return NextResponse.json({ error: 'No users found' }, { status: 400 });
     }
@@ -57,13 +58,9 @@ export async function POST(request: Request) {
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';
 
-        const subject = isSpanish
-          ? `👋 Te extrañamos en Tribe`
-          : `👋 We miss you on Tribe`;
+        const subject = isSpanish ? `👋 Te extrañamos en Tribe` : `👋 We miss you on Tribe`;
 
-        const greeting = isSpanish
-          ? `Hola ${user.name},`
-          : `Hi ${user.name},`;
+        const greeting = isSpanish ? `Hola ${user.name},` : `Hi ${user.name},`;
 
         const message = isSpanish
           ? `Notamos que no has entrenado con nosotros últimamente. Tu comunidad de entrenamiento te está esperando.`
@@ -73,9 +70,7 @@ export async function POST(request: Request) {
           ? `Hay sesiones nuevas todos los días en tu área.`
           : `There are new sessions happening every day in your area.`;
 
-        const cta = isSpanish
-          ? `¡Vuelve y nunca entrenes solo!`
-          : `Come back and never train alone!`;
+        const cta = isSpanish ? `¡Vuelve y nunca entrenes solo!` : `Come back and never train alone!`;
 
         const buttonText = isSpanish ? 'Ver Sesiones' : 'Browse Sessions';
         const tagline = isSpanish ? 'Nunca Entrenes Solo' : 'Never Train Alone';
@@ -118,24 +113,24 @@ export async function POST(request: Request) {
                 © ${new Date().getFullYear()} Tribe · ${tagline}
               </p>
             </div>
-          `
+          `,
         });
 
         emailsSent++;
       } catch (error: any) {
-        console.error(`Error sending nudge to ${user.email}:`, error);
+        logError(error, { route: '/api/send-inactive-nudge', action: 'send_nudge_email', userId: user.id });
         errors++;
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       emailsSent,
       errors,
-      totalUsers: users.length 
+      totalUsers: users.length,
     });
   } catch (error: any) {
-    console.error('Inactive nudge error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/send-inactive-nudge', action: 'inactive_nudge' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,28 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 // Reminder messages in both languages
 const reminderMessages = {
   oneHour: {
     en: {
       title: 'Session in 1 hour!',
-      body: (sport: string, location: string) => `${sport} at ${location} starts in 1 hour. Get ready!`
+      body: (sport: string, location: string) => `${sport} at ${location} starts in 1 hour. Get ready!`,
     },
     es: {
       title: '¡Sesión en 1 hora!',
-      body: (sport: string, location: string) => `${sport} en ${location} comienza en 1 hora. ¡Prepárate!`
-    }
+      body: (sport: string, location: string) => `${sport} en ${location} comienza en 1 hora. ¡Prepárate!`,
+    },
   },
   fifteenMin: {
     en: {
       title: 'Session starting soon!',
-      body: (sport: string, location: string) => `${sport} at ${location} starts in 15 minutes. Head out now!`
+      body: (sport: string, location: string) => `${sport} at ${location} starts in 15 minutes. Head out now!`,
     },
     es: {
       title: '¡La sesión empieza pronto!',
-      body: (sport: string, location: string) => `${sport} en ${location} comienza en 15 minutos. ¡Sal ya!`
-    }
-  }
+      body: (sport: string, location: string) => `${sport} en ${location} comienza en 15 minutos. ¡Sal ya!`,
+    },
+  },
 };
 
 export async function GET(request: Request) {
@@ -33,12 +34,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const now = new Date();
     const today = now.toISOString().split('T')[0];
 
@@ -63,7 +61,7 @@ export async function GET(request: Request) {
       .in('date', [today, tomorrowStr]);
 
     if (sessionsError) {
-      console.error('Error fetching sessions:', sessionsError);
+      logError(sessionsError, { route: '/api/cron/session-reminders', action: 'fetch_sessions' });
       return NextResponse.json({ error: sessionsError.message }, { status: 500 });
     }
 
@@ -72,15 +70,11 @@ export async function GET(request: Request) {
 
       // Check for 1-hour reminder
       const needsOneHourReminder =
-        !session.reminder_1hr_sent &&
-        sessionDateTime >= oneHourFromNow &&
-        sessionDateTime <= oneHourFiveMin;
+        !session.reminder_1hr_sent && sessionDateTime >= oneHourFromNow && sessionDateTime <= oneHourFiveMin;
 
       // Check for 15-minute reminder
       const needsFifteenMinReminder =
-        !session.reminder_15min_sent &&
-        sessionDateTime >= fifteenMinFromNow &&
-        sessionDateTime <= twentyMinFromNow;
+        !session.reminder_15min_sent && sessionDateTime >= fifteenMinFromNow && sessionDateTime <= twentyMinFromNow;
 
       if (needsOneHourReminder || needsFifteenMinReminder) {
         // Get session creator
@@ -93,10 +87,12 @@ export async function GET(request: Request) {
         // Get all confirmed participants
         const { data: participants } = await supabase
           .from('session_participants')
-          .select(`
+          .select(
+            `
             user_id,
             user:users!session_participants_user_id_fkey(id, preferred_language, session_reminders_enabled)
-          `)
+          `
+          )
           .eq('session_id', session.id)
           .eq('status', 'confirmed');
 
@@ -107,7 +103,7 @@ export async function GET(request: Request) {
         if (creator && creator.session_reminders_enabled !== false) {
           usersToNotify.push({
             id: creator.id,
-            lang: creator.preferred_language || 'en'
+            lang: creator.preferred_language || 'en',
           });
         }
 
@@ -117,7 +113,7 @@ export async function GET(request: Request) {
           if (userData && userData.session_reminders_enabled !== false) {
             usersToNotify.push({
               id: participant.user_id,
-              lang: userData.preferred_language || 'en'
+              lang: userData.preferred_language || 'en',
             });
           }
         }
@@ -125,9 +121,7 @@ export async function GET(request: Request) {
         // Send notifications
         for (const userInfo of usersToNotify) {
           const lang = userInfo.lang as 'en' | 'es';
-          const messages = needsOneHourReminder
-            ? reminderMessages.oneHour
-            : reminderMessages.fifteenMin;
+          const messages = needsOneHourReminder ? reminderMessages.oneHour : reminderMessages.fifteenMin;
 
           const title = messages[lang]?.title || messages.en.title;
           const body = (messages[lang]?.body || messages.en.body)(session.sport, session.location);
@@ -140,8 +134,8 @@ export async function GET(request: Request) {
                 userId: userInfo.id,
                 title,
                 body,
-                url: `/session/${session.id}`
-              })
+                url: `/session/${session.id}`,
+              }),
             });
 
             if (needsOneHourReminder) {
@@ -150,23 +144,22 @@ export async function GET(request: Request) {
               fifteenMinRemindersSent++;
             }
           } catch (err) {
-            console.error(`Failed to send reminder to user ${userInfo.id}:`, err);
+            logError(err, {
+              route: '/api/cron/session-reminders',
+              action: 'send_reminder',
+              userId: userInfo.id,
+              sessionId: session.id,
+            });
           }
         }
 
         // Mark reminder as sent
         if (needsOneHourReminder) {
-          await supabase
-            .from('sessions')
-            .update({ reminder_1hr_sent: true })
-            .eq('id', session.id);
+          await supabase.from('sessions').update({ reminder_1hr_sent: true }).eq('id', session.id);
         }
 
         if (needsFifteenMinReminder) {
-          await supabase
-            .from('sessions')
-            .update({ reminder_15min_sent: true })
-            .eq('id', session.id);
+          await supabase.from('sessions').update({ reminder_15min_sent: true }).eq('id', session.id);
         }
       }
     }
@@ -175,11 +168,10 @@ export async function GET(request: Request) {
       success: true,
       timestamp: now.toISOString(),
       oneHourRemindersSent,
-      fifteenMinRemindersSent
+      fifteenMinRemindersSent,
     });
-
   } catch (error: any) {
-    console.error('Session reminders cron error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/cron/session-reminders', action: 'session_reminders_cron' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

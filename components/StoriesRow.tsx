@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Plus, X, MapPin, Calendar } from 'lucide-react';
 import { showInfo } from '@/lib/toast';
+import { logError } from '@/lib/logger';
 import { sportTranslations } from '@/lib/translations';
 import StoryViewer from './StoryViewer';
 import StoryUpload from './StoryUpload';
@@ -37,7 +38,7 @@ function getSeenStories(): Set<string> {
 
 export function markStoriesSeen(ids: string[]) {
   const seen = getSeenStories();
-  ids.forEach(id => seen.add(id));
+  ids.forEach((id) => seen.add(id));
   // Keep only last 500 to avoid localStorage bloat
   const arr = [...seen].slice(-500);
   localStorage.setItem('tribe_seen_stories', JSON.stringify(arr));
@@ -61,17 +62,35 @@ function getCachedStories(): SessionStoryGroup[] | null {
 function setCachedStories(data: SessionStoryGroup[]) {
   try {
     sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-  } catch {}
+  } catch {
+    // sessionStorage write is best-effort; cache miss is harmless
+  }
 }
 
 function getSportEmoji(sport: string): string {
   const map: Record<string, string> = {
-    Running: '\u{1F3C3}', Cycling: '\u{1F6B4}', Swimming: '\u{1F3CA}', CrossFit: '\u{1F3CB}\uFE0F',
-    Boxing: '\u{1F94A}', 'Jiu-Jitsu': '\u{1F94B}', Soccer: '\u26BD', Basketball: '\u{1F3C0}',
-    Volleyball: '\u{1F3D0}', Yoga: '\u{1F9D8}', Tennis: '\u{1F3BE}', Hiking: '\u{1F97E}',
-    Dance: '\u{1F483}', Padel: '\u{1F3BE}', Skateboarding: '\u{1F6F9}', BMX: '\u{1F6B2}',
-    Surfing: '\u{1F3C4}', 'Rock Climbing': '\u{1F9D7}', Golf: '\u26F3', Rugby: '\u{1F3C9}',
-    Calisthenics: '\u{1F4AA}', 'Martial Arts': '\u{1F94B}',
+    Running: '\u{1F3C3}',
+    Cycling: '\u{1F6B4}',
+    Swimming: '\u{1F3CA}',
+    CrossFit: '\u{1F3CB}\uFE0F',
+    Boxing: '\u{1F94A}',
+    'Jiu-Jitsu': '\u{1F94B}',
+    Soccer: '\u26BD',
+    Basketball: '\u{1F3C0}',
+    Volleyball: '\u{1F3D0}',
+    Yoga: '\u{1F9D8}',
+    Tennis: '\u{1F3BE}',
+    Hiking: '\u{1F97E}',
+    Dance: '\u{1F483}',
+    Padel: '\u{1F3BE}',
+    Skateboarding: '\u{1F6F9}',
+    BMX: '\u{1F6B2}',
+    Surfing: '\u{1F3C4}',
+    'Rock Climbing': '\u{1F9D7}',
+    Golf: '\u26F3',
+    Rugby: '\u{1F3C9}',
+    Calisthenics: '\u{1F4AA}',
+    'Martial Arts': '\u{1F94B}',
   };
   return map[sport] || '\u{1F4AA}';
 }
@@ -160,7 +179,8 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
     try {
       const { data, error } = await supabase
         .from('session_stories')
-        .select(`
+        .select(
+          `
           id,
           session_id,
           user_id,
@@ -171,12 +191,13 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
           created_at,
           user:users!session_stories_user_id_fkey(name, avatar_url),
           session:sessions!session_stories_session_id_fkey(sport)
-        `)
+        `
+        )
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading stories:', error);
+        logError(error, { action: 'loadStories' });
         return;
       }
 
@@ -222,7 +243,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
       setGroups(grouped);
       setCachedStories(grouped);
     } catch (err) {
-      console.error('Error in loadStories:', err);
+      logError(err, { action: 'loadStories' });
     } finally {
       setLoaded(true);
     }
@@ -241,9 +262,11 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
   function handleYourStoryClick() {
     if (!userId) return;
     if (activeSessions.length === 0) {
-      showInfo(language === 'es'
-        ? 'Únete o crea una sesión primero para publicar una historia'
-        : 'Join or create a session first to post a story');
+      showInfo(
+        language === 'es'
+          ? 'Únete o crea una sesión primero para publicar una historia'
+          : 'Join or create a session first to post a story'
+      );
     } else if (activeSessions.length === 1) {
       setSelectedSessionId(activeSessions[0].id);
       setShowUpload(true);
@@ -256,8 +279,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
   if (!loaded) return null;
   if (groups.length === 0 && !userId) return null;
 
-  const hasUnseen = (group: SessionStoryGroup) =>
-    group.stories.some(s => !seenIds.has(s.id));
+  const hasUnseen = (group: SessionStoryGroup) => group.stories.some((s) => !seenIds.has(s.id));
 
   function truncate(text: string, max: number) {
     return text.length > max ? text.slice(0, max) + '...' : text;
@@ -270,14 +292,15 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
           className="flex gap-3 overflow-x-auto pb-2"
           style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <style jsx>{`div::-webkit-scrollbar { display: none; }`}</style>
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
 
           {/* Current user's "+" circle */}
           {userId && (
-            <button
-              onClick={handleYourStoryClick}
-              className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]"
-            >
+            <button onClick={handleYourStoryClick} className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]">
               <div className="relative">
                 <div className="w-14 h-14 rounded-full border-2 border-stone-300 dark:border-gray-500 overflow-hidden bg-stone-200 dark:bg-[#3D4349] flex items-center justify-center">
                   {userAvatar ? (
@@ -300,7 +323,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
           {groups.map((group, i) => {
             const firstStory = group.stories[0];
             const unseen = hasUnseen(group);
-            const hasLiveAuthor = liveUserIds ? group.stories.some(s => liveUserIds.has(s.user_id)) : false;
+            const hasLiveAuthor = liveUserIds ? group.stories.some((s) => liveUserIds.has(s.user_id)) : false;
             return (
               <button
                 key={group.sessionId}
@@ -320,9 +343,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
                     {firstStory.user_avatar ? (
                       <img src={firstStory.user_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-lg font-bold text-stone-500">
-                        {firstStory.user_name[0]?.toUpperCase()}
-                      </span>
+                      <span className="text-lg font-bold text-stone-500">{firstStory.user_name[0]?.toUpperCase()}</span>
                     )}
                   </div>
                 </div>
@@ -342,13 +363,19 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
           currentUserId={userId}
           onClose={() => setViewerOpen(false)}
           onStorySeen={handleStoryViewed}
-          onStoryDeleted={() => { sessionStorage.removeItem(CACHE_KEY); loadStories(); }}
+          onStoryDeleted={() => {
+            sessionStorage.removeItem(CACHE_KEY);
+            loadStories();
+          }}
         />
       )}
 
       {/* Session Picker bottom sheet */}
       {showSessionPicker && (
-        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50" onClick={() => setShowSessionPicker(false)}>
+        <div
+          className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50"
+          onClick={() => setShowSessionPicker(false)}
+        >
           <div
             className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[70vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -357,7 +384,10 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
               <h3 className="text-lg font-bold text-theme-primary">
                 {language === 'es' ? 'Elegir Sesión' : 'Choose Session'}
               </h3>
-              <button onClick={() => setShowSessionPicker(false)} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition">
+              <button
+                onClick={() => setShowSessionPicker(false)}
+                className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition"
+              >
                 <X className="w-5 h-5 text-theme-primary" />
               </button>
             </div>
@@ -377,12 +407,16 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
                   </div>
                   <div className="flex-1 text-left min-w-0">
                     <div className="font-semibold text-theme-primary text-sm">
-                      {language === 'es' ? (sportTranslations[s.sport]?.es || s.sport) : s.sport}
+                      {language === 'es' ? sportTranslations[s.sport]?.es || s.sport : s.sport}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-theme-secondary">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(s.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {new Date(s.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </span>
                       {s.location && (
                         <span className="flex items-center gap-1 truncate">
@@ -404,8 +438,14 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
         <StoryUpload
           sessionId={selectedSessionId}
           userId={userId}
-          onClose={() => { setShowUpload(false); setSelectedSessionId(null); }}
-          onUploaded={() => { sessionStorage.removeItem(CACHE_KEY); loadStories(); }}
+          onClose={() => {
+            setShowUpload(false);
+            setSelectedSessionId(null);
+          }}
+          onUploaded={() => {
+            sessionStorage.removeItem(CACHE_KEY);
+            loadStories();
+          }}
         />
       )}
     </>

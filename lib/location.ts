@@ -1,3 +1,5 @@
+import { log, logError } from '@/lib/logger';
+
 export interface Location {
   latitude: number;
   longitude: number;
@@ -6,7 +8,7 @@ export interface Location {
 export async function getUserLocation(): Promise<Location | null> {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      console.error('Geolocation not supported');
+      log('error', 'Geolocation not supported', { action: 'getUserLocation' });
       resolve(null);
       return;
     }
@@ -19,7 +21,7 @@ export async function getUserLocation(): Promise<Location | null> {
         });
       },
       (error) => {
-        console.error('Error getting location:', error);
+        logError(error, { action: 'getUserLocation' });
         resolve(null);
       },
       {
@@ -49,7 +51,7 @@ export async function geocodeAddress(address: string): Promise<Location | null> 
 
     return null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    logError(error, { action: 'geocodeAddress' });
     return null;
   }
 }

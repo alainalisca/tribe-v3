@@ -1,4 +1,5 @@
 'use client';
+import { log, logError } from '@/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Navigation } from 'lucide-react';
@@ -30,7 +31,7 @@ export default function TrainingNowPage() {
     duration: 60,
   });
 
-  const sports = Object.keys(sportTranslations).filter(s => s !== 'All');
+  const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   const getTranslatedSport = (sport: string) => {
     if (language === 'es' && sportTranslations[sport]?.es) {
@@ -41,7 +42,9 @@ export default function TrainingNowPage() {
 
   useEffect(() => {
     async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push('/');
         return;
@@ -64,20 +67,20 @@ export default function TrainingNowPage() {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          setFormData(prev => ({ ...prev, latitude, longitude }));
+          setFormData((prev) => ({ ...prev, latitude, longitude }));
 
           try {
             const name = await reverseGeocodeGoogle(latitude, longitude);
             if (name) {
-              setFormData(prev => ({ ...prev, location: name }));
+              setFormData((prev) => ({ ...prev, location: name }));
             }
           } catch (error) {
-            console.error('Error getting address:', error);
+            logError(error, { action: 'getCurrentLocation' });
           }
           setGettingLocation(false);
         },
         (error) => {
-          console.error('Error getting location:', error);
+          logError(error, { action: 'getCurrentLocation' });
           showError(language === 'es' ? 'No se pudo obtener ubicación' : 'Could not get location');
           setGettingLocation(false);
         },
@@ -112,9 +115,10 @@ export default function TrainingNowPage() {
           longitude: formData.longitude,
           max_participants: 10,
           join_policy: 'open',
-          description: language === 'es'
-            ? `¡Sesión espontánea de ${formData.sport}! Únete ahora.`
-            : `Spontaneous ${formData.sport} session! Join now.`,
+          description:
+            language === 'es'
+              ? `¡Sesión espontánea de ${formData.sport}! Únete ahora.`
+              : `Spontaneous ${formData.sport} session! Join now.`,
           status: 'active',
           is_training_now: true,
         })
@@ -130,19 +134,37 @@ export default function TrainingNowPage() {
       });
 
       // Fire-and-forget: don't block navigation waiting for notifications
-      notifyNearbyUsers(session.id, formData.sport, formData.location, formData.latitude!, formData.longitude!, formData.startIn);
+      notifyNearbyUsers(
+        session.id,
+        formData.sport,
+        formData.location,
+        formData.latitude!,
+        formData.longitude!,
+        formData.startIn
+      );
 
-      showSuccess(language === 'es' ? '¡Sesión creada! Notificando compañeros cercanos...' : 'Session created! Notifying nearby partners...');
+      showSuccess(
+        language === 'es'
+          ? '¡Sesión creada! Notificando compañeros cercanos...'
+          : 'Session created! Notifying nearby partners...'
+      );
       router.push(`/session/${session.id}`);
     } catch (error: any) {
-      console.error('Error creating session:', error);
+      logError(error, { action: 'handleSubmit' });
       showError(getErrorMessage(error, 'create_session', language));
     } finally {
       setLoading(false);
     }
   }
 
-  async function notifyNearbyUsers(sessionId: string, sport: string, location: string, lat: number, lng: number, startIn: number) {
+  async function notifyNearbyUsers(
+    sessionId: string,
+    sport: string,
+    location: string,
+    lat: number,
+    lng: number,
+    startIn: number
+  ) {
     try {
       const response = await fetch('/api/notify-nearby', {
         method: 'POST',
@@ -159,34 +181,37 @@ export default function TrainingNowPage() {
       });
 
       if (!response.ok) {
-        console.error('Failed to notify nearby users');
+        log('error', 'Failed to notify nearby users', { action: 'notifyNearbyUsers', sessionId });
       }
     } catch (error) {
-      console.error('Error notifying nearby users:', error);
+      logError(error, { action: 'notifyNearbyUsers' });
     }
   }
 
-  const txt = language === 'es' ? {
-    title: 'Entrenar Ahora',
-    whatTraining: '¿Qué vas a entrenar?',
-    where: '¿Dónde?',
-    useLocation: 'Usar mi ubicación',
-    whenStarting: '¿Cuándo empiezas?',
-    now: 'Ahora',
-    howLong: '¿Cuánto tiempo?',
-    notify: 'NOTIFICAR COMPAÑEROS CERCANOS',
-    creating: 'Creando...',
-  } : {
-    title: 'Training Now',
-    whatTraining: 'What are you training?',
-    where: 'Where?',
-    useLocation: 'Use my location',
-    whenStarting: 'When are you starting?',
-    now: 'Now',
-    howLong: 'How long?',
-    notify: 'NOTIFY NEARBY PARTNERS',
-    creating: 'Creating...',
-  };
+  const txt =
+    language === 'es'
+      ? {
+          title: 'Entrenar Ahora',
+          whatTraining: '¿Qué vas a entrenar?',
+          where: '¿Dónde?',
+          useLocation: 'Usar mi ubicación',
+          whenStarting: '¿Cuándo empiezas?',
+          now: 'Ahora',
+          howLong: '¿Cuánto tiempo?',
+          notify: 'NOTIFICAR COMPAÑEROS CERCANOS',
+          creating: 'Creando...',
+        }
+      : {
+          title: 'Training Now',
+          whatTraining: 'What are you training?',
+          where: 'Where?',
+          useLocation: 'Use my location',
+          whenStarting: 'When are you starting?',
+          now: 'Now',
+          howLong: 'How long?',
+          notify: 'NOTIFY NEARBY PARTNERS',
+          creating: 'Creating...',
+        };
 
   const startOptions = [
     { value: 0, label: txt.now },
@@ -252,7 +277,7 @@ export default function TrainingNowPage() {
           <LocationPicker
             value={formData.location}
             onChange={(location, coords) => {
-              setFormData(prev => ({
+              setFormData((prev) => ({
                 ...prev,
                 location,
                 latitude: coords?.lat ?? prev.latitude,

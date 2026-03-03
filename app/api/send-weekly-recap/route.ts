@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { logError } from '@/lib/logger';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -13,12 +14,12 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    
+
     const { data: users } = await supabase
       .from('users')
       .select('id, name, email, preferred_language')
       .not('email', 'is', null);
-    
+
     if (!users) {
       return NextResponse.json({ error: 'No users found' }, { status: 400 });
     }
@@ -34,7 +35,8 @@ export async function POST(request: Request) {
       try {
         const { data: participatedSessions } = await supabase
           .from('session_participants')
-          .select(`
+          .select(
+            `
             session:sessions(
               id,
               sport,
@@ -43,7 +45,8 @@ export async function POST(request: Request) {
               start_time,
               creator:users!creator_id(name)
             )
-          `)
+          `
+          )
           .eq('user_id', user.id)
           .eq('status', 'accepted')
           .gte('session.date', oneWeekAgoStr);
@@ -61,13 +64,9 @@ export async function POST(request: Request) {
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';
 
-        const subject = isSpanish
-          ? `📊 Tu resumen semanal de Tribe`
-          : `📊 Your Tribe weekly recap`;
+        const subject = isSpanish ? `📊 Tu resumen semanal de Tribe` : `📊 Your Tribe weekly recap`;
 
-        const greeting = isSpanish
-          ? `¡Hola ${user.name}! 👋`
-          : `Hi ${user.name}! 👋`;
+        const greeting = isSpanish ? `¡Hola ${user.name}! 👋` : `Hi ${user.name}! 👋`;
 
         const summary = isSpanish
           ? `Esta semana tuviste <strong>${totalSessions} ${totalSessions === 1 ? 'sesión' : 'sesiones'}</strong>.`
@@ -75,14 +74,12 @@ export async function POST(request: Request) {
 
         const participatedHeader = isSpanish ? 'Sesiones en las que participaste:' : 'Sessions you joined:';
         const hostedHeader = isSpanish ? 'Sesiones que organizaste:' : 'Sessions you hosted:';
-        const keepGoing = isSpanish 
-          ? '¡Sigue así! Nunca entrenes solo. 💪'
-          : 'Keep it up! Never train alone. 💪';
+        const keepGoing = isSpanish ? '¡Sigue así! Nunca entrenes solo. 💪' : 'Keep it up! Never train alone. 💪';
         const findMore = isSpanish ? 'Encuentra más sesiones' : 'Find more sessions';
         const tagline = isSpanish ? 'Nunca Entrenes Solo' : 'Never Train Alone';
 
         let sessionsHTML = '';
-        
+
         if (participatedSessions && participatedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${participatedHeader}</h3><ul style="color: #374151;">`;
           participatedSessions.forEach((item: any) => {
@@ -138,24 +135,24 @@ export async function POST(request: Request) {
                 © ${new Date().getFullYear()} Tribe · ${tagline}
               </p>
             </div>
-          `
+          `,
         });
 
         emailsSent++;
       } catch (error: any) {
-        console.error(`Error sending recap to ${user.email}:`, error);
+        logError(error, { route: '/api/send-weekly-recap', action: 'send_recap_email', userId: user.id });
         errors++;
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       emailsSent,
       errors,
-      totalUsers: users.length 
+      totalUsers: users.length,
     });
   } catch (error: any) {
-    console.error('Weekly recap error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    logError(error, { route: '/api/send-weekly-recap', action: 'weekly_recap' });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
