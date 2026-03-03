@@ -44,36 +44,61 @@ export default function SessionDetails({
             {session.sport}
           </span>
           {session.skill_level && (
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-              session.skill_level === 'beginner' ? 'bg-green-100 text-green-800' :
-              session.skill_level === 'intermediate' ? 'bg-blue-100 text-blue-800' :
-              session.skill_level === 'advanced' ? 'bg-orange-100 text-orange-800' :
-              'bg-purple-100 text-purple-800'
-            }`}>
-              {session.skill_level === 'beginner' ? '🌱' :
-               session.skill_level === 'intermediate' ? '💪' :
-               session.skill_level === 'advanced' ? '🔥' : '🌟'}{' '}
-              {session.skill_level === 'beginner' ? (language === 'es' ? 'Principiante' : 'Beginner') :
-               session.skill_level === 'intermediate' ? (language === 'es' ? 'Intermedio' : 'Intermediate') :
-               session.skill_level === 'advanced' ? (language === 'es' ? 'Avanzado' : 'Advanced') :
-               (language === 'es' ? 'Todos los Niveles' : 'All Levels')}
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                session.skill_level === 'beginner'
+                  ? 'bg-green-100 text-green-800'
+                  : session.skill_level === 'intermediate'
+                    ? 'bg-blue-100 text-blue-800'
+                    : session.skill_level === 'advanced'
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-purple-100 text-purple-800'
+              }`}
+            >
+              {session.skill_level === 'beginner'
+                ? '🌱'
+                : session.skill_level === 'intermediate'
+                  ? '💪'
+                  : session.skill_level === 'advanced'
+                    ? '🔥'
+                    : '🌟'}{' '}
+              {session.skill_level === 'beginner'
+                ? language === 'es'
+                  ? 'Principiante'
+                  : 'Beginner'
+                : session.skill_level === 'intermediate'
+                  ? language === 'es'
+                    ? 'Intermedio'
+                    : 'Intermediate'
+                  : session.skill_level === 'advanced'
+                    ? language === 'es'
+                      ? 'Avanzado'
+                      : 'Advanced'
+                    : language === 'es'
+                      ? 'Todos los Niveles'
+                      : 'All Levels'}
             </span>
           )}
           {session.gender_preference && session.gender_preference !== 'all' && (
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-              session.gender_preference === 'women_only' ? 'bg-pink-100 text-pink-800' :
-              'bg-sky-100 text-sky-800'
-            }`}>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                session.gender_preference === 'women_only' ? 'bg-pink-100 text-pink-800' : 'bg-sky-100 text-sky-800'
+              }`}
+            >
               {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
               {session.gender_preference === 'women_only'
-                ? (language === 'es' ? 'Solo Mujeres' : 'Women Only')
-                : (language === 'es' ? 'Solo Hombres' : 'Men Only')}
+                ? language === 'es'
+                  ? 'Solo Mujeres'
+                  : 'Women Only'
+                : language === 'es'
+                  ? 'Solo Hombres'
+                  : 'Men Only'}
             </span>
           )}
         </div>
         <div className="text-right">
           <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
-            {participants.length}/{session.max_participants} joined
+            {participants.length}/{session.max_participants} {language === 'es' ? 'unidos' : 'joined'}
           </div>
           <div className="w-24 h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
             <div
@@ -89,7 +114,7 @@ export default function SessionDetails({
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-tribe-green" />
             <p className="text-sm font-medium text-stone-700 dark:text-gray-300">
-              Location Photos
+              {language === 'es' ? 'Fotos del lugar' : 'Location Photos'}
             </p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -99,11 +124,7 @@ export default function SessionDetails({
                 onClick={() => onOpenLightbox(idx, 'location')}
                 className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
               >
-                <img loading="lazy"
-                  src={photo}
-                  alt={`Location ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                <img loading="lazy" src={photo} alt={`Location ${idx + 1}`} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -114,18 +135,20 @@ export default function SessionDetails({
         <div className="flex items-center text-stone-900 dark:text-white">
           <Calendar className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
           <span className="font-medium">
-            {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
+            {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
               weekday: 'long',
               month: 'long',
               day: 'numeric',
-              year: 'numeric'
+              year: 'numeric',
             })}
           </span>
         </div>
 
         <div className="flex items-center text-stone-900 dark:text-white">
           <Clock className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
-          <span>{formatTime12Hour(session.start_time)} • {session.duration} min</span>
+          <span>
+            {formatTime12Hour(session.start_time)} • {session.duration} min
+          </span>
         </div>
 
         <div className="flex items-start text-stone-900 dark:text-white">
@@ -146,18 +169,14 @@ export default function SessionDetails({
         )}
 
         <div className="mt-4">
-          <LocationMap
-            latitude={session.latitude}
-            longitude={session.longitude}
-            location={session.location}
-          />
+          <LocationMap latitude={session.latitude} longitude={session.longitude} location={session.location} />
         </div>
 
         {creator && (
           <div className="flex items-center justify-between text-stone-900 dark:text-white">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
-              <span>Hosted by {creator.name}</span>
+              <span>{language === 'es' ? `Organizada por ${creator.name}` : `Hosted by ${creator.name}`}</span>
             </div>
             {creator.average_rating && creator.average_rating > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">

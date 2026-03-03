@@ -4,18 +4,34 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
 
   // Common Supabase/Postgres errors
   const errorMap: Record<string, { en: string; es: string }> = {
-    // Auth errors
+    // Auth errors — match Supabase error strings
+    'Invalid login credentials': {
+      en: 'Incorrect email or password. Please try again.',
+      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+    },
     invalid_credentials: {
-      en: 'Invalid email or password. Please try again.',
-      es: 'Email o contraseña inválidos. Inténtalo de nuevo.',
+      en: 'Incorrect email or password. Please try again.',
+      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+    },
+    'User already registered': {
+      en: 'An account with this email already exists.',
+      es: 'Ya existe una cuenta con este correo.',
     },
     user_already_exists: {
       en: 'An account with this email already exists.',
-      es: 'Ya existe una cuenta con este email.',
+      es: 'Ya existe una cuenta con este correo.',
+    },
+    'Email not confirmed': {
+      en: 'Please verify your email before signing in.',
+      es: 'Por favor verifica tu correo antes de iniciar sesión.',
     },
     email_not_confirmed: {
-      en: 'Please verify your email address first.',
-      es: 'Por favor verifica tu dirección de email primero.',
+      en: 'Please verify your email before signing in.',
+      es: 'Por favor verifica tu correo antes de iniciar sesión.',
+    },
+    'Password should be at least': {
+      en: 'Password must be at least 6 characters.',
+      es: 'La contraseña debe tener al menos 6 caracteres.',
     },
 
     // Database errors
@@ -107,17 +123,33 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       en: 'Could not sign in with Apple. Please try again.',
       es: 'No se pudo iniciar sesión con Apple. Inténtalo de nuevo.',
     },
+    login: {
+      en: 'Incorrect email or password. Please try again.',
+      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+    },
+    signup: {
+      en: 'Could not create account. Please try again.',
+      es: 'No se pudo crear la cuenta. Inténtalo de nuevo.',
+    },
+    email_taken: {
+      en: 'An account with this email already exists.',
+      es: 'Ya existe una cuenta con este correo.',
+    },
     email_auth: {
       en: 'Sign in failed. Please check your credentials and try again.',
       es: 'Error al iniciar sesión. Verifica tus credenciales e inténtalo de nuevo.',
     },
     forgot_password: {
       en: 'Could not send reset email. Please try again.',
-      es: 'No se pudo enviar el email de restablecimiento. Inténtalo de nuevo.',
+      es: 'No se pudo enviar el correo de restablecimiento. Inténtalo de nuevo.',
     },
     reset_password: {
       en: 'Could not reset password. Please try again.',
       es: 'No se pudo restablecer la contraseña. Inténtalo de nuevo.',
+    },
+    weak_password: {
+      en: 'Password must be at least 6 characters.',
+      es: 'La contraseña debe tener al menos 6 caracteres.',
     },
   };
 

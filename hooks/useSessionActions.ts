@@ -181,7 +181,12 @@ export function useSessionActions({
   }
 
   async function handleLeave() {
-    if (!confirm('Are you sure you want to leave this session?')) return;
+    if (
+      !confirm(
+        language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?'
+      )
+    )
+      return;
     if (!user) return;
     try {
       const { error } = await supabase
@@ -202,7 +207,14 @@ export function useSessionActions({
   }
 
   async function handleCancel() {
-    if (!confirm('Cancel this session? All participants will be notified. This cannot be undone.')) return;
+    if (
+      !confirm(
+        language === 'es'
+          ? '¿Cancelar esta sesión? Todos los participantes serán notificados. Esto no se puede deshacer.'
+          : 'Cancel this session? All participants will be notified. This cannot be undone.'
+      )
+    )
+      return;
     try {
       const result = await cancelSession(supabase, session.id);
       if (!result.success) throw new Error(result.error);
@@ -214,7 +226,10 @@ export function useSessionActions({
   }
 
   async function handleKickUser(userId: string, userName: string) {
-    if (!confirm(`Remove ${userName} from this session?`)) return;
+    if (
+      !confirm(language === 'es' ? `¿Eliminar a ${userName} de esta sesión?` : `Remove ${userName} from this session?`)
+    )
+      return;
     try {
       const { error: deleteError } = await supabase
         .from('session_participants')
@@ -229,7 +244,7 @@ export function useSessionActions({
       setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
       // REASON: Session state is untyped — full typing deferred to future migration
       setSession((prev: any) => ({ ...prev, current_participants: Math.max(0, prev.current_participants - 1) }));
-      showSuccess('User removed from session');
+      showSuccess(language === 'es' ? 'Usuario eliminado de la sesión' : 'User removed from session');
     } catch (error) {
       showError(getErrorMessage(error, 'join_session', language));
     }

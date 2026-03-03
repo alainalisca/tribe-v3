@@ -19,6 +19,7 @@ export default function AuthCallbackPage() {
     const type = searchParams.get('type');
     const errorParam = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const returnTo = searchParams.get('returnTo');
 
     // Handle error params from Supabase OAuth redirect
     if (errorParam && !code) {
@@ -73,7 +74,7 @@ export default function AuthCallbackPage() {
       if (data?.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         if (isNewUser) {
-          window.location.href = '/profile';
+          window.location.href = '/profile/edit';
           return;
         }
       }
@@ -82,7 +83,7 @@ export default function AuthCallbackPage() {
     }
 
     // Existing user — go home
-    window.location.href = '/';
+    window.location.href = returnTo ? decodeURIComponent(returnTo) : '/';
   }
 
   return (
@@ -91,12 +92,12 @@ export default function AuthCallbackPage() {
         {error ? (
           <div className="space-y-4">
             <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-            <p className="text-stone-500 dark:text-gray-400 text-sm">Redirecting...</p>
+            <p className="text-stone-500 dark:text-gray-400 text-sm">Redirecting... / Redirigiendo...</p>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="w-8 h-8 border-3 border-tribe-green border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-stone-600 dark:text-gray-300 text-sm">Signing in...</p>
+            <p className="text-stone-600 dark:text-gray-300 text-sm">Signing in... / Iniciando sesión...</p>
           </div>
         )}
       </div>

@@ -22,28 +22,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
 
-    const { email, password, name, birthDate, acceptedTos } = await request.json();
+    const { email, password, name, birthDate, acceptedTos, language } = await request.json();
+    const lang = (language === 'es' ? 'es' : 'en') as 'en' | 'es';
 
     // Server-side validation
     if (!email || !password || !name || !birthDate) {
-      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: lang === 'es' ? 'Todos los campos son obligatorios' : 'All fields are required' },
+        { status: 400 }
+      );
     }
 
     // Age validation (server-side - cannot be bypassed)
     const age = calculateAge(birthDate);
     if (age < 18) {
-      return NextResponse.json({ error: 'You must be 18 or older to use Tribe' }, { status: 403 });
+      return NextResponse.json(
+        { error: lang === 'es' ? 'Debes tener 18 años o más para usar Tribe' : 'You must be 18 or older to use Tribe' },
+        { status: 403 }
+      );
     }
 
     // ToS validation
     if (!acceptedTos) {
-      return NextResponse.json({ error: 'You must accept the Terms of Service' }, { status: 400 });
+      return NextResponse.json(
+        { error: lang === 'es' ? 'Debes aceptar los Términos de Servicio' : 'You must accept the Terms of Service' },
+        { status: 400 }
+      );
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+      return NextResponse.json(
+        { error: lang === 'es' ? 'Dirección de correo inválida' : 'Invalid email address' },
+        { status: 400 }
+      );
     }
 
     const supabase = await createClient();

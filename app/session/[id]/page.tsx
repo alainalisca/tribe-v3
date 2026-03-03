@@ -299,7 +299,9 @@ export default function SessionDetailPage() {
   if (!session)
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-stone-900 dark:text-white">Session not found</p>
+        <p className="text-stone-900 dark:text-white">
+          {language === 'es' ? 'Sesión no encontrada' : 'Session not found'}
+        </p>
       </div>
     );
 
@@ -437,7 +439,7 @@ export default function SessionDetailPage() {
           ) : isCreator ? (
             <>
               <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">
-                You&apos;re hosting this session
+                {language === 'es' ? 'Tú organizas esta sesión' : "You're hosting this session"}
               </div>
               {!isPast && (
                 <>
@@ -478,14 +480,14 @@ export default function SessionDetailPage() {
               disabled
               className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
             >
-              Session Ended
+              {language === 'es' ? 'Sesión Terminada' : 'Session Ended'}
             </button>
           ) : isFull ? (
             <button
               disabled
               className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
             >
-              Session Full
+              {language === 'es' ? 'Sesión Llena' : 'Session Full'}
             </button>
           ) : (
             <button

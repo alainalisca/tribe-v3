@@ -25,6 +25,7 @@ export default function AuthPage() {
   const [birthDate, setBirthDate] = useState('');
   const [acceptedTos, setAcceptedTos] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,11 +35,16 @@ export default function AuthPage() {
 
   // If user is already authenticated, redirect to home
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && !mode) {
-        router.replace('/');
-      }
-    });
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (user && !mode) {
+          router.replace('/');
+        } else {
+          setCheckingAuth(false);
+        }
+      })
+      .catch(() => setCheckingAuth(false));
   }, []);
 
   useEffect(() => {
@@ -130,19 +136,38 @@ export default function AuthPage() {
 
         if (data.user) {
           const { isNewUser } = await upsertUserProfile(data.user);
-          window.location.href = isNewUser ? '/profile' : '/';
+          const returnTo = searchParams.get('returnTo');
+          window.location.href = isNewUser ? '/profile/edit' : returnTo ? decodeURIComponent(returnTo) : '/';
         }
       } else {
         // Web: redirect-based OAuth flow (works in real browsers)
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: `${window.location.origin}/auth/callback?returnTo=${searchParams.get('returnTo') || ''}`,
           },
         });
         if (error) throw error;
       }
     } catch (err) {
+      // User cancelled — silently return
+      if (err && typeof err === 'object' && 'code' in err) {
+        const code = (err as Record<string, unknown>).code;
+        if (code === '12501' || code === 12501) {
+          setGoogleLoading(false);
+          return;
+        }
+      }
+      if (
+        err instanceof Error &&
+        (err.message.includes('popup_closed') ||
+          err.message.includes('cancelled') ||
+          err.message.includes('canceled') ||
+          err.message.includes('user denied'))
+      ) {
+        setGoogleLoading(false);
+        return;
+      }
       logError(err, { action: 'handleGoogleSignIn' });
       showError(getErrorMessage(err, 'google_sign_in', language));
       setGoogleLoading(false);
@@ -175,19 +200,32 @@ export default function AuthPage() {
             ? `${result.response.givenName} ${result.response.familyName || ''}`.trim()
             : undefined;
           const { isNewUser } = await upsertUserProfile(data.user, fullName);
-          window.location.href = isNewUser ? '/profile' : '/';
+          const returnTo = searchParams.get('returnTo');
+          window.location.href = isNewUser ? '/profile/edit' : returnTo ? decodeURIComponent(returnTo) : '/';
         }
       } else {
         // Web: redirect-based OAuth flow (works in real browsers)
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
           options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: `${window.location.origin}/auth/callback?returnTo=${searchParams.get('returnTo') || ''}`,
           },
         });
         if (error) throw error;
       }
     } catch (err) {
+      // User cancelled — silently return
+      if (err && typeof err === 'object' && 'code' in err) {
+        const code = (err as Record<string, unknown>).code;
+        if (code === '1001' || code === 1001) {
+          setAppleLoading(false);
+          return;
+        }
+      }
+      if (err instanceof Error && (err.message.includes('cancelled') || err.message.includes('canceled'))) {
+        setAppleLoading(false);
+        return;
+      }
       logError(err, { action: 'handleAppleSignIn' });
       showError(getErrorMessage(err, 'apple_sign_in', language));
       setAppleLoading(false);
@@ -226,7 +264,8 @@ export default function AuthPage() {
         }
 
         // Use hard redirect for Safari compatibility
-        window.location.href = '/';
+        const returnTo = searchParams.get('returnTo');
+        window.location.href = returnTo ? decodeURIComponent(returnTo) : '/';
       } else {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -256,7 +295,7 @@ export default function AuthPage() {
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name, birthDate, acceptedTos }),
+          body: JSON.stringify({ email, password, name, birthDate, acceptedTos, language }),
         });
 
         const result = await response.json();
@@ -327,6 +366,14 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-tribe-green border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -523,6 +570,42 @@ export default function AuthPage() {
                   minLength={6}
                   className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
                 />
+                {!isLogin && password && (
+                  <div className="mt-2">
+                    <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all ${
+                          password.length < 6
+                            ? 'w-1/4 bg-red-500'
+                            : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                              ? 'w-2/4 bg-yellow-500'
+                              : 'w-full bg-green-500'
+                        }`}
+                      />
+                    </div>
+                    <p
+                      className={`text-xs mt-1 ${
+                        password.length < 6
+                          ? 'text-red-500'
+                          : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                            ? 'text-yellow-600'
+                            : 'text-green-600'
+                      }`}
+                    >
+                      {password.length < 6
+                        ? language === 'es'
+                          ? 'Muy corta'
+                          : 'Too short'
+                        : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                          ? language === 'es'
+                            ? 'Débil'
+                            : 'Weak'
+                          : language === 'es'
+                            ? 'Fuerte'
+                            : 'Strong'}
+                    </p>
+                  </div>
+                )}
                 {isLogin && (
                   <button
                     type="button"
