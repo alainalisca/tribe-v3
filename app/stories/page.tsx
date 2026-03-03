@@ -61,23 +61,28 @@ export default function StoriesPage() {
   const [viewerStartIndex, setViewerStartIndex] = useState(0);
   const [StoryViewerComp, setStoryViewerComp] = useState<any>(null);
 
-  const t = language === 'es' ? {
-    stories: 'Historias',
-    noStories: 'No hay historias aún',
-    noStoriesDesc: 'Las historias de sesiones aparecerán aquí. ¡Sé el primero en compartir tu entrenamiento!',
-  } : {
-    stories: 'Stories',
-    noStories: 'No stories yet',
-    noStoriesDesc: 'Session stories will appear here. Be the first to share your training!',
-  };
+  const t =
+    language === 'es'
+      ? {
+          stories: 'Historias',
+          noStories: 'No hay historias aún',
+          noStoriesDesc: 'Las historias de sesiones aparecerán aquí. ¡Sé el primero en compartir tu entrenamiento!',
+        }
+      : {
+          stories: 'Stories',
+          noStories: 'No stories yet',
+          noStoriesDesc: 'Session stories will appear here. Be the first to share your training!',
+        };
 
   // Lazy-load StoryViewer to avoid potential import issues
   useEffect(() => {
-    import('@/components/StoryViewer').then(mod => {
-      setStoryViewerComp(() => mod.default);
-    }).catch(err => {
-      console.error('Failed to load StoryViewer:', err);
-    });
+    import('@/components/StoryViewer')
+      .then((mod) => {
+        setStoryViewerComp(() => mod.default);
+      })
+      .catch((err) => {
+        console.error('Failed to load StoryViewer:', err);
+      });
   }, []);
 
   // Lazy-load markStoriesSeen
@@ -85,7 +90,7 @@ export default function StoriesPage() {
     try {
       const raw = localStorage.getItem('tribe_seen_stories');
       const seen = new Set(raw ? JSON.parse(raw) : []);
-      ids.forEach(id => seen.add(id));
+      ids.forEach((id) => seen.add(id));
       const arr = [...seen].slice(-500);
       localStorage.setItem('tribe_seen_stories', JSON.stringify(arr));
     } catch {}
@@ -101,7 +106,9 @@ export default function StoriesPage() {
 
   async function checkUser() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push('/auth');
       } else {
@@ -117,7 +124,8 @@ export default function StoriesPage() {
     try {
       const { data, error } = await supabase
         .from('session_stories')
-        .select(`
+        .select(
+          `
           id,
           session_id,
           user_id,
@@ -128,7 +136,8 @@ export default function StoriesPage() {
           created_at,
           user:users!session_stories_user_id_fkey(name, avatar_url),
           session:sessions!session_stories_session_id_fkey(sport)
-        `)
+        `
+        )
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
@@ -203,7 +212,7 @@ export default function StoriesPage() {
   }
 
   function openStoryViewer(story: Story) {
-    const groupIdx = groups.findIndex(g => g.sessionId === story.sessionId);
+    const groupIdx = groups.findIndex((g) => g.sessionId === story.sessionId);
     if (groupIdx >= 0) {
       setViewerStartIndex(groupIdx);
       setViewerOpen(true);
@@ -229,9 +238,7 @@ export default function StoriesPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">
-            {t.stories}
-          </h1>
+          <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">{t.stories}</h1>
         </div>
       </div>
 
@@ -243,22 +250,15 @@ export default function StoriesPage() {
         ) : allStories.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D] mt-4">
             <div className="text-4xl mb-4">📸</div>
-            <p className="text-lg font-semibold text-theme-primary mb-2">
-              {t.noStories}
-            </p>
-            <p className="text-sm text-theme-secondary">
-              {t.noStoriesDesc}
-            </p>
+            <p className="text-lg font-semibold text-theme-primary mb-2">{t.noStories}</p>
+            <p className="text-sm text-theme-secondary">{t.noStoriesDesc}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {allStories.map((story) => {
-              const thumbnail = story.media_type === 'video' && story.thumbnail_url
-                ? story.thumbnail_url
-                : story.media_url;
-              const sportName = language === 'es'
-                ? (sportTranslations[story.sport]?.es || story.sport)
-                : story.sport;
+              const thumbnail =
+                story.media_type === 'video' && story.thumbnail_url ? story.thumbnail_url : story.media_url;
+              const sportName = language === 'es' ? sportTranslations[story.sport]?.es || story.sport : story.sport;
 
               return (
                 <button
@@ -272,7 +272,9 @@ export default function StoriesPage() {
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

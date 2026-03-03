@@ -55,7 +55,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     try {
       const { data, error } = await supabase
         .from('chat_messages')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           message,
@@ -65,16 +66,18 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             name,
             avatar_url
           )
-        `)
+        `
+        )
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
         .limit(200);
 
       if (error) throw error;
-      const messagesWithUser = data?.map(msg => ({
-        ...msg,
-        user: Array.isArray(msg.user) ? msg.user[0] : msg.user
-      })) || [];
+      const messagesWithUser =
+        data?.map((msg) => ({
+          ...msg,
+          user: Array.isArray(msg.user) ? msg.user[0] : msg.user,
+        })) || [];
       setMessages(messagesWithUser);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -85,7 +88,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   function subscribeToMessages() {
     const channelName = `session:${sessionId}:messages`;
-    
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -109,24 +112,24 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             message: payload.new.message,
             created_at: payload.new.created_at,
             deleted: payload.new.deleted || false,
-            user: userData || { name: 'Unknown', avatar_url: null }
+            user: userData || { name: 'Unknown', avatar_url: null },
           };
-          
+
           setMessages((prev) => [...prev, messageWithUser]);
 
           // Play notification sound for messages from others
           if (payload.new.user_id !== currentUserId) {
             try {
-              const audio = new Audio("/sounds/notification.mp3");
+              const audio = new Audio('/sounds/notification.mp3');
               audio.volume = 0.5;
               audio.play().catch(() => {});
             } catch (e) {}
-            
+
             // Browser notification if tab not focused
-            if (document.hidden && Notification.permission === "granted") {
-              new Notification("New message in Tribe", {
-                body: `${userData?.name || "Someone"}: ${payload.new.message.slice(0, 50)}`,
-                icon: "/icon-192.png"
+            if (document.hidden && Notification.permission === 'granted') {
+              new Notification('New message in Tribe', {
+                body: `${userData?.name || 'Someone'}: ${payload.new.message.slice(0, 50)}`,
+                icon: '/icon-192.png',
               });
             }
           }
@@ -141,12 +144,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           filter: `session_id=eq.${sessionId}`,
         },
         (payload) => {
-          setMessages((prev) => 
-            prev.map(msg => 
-              msg.id === payload.new.id 
-                ? { ...msg, deleted: payload.new.deleted }
-                : msg
-            )
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === payload.new.id ? { ...msg, deleted: payload.new.deleted } : msg))
           );
         }
       )
@@ -159,7 +158,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (!newMessage.trim() || sending) return;
 
     const messageText = newMessage.trim();
@@ -167,13 +166,11 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     try {
       setSending(true);
 
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({
-          session_id: sessionId,
-          user_id: currentUserId,
-          message: messageText,
-        });
+      const { error } = await supabase.from('chat_messages').insert({
+        session_id: sessionId,
+        user_id: currentUserId,
+        message: messageText,
+      });
 
       if (error) throw error;
 
@@ -184,11 +181,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         .eq('session_id', sessionId)
         .neq('user_id', currentUserId);
 
-      const { data: sender } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', currentUserId)
-        .single();
+      const { data: sender } = await supabase.from('users').select('name').eq('id', currentUserId).single();
 
       if (participants) {
         for (const p of participants) {
@@ -199,8 +192,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
               userId: p.user_id,
               title: 'New message in Tribe',
               body: `${sender?.name || 'Someone'}: ${messageText.slice(0, 50)}`,
-              url: `/session/${sessionId}/chat`
-            })
+              url: `/session/${sessionId}/chat`,
+            }),
           }).catch(() => {});
         }
       }
@@ -220,10 +213,10 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     try {
       const { error } = await supabase
         .from('chat_messages')
-        .update({ 
+        .update({
           deleted: true,
           deleted_by: currentUserId,
-          deleted_at: new Date().toISOString()
+          deleted_at: new Date().toISOString(),
         })
         .eq('id', messageId);
 
@@ -231,7 +224,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         console.error('Delete error:', error);
         throw error;
       }
-      
+
       setSelectedMessage(null);
       alert('✅ Message deleted');
     } catch (error: any) {
@@ -253,15 +246,13 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     }
 
     try {
-      const { error } = await supabase
-        .from('reported_messages')
-        .insert({
-          message_id: reportingMessageId,
-          reporter_id: currentUserId,
-          session_id: sessionId,
-          reason: reportReason,
-          description: reportDescription,
-        });
+      const { error } = await supabase.from('reported_messages').insert({
+        message_id: reportingMessageId,
+        reporter_id: currentUserId,
+        session_id: sessionId,
+        reason: reportReason,
+        description: reportDescription,
+      });
 
       if (error) throw error;
 
@@ -309,15 +300,13 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           <div>
             <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
             <p className="text-xs text-stone-600 dark:text-gray-300">
-              {messages.filter(m => !m.deleted).length} messages
+              {messages.filter((m) => !m.deleted).length} messages
             </p>
           </div>
           {canModerate && (
             <div className="flex items-center gap-1 text-xs">
               <Shield className="w-4 h-4 text-tribe-green" />
-              <span className="text-tribe-green font-medium">
-                {isAdmin ? 'Admin' : 'Host'}
-              </span>
+              <span className="text-tribe-green font-medium">{isAdmin ? 'Admin' : 'Host'}</span>
             </div>
           )}
         </div>
@@ -328,17 +317,13 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         {messages.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-4xl mb-4">💬</div>
-            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-              {t('noMessagesYet')}
-            </h3>
-            <p className="text-stone-500 dark:text-gray-400 text-sm">
-              {t('startConversation')}
-            </p>
+            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noMessagesYet')}</h3>
+            <p className="text-stone-500 dark:text-gray-400 text-sm">{t('startConversation')}</p>
           </div>
         ) : (
           messages.map((msg) => {
             const isOwnMessage = msg.user_id === currentUserId;
-            
+
             if (msg.deleted) {
               return (
                 <div key={msg.id} className="flex gap-2">
@@ -348,7 +333,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                 </div>
               );
             }
-            
+
             return (
               <div
                 key={msg.id}
@@ -375,9 +360,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                     <span className="text-xs font-medium text-stone-700 dark:text-gray-300">
                       {isOwnMessage ? 'You' : msg.user?.name}
                     </span>
-                    <span className="text-xs text-stone-500 dark:text-gray-400">
-                      {formatTime(msg.created_at)}
-                    </span>
+                    <span className="text-xs text-stone-500 dark:text-gray-400">{formatTime(msg.created_at)}</span>
                   </div>
                   <div className="flex items-start gap-1">
                     <div
@@ -389,7 +372,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     </div>
-                    
+
                     {/* Message Actions Menu */}
                     {(canModerate || isOwnMessage) && (
                       <button
@@ -403,7 +386,9 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
                   {/* Actions Dropdown */}
                   {selectedMessage === msg.id && (
-                    <div className={`absolute ${isOwnMessage ? 'right-0' : 'left-0'} top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]`}>
+                    <div
+                      className={`absolute ${isOwnMessage ? 'right-0' : 'left-0'} top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]`}
+                    >
                       {canModerate && (
                         <button
                           onClick={() => deleteMessage(msg.id)}
@@ -463,7 +448,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Reason *</label>

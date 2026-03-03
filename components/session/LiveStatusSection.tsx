@@ -89,8 +89,12 @@ export default function LiveStatusSection({
                 <div className="absolute inset-0 w-3 h-3 bg-white rounded-full animate-ping"></div>
               </div>
               {goingLive
-                ? (language === 'es' ? 'Iniciando...' : 'Starting...')
-                : (language === 'es' ? 'Estoy Entrenando' : 'Go Live')}
+                ? language === 'es'
+                  ? 'Iniciando...'
+                  : 'Starting...'
+                : language === 'es'
+                  ? 'Estoy Entrenando'
+                  : 'Go Live'}
             </button>
           )}
         </div>
@@ -118,20 +122,21 @@ export default function LiveStatusSection({
                     <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-red-500 to-red-400 animate-pulse">
                       <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-[#3D4349] flex items-center justify-center">
                         {liveUser.avatar_url ? (
-                          <img loading="lazy" src={liveUser.avatar_url} alt={liveUser.name} className="w-full h-full object-cover" />
+                          <img
+                            loading="lazy"
+                            src={liveUser.avatar_url}
+                            alt={liveUser.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <span className="text-lg font-bold text-stone-500">
-                            {liveUser.name[0]?.toUpperCase()}
-                          </span>
+                          <span className="text-lg font-bold text-stone-500">{liveUser.name[0]?.toUpperCase()}</span>
                         )}
                       </div>
                     </div>
                     <div>
                       <p className="font-medium text-stone-900 dark:text-white">{liveUser.name}</p>
                       <p className="text-xs text-red-600 dark:text-red-400 font-semibold">
-                        {language === 'es'
-                          ? `En vivo hace ${minsLive} min`
-                          : `Live for ${minsLive} min`}
+                        {language === 'es' ? `En vivo hace ${minsLive} min` : `Live for ${minsLive} min`}
                       </p>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 'use client';
-import { formatTime12Hour } from "@/lib/utils";
+import { formatTime12Hour } from '@/lib/utils';
 
 import { Calendar, Clock, MapPin, Users, Share2, MessageCircle, Image as ImageIcon, Star } from 'lucide-react';
 import Link from 'next/link';
@@ -58,20 +58,19 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
     return sessionDate < new Date();
   })();
   const isFull = session.current_participants >= session.max_participants;
-  const isStartingSoon = !isPast && (() => {
-    const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
-    const now = new Date();
-    const diffMs = sessionDateTime.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffHours > 0 && diffHours <= 2;
-  })();
-  const confirmedParticipants = session.session_participants?.filter(
-    (p: any) => p.status === 'confirmed'
-  ) || [];
+  const isStartingSoon =
+    !isPast &&
+    (() => {
+      const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
+      const now = new Date();
+      const diffMs = sessionDateTime.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      return diffHours > 0 && diffHours <= 2;
+    })();
+  const confirmedParticipants = session.session_participants?.filter((p: any) => p.status === 'confirmed') || [];
 
-  const sportName = language === 'es' && sportTranslations[session.sport]
-    ? sportTranslations[session.sport].es
-    : session.sport;
+  const sportName =
+    language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
 
   function handleShare(e: React.MouseEvent) {
     e.preventDefault();
@@ -82,7 +81,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
   }
 
   return (
-    <div onClick={() => window.location.href = `/session/${session.id}`} className="cursor-pointer">
+    <div onClick={() => (window.location.href = `/session/${session.id}`)} className="cursor-pointer">
       <div className="bg-white dark:bg-[#6B7178] rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-stone-200 dark:border-[#52575D]">
         <div className="p-5">
           {/* Header */}
@@ -93,25 +92,27 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
               </span>
 
               {/* Skill level badge */}
-              {session.skill_level && (() => {
-                const skillLevel = getSkillLevelDisplay(session.skill_level, t);
-                return (
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${skillLevel.color}`}>
-                    {skillLevel.emoji} {skillLevel.label}
-                  </span>
-                );
-              })()}
+              {session.skill_level &&
+                (() => {
+                  const skillLevel = getSkillLevelDisplay(session.skill_level, t);
+                  return (
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${skillLevel.color}`}>
+                      {skillLevel.emoji} {skillLevel.label}
+                    </span>
+                  );
+                })()}
 
               {/* Gender preference badge */}
-              {session.gender_preference && (() => {
-                const genderDisplay = getGenderDisplay(session.gender_preference, t);
-                if (!genderDisplay) return null;
-                return (
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${genderDisplay.color}`}>
-                    {genderDisplay.emoji} {genderDisplay.label}
-                  </span>
-                );
-              })()}
+              {session.gender_preference &&
+                (() => {
+                  const genderDisplay = getGenderDisplay(session.gender_preference, t);
+                  if (!genderDisplay) return null;
+                  return (
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${genderDisplay.color}`}>
+                      {genderDisplay.emoji} {genderDisplay.label}
+                    </span>
+                  );
+                })()}
 
               {/* Photo indicator badge */}
               {session.photos && session.photos.length > 0 && (
@@ -127,9 +128,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
                 </span>
               )}
               {isFull && !isPast && (
-                <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold">
-                  {t('full')}
-                </span>
+                <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold">{t('full')}</span>
               )}
               {isStartingSoon && !isPast && !isFull && (
                 <span className="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-semibold animate-pulse">
@@ -162,7 +161,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
             </div>
             <div className="flex-1 mx-4">
               <div className="h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
-                <div 
+                <div
                   className={`h-full ${isFull ? 'bg-red-500' : 'bg-tribe-green'}`}
                   style={{ width: `${(confirmedParticipants.length / session.max_participants) * 100}%` }}
                 />
@@ -181,7 +180,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
                 {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
                   weekday: 'short',
                   month: 'short',
-                  day: 'numeric'
+                  day: 'numeric',
                 })}
               </span>
             </div>
@@ -198,9 +197,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
           <div className="flex items-start mb-3">
             <MapPin className="w-4 h-4 mr-2 mt-0.5 text-tribe-green flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <span className="text-sm text-stone-900 dark:text-white break-words">
-                {session.location}
-              </span>
+              <span className="text-sm text-stone-900 dark:text-white break-words">{session.location}</span>
               {distance && (
                 <span className="ml-2 px-2 py-0.5 bg-tribe-green text-slate-900 rounded-full text-xs font-semibold">
                   {distance} {language === 'es' ? 'de distancia' : 'away'}
@@ -213,17 +210,13 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
           {session.equipment && (
             <div className="flex items-start mt-2">
               <span className="text-sm mr-2">🎒</span>
-              <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">
-                {session.equipment}
-              </span>
+              <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">{session.equipment}</span>
             </div>
           )}
 
           {/* Description */}
           {session.description && (
-            <p className="text-sm text-stone-700 dark:text-[#E0E0E0] mt-2 line-clamp-2">
-              {session.description}
-            </p>
+            <p className="text-sm text-stone-700 dark:text-[#E0E0E0] mt-2 line-clamp-2">{session.description}</p>
           )}
 
           {/* Creator with Thumbnail */}
@@ -232,7 +225,12 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs">
                   {session.creator.avatar_url ? (
-                    <img loading="lazy" src={session.creator.avatar_url} alt={session.creator.name} className="w-6 h-6 rounded-full object-cover" />
+                    <img
+                      loading="lazy"
+                      src={session.creator.avatar_url}
+                      alt={session.creator.name}
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
                   ) : (
                     session.creator.name?.[0]?.toUpperCase() || 'U'
                   )}
@@ -256,7 +254,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
               <div className="flex -space-x-2">
                 {confirmedParticipants.slice(0, 5).map((p: any, idx: number) => (
                   <Link key={idx} href={`/profile/${p.user_id}`}>
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110"
                       title={p.user?.name}
                     >
@@ -284,7 +282,7 @@ export default function SessionCard({ session, onShare, distance, liveData }: Se
             >
               {t('viewDetails')}
             </button>
-            <Link 
+            <Link
               href={`/session/${session.id}/chat`}
               onClick={(e) => e.stopPropagation()}
               className="px-4 py-2 bg-stone-100 dark:bg-[#52575D] rounded-lg hover:bg-stone-200 dark:hover:bg-[#404549] transition-colors flex items-center justify-center"

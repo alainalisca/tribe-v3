@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { upsertUserProfile } from '@/lib/auth-helpers';
+import { logError } from '@/lib/logger';
 
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
@@ -20,7 +22,7 @@ export default function AuthCallbackPage() {
 
     // Handle error params from Supabase OAuth redirect
     if (errorParam && !code) {
-      console.error('Auth callback: OAuth error from provider:', errorParam, errorDescription);
+      logError(errorDescription || errorParam, { action: 'authCallback', route: '/auth/callback' });
       const msg = encodeURIComponent(errorDescription || errorParam);
       window.location.href = `/auth?error=${msg}`;
       return;
@@ -41,14 +43,15 @@ export default function AuthCallbackPage() {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
-        console.error('Auth callback: exchangeCodeForSession failed:', exchangeError);
+        logError(exchangeError, { action: 'exchangeCodeForSession', route: '/auth/callback' });
         setError(exchangeError.message);
         window.location.href = `/auth?error=${encodeURIComponent(exchangeError.message)}`;
         return;
       }
-    } catch (err: any) {
-      console.error('Auth callback: exchange exception:', err);
-      window.location.href = `/auth?error=${encodeURIComponent(err.message || 'callback_failed')}`;
+    } catch (err: unknown) {
+      logError(err, { action: 'exchangeCodeForSession', route: '/auth/callback' });
+      const message = err instanceof Error ? err.message : 'callback_failed';
+      window.location.href = `/auth?error=${encodeURIComponent(message)}`;
       return;
     }
 
@@ -60,63 +63,22 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    // Step 2: Get user info (non-fatal)
-    let user;
+    // Step 2: Get user info and upsert profile (non-fatal)
     try {
       const { data, error: getUserError } = await supabase.auth.getUser();
       if (getUserError) {
-        console.error('Auth callback: getUser error (non-fatal):', getUserError);
+        logError(getUserError, { action: 'getUser', route: '/auth/callback' });
       }
-      user = data?.user;
+
+      if (data?.user) {
+        const { isNewUser } = await upsertUserProfile(data.user);
+        if (isNewUser) {
+          window.location.href = '/profile';
+          return;
+        }
+      }
     } catch (err) {
-      console.error('Auth callback: getUser exception (non-fatal):', err);
-    }
-
-    if (user) {
-      // Step 3: Profile upsert (non-fatal)
-      let isNewUser = false;
-      try {
-        const { data: existingProfile } = await supabase
-          .from('users')
-          .select('id, avatar_url, created_at')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        const avatarUrl = user.user_metadata?.avatar_url || null;
-        const name = user.user_metadata?.full_name
-          || user.user_metadata?.name
-          || user.email?.split('@')[0]
-          || 'User';
-
-        // Build upsert payload — handle Apple's potential null email
-        const upsertPayload: Record<string, any> = {
-          id: user.id,
-          name,
-          avatar_url: avatarUrl,
-        };
-        if (user.email) {
-          upsertPayload.email = user.email;
-        }
-
-        const { error: upsertError } = await supabase
-          .from('users')
-          .upsert(upsertPayload, { onConflict: 'id' });
-
-        if (upsertError) {
-          console.error('Auth callback: upsert error (non-fatal):', upsertError);
-        }
-
-        // Detect new user: no existing profile or account created within last 60s
-        isNewUser = !existingProfile
-          || (Date.now() - new Date(user.created_at).getTime()) < 60_000;
-      } catch (err) {
-        console.error('Auth callback: profile upsert exception (non-fatal):', err);
-      }
-
-      if (isNewUser) {
-        window.location.href = '/profile';
-        return;
-      }
+      logError(err, { action: 'getUser', route: '/auth/callback' });
     }
 
     // Existing user — go home
