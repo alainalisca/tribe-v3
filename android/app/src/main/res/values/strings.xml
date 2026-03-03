@@ -5,5 +5,5 @@
     <string name="package_name">com.aplusfitnessllc.tribe</string>
     <string name="custom_url_scheme">com.aplusfitnessllc.tribe</string>
     <!-- Web client ID from Google Cloud Console (same as Supabase Auth > Google provider) -->
-    <string name="server_client_id">835336425866-deoldl6raco9gjt05dld45jce45ep5cp.apps.googleusercontent.com</string>
+    <string name="server_client_id">835336425866-fdup7aj114fr69th8nqi3uv418og49pr.apps.googleusercontent.com</string>
 </resources>
