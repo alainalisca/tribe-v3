@@ -80,6 +80,14 @@ export async function handleRecapUpload(
   const files = e.target.files;
   if (!files || files.length === 0) return;
 
+  const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  for (let i = 0; i < files.length; i++) {
+    if (!allowedImageTypes.includes(files[i].type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+  }
+
   if (userPhotoCount + files.length > 3) {
     showInfo('You can upload maximum 3 photos per session');
     return;
@@ -144,10 +152,10 @@ export async function reportRecapPhoto(
   photoId: string,
   user: { id: string } | null,
   language: 'en' | 'es',
-  onPhotosChanged: () => void
+  onPhotosChanged: () => void,
+  reason?: string
 ) {
   if (!user) return;
-  const reason = prompt('Report reason (optional):');
 
   try {
     const { createClient } = await import('@/lib/supabase/client');
@@ -160,7 +168,7 @@ export async function reportRecapPhoto(
     });
     if (!result.success) throw new Error(result.error);
 
-    showSuccess('Photo reported. Admin will review.');
+    showSuccess(language === 'es' ? 'Foto reportada. Un admin la revisara.' : 'Photo reported. Admin will review.');
     onPhotosChanged();
   } catch (error: unknown) {
     showError(getErrorMessage(error, 'send_message', language));

@@ -60,6 +60,14 @@ export default function PhotoUploadSection({
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    for (let i = 0; i < files.length; i++) {
+      if (!allowedImageTypes.includes(files[i].type)) {
+        showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+        return;
+      }
+    }
     if (photos.length + files.length > 3) {
       showInfo(t('maxPhotosAllowed'));
       return;
@@ -127,7 +135,7 @@ export default function PhotoUploadSection({
             )}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               multiple
               onChange={handleUpload}
               disabled={uploading}

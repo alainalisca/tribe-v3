@@ -6,6 +6,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { insertTemplate, deleteTemplate as dalDeleteTemplate, fetchTemplatesByUser } from '@/lib/dal';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Database } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -30,6 +31,9 @@ export default function TemplateSection({
   const [templates, setTemplates] = useState<SessionTemplateRow[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -54,18 +58,23 @@ export default function TemplateSection({
     }
   }
 
-  async function saveAsTemplate() {
+  function startSaveAsTemplate() {
     if (!formData.sport || !formData.location) {
       showInfo(t('fillSportAndLocation'));
       return;
     }
-    const templateName = prompt(t('nameForTemplate'), `${formData.sport} - ${formData.location}`);
-    if (!templateName) return;
+    setTemplateName(`${formData.sport} - ${formData.location}`);
+    setShowNameInput(true);
+  }
+
+  async function confirmSaveTemplate() {
+    if (!templateName.trim()) return;
+    setShowNameInput(false);
     try {
       setSavingTemplate(true);
       const result = await insertTemplate(supabase, {
         user_id: userId,
-        name: templateName,
+        name: templateName.trim(),
         sport: formData.sport,
         location: formData.location,
         duration: formData.duration,
@@ -81,11 +90,11 @@ export default function TemplateSection({
       showError(`${t('errorSavingTemplate')}: ${detail}`);
     } finally {
       setSavingTemplate(false);
+      setTemplateName('');
     }
   }
 
-  async function deleteTemplate(templateId: string) {
-    if (!confirm(t('deleteTemplateConfirm'))) return;
+  async function doDeleteTemplate(templateId: string) {
     try {
       const result = await dalDeleteTemplate(supabase, templateId);
       if (!result.success) throw new Error(result.error);
@@ -114,13 +123,53 @@ export default function TemplateSection({
         </button>
         <button
           type="button"
-          onClick={saveAsTemplate}
+          onClick={startSaveAsTemplate}
           disabled={savingTemplate}
           className="flex-1 py-3 px-3 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
         >
           {savingTemplate ? '...' : `💾 ${t('saveTemplate')}`}
         </button>
       </div>
+
+      {showNameInput && (
+        <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
+          <label className="text-sm font-bold text-theme-primary mb-2 block">{t('nameForTemplate')}</label>
+          <input
+            type="text"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmSaveTemplate();
+              if (e.key === 'Escape') {
+                setShowNameInput(false);
+                setTemplateName('');
+              }
+            }}
+            autoFocus
+            className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowNameInput(false);
+                setTemplateName('');
+              }}
+              className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] text-sm font-medium"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={confirmSaveTemplate}
+              disabled={!templateName.trim()}
+              className="flex-1 py-2 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
+            >
+              💾 {t('saveTemplate')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {showTemplates && templates.length > 0 && (
         <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
@@ -147,7 +196,7 @@ export default function TemplateSection({
                   </button>
                   <button
                     type="button"
-                    onClick={() => deleteTemplate(template.id)}
+                    onClick={() => setConfirmDeleteId(template.id)}
                     className="px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs rounded"
                   >
                     🗑️
@@ -158,6 +207,20 @@ export default function TemplateSection({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title={t('delete')}
+        message={t('deleteTemplateConfirm')}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDeleteId) doDeleteTemplate(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </>
   );
 }

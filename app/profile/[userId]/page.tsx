@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
@@ -54,6 +55,13 @@ export default function PublicProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    variant?: 'danger' | 'default';
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -130,11 +138,23 @@ export default function PublicProfilePage() {
         setIsBlocked(false);
         showSuccess(t.userUnblocked);
       } else {
-        if (!confirm(t.blockConfirm)) return;
-        const result = await blockUser(supabase, { user_id: currentUser.id, blocked_user_id: userId });
-        if (!result.success) throw new Error(result.error);
-        setIsBlocked(true);
-        showSuccess(t.userBlocked);
+        setConfirmAction({
+          title: t.block,
+          message: t.blockConfirm,
+          confirmLabel: t.block,
+          variant: 'danger',
+          onConfirm: async () => {
+            setConfirmAction(null);
+            try {
+              const result = await blockUser(supabase, { user_id: currentUser.id, blocked_user_id: userId });
+              if (!result.success) throw new Error(result.error);
+              setIsBlocked(true);
+              showSuccess(t.userBlocked);
+            } catch (error: unknown) {
+              showError(getErrorMessage(error, 'admin_action', language));
+            }
+          },
+        });
       }
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
@@ -376,6 +396,17 @@ export default function PublicProfilePage() {
           onSubmit={handleReport}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={confirmAction?.title ?? ''}
+        message={confirmAction?.message ?? ''}
+        confirmLabel={confirmAction?.confirmLabel ?? t.submit}
+        cancelLabel={t.cancel}
+        variant={confirmAction?.variant ?? 'default'}
+        onConfirm={() => confirmAction?.onConfirm()}
+        onCancel={() => setConfirmAction(null)}
+      />
 
       <BottomNav />
     </div>

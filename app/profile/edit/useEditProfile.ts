@@ -91,6 +91,12 @@ export function useEditProfile(language: 'en' | 'es') {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedImageTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
     if (formData.photos.length >= 6) {
       showInfo(tr.maxPhotos);
       return;

@@ -54,6 +54,14 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       const selected = e.target.files?.[0];
       if (!selected) return;
 
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
+      if (!allowedImageTypes.includes(selected.type) && !allowedVideoTypes.includes(selected.type)) {
+        showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+        e.target.value = '';
+        return;
+      }
+
       const isVideo = selected.type.startsWith('video/');
       const limit = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
       if (selected.size > limit) {
@@ -221,7 +229,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               </div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 onChange={handleFileSelect}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
@@ -233,7 +241,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               </div>
               <input
                 type="file"
-                accept="video/*"
+                accept="video/mp4,video/quicktime,video/webm"
                 onChange={handleFileSelect}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />

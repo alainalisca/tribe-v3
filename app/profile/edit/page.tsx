@@ -214,7 +214,7 @@ export default function EditProfilePage() {
                 <span className="text-xs text-stone-500">{tr.addPhoto}</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
                   className="hidden"
                   onChange={handlePhotoUpload}
                   disabled={uploadingPhoto}

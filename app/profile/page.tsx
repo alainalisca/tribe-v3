@@ -64,7 +64,12 @@ export default function ProfilePage() {
           <div className="absolute bottom-4 right-4 z-30">
             <label className="block bg-white p-3 rounded-full cursor-pointer hover:bg-opacity-90 transition shadow-xl border-2 border-white">
               <Camera className="w-5 h-5 text-slate-900" />
-              <input type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleBannerUpload}
+              />
             </label>
           </div>
         </div>
@@ -87,7 +92,12 @@ export default function ProfilePage() {
             </div>
             <label className="absolute bottom-0 right-0 bg-slate-900 p-2.5 rounded-full cursor-pointer hover:bg-slate-800 transition shadow-lg">
               <Camera className="w-5 h-5 text-white" />
-              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
             </label>
           </div>
 

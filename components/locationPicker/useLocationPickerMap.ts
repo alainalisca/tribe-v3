@@ -5,6 +5,7 @@ import type { Map as LeafletMap } from 'leaflet';
 import { useLanguage } from '@/lib/LanguageContext';
 import { loadGoogleMaps, reverseGeocodeGoogle } from '@/lib/google-maps';
 import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 import type { LeafletMapComponents } from './locationPickerTypes';
 
 interface UseLocationPickerMapParams {
@@ -12,7 +13,7 @@ interface UseLocationPickerMapParams {
 }
 
 export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const [showMap, setShowMap] = useState(false);
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -129,7 +130,7 @@ export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
   // Get user's current location
   function getCurrentLocation() {
     if (!navigator.geolocation) {
-      alert(language === 'es' ? 'Geolocalización no disponible' : 'Geolocation not available');
+      showError(t('geolocationNotAvailable'));
       return;
     }
 
@@ -145,11 +146,7 @@ export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
       (err) => {
         logError(err, { action: 'getCurrentLocation' });
         setGettingLocation(false);
-        alert(
-          language === 'es'
-            ? 'No se pudo obtener tu ubicación. Por favor, selecciona en el mapa.'
-            : 'Could not get your location. Please select on the map.'
-        );
+        showError(t('couldNotGetLocation'));
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );

@@ -13,6 +13,7 @@ import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import LiveNowSection from '@/components/home/LiveNowSection';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
 import { useHomeFeed } from './useHomeFeed';
@@ -179,6 +180,17 @@ export default function HomePage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!f.confirmAction}
+        title={f.confirmAction?.title ?? ''}
+        message={f.confirmAction?.message ?? ''}
+        confirmLabel={f.confirmAction?.confirmLabel ?? f.t('confirm')}
+        cancelLabel={f.t('cancel')}
+        variant={f.confirmAction?.variant ?? 'default'}
+        onConfirm={() => f.confirmAction?.onConfirm()}
+        onCancel={() => f.setConfirmAction(null)}
+      />
 
       <BottomNav />
       <NotificationPrompt hideWhenOnboarding={f.showOnboarding} />

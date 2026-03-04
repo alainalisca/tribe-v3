@@ -217,6 +217,24 @@ export const extEn = {
   bugsLabel: 'Bugs',
   sessionsLabel: 'Sessions',
   unauthorizedAccess: 'Unauthorized access',
+
+  // Confirm dialog keys
+  deleteMessageConfirm: 'Delete this message?',
+  verifyPhotosConfirm: 'Verify these photos as authentic?',
+  removeVerificationConfirm: 'Remove verification?',
+  banUserConfirm: 'Ban this user?',
+  unbanUserConfirm: 'Unban this user?',
+  deleteUserConfirm: 'DELETE user and ALL data?',
+  deleteSessionConfirm: 'Are you sure you want to delete this session? This cannot be undone.',
+  geolocationNotAvailable: 'Geolocation not available',
+  couldNotGetLocation: 'Could not get your location. Please select on the map.',
+  photoReported: 'Photo reported. Admin will review.',
+  confirmAction: 'Confirm',
+  verifyPhotos: 'Verify Photos',
+  removeVerification: 'Remove Verification',
+  banUser: 'Ban User',
+  unbanUser: 'Unban User',
+  deleteUserBtn: 'Delete User',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -437,4 +455,22 @@ export const extEs: Record<keyof typeof extEn, string> = {
   bugsLabel: 'Errores',
   sessionsLabel: 'Sesiones',
   unauthorizedAccess: 'Acceso no autorizado',
+
+  // Confirm dialog keys
+  deleteMessageConfirm: '¿Eliminar este mensaje?',
+  verifyPhotosConfirm: '¿Verificar estas fotos como autenticas?',
+  removeVerificationConfirm: '¿Quitar verificacion?',
+  banUserConfirm: '¿Banear este usuario?',
+  unbanUserConfirm: '¿Desbanear este usuario?',
+  deleteUserConfirm: '¿ELIMINAR usuario y TODOS sus datos?',
+  deleteSessionConfirm: '¿Estas seguro que quieres eliminar esta sesion? Esto no se puede deshacer.',
+  geolocationNotAvailable: 'Geolocalizacion no disponible',
+  couldNotGetLocation: 'No se pudo obtener tu ubicacion. Selecciona en el mapa.',
+  photoReported: 'Foto reportada. Un admin la revisara.',
+  confirmAction: 'Confirmar',
+  verifyPhotos: 'Verificar Fotos',
+  removeVerification: 'Quitar Verificacion',
+  banUser: 'Banear Usuario',
+  unbanUser: 'Desbanear Usuario',
+  deleteUserBtn: 'Eliminar Usuario',
 };

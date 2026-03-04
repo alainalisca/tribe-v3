@@ -63,6 +63,13 @@ export function useHomeFeed() {
   const [fixedHeight, setFixedHeight] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [fetchError, setFetchError] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    variant?: 'danger' | 'default';
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -280,16 +287,24 @@ export function useHomeFeed() {
     }
   }
 
-  async function handleDeleteSession(id: string) {
-    if (!confirm('Are you sure you want to delete this session? This cannot be undone.')) return;
-    try {
-      const result = await dalDeleteSession(supabase, id);
-      if (!result.success) throw new Error(result.error);
-      showSuccess('Session deleted successfully!');
-      await loadSessions();
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'delete_session', language));
-    }
+  function handleDeleteSession(id: string) {
+    setConfirmAction({
+      title: t('delete'),
+      message: t('deleteSessionConfirm'),
+      confirmLabel: t('delete'),
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmAction(null);
+        try {
+          const result = await dalDeleteSession(supabase, id);
+          if (!result.success) throw new Error(result.error);
+          showSuccess('Session deleted successfully!');
+          await loadSessions();
+        } catch (error: unknown) {
+          showError(getErrorMessage(error, 'delete_session', language));
+        }
+      },
+    });
   }
 
   function getDistanceText(session: SessionWithRelations): string | undefined {
@@ -337,6 +352,8 @@ export function useHomeFeed() {
     visibleCount,
     setVisibleCount,
     fetchError,
+    confirmAction,
+    setConfirmAction,
     PAGE_SIZE,
     loadSessions,
     handleShareSession,

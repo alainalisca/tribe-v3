@@ -100,6 +100,12 @@ export function useProfile(language: 'en' | 'es') {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedImageTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
@@ -127,6 +133,12 @@ export function useProfile(language: 'en' | 'es') {
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedImageTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
 
     try {
       const fileExt = file.name.split('.').pop();

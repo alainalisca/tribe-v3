@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { fetchUserIsAdmin } from '@/lib/dal';
+import { showError } from '@/lib/toast';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import {
   AdminStats,
   UserManagement,
@@ -31,7 +33,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const data = useAdminData(supabase);
-  const actions = useAdminActions(supabase, user?.id, language, {
+  const actions = useAdminActions(supabase, user?.id, language, t, {
     setUsers: data.setUsers,
     setReports: data.setReports,
     setFeedback: data.setFeedback,
@@ -51,7 +53,7 @@ export default function AdminPage() {
       }
       const adminResult = await fetchUserIsAdmin(supabase, user.id);
       if (!adminResult.success || !adminResult.data) {
-        alert(t('unauthorizedAccess'));
+        showError(t('unauthorizedAccess'));
         router.push('/');
         return;
       }
@@ -189,6 +191,17 @@ export default function AdminPage() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!actions.confirmAction}
+        title={actions.confirmAction?.title ?? ''}
+        message={actions.confirmAction?.message ?? ''}
+        confirmLabel={actions.confirmAction?.confirmLabel ?? t('confirmAction')}
+        cancelLabel={t('cancel')}
+        variant={actions.confirmAction?.variant ?? 'default'}
+        onConfirm={() => actions.confirmAction?.onConfirm()}
+        onCancel={() => actions.setConfirmAction(null)}
+      />
     </div>
   );
 }

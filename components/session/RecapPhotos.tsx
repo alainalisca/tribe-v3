@@ -124,7 +124,7 @@ export default function RecapPhotos({
               )}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
                 onChange={(e) =>
                   handleRecapUpload(e, user, session.id, userPhotoCount, language, onPhotosChanged, setUploadingRecap)
