@@ -1,6 +1,5 @@
 'use client';
 
-import { logError } from '@/lib/logger';
 import { useState } from 'react';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';

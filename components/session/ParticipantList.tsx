@@ -32,7 +32,7 @@ export default function ParticipantList({
   creator,
   participants,
   canKick,
-  language,
+  language: _language,
   onKickUser,
 }: ParticipantListProps) {
   const { t } = useLanguage();

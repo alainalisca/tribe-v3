@@ -13,7 +13,7 @@ interface GuestJoinModalProps {
 }
 
 export default function GuestJoinModal({
-  language,
+  language: _language,
   guestData,
   joiningAsGuest,
   onClose,

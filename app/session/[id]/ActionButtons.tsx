@@ -29,7 +29,7 @@ interface ActionButtonsProps {
 }
 
 export default function ActionButtons({
-  language,
+  language: _language,
   user,
   session,
   isCreator,

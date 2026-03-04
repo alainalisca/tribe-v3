@@ -1,6 +1,5 @@
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
 import { SupabaseClient } from '@supabase/supabase-js';
 import {
   fetchConfirmedCount,

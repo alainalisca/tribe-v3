@@ -9,7 +9,7 @@ interface SessionStoriesProps {
   onViewStories: () => void;
 }
 
-export default function SessionStories({ stories, language, onViewStories }: SessionStoriesProps) {
+export default function SessionStories({ stories, language: _language, onViewStories }: SessionStoriesProps) {
   const { t } = useLanguage();
   if (stories.length === 0) return null;
 

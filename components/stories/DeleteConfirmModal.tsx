@@ -10,7 +10,12 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void;
 }
 
-export default function DeleteConfirmModal({ language, deleting, onCancel, onConfirm }: DeleteConfirmModalProps) {
+export default function DeleteConfirmModal({
+  language: _language,
+  deleting,
+  onCancel,
+  onConfirm,
+}: DeleteConfirmModalProps) {
   const { t } = useLanguage();
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
