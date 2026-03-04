@@ -12,6 +12,12 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
+import {
+  updateParticipantStatus,
+  deleteParticipant,
+  fetchSessionsByCreator,
+  fetchPendingParticipantsForSessions,
+} from '@/lib/dal';
 import type { User as AuthUser } from '@supabase/supabase-js';
 
 interface JoinRequest {
@@ -62,23 +68,26 @@ export default function RequestsPage() {
 
   async function loadRequests(userId: string) {
     try {
-      const { data: mySessions } = await supabase
-        .from('sessions')
-        .select('id, sport, date, start_time, location')
-        .eq('creator_id', userId);
+      const sessionsResult = await fetchSessionsByCreator(supabase, userId, {
+        fields: 'id, sport, date, start_time, location',
+      });
 
-      if (!mySessions || mySessions.length === 0) {
+      const mySessions = (sessionsResult.data || []) as {
+        id: string;
+        sport: string;
+        date: string;
+        start_time: string;
+        location: string;
+      }[];
+      if (mySessions.length === 0) {
         setLoading(false);
         return;
       }
 
       const sessionIds = mySessions.map((s) => s.id);
 
-      const { data: pendingRequests } = await supabase
-        .from('session_participants')
-        .select('*, users(name, avatar_url, sports)')
-        .in('session_id', sessionIds)
-        .eq('status', 'pending');
+      const pendingResult = await fetchPendingParticipantsForSessions(supabase, sessionIds);
+      const pendingRequests = (pendingResult.data || []) as Array<Record<string, unknown>>;
 
       const requestsWithSessions =
         pendingRequests?.map((req) => ({
@@ -86,7 +95,7 @@ export default function RequestsPage() {
           session: mySessions.find((s) => s.id === req.session_id),
         })) || [];
 
-      setRequests(requestsWithSessions);
+      setRequests(requestsWithSessions as JoinRequest[]);
     } catch (error) {
       logError(error, { action: 'loadRequests' });
     } finally {
@@ -96,9 +105,9 @@ export default function RequestsPage() {
 
   async function handleAccept(requestId: string) {
     try {
-      const { error } = await supabase.from('session_participants').update({ status: 'confirmed' }).eq('id', requestId);
+      const result = await updateParticipantStatus(supabase, requestId, 'confirmed');
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
       loadRequests(user!.id);
@@ -109,9 +118,9 @@ export default function RequestsPage() {
 
   async function handleDecline(requestId: string) {
     try {
-      const { error } = await supabase.from('session_participants').delete().eq('id', requestId);
+      const result = await deleteParticipant(supabase, requestId);
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
       loadRequests(user!.id);

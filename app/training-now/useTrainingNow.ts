@@ -7,6 +7,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
+import { insertParticipant, insertSession } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export interface TrainingNowFormData {
@@ -97,36 +98,34 @@ export function useTrainingNow(language: 'en' | 'es') {
       const now = new Date();
       const startTime = new Date(now.getTime() + formData.startIn * 60000);
 
-      const { data: session, error } = await supabase
-        .from('sessions')
-        .insert({
-          creator_id: user.id,
-          sport: formData.sport,
-          date: startTime.toISOString().split('T')[0],
-          start_time: startTime.toTimeString().split(' ')[0],
-          duration: formData.duration,
-          location: formData.location,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          max_participants: 10,
-          join_policy: 'open',
-          description:
-            language === 'es'
-              ? `\u00a1Sesi\u00f3n espont\u00e1nea de ${formData.sport}! \u00danete ahora.`
-              : `Spontaneous ${formData.sport} session! Join now.`,
-          status: 'active',
-          is_training_now: true,
-        })
-        .select()
-        .single();
+      const sessionResult = await insertSession(supabase, {
+        creator_id: user.id,
+        sport: formData.sport,
+        date: startTime.toISOString().split('T')[0],
+        start_time: startTime.toTimeString().split(' ')[0],
+        duration: formData.duration,
+        location: formData.location,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        max_participants: 10,
+        join_policy: 'open',
+        description:
+          language === 'es'
+            ? `\u00a1Sesi\u00f3n espont\u00e1nea de ${formData.sport}! \u00danete ahora.`
+            : `Spontaneous ${formData.sport} session! Join now.`,
+        status: 'active',
+        is_training_now: true,
+      });
 
-      if (error) throw error;
+      if (!sessionResult.success || !sessionResult.data) throw new Error(sessionResult.error);
+      const session = sessionResult.data;
 
-      await supabase.from('session_participants').insert({
+      const participantResult = await insertParticipant(supabase, {
         session_id: session.id,
         user_id: user.id,
         status: 'confirmed',
       });
+      if (!participantResult.success) throw new Error(participantResult.error);
 
       // Fire-and-forget: don't block navigation waiting for notifications
       notifyNearbyUsers(

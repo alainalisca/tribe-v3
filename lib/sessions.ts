@@ -1,5 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import {
+  fetchSessionFields,
+  fetchConfirmedCount,
+  insertParticipant,
+  updateParticipantCount,
+  checkExistingParticipation,
+} from '@/lib/dal';
 
 interface JoinSessionParams {
   supabase: SupabaseClient;
@@ -22,15 +29,25 @@ export async function joinSession({
 }: JoinSessionParams): Promise<JoinSessionResult> {
   try {
     // 1. Fetch the session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id, creator_id, join_policy, max_participants, current_participants, status, sport')
-      .eq('id', sessionId)
-      .single();
+    const sessionResult = await fetchSessionFields(
+      supabase,
+      sessionId,
+      'id, creator_id, join_policy, max_participants, current_participants, status, sport'
+    );
 
-    if (sessionError || !session) {
+    if (!sessionResult.success || !sessionResult.data) {
       return { success: false, error: 'session_not_found' };
     }
+
+    const session = sessionResult.data as {
+      id: string;
+      creator_id: string;
+      join_policy: string;
+      max_participants: number;
+      current_participants: number;
+      status: string;
+      sport: string;
+    };
 
     // 2. Check session is active
     if (session.status !== 'active') {
@@ -43,25 +60,16 @@ export async function joinSession({
     }
 
     // 4. Check duplicate participation
-    const { data: existing } = await supabase
-      .from('session_participants')
-      .select('id, status')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existing) {
+    const existingResult = await checkExistingParticipation(supabase, sessionId, userId);
+    if (existingResult.success && existingResult.data) {
       return { success: false, error: 'already_joined' };
     }
 
     // 5. Fetch current confirmed count (authoritative, not cached)
-    const { count } = await supabase
-      .from('session_participants')
-      .select('id', { count: 'exact', head: true })
-      .eq('session_id', sessionId)
-      .eq('status', 'confirmed');
-
-    const confirmedCount = count ?? session.current_participants;
+    const countResult = await fetchConfirmedCount(supabase, sessionId);
+    const confirmedCount = countResult.success
+      ? (countResult.data ?? session.current_participants)
+      : session.current_participants;
 
     // 6. Check capacity
     if (confirmedCount >= session.max_participants) {
@@ -77,24 +85,19 @@ export async function joinSession({
     const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
 
     // 9. Insert participant
-    const { error: insertError } = await supabase
-      .from('session_participants')
-      .insert({
-        session_id: sessionId,
-        user_id: userId,
-        status,
-      });
+    const insertResult = await insertParticipant(supabase, {
+      session_id: sessionId,
+      user_id: userId,
+      status,
+    });
 
-    if (insertError) {
-      return { success: false, error: insertError.message };
+    if (!insertResult.success) {
+      return { success: false, error: insertResult.error };
     }
 
     // 10. If confirmed, increment participant count
     if (status === 'confirmed') {
-      await supabase
-        .from('sessions')
-        .update({ current_participants: confirmedCount + 1 })
-        .eq('id', sessionId);
+      await updateParticipantCount(supabase, sessionId, confirmedCount + 1);
     }
 
     // 11. Notify host (fire-and-forget)
@@ -111,7 +114,7 @@ export async function joinSession({
         url: `/session/${sessionId}`,
         data: { sessionId, type: 'join' },
       }),
-    }).catch(err => logError(err, { action: 'notify_host', sessionId }));
+    }).catch((err) => logError(err, { action: 'notify_host', sessionId }));
 
     return { success: true, status };
   } catch (error) {

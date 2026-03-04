@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { log, logError } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
+import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
 
 /**
  * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
@@ -39,16 +40,18 @@ export async function POST(request: Request) {
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get user's notification credentials
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('push_subscription, fcm_token, fcm_platform')
-      .eq('id', userId)
-      .single();
+    const userResult = await fetchUserProfileMaybe(supabase, userId, 'push_subscription, fcm_token, fcm_platform');
 
-    if (error) {
-      logError(error, { route: '/api/notifications/send', action: 'fetch_user', userId });
+    if (!userResult.success || !userResult.data) {
+      logError(userResult.error, { route: '/api/notifications/send', action: 'fetch_user', userId });
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
+
+    const user = userResult.data as {
+      push_subscription: unknown;
+      fcm_token: string | null;
+      fcm_platform: string | null;
+    };
 
     if (!user?.push_subscription && !user?.fcm_token) {
       return NextResponse.json({ error: 'No push subscription or FCM token found for user' }, { status: 404 });
@@ -81,10 +84,7 @@ export async function POST(request: Request) {
         errors.push(`FCM: ${fcmResult.error}`);
         // Only clear token if it's actually invalid, not for server-side init errors
         if (isFcmTokenInvalid(fcmResult.error)) {
-          await supabase
-            .from('users')
-            .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
-            .eq('id', userId);
+          await updateUser(supabase, userId, { fcm_token: null, fcm_platform: null, fcm_updated_at: null });
         }
       }
     }
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       // If web push failed due to expired subscription, clear it
       if (!webPushResult.success) {
         errors.push(`WebPush: ${webPushResult.error}`);
-        await supabase.from('users').update({ push_subscription: null }).eq('id', userId);
+        await updateUser(supabase, userId, { push_subscription: null });
       }
     }
 
@@ -166,15 +166,20 @@ export async function PUT(request: Request) {
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get all users' notification credentials
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, push_subscription, fcm_token, fcm_platform')
-      .in('id', userIds);
-
-    if (error) {
-      logError(error, { route: '/api/notifications/send', action: 'fetch_users_batch' });
+    const userResults = await Promise.all(
+      userIds.map((id: string) => fetchUserProfileMaybe(supabase, id, 'id, push_subscription, fcm_token, fcm_platform'))
+    );
+    const fetchError = userResults.find((r) => !r.success);
+    if (fetchError) {
+      logError(fetchError.error, { route: '/api/notifications/send', action: 'fetch_users_batch' });
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
+    const users = userResults
+      .filter((r) => r.data != null)
+      .map(
+        (r) =>
+          r.data as { id: string; push_subscription: unknown; fcm_token: string | null; fcm_platform: string | null }
+      );
 
     const notificationData: Record<string, string> = {
       url: url || '/',
@@ -192,7 +197,7 @@ export async function PUT(request: Request) {
     const invalidWebPushUserIds: string[] = [];
 
     // Process each user
-    for (const user of users || []) {
+    for (const user of users) {
       if (!user.push_subscription && !user.fcm_token) {
         results.noSubscription++;
         continue;
@@ -234,14 +239,15 @@ export async function PUT(request: Request) {
 
     // Clean up invalid tokens/subscriptions
     if (invalidFcmTokenUserIds.length > 0) {
-      await supabase
-        .from('users')
-        .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
-        .in('id', invalidFcmTokenUserIds);
+      await updateUsersByIds(supabase, invalidFcmTokenUserIds, {
+        fcm_token: null,
+        fcm_platform: null,
+        fcm_updated_at: null,
+      });
     }
 
     if (invalidWebPushUserIds.length > 0) {
-      await supabase.from('users').update({ push_subscription: null }).in('id', invalidWebPushUserIds);
+      await updateUsersByIds(supabase, invalidWebPushUserIds, { push_subscription: null });
     }
 
     return NextResponse.json({

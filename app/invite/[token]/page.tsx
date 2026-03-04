@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { fetchInviteWithSession, fetchUsersByIds, insertParticipant, updateSession } from '@/lib/dal';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
 import type { Database } from '@/lib/database.types';
@@ -55,13 +56,10 @@ export default function InvitePage() {
       }
 
       // Load invite token
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('invite_tokens')
-        .select('*, session:sessions(*)')
-        .eq('token', token)
-        .single();
+      const inviteResult = await fetchInviteWithSession(supabase, token);
+      if (!inviteResult.success) throw new Error(inviteResult.error);
 
-      if (inviteError) throw inviteError;
+      const inviteData = inviteResult.data as { expires_at: string; session: SessionRow; created_by: string };
 
       // Check if token expired
       if (new Date(inviteData.expires_at) < new Date()) {
@@ -72,13 +70,10 @@ export default function InvitePage() {
       setSession(inviteData.session);
 
       // Load inviter info
-      const { data: inviterData } = await supabase
-        .from('users')
-        .select('name, avatar_url')
-        .eq('id', inviteData.created_by)
-        .single();
-
-      setInviter(inviterData);
+      const usersResult = await fetchUsersByIds(supabase, [inviteData.created_by]);
+      if (usersResult.success && usersResult.data && usersResult.data.length > 0) {
+        setInviter({ name: usersResult.data[0].name, avatar_url: usersResult.data[0].avatar_url });
+      }
     } catch (error) {
       logError(error, { action: 'loadInvite' });
       showError(language === 'es' ? 'Invitación inválida' : 'Invalid invite');
@@ -104,7 +99,7 @@ export default function InvitePage() {
       }
 
       // Add guest to participants
-      const { error } = await supabase.from('session_participants').insert({
+      const result = await insertParticipant(supabase, {
         session_id: session.id,
         user_id: null,
         is_guest: true,
@@ -114,13 +109,12 @@ export default function InvitePage() {
         status: 'confirmed',
       });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       // Update participant count
-      await supabase
-        .from('sessions')
-        .update({ current_participants: (session.current_participants ?? 0) + 1 })
-        .eq('id', session.id);
+      await updateSession(supabase, session.id, {
+        current_participants: (session.current_participants ?? 0) + 1,
+      });
 
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
 

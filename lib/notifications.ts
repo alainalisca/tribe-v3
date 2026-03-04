@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
+import { updateUser } from '@/lib/dal';
 
 export async function requestNotificationPermission(userId: string) {
   // Check if browser supports notifications
@@ -36,13 +37,13 @@ export async function requestNotificationPermission(userId: string) {
 
     // Save subscription to Supabase
     const supabase = createClient();
-    const { error } = await supabase
-      .from('users')
-      .update({ push_subscription: subscription.toJSON() })
-      .eq('id', userId);
+    // REASON: PushSubscriptionJSON shape is compatible with Json but TS can't verify the index signature
+    const result = await updateUser(supabase, userId, {
+      push_subscription: JSON.parse(JSON.stringify(subscription.toJSON())),
+    });
 
-    if (error) {
-      logError(error, { action: 'requestNotificationPermission', userId });
+    if (!result.success) {
+      logError(result.error, { action: 'requestNotificationPermission', userId });
       return null;
     }
 

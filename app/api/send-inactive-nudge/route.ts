@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { fetchUsersForAdmin, fetchParticipationsWithSession, fetchSessionsByCreator } from '@/lib/dal';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -22,12 +23,11 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, name, email, preferred_language, created_at')
-      .not('email', 'is', null);
+    const usersResult = await fetchUsersForAdmin(supabase);
+    const allUsers = usersResult.data || [];
+    const users = allUsers.filter((u) => u.email != null);
 
-    if (!users) {
+    if (users.length === 0) {
       return NextResponse.json({ error: 'No users found' }, { status: 400 });
     }
 
@@ -41,26 +41,24 @@ export async function POST(request: Request) {
     for (const user of users) {
       try {
         // Skip users created less than 2 weeks ago
-        const userCreatedAt = new Date(user.created_at);
+        const userCreatedAt = new Date(user.created_at!);
         if (userCreatedAt > twoWeeksAgo) continue;
 
         // Check if user has any recent activity
-        const { data: recentParticipation } = await supabase
-          .from('session_participants')
-          .select('id')
-          .eq('user_id', user.id)
-          .gte('created_at', twoWeeksAgoStr)
-          .limit(1);
+        const recentParticipationResult = await fetchParticipationsWithSession(supabase, user.id, {
+          userJoinFields: 'id',
+          dateGte: twoWeeksAgoStr,
+        });
+        const recentParticipation = recentParticipationResult.data || [];
 
-        const { data: recentHosted } = await supabase
-          .from('sessions')
-          .select('id')
-          .eq('creator_id', user.id)
-          .gte('created_at', twoWeeksAgoStr)
-          .limit(1);
+        const recentHostedResult = await fetchSessionsByCreator(supabase, user.id, {
+          dateGte: twoWeeksAgoStr,
+          fields: 'id',
+        });
+        const recentHosted = recentHostedResult.data || [];
 
         // Skip users with recent activity
-        if (recentParticipation?.length || recentHosted?.length) continue;
+        if (recentParticipation.length || recentHosted.length) continue;
 
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';

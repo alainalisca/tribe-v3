@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { deleteSessionStory } from '@/lib/dal';
 import type { StoryGroup } from './storyTypes';
 
 const DURATION = 5000; // 5s for images
@@ -185,8 +186,8 @@ export function useStoryViewerState({
         }
       }
 
-      const { error } = await supabase.from('session_stories').delete().eq('id', story.id);
-      if (error) throw error;
+      const result = await deleteSessionStory(supabase, story.id);
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(language === 'es' ? 'Historia eliminada' : 'Story deleted');
       setShowDeleteConfirm(false);

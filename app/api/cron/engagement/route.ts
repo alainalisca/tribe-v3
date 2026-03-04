@@ -2,6 +2,13 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent, replaceMessageVariables } from '@/lib/motivational-messages';
 import { logError } from '@/lib/logger';
+import {
+  updateUser,
+  fetchUsersWithPush,
+  fetchParticipationsWithSession,
+  fetchSessionsByCreator,
+  fetchActiveSessionCount,
+} from '@/lib/dal';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -51,50 +58,62 @@ export async function GET(request: Request) {
       const today = now.toISOString().split('T')[0];
 
       // Get users with push subscriptions who haven't received weekly recap today
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, preferred_language, push_subscription, last_weekly_recap_sent')
-        .not('push_subscription', 'is', null)
-        .or(`last_weekly_recap_sent.is.null,last_weekly_recap_sent.lt.${today}`);
+      const usersResult = await fetchUsersWithPush(
+        supabase,
+        'id, preferred_language, push_subscription, last_weekly_recap_sent',
+        { lastWeeklyRecapBefore: today }
+      );
+      const users = (usersResult.data || []) as Array<{
+        id: string;
+        preferred_language: string | null;
+        push_subscription: unknown;
+        last_weekly_recap_sent: string | null;
+      }>;
 
-      if (users && users.length > 0) {
+      if (users.length > 0) {
         for (const user of users) {
           // Get user's session participation for the past week
-          const { data: participations } = await supabase
-            .from('session_participants')
-            .select('session_id, sessions!inner(date, sport, duration)')
-            .eq('user_id', user.id)
-            .eq('status', 'confirmed')
-            .gte('sessions.date', oneWeekAgo.toISOString().split('T')[0])
-            .lte('sessions.date', today);
+          const participationsResult = await fetchParticipationsWithSession(supabase, user.id, {
+            status: 'confirmed',
+            dateGte: oneWeekAgo.toISOString().split('T')[0],
+            dateLte: today,
+          });
+          const participations = (participationsResult.data || []) as Array<{
+            session_id: string;
+            sessions: { date: string; sport: string; duration: number | null } | null;
+          }>;
 
           // Get sessions the user hosted
-          const { data: hostedSessions } = await supabase
-            .from('sessions')
-            .select('id, date, sport, duration, current_participants')
-            .eq('creator_id', user.id)
-            .gte('date', oneWeekAgo.toISOString().split('T')[0])
-            .lte('date', today);
+          const hostedResult = await fetchSessionsByCreator(supabase, user.id, {
+            dateGte: oneWeekAgo.toISOString().split('T')[0],
+            dateLte: today,
+            fields: 'id, date, sport, duration, current_participants',
+          });
+          const hostedSessions = (hostedResult.data || []) as Array<{
+            id: string;
+            date: string;
+            sport: string;
+            duration: number | null;
+            current_participants: number | null;
+          }>;
 
-          const sessionsJoined = participations?.length || 0;
-          const sessionsHosted = hostedSessions?.length || 0;
+          const sessionsJoined = participations.length;
+          const sessionsHosted = hostedSessions.length;
           const totalSessions = sessionsJoined + sessionsHosted;
 
           // Calculate total training hours
           let totalMinutes = 0;
-          participations?.forEach((p) => {
-            // Supabase types nested joins as arrays, but single-row inner joins return an object at runtime
-            const sessions = p.sessions as unknown as { date: string; sport: string; duration: number | null } | null;
-            totalMinutes += sessions?.duration || 0;
+          participations.forEach((p) => {
+            totalMinutes += p.sessions?.duration || 0;
           });
-          hostedSessions?.forEach((s) => {
+          hostedSessions.forEach((s) => {
             totalMinutes += s.duration || 0;
           });
           const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
 
           // Calculate how many people the user helped (attendees at their hosted sessions)
           let peopleHelped = 0;
-          hostedSessions?.forEach((s) => {
+          hostedSessions.forEach((s) => {
             peopleHelped += (s.current_participants || 1) - 1; // Exclude host
           });
 
@@ -126,7 +145,7 @@ export async function GET(request: Request) {
               }),
             });
 
-            await supabase.from('users').update({ last_weekly_recap_sent: new Date().toISOString() }).eq('id', user.id);
+            await updateUser(supabase, user.id, { last_weekly_recap_sent: new Date().toISOString() });
 
             weeklyRecapsSent++;
           } catch (err) {
@@ -147,21 +166,27 @@ export async function GET(request: Request) {
     // - But were active within the last 60 days (not completely churned)
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const { data: inactiveUsers } = await supabase
-      .from('users')
-      .select('id, preferred_language, push_subscription, updated_at, last_reengagement_sent')
-      .not('push_subscription', 'is', null)
-      .lte('updated_at', threeDaysAgo.toISOString())
-      .gte('updated_at', sixtyDaysAgo.toISOString())
-      .or(`last_reengagement_sent.is.null,last_reengagement_sent.lt.${threeDaysAgo.toISOString()}`);
+    const inactiveUsersResult = await fetchUsersWithPush(
+      supabase,
+      'id, preferred_language, push_subscription, updated_at, last_reengagement_sent',
+      {
+        updatedBefore: threeDaysAgo.toISOString(),
+        updatedAfter: sixtyDaysAgo.toISOString(),
+        lastReengagementBefore: threeDaysAgo.toISOString(),
+      }
+    );
+    const inactiveUsers = (inactiveUsersResult.data || []) as Array<{
+      id: string;
+      preferred_language: string | null;
+      push_subscription: unknown;
+      updated_at: string;
+      last_reengagement_sent: string | null;
+    }>;
 
-    if (inactiveUsers && inactiveUsers.length > 0) {
+    if (inactiveUsers.length > 0) {
       // Count available sessions in the system
-      const { count: availableSessions } = await supabase
-        .from('sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('date', now.toISOString().split('T')[0]);
+      const sessionCountResult = await fetchActiveSessionCount(supabase, now.toISOString().split('T')[0]);
+      const availableSessions = sessionCountResult.data ?? 0;
 
       for (const user of inactiveUsers) {
         // Calculate days since last activity
@@ -175,7 +200,7 @@ export async function GET(request: Request) {
         // Replace variables
         content = replaceMessageVariables(content, {
           days: daysSinceActive,
-          count: availableSessions || 0,
+          count: availableSessions,
         });
 
         try {
@@ -190,7 +215,7 @@ export async function GET(request: Request) {
             }),
           });
 
-          await supabase.from('users').update({ last_reengagement_sent: new Date().toISOString() }).eq('id', user.id);
+          await updateUser(supabase, user.id, { last_reengagement_sent: new Date().toISOString() });
 
           reEngagementsSent++;
         } catch (err) {

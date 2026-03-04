@@ -4,6 +4,14 @@ import { logError } from '@/lib/logger';
 import { useEffect, useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import {
+  upsertLiveStatus,
+  deleteLiveStatus,
+  fetchMyLiveExpiry,
+  fetchLiveUsersWithDetails,
+  pingLiveStatus,
+  renewLiveStatus,
+} from '@/lib/dal';
 
 interface LiveUser {
   user_id: string;
@@ -30,29 +38,19 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
   async function loadLiveStatus() {
     try {
       if (user) {
-        const { data: myLive } = await supabase
-          .from('live_status')
-          .select('expires_at')
-          .eq('session_id', sessionId)
-          .eq('user_id', user.id)
-          .gt('expires_at', new Date().toISOString())
-          .maybeSingle();
-        if (myLive) {
+        const expiryResult = await fetchMyLiveExpiry(supabase, sessionId, user.id);
+        if (expiryResult.success && expiryResult.data) {
           setIsLive(true);
-          setLiveExpiresAt(new Date(myLive.expires_at));
+          setLiveExpiresAt(new Date(expiryResult.data));
         } else {
           setIsLive(false);
           setLiveExpiresAt(null);
         }
       }
-      const { data: liveData } = await supabase
-        .from('live_status')
-        .select('user_id, started_at, user:users(name, avatar_url)')
-        .eq('session_id', sessionId)
-        .gt('expires_at', new Date().toISOString());
-      if (liveData) {
+      const liveResult = await fetchLiveUsersWithDetails(supabase, sessionId);
+      if (liveResult.success && liveResult.data) {
         setLiveUsers(
-          liveData.map((row) => {
+          (liveResult.data as Array<{ user_id: string; started_at: string; user: unknown }>).map((row) => {
             const rawUser = row.user;
             const userObj = (Array.isArray(rawUser) ? rawUser[0] : rawUser) as {
               name: string;
@@ -77,11 +75,7 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
     if (!isLive || !user) return;
     const interval = setInterval(async () => {
       try {
-        await supabase
-          .from('live_status')
-          .update({ last_ping: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('session_id', sessionId);
+        await pingLiveStatus(supabase, user.id, sessionId);
       } catch {
         // Heartbeat ping is fire-and-forget; next interval will retry
       }
@@ -125,17 +119,14 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
     if (!user) return;
     setGoingLive(true);
     try {
-      const { error } = await supabase.from('live_status').upsert(
-        {
-          user_id: user.id,
-          session_id: sessionId,
-          started_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-          last_ping: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,session_id' }
-      );
-      if (error) throw error;
+      const result = await upsertLiveStatus(supabase, {
+        user_id: user.id,
+        session_id: sessionId,
+        started_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        last_ping: new Date().toISOString(),
+      });
+      if (!result.success) throw new Error(result.error);
       setIsLive(true);
       setLiveExpiresAt(new Date(Date.now() + 15 * 60 * 1000));
       showSuccess(language === 'es' ? '¡Estás en vivo!' : "You're live!");
@@ -150,7 +141,8 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
   async function handleEndLive() {
     if (!user) return;
     try {
-      await supabase.from('live_status').delete().eq('user_id', user.id).eq('session_id', sessionId);
+      const result = await deleteLiveStatus(supabase, user.id, sessionId);
+      if (!result.success) throw new Error(result.error);
       setIsLive(false);
       setLiveExpiresAt(null);
       setLiveCountdown('');
@@ -164,15 +156,11 @@ export function useLiveStatus({ supabase, sessionId, sessionDate, user, language
   async function handleRenewLive() {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from('live_status')
-        .update({
-          expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-          last_ping: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-        .eq('session_id', sessionId);
-      if (error) throw error;
+      const result = await renewLiveStatus(supabase, user.id, sessionId, {
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        last_ping: new Date().toISOString(),
+      });
+      if (!result.success) throw new Error(result.error);
       setLiveExpiresAt(new Date(Date.now() + 15 * 60 * 1000));
       showSuccess(language === 'es' ? '¡Live renovado 15 min!' : 'Live renewed 15 min!');
     } catch {

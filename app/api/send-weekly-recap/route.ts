@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForAdmin } from '@/lib/dal';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -22,12 +23,11 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, name, email, preferred_language')
-      .not('email', 'is', null);
+    const usersResult = await fetchUsersForAdmin(supabase);
+    const allUsers = usersResult.data || [];
+    const users = allUsers.filter((u) => u.email != null);
 
-    if (!users) {
+    if (users.length === 0) {
       return NextResponse.json({ error: 'No users found' }, { status: 400 });
     }
 
@@ -40,31 +40,35 @@ export async function POST(request: Request) {
 
     for (const user of users) {
       try {
-        const { data: participatedSessions } = await supabase
-          .from('session_participants')
-          .select(
-            `
-            session:sessions(
-              id,
-              sport,
-              location,
-              date,
-              start_time,
-              creator:users!creator_id(name)
-            )
-          `
-          )
-          .eq('user_id', user.id)
-          .eq('status', 'accepted')
-          .gte('session.date', oneWeekAgoStr);
+        const participatedResult = await fetchParticipationsWithSession(supabase, user.id, {
+          status: 'accepted',
+          dateGte: oneWeekAgoStr,
+          userJoinFields: 'session:sessions(id, sport, location, date, start_time, creator:users!creator_id(name))',
+        });
+        const participatedSessions = (participatedResult.data || []) as Array<{
+          session: {
+            id: string;
+            sport: string;
+            location: string;
+            date: string;
+            start_time: string;
+            creator: { name: string };
+          };
+        }>;
 
-        const { data: hostedSessions } = await supabase
-          .from('sessions')
-          .select('id, sport, location, date, start_time')
-          .eq('creator_id', user.id)
-          .gte('date', oneWeekAgoStr);
+        const hostedResult = await fetchSessionsByCreator(supabase, user.id, {
+          dateGte: oneWeekAgoStr,
+          fields: 'id, sport, location, date, start_time',
+        });
+        const hostedSessions = (hostedResult.data || []) as Array<{
+          id: string;
+          sport: string;
+          location: string;
+          date: string;
+          start_time: string;
+        }>;
 
-        const totalSessions = (participatedSessions?.length || 0) + (hostedSessions?.length || 0);
+        const totalSessions = participatedSessions.length + hostedSessions.length;
 
         if (totalSessions === 0) continue;
 
@@ -87,28 +91,16 @@ export async function POST(request: Request) {
 
         let sessionsHTML = '';
 
-        if (participatedSessions && participatedSessions.length > 0) {
+        if (participatedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${participatedHeader}</h3><ul style="color: #374151;">`;
           for (const item of participatedSessions) {
-            // Supabase types nested joins as arrays, but single-row joins return an object at runtime
-            const session = (
-              item as unknown as {
-                session: {
-                  id: string;
-                  sport: string;
-                  location: string;
-                  date: string;
-                  start_time: string;
-                  creator: { name: string };
-                };
-              }
-            ).session;
+            const session = item.session;
             sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
           }
           sessionsHTML += '</ul>';
         }
 
-        if (hostedSessions && hostedSessions.length > 0) {
+        if (hostedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${hostedHeader}</h3><ul style="color: #374151;">`;
           for (const session of hostedSessions) {
             sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;

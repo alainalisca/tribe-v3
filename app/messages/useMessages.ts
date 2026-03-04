@@ -6,6 +6,12 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import {
+  fetchParticipantSessionIds,
+  fetchSessionsByCreator,
+  fetchSessionsByIds,
+  fetchChatMessagesForSessions,
+} from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export interface Conversation {
@@ -61,29 +67,17 @@ export function useMessages() {
       setLoading(true);
 
       // Get all sessions where user is a participant (including as creator)
-      const { data: participantSessions, error: participantError } = await supabase
-        .from('session_participants')
-        .select('session_id')
-        .eq('user_id', userId)
-        .eq('status', 'confirmed');
-
-      if (participantError) throw participantError;
+      const participantResult = await fetchParticipantSessionIds(supabase, userId);
+      if (!participantResult.success) throw new Error(participantResult.error);
 
       // Get sessions created by user
-      const { data: createdSessions, error: createdError } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('creator_id', userId);
-
-      if (createdError) throw createdError;
+      const createdResult = await fetchSessionsByCreator(supabase, userId, { fields: 'id' });
+      if (!createdResult.success) throw new Error(createdResult.error);
 
       // Combine session IDs
-      const sessionIds = [
-        ...new Set([
-          ...(participantSessions?.map((p) => p.session_id) || []),
-          ...(createdSessions?.map((s) => s.id) || []),
-        ]),
-      ];
+      // REASON: DAL returns unknown[] for flexible field queries — cast for field access
+      const createdSessions = (createdResult.data || []) as Array<{ id: string }>;
+      const sessionIds = [...new Set([...(participantResult.data || []), ...createdSessions.map((s) => s.id)])];
 
       if (sessionIds.length === 0) {
         setConversations([]);
@@ -92,18 +86,21 @@ export function useMessages() {
       }
 
       // Batch: get all sessions in one query
-      const { data: sessions } = await supabase
-        .from('sessions')
-        .select(
-          `
-          id,
-          sport,
-          date,
-          location,
-          creator:users!sessions_creator_id_fkey(id, name, avatar_url)
-        `
-        )
-        .in('id', sessionIds);
+      const sessionsResult = await fetchSessionsByIds(
+        supabase,
+        sessionIds,
+        'id, sport, date, location, creator:users!sessions_creator_id_fkey(id, name, avatar_url)'
+      );
+      // REASON: DAL returns unknown[] — cast for field access on session rows with creator join
+      const sessions = (sessionsResult.success ? sessionsResult.data : []) as Array<{
+        id: string;
+        sport: string;
+        date: string;
+        location: string;
+        creator:
+          | { id: string; name: string; avatar_url: string | null }
+          | Array<{ id: string; name: string; avatar_url: string | null }>;
+      }>;
 
       if (!sessions || sessions.length === 0) {
         setConversations([]);
@@ -112,19 +109,14 @@ export function useMessages() {
       }
 
       // Batch: get the latest message per session in one query
-      const { data: allMessages } = await supabase
-        .from('chat_messages')
-        .select(
-          `
-          session_id,
-          message,
-          created_at,
-          user:users!chat_messages_user_id_fkey(name)
-        `
-        )
-        .in('session_id', sessionIds)
-        .eq('deleted', false)
-        .order('created_at', { ascending: false });
+      const messagesResult = await fetchChatMessagesForSessions(supabase, sessionIds);
+      // REASON: DAL returns unknown[] — cast for field access on chat message rows
+      const allMessages = (messagesResult.success ? messagesResult.data : []) as Array<{
+        session_id: string;
+        message: string;
+        created_at: string | null;
+        user: { name: string | null } | { name: string | null }[] | null;
+      }>;
 
       // Group: find the last message per session and check if messages exist
       const lastMessageBySession = new Map<
@@ -136,7 +128,7 @@ export function useMessages() {
           user: { name: string | null } | { name: string | null }[] | null;
         }
       >();
-      for (const msg of allMessages || []) {
+      for (const msg of allMessages) {
         if (!lastMessageBySession.has(msg.session_id)) {
           lastMessageBySession.set(msg.session_id, msg);
         }

@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import {
+  fetchAdminStatsRaw,
+  fetchAdminUsersWithCounts,
+  fetchAdminReports,
+  fetchAdminFeedback,
+  fetchAdminBugs,
+  fetchAdminMessages,
+  fetchAdminSessions,
+} from '@/lib/dal';
 import type {
   AdminStatsData,
   AdminUser,
@@ -50,63 +59,51 @@ export function useAdminData(supabase: SupabaseClient) {
 
   async function loadStats() {
     try {
+      const result = await fetchAdminStatsRaw(supabase);
+      if (!result.success || !result.data) return;
+
+      const {
+        userCount,
+        activeSessionCount,
+        messageCount,
+        newUsersToday,
+        allSessions,
+        allSessionCreators,
+        allParticipants,
+      } = result.data;
+
       const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const weekStart = new Date(now);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
       const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
-      const [
-        { count: userCount },
-        { count: activeSessionCount },
-        { count: messageCount },
-        { count: newUsers },
-        { data: allSessions },
-        { data: allSessionCreators },
-        { data: allParticipants },
-      ] = await Promise.all([
-        supabase.from('users').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .gte('date', today),
-        supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
-        supabase.from('sessions').select('id, status, date, participants_count, sport, creator_id'),
-        supabase.from('sessions').select('creator_id'),
-        supabase.from('session_participants').select('user_id'),
-      ]);
-
-      const totalSessions = allSessions?.length || 0;
-      const pastSessions = allSessions?.filter((s) => new Date(s.date + 'T00:00:00') < new Date()) || [];
+      const totalSessions = allSessions.length;
+      const pastSessions = allSessions.filter((s) => new Date(s.date + 'T00:00:00') < new Date());
       const avgParticipants =
         totalSessions > 0
-          ? Math.round((allSessions || []).reduce((sum, s) => sum + (s.participants_count || 0), 0) / totalSessions)
+          ? Math.round(allSessions.reduce((sum, s) => sum + (s.participants_count || 0), 0) / totalSessions)
           : 0;
-      const sessionsThisWeek = allSessions?.filter((s) => s.date >= weekStr).length || 0;
-      const sessionsThisMonth = allSessions?.filter((s) => s.date >= monthStr).length || 0;
+      const sessionsThisWeek = allSessions.filter((s) => s.date >= weekStr).length;
+      const sessionsThisMonth = allSessions.filter((s) => s.date >= monthStr).length;
 
       const sportCounts: Record<string, number> = {};
-      allSessions?.forEach((s) => {
+      allSessions.forEach((s) => {
         sportCounts[s.sport] = (sportCounts[s.sport] || 0) + 1;
       });
       const topSportEntry = Object.entries(sportCounts).sort((a, b) => b[1] - a[1])[0];
 
       const activeCreatorIds = new Set<string>();
-      allSessions?.forEach((s) => {
+      allSessions.forEach((s) => {
         if (new Date(s.date + 'T00:00:00') >= new Date(thirtyDaysAgo)) activeCreatorIds.add(s.creator_id);
       });
       const activeParticipantIds = new Set<string>();
-      allParticipants?.forEach((p) => activeParticipantIds.add(p.user_id));
+      allParticipants.forEach((p) => activeParticipantIds.add(p.user_id));
       const activeUsers = new Set([...activeCreatorIds, ...activeParticipantIds]).size;
 
       const creatorCounts = new Map<string, number>();
-      allSessionCreators?.forEach((s) => {
+      allSessionCreators.forEach((s) => {
         creatorCounts.set(s.creator_id, (creatorCounts.get(s.creator_id) || 0) + 1);
       });
       const creatorsWithMultiple = [...creatorCounts.values()].filter((c) => c > 1).length;
@@ -114,23 +111,23 @@ export function useAdminData(supabase: SupabaseClient) {
         creatorCounts.size > 0 ? Math.round((creatorsWithMultiple / creatorCounts.size) * 100) : 0;
 
       setStats({
-        totalUsers: userCount || 0,
+        totalUsers: userCount,
         activeUsers,
-        activeSessions: activeSessionCount || 0,
+        activeSessions: activeSessionCount,
         totalSessions,
         sessionsThisWeek,
         sessionsThisMonth,
-        totalMessages: messageCount || 0,
-        newUsersToday: newUsers || 0,
+        totalMessages: messageCount,
+        newUsersToday,
         completedSessions: pastSessions.filter((s) => s.status === 'completed').length,
         cancelledSessions: pastSessions.filter((s) => s.status === 'cancelled').length,
         averageParticipants: avgParticipants,
         topSport: topSportEntry?.[0] || '-',
         topSportCount: topSportEntry?.[1] || 0,
-        avgSessionsPerUser: (userCount || 0) > 0 ? Math.round((totalSessions / (userCount || 1)) * 10) / 10 : 0,
+        avgSessionsPerUser: userCount > 0 ? Math.round((totalSessions / userCount) * 10) / 10 : 0,
         retentionPercent,
-        totalCreated: allSessionCreators?.length || 0,
-        totalJoined: allParticipants?.length || 0,
+        totalCreated: allSessionCreators.length,
+        totalJoined: allParticipants.length,
       });
     } catch (error) {
       logError(error, { action: 'loadStats' });
@@ -140,26 +137,24 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadUsers() {
     setLoadingUsers(true);
     try {
-      const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-        supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
-        supabase.from('sessions').select('creator_id'),
-        supabase.from('session_participants').select('user_id'),
-      ]);
-      if (error) throw error;
+      const result = await fetchAdminUsersWithCounts(supabase);
+      if (!result.success || !result.data) throw new Error(result.error);
+
+      const { users: data, sessionCounts, participantCounts } = result.data;
       const createdMap = new Map<string, number>();
-      sessionCounts?.forEach((s) => {
+      sessionCounts.forEach((s) => {
         createdMap.set(s.creator_id, (createdMap.get(s.creator_id) || 0) + 1);
       });
       const joinedMap = new Map<string, number>();
-      participantCounts?.forEach((p) => {
+      participantCounts.forEach((p) => {
         if (p.user_id) joinedMap.set(p.user_id, (joinedMap.get(p.user_id) || 0) + 1);
       });
       setUsers(
-        (data || []).map((u) => ({
+        (data as Array<{ id: string } & Record<string, unknown>>).map((u) => ({
           ...u,
           sessions_created: createdMap.get(u.id) || 0,
           sessions_joined: joinedMap.get(u.id) || 0,
-        }))
+        })) as AdminUser[]
       );
     } catch (error) {
       logError(error, { action: 'loadUsers' });
@@ -171,14 +166,9 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadReports() {
     setLoadingReports(true);
     try {
-      const { data, error } = await supabase
-        .from('reported_users')
-        .select(
-          `*, reporter:users!reported_users_reporter_id_fkey(id, name, email), reported:users!reported_users_reported_user_id_fkey(id, name, email)`
-        )
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setReports(data || []);
+      const result = await fetchAdminReports(supabase);
+      if (!result.success) throw new Error(result.error);
+      setReports(result.data || []);
     } catch (error) {
       logError(error, { action: 'loadReports' });
     } finally {
@@ -189,12 +179,9 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadFeedback() {
     setLoadingFeedback(true);
     try {
-      const { data, error } = await supabase
-        .from('user_feedback')
-        .select(`*, user:users(id, name, email)`)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setFeedback(data || []);
+      const result = await fetchAdminFeedback(supabase);
+      if (!result.success) throw new Error(result.error);
+      setFeedback(result.data || []);
     } catch (error) {
       logError(error, { action: 'loadFeedback' });
     } finally {
@@ -205,12 +192,9 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadBugs() {
     setLoadingBugs(true);
     try {
-      const { data, error } = await supabase
-        .from('bug_reports')
-        .select(`*, user:users(id, name, email)`)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setBugs(data || []);
+      const result = await fetchAdminBugs(supabase);
+      if (!result.success) throw new Error(result.error);
+      setBugs(result.data || []);
     } catch (error) {
       logError(error, { action: 'loadBugs' });
     } finally {
@@ -221,13 +205,9 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadMessages() {
     setLoadingMessages(true);
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(`*, user:users(id, name, email), session:sessions(id, sport, location)`)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      setMessages(data || []);
+      const result = await fetchAdminMessages(supabase);
+      if (!result.success) throw new Error(result.error);
+      setMessages(result.data || []);
     } catch (error) {
       logError(error, { action: 'loadMessages' });
     } finally {
@@ -238,13 +218,9 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadSessions() {
     setLoadingSessions(true);
     try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(`*, creator:users!sessions_creator_id_fkey(id, name, email)`)
-        .order('date', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setSessions(data || []);
+      const result = await fetchAdminSessions(supabase);
+      if (!result.success) throw new Error(result.error);
+      setSessions(result.data || []);
     } catch (error) {
       logError(error, { action: 'loadSessions' });
     } finally {

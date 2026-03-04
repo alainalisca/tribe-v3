@@ -6,6 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { log, logError } from '@/lib/logger';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
+import { insertParticipant, insertSession } from '@/lib/dal';
 
 interface TrainingNowFormData {
   sport: string;
@@ -111,33 +112,31 @@ export function useTrainingNowForm({ isOpen, userId, language, onSessionCreated,
       const sessionTime = startTime.toTimeString().slice(0, 5);
 
       // Create the session
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .insert({
-          creator_id: userId,
-          sport: formData.sport,
-          location: formData.location,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          date: sessionDate,
-          start_time: sessionTime,
-          duration: formData.duration,
-          max_participants: 10,
-          current_participants: 1,
-          status: 'active',
-          is_immediate: true,
-        })
-        .select()
-        .single();
+      const sessionResult = await insertSession(supabase, {
+        creator_id: userId,
+        sport: formData.sport,
+        location: formData.location,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        date: sessionDate,
+        start_time: sessionTime,
+        duration: formData.duration,
+        max_participants: 10,
+        current_participants: 1,
+        status: 'active',
+        is_immediate: true,
+      });
 
-      if (sessionError) throw sessionError;
+      if (!sessionResult.success) throw new Error(sessionResult.error);
+      const session = sessionResult.data!;
 
       // Add creator as participant
-      await supabase.from('session_participants').insert({
+      const participantResult = await insertParticipant(supabase, {
         session_id: session.id,
         user_id: userId,
         status: 'confirmed',
       });
+      if (!participantResult.success) throw new Error(participantResult.error);
 
       // Fire-and-forget: don't block UI waiting for notifications
       if (formData.latitude && formData.longitude) {

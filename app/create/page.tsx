@@ -13,6 +13,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { insertSession } from '@/lib/dal';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -92,18 +93,14 @@ export default function CreateSessionPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .insert({
-          ...formData,
-          creator_id: user!.id,
-          current_participants: 0,
-          status: 'active',
-          photos: photos.length > 0 ? photos : null,
-        })
-        .select()
-        .single();
-      if (error) throw error;
+      const result = await insertSession(supabase, {
+        ...formData,
+        creator_id: user!.id,
+        current_participants: 0,
+        status: 'active',
+        photos: photos.length > 0 ? photos : null,
+      });
+      if (!result.success) throw new Error(result.error);
       showSuccess(t('sessionCreated'));
       router.push('/');
       celebrateSessionCreated();

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { insertSessionStory } from '@/lib/dal';
 import { getStoryUploadTranslations } from './stories/storyUploadTranslations';
 import {
   MAX_IMAGE_SIZE,
@@ -168,7 +169,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         }
       }
 
-      const { error: insertError } = await supabase.from('session_stories').insert({
+      const insertResult = await insertSessionStory(supabase, {
         session_id: sessionId,
         user_id: userId,
         media_url: mediaUrl,
@@ -177,7 +178,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         caption: caption.trim() || null,
       });
 
-      if (insertError) throw insertError;
+      if (!insertResult.success) throw new Error(insertResult.error);
 
       showSuccess(t.success);
       onUploaded?.();

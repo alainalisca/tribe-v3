@@ -11,7 +11,13 @@ import { calculateDistance, formatDistance } from '@/lib/distance';
 import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { joinSession } from '@/lib/sessions';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchUpcomingSessions, deleteSession as dalDeleteSession } from '@/lib/dal';
+import {
+  fetchUpcomingSessions,
+  deleteSession as dalDeleteSession,
+  fetchUserProfileMaybe,
+  updateUser,
+  fetchLiveUsersWithDetails,
+} from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import type { User } from '@supabase/supabase-js';
@@ -105,12 +111,12 @@ export function useHomeFeed() {
   }
   async function loadProfile() {
     if (!user) return;
-    const { data } = await supabase
-      .from('users')
-      .select('name, avatar_url, bio, sports, safety_waiver_accepted')
-      .eq('id', user.id)
-      .maybeSingle();
-    setUserProfile(data);
+    const result = await fetchUserProfileMaybe(
+      supabase,
+      user.id,
+      'name, avatar_url, bio, sports, safety_waiver_accepted'
+    );
+    setUserProfile((result.data as UserProfile | null) ?? null);
   }
 
   async function loadSessions() {
@@ -132,25 +138,20 @@ export function useHomeFeed() {
   async function loadLiveStatuses(sessionIds: string[]) {
     if (sessionIds.length === 0) return;
     try {
-      const { data, error } = await supabase
-        .from('live_status')
-        .select('session_id, user_id, user:users(name, avatar_url)')
-        .in('session_id', sessionIds)
-        .gt('expires_at', new Date().toISOString());
-      if (error || !data) return;
+      const results = await Promise.all(
+        sessionIds.map((sid) => fetchLiveUsersWithDetails(supabase, sid).then((r) => ({ sid, r })))
+      );
       const map: Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }> = {};
       const userIds = new Set<string>();
-      for (const row of data) {
-        const typed = row as unknown as {
-          session_id: string;
-          user_id: string;
-          user: { name: string; avatar_url: string | null } | null;
-        };
-        const sid = typed.session_id;
-        userIds.add(typed.user_id);
-        if (!map[sid]) map[sid] = { count: 0, users: [] };
-        map[sid].count++;
-        map[sid].users.push({ name: typed.user?.name || 'Unknown', avatar_url: typed.user?.avatar_url || null });
+      for (const { sid, r } of results) {
+        if (!r.success || !r.data || r.data.length === 0) continue;
+        for (const row of r.data) {
+          const typed = row as { user_id: string; user: { name: string; avatar_url: string | null } | null };
+          userIds.add(typed.user_id);
+          if (!map[sid]) map[sid] = { count: 0, users: [] };
+          map[sid].count++;
+          map[sid].users.push({ name: typed.user?.name || 'Unknown', avatar_url: typed.user?.avatar_url || null });
+        }
       }
       setLiveStatusMap(map);
       setLiveUserIdSet(userIds);
@@ -262,11 +263,11 @@ export function useHomeFeed() {
   async function handleWaiverAccepted() {
     if (!user) return;
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ safety_waiver_accepted: true, safety_waiver_accepted_at: new Date().toISOString() })
-        .eq('id', user.id);
-      if (error) throw error;
+      const result = await updateUser(supabase, user.id, {
+        safety_waiver_accepted: true,
+        safety_waiver_accepted_at: new Date().toISOString(),
+      });
+      if (!result.success) throw new Error(result.error);
       if (userProfile) setUserProfile({ ...userProfile, safety_waiver_accepted: true });
       setShowSafetyWaiver(false);
       if (pendingSessionId) {

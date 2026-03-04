@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { logError } from '@/lib/logger';
+import { fetchSessionsByCreator, fetchParticipationsWithSession } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Session } from '@/lib/database.types';
 
@@ -87,35 +88,24 @@ export function useSessionsData() {
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       // Load sessions I'm hosting (upcoming) - include today's sessions
-      const { data: hosting } = await supabase
-        .from('sessions')
-        .select(
-          `
-          *,
-          participants:session_participants(user_id, status)
-        `
-        )
-        .eq('creator_id', userId)
-        .gte('date', today)
-        .eq('status', 'active')
-        .order('date', { ascending: true });
+      const hostingResult = await fetchSessionsByCreator(supabase, userId, {
+        dateGte: today,
+        fields: '*, participants:session_participants(user_id, status)',
+      });
+      // REASON: DAL returns unknown[] — cast for field access on hosting session rows
+      const hostingRaw = (hostingResult.success ? hostingResult.data : []) as HostingSession[];
+      const hosting = hostingRaw.filter((s) => s.status === 'active').sort((a, b) => a.date.localeCompare(b.date));
 
       // Filter out hosting sessions that have actually ended (today's sessions past their end time)
-      const upcomingHosting = (hosting || []).filter((s) => !isSessionPast(s));
+      const upcomingHosting = hosting.filter((s) => !isSessionPast(s));
 
       // Load sessions I've joined (upcoming)
-      const { data: joined } = await supabase
-        .from('session_participants')
-        .select(
-          `
-          session:sessions(
-            *,
-            creator:users!sessions_creator_id_fkey(name, avatar_url)
-          )
-        `
-        )
-        .eq('user_id', userId)
-        .eq('status', 'confirmed');
+      const joinedResult = await fetchParticipationsWithSession(supabase, userId, {
+        status: 'confirmed',
+        userJoinFields: 'session:sessions(*, creator:users!sessions_creator_id_fkey(name, avatar_url))',
+      });
+      // REASON: DAL returns unknown[] — cast for field access on joined session rows
+      const joined = (joinedResult.success ? joinedResult.data : []) as Array<{ session: unknown }>;
 
       // Filter joined sessions to only upcoming ones (not past their end time)
       const upcomingJoined =
@@ -128,16 +118,15 @@ export function useSessionsData() {
           .map((j) => j.session as unknown as JoinedSession) || [];
 
       // Load past sessions (both hosted and joined)
-      const { data: pastHosted } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('creator_id', userId)
-        .lte('date', today)
-        .order('date', { ascending: false })
-        .limit(20);
+      const pastHostedResult = await fetchSessionsByCreator(supabase, userId, { dateLte: today });
+      // REASON: DAL returns unknown[] — cast for field access
+      const pastHosted = (pastHostedResult.success ? pastHostedResult.data : []) as PastSession[];
+      const pastHostedSorted = pastHosted
+        .sort((a, b) => new Date(b.date + 'T00:00:00').getTime() - new Date(a.date + 'T00:00:00').getTime())
+        .slice(0, 20);
 
       // Filter to only actually past sessions
-      const pastHostedFiltered = (pastHosted || []).filter((s) => isSessionPast(s));
+      const pastHostedFiltered = pastHostedSorted.filter((s) => isSessionPast(s));
 
       const pastJoinedData =
         joined

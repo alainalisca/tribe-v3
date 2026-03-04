@@ -4,6 +4,18 @@ import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import {
+  deleteChatMessage,
+  deleteChatMessagesByUser,
+  deleteParticipantsByUser,
+  deleteSessionsByCreator,
+  deleteUser as dalDeleteUser,
+  updateUser,
+  updateSession,
+  updateReportStatus as dalUpdateReportStatus,
+  updateFeedbackStatus as dalUpdateFeedbackStatus,
+  updateBugStatus as dalUpdateBugStatus,
+} from '@/lib/dal';
 import type { AdminUser, AdminReport, AdminFeedback, AdminBug, AdminSession, AdminMessage } from './types';
 
 interface Setters {
@@ -27,8 +39,8 @@ export function useAdminActions(
     if (!confirm('Delete this message?')) return;
     setActionLoading(messageId);
     try {
-      const { error } = await supabase.from('chat_messages').delete().eq('id', messageId);
-      if (error) throw error;
+      const result = await deleteChatMessage(supabase, messageId);
+      if (!result.success) throw new Error(result.error);
       setters.setMessages((prev) => prev.filter((m) => m.id !== messageId));
       showSuccess('Message deleted');
     } catch (error: unknown) {
@@ -41,11 +53,12 @@ export function useAdminActions(
   async function verifySessionPhotos(sessionId: string) {
     if (!confirm('Verify these location photos as authentic?')) return;
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .update({ photo_verified: true, verified_by: userId, verified_at: new Date().toISOString() })
-        .eq('id', sessionId);
-      if (error) throw error;
+      const result = await updateSession(supabase, sessionId, {
+        photo_verified: true,
+        verified_by: userId,
+        verified_at: new Date().toISOString(),
+      });
+      if (!result.success) throw new Error(result.error);
       setters.setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, photo_verified: true } : s)));
       showSuccess('Photos verified');
     } catch (error: unknown) {
@@ -56,11 +69,12 @@ export function useAdminActions(
   async function unverifySessionPhotos(sessionId: string) {
     if (!confirm('Remove verification?')) return;
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .update({ photo_verified: false, verified_by: null, verified_at: null })
-        .eq('id', sessionId);
-      if (error) throw error;
+      const result = await updateSession(supabase, sessionId, {
+        photo_verified: false,
+        verified_by: null,
+        verified_at: null,
+      });
+      if (!result.success) throw new Error(result.error);
       setters.setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, photo_verified: false } : s)));
       showSuccess('Verification removed');
     } catch (error: unknown) {
@@ -72,8 +86,8 @@ export function useAdminActions(
     if (!confirm('Ban this user?')) return;
     setActionLoading(targetUserId);
     try {
-      const { error } = await supabase.from('users').update({ banned: true }).eq('id', targetUserId);
-      if (error) throw error;
+      const result = await updateUser(supabase, targetUserId, { banned: true });
+      if (!result.success) throw new Error(result.error);
       setters.setUsers((prev) => prev.map((u) => (u.id === targetUserId ? { ...u, banned: true } : u)));
       showSuccess('User banned');
     } catch (error: unknown) {
@@ -87,8 +101,8 @@ export function useAdminActions(
     if (!confirm('Unban this user?')) return;
     setActionLoading(targetUserId);
     try {
-      const { error } = await supabase.from('users').update({ banned: false }).eq('id', targetUserId);
-      if (error) throw error;
+      const result = await updateUser(supabase, targetUserId, { banned: false });
+      if (!result.success) throw new Error(result.error);
       setters.setUsers((prev) => prev.map((u) => (u.id === targetUserId ? { ...u, banned: false } : u)));
       showSuccess('User unbanned');
     } catch (error: unknown) {
@@ -102,11 +116,11 @@ export function useAdminActions(
     if (!confirm('DELETE user and ALL data?')) return;
     setActionLoading(targetUserId);
     try {
-      await supabase.from('chat_messages').delete().eq('user_id', targetUserId);
-      await supabase.from('session_participants').delete().eq('user_id', targetUserId);
-      await supabase.from('sessions').delete().eq('creator_id', targetUserId);
-      const { error } = await supabase.from('users').delete().eq('id', targetUserId);
-      if (error) throw error;
+      await deleteChatMessagesByUser(supabase, targetUserId);
+      await deleteParticipantsByUser(supabase, targetUserId);
+      await deleteSessionsByCreator(supabase, targetUserId);
+      const result = await dalDeleteUser(supabase, targetUserId);
+      if (!result.success) throw new Error(result.error);
       setters.setUsers((prev) => prev.filter((u) => u.id !== targetUserId));
       showSuccess('User deleted');
     } catch (error: unknown) {
@@ -118,8 +132,8 @@ export function useAdminActions(
 
   async function updateReportStatus(reportId: string, status: string) {
     try {
-      const { error } = await supabase.from('reported_users').update({ status }).eq('id', reportId);
-      if (error) throw error;
+      const result = await dalUpdateReportStatus(supabase, reportId, status);
+      if (!result.success) throw new Error(result.error);
       setters.setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status } : r)));
       showSuccess(`Report marked as ${status}`);
     } catch (error: unknown) {
@@ -129,8 +143,8 @@ export function useAdminActions(
 
   async function updateFeedbackStatus(feedbackId: string, status: string) {
     try {
-      const { error } = await supabase.from('user_feedback').update({ status }).eq('id', feedbackId);
-      if (error) throw error;
+      const result = await dalUpdateFeedbackStatus(supabase, feedbackId, status);
+      if (!result.success) throw new Error(result.error);
       setters.setFeedback((prev) => prev.map((f) => (f.id === feedbackId ? { ...f, status } : f)));
       showSuccess(`Feedback marked as ${status}`);
     } catch (error: unknown) {
@@ -140,8 +154,8 @@ export function useAdminActions(
 
   async function updateBugStatus(bugId: string, status: string) {
     try {
-      const { error } = await supabase.from('bug_reports').update({ status }).eq('id', bugId);
-      if (error) throw error;
+      const result = await dalUpdateBugStatus(supabase, bugId, status);
+      if (!result.success) throw new Error(result.error);
       setters.setBugs((prev) => prev.map((b) => (b.id === bugId ? { ...b, status } : b)));
       showSuccess(`Bug marked as ${status}`);
     } catch (error: unknown) {

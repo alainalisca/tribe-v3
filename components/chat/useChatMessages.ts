@@ -5,6 +5,15 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import {
+  fetchUserName,
+  fetchUserProfileMaybe,
+  insertReportedMessage,
+  fetchChatMessagesWithUsers,
+  insertChatMessage,
+  softDeleteChatMessage,
+  fetchParticipantUserIdsForSession,
+} from '@/lib/dal';
 
 export interface ChatMessage {
   id: string;
@@ -49,17 +58,16 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
 
   async function loadMessages() {
     try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(
-          `id, user_id, message, created_at, deleted,
-          user:users!chat_messages_user_id_fkey (name, avatar_url)`
-        )
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true })
-        .limit(200);
-
-      if (error) throw error;
+      const result = await fetchChatMessagesWithUsers(supabase, sessionId);
+      if (!result.success) throw new Error(result.error);
+      const data = result.data as Array<{
+        id: string;
+        user_id: string;
+        message: string;
+        created_at: string;
+        deleted: boolean;
+        user: { name: string; avatar_url: string | null } | Array<{ name: string; avatar_url: string | null }>;
+      }>;
       const messagesWithUser =
         data?.map((msg) => ({
           ...msg,
@@ -80,11 +88,14 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${sessionId}` },
         async (payload) => {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('name, avatar_url')
-            .eq('id', payload.new.user_id)
-            .single();
+          const userResult = await fetchUserProfileMaybe(supabase, payload.new.user_id, 'name, avatar_url');
+          const userData =
+            userResult.success && userResult.data
+              ? {
+                  name: (userResult.data.name as string) || 'Unknown',
+                  avatar_url: userResult.data.avatar_url as string | null,
+                }
+              : { name: 'Unknown', avatar_url: null };
 
           const messageWithUser: ChatMessage = {
             id: payload.new.id,
@@ -92,7 +103,7 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
             message: payload.new.message,
             created_at: payload.new.created_at,
             deleted: payload.new.deleted || false,
-            user: userData || { name: 'Unknown', avatar_url: null },
+            user: userData,
           };
 
           setMessages((prev) => [...prev, messageWithUser]);
@@ -134,24 +145,24 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
     if (!messageText.trim() || sending) return;
     try {
       setSending(true);
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert({ session_id: sessionId, user_id: currentUserId, message: messageText });
-      if (error) throw error;
+      const insertResult = await insertChatMessage(supabase, {
+        session_id: sessionId,
+        user_id: currentUserId,
+        message: messageText,
+      });
+      if (!insertResult.success) throw new Error(insertResult.error);
 
-      const { data: participants } = await supabase
-        .from('session_participants')
-        .select('user_id')
-        .eq('session_id', sessionId)
-        .neq('user_id', currentUserId);
-      const { data: sender } = await supabase.from('users').select('name').eq('id', currentUserId).single();
-      if (participants) {
-        for (const p of participants) {
+      const participantsResult = await fetchParticipantUserIdsForSession(supabase, sessionId, currentUserId);
+      const participantUserIds = participantsResult.success ? (participantsResult.data ?? []) : [];
+      const senderResult = await fetchUserName(supabase, currentUserId);
+      const sender = senderResult.success ? { name: senderResult.data } : null;
+      if (participantUserIds.length > 0) {
+        for (const userId of participantUserIds) {
           fetch('/api/notifications/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: p.user_id,
+              userId,
               title: 'New message in Tribe',
               body: `${sender?.name || 'Someone'}: ${messageText.slice(0, 50)}`,
               url: `/session/${sessionId}/chat`,
@@ -169,11 +180,8 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
 
   async function deleteMessage(messageId: string) {
     try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ deleted: true, deleted_by: currentUserId, deleted_at: new Date().toISOString() })
-        .eq('id', messageId);
-      if (error) throw error;
+      const result = await softDeleteChatMessage(supabase, messageId, currentUserId);
+      if (!result.success) throw new Error(result.error);
       showSuccess(language === 'es' ? 'Mensaje eliminado' : 'Message deleted');
     } catch (error) {
       logError(error, { action: 'deleteMessage', messageId });
@@ -192,14 +200,14 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
       return;
     }
     try {
-      const { error } = await supabase.from('reported_messages').insert({
+      const result = await insertReportedMessage(supabase, {
         message_id: reportingMessageId,
         reporter_id: currentUserId,
         session_id: sessionId,
         reason: reportReason,
         description: reportDescription,
       });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
       showSuccess(
         language === 'es'
           ? 'Mensaje reportado. Los administradores lo revisarán.'

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
+import { updateSession } from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
 
 interface EditSessionModalProps {
@@ -33,9 +34,8 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('sessions').update(formData).eq('id', session.id);
-
-      if (error) throw error;
+      const result = await updateSession(supabase, session.id, formData);
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(language === 'es' ? 'Sesión actualizada exitosamente' : 'Session updated successfully!');
       onSave();

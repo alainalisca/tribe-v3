@@ -6,7 +6,16 @@ import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchSessionWithDetails } from '@/lib/dal';
+import {
+  fetchSessionWithDetails,
+  fetchUserIsAdmin,
+  fetchUsersByIds,
+  fetchAttendanceForSession,
+  fetchAllRecapPhotosForSession,
+  fetchActiveStoriesForSession,
+  fetchUserReviewExists,
+  insertInviteToken,
+} from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import type { User as AuthUser } from '@supabase/supabase-js';
@@ -118,8 +127,8 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     } = await supabase.auth.getUser();
     setUser(user);
     if (user) {
-      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-      setUserIsAdmin(!!profile?.is_admin);
+      const result = await fetchUserIsAdmin(supabase, user.id);
+      setUserIsAdmin(result.success ? !!result.data : false);
     }
   }
 
@@ -147,31 +156,28 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
 
   async function checkAttendance() {
     if (!user) return;
-    const { data } = await supabase
-      .from('session_attendance')
-      .select('attended')
-      .eq('session_id', sessionId)
-      .eq('user_id', user.id)
-      .single();
-    setWasMarkedAttended(data?.attended === true);
+    const result = await fetchAttendanceForSession(supabase, sessionId, [user.id]);
+    if (result.success && result.data) {
+      const record = result.data.find((r) => r.user_id === user.id);
+      setWasMarkedAttended(record?.attended === true);
+    }
   }
 
   async function loadRecapPhotos() {
     try {
-      const { data: photosData, error } = await supabase
-        .from('session_recap_photos')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('uploaded_at', { ascending: true });
-      if (error) throw error;
-      if (photosData && photosData.length > 0) {
+      const result = await fetchAllRecapPhotosForSession(supabase, sessionId);
+      if (!result.success) throw new Error(result.error);
+      // REASON: DAL returns unknown[] — cast to any[] for field access on raw photo rows
+      const photosData = (result.data || []) as any[];
+      if (photosData.length > 0) {
         const userIds = [...new Set(photosData.map((p) => p.user_id))];
-        const { data: usersData } = await supabase.from('users').select('id, name, avatar_url').in('id', userIds);
+        const usersResult = await fetchUsersByIds(supabase, userIds);
+        const usersData = usersResult.success ? usersResult.data : [];
         setRecapPhotos(photosData.map((photo) => ({ ...photo, user: usersData?.find((u) => u.id === photo.user_id) })));
       } else {
         setRecapPhotos([]);
       }
-      if (user) setUserPhotoCount(photosData?.filter((p) => p.user_id === user.id).length || 0);
+      if (user) setUserPhotoCount(photosData.filter((p) => p.user_id === user.id).length || 0);
     } catch (error) {
       logError(error, { action: 'loadRecapPhotos', sessionId });
     }
@@ -179,16 +185,9 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
 
   async function loadSessionStories() {
     try {
-      const { data, error } = await supabase
-        .from('session_stories')
-        .select(
-          'id, session_id, user_id, media_url, media_type, thumbnail_url, caption, created_at, user:users!session_stories_user_id_fkey(name, avatar_url)'
-        )
-        .eq('session_id', sessionId)
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setSessionStories((data as unknown as SessionStoryJoined[]) || []);
+      const result = await fetchActiveStoriesForSession(supabase, sessionId);
+      if (!result.success) throw new Error(result.error);
+      setSessionStories((result.data as unknown as SessionStoryJoined[]) || []);
     } catch (error) {
       logError(error, { action: 'loadSessionStories', sessionId });
     }
@@ -197,13 +196,8 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   async function checkUserReview() {
     if (!user || !session) return;
     try {
-      const { data } = await supabase
-        .from('reviews')
-        .select('id')
-        .eq('session_id', session.id)
-        .eq('reviewer_id', user.id)
-        .single();
-      if (data) setHasReviewed(true);
+      const result = await fetchUserReviewExists(supabase, session.id, user.id);
+      if (result.success && result.data) setHasReviewed(true);
     } catch {
       // Review check is best-effort; defaults to not reviewed
     }
@@ -214,10 +208,8 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     try {
       setCreatingInvite(true);
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const { error } = await supabase
-        .from('invite_tokens')
-        .insert({ session_id: session.id, token, created_by: user.id });
-      if (error) throw error;
+      const result = await insertInviteToken(supabase, { session_id: session.id, token, created_by: user.id });
+      if (!result.success) throw new Error(result.error);
       setInviteLink(`${window.location.origin}/invite/${token}`);
       setShowInviteModal(true);
     } catch (error) {

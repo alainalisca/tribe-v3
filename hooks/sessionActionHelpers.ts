@@ -2,7 +2,14 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { fetchConfirmedCount } from '@/lib/dal';
+import {
+  fetchConfirmedCount,
+  insertParticipantReturning,
+  updateParticipantCount,
+  deleteGuestParticipant,
+  fetchGuestParticipant,
+  deleteParticipantBySessionAndUser,
+} from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
 import type { GuestData } from './sessionActionTypes';
 
@@ -17,26 +24,21 @@ export async function insertGuestParticipant(
     throw new Error('SESSION_FULL');
   }
 
-  const { data, error } = await supabase
-    .from('session_participants')
-    .insert({
-      session_id: session.id,
-      user_id: null,
-      is_guest: true,
-      guest_name: guestData.name,
-      guest_phone: guestData.phone,
-      guest_email: guestData.email || null,
-      status: 'confirmed',
-    })
-    .select('id, guest_token')
-    .single();
+  const result = await insertParticipantReturning(supabase, {
+    session_id: session.id,
+    user_id: null,
+    is_guest: true,
+    guest_name: guestData.name,
+    guest_phone: guestData.phone,
+    guest_email: guestData.email || null,
+    status: 'confirmed',
+  });
 
-  if (error) throw error;
+  if (!result.success) throw new Error(result.error);
+  const data = result.data as { id: string; guest_token: string | null };
 
-  await supabase
-    .from('sessions')
-    .update({ current_participants: (session.current_participants ?? 0) + 1 })
-    .eq('id', session.id);
+  const newCount = (session.current_participants ?? 0) + 1;
+  await updateParticipantCount(supabase, session.id, newCount);
 
   return data;
 }
@@ -85,21 +87,12 @@ export async function removeGuestParticipant(
     deleteClient = createClientWithHeaders({ 'x-guest-token': storedGuestToken });
   }
 
-  const query = deleteClient.from('session_participants').delete().eq('session_id', sessionId).eq('is_guest', true);
-  // Filter by token if available, fall back to phone
-  if (storedGuestToken) {
-    query.eq('guest_token', storedGuestToken);
-  } else if (storedGuestPhone) {
-    query.eq('guest_phone', storedGuestPhone);
-  }
+  const filter = storedGuestToken ? { guest_token: storedGuestToken } : { guest_phone: storedGuestPhone! };
+  const deleteResult = await deleteGuestParticipant(deleteClient, sessionId, filter);
+  if (!deleteResult.success) throw new Error(deleteResult.error);
 
-  const { error } = await query;
-  if (error) throw error;
-
-  await supabase
-    .from('sessions')
-    .update({ current_participants: Math.max(0, (session.current_participants ?? 0) - 1) })
-    .eq('id', session.id);
+  const newCount = Math.max(0, (session.current_participants ?? 0) - 1);
+  await updateParticipantCount(supabase, session.id, newCount);
 
   localStorage.removeItem(`guest_phone_${sessionId}`);
   localStorage.removeItem(`guest_email_${sessionId}`);
@@ -120,16 +113,10 @@ export async function checkGuestStatus(
   }
 
   try {
-    let query = supabase
-      .from('session_participants')
-      .select('id, guest_token')
-      .eq('session_id', sessionId)
-      .eq('is_guest', true);
-    if (storedGuestPhone) query = query.eq('guest_phone', storedGuestPhone);
-    else if (storedGuestEmail) query = query.eq('guest_email', storedGuestEmail);
-
-    const { data, error } = await query.single();
-    if (!error && data) {
+    const filter = storedGuestPhone ? { guest_phone: storedGuestPhone } : { guest_email: storedGuestEmail! };
+    const guestResult = await fetchGuestParticipant(supabase, sessionId, filter);
+    const data = guestResult.data as { id: string; guest_token: string | null } | null;
+    if (guestResult.success && data) {
       if (data.guest_token) localStorage.setItem(`guest_token_${sessionId}`, data.guest_token);
       return { hasJoined: true, participantId: data.id };
     } else {
@@ -152,17 +139,11 @@ export async function removeUserFromSession(
   language: 'en' | 'es',
   onNavigate: (path: string) => void
 ): Promise<void> {
-  const { error } = await supabase
-    .from('session_participants')
-    .delete()
-    .eq('session_id', session.id)
-    .eq('user_id', userId);
-  if (error) throw error;
+  const deleteResult = await deleteParticipantBySessionAndUser(supabase, session.id, userId);
+  if (!deleteResult.success) throw new Error(deleteResult.error);
 
-  await supabase
-    .from('sessions')
-    .update({ current_participants: (session.current_participants ?? 0) - 1 })
-    .eq('id', session.id);
+  const newCount = (session.current_participants ?? 0) - 1;
+  await updateParticipantCount(supabase, session.id, newCount);
 
   showSuccess(language === 'es' ? 'Has salido de la sesion' : 'You have left the session');
   onNavigate('/sessions');

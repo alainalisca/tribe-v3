@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Star, X } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { insertReview } from '@/lib/dal';
 import StarRating from '@/components/StarRating';
 
 interface ReviewSectionProps {
@@ -42,7 +43,7 @@ export default function ReviewSection({
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
 
-      const { error } = await supabase.from('reviews').insert({
+      const result = await insertReview(supabase, {
         session_id: session.id,
         reviewer_id: user.id,
         host_id: session.creator_id,
@@ -50,7 +51,7 @@ export default function ReviewSection({
         comment: reviewComment.trim() || null,
       });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       setShowRatingModal(false);
       showSuccess(language === 'es' ? '¡Gracias por tu reseña!' : 'Thank you for your review!');

@@ -2,6 +2,13 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { logError } from '@/lib/logger';
+import {
+  updateSession,
+  updateUser,
+  fetchSessionsWithCreator,
+  fetchParticipantsWithUserDetails,
+  fetchUsersWithPush,
+} from '@/lib/dal';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -43,13 +50,21 @@ export async function GET(request: Request) {
     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     const twoHoursFifteenMinsFromNow = new Date(now.getTime() + 2.25 * 60 * 60 * 1000);
 
-    const { data: sessions } = await supabase
-      .from('sessions')
-      .select('*, creator:users!sessions_creator_id_fkey(id, name, email, preferred_language)')
-      .eq('status', 'active')
-      .eq('reminder_sent', false)
-      .gte('date', now.toISOString().split('T')[0])
-      .lte('date', twoHoursFifteenMinsFromNow.toISOString().split('T')[0]);
+    const sessionsResult = await fetchSessionsWithCreator(supabase, {
+      status: 'active',
+      reminder_sent: false,
+      dateGte: now.toISOString().split('T')[0],
+      dateLte: twoHoursFifteenMinsFromNow.toISOString().split('T')[0],
+    });
+    const sessions = sessionsResult.data as Array<{
+      id: string;
+      sport: string;
+      location: string;
+      date: string;
+      start_time: string;
+      creator: { id: string; name: string; email: string; preferred_language: string | null };
+      [key: string]: unknown;
+    }> | null;
 
     let remindersSent = 0;
 
@@ -60,11 +75,15 @@ export async function GET(request: Request) {
       });
 
       for (const session of sessionsToRemind) {
-        const { data: participants } = await supabase
-          .from('session_participants')
-          .select('user_id, users!session_participants_user_id_fkey(id, name, email, preferred_language)')
-          .eq('session_id', session.id)
-          .eq('status', 'confirmed');
+        const participantsResult = await fetchParticipantsWithUserDetails(
+          supabase,
+          session.id,
+          'id, name, email, preferred_language'
+        );
+        const participants = (participantsResult.data || []) as Array<{
+          user_id: string;
+          user: { id: string; name: string; email: string; preferred_language: string | null } | null;
+        }>;
 
         const hostLang = session.creator?.preferred_language || 'en';
         const hostTitle = hostLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Your session starts soon!';
@@ -84,11 +103,8 @@ export async function GET(request: Request) {
           }),
         });
 
-        for (const participant of participants || []) {
-          // Supabase types nested joins as arrays, but single-row joins return an object at runtime
-          const pLang =
-            (participant as unknown as { users: { preferred_language: string | null } | null }).users
-              ?.preferred_language || 'en';
+        for (const participant of participants) {
+          const pLang = participant.user?.preferred_language || 'en';
           const pTitle = pLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Session starting soon!';
           const pBody =
             pLang === 'es'
@@ -107,7 +123,7 @@ export async function GET(request: Request) {
           });
         }
 
-        await supabase.from('sessions').update({ reminder_sent: true }).eq('id', session.id);
+        await updateSession(supabase, session.id, { reminder_sent: true });
 
         remindersSent++;
       }
@@ -124,14 +140,19 @@ export async function GET(request: Request) {
       // - Have push notifications enabled
       // - Haven't received morning motivation today
       // - Have been active in the last 30 days
-      const { data: users } = await supabase
-        .from('users')
-        .select(
-          'id, preferred_language, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at'
-        )
-        .not('push_subscription', 'is', null)
-        .or(`last_motivation_sent.is.null,last_motivation_sent.lt.${today}`)
-        .gte('updated_at', thirtyDaysAgo);
+      const usersResult = await fetchUsersWithPush(
+        supabase,
+        'id, preferred_language, push_subscription, last_motivation_sent, last_motivation_message_id, updated_at',
+        { lastMotivationBefore: today, updatedAfter: thirtyDaysAgo }
+      );
+      const users = (usersResult.data || []) as Array<{
+        id: string;
+        preferred_language: string | null;
+        push_subscription: unknown;
+        last_motivation_sent: string | null;
+        last_motivation_message_id: string | null;
+        updated_at: string;
+      }>;
 
       if (users && users.length > 0) {
         for (const user of users) {
@@ -168,13 +189,10 @@ export async function GET(request: Request) {
 
             // Update tracking: add new message ID and update timestamp
             const newUsedIds = [...usedMessageIds, index];
-            await supabase
-              .from('users')
-              .update({
-                last_motivation_sent: new Date().toISOString(),
-                last_motivation_message_id: JSON.stringify(newUsedIds),
-              })
-              .eq('id', user.id);
+            await updateUser(supabase, user.id, {
+              last_motivation_sent: new Date().toISOString(),
+              last_motivation_message_id: JSON.stringify(newUsedIds),
+            });
 
             morningMotivationSent++;
           } catch (err) {

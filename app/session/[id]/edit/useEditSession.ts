@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { fetchSession, updateSession } from '@/lib/dal';
 import type { EditSessionTranslations } from './translations';
 
 export interface EditSessionFormData {
@@ -54,10 +55,10 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
 
   async function loadSession() {
     try {
-      const { data: session, error } = await supabase.from('sessions').select('*').eq('id', params.id).single();
+      const result = await fetchSession(supabase, params.id as string);
+      if (!result.success || !result.data) throw new Error(result.error);
 
-      if (error) throw error;
-
+      const session = result.data;
       setFormData({
         sport: session.sport,
         location: session.location,
@@ -86,9 +87,8 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     setSaving(true);
 
     try {
-      const { error } = await supabase.from('sessions').update(formData).eq('id', params.id);
-
-      if (error) throw error;
+      const result = await updateSession(supabase, params.id as string, formData);
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(txt.updated);
       router.push(`/session/${params.id}`);

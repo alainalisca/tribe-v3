@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
+import { fetchSessionsByCreator, fetchAllActiveStories, fetchJoinedSessionsWithDetails } from '@/lib/dal';
 import type { StoryGroup, ActiveSession } from './storyTypes';
 import {
   getSeenStories,
-  markStoriesSeen,
+  markStoriesSeen as markStoriesSeenHelper,
   getCachedStories,
   setCachedStories,
   clearStoriesCache,
@@ -39,33 +40,27 @@ export function useStoriesData({ userId }: UseStoriesDataProps) {
   async function loadActiveSessions() {
     if (!userId) return;
 
-    const { data: created } = await supabase
-      .from('sessions')
-      .select('id, sport, date, start_time, location')
-      .eq('creator_id', userId)
-      .eq('status', 'active')
-      .order('date', { ascending: false });
+    const createdResult = await fetchSessionsByCreator(supabase, userId, {
+      fields: 'id, sport, date, start_time, location, status',
+    });
+    // REASON: DAL returns unknown[] — cast for field access on session rows
+    const allCreated = (createdResult.success ? createdResult.data : []) as Array<ActiveSession & { status?: string }>;
+    const created = allCreated.filter((s) => s.status === 'active').sort((a, b) => b.date.localeCompare(a.date));
 
-    const { data: joined } = await supabase
-      .from('session_participants')
-      .select('session_id, sessions!inner(id, sport, date, start_time, location, status)')
-      .eq('user_id', userId)
-      .eq('sessions.status', 'active');
+    const joinedResult = await fetchJoinedSessionsWithDetails(supabase, userId);
+    // REASON: DAL returns unknown[] — cast for field access on joined session rows
+    const joined = (joinedResult.success ? joinedResult.data : []) as Array<{ sessions: ActiveSession | null }>;
 
     const sessionsMap = new Map<string, ActiveSession>();
 
-    if (created) {
-      for (const s of created) {
-        sessionsMap.set(s.id, s);
-      }
+    for (const s of created) {
+      sessionsMap.set(s.id, s);
     }
 
-    if (joined) {
-      for (const row of joined) {
-        const s = (row as unknown as { sessions: ActiveSession | null }).sessions;
-        if (s && !sessionsMap.has(s.id)) {
-          sessionsMap.set(s.id, s);
-        }
+    for (const row of joined) {
+      const s = row.sessions;
+      if (s && !sessionsMap.has(s.id)) {
+        sessionsMap.set(s.id, s);
       }
     }
 
@@ -80,31 +75,28 @@ export function useStoriesData({ userId }: UseStoriesDataProps) {
 
   async function loadStories() {
     try {
-      const { data, error } = await supabase
-        .from('session_stories')
-        .select(
-          `
-          id,
-          session_id,
-          user_id,
-          media_url,
-          media_type,
-          thumbnail_url,
-          caption,
-          created_at,
-          user:users!session_stories_user_id_fkey(name, avatar_url),
-          session:sessions!session_stories_session_id_fkey(sport)
-        `
-        )
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+      const result = await fetchAllActiveStories(supabase);
 
-      if (error) {
-        logError(error, { action: 'loadStories' });
+      if (!result.success) {
+        logError(result.error, { action: 'loadStories' });
         return;
       }
 
-      if (!data || data.length === 0) {
+      // REASON: DAL returns unknown[] — cast for field access on story rows with user/session joins
+      const data = (result.data || []) as Array<{
+        id: string;
+        session_id: string;
+        user_id: string;
+        media_url: string;
+        media_type: string;
+        thumbnail_url: string | null;
+        caption: string | null;
+        created_at: string;
+        user: { name: string; avatar_url: string | null } | null;
+        session: { sport: string } | null;
+      }>;
+
+      if (data.length === 0) {
         setGroups([]);
         setCachedStories([]);
         setLoaded(true);
@@ -114,12 +106,10 @@ export function useStoriesData({ userId }: UseStoriesDataProps) {
       const map = new Map<string, StoryGroup>();
       for (const row of data) {
         const sid = row.session_id;
-        const user = row.user as unknown as { name: string; avatar_url: string | null } | null;
-        const session = row.session as unknown as { sport: string } | null;
         if (!map.has(sid)) {
           map.set(sid, {
             sessionId: sid,
-            sport: session?.sport || '?',
+            sport: row.session?.sport || '?',
             stories: [],
           });
         }
@@ -131,8 +121,8 @@ export function useStoriesData({ userId }: UseStoriesDataProps) {
           caption: row.caption,
           created_at: row.created_at,
           user_id: row.user_id,
-          user_name: user?.name || '?',
-          user_avatar: user?.avatar_url || null,
+          user_name: row.user?.name || '?',
+          user_avatar: row.user?.avatar_url || null,
         });
       }
 
@@ -156,7 +146,7 @@ export function useStoriesData({ userId }: UseStoriesDataProps) {
   }
 
   function handleStoryViewed(storyIds: string[]) {
-    markStoriesSeen(storyIds);
+    markStoriesSeenHelper(storyIds);
     setSeenIds(getSeenStories());
   }
 

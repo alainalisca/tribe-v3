@@ -1,5 +1,6 @@
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { insertRecapPhoto, deleteRecapPhoto as dalDeleteRecapPhoto, updateRecapPhotoReport } from '@/lib/dal';
 
 export interface RecapPhoto {
   id: string;
@@ -106,13 +107,13 @@ export async function handleRecapUpload(
         data: { publicUrl },
       } = supabase.storage.from('session-photos').getPublicUrl(fileName);
 
-      const { error: insertError } = await supabase.from('session_recap_photos').insert({
+      const insertResult = await insertRecapPhoto(supabase, {
         session_id: sessionId,
         user_id: user.id,
         photo_url: publicUrl,
       });
 
-      if (insertError) throw insertError;
+      if (!insertResult.success) throw new Error(insertResult.error);
     }
 
     showSuccess('Recap photos uploaded!');
@@ -129,9 +130,8 @@ export async function deleteRecapPhoto(photoId: string, language: 'en' | 'es', o
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
 
-    const { error } = await supabase.from('session_recap_photos').delete().eq('id', photoId);
-
-    if (error) throw error;
+    const result = await dalDeleteRecapPhoto(supabase, photoId);
+    if (!result.success) throw new Error(result.error);
 
     showSuccess('Photo deleted');
     onPhotosChanged();
@@ -153,16 +153,12 @@ export async function reportRecapPhoto(
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from('session_recap_photos')
-      .update({
-        reported: true,
-        reported_by: user.id,
-        reported_reason: reason || 'No reason provided',
-      })
-      .eq('id', photoId);
-
-    if (error) throw error;
+    const result = await updateRecapPhotoReport(supabase, photoId, {
+      reported: true,
+      reported_by: user.id,
+      reported_reason: reason || 'No reason provided',
+    });
+    if (!result.success) throw new Error(result.error);
 
     showSuccess('Photo reported. Admin will review.');
     onPhotosChanged();

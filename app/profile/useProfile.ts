@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getProfileTranslations } from './translations';
+import { fetchUserProfile, updateUser, fetchSessionsByCreatorCount, fetchParticipantCountForUser } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -74,25 +75,19 @@ export function useProfile(language: 'en' | 'es') {
       }
       setUser(authUser);
 
-      const { data: profileData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
+      const profileResult = await fetchUserProfile(supabase, authUser.id);
+      setProfile(profileResult.data ?? null);
 
-      setProfile(profileData);
+      const createdResult = await fetchSessionsByCreatorCount(supabase, authUser.id);
+      const created = createdResult.success ? (createdResult.data ?? 0) : 0;
 
-      const { count: created } = await supabase
-        .from('sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('creator_id', authUser.id)
-        .eq('status', 'active');
-
-      const { count: joined } = await supabase
-        .from('session_participants')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id);
+      const joinedResult = await fetchParticipantCountForUser(supabase, authUser.id);
+      const joined = joinedResult.success ? (joinedResult.data ?? 0) : 0;
 
       setStats({
-        sessionsCreated: created || 0,
-        sessionsJoined: joined || 0,
-        totalSessions: (created || 0) + (joined || 0),
+        sessionsCreated: created,
+        sessionsJoined: joined,
+        totalSessions: created + joined,
       });
     } catch (error) {
       logError(error, { action: 'loadProfile' });
@@ -118,9 +113,9 @@ export function useProfile(language: 'en' | 'es') {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
+      const updateResult = await updateUser(supabase, user.id, { avatar_url: publicUrl });
 
-      if (updateError) throw updateError;
+      if (!updateResult.success) throw new Error(updateResult.error);
 
       await loadProfile();
     } catch (error) {
@@ -146,9 +141,9 @@ export function useProfile(language: 'en' | 'es') {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase.from('users').update({ banner_url: publicUrl }).eq('id', user.id);
+      const updateResult = await updateUser(supabase, user.id, { banner_url: publicUrl });
 
-      if (updateError) throw updateError;
+      if (!updateResult.success) throw new Error(updateResult.error);
 
       await loadProfile();
     } catch (error) {

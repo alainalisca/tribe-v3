@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
+import { fetchConfirmedParticipantsWithUsers, fetchAttendanceForSession, upsertAttendance } from '@/lib/dal';
 
 interface AttendanceParticipant {
   user_id: string;
@@ -42,32 +43,25 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
 
   async function loadParticipants() {
     try {
-      const { data: participantsData } = await supabase
-        .from('session_participants')
-        .select(
-          `
-          user_id,
-          user:users(id, name, avatar_url)
-        `
-        )
-        .eq('session_id', sessionId)
-        .eq('status', 'confirmed');
-
-      if (!participantsData) {
+      const participantsResult = await fetchConfirmedParticipantsWithUsers(supabase, sessionId);
+      if (!participantsResult.success || !participantsResult.data) {
         setParticipants([]);
         return;
       }
+      const participantsData = participantsResult.data as Array<{
+        user_id: string;
+        user:
+          | { id: string; name: string; avatar_url: string | null }
+          | Array<{ id: string; name: string; avatar_url: string | null }>;
+      }>;
 
       const userIds = participantsData.map((p) => p.user_id).filter(Boolean);
-      const { data: allAttendance } = await supabase
-        .from('session_attendance')
-        .select('user_id, attended')
-        .eq('session_id', sessionId)
-        .in('user_id', userIds);
+      const attendanceResult = await fetchAttendanceForSession(supabase, sessionId, userIds);
+      const allAttendance = attendanceResult.success ? (attendanceResult.data ?? []) : [];
 
-      const attendanceByUser = (allAttendance || []).reduce(
+      const attendanceByUser = allAttendance.reduce(
         (acc, row) => {
-          acc[(row as { user_id: string }).user_id] = (row as { attended: boolean }).attended;
+          acc[row.user_id] = row.attended;
           return acc;
         },
         {} as Record<string, boolean>
@@ -95,26 +89,8 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
     try {
       setSendingEmail(userId);
 
-      const { data: existing } = await supabase
-        .from('session_attendance')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('user_id', userId)
-        .single();
-
-      if (existing) {
-        await supabase
-          .from('session_attendance')
-          .update({ attended })
-          .eq('session_id', sessionId)
-          .eq('user_id', userId);
-      } else {
-        await supabase.from('session_attendance').insert({
-          session_id: sessionId,
-          user_id: userId,
-          attended,
-        });
-      }
+      const result = await upsertAttendance(supabase, sessionId, userId, attended);
+      if (!result.success) throw new Error(result.error);
 
       // Send email notification if marking as attended
       if (attended) {

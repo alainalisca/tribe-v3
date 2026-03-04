@@ -6,7 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
 import { joinSession } from '@/lib/sessions';
-import { cancelSession } from '@/lib/dal';
+import { cancelSession, updateParticipantCount, deleteParticipantBySessionAndUser } from '@/lib/dal';
 import type { UseSessionActionsParams, ConfirmAction, GuestData } from './sessionActionTypes';
 import { getJoinErrorMessages } from './sessionActionTypes';
 import {
@@ -179,19 +179,14 @@ export function useSessionActions({
     });
   }
 
-  async function doKickUser(userId: string) {
+  async function doKickUser(kickUserId: string) {
     try {
-      const { error: deleteError } = await supabase
-        .from('session_participants')
-        .delete()
-        .eq('session_id', session.id)
-        .eq('user_id', userId);
-      if (deleteError) throw deleteError;
-      await supabase
-        .from('sessions')
-        .update({ current_participants: Math.max(0, (session.current_participants ?? 0) - 1) })
-        .eq('id', session.id);
-      setParticipants((prev) => prev.filter((p) => p.user_id !== userId));
+      const deleteResult = await deleteParticipantBySessionAndUser(supabase, session.id, kickUserId);
+      if (!deleteResult.success) throw new Error(deleteResult.error);
+      const newCount = Math.max(0, (session.current_participants ?? 0) - 1);
+      const updateResult = await updateParticipantCount(supabase, session.id, newCount);
+      if (!updateResult.success) throw new Error(updateResult.error);
+      setParticipants((prev) => prev.filter((p) => p.user_id !== kickUserId));
       setSession((prev) =>
         prev ? { ...prev, current_participants: Math.max(0, (prev.current_participants ?? 0) - 1) } : prev
       );

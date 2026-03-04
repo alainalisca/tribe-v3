@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { fetchSessionFields, fetchUserProfileMaybe } from '@/lib/dal';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
@@ -28,18 +29,18 @@ export async function POST(request: Request) {
     const { sessionId, userId } = await request.json();
 
     // Get session details
-    const { data: session } = await supabase
-      .from('sessions')
-      .select('*, creator:users!creator_id(name)')
-      .eq('id', sessionId)
-      .single();
+    const sessionResult = await fetchSessionFields(supabase, sessionId, '*, creator:users!creator_id(name)');
+    const session = sessionResult.data as {
+      id: string;
+      sport: string;
+      location: string;
+      date: string;
+      creator: { name: string } | null;
+    } | null;
 
     // Get user details including language preference
-    const { data: user } = await supabase
-      .from('users')
-      .select('name, email, preferred_language')
-      .eq('id', userId)
-      .single();
+    const userResult = await fetchUserProfileMaybe(supabase, userId, 'name, email, preferred_language');
+    const user = userResult.data as { name: string; email: string; preferred_language: string | null } | null;
 
     if (!session || !user?.email) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });

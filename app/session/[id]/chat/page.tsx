@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { fetchUserIsAdmin, fetchSession } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -50,13 +51,13 @@ export default function ChatPage() {
     setUser(user);
 
     if (user) {
-      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-      setUserIsAdmin(!!profile?.is_admin);
+      const result = await fetchUserIsAdmin(supabase, user.id);
+      setUserIsAdmin(result.success ? !!result.data : false);
     }
 
-    const { data: sessionData } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
+    const sessionResult = await fetchSession(supabase, sessionId);
 
-    setSession(sessionData);
+    setSession(sessionResult.success ? (sessionResult.data ?? null) : null);
   }
 
   if (!user || !session) {

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { createEvents, type EventAttributes } from 'ics';
 import { log, logError } from '@/lib/logger';
+import { fetchSessionFields } from '@/lib/dal';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
@@ -24,11 +25,17 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    const { data: session } = await supabase
-      .from('sessions')
-      .select('*, creator:users!creator_id(name)')
-      .eq('id', sessionId)
-      .single();
+    const sessionResult = await fetchSessionFields(supabase, sessionId, '*, creator:users!creator_id(name)');
+    const session = sessionResult.data as {
+      id: string;
+      sport: string;
+      location: string;
+      date: string;
+      start_time: string;
+      duration: number | null;
+      description: string | null;
+      creator: { name: string } | null;
+    } | null;
 
     if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });

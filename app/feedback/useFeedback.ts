@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { insertFeedback, insertBugReport } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export function useFeedbackTranslations(language: string) {
@@ -125,14 +126,14 @@ export function useFeedback() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('user_feedback').insert({
+      const result = await insertFeedback(supabase, {
         user_id: user!.id,
         type: feedbackType,
         title: feedbackTitle,
         description: feedbackDescription,
       });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(t.feedbackSuccess);
       setFeedbackTitle('');
@@ -152,7 +153,7 @@ export function useFeedback() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('bug_reports').insert({
+      const result = await insertBugReport(supabase, {
         user_id: user!.id,
         title: bugTitle,
         description: bugDescription,
@@ -160,7 +161,7 @@ export function useFeedback() {
         severity: bugSeverity,
       });
 
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
 
       showSuccess(t.bugSuccess);
       setBugTitle('');

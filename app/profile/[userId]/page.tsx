@@ -11,6 +11,15 @@ import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
+import {
+  fetchUserProfile,
+  blockUser,
+  unblockUser,
+  reportUser,
+  fetchBlockedStatus,
+  fetchSessionsByCreatorCount,
+  fetchParticipantCountForUser,
+} from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -83,29 +92,19 @@ export default function PublicProfilePage() {
     } = await supabase.auth.getUser();
     setCurrentUser(user);
     if (user) {
-      const { data } = await supabase
-        .from('blocked_users')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('blocked_user_id', userId)
-        .single();
-      setIsBlocked(!!data);
+      const blockedResult = await fetchBlockedStatus(supabase, user.id, userId);
+      setIsBlocked(blockedResult.success ? !!blockedResult.data : false);
     }
   }
 
   async function loadProfile() {
     try {
-      const { data: profileData } = await supabase.from('users').select('*').eq('id', userId).single();
-      setProfile(profileData);
-      const { count: created } = await supabase
-        .from('sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('creator_id', userId)
-        .eq('status', 'active');
-      const { count: joined } = await supabase
-        .from('session_participants')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
+      const profileResult = await fetchUserProfile(supabase, userId);
+      setProfile(profileResult.data ?? null);
+      const createdResult = await fetchSessionsByCreatorCount(supabase, userId);
+      const created = createdResult.success ? (createdResult.data ?? 0) : 0;
+      const joinedResult = await fetchParticipantCountForUser(supabase, userId);
+      const joined = joinedResult.success ? (joinedResult.data ?? 0) : 0;
       const { data: attendanceData } = await supabase.rpc('get_user_attendance_stats', { user_uuid: userId });
       const attendance = attendanceData?.[0] || { total_sessions: 0, attended_sessions: 0, attendance_rate: 0 };
       setStats({
@@ -126,12 +125,14 @@ export default function PublicProfilePage() {
     if (!currentUser) return;
     try {
       if (isBlocked) {
-        await supabase.from('blocked_users').delete().eq('user_id', currentUser.id).eq('blocked_user_id', userId);
+        const result = await unblockUser(supabase, currentUser.id, userId);
+        if (!result.success) throw new Error(result.error);
         setIsBlocked(false);
         showSuccess(t.userUnblocked);
       } else {
         if (!confirm(t.blockConfirm)) return;
-        await supabase.from('blocked_users').insert({ user_id: currentUser.id, blocked_user_id: userId });
+        const result = await blockUser(supabase, { user_id: currentUser.id, blocked_user_id: userId });
+        if (!result.success) throw new Error(result.error);
         setIsBlocked(true);
         showSuccess(t.userBlocked);
       }
@@ -147,12 +148,13 @@ export default function PublicProfilePage() {
     }
     setSubmitting(true);
     try {
-      await supabase.from('reported_users').insert({
+      const reportResult = await reportUser(supabase, {
         reporter_id: currentUser!.id,
         reported_user_id: userId,
         reason: reportReason,
         description: reportDescription,
       });
+      if (!reportResult.success) throw new Error(reportResult.error);
       showSuccess(t.reportSuccess);
       setShowReportModal(false);
       setReportReason('');

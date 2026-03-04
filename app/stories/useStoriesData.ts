@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { logError } from '@/lib/logger';
+import { fetchAllActiveStories } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Story, StoryGroup } from './types';
 
@@ -77,33 +78,30 @@ export function useStoriesData() {
 
   async function loadStories() {
     try {
-      const { data, error } = await supabase
-        .from('session_stories')
-        .select(
-          `
-          id,
-          session_id,
-          user_id,
-          media_url,
-          media_type,
-          thumbnail_url,
-          caption,
-          created_at,
-          user:users!session_stories_user_id_fkey(name, avatar_url),
-          session:sessions!session_stories_session_id_fkey(sport)
-        `
-        )
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+      const result = await fetchAllActiveStories(supabase);
 
-      if (error) {
-        logError(error, { action: 'loadStories' });
+      if (!result.success) {
+        logError(result.error, { action: 'loadStories' });
         setGroups([]);
         setAllStories([]);
         return;
       }
 
-      if (!data || data.length === 0) {
+      // REASON: DAL returns unknown[] — cast for field access on story rows with user/session joins
+      const data = (result.data || []) as Array<{
+        id: string;
+        session_id: string;
+        user_id: string;
+        media_url: string;
+        media_type: string;
+        thumbnail_url: string | null;
+        caption: string | null;
+        created_at: string;
+        user: Record<string, string | null> | null;
+        session: Record<string, string | null> | null;
+      }>;
+
+      if (data.length === 0) {
         setGroups([]);
         setAllStories([]);
         return;
@@ -113,8 +111,6 @@ export function useStoriesData() {
       const flat: Story[] = [];
       for (const row of data) {
         try {
-          const u = row.user as unknown as Record<string, string | null> | null;
-          const s = row.session as unknown as Record<string, string | null> | null;
           flat.push({
             id: row.id,
             media_url: row.media_url || '',
@@ -123,10 +119,10 @@ export function useStoriesData() {
             caption: row.caption || null,
             created_at: row.created_at || '',
             user_id: row.user_id || '',
-            user_name: u?.name || '?',
-            user_avatar: u?.avatar_url || null,
+            user_name: row.user?.name || '?',
+            user_avatar: row.user?.avatar_url || null,
             sessionId: row.session_id || '',
-            sport: s?.sport || '?',
+            sport: row.session?.sport || '?',
           });
         } catch {
           // Skip malformed rows

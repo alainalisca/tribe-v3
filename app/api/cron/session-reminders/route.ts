@@ -1,6 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import {
+  updateSession,
+  fetchActiveSessionsForDates,
+  fetchUserProfileMaybe,
+  fetchParticipantsWithUserDetails,
+} from '@/lib/dal';
 
 // Reminder messages in both languages
 const reminderMessages = {
@@ -60,16 +66,14 @@ export async function GET(request: Request) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('status', 'active')
-      .in('date', [today, tomorrowStr]);
+    const sessionsResult = await fetchActiveSessionsForDates(supabase, [today, tomorrowStr]);
 
-    if (sessionsError) {
-      logError(sessionsError, { route: '/api/cron/session-reminders', action: 'fetch_sessions' });
-      return NextResponse.json({ error: sessionsError.message }, { status: 500 });
+    if (!sessionsResult.success) {
+      logError(sessionsResult.error, { route: '/api/cron/session-reminders', action: 'fetch_sessions' });
+      return NextResponse.json({ error: sessionsResult.error }, { status: 500 });
     }
+
+    const sessions = sessionsResult.data;
 
     for (const session of sessions || []) {
       const sessionDateTime = new Date(`${session.date}T${session.start_time}`);
@@ -84,23 +88,23 @@ export async function GET(request: Request) {
 
       if (needsOneHourReminder || needsFifteenMinReminder) {
         // Get session creator
-        const { data: creator } = await supabase
-          .from('users')
-          .select('id, preferred_language, session_reminders_enabled')
-          .eq('id', session.creator_id)
-          .single();
+        const creatorResult = await fetchUserProfileMaybe(
+          supabase,
+          session.creator_id,
+          'id, preferred_language, session_reminders_enabled'
+        );
+        const creator = creatorResult.data as {
+          id: string;
+          preferred_language: string | null;
+          session_reminders_enabled: boolean | null;
+        } | null;
 
         // Get all confirmed participants
-        const { data: participants } = await supabase
-          .from('session_participants')
-          .select(
-            `
-            user_id,
-            user:users!session_participants_user_id_fkey(id, preferred_language, session_reminders_enabled)
-          `
-          )
-          .eq('session_id', session.id)
-          .eq('status', 'confirmed');
+        const participantsResult = await fetchParticipantsWithUserDetails(supabase, session.id);
+        const participants = (participantsResult.data || []) as Array<{
+          user_id: string;
+          user: { id: string; preferred_language: string | null; session_reminders_enabled: boolean | null } | null;
+        }>;
 
         // Collect all users to notify (creator + participants)
         const usersToNotify: Array<{ id: string; lang: string }> = [];
@@ -114,12 +118,8 @@ export async function GET(request: Request) {
         }
 
         // Add participants if reminders enabled
-        for (const participant of participants || []) {
-          const userData = (
-            participant as unknown as {
-              user: { id: string; preferred_language: string | null; session_reminders_enabled: boolean | null };
-            }
-          ).user;
+        for (const participant of participants) {
+          const userData = participant.user;
           if (userData && userData.session_reminders_enabled !== false) {
             usersToNotify.push({
               id: participant.user_id,
@@ -165,11 +165,11 @@ export async function GET(request: Request) {
 
         // Mark reminder as sent
         if (needsOneHourReminder) {
-          await supabase.from('sessions').update({ reminder_1hr_sent: true }).eq('id', session.id);
+          await updateSession(supabase, session.id, { reminder_1hr_sent: true });
         }
 
         if (needsFifteenMinReminder) {
-          await supabase.from('sessions').update({ reminder_15min_sent: true }).eq('id', session.id);
+          await updateSession(supabase, session.id, { reminder_15min_sent: true });
         }
       }
     }

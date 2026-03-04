@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getEditProfileTranslations } from './translations';
+import { fetchUserProfile, updateUser } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export interface EditProfileFormData {
@@ -62,7 +63,8 @@ export function useEditProfile(language: 'en' | 'es') {
       }
       setUser(authUser);
 
-      const { data: profileData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
+      const profileResult = await fetchUserProfile(supabase, authUser.id);
+      const profileData = profileResult.data;
 
       if (profileData) {
         setFormData({
@@ -134,23 +136,20 @@ export function useEditProfile(language: 'en' | 'es') {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: formData.name,
-          username: formData.username,
-          bio: formData.bio,
-          location: formData.location,
-          sports: formData.sports,
-          photos: formData.photos,
-          emergency_contact_name: formData.emergency_contact_name,
-          emergency_contact_phone: formData.emergency_contact_phone,
-          instagram_username: formData.instagram_username,
-          facebook_url: formData.facebook_url,
-        })
-        .eq('id', user.id);
+      const updateResult = await updateUser(supabase, user.id, {
+        name: formData.name,
+        username: formData.username,
+        bio: formData.bio,
+        location: formData.location,
+        sports: formData.sports,
+        photos: formData.photos,
+        emergency_contact_name: formData.emergency_contact_name,
+        emergency_contact_phone: formData.emergency_contact_phone,
+        instagram_username: formData.instagram_username,
+        facebook_url: formData.facebook_url,
+      });
 
-      if (error) throw error;
+      if (!updateResult.success) throw new Error(updateResult.error);
 
       showSuccess(tr.profileUpdated);
       router.push('/profile');

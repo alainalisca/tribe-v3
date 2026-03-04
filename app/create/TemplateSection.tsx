@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { insertTemplate, deleteTemplate as dalDeleteTemplate, fetchTemplatesByUser } from '@/lib/dal';
 import type { Database } from '@/lib/database.types';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
@@ -35,17 +36,13 @@ export default function TemplateSection({
 
   async function loadTemplates() {
     try {
-      const { data, error } = await supabase
-        .from('session_templates')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      if (error) {
-        log('warn', 'Templates load failed (non-critical)', { action: 'loadTemplates', error: error.message });
+      const result = await fetchTemplatesByUser(supabase, userId);
+      if (!result.success) {
+        log('warn', 'Templates load failed (non-critical)', { action: 'loadTemplates', error: result.error });
         setTemplates([]);
         return;
       }
-      setTemplates(data || []);
+      setTemplates((result.data || []) as SessionTemplateRow[]);
     } catch (error: unknown) {
       log('warn', 'Templates load exception (non-critical)', {
         action: 'loadTemplates',
@@ -67,7 +64,7 @@ export default function TemplateSection({
     if (!templateName) return;
     try {
       setSavingTemplate(true);
-      const { error } = await supabase.from('session_templates').insert({
+      const result = await insertTemplate(supabase, {
         user_id: userId,
         name: templateName,
         sport: formData.sport,
@@ -76,7 +73,7 @@ export default function TemplateSection({
         max_participants: formData.max_participants,
         description: formData.description,
       });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error);
       showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
       await loadTemplates();
     } catch (error: unknown) {
@@ -91,8 +88,8 @@ export default function TemplateSection({
   async function deleteTemplate(templateId: string) {
     if (!confirm(language === 'es' ? '¿Eliminar plantilla?' : 'Delete template?')) return;
     try {
-      const { error } = await supabase.from('session_templates').delete().eq('id', templateId);
-      if (error) throw error;
+      const result = await dalDeleteTemplate(supabase, templateId);
+      if (!result.success) throw new Error(result.error);
       loadTemplates();
       showSuccess(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
     } catch (error: unknown) {

@@ -3,16 +3,11 @@
 // Existing inline queries will be migrated incrementally
 
 import { SupabaseClient } from '@supabase/supabase-js';
-import type { Session } from '@/lib/database.types';
+import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types';
 import { logError } from '@/lib/logger';
 
-// --- Result types ---
-
-interface DalResult<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import type { DalResult } from './types';
+export type { DalResult } from './types';
 
 // --- Query return types (with joined relations) ---
 
@@ -203,5 +198,168 @@ export async function updateParticipantCount(
   } catch (error) {
     logError(error, { action: 'updateParticipantCount', sessionId });
     return { success: false, error: 'Failed to update participant count' };
+  }
+}
+
+/** Updates a session with arbitrary fields. */
+export async function updateSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+  data: SessionUpdate
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase.from('sessions').update(data).eq('id', sessionId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'updateSession', sessionId });
+    return { success: false, error: 'Failed to update session' };
+  }
+}
+
+/** Deletes all sessions created by a specific user. Used by admin delete-user flow. */
+export async function deleteSessionsByCreator(supabase: SupabaseClient, creatorId: string): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase.from('sessions').delete().eq('creator_id', creatorId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'deleteSessionsByCreator' });
+    return { success: false, error: 'Failed to delete sessions' };
+  }
+}
+
+/** Fetches session creator IDs (for admin stats). */
+export async function fetchSessionCreatorIds(supabase: SupabaseClient): Promise<DalResult<string[]>> {
+  try {
+    const { data, error } = await supabase.from('sessions').select('creator_id');
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []).map((d) => d.creator_id).filter(Boolean) as string[] };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionCreatorIds' });
+    return { success: false, error: 'Failed to fetch creator IDs' };
+  }
+}
+
+/** Insert a new session, returning the created row. */
+export async function insertSession(supabase: SupabaseClient, data: SessionInsert): Promise<DalResult<Session>> {
+  try {
+    const { data: session, error } = await supabase.from('sessions').insert(data).select().single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: session };
+  } catch (error) {
+    logError(error, { action: 'insertSession' });
+    return { success: false, error: 'Failed to create session' };
+  }
+}
+
+/** Count sessions created by a user. */
+export async function fetchSessionsByCreatorCount(
+  supabase: SupabaseClient,
+  creatorId: string
+): Promise<DalResult<number>> {
+  try {
+    const { count, error } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', creatorId);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: count ?? 0 };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionsByCreatorCount' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** Fetch active sessions for given dates. */
+export async function fetchActiveSessionsForDates(
+  supabase: SupabaseClient,
+  dates: string[]
+): Promise<DalResult<Session[]>> {
+  try {
+    const { data, error } = await supabase.from('sessions').select('*').eq('status', 'active').in('date', dates);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchActiveSessionsForDates' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** Count active sessions from a date forward. */
+export async function fetchActiveSessionCount(supabase: SupabaseClient, fromDate: string): Promise<DalResult<number>> {
+  try {
+    const { count, error } = await supabase
+      .from('sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gte('date', fromDate);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: count ?? 0 };
+  } catch (error) {
+    logError(error, { action: 'fetchActiveSessionCount' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** Fetch sessions by creator with optional date filters. */
+export async function fetchSessionsByCreator(
+  supabase: SupabaseClient,
+  creatorId: string,
+  opts?: { dateGte?: string; dateLte?: string; fields?: string }
+): Promise<DalResult<unknown[]>> {
+  try {
+    let query = supabase
+      .from('sessions')
+      .select(opts?.fields || '*')
+      .eq('creator_id', creatorId);
+    if (opts?.dateGte) query = query.gte('date', opts.dateGte);
+    if (opts?.dateLte) query = query.lte('date', opts.dateLte);
+    const { data, error } = await query;
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionsByCreator' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+// REASON: returns raw Supabase join shape — callers handle type narrowing
+/** Fetch sessions with creator join (for cron/reminders). */
+export async function fetchSessionsWithCreator(
+  supabase: SupabaseClient,
+  filters: { status?: string; reminder_sent?: boolean; dateGte?: string; dateLte?: string; followup_sent?: boolean }
+): Promise<DalResult<unknown[]>> {
+  try {
+    let query = supabase
+      .from('sessions')
+      .select('*, creator:users!sessions_creator_id_fkey(id, name, email, preferred_language)');
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.reminder_sent !== undefined) query = query.eq('reminder_sent', filters.reminder_sent);
+    if (filters.followup_sent !== undefined) query = query.eq('followup_sent', filters.followup_sent);
+    if (filters.dateGte) query = query.gte('date', filters.dateGte);
+    if (filters.dateLte) query = query.lte('date', filters.dateLte);
+    const { data, error } = await query;
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionsWithCreator' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** Fetch a session with specific fields. */
+export async function fetchSessionFields(
+  supabase: SupabaseClient,
+  sessionId: string,
+  fields: string
+): Promise<DalResult<unknown>> {
+  try {
+    const { data, error } = await supabase.from('sessions').select(fields).eq('id', sessionId).single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, data };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionFields' });
+    return { success: false, error: 'Failed' };
   }
 }

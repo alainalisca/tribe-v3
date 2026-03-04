@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { log, logError } from '@/lib/logger';
+import { fetchUserName, fetchUsersWithPush } from '@/lib/dal';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -44,20 +45,32 @@ export async function POST(request: Request) {
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get creator name
-    const { data: creator } = await supabase.from('users').select('name').eq('id', creatorId).single();
+    const nameResult = await fetchUserName(supabase, creatorId);
+    const creatorName = nameResult.data || 'Someone';
 
-    const creatorName = creator?.name || 'Someone';
+    // Get users with push subscriptions
+    const usersResult = await fetchUsersWithPush(
+      supabase,
+      'id, name, push_subscription, fcm_token, sports, latitude, longitude, preferred_language'
+    );
 
-    // Get users with either push_subscription OR fcm_token
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, name, push_subscription, fcm_token, sports, latitude, longitude, preferred_language')
-      .neq('id', creatorId);
-
-    if (error) {
-      logError(error, { route: '/api/notify-nearby', action: 'fetch_users' });
+    if (!usersResult.success) {
+      logError(usersResult.error, { route: '/api/notify-nearby', action: 'fetch_users' });
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
     }
+
+    const users = ((usersResult.data || []) as Array<Record<string, unknown>>).filter(
+      (u) => u.id !== creatorId
+    ) as Array<{
+      id: string;
+      name: string;
+      push_subscription: unknown;
+      fcm_token: string | null;
+      sports: string[] | null;
+      latitude: number | null;
+      longitude: number | null;
+      preferred_language: string | null;
+    }>;
 
     // Filter: must have at least one notification channel, match sport, and be nearby
     const nearbyUsers = (users || []).filter((user) => {

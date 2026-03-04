@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
+import { updateUser } from '@/lib/dal';
 
 // Check if running in native Capacitor app
 export const isNativeApp = () => {
@@ -81,26 +82,20 @@ async function saveFcmToken(userId: string, token: string): Promise<void> {
     tokenPreview: token.substring(0, 20) + '...',
   });
 
-  const { data, error } = await supabase
-    .from('users')
-    .update({
-      fcm_token: token,
-      fcm_platform: platform,
-      fcm_updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-    .select('id, fcm_token, fcm_platform');
+  const result = await updateUser(supabase, userId, {
+    fcm_token: token,
+    fcm_platform: platform,
+    fcm_updated_at: new Date().toISOString(),
+  });
 
-  if (error) {
+  if (!result.success) {
     log('error', 'Error saving FCM token', {
       action: 'saveFcmToken',
       userId,
-      errorMessage: error.message,
-      errorDetails: error.details,
-      errorHint: error.hint,
+      errorMessage: result.error || 'Unknown error',
     });
   } else {
-    log('info', 'FCM token saved successfully', { action: 'saveFcmToken', userId, updatedRow: JSON.stringify(data) });
+    log('info', 'FCM token saved successfully', { action: 'saveFcmToken', userId });
   }
 }
 
@@ -171,14 +166,11 @@ export async function removeFcmToken(userId: string): Promise<void> {
 
     // Remove token from Supabase
     const supabase = createClient();
-    await supabase
-      .from('users')
-      .update({
-        fcm_token: null,
-        fcm_platform: null,
-        fcm_updated_at: null,
-      })
-      .eq('id', userId);
+    await updateUser(supabase, userId, {
+      fcm_token: null,
+      fcm_platform: null,
+      fcm_updated_at: null,
+    });
 
     // Remove all listeners
     await FirebaseMessaging.removeAllListeners();

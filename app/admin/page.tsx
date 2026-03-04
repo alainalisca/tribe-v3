@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserIsAdmin } from '@/lib/dal';
 import {
   AdminStats,
   UserManagement,
@@ -48,8 +49,8 @@ export default function AdminPage() {
         router.push('/auth');
         return;
       }
-      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-      if (!profile?.is_admin) {
+      const adminResult = await fetchUserIsAdmin(supabase, user.id);
+      if (!adminResult.success || !adminResult.data) {
         alert('Unauthorized access');
         router.push('/');
         return;

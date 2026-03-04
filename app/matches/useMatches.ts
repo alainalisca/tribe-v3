@@ -5,6 +5,12 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
+import {
+  fetchSessionsByCreator,
+  fetchSessionsByIds,
+  fetchParticipantsForSessions,
+  fetchConfirmedParticipations,
+} from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export interface JoinRequestItem {
@@ -80,41 +86,44 @@ export function useMatches() {
 
   async function loadJoinRequests() {
     try {
-      const { data: mySessions, error: sessError } = await supabase
-        .from('sessions')
-        .select('id, sport, date, start_time, location')
-        .eq('creator_id', user!.id)
-        .eq('status', 'active');
+      const sessionsResult = await fetchSessionsByCreator(supabase, user!.id, {
+        fields: 'id, sport, date, start_time, location, status',
+      });
+      if (!sessionsResult.success) throw new Error(sessionsResult.error);
 
-      if (sessError) throw sessError;
+      // REASON: DAL returns unknown[] — cast for field access on session rows
+      const mySessions = (sessionsResult.data || []) as Array<{
+        id: string;
+        sport: string;
+        date: string;
+        start_time: string;
+        location: string;
+        status?: string;
+      }>;
+      const activeSessions = mySessions.filter((s) => s.status === 'active');
 
-      if (!mySessions || mySessions.length === 0) {
+      if (activeSessions.length === 0) {
         setJoinRequests([]);
         return;
       }
 
-      const sessionIds = mySessions.map((s) => s.id);
+      const sessionIds = activeSessions.map((s) => s.id);
 
-      const { data: participants } = await supabase
-        .from('session_participants')
-        .select(
-          `
-          id,
-          user_id,
-          session_id,
-          joined_at,
-          status,
-          user:users!session_participants_user_id_fkey(id, name, avatar_url)
-        `
-        )
-        .in('session_id', sessionIds)
-        .eq('status', 'confirmed')
-        .order('joined_at', { ascending: false });
+      const participantsResult = await fetchParticipantsForSessions(supabase, sessionIds, 'confirmed');
+      // REASON: DAL returns unknown[] — cast for field access on participant rows
+      const participants = (participantsResult.success ? participantsResult.data : []) as Array<{
+        id: string;
+        user_id: string | null;
+        session_id: string;
+        joined_at: string | null;
+        status: string | null;
+        user: JoinRequestItem['user'] | JoinRequestItem['user'][];
+      }>;
 
-      const requestsWithSession = (participants || []).map((p) => ({
+      const requestsWithSession = participants.map((p) => ({
         ...p,
         user: (Array.isArray(p.user) ? p.user[0] : p.user) as JoinRequestItem['user'],
-        session: mySessions.find((s) => s.id === p.session_id),
+        session: activeSessions.find((s) => s.id === p.session_id),
       }));
 
       setJoinRequests(requestsWithSession);
@@ -129,28 +138,31 @@ export function useMatches() {
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const { data: participations } = await supabase
-        .from('session_participants')
-        .select('session_id, joined_at')
-        .eq('user_id', user!.id)
-        .eq('status', 'confirmed');
+      const participationsResult = await fetchConfirmedParticipations(supabase, user!.id);
+      if (!participationsResult.success) throw new Error(participationsResult.error);
 
-      if (!participations || participations.length === 0) {
+      const participations = participationsResult.data || [];
+      if (participations.length === 0) {
         setTribeSessions([]);
         return;
       }
 
       const sessionIds = participations.map((p) => p.session_id);
 
-      const { data: sessions } = await supabase
-        .from('sessions')
-        .select('id, sport, date, start_time, location, creator_id, current_participants, max_participants')
-        .in('id', sessionIds)
-        .eq('status', 'active')
-        .gte('date', today)
-        .order('date', { ascending: true });
+      const sessionsResult = await fetchSessionsByIds(
+        supabase,
+        sessionIds,
+        'id, sport, date, start_time, location, creator_id, current_participants, max_participants, status'
+      );
+      // REASON: DAL returns unknown[] — cast for field access, then filter/sort client-side
+      const allSessions = (sessionsResult.success ? sessionsResult.data : []) as Array<
+        TribeSession & { status?: string }
+      >;
+      const sessions = allSessions
+        .filter((s) => s.status === 'active' && s.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date));
 
-      setTribeSessions(sessions || []);
+      setTribeSessions(sessions);
     } catch (error) {
       logError(error, { action: 'loadTribeSessions' });
       setTribeSessions([]);

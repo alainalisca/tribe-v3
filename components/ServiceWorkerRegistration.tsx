@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
+import { updateUser } from '@/lib/dal';
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -44,10 +45,7 @@ export default function ServiceWorkerRegistration() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        await supabase
-          .from('users')
-          .update({ push_subscription: JSON.stringify(subscription) })
-          .eq('id', user.id);
+        await updateUser(supabase, user.id, { push_subscription: JSON.stringify(subscription) });
         log('debug', 'Push subscription saved', { userId: user.id });
       }
     } catch (error) {

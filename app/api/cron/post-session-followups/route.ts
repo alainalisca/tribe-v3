@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { updateSession, fetchSessionsWithCreator, fetchSessionAttendance } from '@/lib/dal';
 
 /**
  * @description Sends post-session follow-up emails to attendees of sessions that ended within the last 2 hours, prompting them to share photos.
@@ -22,15 +23,24 @@ export async function GET(request: Request) {
     const now = new Date();
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
-    const { data: sessions, error } = await supabase
-      .from('sessions')
-      .select('id, sport, location, date, start_time, duration')
-      .eq('followup_sent', false)
-      .lt('date', now.toISOString().split('T')[0]);
+    const sessionsResult = await fetchSessionsWithCreator(supabase, {
+      followup_sent: false,
+      dateLte: now.toISOString().split('T')[0],
+    });
 
-    if (error) throw error;
+    if (!sessionsResult.success) throw new Error(sessionsResult.error);
 
-    if (!sessions || sessions.length === 0) {
+    const sessions = (sessionsResult.data || []) as Array<{
+      id: string;
+      sport: string;
+      location: string;
+      date: string;
+      start_time: string;
+      duration: number;
+      creator: { id: string; name: string; email: string; preferred_language: string | null } | null;
+    }>;
+
+    if (sessions.length === 0) {
       return NextResponse.json({ message: 'No sessions need follow-ups', count: 0 });
     }
 
@@ -45,13 +55,10 @@ export async function GET(request: Request) {
 
     // Send follow-up emails to participants who attended
     for (const session of endedSessions) {
-      const { data: attendees } = await supabase
-        .from('session_attendance')
-        .select('user_id')
-        .eq('session_id', session.id)
-        .eq('attended', true);
+      const attendanceResult = await fetchSessionAttendance(supabase, session.id);
+      const attendees = (attendanceResult.data || []).filter((a) => a.attended);
 
-      if (!attendees || attendees.length === 0) continue;
+      if (attendees.length === 0) continue;
 
       // Send email to each attendee
       for (const attendee of attendees) {
@@ -76,7 +83,7 @@ export async function GET(request: Request) {
       }
 
       // Mark follow-up as sent
-      await supabase.from('sessions').update({ followup_sent: true }).eq('id', session.id);
+      await updateSession(supabase, session.id, { followup_sent: true });
     }
 
     return NextResponse.json({

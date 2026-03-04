@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
+import { upsertUser, fetchUserProfileMaybe } from '@/lib/dal';
 
 interface UpsertResult {
   isNewUser: boolean;
@@ -19,11 +20,8 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
   let isNewUser = false;
 
   try {
-    const { data: existingProfile } = await supabase
-      .from('users')
-      .select('id, avatar_url, created_at')
-      .eq('id', user.id)
-      .maybeSingle();
+    const profileResult = await fetchUserProfileMaybe(supabase, user.id, 'id, avatar_url, created_at');
+    const existingProfile = profileResult.success ? profileResult.data : null;
 
     const avatarUrl = user.user_metadata?.avatar_url || null;
     const name =
@@ -39,10 +37,10 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
       upsertPayload.email = user.email;
     }
 
-    const { error: upsertError } = await supabase.from('users').upsert(upsertPayload, { onConflict: 'id' });
+    const upsertResult = await upsertUser(supabase, upsertPayload);
 
-    if (upsertError) {
-      logError(upsertError, { action: 'upsertUserProfile', userId: user.id });
+    if (!upsertResult.success) {
+      logError(new Error(upsertResult.error), { action: 'upsertUserProfile', userId: user.id });
     }
 
     // Detect new user: no existing profile or account created within last 60s

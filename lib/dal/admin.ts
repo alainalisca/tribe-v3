@@ -1,0 +1,193 @@
+/** DAL: admin-specific aggregate queries for the admin dashboard */
+import { SupabaseClient } from '@supabase/supabase-js';
+import { logError } from '@/lib/logger';
+import type { DalResult } from './types';
+import type { AdminReport, AdminFeedback, AdminBug, AdminSession, AdminMessage } from '@/app/admin/types';
+
+// --- Stats helper types ---
+
+export interface AdminStatsRaw {
+  userCount: number;
+  activeSessionCount: number;
+  messageCount: number;
+  newUsersToday: number;
+  allSessions: Array<{
+    id: string;
+    status: string;
+    date: string;
+    participants_count: number;
+    sport: string;
+    creator_id: string;
+  }>;
+  allSessionCreators: Array<{ creator_id: string }>;
+  allParticipants: Array<{ user_id: string }>;
+}
+
+/**
+ * Fetches all raw data needed to compute admin dashboard statistics.
+ * Returns counts and row-level data for client-side aggregation.
+ */
+export async function fetchAdminStatsRaw(supabase: SupabaseClient): Promise<DalResult<AdminStatsRaw>> {
+  try {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [
+      { count: userCount },
+      { count: activeSessionCount },
+      { count: messageCount },
+      { count: newUsers },
+      { data: allSessions },
+      { data: allSessionCreators },
+      { data: allParticipants },
+    ] = await Promise.all([
+      supabase.from('users').select('id', { count: 'exact', head: true }),
+      supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('status', 'active').gte('date', today),
+      supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
+      supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+      supabase.from('sessions').select('id, status, date, participants_count, sport, creator_id'),
+      supabase.from('sessions').select('creator_id'),
+      supabase.from('session_participants').select('user_id'),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        userCount: userCount || 0,
+        activeSessionCount: activeSessionCount || 0,
+        messageCount: messageCount || 0,
+        newUsersToday: newUsers || 0,
+        allSessions: allSessions || [],
+        allSessionCreators: allSessionCreators || [],
+        allParticipants: allParticipants || [],
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminStatsRaw' });
+    return { success: false, error: 'Failed to fetch admin stats' };
+  }
+}
+
+/**
+ * Fetches all users with session created/joined counts for the admin user management tab.
+ */
+export async function fetchAdminUsersWithCounts(
+  supabase: SupabaseClient
+): Promise<
+  DalResult<{
+    users: unknown[];
+    sessionCounts: Array<{ creator_id: string }>;
+    participantCounts: Array<{ user_id: string }>;
+  }>
+> {
+  try {
+    const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
+      supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('sessions').select('creator_id'),
+      supabase.from('session_participants').select('user_id'),
+    ]);
+    if (error) return { success: false, error: error.message };
+    return {
+      success: true,
+      data: {
+        users: data || [],
+        sessionCounts: sessionCounts || [],
+        participantCounts: participantCounts || [],
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminUsersWithCounts' });
+    return { success: false, error: 'Failed to fetch admin users' };
+  }
+}
+
+/**
+ * Fetches reported users with reporter/reported user details.
+ */
+export async function fetchAdminReports(supabase: SupabaseClient): Promise<DalResult<AdminReport[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('reported_users')
+      .select(
+        `*, reporter:users!reported_users_reporter_id_fkey(id, name, email), reported:users!reported_users_reported_user_id_fkey(id, name, email)`
+      )
+      .order('created_at', { ascending: false });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as AdminReport[] };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminReports' });
+    return { success: false, error: 'Failed to fetch reports' };
+  }
+}
+
+/**
+ * Fetches user feedback with user details.
+ */
+export async function fetchAdminFeedback(supabase: SupabaseClient): Promise<DalResult<AdminFeedback[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('user_feedback')
+      .select(`*, user:users(id, name, email)`)
+      .order('created_at', { ascending: false });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as AdminFeedback[] };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminFeedback' });
+    return { success: false, error: 'Failed to fetch feedback' };
+  }
+}
+
+/**
+ * Fetches bug reports with user details.
+ */
+export async function fetchAdminBugs(supabase: SupabaseClient): Promise<DalResult<AdminBug[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('bug_reports')
+      .select(`*, user:users(id, name, email)`)
+      .order('created_at', { ascending: false });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as AdminBug[] };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminBugs' });
+    return { success: false, error: 'Failed to fetch bug reports' };
+  }
+}
+
+/**
+ * Fetches chat messages with user and session details for admin review.
+ */
+export async function fetchAdminMessages(supabase: SupabaseClient): Promise<DalResult<AdminMessage[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select(`*, user:users(id, name, email), session:sessions(id, sport, location)`)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as AdminMessage[] };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminMessages' });
+    return { success: false, error: 'Failed to fetch messages' };
+  }
+}
+
+/**
+ * Fetches sessions with creator details for admin session management.
+ */
+export async function fetchAdminSessions(supabase: SupabaseClient): Promise<DalResult<AdminSession[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(`*, creator:users!sessions_creator_id_fkey(id, name, email)`)
+      .order('date', { ascending: false })
+      .limit(50);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as AdminSession[] };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminSessions' });
+    return { success: false, error: 'Failed to fetch sessions' };
+  }
+}

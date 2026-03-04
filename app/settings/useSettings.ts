@@ -8,6 +8,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getSettingsTranslations } from './translations';
+import { fetchUserField, fetchUserIsAdmin, deleteUser, updateUser } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export function useSettings(language: 'en' | 'es') {
@@ -38,10 +39,10 @@ export function useSettings(language: 'en' | 'es') {
   useEffect(() => {
     async function loadReminderPreference() {
       if (!user) return;
-      const { data } = await supabase.from('users').select('session_reminders_enabled').eq('id', user.id).single();
+      const result = await fetchUserField(supabase, user.id, 'session_reminders_enabled');
 
-      if (data) {
-        setSessionRemindersEnabled(data.session_reminders_enabled !== false);
+      if (result.success && result.data !== undefined) {
+        setSessionRemindersEnabled(result.data !== false);
       }
     }
     loadReminderPreference();
@@ -56,8 +57,8 @@ export function useSettings(language: 'en' | 'es') {
       router.push('/auth');
     } else {
       setUser(user);
-      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-      setUserIsAdmin(!!profile?.is_admin);
+      const adminResult = await fetchUserIsAdmin(supabase, user.id);
+      setUserIsAdmin(adminResult.success ? !!adminResult.data : false);
     }
   }
 
@@ -88,9 +89,9 @@ export function useSettings(language: 'en' | 'es') {
     }
 
     try {
-      const { error: deleteError } = await supabase.from('users').delete().eq('id', user!.id);
+      const deleteResult = await deleteUser(supabase, user!.id);
 
-      if (deleteError) throw deleteError;
+      if (!deleteResult.success) throw new Error(deleteResult.error);
 
       await supabase.auth.signOut();
       showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
@@ -107,9 +108,9 @@ export function useSettings(language: 'en' | 'es') {
     setLoadingReminders(true);
     try {
       const newValue = !sessionRemindersEnabled;
-      const { error } = await supabase.from('users').update({ session_reminders_enabled: newValue }).eq('id', user.id);
+      const updateResult = await updateUser(supabase, user.id, { session_reminders_enabled: newValue });
 
-      if (error) throw error;
+      if (!updateResult.success) throw new Error(updateResult.error);
 
       setSessionRemindersEnabled(newValue);
       showSuccess(
