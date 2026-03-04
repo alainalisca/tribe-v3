@@ -41,6 +41,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; showAbove: boolean } | null>(null);
   const supabase = createClient();
   const { t, language } = useLanguage();
 
@@ -56,6 +58,34 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Capacitor Keyboard plugin — scroll chat on keyboard show
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (!Capacitor.isNativePlatform()) return;
+        const { Keyboard } = await import('@capacitor/keyboard');
+        Keyboard.setAccessoryBarVisible({ isVisible: true });
+        Keyboard.setScroll({ isDisabled: false });
+        const showListener = await Keyboard.addListener('keyboardWillShow', () => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        });
+        const hideListener = await Keyboard.addListener('keyboardWillHide', () => {
+          /* no-op — layout reflows naturally */
+        });
+        cleanup = () => {
+          showListener.remove();
+          hideListener.remove();
+        };
+      } catch {
+        /* Keyboard plugin not available */
+      }
+    })();
+    return () => cleanup?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   async function loadMessages() {
     try {
@@ -295,6 +325,50 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       .slice(0, 2);
   }
 
+  // --- Long-press menu helpers ---
+  function openMessageMenu(msgId: string, element: HTMLElement) {
+    const rect = element.getBoundingClientRect();
+    const showAbove = rect.bottom > window.innerHeight * 0.6;
+    setMenuPosition({
+      top: showAbove ? rect.top - 4 : rect.bottom + 4,
+      left: Math.min(rect.left, window.innerWidth - 160),
+      showAbove,
+    });
+    setSelectedMessage(msgId);
+  }
+
+  function dismissMenu() {
+    setSelectedMessage(null);
+    setMenuPosition(null);
+  }
+
+  function handleTouchStart(msgId: string, e: React.TouchEvent) {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    const target = e.currentTarget as HTMLElement;
+    longPressTimerRef.current = setTimeout(() => {
+      openMessageMenu(msgId, target);
+      longPressTimerRef.current = null;
+    }, 500);
+  }
+
+  function handleTouchEnd() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  function handleTouchMove() {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
+  // Computed values for the fixed action menu
+  const selectedMsg = selectedMessage ? messages.find((m) => m.id === selectedMessage) : null;
+  const isSelectedOwn = selectedMsg?.user_id === currentUserId;
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-300 dark:border-[#52575D]">
@@ -304,7 +378,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   }
 
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[600px]">
+    <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[calc(100dvh-6rem)]">
       {/* Chat Header */}
       <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -349,6 +423,9 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
               <div
                 key={msg.id}
                 className={`flex gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} group relative`}
+                onTouchStart={(e) => handleTouchStart(msg.id, e)}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchMove}
               >
                 {/* Avatar */}
                 <Link href={`/profile/${msg.user_id}`} className="flex-shrink-0">
@@ -387,42 +464,17 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                     {/* Message Actions Menu */}
                     {(canModerate || isOwnMessage) && (
                       <button
-                        onClick={() => setSelectedMessage(selectedMessage === msg.id ? null : msg.id)}
+                        onClick={(e) => {
+                          const row = (e.currentTarget as HTMLElement).closest('.group') as HTMLElement;
+                          if (selectedMessage === msg.id) dismissMenu();
+                          else openMessageMenu(msg.id, row);
+                        }}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-[#52575D] rounded transition"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-
-                  {/* Actions Dropdown */}
-                  {selectedMessage === msg.id && (
-                    <div
-                      className={`absolute ${isOwnMessage ? 'right-0' : 'left-0'} top-full mt-1 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-lg shadow-lg z-10 min-w-[120px]`}
-                    >
-                      {canModerate && (
-                        <button
-                          onClick={() => {
-                            setConfirmDeleteId(msg.id);
-                            setSelectedMessage(null);
-                          }}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          {language === 'es' ? 'Eliminar' : 'Delete'}
-                        </button>
-                      )}
-                      {!isOwnMessage && !canModerate && (
-                        <button
-                          onClick={() => reportMessage(msg.id)}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-orange-600"
-                        >
-                          <Flag className="w-4 h-4" />
-                          Report
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             );
@@ -430,6 +482,44 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Fixed action menu (long-press on mobile, hover-click on desktop) */}
+      {selectedMessage && menuPosition && selectedMsg && !selectedMsg.deleted && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={dismissMenu} />
+          <div
+            className="fixed z-50 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-xl shadow-lg min-w-[160px] py-1"
+            style={{
+              ...(menuPosition.showAbove
+                ? { bottom: `${window.innerHeight - menuPosition.top}px` }
+                : { top: `${menuPosition.top}px` }),
+              left: `${menuPosition.left}px`,
+            }}
+          >
+            {(isSelectedOwn || canModerate) && (
+              <button
+                onClick={() => {
+                  setConfirmDeleteId(selectedMessage);
+                  dismissMenu();
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
+              >
+                <Trash2 className="w-4 h-4" />
+                {language === 'es' ? 'Eliminar' : 'Delete'}
+              </button>
+            )}
+            {!isSelectedOwn && (
+              <button
+                onClick={() => reportMessage(selectedMessage)}
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-orange-600"
+              >
+                <Flag className="w-4 h-4" />
+                {language === 'es' ? 'Reportar' : 'Report'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Message Input */}
       <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">

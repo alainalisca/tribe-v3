@@ -2,6 +2,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import IOSInstallPrompt from '@/components/IOSInstallPrompt';
+import BackButtonHandler from '@/components/BackButtonHandler';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import './globals.css';
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               />
               <ServiceWorkerRegistration />
               <IOSInstallPrompt />
+              <BackButtonHandler />
               {children}
             </LanguageProvider>
           </ThemeProvider>

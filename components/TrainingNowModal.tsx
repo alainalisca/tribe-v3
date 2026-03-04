@@ -254,6 +254,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
 
   return (
     <div
+      data-modal="true"
       className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -261,7 +262,11 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
           <h2 className="text-lg font-bold text-theme-primary">{txt.title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full">
+          <button
+            data-modal-close="true"
+            onClick={onClose}
+            className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full"
+          >
             <X className="w-5 h-5 text-theme-primary" />
           </button>
         </div>

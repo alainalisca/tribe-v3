@@ -244,7 +244,7 @@ export default function SettingsPage() {
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
         {/* Admin Section - Only for admin */}
         {userIsAdmin && (
-          <div className="bg-white rounded-2xl p-5 border border-stone-200">
+          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-tribe-green" />
               <h2 className="text-lg font-bold text-theme-primary">{txt.admin}</h2>
@@ -258,14 +258,14 @@ export default function SettingsPage() {
         )}
 
         {/* Help & Feedback Section */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <MessageSquare className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.help}</h2>
           </div>
           <div className="space-y-2">
             <Link href="/feedback">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition flex items-center gap-2">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 {txt.feedback}
               </button>
@@ -276,7 +276,7 @@ export default function SettingsPage() {
                   e.preventDefault();
                   router.push('/feedback?tab=bug');
                 }}
-                className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2"
               >
                 <Bug className="w-4 h-4" />
                 {txt.bugReport}
@@ -286,7 +286,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Notifications Section */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <svg className="w-5 h-5 text-tribe-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -306,7 +306,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition font-semibold ${
                 notificationsEnabled
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
               }`}
             >
               {notificationsEnabled
@@ -324,10 +324,10 @@ export default function SettingsPage() {
               disabled={loadingReminders || !notificationsEnabled}
               className={`w-full p-4 rounded-xl text-left transition font-semibold ${
                 !notificationsEnabled
-                  ? 'bg-stone-50 text-stone-400 cursor-not-allowed'
+                  ? 'bg-stone-50 dark:bg-[#272D34] text-stone-400 dark:text-gray-500 cursor-not-allowed'
                   : sessionRemindersEnabled
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -358,7 +358,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Language Section */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.language}</h2>
@@ -370,7 +370,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'en'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
               }`}
             >
               {txt.english}
@@ -380,7 +380,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'es'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
               }`}
             >
               {txt.spanish}
@@ -389,21 +389,21 @@ export default function SettingsPage() {
         </div>
 
         {/* Legal Section */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
             <Link href="/legal/terms">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
                 {txt.terms}
               </button>
             </Link>
             <Link href="/legal/privacy">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
                 {txt.privacy}
               </button>
             </Link>
             <Link href="/legal/safety">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 text-stone-700 hover:bg-stone-200 transition">
+              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
                 {txt.safety}
               </button>
             </Link>
@@ -411,7 +411,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Account Section */}
-        <div className="bg-white rounded-2xl p-5 border border-stone-200">
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
           <button
             onClick={handleSignOut}
@@ -425,7 +425,7 @@ export default function SettingsPage() {
               setDeleteInput('');
               setShowDeleteConfirm(true);
             }}
-            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 text-red-600 font-semibold rounded-xl hover:bg-stone-300 transition"
+            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-[#3D4349] text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
           >
             <Trash2 className="w-5 h-5" />
             {txt.deleteAccount}

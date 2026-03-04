@@ -65,9 +65,10 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const Icon = currentStep.icon;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div data-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-[#6B7178] rounded-2xl max-w-md w-full p-6 relative">
         <button
+          data-modal-close="true"
           onClick={onComplete}
           className="absolute top-4 right-4 p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
         >

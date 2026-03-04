@@ -46,6 +46,7 @@ export default function ConfirmDialog({
 
   return (
     <div
+      data-confirm-dialog="true"
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
@@ -56,6 +57,7 @@ export default function ConfirmDialog({
         <p className="text-sm text-stone-600 dark:text-gray-300 mb-6">{message}</p>
         <div className="flex gap-3">
           <button
+            data-confirm-cancel="true"
             onClick={onCancel}
             className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
           >
