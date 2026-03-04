@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface SafetyWaiverModalProps {
   onAccept: () => void;
@@ -9,6 +10,7 @@ interface SafetyWaiverModalProps {
 }
 
 export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverModalProps) {
+  const { language } = useLanguage();
   const [acknowledged, setAcknowledged] = useState({
     platform: false,
     risks: false,
@@ -18,14 +20,41 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
 
   const allChecked = Object.values(acknowledged).every((v) => v);
 
+  const tr =
+    language === 'es'
+      ? {
+          title: 'Seguridad ante todo',
+          intro: '¡Bienvenido a Tribe! Antes de comenzar, por favor acepta estos puntos importantes de seguridad:',
+          platform:
+            'Entiendo que Tribe es solo una plataforma de coordinación y no verifica usuarios ni supervisa sesiones',
+          risks: 'Asumo todos los riesgos de participar en actividades físicas, incluyendo posibles lesiones',
+          guidelinesPre: 'Seguiré las ',
+          guidelinesLink: 'guías de seguridad',
+          guidelinesPost: ' (reunirse en público, avisar a alguien, etc.)',
+          age: 'Tengo 18 años o más y estoy físicamente apto/a para participar en las actividades a las que me uno',
+          accept: 'Entiendo y acepto',
+          cancel: 'Cancelar',
+        }
+      : {
+          title: 'Safety First',
+          intro: 'Welcome to Tribe! Before you start, please acknowledge these important safety points:',
+          platform:
+            'I understand Tribe is a coordination platform only and does not verify users or supervise sessions',
+          risks: 'I assume all risks of participating in physical activities, including possible injury',
+          guidelinesPre: 'I will follow ',
+          guidelinesLink: 'safety guidelines',
+          guidelinesPost: ' (meet in public, tell someone, etc.)',
+          age: "I'm 18 or older and physically able to participate in the activities I join",
+          accept: 'I Understand and Accept',
+          cancel: 'Cancel',
+        };
+
   return (
     <div data-modal="true" className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">Safety First</h2>
+        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">{tr.title}</h2>
 
-        <p className="text-stone-600 dark:text-gray-300 mb-6">
-          Before joining your first session, please acknowledge these important safety points:
-        </p>
+        <p className="text-stone-600 dark:text-gray-300 mb-6">{tr.intro}</p>
 
         <div className="space-y-4 mb-6">
           <label className="flex items-start gap-3 cursor-pointer group">
@@ -41,7 +70,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
               className="mt-1 w-5 h-5 accent-tribe-green"
             />
             <span className="text-sm text-stone-700 dark:text-gray-300 group-hover:text-stone-900 dark:group-hover:text-white">
-              I understand Tribe is a coordination platform only and does not verify users or supervise sessions
+              {tr.platform}
             </span>
           </label>
 
@@ -58,7 +87,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
               className="mt-1 w-5 h-5 accent-tribe-green"
             />
             <span className="text-sm text-stone-700 dark:text-gray-300 group-hover:text-stone-900 dark:group-hover:text-white">
-              I assume all risks of participating in physical activities, including possible injury
+              {tr.risks}
             </span>
           </label>
 
@@ -75,15 +104,15 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
               className="mt-1 w-5 h-5 accent-tribe-green"
             />
             <span className="text-sm text-stone-700 dark:text-gray-300 group-hover:text-stone-900 dark:group-hover:text-white">
-              I will follow{' '}
+              {tr.guidelinesPre}
               <Link
                 href="/legal/safety"
                 target="_blank"
                 className="underline text-tribe-green hover:text-tribe-green/80"
               >
-                safety guidelines
-              </Link>{' '}
-              (meet in public, tell someone, etc.)
+                {tr.guidelinesLink}
+              </Link>
+              {tr.guidelinesPost}
             </span>
           </label>
 
@@ -100,7 +129,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
               className="mt-1 w-5 h-5 accent-tribe-green"
             />
             <span className="text-sm text-stone-700 dark:text-gray-300 group-hover:text-stone-900 dark:group-hover:text-white">
-              I&apos;m 18 or older and physically able to participate in the activities I join
+              {tr.age}
             </span>
           </label>
         </div>
@@ -111,14 +140,14 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
             disabled={!allChecked}
             className="flex-1 bg-tribe-green text-slate-900 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-tribe-green/90 transition"
           >
-            I Understand and Accept
+            {tr.accept}
           </button>
           <button
             data-modal-close="true"
             onClick={onCancel}
             className="px-6 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
           >
-            Cancel
+            {tr.cancel}
           </button>
         </div>
       </div>

@@ -125,7 +125,7 @@ export function useSessionActions({
           guest_email: guestData.email || null,
           status: 'confirmed',
         })
-        .select('id')
+        .select('id, guest_token')
         .single();
       if (error) throw error;
       await supabase
@@ -134,6 +134,7 @@ export function useSessionActions({
         .eq('id', session.id);
       localStorage.setItem(`guest_phone_${session.id}`, guestData.phone);
       if (guestData.email) localStorage.setItem(`guest_email_${session.id}`, guestData.email);
+      if (data.guest_token) localStorage.setItem(`guest_token_${session.id}`, data.guest_token);
       setGuestHasJoined(true);
       setGuestParticipantId(data.id);
       fetch('/api/notifications/send', {
@@ -170,18 +171,27 @@ export function useSessionActions({
   }
 
   async function doGuestLeave() {
+    const storedGuestToken = localStorage.getItem(`guest_token_${sessionId}`);
     const storedGuestPhone = localStorage.getItem(`guest_phone_${sessionId}`);
-    if (!storedGuestPhone) {
+    if (!storedGuestToken && !storedGuestPhone) {
       showError(language === 'es' ? 'No se encontró la información del invitado' : 'Guest information not found');
       return;
     }
     try {
-      const { error } = await supabase
-        .from('session_participants')
-        .delete()
-        .eq('session_id', sessionId)
-        .eq('is_guest', true)
-        .eq('guest_phone', storedGuestPhone);
+      // Use a client with x-guest-token header for RLS verification
+      let deleteClient = supabase;
+      if (storedGuestToken) {
+        const { createClientWithHeaders } = await import('@/lib/supabase/client');
+        deleteClient = createClientWithHeaders({ 'x-guest-token': storedGuestToken });
+      }
+      const query = deleteClient.from('session_participants').delete().eq('session_id', sessionId).eq('is_guest', true);
+      // Filter by token if available, fall back to phone
+      if (storedGuestToken) {
+        query.eq('guest_token', storedGuestToken);
+      } else if (storedGuestPhone) {
+        query.eq('guest_phone', storedGuestPhone);
+      }
+      const { error } = await query;
       if (error) throw error;
       await supabase
         .from('sessions')
@@ -189,6 +199,7 @@ export function useSessionActions({
         .eq('id', session.id);
       localStorage.removeItem(`guest_phone_${sessionId}`);
       localStorage.removeItem(`guest_email_${sessionId}`);
+      localStorage.removeItem(`guest_token_${sessionId}`);
       setGuestHasJoined(false);
       setGuestParticipantId(null);
       showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
@@ -288,16 +299,22 @@ export function useSessionActions({
 
     (async () => {
       try {
-        let query = supabase.from('session_participants').select('id').eq('session_id', paramId).eq('is_guest', true);
+        let query = supabase
+          .from('session_participants')
+          .select('id, guest_token')
+          .eq('session_id', paramId)
+          .eq('is_guest', true);
         if (storedGuestPhone) query = query.eq('guest_phone', storedGuestPhone);
         else if (storedGuestEmail) query = query.eq('guest_email', storedGuestEmail);
         const { data, error } = await query.single();
         if (!error && data) {
           setGuestHasJoined(true);
           setGuestParticipantId(data.id);
+          if (data.guest_token) localStorage.setItem(`guest_token_${paramId}`, data.guest_token);
         } else {
           localStorage.removeItem(`guest_phone_${paramId}`);
           localStorage.removeItem(`guest_email_${paramId}`);
+          localStorage.removeItem(`guest_token_${paramId}`);
           setGuestHasJoined(false);
           setGuestParticipantId(null);
         }

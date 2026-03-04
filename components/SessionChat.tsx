@@ -48,6 +48,53 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   const canModerate = isHost || isAdmin;
 
+  const tr =
+    language === 'es'
+      ? {
+          loadingChat: 'Cargando chat...',
+          groupChat: 'Chat grupal',
+          messages: 'mensajes',
+          messageDeleted: 'Mensaje eliminado',
+          you: 'Tú',
+          typeMessage: 'Escribe un mensaje...',
+          reportMessage: 'Reportar mensaje',
+          reason: 'Razón *',
+          selectReason: 'Selecciona una razón',
+          spam: 'Spam',
+          harassment: 'Acoso',
+          inappropriate: 'Contenido inapropiado',
+          offensive: 'Lenguaje ofensivo',
+          other: 'Otro',
+          details: 'Detalles (opcional)',
+          moreContext: 'Proporciona más contexto...',
+          cancel: 'Cancelar',
+          submitReport: 'Enviar reporte',
+          admin: 'Admin',
+          host: 'Anfitrión',
+        }
+      : {
+          loadingChat: 'Loading chat...',
+          groupChat: 'Group Chat',
+          messages: 'messages',
+          messageDeleted: 'Message deleted',
+          you: 'You',
+          typeMessage: 'Type a message...',
+          reportMessage: 'Report Message',
+          reason: 'Reason *',
+          selectReason: 'Select a reason',
+          spam: 'Spam',
+          harassment: 'Harassment',
+          inappropriate: 'Inappropriate content',
+          offensive: 'Offensive language',
+          other: 'Other',
+          details: 'Details (optional)',
+          moreContext: 'Provide more context...',
+          cancel: 'Cancel',
+          submitReport: 'Submit Report',
+          admin: 'Admin',
+          host: 'Host',
+        };
+
   useEffect(() => {
     loadMessages();
     const cleanup = subscribeToMessages();
@@ -372,7 +419,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-300 dark:border-[#52575D]">
-        <p className="text-center text-stone-600 dark:text-gray-300">Loading chat...</p>
+        <p className="text-center text-stone-600 dark:text-gray-300">{tr.loadingChat}</p>
       </div>
     );
   }
@@ -383,15 +430,15 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-stone-900 dark:text-white">Group Chat</h3>
+            <h3 className="font-semibold text-stone-900 dark:text-white">{tr.groupChat}</h3>
             <p className="text-xs text-stone-600 dark:text-gray-300">
-              {messages.filter((m) => !m.deleted).length} messages
+              {messages.filter((m) => !m.deleted).length} {tr.messages}
             </p>
           </div>
           {canModerate && (
             <div className="flex items-center gap-1 text-xs">
               <Shield className="w-4 h-4 text-tribe-green" />
-              <span className="text-tribe-green font-medium">{isAdmin ? 'Admin' : 'Host'}</span>
+              <span className="text-tribe-green font-medium">{isAdmin ? tr.admin : tr.host}</span>
             </div>
           )}
         </div>
@@ -413,7 +460,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
               return (
                 <div key={msg.id} className="flex gap-2">
                   <div className="flex-1 p-3 bg-stone-100 dark:bg-[#52575D] rounded-lg opacity-50">
-                    <p className="text-xs text-stone-500 italic">Message deleted</p>
+                    <p className="text-xs text-stone-500 italic">{tr.messageDeleted}</p>
                   </div>
                 </div>
               );
@@ -446,7 +493,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                 <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-xs font-medium text-stone-700 dark:text-gray-300">
-                      {isOwnMessage ? 'You' : msg.user?.name}
+                      {isOwnMessage ? tr.you : msg.user?.name}
                     </span>
                     <span className="text-xs text-stone-500 dark:text-gray-400">{formatTime(msg.created_at)}</span>
                   </div>
@@ -528,7 +575,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={tr.typeMessage}
             disabled={sending}
             autoComplete="off"
             enterKeyHint="send"
@@ -564,7 +611,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Report Message</h3>
+              <h3 className="text-lg font-bold text-stone-900 dark:text-white">{tr.reportMessage}</h3>
               <button onClick={() => setShowReportModal(false)}>
                 <X className="w-5 h-5" />
               </button>
@@ -572,28 +619,28 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Reason *</label>
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{tr.reason}</label>
                 <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
                 >
-                  <option value="">Select a reason</option>
-                  <option value="spam">Spam</option>
-                  <option value="harassment">Harassment</option>
-                  <option value="inappropriate">Inappropriate content</option>
-                  <option value="offensive">Offensive language</option>
-                  <option value="other">Other</option>
+                  <option value="">{tr.selectReason}</option>
+                  <option value="spam">{tr.spam}</option>
+                  <option value="harassment">{tr.harassment}</option>
+                  <option value="inappropriate">{tr.inappropriate}</option>
+                  <option value="offensive">{tr.offensive}</option>
+                  <option value="other">{tr.other}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Details (optional)</label>
+                <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{tr.details}</label>
                 <textarea
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder="Provide more context..."
-                  className="w-full p-2 border rounded-lg h-20 resize-none"
+                  placeholder={tr.moreContext}
+                  className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-stone-900 dark:text-white h-20 resize-none"
                 />
               </div>
             </div>
@@ -601,16 +648,16 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowReportModal(false)}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-stone-50"
+                className="flex-1 px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-[#52575D]"
               >
-                Cancel
+                {tr.cancel}
               </button>
               <button
                 onClick={submitReport}
                 disabled={!reportReason}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
               >
-                Submit Report
+                {tr.submitReport}
               </button>
             </div>
           </div>
