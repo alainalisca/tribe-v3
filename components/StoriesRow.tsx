@@ -21,7 +21,7 @@ interface StoriesRowProps {
 }
 
 export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesRowProps) {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const { groups, seenIds, activeSessions, loaded, refreshStories, handleStoryViewed } = useStoriesData({ userId });
 
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -38,11 +38,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
   function handleYourStoryClick() {
     if (!userId) return;
     if (activeSessions.length === 0) {
-      showInfo(
-        language === 'es'
-          ? '\u00danete o crea una sesi\u00f3n primero para publicar una historia'
-          : 'Join or create a session first to post a story'
-      );
+      showInfo(t('joinOrCreateFirst'));
     } else if (activeSessions.length === 1) {
       setSelectedSessionId(activeSessions[0].id);
       setShowUpload(true);
@@ -86,7 +82,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
                 </div>
               </div>
               <span className="text-[10px] text-theme-secondary text-center leading-tight truncate w-full">
-                {language === 'es' ? 'Tu historia' : 'Your story'}
+                {t('yourStory')}
               </span>
             </button>
           )}

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Share, Plus, Home, MoreVertical, X } from 'lucide-react';
 import { logError } from '@/lib/logger';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function IOSInstallPrompt() {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
@@ -66,8 +68,8 @@ export default function IOSInstallPrompt() {
               Tribe<span className="text-tribe-green">.</span>
             </span>
           </div>
-          <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">Install Tribe</h2>
-          <p className="text-gray-600 dark:text-gray-400">Get the full app experience</p>
+          <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">{t('installTribe')}</h2>
+          <p className="text-gray-600 dark:text-gray-400">{t('getFullExperience')}</p>
         </div>
 
         {isIOS ? (
@@ -77,10 +79,10 @@ export default function IOSInstallPrompt() {
                 1
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap Share</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">{t('tapShare')}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Share className="w-4 h-4" />
-                  <span>at the bottom of Safari</span>
+                  <span>{t('atBottomOfSafari')}</span>
                 </div>
               </div>
             </div>
@@ -90,10 +92,10 @@ export default function IOSInstallPrompt() {
                 2
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Add to Home Screen</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">{t('addToHomeScreen')}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Plus className="w-4 h-4" />
-                  <span>from the menu</span>
+                  <span>{t('fromTheMenu')}</span>
                 </div>
               </div>
             </div>
@@ -105,10 +107,10 @@ export default function IOSInstallPrompt() {
                 1
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Tap menu</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">{t('tapMenu')}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <MoreVertical className="w-4 h-4" />
-                  <span>in your browser</span>
+                  <span>{t('inYourBrowser')}</span>
                 </div>
               </div>
             </div>
@@ -118,10 +120,10 @@ export default function IOSInstallPrompt() {
                 2
               </div>
               <div className="flex-1">
-                <p className="font-semibold mb-1 text-gray-900 dark:text-white">Install app</p>
+                <p className="font-semibold mb-1 text-gray-900 dark:text-white">{t('installApp')}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <Home className="w-4 h-4" />
-                  <span>or &quot;Add to Home screen&quot;</span>
+                  <span>{t('orAddToHomeScreen')}</span>
                 </div>
               </div>
             </div>
@@ -132,7 +134,7 @@ export default function IOSInstallPrompt() {
           onClick={() => handleDismiss(false)}
           className="w-full py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
-          Maybe later
+          {t('maybeLater')}
         </button>
       </div>
     </div>

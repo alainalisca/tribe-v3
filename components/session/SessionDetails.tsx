@@ -4,6 +4,7 @@ import { formatTime12Hour } from '@/lib/utils';
 import { Calendar, Clock, MapPin, Users, Star } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import type { Session } from '@/lib/database.types';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface CreatorInfo {
   id: string;
@@ -36,6 +37,7 @@ export default function SessionDetails({
   language,
   onOpenLightbox,
 }: SessionDetailsProps) {
+  const { t } = useLanguage();
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -63,20 +65,12 @@ export default function SessionDetails({
                     ? '🔥'
                     : '🌟'}{' '}
               {session.skill_level === 'beginner'
-                ? language === 'es'
-                  ? 'Principiante'
-                  : 'Beginner'
+                ? t('beginner')
                 : session.skill_level === 'intermediate'
-                  ? language === 'es'
-                    ? 'Intermedio'
-                    : 'Intermediate'
+                  ? t('intermediate')
                   : session.skill_level === 'advanced'
-                    ? language === 'es'
-                      ? 'Avanzado'
-                      : 'Advanced'
-                    : language === 'es'
-                      ? 'Todos los Niveles'
-                      : 'All Levels'}
+                    ? t('advanced')
+                    : t('allLevels')}
             </span>
           )}
           {session.gender_preference && session.gender_preference !== 'all' && (
@@ -86,19 +80,13 @@ export default function SessionDetails({
               }`}
             >
               {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
-              {session.gender_preference === 'women_only'
-                ? language === 'es'
-                  ? 'Solo Mujeres'
-                  : 'Women Only'
-                : language === 'es'
-                  ? 'Solo Hombres'
-                  : 'Men Only'}
+              {session.gender_preference === 'women_only' ? t('womenOnly') : t('menOnly')}
             </span>
           )}
         </div>
         <div className="text-right">
           <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
-            {participants.length}/{session.max_participants} {language === 'es' ? 'unidos' : 'joined'}
+            {participants.length}/{session.max_participants} {t('joined')}
           </div>
           <div className="w-24 h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
             <div
@@ -113,9 +101,7 @@ export default function SessionDetails({
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-tribe-green" />
-            <p className="text-sm font-medium text-stone-700 dark:text-gray-300">
-              {language === 'es' ? 'Fotos del lugar' : 'Location Photos'}
-            </p>
+            <p className="text-sm font-medium text-stone-700 dark:text-gray-300">{t('locationPhotos')}</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {session.photos.map((photo: string, idx: number) => (
@@ -160,9 +146,7 @@ export default function SessionDetails({
           <div className="flex items-start text-stone-900 dark:text-white">
             <span className="w-5 h-5 mr-3 mt-0.5 text-lg">🎒</span>
             <div>
-              <p className="text-xs text-stone-500 dark:text-gray-400 mb-0.5">
-                {language === 'es' ? 'Equipo necesario' : 'Equipment needed'}
-              </p>
+              <p className="text-xs text-stone-500 dark:text-gray-400 mb-0.5">{t('equipmentNeeded')}</p>
               <span>{session.equipment}</span>
             </div>
           </div>
@@ -176,7 +160,9 @@ export default function SessionDetails({
           <div className="flex items-center justify-between text-stone-900 dark:text-white">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
-              <span>{language === 'es' ? `Organizada por ${creator.name}` : `Hosted by ${creator.name}`}</span>
+              <span>
+                {t('hostedBy')} {creator.name}
+              </span>
             </div>
             {creator.average_rating && creator.average_rating > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">

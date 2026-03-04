@@ -26,7 +26,7 @@ export default function InvitePage() {
   const params = useParams();
   const token = params.token as string;
   const supabase = createClient();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<SessionRow | null>(null);
@@ -63,7 +63,7 @@ export default function InvitePage() {
 
       // Check if token expired
       if (new Date(inviteData.expires_at) < new Date()) {
-        showError(language === 'es' ? 'Invitación expirada' : 'Invite expired');
+        showError(t('inviteExpired'));
         return;
       }
 
@@ -76,7 +76,7 @@ export default function InvitePage() {
       }
     } catch (error) {
       logError(error, { action: 'loadInvite' });
-      showError(language === 'es' ? 'Invitación inválida' : 'Invalid invite');
+      showError(t('invalidInvite'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function InvitePage() {
 
   async function handleGuestJoin() {
     if (!guestData.name || !guestData.phone) {
-      showError(language === 'es' ? 'Completa nombre y teléfono' : 'Fill in name and phone');
+      showError(t('fillNameAndPhone'));
       return;
     }
     if (!session) return;
@@ -94,7 +94,7 @@ export default function InvitePage() {
 
       // Check if session is full
       if ((session.current_participants ?? 0) >= session.max_participants) {
-        showError(language === 'es' ? 'Sesión llena' : 'Session full');
+        showError(t('sessionFullMsg'));
         return;
       }
 
@@ -116,7 +116,7 @@ export default function InvitePage() {
         current_participants: (session.current_participants ?? 0) + 1,
       });
 
-      showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
+      showSuccess(t('confirmedSeeYou'));
 
       // Show success message with session details
       setTimeout(() => {
@@ -132,7 +132,7 @@ export default function InvitePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-theme-primary">Loading...</p>
+        <p className="text-theme-primary">{t('loading')}</p>
       </div>
     );
   }
@@ -141,11 +141,9 @@ export default function InvitePage() {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-theme-primary mb-2">
-            {language === 'es' ? 'Invitación no encontrada' : 'Invite not found'}
-          </h1>
+          <h1 className="text-2xl font-bold text-theme-primary mb-2">{t('inviteNotFound')}</h1>
           <Link href="/" className="text-tribe-green hover:underline">
-            {language === 'es' ? 'Ir a inicio' : 'Go home'}
+            {t('goHome')}
           </Link>
         </div>
       </div>
@@ -155,12 +153,10 @@ export default function InvitePage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20 safe-area-top">
       <div className="bg-tribe-green p-6 text-center">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          {language === 'es' ? '¡Estás invitado!' : "You're Invited!"}
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('youreInvited')}</h1>
         {inviter && (
           <p className="text-slate-800">
-            {language === 'es' ? 'Por' : 'By'} {inviter.name}
+            {t('by')} {inviter.name}
           </p>
         )}
       </div>
@@ -180,7 +176,7 @@ export default function InvitePage() {
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Clock className="w-4 h-4" />
               <span>
-                {formatTime12Hour(session.start_time)} • {session.duration} min
+                {formatTime12Hour(session.start_time)} • {session.duration} {t('min')}
               </span>
             </div>
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
@@ -190,8 +186,7 @@ export default function InvitePage() {
             <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
               <Users className="w-4 h-4" />
               <span>
-                {session.current_participants}/{session.max_participants}{' '}
-                {language === 'es' ? 'confirmados' : 'confirmed'}
+                {session.current_participants}/{session.max_participants} {t('confirmed')}
               </span>
             </div>
           </div>
@@ -206,15 +201,11 @@ export default function InvitePage() {
         {/* Join Form */}
         {isGuest ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow">
-            <h3 className="text-lg font-bold text-theme-primary mb-3">
-              {language === 'es' ? 'Confirma tu asistencia' : 'Confirm your spot'}
-            </h3>
+            <h3 className="text-lg font-bold text-theme-primary mb-3">{t('confirmYourSpot')}</h3>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-1">
-                  {language === 'es' ? 'Nombre completo' : 'Full name'} *
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-1">{t('fullName')}</label>
                 <input
                   type="text"
                   value={guestData.name}
@@ -225,9 +216,7 @@ export default function InvitePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-1">
-                  {language === 'es' ? 'Teléfono' : 'Phone'} *
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-1">{t('phone')}</label>
                 <input
                   type="tel"
                   value={guestData.phone}
@@ -238,9 +227,7 @@ export default function InvitePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-1">
-                  {language === 'es' ? 'Email (opcional)' : 'Email (optional)'}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-1">{t('emailOptional')}</label>
                 <input
                   type="email"
                   value={guestData.email}
@@ -255,32 +242,22 @@ export default function InvitePage() {
                 disabled={joining}
                 className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
               >
-                {joining
-                  ? language === 'es'
-                    ? 'Confirmando...'
-                    : 'Confirming...'
-                  : language === 'es'
-                    ? 'Confirmar asistencia'
-                    : 'Confirm attendance'}
+                {joining ? t('confirming') : t('confirmAttendance')}
               </button>
 
               <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
-                {language === 'es'
-                  ? 'Tu info se compartirá con el organizador'
-                  : 'Your info will be shared with the organizer'}
+                {t('infoSharedWithOrganizer')}
               </p>
             </div>
           </div>
         ) : (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow text-center">
-            <p className="text-theme-primary mb-4">
-              {language === 'es' ? 'Ya tienes cuenta. ¡Únete desde la app!' : 'You have an account. Join from the app!'}
-            </p>
+            <p className="text-theme-primary mb-4">{t('haveAccountJoinFromApp')}</p>
             <Link
               href={`/session/${session.id}`}
               className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
             >
-              {language === 'es' ? 'Ver sesión' : 'View session'}
+              {t('viewSession')}
             </Link>
           </div>
         )}

@@ -77,13 +77,13 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               )}
               {isStartingSoon && !isPast && !isFull && (
                 <span className="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-semibold animate-pulse">
-                  🔥 {language === 'es' ? 'PRONTO' : 'STARTING SOON'}
+                  🔥 {t('startingSoon')}
                 </span>
               )}
               {liveData && liveData.count > 0 && (
                 <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold flex items-center gap-1 animate-pulse">
                   <span className="w-2 h-2 bg-white rounded-full"></span>
-                  {liveData.count} {language === 'es' ? 'en vivo' : 'live'}
+                  {liveData.count} {t('live')}
                 </span>
               )}
             </div>
@@ -145,7 +145,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               <span className="text-sm text-stone-900 dark:text-white break-words">{session.location}</span>
               {distance && (
                 <span className="ml-2 px-2 py-0.5 bg-tribe-green text-slate-900 rounded-full text-xs font-semibold">
-                  {distance} {language === 'es' ? 'de distancia' : 'away'}
+                  {distance} {t('away')}
                 </span>
               )}
             </div>
@@ -210,7 +210,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               </div>
               {confirmedParticipants.length > 5 && (
                 <span className="text-xs text-stone-600 dark:text-[#B1B3B6]">
-                  +{confirmedParticipants.length - 5} {language === 'es' ? 'mas' : 'more'}
+                  +{confirmedParticipants.length - 5} {t('more')}
                 </span>
               )}
             </div>

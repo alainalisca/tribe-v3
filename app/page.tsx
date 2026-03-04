@@ -76,19 +76,11 @@ export default function HomePage() {
               onClick={async () => {
                 const loc = await getUserLocation();
                 if (loc) f.setUserLocation(loc);
-                else
-                  showInfo(
-                    f.language === 'es'
-                      ? 'Activa la ubicación en la configuración de tu navegador'
-                      : 'Enable location in your browser settings'
-                  );
+                else showInfo(f.t('enableLocationSettings'));
               }}
               className="w-full mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
             >
-              📍{' '}
-              {f.language === 'es'
-                ? 'Activa tu ubicación para ver sesiones cercanas'
-                : 'Enable location to see sessions near you'}
+              📍 {f.t('enableLocationNearby')}
             </button>
           )}
 
@@ -107,12 +99,8 @@ export default function HomePage() {
               className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
             >
               <div className="text-center">
-                <div className="text-lg">{f.language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
-                <div className="text-xs font-normal opacity-75">
-                  {f.language === 'es'
-                    ? 'Conecta con personas entrenando cerca'
-                    : 'Connect with people training nearby'}
-                </div>
+                <div className="text-lg">{f.t('trainingNowLabel')}</div>
+                <div className="text-xs font-normal opacity-75">{f.t('connectNearby')}</div>
               </div>
             </button>
           )}
@@ -128,19 +116,13 @@ export default function HomePage() {
           ) : f.fetchError ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
               <div className="text-4xl mb-4">⚠️</div>
-              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-                {f.language === 'es' ? 'No se pudieron cargar las sesiones' : 'Could not load sessions'}
-              </p>
-              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">
-                {f.language === 'es'
-                  ? 'Verifica tu conexión e inténtalo de nuevo'
-                  : 'Check your connection and try again'}
-              </p>
+              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('couldNotLoadSessions')}</p>
+              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('checkConnectionRetry')}</p>
               <button
                 onClick={() => f.loadSessions()}
                 className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
               >
-                {f.language === 'es' ? 'Reintentar' : 'Retry'}
+                {f.t('retry')}
               </button>
             </div>
           ) : f.filteredSessions.length === 0 ? (
@@ -150,7 +132,7 @@ export default function HomePage() {
               <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
               <Link href="/create">
                 <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                  {f.language === 'es' ? 'Crear Sesión' : 'Create Session'}
+                  {f.t('createSession')}
                 </button>
               </Link>
             </div>

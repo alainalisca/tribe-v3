@@ -11,55 +11,31 @@ interface OnboardingModalProps {
 
 export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const [step, setStep] = useState(1);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
 
-  const steps =
-    language === 'es'
-      ? [
-          {
-            title: 'Nunca Entrenes Solo',
-            description: 'Encuentra compañeros de entrenamiento y sesiones en tu ciudad',
-            icon: Users,
-          },
-          {
-            title: 'Encuentra Compañeros',
-            description: 'Conecta con personas que comparten tus metas y horarios',
-            icon: Users,
-          },
-          {
-            title: 'Únete a Sesiones',
-            description: 'Explora carreras, entrenamientos, clases y eventos cerca de ti',
-            icon: Calendar,
-          },
-          {
-            title: 'Completa tu Perfil',
-            description: 'Añade tus deportes favoritos para mejores coincidencias',
-            icon: User,
-          },
-        ]
-      : [
-          {
-            title: 'Never Train Alone',
-            description: 'Never train alone. Find partners for any workout.',
-            icon: Users,
-          },
-          {
-            title: 'Never Train Alone',
-            description: 'Connect with people who share your fitness goals and schedule',
-            icon: Users,
-          },
-          {
-            title: 'Join Sessions Instantly',
-            description: 'Browse runs, gym sessions, classes and events near you',
-            icon: Calendar,
-          },
-          {
-            title: 'Complete Your Profile',
-            description: 'Add your favorite sports for better matches',
-            icon: User,
-          },
-        ];
+  const steps = [
+    {
+      title: t('neverTrainAlone'),
+      description: t('onboardingDesc1'),
+      icon: Users,
+    },
+    {
+      title: t('neverTrainAlone'),
+      description: t('onboardingDesc1'),
+      icon: Users,
+    },
+    {
+      title: t('joinSessionsInstantly'),
+      description: t('onboardingDesc2'),
+      icon: Calendar,
+    },
+    {
+      title: t('completeYourProfile'),
+      description: t('onboardingDesc3'),
+      icon: User,
+    },
+  ];
 
   const currentStep = steps[step - 1];
   const Icon = currentStep.icon;

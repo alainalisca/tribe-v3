@@ -34,7 +34,7 @@ export default function PublicProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
   const supabase = createClient();
-  const { language } = useLanguage();
+  const { language, t: globalT } = useLanguage();
   const t = getProfileTranslations(language);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -306,7 +306,7 @@ export default function PublicProfilePage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    📘 Facebook Profile
+                    📘 {globalT('facebookProfile')}
                   </a>
                 )}
               </div>

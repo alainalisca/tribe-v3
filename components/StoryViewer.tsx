@@ -7,6 +7,7 @@ import type { StoryGroup } from './stories/storyTypes';
 import { timeAgo } from './stories/storyTypes';
 import { useStoryViewerState } from './stories/useStoryViewerState';
 import DeleteConfirmModal from './stories/DeleteConfirmModal';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface StoryViewerProps {
   groups: StoryGroup[];
@@ -25,6 +26,7 @@ export default function StoryViewer({
   onStorySeen,
   onStoryDeleted,
 }: StoryViewerProps) {
+  const { t } = useLanguage();
   const {
     language,
     group,
@@ -123,7 +125,7 @@ export default function StoryViewer({
       >
         {!story.media_url ? (
           <div className="w-full h-full flex items-center justify-center bg-stone-800">
-            <p className="text-white/60">{language === 'es' ? 'Medio no disponible' : 'Media unavailable'}</p>
+            <p className="text-white/60">{t('mediaUnavailable')}</p>
           </div>
         ) : story.media_type === 'image' ? (
           <img
@@ -161,7 +163,7 @@ export default function StoryViewer({
           onClick={onClose}
           className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white text-sm font-semibold rounded-full hover:bg-white/30 transition border border-white/20"
         >
-          {language === 'es' ? 'Ver Sesi\u00f3n' : 'View Session'}
+          {t('viewSession')}
         </Link>
       </div>
 

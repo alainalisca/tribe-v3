@@ -7,6 +7,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { insertTemplate, deleteTemplate as dalDeleteTemplate, fetchTemplatesByUser } from '@/lib/dal';
 import type { Database } from '@/lib/database.types';
+import { useLanguage } from '@/lib/LanguageContext';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 
@@ -25,6 +26,7 @@ export default function TemplateSection({
   formData,
   onLoadTemplate,
 }: TemplateSectionProps) {
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState<SessionTemplateRow[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -54,13 +56,10 @@ export default function TemplateSection({
 
   async function saveAsTemplate() {
     if (!formData.sport || !formData.location) {
-      showInfo(language === 'es' ? 'Completa deporte y ubicación primero' : 'Fill in sport and location first');
+      showInfo(t('fillSportAndLocation'));
       return;
     }
-    const templateName = prompt(
-      language === 'es' ? 'Nombre para esta plantilla:' : 'Name for this template:',
-      `${formData.sport} - ${formData.location}`
-    );
+    const templateName = prompt(t('nameForTemplate'), `${formData.sport} - ${formData.location}`);
     if (!templateName) return;
     try {
       setSavingTemplate(true);
@@ -74,24 +73,24 @@ export default function TemplateSection({
         description: formData.description,
       });
       if (!result.success) throw new Error(result.error);
-      showSuccess(language === 'es' ? '¡Plantilla guardada!' : 'Template saved!');
+      showSuccess(t('templateSaved'));
       await loadTemplates();
     } catch (error: unknown) {
       logError(error, { action: 'saveAsTemplate' });
       const detail = error instanceof Error ? error.message : String(error);
-      showError(language === 'es' ? `Error al guardar plantilla: ${detail}` : `Error saving template: ${detail}`);
+      showError(`${t('errorSavingTemplate')}: ${detail}`);
     } finally {
       setSavingTemplate(false);
     }
   }
 
   async function deleteTemplate(templateId: string) {
-    if (!confirm(language === 'es' ? '¿Eliminar plantilla?' : 'Delete template?')) return;
+    if (!confirm(t('deleteTemplateConfirm'))) return;
     try {
       const result = await dalDeleteTemplate(supabase, templateId);
       if (!result.success) throw new Error(result.error);
       loadTemplates();
-      showSuccess(language === 'es' ? 'Plantilla eliminada' : 'Template deleted');
+      showSuccess(t('templateDeleted'));
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'create_session', language));
     }
@@ -100,7 +99,7 @@ export default function TemplateSection({
   function handleLoadTemplate(template: SessionTemplateRow) {
     onLoadTemplate(template);
     setShowTemplates(false);
-    showSuccess(language === 'es' ? 'Plantilla cargada' : 'Template loaded');
+    showSuccess(t('templateLoaded'));
   }
 
   return (
@@ -111,7 +110,7 @@ export default function TemplateSection({
           onClick={() => setShowTemplates(!showTemplates)}
           className="flex-1 py-3 px-3 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178] transition text-sm"
         >
-          📋 {language === 'es' ? 'Usar Plantilla' : 'Use Template'} ({templates.length})
+          📋 {t('useTemplate')} ({templates.length})
         </button>
         <button
           type="button"
@@ -119,15 +118,13 @@ export default function TemplateSection({
           disabled={savingTemplate}
           className="flex-1 py-3 px-3 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
         >
-          {savingTemplate ? '...' : language === 'es' ? '💾 Guardar' : '💾 Save Template'}
+          {savingTemplate ? '...' : `💾 ${t('saveTemplate')}`}
         </button>
       </div>
 
       {showTemplates && templates.length > 0 && (
         <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
-          <h3 className="text-sm font-bold text-theme-primary mb-2">
-            {language === 'es' ? 'Tus Plantillas' : 'Your Templates'}
-          </h3>
+          <h3 className="text-sm font-bold text-theme-primary mb-2">{t('yourTemplates')}</h3>
           <div className="space-y-2">
             {templates.map((template) => (
               <div
@@ -146,7 +143,7 @@ export default function TemplateSection({
                     onClick={() => handleLoadTemplate(template)}
                     className="px-3 py-1 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
                   >
-                    {language === 'es' ? 'Usar' : 'Use'}
+                    {t('use')}
                   </button>
                   <button
                     type="button"

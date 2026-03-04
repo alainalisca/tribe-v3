@@ -17,7 +17,7 @@ interface EditSessionModalProps {
 
 export default function EditSessionModal({ session, onClose, onSave }: EditSessionModalProps) {
   const supabase = createClient();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     sport: session.sport,
@@ -58,11 +58,11 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           <X className="w-5 h-5 text-stone-600 dark:text-gray-400" />
         </button>
 
-        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-6">Edit Session</h2>
+        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-6">{t('editSession')}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Sport</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('sport')}</label>
             <input
               type="text"
               value={formData.sport}
@@ -73,7 +73,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Date</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('date')}</label>
             <input
               type="date"
               value={formData.date}
@@ -84,7 +84,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Start Time</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('startTime')}</label>
             <input
               type="time"
               value={formData.start_time}
@@ -96,7 +96,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
 
           <div>
             <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              Duration (minutes)
+              {t('durationMinutes')}
             </label>
             <input
               type="number"
@@ -108,7 +108,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Location</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('location')}</label>
             <input
               type="text"
               value={formData.location}
@@ -119,7 +119,9 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Max Participants</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+              {t('maxParticipants')}
+            </label>
             <input
               type="number"
               value={formData.max_participants}
@@ -130,7 +132,9 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">Description</label>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
+              {t('description')}
+            </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -145,14 +149,14 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               onClick={onClose}
               className="flex-1 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="flex-1 py-3 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('saving') : t('saveChanges')}
             </button>
           </div>
         </form>

@@ -112,7 +112,7 @@ export default function FilterBar({
               onChange={(e) => setSelectedSport(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="">{language === 'es' ? 'Deporte' : 'Sport'}</option>
+              <option value="">{t('sport')}</option>
               {sports.map((sport) => (
                 <option key={sport} value={sport}>
                   {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
@@ -125,10 +125,10 @@ export default function FilterBar({
               onChange={(e) => setDateFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">{language === 'es' ? 'Fecha' : 'Date'}</option>
-              <option value="today">{language === 'es' ? 'Hoy' : 'Today'}</option>
-              <option value="week">{language === 'es' ? 'Semana' : 'Week'}</option>
-              <option value="month">{language === 'es' ? 'Mes' : 'Month'}</option>
+              <option value="all">{t('date')}</option>
+              <option value="today">{t('today')}</option>
+              <option value="week">{t('week')}</option>
+              <option value="month">{t('month')}</option>
             </select>
 
             <select
@@ -136,16 +136,16 @@ export default function FilterBar({
               onChange={(e) => setGenderFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">👥 {language === 'es' ? 'Todos' : 'All'}</option>
-              <option value="women_only">👩 {language === 'es' ? 'Mujeres' : 'Women'}</option>
-              <option value="men_only">👨 {language === 'es' ? 'Hombres' : 'Men'}</option>
+              <option value="all">👥 {t('all')}</option>
+              <option value="women_only">👩 {t('women')}</option>
+              <option value="men_only">👨 {t('men')}</option>
             </select>
           </div>
 
           {userLocation && (
             <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-3 py-1.5">
               <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
-                {language === 'es' ? 'Dist.' : 'Dist.'}
+                {t('dist')}
               </label>
               <input
                 type="range"
@@ -157,7 +157,7 @@ export default function FilterBar({
                 className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
               />
               <span className="text-xs font-semibold text-tribe-green min-w-[48px] text-right flex-shrink-0">
-                {maxDistance === 100 ? (language === 'es' ? 'Todo' : 'All') : `${maxDistance}km`}
+                {maxDistance === 100 ? t('all') : `${maxDistance}km`}
               </span>
             </div>
           )}

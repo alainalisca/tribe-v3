@@ -2,6 +2,7 @@
 
 import { Camera } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface LiveUser {
   user_id: string;
@@ -35,6 +36,7 @@ export default function LiveStatusSection({
   onRenewLive,
   onShareMoment,
 }: LiveStatusSectionProps) {
+  const { t } = useLanguage();
   return (
     <>
       {/* Go Live / Live Controls */}
@@ -48,12 +50,10 @@ export default function LiveStatusSection({
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                     <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
                   </div>
-                  <span className="font-bold text-red-700 dark:text-red-300">
-                    {language === 'es' ? 'EN VIVO' : 'LIVE'}
-                  </span>
+                  <span className="font-bold text-red-700 dark:text-red-300">{t('liveLabel')}</span>
                 </div>
                 <span className="text-sm font-mono text-red-600 dark:text-red-400">
-                  {liveCountdown} {language === 'es' ? 'restante' : 'remaining'}
+                  {liveCountdown} {t('remaining')}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -61,13 +61,13 @@ export default function LiveStatusSection({
                   onClick={onRenewLive}
                   className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition text-sm"
                 >
-                  {language === 'es' ? 'Renovar 15 min' : 'Renew 15 min'}
+                  {t('renewFifteenMin')}
                 </button>
                 <button
                   onClick={onEndLive}
                   className="flex-1 py-2 bg-stone-200 dark:bg-stone-600 text-stone-700 dark:text-white font-bold rounded-lg hover:bg-stone-300 transition text-sm"
                 >
-                  {language === 'es' ? 'Terminar' : 'End Live'}
+                  {t('endLive')}
                 </button>
               </div>
               <button
@@ -75,7 +75,7 @@ export default function LiveStatusSection({
                 className="w-full mt-2 py-2 border-2 border-red-400 text-red-600 dark:text-red-300 font-semibold rounded-lg flex items-center justify-center gap-2 text-sm"
               >
                 <Camera className="w-4 h-4" />
-                {language === 'es' ? 'Compartir Momento' : 'Share Moment'}
+                {t('shareMoment')}
               </button>
             </div>
           ) : (
@@ -88,13 +88,7 @@ export default function LiveStatusSection({
                 <div className="w-3 h-3 bg-white rounded-full"></div>
                 <div className="absolute inset-0 w-3 h-3 bg-white rounded-full animate-ping"></div>
               </div>
-              {goingLive
-                ? language === 'es'
-                  ? 'Iniciando...'
-                  : 'Starting...'
-                : language === 'es'
-                  ? 'Estoy Entrenando'
-                  : 'Go Live'}
+              {goingLive ? t('starting') : t('goLive')}
             </button>
           )}
         </div>
@@ -109,7 +103,7 @@ export default function LiveStatusSection({
               <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
             </div>
             <h2 className="text-lg font-bold text-red-700 dark:text-red-300">
-              {language === 'es' ? 'Entrenando Ahora' : 'Training Now'} ({liveUsers.length})
+              {t('trainingNow')} ({liveUsers.length})
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-3">

@@ -2,6 +2,7 @@
 
 import { UserX } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface CreatorInfo {
   id: string;
@@ -34,19 +35,21 @@ export default function ParticipantList({
   language,
   onKickUser,
 }: ParticipantListProps) {
+  const { t } = useLanguage();
   if (!creator && participants.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-        {language === 'es' ? 'Participantes' : 'Participants'} ({participants.length + 1})
+        {t('participants')} ({participants.length + 1})
       </h2>
       <div className="grid grid-cols-1 gap-3">
         {creator && (
           <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
             <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
               {creator.avatar_url ? (
-                <img loading="lazy"
+                <img
+                  loading="lazy"
                   src={creator.avatar_url}
                   alt={creator.name}
                   className="w-12 h-12 rounded-full object-cover"
@@ -58,34 +61,42 @@ export default function ParticipantList({
               )}
               <div>
                 <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
-                <p className="text-xs text-tribe-green font-semibold">{language === 'es' ? 'Anfitrión' : 'Host'}</p>
+                <p className="text-xs text-tribe-green font-semibold">{t('host')}</p>
               </div>
             </Link>
           </div>
         )}
 
         {participants.map((participant) => (
-          <div key={participant.user_id} className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+          <div
+            key={participant.user_id}
+            className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+          >
             <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
               {participant.user?.avatar_url ? (
-                <img loading="lazy"
+                <img
+                  loading="lazy"
                   src={participant.user.avatar_url}
                   alt={participant.user.name}
                   className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
-                  {participant.is_guest ? participant.guest_name?.[0]?.toUpperCase() : participant.user?.name?.[0]?.toUpperCase() || 'U'}
+                  {participant.is_guest
+                    ? participant.guest_name?.[0]?.toUpperCase()
+                    : participant.user?.name?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
               <p className="font-medium text-stone-900 dark:text-white">
-                {participant.is_guest ? participant.guest_name : participant.user?.name || 'Unknown'}
+                {participant.is_guest ? participant.guest_name : participant.user?.name || t('unknown')}
               </p>
             </Link>
 
             {canKick && (
               <button
-                onClick={() => participant.user_id && onKickUser(participant.user_id, participant.user?.name || 'Unknown')}
+                onClick={() =>
+                  participant.user_id && onKickUser(participant.user_id, participant.user?.name || t('unknown'))
+                }
                 className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                 title="Remove from session"
               >

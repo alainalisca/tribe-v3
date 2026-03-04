@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Camera } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface SessionHeaderProps {
   language: 'en' | 'es';
@@ -20,6 +21,7 @@ export default function SessionHeader({
   sessionStories,
   onAddStory,
 }: SessionHeaderProps) {
+  const { t } = useLanguage();
   return (
     <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
       <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
@@ -28,9 +30,7 @@ export default function SessionHeader({
             <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
           </button>
         </Link>
-        <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">
-          {language === 'es' ? 'Detalles de Sesión' : 'Session Details'}
-        </h1>
+        <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">{t('sessionDetails')}</h1>
         {user && (hasJoined || isCreator) && (
           <button
             onClick={onAddStory}

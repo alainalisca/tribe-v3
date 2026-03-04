@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { calculateDistance, formatDistance } from '@/lib/distance';
+import { useLanguage } from '@/lib/LanguageContext';
 import type { SessionWithRelations } from '@/lib/dal';
 
 interface LiveNowSectionProps {
@@ -11,6 +12,7 @@ interface LiveNowSectionProps {
 }
 
 export default function LiveNowSection({ liveNowSessions, userLocation, language }: LiveNowSectionProps) {
+  const { t } = useLanguage();
   if (liveNowSessions.length === 0) return null;
 
   return (
@@ -21,7 +23,7 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
           <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
         </div>
         <h2 className="text-lg font-bold text-theme-primary">
-          {language === 'es' ? 'EN VIVO AHORA' : 'LIVE NOW'} ({liveNowSessions.length})
+          {t('liveNow')} ({liveNowSessions.length})
         </h2>
       </div>
       <div className="space-y-3">
@@ -35,9 +37,9 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
 
           let statusText = '';
           if (diffMins > 0) {
-            statusText = language === 'es' ? `Empieza en ${diffMins} min` : `Starting in ${diffMins} min`;
+            statusText = `${language === 'es' ? 'Empieza en' : 'Starting in'} ${diffMins} ${t('min')}`;
           } else {
-            statusText = language === 'es' ? `${minsLeft} min restantes` : `${minsLeft} min left`;
+            statusText = `${minsLeft} ${t('minLeft')}`;
           }
 
           let liveDistanceText = '';
@@ -91,7 +93,7 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
                   <div className="text-right">
                     <div className="text-xs font-medium text-green-600 dark:text-green-400">{statusText}</div>
                     <button className="mt-1 px-4 py-1.5 bg-tribe-green text-slate-900 text-sm font-bold rounded-full hover:bg-lime-500 transition">
-                      {language === 'es' ? 'Unirse' : 'Join'}
+                      {t('join')}
                     </button>
                   </div>
                 </div>

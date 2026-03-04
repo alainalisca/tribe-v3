@@ -12,9 +12,14 @@ interface ProfileCompletionBannerProps {
   userId?: string;
 }
 
-export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName = true, userId }: ProfileCompletionBannerProps) {
+export default function ProfileCompletionBanner({
+  hasPhoto,
+  hasSports,
+  hasName = true,
+  userId,
+}: ProfileCompletionBannerProps) {
   const [dismissed, setDismissed] = useState(false);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Check localStorage for persistent dismissal on mount
   useEffect(() => {
@@ -32,9 +37,10 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
   // Don't show if dismissed OR if profile is complete
   if (dismissed || isProfileComplete) return null;
 
-  const message = language === 'es' 
-    ? '¡Completa tu perfil para ayudar a otros a encontrarte!'
-    : 'Complete your profile to help others find you!';
+  const message =
+    language === 'es'
+      ? '¡Completa tu perfil para ayudar a otros a encontrarte!'
+      : 'Complete your profile to help others find you!';
 
   return (
     <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-lg p-4 mb-4">
@@ -44,17 +50,17 @@ export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName =
           <div className="flex flex-wrap gap-4 mt-2 text-sm">
             {!hasName && (
               <Link href="/profile/edit" className="text-tribe-green hover:underline">
-                {language === 'es' ? '+ Agregar nombre' : '+ Add name'}
+                {t('addName')}
               </Link>
             )}
             {!hasPhoto && (
               <Link href="/profile/edit" className="text-tribe-green hover:underline">
-                {language === 'es' ? '+ Agregar foto' : '+ Add photo'}
+                {t('addPhoto')}
               </Link>
             )}
             {!hasSports && (
               <Link href="/profile/edit" className="text-tribe-green hover:underline">
-                {language === 'es' ? '+ Agregar deportes' : '+ Add sports'}
+                {t('addSports')}
               </Link>
             )}
           </div>

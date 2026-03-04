@@ -39,6 +39,15 @@ function createDefaultProps(overrides = {}) {
       const map: Record<string, string> = {
         searchPlaceholder: 'Search sessions...',
         clearAll: 'Clear all',
+        sport: 'Sport',
+        date: 'Date',
+        today: 'Today',
+        week: 'Week',
+        month: 'Month',
+        all: 'All',
+        women: 'Women',
+        men: 'Men',
+        dist: 'Dist.',
       };
       return map[key] || key;
     },

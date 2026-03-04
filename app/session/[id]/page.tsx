@@ -27,7 +27,7 @@ import { useSessionDetail } from './useSessionDetail';
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const d = useSessionDetail(params.id as string, language, (path) => router.push(path));
 
   if (d.loading)
@@ -39,9 +39,7 @@ export default function SessionDetailPage() {
   if (!d.session)
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-stone-900 dark:text-white">
-          {language === 'es' ? 'Sesión no encontrada' : 'Session not found'}
-        </p>
+        <p className="text-stone-900 dark:text-white">{t('sessionNotFound')}</p>
       </div>
     );
 
@@ -208,8 +206,8 @@ export default function SessionDetailPage() {
         open={!!d.sessionActions.confirmAction}
         title={d.sessionActions.confirmAction?.title || ''}
         message={d.sessionActions.confirmAction?.message || ''}
-        confirmLabel={language === 'es' ? 'Confirmar' : 'Confirm'}
-        cancelLabel={language === 'es' ? 'Cancelar' : 'Cancel'}
+        confirmLabel={t('confirm')}
+        cancelLabel={t('cancel')}
         variant="danger"
         onConfirm={() => {
           d.sessionActions.confirmAction?.onConfirm();

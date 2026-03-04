@@ -9,7 +9,7 @@ import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
 
 export default function ProfilePage() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const {
     txt,
     profile,
@@ -173,7 +173,7 @@ export default function ProfilePage() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                   >
-                    📘 Facebook Profile
+                    📘 {t('facebookProfile')}
                   </a>
                 )}
               </div>

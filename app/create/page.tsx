@@ -78,12 +78,10 @@ export default function CreateSessionPage() {
 
   function validate() {
     const newErrors: FormErrors = {};
-    if (!formData.sport) newErrors.sport = language === 'es' ? 'El deporte es requerido' : 'Sport is required';
-    if (!formData.date) newErrors.date = language === 'es' ? 'La fecha es requerida' : 'Date is required';
-    if (!formData.start_time)
-      newErrors.start_time = language === 'es' ? 'La hora es requerida' : 'Start time is required';
-    if (!formData.location)
-      newErrors.location = language === 'es' ? 'La ubicación es requerida' : 'Location is required';
+    if (!formData.sport) newErrors.sport = t('sportRequired');
+    if (!formData.date) newErrors.date = t('dateRequired');
+    if (!formData.start_time) newErrors.start_time = t('startTimeRequired');
+    if (!formData.location) newErrors.location = t('locationRequired');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -113,7 +111,7 @@ export default function CreateSessionPage() {
         hint: String(err?.hint ?? ''),
       });
       const errorMsg = (err?.message ?? err?.code ?? err?.details ?? JSON.stringify(error)) as string;
-      showError(language === 'es' ? `Error al crear sesión: ${errorMsg}` : `Session creation failed: ${errorMsg}`);
+      showError(`${t('sessionCreationFailed')}: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -252,7 +250,7 @@ export default function CreateSessionPage() {
                     longitude: coords?.lng ?? null,
                   }));
                 }}
-                placeholder={language === 'es' ? 'ej. Parque Lleras' : 'e.g. Central Park'}
+                placeholder={t('locationPlaceholder')}
                 error={errors.location}
               />
             </div>
@@ -260,7 +258,7 @@ export default function CreateSessionPage() {
             {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-theme-primary mb-2">
-                {t('duration')} ({language === 'es' ? 'minutos' : 'minutes'})
+                {t('duration')} ({t('minutes')})
               </label>
               <div className="grid grid-cols-4 gap-2">
                 {[15, 30, 45, 60, 90, 120, 150, 180].map((mins) => (
@@ -292,24 +290,16 @@ export default function CreateSessionPage() {
 
             {/* Join Policy */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">
-                {language === 'es' ? 'Política de unión' : 'Join Policy'}
-              </label>
+              <label className="block text-sm font-medium text-theme-primary mb-2">{t('joinPolicy')}</label>
               <select
                 name="join_policy"
                 value={formData.join_policy}
                 onChange={handleChange}
                 className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
               >
-                <option value="open">
-                  {language === 'es' ? 'Abierto - Cualquiera puede unirse' : 'Open - Anyone can join'}
-                </option>
-                <option value="curated">
-                  {language === 'es' ? 'Curado - Revisas solicitudes' : 'Curated - You review requests'}
-                </option>
-                <option value="invite_only">
-                  {language === 'es' ? 'Solo invitación - Privado' : 'Invite Only - Private'}
-                </option>
+                <option value="open">{t('openJoinPolicy')}</option>
+                <option value="curated">{t('curatedJoinPolicy')}</option>
+                <option value="invite_only">{t('inviteOnlyJoinPolicy')}</option>
               </select>
             </div>
 
@@ -321,7 +311,7 @@ export default function CreateSessionPage() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                placeholder={language === 'es' ? 'Describe tu sesión...' : 'Describe your session...'}
+                placeholder={t('describeSession')}
                 className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary resize-none"
               />
             </div>
@@ -353,7 +343,7 @@ export default function CreateSessionPage() {
               disabled={loading}
               className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
             >
-              {loading ? (language === 'es' ? 'Creando...' : 'Creating...') : t('createSession')}
+              {loading ? t('creating') : t('createSession')}
             </button>
           </form>
         </div>

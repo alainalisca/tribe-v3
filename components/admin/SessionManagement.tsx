@@ -24,16 +24,24 @@ export default function SessionManagement({
   return (
     <div className="bg-white rounded shadow">
       <div className="p-3 border-b">
-        <h3 className="text-sm font-bold text-[#272D34]">Sessions Management ({sessions.length})</h3>
-        <p className="text-xs text-stone-600 mt-1">Verify location photos to reduce fake sessions</p>
+        <h3 className="text-sm font-bold text-[#272D34]">
+          {language === 'es' ? 'Gestion de Sesiones' : 'Sessions Management'} ({sessions.length})
+        </h3>
+        <p className="text-xs text-stone-600 mt-1">
+          {language === 'es'
+            ? 'Verifica fotos de ubicacion para reducir sesiones falsas'
+            : 'Verify location photos to reduce fake sessions'}
+        </p>
       </div>
 
       {loading ? (
-        <p className="text-center py-6 text-sm text-gray-500">Loading sessions...</p>
+        <p className="text-center py-6 text-sm text-gray-500">
+          {language === 'es' ? 'Cargando sesiones...' : 'Loading sessions...'}
+        </p>
       ) : sessions.length === 0 ? (
         <div className="p-6 text-center">
           <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">No sessions yet</p>
+          <p className="text-sm text-gray-500">{language === 'es' ? 'Aun no hay sesiones' : 'No sessions yet'}</p>
         </div>
       ) : (
         <div className="divide-y max-h-[600px] overflow-y-auto">
@@ -49,19 +57,23 @@ export default function SessionManagement({
                       </p>
                       {session.photo_verified && (
                         <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded flex items-center gap-1">
-                          &#10003; Verified
+                          &#10003; {language === 'es' ? 'Verificado' : 'Verified'}
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-stone-500 mb-2">
-                      <span>{session.creator?.name || 'Unknown Host'}</span>
+                      <span>
+                        {session.creator?.name || (language === 'es' ? 'Anfitrion Desconocido' : 'Unknown Host')}
+                      </span>
                       <span>&bull;</span>
                       <span>
                         {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
                       </span>
                       <span>&bull;</span>
-                      <span>{session.photos?.length || 0} photos</span>
+                      <span>
+                        {session.photos?.length || 0} {language === 'es' ? 'fotos' : 'photos'}
+                      </span>
                     </div>
 
                     {session.photos && session.photos.length > 0 && (
@@ -85,14 +97,14 @@ export default function SessionManagement({
                         onClick={() => onVerify(session.id)}
                         className="px-3 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                       >
-                        &#10003; Verify
+                        &#10003; {language === 'es' ? 'Verificar' : 'Verify'}
                       </button>
                     ) : (
                       <button
                         onClick={() => onUnverify(session.id)}
                         className="px-3 py-1.5 bg-orange-500 text-white text-xs rounded hover:bg-orange-600"
                       >
-                        Remove
+                        {language === 'es' ? 'Eliminar' : 'Remove'}
                       </button>
                     )}
                   </div>

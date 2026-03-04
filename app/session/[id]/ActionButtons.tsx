@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { LogOut, Trash2, MessageCircle } from 'lucide-react';
 import { downloadICS } from '@/lib/calendar';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -40,6 +41,7 @@ export default function ActionButtons({
   onInvite,
   creatingInvite,
 }: ActionButtonsProps) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-2">
       {!user ? (
@@ -49,34 +51,34 @@ export default function ActionButtons({
             className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
-            {language === 'es' ? 'Salir de Sesión' : 'Leave Session'}
+            {t('leaveSession')}
           </button>
         ) : isPast ? (
           <button
             disabled
             className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
           >
-            {language === 'es' ? 'Sesión Terminada' : 'Session Ended'}
+            {t('sessionEnded')}
           </button>
         ) : isFull ? (
           <button
             disabled
             className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
           >
-            {language === 'es' ? 'Sesión Llena' : 'Session Full'}
+            {t('sessionFull')}
           </button>
         ) : (
           <button
             onClick={() => sessionActions.setShowGuestModal(true)}
             className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
           >
-            {language === 'es' ? 'Unirse como Invitado' : 'Join as Guest'}
+            {t('joinAsGuest')}
           </button>
         )
       ) : isCreator ? (
         <>
           <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">
-            {language === 'es' ? 'Tú organizas esta sesión' : "You're hosting this session"}
+            {t('hostingThisSession')}
           </div>
           {!isPast && (
             <>
@@ -92,14 +94,14 @@ export default function ActionButtons({
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                   />
                 </svg>
-                {language === 'es' ? 'Editar Sesión' : 'Edit Session'}
+                {t('editSessionBtn')}
               </button>
               <button
                 onClick={sessionActions.handleCancel}
                 className="w-full py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-5 h-5" />
-                {language === 'es' ? 'Cancelar Sesión' : 'Cancel Session'}
+                {t('cancelSession')}
               </button>
             </>
           )}
@@ -110,21 +112,21 @@ export default function ActionButtons({
           className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
         >
           <LogOut className="w-5 h-5" />
-          {language === 'es' ? 'Salir de Sesión' : 'Leave Session'}
+          {t('leaveSession')}
         </button>
       ) : isPast ? (
         <button
           disabled
           className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
         >
-          {language === 'es' ? 'Sesión Terminada' : 'Session Ended'}
+          {t('sessionEnded')}
         </button>
       ) : isFull ? (
         <button
           disabled
           className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
         >
-          {language === 'es' ? 'Sesión Llena' : 'Session Full'}
+          {t('sessionFull')}
         </button>
       ) : (
         <button
@@ -132,13 +134,7 @@ export default function ActionButtons({
           disabled={sessionActions.joining}
           className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 transition"
         >
-          {sessionActions.joining
-            ? language === 'es'
-              ? 'Uniéndose...'
-              : 'Joining...'
-            : language === 'es'
-              ? 'Unirse a la Sesión'
-              : 'Join Session'}
+          {sessionActions.joining ? t('joining') : t('joinSession')}
         </button>
       )}
 
@@ -148,7 +144,7 @@ export default function ActionButtons({
           className="w-full py-3 bg-stone-700 text-white font-bold rounded-lg hover:bg-stone-600 transition flex items-center justify-center gap-2"
         >
           <MessageCircle className="w-5 h-5" />
-          {language === 'es' ? 'Chat de Grupo' : 'Group Chat'}
+          {t('groupChat')}
         </Link>
       )}
       {hasJoined && !isPast && (
@@ -157,13 +153,7 @@ export default function ActionButtons({
           disabled={creatingInvite}
           className="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition disabled:opacity-50"
         >
-          {creatingInvite
-            ? language === 'es'
-              ? 'Generando...'
-              : 'Generating...'
-            : language === 'es'
-              ? 'Invitar Amigo'
-              : 'Invite Friend'}
+          {creatingInvite ? t('generating') : t('inviteFriend')}
         </button>
       )}
       {hasJoined && (
@@ -190,7 +180,7 @@ export default function ActionButtons({
               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          {language === 'es' ? 'Añadir al Calendario' : 'Add to Calendar'}
+          {t('addToCalendar')}
         </button>
       )}
     </div>

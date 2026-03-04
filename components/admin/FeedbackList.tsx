@@ -18,14 +18,18 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
   const resolvedFeedback = feedback.filter((f) => f.status !== 'pending');
 
   if (loading) {
-    return <p className="text-center py-6 text-sm text-gray-500">Loading feedback...</p>;
+    return (
+      <p className="text-center py-6 text-sm text-gray-500">
+        {language === 'es' ? 'Cargando comentarios...' : 'Loading feedback...'}
+      </p>
+    );
   }
 
   if (feedback.length === 0) {
     return (
       <div className="bg-white rounded p-6 text-center shadow">
         <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">No feedback yet</p>
+        <p className="text-sm text-gray-500">{language === 'es' ? 'Sin comentarios aun' : 'No feedback yet'}</p>
       </div>
     );
   }
@@ -36,7 +40,7 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
         <>
           <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-blue-500" />
-            New Feedback ({pendingFeedback.length})
+            {language === 'es' ? 'Nuevos Comentarios' : 'New Feedback'} ({pendingFeedback.length})
           </h3>
           {pendingFeedback.map((item) => (
             <div key={item.id} className="bg-white rounded shadow p-3">
@@ -61,13 +65,13 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
                   onClick={() => onUpdateStatus(item.id, 'reviewed')}
                   className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                 >
-                  Mark Reviewed
+                  {language === 'es' ? 'Marcar Revisado' : 'Mark Reviewed'}
                 </button>
                 <button
                   onClick={() => onUpdateStatus(item.id, 'implemented')}
                   className="flex-1 py-1.5 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
                 >
-                  Implemented
+                  {language === 'es' ? 'Implementado' : 'Implemented'}
                 </button>
               </div>
             </div>
@@ -83,7 +87,13 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
               <p className="text-xs text-stone-600">{item.user?.name}</p>
             </div>
             <span className="text-xs text-green-600">
-              {item.status === 'implemented' ? '&#10003; Done' : '&#10003; Reviewed'}
+              {item.status === 'implemented'
+                ? language === 'es'
+                  ? '&#10003; Listo'
+                  : '&#10003; Done'
+                : language === 'es'
+                  ? '&#10003; Revisado'
+                  : '&#10003; Reviewed'}
             </span>
           </div>
         </div>

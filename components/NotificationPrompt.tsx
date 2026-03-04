@@ -6,12 +6,14 @@ import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { showInfo, showError as showErrorToast } from '@/lib/toast';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface NotificationPromptProps {
   hideWhenOnboarding?: boolean;
 }
 
 export default function NotificationPrompt({ hideWhenOnboarding = false }: NotificationPromptProps) {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -52,11 +54,11 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
         setShow(false);
         localStorage.setItem('notification-prompt-shown', 'true');
       } else {
-        showInfo('Please enable notifications in your browser/device settings');
+        showInfo(t('enableNotifInSettings'));
       }
     } catch (error) {
       logError(error, { action: 'handleEnable', userId: userId ?? undefined });
-      showErrorToast('Failed to enable notifications. Please try again.');
+      showErrorToast(t('failedNotifications'));
     }
 
     setLoading(false);
@@ -84,10 +86,8 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
         </div>
 
         <div className="flex-1">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-1">Stay Updated</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            Get notified about new matches, join requests, and session reminders.
-          </p>
+          <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t('stayUpdated')}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{t('notifDescription')}</p>
 
           <div className="flex gap-2">
             <button
@@ -95,13 +95,13 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
               disabled={loading}
               className="flex-1 bg-tribe-green text-slate-900 font-semibold py-2 px-4 rounded-lg hover:bg-[#b0d853] transition disabled:opacity-50"
             >
-              {loading ? 'Enabling...' : 'Enable'}
+              {loading ? t('enabling') : t('enable')}
             </button>
             <button
               onClick={handleDismiss}
               className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
             >
-              Later
+              {t('later')}
             </button>
           </div>
         </div>

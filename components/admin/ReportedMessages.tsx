@@ -28,14 +28,18 @@ export default function ReportedMessages({
   const resolvedReports = reports.filter((r) => r.status !== 'pending');
 
   if (loading) {
-    return <p className="text-center py-6 text-sm text-gray-500">Loading reports...</p>;
+    return (
+      <p className="text-center py-6 text-sm text-gray-500">
+        {language === 'es' ? 'Cargando reportes...' : 'Loading reports...'}
+      </p>
+    );
   }
 
   if (reports.length === 0) {
     return (
       <div className="bg-white rounded p-6 text-center shadow">
         <Flag className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">No reports yet</p>
+        <p className="text-sm text-gray-500">{language === 'es' ? 'Sin reportes aun' : 'No reports yet'}</p>
       </div>
     );
   }
@@ -46,7 +50,7 @@ export default function ReportedMessages({
         <>
           <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
-            Pending ({pendingReports.length})
+            {language === 'es' ? 'Pendiente' : 'Pending'} ({pendingReports.length})
           </h3>
           {pendingReports.map((report) => (
             <div key={report.id} className="bg-white rounded shadow p-3">
@@ -74,19 +78,19 @@ export default function ReportedMessages({
                   onClick={() => router.push(`/profile/${report.reported_user_id}`)}
                   className="flex-1 py-1.5 border border-stone-300 text-stone-700 text-xs rounded hover:bg-stone-50"
                 >
-                  View Profile
+                  {language === 'es' ? 'Ver Perfil' : 'View Profile'}
                 </button>
                 <button
                   onClick={() => onBanUser(report.reported_user_id ?? '')}
                   className="flex-1 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600"
                 >
-                  Ban User
+                  {language === 'es' ? 'Banear Usuario' : 'Ban User'}
                 </button>
                 <button
                   onClick={() => onUpdateStatus(report.id, 'resolved')}
                   className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                 >
-                  Resolve
+                  {language === 'es' ? 'Resolver' : 'Resolve'}
                 </button>
               </div>
             </div>
@@ -96,7 +100,9 @@ export default function ReportedMessages({
 
       {resolvedReports.length > 0 && (
         <>
-          <h3 className="text-sm font-bold text-[#272D34] mt-4">Resolved ({resolvedReports.length})</h3>
+          <h3 className="text-sm font-bold text-[#272D34] mt-4">
+            {language === 'es' ? 'Resuelto' : 'Resolved'} ({resolvedReports.length})
+          </h3>
           {resolvedReports.slice(0, 5).map((report) => (
             <div key={report.id} className="bg-stone-50 rounded p-3 opacity-60">
               <div className="flex items-center justify-between">
@@ -104,7 +110,7 @@ export default function ReportedMessages({
                   <p className="text-sm font-medium">{report.reported?.name}</p>
                   <p className="text-xs text-stone-600">{report.reason}</p>
                 </div>
-                <span className="text-xs text-green-600">&#10003; Resolved</span>
+                <span className="text-xs text-green-600">&#10003; {language === 'es' ? 'Resuelto' : 'Resolved'}</span>
               </div>
             </div>
           ))}

@@ -1,4 +1,5 @@
 import { Users, Calendar, MessageSquare, TrendingUp, Activity, Award, BarChart3 } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface AdminStatsProps {
   stats: {
@@ -35,23 +36,29 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
 }
 
 export default function AdminStats({ stats }: AdminStatsProps) {
+  const { language } = useLanguage();
+
   return (
     <div className="space-y-4">
       {/* Row 1: Core Metrics */}
       <div className="grid grid-cols-2 gap-2">
-        <StatCard label="Users" value={stats.totalUsers} icon={<Users className="w-4 h-4 text-blue-500" />} />
         <StatCard
-          label="Active Users"
+          label={language === 'es' ? 'Usuarios' : 'Users'}
+          value={stats.totalUsers}
+          icon={<Users className="w-4 h-4 text-blue-500" />}
+        />
+        <StatCard
+          label={language === 'es' ? 'Usuarios Activos' : 'Active Users'}
           value={stats.activeUsers}
           icon={<Activity className="w-4 h-4 text-green-500" />}
         />
         <StatCard
-          label="Active Sessions"
+          label={language === 'es' ? 'Sesiones Activas' : 'Active Sessions'}
           value={stats.activeSessions}
           icon={<Calendar className="w-4 h-4 text-green-500" />}
         />
         <StatCard
-          label="Messages"
+          label={language === 'es' ? 'Mensajes' : 'Messages'}
           value={stats.totalMessages}
           icon={<MessageSquare className="w-4 h-4 text-purple-500" />}
         />
@@ -59,25 +66,27 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 2: Activity */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Activity</h3>
+        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+          {language === 'es' ? 'Actividad' : 'Activity'}
+        </h3>
         <div className="grid grid-cols-2 gap-2">
           <StatCard
-            label="New Today"
+            label={language === 'es' ? 'Nuevos Hoy' : 'New Today'}
             value={stats.newUsersToday}
             icon={<TrendingUp className="w-4 h-4 text-orange-500" />}
           />
           <StatCard
-            label="This Week"
+            label={language === 'es' ? 'Esta Semana' : 'This Week'}
             value={stats.sessionsThisWeek}
             icon={<Calendar className="w-4 h-4 text-blue-500" />}
           />
           <StatCard
-            label="This Month"
+            label={language === 'es' ? 'Este Mes' : 'This Month'}
             value={stats.sessionsThisMonth}
             icon={<Calendar className="w-4 h-4 text-indigo-500" />}
           />
           <StatCard
-            label="Avg/User"
+            label={language === 'es' ? 'Prom/Usuario' : 'Avg/User'}
             value={stats.avgSessionsPerUser}
             icon={<BarChart3 className="w-4 h-4 text-teal-500" />}
           />
@@ -86,25 +95,27 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 3: Session Analytics */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Session Analytics</h3>
+        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+          {language === 'es' ? 'Analisis de Sesiones' : 'Session Analytics'}
+        </h3>
         <div className="grid grid-cols-2 gap-2">
           <StatCard
-            label="Total Sessions"
+            label={language === 'es' ? 'Total Sesiones' : 'Total Sessions'}
             value={stats.totalSessions}
             icon={<Calendar className="w-4 h-4 text-stone-500" />}
           />
           <StatCard
-            label="Completed"
+            label={language === 'es' ? 'Completadas' : 'Completed'}
             value={stats.completedSessions}
             icon={<span className="text-green-500 text-sm">&#10003;</span>}
           />
           <StatCard
-            label="Cancelled"
+            label={language === 'es' ? 'Canceladas' : 'Cancelled'}
             value={stats.cancelledSessions}
             icon={<span className="text-red-500 text-sm">&#10007;</span>}
           />
           <StatCard
-            label="Avg Participants"
+            label={language === 'es' ? 'Prom Participantes' : 'Avg Participants'}
             value={stats.averageParticipants}
             icon={<Users className="w-4 h-4 text-blue-500" />}
           />
@@ -113,25 +124,27 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 4: Engagement */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">Engagement</h3>
+        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+          {language === 'es' ? 'Compromiso' : 'Engagement'}
+        </h3>
         <div className="grid grid-cols-2 gap-2">
           <StatCard
-            label="Top Sport"
+            label={language === 'es' ? 'Deporte Top' : 'Top Sport'}
             value={stats.topSport ? `${stats.topSport} (${stats.topSportCount})` : '-'}
             icon={<Award className="w-4 h-4 text-yellow-500" />}
           />
           <StatCard
-            label="Retention"
+            label={language === 'es' ? 'Retencion' : 'Retention'}
             value={`${stats.retentionPercent}%`}
             icon={<TrendingUp className="w-4 h-4 text-green-500" />}
           />
           <StatCard
-            label="Sessions Created"
+            label={language === 'es' ? 'Sesiones Creadas' : 'Sessions Created'}
             value={stats.totalCreated}
             icon={<Calendar className="w-4 h-4 text-blue-500" />}
           />
           <StatCard
-            label="Sessions Joined"
+            label={language === 'es' ? 'Sesiones Unidas' : 'Sessions Joined'}
             value={stats.totalJoined}
             icon={<Users className="w-4 h-4 text-purple-500" />}
           />

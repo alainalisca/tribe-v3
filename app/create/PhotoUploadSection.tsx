@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface PhotoUploadSectionProps {
   supabase: SupabaseClient;
@@ -53,13 +54,14 @@ export default function PhotoUploadSection({
   photos,
   onPhotosChange,
 }: PhotoUploadSectionProps) {
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     if (photos.length + files.length > 3) {
-      showInfo(language === 'es' ? 'Máximo 3 fotos permitidas' : 'Maximum 3 photos allowed');
+      showInfo(t('maxPhotosAllowed'));
       return;
     }
     setUploading(true);
@@ -96,13 +98,9 @@ export default function PhotoUploadSection({
     <div>
       <label className="block text-sm font-medium text-theme-primary mb-2">
         <ImageIcon className="w-4 h-4 inline mr-2" />
-        {language === 'es' ? 'Fotos de ubicación (máx. 3)' : 'Location photos (max 3)'}
+        {t('locationPhotosMax')}
       </label>
-      <p className="text-xs text-stone-500 mb-3">
-        {language === 'es'
-          ? 'Ayuda a los participantes a encontrar el lugar de encuentro'
-          : 'Help participants find the meeting spot'}
-      </p>
+      <p className="text-xs text-stone-500 mb-3">{t('helpFindMeetingSpot')}</p>
       <div className="flex gap-2 items-center">
         {photos.map((photo, index) => (
           <div key={index} className="relative w-20 h-20 flex-shrink-0">

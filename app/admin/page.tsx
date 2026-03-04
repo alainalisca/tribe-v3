@@ -24,7 +24,7 @@ export default function AdminPage() {
   const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -51,7 +51,7 @@ export default function AdminPage() {
       }
       const adminResult = await fetchUserIsAdmin(supabase, user.id);
       if (!adminResult.success || !adminResult.data) {
-        alert('Unauthorized access');
+        alert(t('unauthorizedAccess'));
         router.push('/');
         return;
       }
@@ -80,20 +80,20 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-stone-50">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">{t('loading')}</div>
       </div>
     );
   }
   if (!authorized) return null;
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'users', label: 'Users' },
-    { id: 'reports', label: 'Reports', badge: pendingReports.length, badgeColor: 'bg-red-500' },
-    { id: 'feedback', label: 'Feedback', badge: pendingFeedback.length, badgeColor: 'bg-blue-500' },
-    { id: 'bugs', label: 'Bugs', badge: pendingBugs.length, badgeColor: 'bg-orange-500' },
-    { id: 'messages', label: 'Messages' },
-    { id: 'sessions', label: 'Sessions' },
+    { id: 'dashboard', label: t('dashboard') },
+    { id: 'users', label: t('users') },
+    { id: 'reports', label: t('reportsList'), badge: pendingReports.length, badgeColor: 'bg-red-500' },
+    { id: 'feedback', label: t('feedbackLabel'), badge: pendingFeedback.length, badgeColor: 'bg-blue-500' },
+    { id: 'bugs', label: t('bugsLabel'), badge: pendingBugs.length, badgeColor: 'bg-orange-500' },
+    { id: 'messages', label: t('messages') },
+    { id: 'sessions', label: t('sessionsLabel') },
   ];
 
   return (
@@ -103,10 +103,10 @@ export default function AdminPage() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back
+          {t('back')}
         </Link>
 
-        <h1 className="text-lg font-bold text-[#272D34] mb-1">Admin Panel</h1>
+        <h1 className="text-lg font-bold text-[#272D34] mb-1">{t('adminPanel')}</h1>
         <p className="text-xs text-stone-600 mb-4 truncate">{user?.email}</p>
 
         <div

@@ -18,14 +18,20 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
   const resolvedBugs = bugs.filter((b) => b.status !== 'pending');
 
   if (loading) {
-    return <p className="text-center py-6 text-sm text-gray-500">Loading bugs...</p>;
+    return (
+      <p className="text-center py-6 text-sm text-gray-500">
+        {language === 'es' ? 'Cargando errores...' : 'Loading bugs...'}
+      </p>
+    );
   }
 
   if (bugs.length === 0) {
     return (
       <div className="bg-white rounded p-6 text-center shadow">
         <Bug className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-        <p className="text-sm text-gray-500">No bug reports yet</p>
+        <p className="text-sm text-gray-500">
+          {language === 'es' ? 'Sin reportes de errores aun' : 'No bug reports yet'}
+        </p>
       </div>
     );
   }
@@ -36,7 +42,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
         <>
           <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
             <Bug className="w-4 h-4 text-orange-500" />
-            Open Bugs ({pendingBugs.length})
+            {language === 'es' ? 'Errores Abiertos' : 'Open Bugs'} ({pendingBugs.length})
           </h3>
           {pendingBugs.map((bug) => (
             <div key={bug.id} className="bg-white rounded shadow p-3">
@@ -77,13 +83,13 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
                   onClick={() => onUpdateStatus(bug.id, 'investigating')}
                   className="flex-1 py-1.5 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
                 >
-                  Investigating
+                  {language === 'es' ? 'Investigando' : 'Investigating'}
                 </button>
                 <button
                   onClick={() => onUpdateStatus(bug.id, 'fixed')}
                   className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                 >
-                  Fixed
+                  {language === 'es' ? 'Corregido' : 'Fixed'}
                 </button>
               </div>
             </div>
@@ -99,7 +105,13 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
               <p className="text-xs text-stone-600">{bug.user?.name}</p>
             </div>
             <span className="text-xs text-green-600">
-              {bug.status === 'fixed' ? '&#10003; Fixed' : 'Investigating'}
+              {bug.status === 'fixed'
+                ? language === 'es'
+                  ? '&#10003; Corregido'
+                  : '&#10003; Fixed'
+                : language === 'es'
+                  ? 'Investigando'
+                  : 'Investigating'}
             </span>
           </div>
         </div>

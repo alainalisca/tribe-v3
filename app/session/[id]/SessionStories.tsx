@@ -1,6 +1,7 @@
 'use client';
 
 import type { SessionStoryJoined } from './types';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface SessionStoriesProps {
   stories: SessionStoryJoined[];
@@ -9,12 +10,13 @@ interface SessionStoriesProps {
 }
 
 export default function SessionStories({ stories, language, onViewStories }: SessionStoriesProps) {
+  const { t } = useLanguage();
   if (stories.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow-lg">
       <h2 className="text-sm font-bold text-stone-900 dark:text-white mb-3">
-        {language === 'es' ? 'Historias' : 'Stories'} ({stories.length})
+        {t('stories')} ({stories.length})
       </h2>
       <div
         className="flex gap-2 overflow-x-auto pb-1"

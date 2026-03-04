@@ -1,6 +1,7 @@
 'use client';
 
 import { downloadICS } from '@/lib/calendar';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface CalendarButtonProps {
   session: {
@@ -16,6 +17,7 @@ interface CalendarButtonProps {
 }
 
 export default function CalendarButton({ session }: CalendarButtonProps) {
+  const { t } = useLanguage();
   const handleAddToCalendar = () => {
     downloadICS({
       sport: session.sport,
@@ -42,7 +44,7 @@ export default function CalendarButton({ session }: CalendarButtonProps) {
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
         />
       </svg>
-      <span className="text-sm font-medium">Add to Calendar</span>
+      <span className="text-sm font-medium">{t('addToCalendar')}</span>
     </button>
   );
 }

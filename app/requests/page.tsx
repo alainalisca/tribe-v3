@@ -44,7 +44,7 @@ interface JoinRequest {
 export default function RequestsPage() {
   const router = useRouter();
   const supabase = createClient();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +109,7 @@ export default function RequestsPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      showSuccess(language === 'en' ? 'Request accepted!' : '¡Solicitud aceptada!');
+      showSuccess(t('requestAccepted'));
       loadRequests(user!.id);
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'handle_request', language));
@@ -122,7 +122,7 @@ export default function RequestsPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      showSuccess(language === 'en' ? 'Request declined' : 'Solicitud rechazada');
+      showSuccess(t('requestDeclined'));
       loadRequests(user!.id);
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'handle_request', language));
@@ -146,9 +146,7 @@ export default function RequestsPage() {
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
             </button>
           </Link>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white">
-            {language === 'en' ? 'Join Requests' : 'Solicitudes'}
-          </h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('joinRequests')}</h1>
         </div>
       </div>
 
@@ -171,17 +169,11 @@ export default function RequestsPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">
-              {language === 'en' ? 'No Pending Requests' : 'Sin Solicitudes Pendientes'}
-            </h2>
-            <p className="text-stone-600 dark:text-gray-300 mb-4">
-              {language === 'en'
-                ? "When someone wants to join your sessions, you'll see their requests here."
-                : 'Cuando alguien quiera unirse a tus sesiones, verás sus solicitudes aquí.'}
-            </p>
+            <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('noPendingRequests')}</h2>
+            <p className="text-stone-600 dark:text-gray-300 mb-4">{t('requestsDescription')}</p>
             <Link href="/create">
               <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                {language === 'en' ? 'Create a Session' : 'Crear una Sesión'}
+                {t('createASession')}
               </button>
             </Link>
           </div>
@@ -199,7 +191,11 @@ export default function RequestsPage() {
                         new Date(request.session.date + 'T00:00:00').toLocaleDateString(
                           language === 'es' ? 'es-ES' : 'en-US'
                         )}{' '}
-                      {request.session && <>at {formatTime12Hour(request.session.start_time)}</>}
+                      {request.session && (
+                        <>
+                          {t('at')} {formatTime12Hour(request.session.start_time)}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -221,9 +217,7 @@ export default function RequestsPage() {
                     <p className="font-semibold text-stone-900 dark:text-white">{request.users?.name}</p>
                   </div>
                   <Link href={`/profile/${request.user_id}`}>
-                    <button className="text-xs text-tribe-green hover:underline">
-                      {language === 'en' ? 'View Profile' : 'Ver Perfil'}
-                    </button>
+                    <button className="text-xs text-tribe-green hover:underline">{t('viewProfile')}</button>
                   </Link>
                 </div>
 
@@ -233,14 +227,14 @@ export default function RequestsPage() {
                     className="flex-1 py-2 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
-                    {language === 'en' ? 'Accept' : 'Aceptar'}
+                    {t('accept')}
                   </button>
                   <button
                     onClick={() => handleDecline(request.id)}
                     className="flex-1 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
                   >
                     <X className="w-4 h-4" />
-                    {language === 'en' ? 'Decline' : 'Rechazar'}
+                    {t('decline')}
                   </button>
                 </div>
               </div>

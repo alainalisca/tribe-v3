@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Camera, Upload, Trash2, Flag } from 'lucide-react';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { useLanguage } from '@/lib/LanguageContext';
 import { type RecapPhotosProps, handleRecapUpload, deleteRecapPhoto, reportRecapPhoto } from './recapPhotosHelpers';
 
 // Re-export types for consumers
@@ -21,6 +22,7 @@ export default function RecapPhotos({
   onOpenLightbox,
   onPhotosChanged,
 }: RecapPhotosProps) {
+  const { t } = useLanguage();
   const [uploadingRecap, setUploadingRecap] = useState(false);
   const [confirmDeletePhotoId, setConfirmDeletePhotoId] = useState<string | null>(null);
 
@@ -34,10 +36,8 @@ export default function RecapPhotos({
               <Camera className="w-6 h-6 text-slate-900" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-slate-900 mb-1">Share Your Experience! 📸</h3>
-              <p className="text-sm text-slate-800">
-                You attended this session - upload up to 3 photos to share with the community!
-              </p>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">{t('shareYourExperience')} 📸</h3>
+              <p className="text-sm text-slate-800">{t('uploadPhotosDesc')}</p>
             </div>
           </div>
         </div>
@@ -49,9 +49,13 @@ export default function RecapPhotos({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-tribe-green" />
-              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Session Recap</h2>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">{t('sessionRecap')}</h2>
             </div>
-            {canUploadRecap && <span className="text-xs text-stone-500">{userPhotoCount}/3 uploaded</span>}
+            {canUploadRecap && (
+              <span className="text-xs text-stone-500">
+                {userPhotoCount}/3 {t('uploaded')}
+              </span>
+            )}
           </div>
 
           {recapPhotos.length > 0 && (
@@ -97,7 +101,7 @@ export default function RecapPhotos({
 
                   {photo.reported && (
                     <div className="absolute top-1 left-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-                      Reported
+                      {t('reported')}
                     </div>
                   )}
                 </div>
@@ -110,12 +114,12 @@ export default function RecapPhotos({
               {uploadingRecap ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-900"></div>
-                  Uploading...
+                  {t('uploading')}
                 </>
               ) : (
                 <>
                   <Upload className="w-5 h-5" />
-                  Upload Photos ({userPhotoCount}/3)
+                  {t('photos')} ({userPhotoCount}/3)
                 </>
               )}
               <input
@@ -133,9 +137,7 @@ export default function RecapPhotos({
 
           {!canUploadRecap && recapPhotos.length === 0 && (
             <p className="text-sm text-center text-stone-500 py-4">
-              {isPast
-                ? 'No recap photos yet. Verified attendees can upload.'
-                : 'Recap photos will be available after the session ends.'}
+              {isPast ? t('noRecapPhotos') : t('recapPhotosAfterSession')}
             </p>
           )}
         </div>

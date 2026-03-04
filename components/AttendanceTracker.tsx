@@ -24,7 +24,7 @@ interface AttendanceTrackerProps {
 
 export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionDate }: AttendanceTrackerProps) {
   const supabase = createClient();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const [participants, setParticipants] = useState<AttendanceParticipant[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
@@ -121,7 +121,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
   if (loading) {
     return (
       <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-        <p className="text-stone-500 dark:text-gray-400">Loading attendance...</p>
+        <p className="text-stone-500 dark:text-gray-400">{t('loadingAttendance')}</p>
       </div>
     );
   }
@@ -132,8 +132,8 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
 
   return (
     <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">Mark Attendance</h2>
-      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">Mark who attended to allow them to upload photos</p>
+      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t('markAttendance')}</h2>
+      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('markAttendanceDesc')}</p>
       <div className="space-y-2">
         {participants.map((participant) => (
           <div

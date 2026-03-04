@@ -287,8 +287,8 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
       <ConfirmDialog
         open={!!chat.confirmDeleteId}
-        title={language === 'es' ? 'Eliminar mensaje' : 'Delete message'}
-        message={language === 'es' ? '¿Eliminar este mensaje?' : 'Delete this message?'}
+        title={t('deleteMessage')}
+        message={t('deleteThisMessage')}
         confirmLabel={tr.delete}
         cancelLabel={tr.cancel}
         variant="danger"

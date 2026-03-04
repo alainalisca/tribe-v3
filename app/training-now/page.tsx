@@ -11,7 +11,7 @@ import { getTrainingNowTranslations } from './translations';
 import { useTrainingNow } from './useTrainingNow';
 
 export default function TrainingNowPage() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const txt = getTrainingNowTranslations(language);
   const { user, loading, gettingLocation, formData, setFormData, getCurrentLocation, handleSubmit } =
     useTrainingNow(language);
@@ -27,15 +27,15 @@ export default function TrainingNowPage() {
 
   const startOptions = [
     { value: 0, label: txt.now },
-    { value: 30, label: '30 min' },
-    { value: 60, label: '1 hour' },
+    { value: 30, label: t('thirtyMin') },
+    { value: 60, label: t('oneHour') },
   ];
 
   const durationOptions = [
-    { value: 30, label: '30 min' },
-    { value: 60, label: '1 hour' },
-    { value: 90, label: '1.5 hrs' },
-    { value: 120, label: '2 hours' },
+    { value: 30, label: t('thirtyMin') },
+    { value: 60, label: t('oneHour') },
+    { value: 90, label: t('oneAndHalfHrs') },
+    { value: 120, label: t('twoHours') },
   ];
 
   if (!user) return null;

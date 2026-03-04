@@ -1,4 +1,5 @@
 import { MessageSquare, Trash2 } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
 import type { Database } from '@/lib/database.types';
 
 type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
@@ -15,22 +16,27 @@ interface MessageListProps {
 }
 
 export default function MessageList({ messages, loading, actionLoading, onDelete }: MessageListProps) {
+  const { language } = useLanguage();
   return (
     <div className="bg-white rounded shadow">
       <div className="p-3 border-b">
         <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-purple-500" />
-          Recent Messages ({messages.length})
+          {language === 'es' ? 'Mensajes Recientes' : 'Recent Messages'} ({messages.length})
         </h3>
-        <p className="text-xs text-stone-600 mt-1">Last 100 messages across all sessions</p>
+        <p className="text-xs text-stone-600 mt-1">
+          {language === 'es' ? 'Ultimos 100 mensajes de todas las sesiones' : 'Last 100 messages across all sessions'}
+        </p>
       </div>
 
       {loading ? (
-        <p className="text-center py-6 text-sm text-gray-500">Loading messages...</p>
+        <p className="text-center py-6 text-sm text-gray-500">
+          {language === 'es' ? 'Cargando mensajes...' : 'Loading messages...'}
+        </p>
       ) : messages.length === 0 ? (
         <div className="p-6 text-center">
           <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">No messages yet</p>
+          <p className="text-sm text-gray-500">{language === 'es' ? 'Sin mensajes aun' : 'No messages yet'}</p>
         </div>
       ) : (
         <div className="divide-y max-h-[600px] overflow-y-auto">
@@ -47,7 +53,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
 
                   <div className="flex items-center gap-3 text-xs text-stone-500">
                     <span>
-                      Session: {msg.session?.sport} @ {msg.session?.location}
+                      {language === 'es' ? 'Sesion:' : 'Session:'} {msg.session?.sport} @ {msg.session?.location}
                     </span>
                     <span>&bull;</span>
                     <span>{new Date(msg.created_at ?? '').toLocaleString()}</span>
