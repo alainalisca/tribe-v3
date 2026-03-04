@@ -37,7 +37,6 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.263.1",
     "next": "16.0.10",
-    "next-intl": "^3.9.0",
     "posthog-js": "^1.302.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
