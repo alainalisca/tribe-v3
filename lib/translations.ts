@@ -1,5 +1,4 @@
 export type Language = 'en' | 'es';
-
 export const translations = {
   en: {
     // Navigation
@@ -9,7 +8,7 @@ export const translations = {
     messages: 'Messages',
     requests: 'Requests',
     profile: 'Profile',
-    
+
     // Requests Page
     joinRequests: 'Join Requests',
     noRequests: 'No pending requests',
@@ -17,7 +16,7 @@ export const translations = {
     decline: 'Decline',
     viewProfile: 'View Profile',
     anonymous: 'Anonymous User',
-    
+
     // Common
     loading: 'Loading...',
     save: 'Save',
@@ -33,7 +32,7 @@ export const translations = {
     noSessionsYet: 'No sessions yet',
     createFirstSession: 'Create your first session to find training partners',
     tryDifferentSearch: 'Be the first! Create a session and never train alone.',
-    
+
     // Session Card
     spots: 'spots',
     spotsLeft: 'spots left',
@@ -47,7 +46,7 @@ export const translations = {
     viewDetails: 'View Details',
     hostedBy: 'Hosted by',
     away: 'away',
-    
+
     // My Sessions
     hosting: 'Hosting',
     joinedSessions: 'Joined',
@@ -55,7 +54,7 @@ export const translations = {
     noJoinedSessions: 'No joined sessions',
     browseHomePage: 'Browse the home page to find sessions',
     findSessions: 'Find Sessions',
-    
+
     // Create Session
     createSession: 'Create Session',
     sport: 'Sport',
@@ -71,102 +70,102 @@ export const translations = {
     intermediate: 'Intermediate',
     advanced: 'Advanced',
     allLevels: 'All Levels',
-    
+
     // Profile
     editProfile: 'Edit Profile',
     name: 'Name',
     bio: 'Bio',
     sportsActivities: 'Sports Activities',
     photos: 'Photos',
-    
+
     // Settings
     settings: 'Settings',
     language: 'Language',
     notifications: 'Notifications',
     privacy: 'Privacy',
     logout: 'Logout',
-    
+
     // Auth
     signIn: 'Sign In',
     signUp: 'Sign Up',
     email: 'Email',
     password: 'Password',
     forgotPassword: 'Forgot Password?',
-    
+
     // Chat
-    noMessagesYet: "No messages yet",
-    startConversation: "Start the conversation!",
-    noConversations: "No conversations yet",
-    joinSessionToChat: "Join a session to start chatting with other participants",
+    noMessagesYet: 'No messages yet',
+    startConversation: 'Start the conversation!',
+    noConversations: 'No conversations yet',
+    joinSessionToChat: 'Join a session to start chatting with other participants',
 
     // Session Actions
-    sessionCreated: "Session created!",
-    sessionFullMsg: "This session is full",
-    alreadyJoined: "You already joined this session!",
+    sessionCreated: 'Session created!',
+    sessionFullMsg: 'This session is full',
+    alreadyJoined: 'You already joined this session!',
     joinedSuccessfully: "You're in! Never train alone.",
-    ended: "Ended",
-    duration: "Duration",
+    ended: 'Ended',
+    duration: 'Duration',
 
     // Matches/Tribe
-    matches: "Matches",
-    myTribe: "My Tribe",
-    noJoinRequests: "No join requests",
-    newJoinRequest: "New join request",
-    userWantsToJoin: "wants to join your session",
-    noSessions: "No sessions",
+    matches: 'Matches',
+    myTribe: 'My Tribe',
+    noJoinRequests: 'No join requests',
+    newJoinRequest: 'New join request',
+    userWantsToJoin: 'wants to join your session',
+    noSessions: 'No sessions',
 
     // Session Reminders
-    sessionReminders: "Session Reminders",
-    sessionRemindersDesc: "1 hour & 15 min before your sessions",
-    reminderOneHourTitle: "Session in 1 hour!",
-    reminderOneHourBody: "starts in 1 hour. Get ready!",
-    reminderFifteenMinTitle: "Session starting soon!",
-    reminderFifteenMinBody: "starts in 15 minutes. Head out now!",
-    remindersEnabled: "Reminders enabled",
-    remindersDisabled: "Reminders disabled",
+    sessionReminders: 'Session Reminders',
+    sessionRemindersDesc: '1 hour & 15 min before your sessions',
+    reminderOneHourTitle: 'Session in 1 hour!',
+    reminderOneHourBody: 'starts in 1 hour. Get ready!',
+    reminderFifteenMinTitle: 'Session starting soon!',
+    reminderFifteenMinBody: 'starts in 15 minutes. Head out now!',
+    remindersEnabled: 'Reminders enabled',
+    remindersDisabled: 'Reminders disabled',
 
     // Gender Preferences
-    genderPreference: "Who can join",
-    allWelcome: "All Welcome",
-    womenOnly: "Women Only",
-    menOnly: "Men Only",
-    filterByGender: "Filter by gender",
+    genderPreference: 'Who can join',
+    allWelcome: 'All Welcome',
+    womenOnly: 'Women Only',
+    menOnly: 'Men Only',
+    filterByGender: 'Filter by gender',
 
     // Equipment
-    equipment: "Equipment Needed",
-    equipmentPlaceholder: "e.g. Yoga mat, running shoes, water bottle",
-    equipmentNeeded: "Equipment needed",
+    equipment: 'Equipment Needed',
+    equipmentPlaceholder: 'e.g. Yoga mat, running shoes, water bottle',
+    equipmentNeeded: 'Equipment needed',
 
     // Ratings & Reviews
-    rateThisSession: "Rate this session",
-    howWasYourExperience: "How was your experience with the host?",
-    leaveAComment: "Leave a comment (optional)",
-    submitReview: "Submit Review",
-    thankYouForReview: "Thank you for your review!",
-    alreadyReviewed: "You already reviewed this session",
-    hostRating: "Host Rating",
-    reviews: "reviews",
-    noReviewsYet: "No reviews yet",
+    rateThisSession: 'Rate this session',
+    howWasYourExperience: 'How was your experience with the host?',
+    leaveAComment: 'Leave a comment (optional)',
+    submitReview: 'Submit Review',
+    thankYouForReview: 'Thank you for your review!',
+    alreadyReviewed: 'You already reviewed this session',
+    hostRating: 'Host Rating',
+    reviews: 'reviews',
+    noReviewsYet: 'No reviews yet',
   },
-  
+
   es: {
-    // Navegación
+    // Navegacion
     home: 'Inicio',
     mySessions: 'Mis Sesiones',
     create: 'Crear',
     messages: 'Mensajes',
     requests: 'Solicitudes',
     profile: 'Perfil',
-    
-    // Página de Solicitudes
-    joinRequests: 'Solicitudes de Unión',
+
+    // Pagina de Solicitudes
+    joinRequests: 'Solicitudes de Union',
     noRequests: 'No hay solicitudes pendientes',
     accept: 'Aceptar',
     decline: 'Rechazar',
     viewProfile: 'Ver Perfil',
-    anonymous: 'Usuario Anónimo',
-    
-    // Común
+    anonymous: 'Usuario Anonimo',
+
+    // Comun
     loading: 'Cargando...',
     save: 'Guardar',
     cancel: 'Cancelar',
@@ -177,12 +176,12 @@ export const translations = {
     searchPlaceholder: 'Buscar sesiones...',
     clearAll: 'Limpiar todo',
     sessionsCount: 'sesiones',
-    noSessionsFound: 'Aún no hay sesiones',
-    noSessionsYet: 'Aún no hay sesiones',
-    createFirstSession: 'Crea tu primera sesión para encontrar compañeros de entrenamiento',
-    tryDifferentSearch: '¡Sé el primero! Crea una sesión y nunca entrenes solo.',
-    
-    // Tarjeta de Sesión
+    noSessionsFound: 'Aun no hay sesiones',
+    noSessionsYet: 'Aun no hay sesiones',
+    createFirstSession: 'Crea tu primera sesion para encontrar companeros de entrenamiento',
+    tryDifferentSearch: 'Se el primero! Crea una sesion y nunca entrenes solo.',
+
+    // Tarjeta de Sesion
     spots: 'espacios',
     spotsLeft: 'lugares disponibles',
     share: 'Compartir',
@@ -195,134 +194,107 @@ export const translations = {
     viewDetails: 'Ver Detalles',
     hostedBy: 'Organizado por',
     away: 'de distancia',
-    
+
     // Mis Sesiones
     hosting: 'Organizando',
     joinedSessions: 'Unido',
-    noHostingSessions: 'No hay sesiones aún',
+    noHostingSessions: 'No hay sesiones aun',
     noJoinedSessions: 'No hay sesiones unidas',
-    browseHomePage: 'Navega la página principal para encontrar sesiones',
+    browseHomePage: 'Navega la pagina principal para encontrar sesiones',
     findSessions: 'Buscar Sesiones',
-    
-    // Crear Sesión
-    createSession: 'Crear Sesión',
+
+    // Crear Sesion
+    createSession: 'Crear Sesion',
     sport: 'Deporte',
     date: 'Fecha',
     time: 'Hora',
     selectSport: 'Selecciona un deporte',
     startTime: 'Hora de Inicio',
-    location: 'Ubicación',
-    maxParticipants: 'Máximo de Participantes',
-    description: 'Descripción',
+    location: 'Ubicacion',
+    maxParticipants: 'Maximo de Participantes',
+    description: 'Descripcion',
     skillLevel: 'Nivel',
     beginner: 'Principiante',
     intermediate: 'Intermedio',
     advanced: 'Avanzado',
     allLevels: 'Todos los Niveles',
-    
+
     // Perfil
     editProfile: 'Editar Perfil',
     name: 'Nombre',
-    bio: 'Biografía',
+    bio: 'Biografia',
     sportsActivities: 'Actividades Deportivas',
     photos: 'Fotos',
-    
-    // Configuración
-    settings: 'Configuración',
+
+    // Configuracion
+    settings: 'Configuracion',
     language: 'Idioma',
     notifications: 'Notificaciones',
     privacy: 'Privacidad',
-    logout: 'Cerrar Sesión',
-    
-    // Autenticación
-    signIn: 'Iniciar Sesión',
+    logout: 'Cerrar Sesion',
+
+    // Autenticacion
+    signIn: 'Iniciar Sesion',
     signUp: 'Registrarse',
-    email: 'Correo Electrónico',
-    password: 'Contraseña',
-    forgotPassword: '¿Olvidaste tu Contraseña?',
-    
+    email: 'Correo Electronico',
+    password: 'Contrasena',
+    forgotPassword: 'Olvidaste tu Contrasena?',
+
     // Chat
-    noMessagesYet: "No hay mensajes aún",
-    startConversation: "¡Inicia la conversación!",
-    noConversations: "No hay conversaciones aún",
-    joinSessionToChat: "Únete a una sesión para chatear con otros participantes",
+    noMessagesYet: 'No hay mensajes aun',
+    startConversation: 'Inicia la conversacion!',
+    noConversations: 'No hay conversaciones aun',
+    joinSessionToChat: 'Unete a una sesion para chatear con otros participantes',
 
     // Session Actions
-    sessionCreated: "¡Sesión creada!",
-    sessionFullMsg: "Esta sesión está llena",
-    alreadyJoined: "¡Ya te uniste a esta sesión!",
-    joinedSuccessfully: "¡Estás dentro! Nunca entrenes solo.",
-    ended: "Terminado",
-    duration: "Duración",
+    sessionCreated: 'Sesion creada!',
+    sessionFullMsg: 'Esta sesion esta llena',
+    alreadyJoined: 'Ya te uniste a esta sesion!',
+    joinedSuccessfully: 'Estas dentro! Nunca entrenes solo.',
+    ended: 'Terminado',
+    duration: 'Duracion',
 
     // Matches/Tribe
-    matches: "Coincidencias",
-    myTribe: "Mi Tribu",
-    noJoinRequests: "Sin solicitudes",
-    newJoinRequest: "Nueva solicitud",
-    userWantsToJoin: "quiere unirse a tu sesión",
-    noSessions: "Sin sesiones",
+    matches: 'Coincidencias',
+    myTribe: 'Mi Tribu',
+    noJoinRequests: 'Sin solicitudes',
+    newJoinRequest: 'Nueva solicitud',
+    userWantsToJoin: 'quiere unirse a tu sesion',
+    noSessions: 'Sin sesiones',
 
     // Session Reminders
-    sessionReminders: "Recordatorios de Sesión",
-    sessionRemindersDesc: "1 hora y 15 min antes de tus sesiones",
-    reminderOneHourTitle: "¡Sesión en 1 hora!",
-    reminderOneHourBody: "comienza en 1 hora. ¡Prepárate!",
-    reminderFifteenMinTitle: "¡La sesión empieza pronto!",
-    reminderFifteenMinBody: "comienza en 15 minutos. ¡Sal ya!",
-    remindersEnabled: "Recordatorios activados",
-    remindersDisabled: "Recordatorios desactivados",
+    sessionReminders: 'Recordatorios de Sesion',
+    sessionRemindersDesc: '1 hora y 15 min antes de tus sesiones',
+    reminderOneHourTitle: 'Sesion en 1 hora!',
+    reminderOneHourBody: 'comienza en 1 hora. Preparate!',
+    reminderFifteenMinTitle: 'La sesion empieza pronto!',
+    reminderFifteenMinBody: 'comienza en 15 minutos. Sal ya!',
+    remindersEnabled: 'Recordatorios activados',
+    remindersDisabled: 'Recordatorios desactivados',
 
     // Gender Preferences
-    genderPreference: "Quién puede unirse",
-    allWelcome: "Todos Bienvenidos",
-    womenOnly: "Solo Mujeres",
-    menOnly: "Solo Hombres",
-    filterByGender: "Filtrar por género",
+    genderPreference: 'Quien puede unirse',
+    allWelcome: 'Todos Bienvenidos',
+    womenOnly: 'Solo Mujeres',
+    menOnly: 'Solo Hombres',
+    filterByGender: 'Filtrar por genero',
 
     // Equipment
-    equipment: "Equipo Necesario",
-    equipmentPlaceholder: "ej. Tapete de yoga, tenis, botella de agua",
-    equipmentNeeded: "Equipo necesario",
+    equipment: 'Equipo Necesario',
+    equipmentPlaceholder: 'ej. Tapete de yoga, tenis, botella de agua',
+    equipmentNeeded: 'Equipo necesario',
 
     // Ratings & Reviews
-    rateThisSession: "Califica esta sesión",
-    howWasYourExperience: "¿Cómo fue tu experiencia con el anfitrión?",
-    leaveAComment: "Deja un comentario (opcional)",
-    submitReview: "Enviar Reseña",
-    thankYouForReview: "¡Gracias por tu reseña!",
-    alreadyReviewed: "Ya calificaste esta sesión",
-    hostRating: "Calificación del Anfitrión",
-    reviews: "reseñas",
-    noReviewsYet: "Sin reseñas aún",
-  }
+    rateThisSession: 'Califica esta sesion',
+    howWasYourExperience: 'Como fue tu experiencia con el anfitrion?',
+    leaveAComment: 'Deja un comentario (opcional)',
+    submitReview: 'Enviar Resena',
+    thankYouForReview: 'Gracias por tu resena!',
+    alreadyReviewed: 'Ya calificaste esta sesion',
+    hostRating: 'Calificacion del Anfitrion',
+    reviews: 'resenas',
+    noReviewsYet: 'Sin resenas aun',
+  },
 };
-
 export type TranslationKey = keyof typeof translations.en;
-
-// Sport translations for Colombia/Medellín market
-export const sportTranslations: { [key: string]: { en: string; es: string } } = {
-  'All': { en: 'All', es: 'Todos' },
-  'Running': { en: 'Running', es: 'Correr' },
-  'Hiking': { en: 'Hiking', es: 'Senderismo' },
-  'Cycling': { en: 'Cycling', es: 'Ciclismo' },
-  'Swimming': { en: 'Swimming', es: 'Natación' },
-  'CrossFit': { en: 'CrossFit', es: 'CrossFit' },
-  'Weightlifting': { en: 'Weightlifting', es: 'Levantamiento de Pesas' },
-  'Calisthenics': { en: 'Calisthenics', es: 'Calistenia' },
-  'Boxing': { en: 'Boxing', es: 'Boxeo' },
-  'Muay Thai': { en: 'Muay Thai', es: 'Muay Thai' },
-  'Kickboxing': { en: 'Kickboxing', es: 'Kickboxing' },
-  'Jiu-Jitsu': { en: 'Jiu-Jitsu', es: 'Jiu-Jitsu' },
-  'Soccer': { en: 'Soccer', es: 'Fútbol' },
-  'Basketball': { en: 'Basketball', es: 'Baloncesto' },
-  'Volleyball': { en: 'Volleyball', es: 'Voleibol' },
-  'Yoga': { en: 'Yoga', es: 'Yoga' },
-  'Pilates': { en: 'Pilates', es: 'Pilates' },
-  'Dance': { en: 'Dance', es: 'Baile' },
-  'Tennis': { en: 'Tennis', es: 'Tenis' },
-  'Padel': { en: 'Padel', es: 'Pádel' },
-  'Skateboarding': { en: 'Skateboarding', es: 'Patinaje' },
-  'BMX': { en: 'BMX', es: 'BMX' },
-  'Other': { en: 'Other', es: 'Otro' }
-};
+export { sportTranslations } from './sportTranslationData';

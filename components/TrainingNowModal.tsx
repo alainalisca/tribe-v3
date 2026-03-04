@@ -1,15 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getErrorMessage } from '@/lib/errorMessages';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
-import { log, logError } from '@/lib/logger';
 import { sportTranslations } from '@/lib/translations';
-import { reverseGeocodeGoogle } from '@/lib/google-maps';
 import LocationPicker from '@/components/LocationPicker';
+import { getTrainingNowTexts } from './trainingNow/trainingNowTranslations';
+import { useTrainingNowForm } from './trainingNow/useTrainingNowForm';
 
 interface TrainingNowModalProps {
   isOpen: boolean;
@@ -19,18 +15,14 @@ interface TrainingNowModalProps {
 }
 
 export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, userId }: TrainingNowModalProps) {
-  const supabase = createClient();
   const { language } = useLanguage();
-  const [loading, setLoading] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
 
-  const [formData, setFormData] = useState({
-    sport: '',
-    location: '',
-    latitude: null as number | null,
-    longitude: null as number | null,
-    startIn: 30, // minutes
-    duration: 60, // minutes
+  const { loading, gettingLocation, formData, setFormData, getCurrentLocation, handleSubmit } = useTrainingNowForm({
+    isOpen,
+    userId,
+    language,
+    onSessionCreated,
+    onClose,
   });
 
   const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
@@ -42,215 +34,9 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     return sport;
   };
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, [isOpen]);
-  useEffect(() => {
-    if (isOpen) {
-      getCurrentLocation();
-    }
-  }, [isOpen]);
-
-  async function getCurrentLocation() {
-    if (!navigator.geolocation) return;
-
-    setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setFormData((prev) => ({ ...prev, latitude, longitude }));
-
-        // Reverse geocode to get address
-        try {
-          const name = await reverseGeocodeGoogle(latitude, longitude);
-          if (name) {
-            setFormData((prev) => ({ ...prev, location: name }));
-          }
-        } catch (e) {
-          logError(e, { action: 'reverseGeocode' });
-        }
-        setGettingLocation(false);
-      },
-      (error) => {
-        logError(error, { action: 'getCurrentLocation' });
-        setGettingLocation(false);
-      },
-      { enableHighAccuracy: true }
-    );
-  }
-
-  async function handleSubmit() {
-    if (!formData.sport) {
-      showInfo(language === 'es' ? 'Selecciona un deporte' : 'Select a sport');
-      return;
-    }
-    if (!formData.location) {
-      showInfo(language === 'es' ? 'Ingresa una ubicación' : 'Enter a location');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Calculate start time
-      const startTime = new Date();
-      startTime.setMinutes(startTime.getMinutes() + formData.startIn);
-
-      const sessionDate = startTime.toISOString().split('T')[0];
-      const sessionTime = startTime.toTimeString().slice(0, 5);
-
-      // Create the session
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .insert({
-          creator_id: userId,
-          sport: formData.sport,
-          location: formData.location,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          date: sessionDate,
-          start_time: sessionTime,
-          duration: formData.duration,
-          max_participants: 10,
-          current_participants: 1,
-          status: 'active',
-          is_immediate: true,
-        })
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      // Add creator as participant
-      await supabase.from('session_participants').insert({
-        session_id: session.id,
-        user_id: userId,
-        status: 'confirmed',
-      });
-
-      // Fire-and-forget: don't block UI waiting for notifications
-      if (formData.latitude && formData.longitude) {
-        notifyNearbyUsers(
-          session.id,
-          formData.sport,
-          formData.location,
-          formData.latitude,
-          formData.longitude,
-          formData.startIn
-        );
-      }
-
-      showSuccess(
-        language === 'es'
-          ? '¡Sesión creada! Notificando a compañeros cercanos...'
-          : 'Session created! Notifying nearby partners...'
-      );
-      onSessionCreated();
-      onClose();
-
-      // Reset form
-      setFormData({
-        sport: '',
-        location: '',
-        latitude: null,
-        longitude: null,
-        startIn: 30,
-        duration: 60,
-      });
-    } catch (error: unknown) {
-      logError(error, { action: 'handleSubmit' });
-      showError(getErrorMessage(error, 'create_session', language));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function notifyNearbyUsers(
-    sessionId: string,
-    sport: string,
-    location: string,
-    lat: number,
-    lng: number,
-    startIn: number
-  ) {
-    try {
-      const response = await fetch('/api/notify-nearby', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          sport,
-          location,
-          latitude: lat,
-          longitude: lng,
-          startIn,
-          creatorId: userId,
-        }),
-      });
-
-      if (!response.ok) {
-        log('error', 'Failed to notify nearby users', { action: 'notifyNearbyUsers', sessionId });
-      }
-    } catch (error) {
-      logError(error, { action: 'notifyNearbyUsers', sessionId });
-    }
-  }
-
   if (!isOpen) return null;
 
-  const txt =
-    language === 'es'
-      ? {
-          title: 'Entrenar Ahora',
-          whatTraining: '¿Qué vas a entrenar?',
-          where: '¿Dónde?',
-          useLocation: '📍 Usar mi ubicación',
-          gettingLocation: 'Obteniendo ubicación...',
-          locationPlaceholder: 'ej. Bodytech Poblado',
-          when: '¿Cuándo empiezas?',
-          now: 'Ahora',
-          min30: '30 min',
-          hour1: '1 hora',
-          howLong: '¿Cuánto tiempo?',
-          min30dur: '30 min',
-          hour1dur: '1 hora',
-          hour15dur: '1.5 hrs',
-          hour2dur: '2 horas',
-          notify: '🔔 NOTIFICAR COMPAÑEROS CERCANOS',
-          creating: 'Creando...',
-        }
-      : {
-          title: 'Training Now',
-          whatTraining: 'What are you training?',
-          where: 'Where?',
-          useLocation: '📍 Use my location',
-          gettingLocation: 'Getting location...',
-          locationPlaceholder: 'e.g. Central Park',
-          when: 'When are you starting?',
-          now: 'Now',
-          min30: '30 min',
-          hour1: '1 hour',
-          howLong: 'How long?',
-          min30dur: '30 min',
-          hour1dur: '1 hour',
-          hour15dur: '1.5 hrs',
-          hour2dur: '2 hours',
-          notify: '🔔 NOTIFY NEARBY PARTNERS',
-          creating: 'Creating...',
-        };
+  const txt = getTrainingNowTexts(language);
 
   return (
     <div

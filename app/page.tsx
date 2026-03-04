@@ -1,14 +1,9 @@
 /** Page: / — Home feed with session discovery, filters, and stories */
 'use client';
-import { logError } from '@/lib/logger';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
 
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import OnboardingModal from '@/components/OnboardingModal';
 import EditSessionModal from '@/components/EditSessionModal';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import SessionCard from '@/components/SessionCard';
 import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
@@ -18,358 +13,72 @@ import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import LiveNowSection from '@/components/home/LiveNowSection';
-import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
-import { scheduleSessionReminders } from '@/lib/reminders';
-import { calculateDistance, formatDistance } from '@/lib/distance';
-import { registerForPushNotifications } from '@/lib/firebase-messaging';
-import { joinSession } from '@/lib/sessions';
-import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchUpcomingSessions, deleteSession as dalDeleteSession } from '@/lib/dal';
-import type { User } from '@supabase/supabase-js';
-import type { SessionWithRelations } from '@/lib/dal';
-
-/** Subset of user profile fields loaded on the home page */
-interface UserProfile {
-  name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  sports: string[] | null;
-  safety_waiver_accepted: boolean | null;
-}
-
-const PAGE_SIZE = 20;
+import { showInfo } from '@/lib/toast';
+import { useHomeFeed } from './useHomeFeed';
 
 export default function HomePage() {
-  const router = useRouter();
-  const supabase = createClient();
-  const { t, language } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [userChecked, setUserChecked] = useState(false);
-  const [sessions, setSessions] = useState<SessionWithRelations[]>([]);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [editingSession, setEditingSession] = useState<SessionWithRelations | null>(null);
-  const [filteredSessions, setFilteredSessions] = useState<SessionWithRelations[]>([]);
-  const [liveNowSessions, setLiveNowSessions] = useState<SessionWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSport, setSelectedSport] = useState<string>('');
-  const [maxDistance, setMaxDistance] = useState<number>(100);
-  const [dateFilter, setDateFilter] = useState<string>('all');
-  const [genderFilter, setGenderFilter] = useState<string>('all');
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [showSafetyWaiver, setShowSafetyWaiver] = useState(false);
-  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
-  const [liveStatusMap, setLiveStatusMap] = useState<
-    Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }>
-  >({});
-  const [liveUserIdSet, setLiveUserIdSet] = useState<Set<string>>(new Set());
-  const [fixedHeight, setFixedHeight] = useState(0);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [fetchError, setFetchError] = useState(false);
-
-  useEffect(() => {
-    checkUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  useEffect(() => {
-    if (userChecked) {
-      scheduleSessionReminders();
-      if (user) tryRegisterPushNotifications(user.id);
-      loadProfile();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user is set
-  }, [userChecked]);
-
-  useEffect(() => {
-    if (!user || !userProfile) return;
-    const isProfileComplete = userProfile.avatar_url && (userProfile.sports?.length ?? 0) > 0;
-    if (isProfileComplete) {
-      setShowOnboarding(false);
-      return;
-    }
-    const hasSeenOnboarding = localStorage.getItem(`hasSeenOnboarding_${user.id}`);
-    if (!hasSeenOnboarding) setShowOnboarding(true);
-  }, [user, userProfile]);
-
-  useEffect(() => {
-    if (userChecked) loadSessions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user/location set
-  }, [userChecked]);
-  useEffect(() => {
-    getUserLocation().then((loc) => {
-      if (loc) setUserLocation(loc);
-    });
-  }, []);
-  useEffect(() => {
-    filterSessions();
-    setVisibleCount(PAGE_SIZE);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filter deps tracked explicitly
-  }, [sessions, searchQuery, selectedSport, maxDistance, userLocation, dateFilter, genderFilter]);
-
-  async function tryRegisterPushNotifications(userId: string) {
-    try {
-      const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform();
-      if (isNative) {
-        await registerForPushNotifications(userId);
-      } else if ('Notification' in window && Notification.permission === 'granted') {
-        await registerForPushNotifications(userId);
-      }
-    } catch (error) {
-      logError(error, { action: 'tryRegisterPushNotifications' });
-    }
-  }
-
-  async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    setUser(user || null);
-    setUserChecked(true);
-  }
-
-  async function loadProfile() {
-    if (!user) return;
-    const { data } = await supabase
-      .from('users')
-      .select('name, avatar_url, bio, sports, safety_waiver_accepted')
-      .eq('id', user.id)
-      .maybeSingle();
-    setUserProfile(data);
-  }
-
-  async function loadSessions() {
-    try {
-      setLoading(true);
-      setFetchError(false);
-      const result = await fetchUpcomingSessions(supabase);
-      if (!result.success) throw new Error(result.error);
-      setSessions(result.data || []);
-      loadLiveStatuses((result.data || []).map((s) => s.id));
-    } catch (error) {
-      logError(error, { action: 'loadSessions' });
-      setFetchError(true);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadLiveStatuses(sessionIds: string[]) {
-    if (sessionIds.length === 0) return;
-    try {
-      const { data, error } = await supabase
-        .from('live_status')
-        .select('session_id, user_id, user:users(name, avatar_url)')
-        .in('session_id', sessionIds)
-        .gt('expires_at', new Date().toISOString());
-
-      if (error || !data) return;
-
-      const map: Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }> = {};
-      const userIds = new Set<string>();
-      for (const row of data) {
-        const typed = row as unknown as {
-          session_id: string;
-          user_id: string;
-          user: { name: string; avatar_url: string | null } | null;
-        };
-        const sid = typed.session_id;
-        const uid = typed.user_id;
-        const userInfo = typed.user;
-        userIds.add(uid);
-        if (!map[sid]) map[sid] = { count: 0, users: [] };
-        map[sid].count++;
-        map[sid].users.push({ name: userInfo?.name || 'Unknown', avatar_url: userInfo?.avatar_url || null });
-      }
-      setLiveStatusMap(map);
-      setLiveUserIdSet(userIds);
-    } catch (error) {
-      logError(error, { action: 'loadLiveStatuses' });
-    }
-  }
-
-  function filterSessions() {
-    const now = new Date();
-    const liveFiltered = sessions.filter((s) => {
-      if (!s.is_training_now) return false;
-      const sessionStart = new Date(`${s.date}T${s.start_time}`);
-      const sessionEnd = new Date(sessionStart.getTime() + (s.duration || 60) * 60000);
-      const twoHoursFromNow = new Date(now.getTime() + 120 * 60000);
-      return sessionStart <= twoHoursFromNow && sessionEnd > now;
-    });
-    setLiveNowSessions(liveFiltered);
-
-    let filtered = [...sessions];
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (s) =>
-          s.sport?.toLowerCase().includes(query) ||
-          s.location?.toLowerCase().includes(query) ||
-          s.description?.toLowerCase().includes(query)
-      );
-    }
-
-    if (selectedSport) filtered = filtered.filter((s) => s.sport === selectedSport);
-
-    if (userLocation && maxDistance < 100) {
-      filtered = filtered.filter((s) => {
-        if (!s.latitude || !s.longitude) return true;
-        return calculateDistance(userLocation.latitude, userLocation.longitude, s.latitude, s.longitude) <= maxDistance;
-      });
-    }
-
-    if (dateFilter !== 'all') {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const endDate = new Date();
-      if (dateFilter === 'today') endDate.setHours(23, 59, 59, 999);
-      else if (dateFilter === 'week') endDate.setDate(today.getDate() + 7);
-      else if (dateFilter === 'month') endDate.setMonth(today.getMonth() + 1);
-      filtered = filtered.filter((s) => {
-        const sessionDate = new Date(s.date + 'T00:00:00');
-        return sessionDate >= today && sessionDate <= endDate;
-      });
-    }
-
-    if (genderFilter !== 'all') {
-      filtered = filtered.filter(
-        (s) => s.gender_preference === genderFilter || s.gender_preference === 'all' || !s.gender_preference
-      );
-    }
-    setFilteredSessions(filtered);
-  }
-
-  function handleShareSession(session: SessionWithRelations) {
-    const shareText =
-      language === 'es'
-        ? `¡Únete a ${session.sport} el ${new Date(session.date + 'T00:00:00').toLocaleDateString('es-ES')}! Nunca entrenes solo 💪`
-        : `Join me for ${session.sport} on ${new Date(session.date + 'T00:00:00').toLocaleDateString('en-US')}! Never train alone 💪`;
-    const shareUrl = `${window.location.origin}/session/${session.id}`;
-    if (navigator.share) {
-      navigator.share({ title: 'Tribe - ' + session.sport, text: shareText, url: shareUrl }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(shareText + '\n' + shareUrl);
-      showInfo(language === 'es' ? 'Enlace copiado' : 'Link copied!');
-    }
-  }
-
-  async function handleJoinSession(sessionId: string) {
-    if (!user) return;
-    if (userProfile && !userProfile.safety_waiver_accepted) {
-      setPendingSessionId(sessionId);
-      setShowSafetyWaiver(true);
-      return;
-    }
-    try {
-      const result = await joinSession({
-        supabase,
-        sessionId,
-        userId: user.id,
-        userName: userProfile?.name || user.email || 'Someone',
-      });
-      if (!result.success) {
-        const errorMessages: Record<string, string> = {
-          session_not_found: 'Session not found',
-          session_not_active: 'This session is no longer active',
-          self_join: 'You cannot join your own session!',
-          already_joined: t('alreadyJoined'),
-          capacity_full: t('sessionFullMsg'),
-          invite_only: 'This is a private session. You need a direct invitation from the host.',
-        };
-        showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
-        return;
-      }
-      showSuccess(
-        result.status === 'pending'
-          ? 'Request sent! The host will review your profile and decide.'
-          : t('joinedSuccessfully')
-      );
-      await loadSessions();
-    } catch (error: unknown) {
-      logError(error, { action: 'handleJoinSession' });
-      showError(getErrorMessage(error, 'join_session', language));
-    }
-  }
-
-  async function handleWaiverAccepted() {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ safety_waiver_accepted: true, safety_waiver_accepted_at: new Date().toISOString() })
-        .eq('id', user.id);
-      if (error) throw error;
-      if (userProfile) setUserProfile({ ...userProfile, safety_waiver_accepted: true });
-      setShowSafetyWaiver(false);
-      if (pendingSessionId) {
-        await handleJoinSession(pendingSessionId);
-        setPendingSessionId(null);
-      }
-    } catch (error) {
-      logError(error, { action: 'handleWaiverAccepted' });
-      showError(getErrorMessage(error, 'accept_waiver', language));
-    }
-  }
+  const f = useHomeFeed();
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
-      {showOnboarding && user && (
+      {f.showOnboarding && f.user && (
         <OnboardingModal
           onComplete={() => {
-            localStorage.setItem(`hasSeenOnboarding_${user.id}`, 'true');
-            setShowOnboarding(false);
+            localStorage.setItem(`hasSeenOnboarding_${f.user!.id}`, 'true');
+            f.setShowOnboarding(false);
           }}
         />
       )}
 
       <FilterBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedSport={selectedSport}
-        setSelectedSport={setSelectedSport}
-        dateFilter={dateFilter}
-        setDateFilter={setDateFilter}
-        genderFilter={genderFilter}
-        setGenderFilter={setGenderFilter}
-        maxDistance={maxDistance}
-        setMaxDistance={setMaxDistance}
-        userLocation={userLocation}
-        loading={loading}
-        filteredCount={filteredSessions.length}
-        language={language}
-        t={t}
-        onFixedHeightChange={setFixedHeight}
+        searchQuery={f.searchQuery}
+        setSearchQuery={f.setSearchQuery}
+        selectedSport={f.selectedSport}
+        setSelectedSport={f.setSelectedSport}
+        dateFilter={f.dateFilter}
+        setDateFilter={f.setDateFilter}
+        genderFilter={f.genderFilter}
+        setGenderFilter={f.setGenderFilter}
+        maxDistance={f.maxDistance}
+        setMaxDistance={f.setMaxDistance}
+        userLocation={f.userLocation}
+        loading={f.loading}
+        filteredCount={f.filteredSessions.length}
+        language={f.language}
+        t={f.t}
+        onFixedHeightChange={f.setFixedHeight}
       />
 
-      <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-header'}>
+      <div style={{ paddingTop: f.fixedHeight || undefined }} className={f.fixedHeight ? '' : 'pt-header'}>
         <div className="max-w-2xl mx-auto p-4">
-          {editingSession && (
+          {f.editingSession && (
             <EditSessionModal
-              session={editingSession}
-              onClose={() => setEditingSession(null)}
+              session={f.editingSession}
+              onClose={() => f.setEditingSession(null)}
               onSave={() => {
-                loadSessions();
-                setEditingSession(null);
+                f.loadSessions();
+                f.setEditingSession(null);
               }}
             />
           )}
 
           <div className="mt-1">
-            <StoriesRow userId={user?.id || null} userAvatar={userProfile?.avatar_url} liveUserIds={liveUserIdSet} />
+            <StoriesRow
+              userId={f.user?.id || null}
+              userAvatar={f.userProfile?.avatar_url}
+              liveUserIds={f.liveUserIdSet}
+            />
           </div>
 
-          {user && !userLocation && !loading && (
+          {f.user && !f.userLocation && !f.loading && (
             <button
               onClick={async () => {
                 const loc = await getUserLocation();
-                if (loc) setUserLocation(loc);
+                if (loc) f.setUserLocation(loc);
                 else
                   showInfo(
-                    language === 'es'
+                    f.language === 'es'
                       ? 'Activa la ubicación en la configuración de tu navegador'
                       : 'Enable location in your browser settings'
                   );
@@ -377,123 +86,101 @@ export default function HomePage() {
               className="w-full mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
             >
               📍{' '}
-              {language === 'es'
+              {f.language === 'es'
                 ? 'Activa tu ubicación para ver sesiones cercanas'
                 : 'Enable location to see sessions near you'}
             </button>
           )}
 
-          {user && userProfile && (
+          {f.user && f.userProfile && (
             <ProfileCompletionBanner
-              hasPhoto={!!userProfile.avatar_url}
-              hasSports={!!userProfile.sports && userProfile.sports.length > 0}
-              hasName={!!userProfile.name}
-              userId={user.id}
+              hasPhoto={!!f.userProfile.avatar_url}
+              hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
+              hasName={!!f.userProfile.name}
+              userId={f.user.id}
             />
           )}
 
-          {user && (
+          {f.user && (
             <button
-              onClick={() => router.push('/training-now')}
+              onClick={() => f.router.push('/training-now')}
               className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
             >
               <div className="text-center">
-                <div className="text-lg">{language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
+                <div className="text-lg">{f.language === 'es' ? 'ENTRENAR AHORA' : 'TRAINING NOW'}</div>
                 <div className="text-xs font-normal opacity-75">
-                  {language === 'es' ? 'Conecta con personas entrenando cerca' : 'Connect with people training nearby'}
+                  {f.language === 'es'
+                    ? 'Conecta con personas entrenando cerca'
+                    : 'Connect with people training nearby'}
                 </div>
               </div>
             </button>
           )}
 
-          <LiveNowSection liveNowSessions={liveNowSessions} userLocation={userLocation} language={language} />
+          <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />
 
-          {loading ? (
+          {f.loading ? (
             <div className="space-y-4">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
             </div>
-          ) : fetchError ? (
+          ) : f.fetchError ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
               <div className="text-4xl mb-4">⚠️</div>
               <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-                {language === 'es' ? 'No se pudieron cargar las sesiones' : 'Could not load sessions'}
+                {f.language === 'es' ? 'No se pudieron cargar las sesiones' : 'Could not load sessions'}
               </p>
               <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">
-                {language === 'es'
+                {f.language === 'es'
                   ? 'Verifica tu conexión e inténtalo de nuevo'
                   : 'Check your connection and try again'}
               </p>
               <button
-                onClick={() => loadSessions()}
+                onClick={() => f.loadSessions()}
                 className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
               >
-                {language === 'es' ? 'Reintentar' : 'Retry'}
+                {f.language === 'es' ? 'Reintentar' : 'Retry'}
               </button>
             </div>
-          ) : filteredSessions.length === 0 ? (
+          ) : f.filteredSessions.length === 0 ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
               <div className="text-4xl mb-4">🏃‍♂️</div>
-              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noSessionsFound')}</p>
-              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{t('tryDifferentSearch')}</p>
+              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('noSessionsFound')}</p>
+              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
               <Link href="/create">
                 <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                  {language === 'es' ? 'Crear Sesión' : 'Create Session'}
+                  {f.language === 'es' ? 'Crear Sesión' : 'Create Session'}
                 </button>
               </Link>
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredSessions.slice(0, visibleCount).map((session) => {
-                let distanceText: string | undefined;
-                if (userLocation && session.latitude && session.longitude) {
-                  distanceText = formatDistance(
-                    calculateDistance(
-                      userLocation.latitude,
-                      userLocation.longitude,
-                      session.latitude,
-                      session.longitude
-                    ),
-                    language
-                  );
-                }
-                return (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    onJoin={handleJoinSession}
-                    userLocation={userLocation}
-                    currentUserId={user?.id}
-                    onEdit={(id: string) => {
-                      const s = sessions.find((s) => s.id === id);
-                      if (s) setEditingSession(s);
-                    }}
-                    onDelete={async (id: string) => {
-                      if (!confirm('Are you sure you want to delete this session? This cannot be undone.')) return;
-                      try {
-                        const result = await dalDeleteSession(supabase, id);
-                        if (!result.success) throw new Error(result.error);
-                        showSuccess('Session deleted successfully!');
-                        await loadSessions();
-                      } catch (error: unknown) {
-                        showError(getErrorMessage(error, 'delete_session', language));
-                      }
-                    }}
-                    onShare={handleShareSession}
-                    distance={distanceText}
-                    liveData={liveStatusMap[session.id]}
-                  />
-                );
-              })}
-              {visibleCount < filteredSessions.length && (
+              {f.filteredSessions.slice(0, f.visibleCount).map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onJoin={f.handleJoinSession}
+                  userLocation={f.userLocation}
+                  currentUserId={f.user?.id}
+                  onEdit={(id: string) => {
+                    const s = f.sessions.find((s) => s.id === id);
+                    if (s) f.setEditingSession(s);
+                  }}
+                  onDelete={f.handleDeleteSession}
+                  onShare={f.handleShareSession}
+                  distance={f.getDistanceText(session)}
+                  liveData={f.liveStatusMap[session.id]}
+                />
+              ))}
+              {f.visibleCount < f.filteredSessions.length && (
                 <button
-                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}
                   className="w-full py-3 bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-[#52575D] hover:bg-stone-100 dark:hover:bg-[#7D8490] transition"
                 >
-                  {language === 'es'
-                    ? `Mostrar más (${filteredSessions.length - visibleCount} restantes)`
-                    : `Show more (${filteredSessions.length - visibleCount} remaining)`}
+                  {f.language === 'es'
+                    ? `Mostrar más (${f.filteredSessions.length - f.visibleCount} restantes)`
+                    : `Show more (${f.filteredSessions.length - f.visibleCount} remaining)`}
                 </button>
               )}
             </div>
@@ -501,18 +188,18 @@ export default function HomePage() {
         </div>
       </div>
 
-      {showSafetyWaiver && (
+      {f.showSafetyWaiver && (
         <SafetyWaiverModal
-          onAccept={handleWaiverAccepted}
+          onAccept={f.handleWaiverAccepted}
           onCancel={() => {
-            setShowSafetyWaiver(false);
-            setPendingSessionId(null);
+            f.setShowSafetyWaiver(false);
+            f.setPendingSessionId(null);
           }}
         />
       )}
 
       <BottomNav />
-      <NotificationPrompt hideWhenOnboarding={showOnboarding} />
+      <NotificationPrompt hideWhenOnboarding={f.showOnboarding} />
     </div>
   );
 }

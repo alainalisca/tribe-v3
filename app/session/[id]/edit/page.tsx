@@ -1,153 +1,17 @@
 /** Page: /session/[id]/edit — Edit an existing session's details */
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { showSuccess, showError } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
+import { getEditSessionTranslations } from './translations';
+import { useEditSession } from './useEditSession';
 
 export default function EditSessionPage() {
-  const router = useRouter();
-  const params = useParams();
   const { language } = useLanguage();
-  const supabase = createClient();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    sport: '',
-    location: '',
-    latitude: null as number | null,
-    longitude: null as number | null,
-    date: '',
-    start_time: '',
-    duration: 60,
-    max_participants: 10,
-    description: '',
-    skill_level: 'all_levels',
-    gender_preference: 'all',
-    equipment: '',
-    join_policy: 'open',
-  });
-
-  const txt =
-    language === 'es'
-      ? {
-          editSession: 'Editar Sesión',
-          sport: 'Deporte',
-          location: 'Ubicación',
-          date: 'Fecha',
-          time: 'Hora',
-          duration: 'Duración (minutos)',
-          maxParticipants: 'Máx. participantes',
-          description: 'Descripción',
-          descPlaceholder: 'Describe tu sesión...',
-          skillLevel: 'Nivel de habilidad',
-          allLevels: 'Todos',
-          beginner: 'Principiante',
-          intermediate: 'Intermedio',
-          advanced: 'Avanzado',
-          genderPref: 'Preferencia de género',
-          allWelcome: 'Todos',
-          womenOnly: 'Solo mujeres',
-          menOnly: 'Solo hombres',
-          equipment: 'Equipamiento',
-          equipmentPlaceholder: 'ej. Trae tu propia colchoneta',
-          joinPolicy: 'Política de unión',
-          open: 'Abierto - Cualquiera puede unirse',
-          curated: 'Curado - Revisas solicitudes',
-          inviteOnly: 'Solo invitación - Privado',
-          save: 'Guardar Cambios',
-          saving: 'Guardando...',
-          cancel: 'Cancelar',
-          updated: 'Sesión actualizada',
-        }
-      : {
-          editSession: 'Edit Session',
-          sport: 'Sport',
-          location: 'Location',
-          date: 'Date',
-          time: 'Time',
-          duration: 'Duration (minutes)',
-          maxParticipants: 'Max participants',
-          description: 'Description',
-          descPlaceholder: 'Describe your session...',
-          skillLevel: 'Skill Level',
-          allLevels: 'All Levels',
-          beginner: 'Beginner',
-          intermediate: 'Intermediate',
-          advanced: 'Advanced',
-          genderPref: 'Gender Preference',
-          allWelcome: 'All Welcome',
-          womenOnly: 'Women Only',
-          menOnly: 'Men Only',
-          equipment: 'Equipment',
-          equipmentPlaceholder: 'e.g. Bring your own mat',
-          joinPolicy: 'Join Policy',
-          open: 'Open - Anyone can join',
-          curated: 'Curated - You review requests',
-          inviteOnly: 'Invite Only - Private',
-          save: 'Save Changes',
-          saving: 'Saving...',
-          cancel: 'Cancel',
-          updated: 'Session updated',
-        };
-
-  useEffect(() => {
-    loadSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  async function loadSession() {
-    try {
-      const { data: session, error } = await supabase.from('sessions').select('*').eq('id', params.id).single();
-
-      if (error) throw error;
-
-      setFormData({
-        sport: session.sport,
-        location: session.location,
-        latitude: session.latitude || null,
-        longitude: session.longitude || null,
-        date: session.date,
-        start_time: session.start_time,
-        duration: session.duration,
-        max_participants: session.max_participants,
-        description: session.description || '',
-        skill_level: session.skill_level || 'all_levels',
-        gender_preference: session.gender_preference || 'all',
-        equipment: session.equipment || '',
-        join_policy: session.join_policy || 'open',
-      });
-    } catch {
-      showError(language === 'es' ? 'Error al cargar sesión' : 'Error loading session');
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const { error } = await supabase.from('sessions').update(formData).eq('id', params.id);
-
-      if (error) throw error;
-
-      showSuccess(txt.updated);
-      router.push(`/session/${params.id}`);
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'update_session', language));
-    } finally {
-      setSaving(false);
-    }
-  }
+  const txt = getEditSessionTranslations(language);
+  const { loading, saving, formData, setFormData, handleSubmit, params, router } = useEditSession(language, txt);
 
   if (loading) {
     return (

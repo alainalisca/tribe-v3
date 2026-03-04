@@ -1,232 +1,32 @@
 /** Page: /settings — App settings: notifications, theme, language, account */
 'use client';
-import { log, logError } from '@/lib/logger';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
 import Link from 'next/link';
+import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getErrorMessage } from '@/lib/errorMessages';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import BottomNav from '@/components/BottomNav';
-import type { User } from '@supabase/supabase-js';
+import { useSettings } from './useSettings';
+import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const supabase = createClient();
   const { language, setLanguage } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteInput, setDeleteInput] = useState('');
-
-  useEffect(() => {
-    checkUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-    } else {
-      setUser(user);
-      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-      setUserIsAdmin(!!profile?.is_admin);
-    }
-  }
-
-  async function handleSignOut() {
-    if (user) {
-      try {
-        log('debug', 'Removing FCM token on sign out', { userId: user.id, action: 'handleSignOut' });
-        const { removeFcmToken } = await import('@/lib/firebase-messaging');
-        await removeFcmToken(user.id);
-      } catch (error) {
-        logError(error, { action: 'handleSignOut', userId: user.id });
-      }
-    }
-    await supabase.auth.signOut();
-    router.push('/auth');
-  }
-
-  async function handleDeleteAccount() {
-    const confirmWord = language === 'es' ? 'ELIMINAR' : 'DELETE';
-    if (deleteInput !== confirmWord) {
-      showInfo(language === 'es' ? 'Eliminación cancelada' : 'Deletion cancelled');
-      setShowDeleteConfirm(false);
-      setDeleteInput('');
-      return;
-    }
-
-    try {
-      const { error: deleteError } = await supabase.from('users').delete().eq('id', user!.id);
-
-      if (deleteError) throw deleteError;
-
-      await supabase.auth.signOut();
-      showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
-      setShowDeleteConfirm(false);
-      setDeleteInput('');
-      window.location.href = '/auth';
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'update_settings', language));
-    }
-  }
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [sessionRemindersEnabled, setSessionRemindersEnabled] = useState(true);
-  const [loadingReminders, setLoadingReminders] = useState(false);
-
-  async function toggleSessionReminders() {
-    if (!user) return;
-    setLoadingReminders(true);
-    try {
-      const newValue = !sessionRemindersEnabled;
-      const { error } = await supabase.from('users').update({ session_reminders_enabled: newValue }).eq('id', user.id);
-
-      if (error) throw error;
-
-      setSessionRemindersEnabled(newValue);
-      showSuccess(
-        newValue
-          ? language === 'es'
-            ? 'Recordatorios activados'
-            : 'Reminders enabled'
-          : language === 'es'
-            ? 'Recordatorios desactivados'
-            : 'Reminders disabled'
-      );
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'update_settings', language));
-    } finally {
-      setLoadingReminders(false);
-    }
-  }
-
-  async function toggleNotifications() {
-    if (!user) return;
-
-    try {
-      const { Capacitor } = await import('@capacitor/core');
-      const isNative = Capacitor.isNativePlatform();
-
-      if (isNative) {
-        // Native: use unified registration which handles permission + FCM token
-        log('debug', 'Toggling notifications for native user', { userId: user.id, action: 'toggleNotifications' });
-        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
-        const success = await registerForPushNotifications(user.id);
-        if (success) {
-          setNotificationsEnabled(true);
-          showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
-        } else {
-          showError(
-            language === 'en'
-              ? 'Could not enable notifications. Check your device settings.'
-              : 'No se pudieron activar las notificaciones. Revisa la configuración de tu dispositivo.'
-          );
-        }
-        return;
-      }
-
-      // Web path
-      if (!('Notification' in window)) {
-        showError('This browser does not support notifications');
-        return;
-      }
-
-      if (Notification.permission === 'granted') {
-        setNotificationsEnabled(false);
-        showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
-      } else if (Notification.permission !== 'denied') {
-        log('debug', 'Requesting web push for user', { userId: user.id, action: 'toggleNotifications' });
-        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
-        const success = await registerForPushNotifications(user.id);
-        log('debug', 'Web push registration result', { success, action: 'toggleNotifications' });
-        if (success) {
-          setNotificationsEnabled(true);
-          showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
-        }
-      } else {
-        showError(
-          language === 'en'
-            ? 'Notifications are blocked. Please enable them in your browser settings.'
-            : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.'
-        );
-      }
-    } catch (error) {
-      logError(error, { action: 'toggleNotifications' });
-      showError(language === 'en' ? 'Error enabling notifications' : 'Error al activar notificaciones');
-    }
-  }
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted');
-    }
-  }, []);
-
-  // Load user's reminder preference
-  useEffect(() => {
-    async function loadReminderPreference() {
-      if (!user) return;
-      const { data } = await supabase.from('users').select('session_reminders_enabled').eq('id', user.id).single();
-
-      if (data) {
-        setSessionRemindersEnabled(data.session_reminders_enabled !== false);
-      }
-    }
-    loadReminderPreference();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only (supabase is stable)
-  }, [user]);
-
-  const txt =
-    language === 'en'
-      ? {
-          settings: 'Settings',
-          language: 'Language',
-          english: 'English',
-          spanish: 'Spanish',
-          account: 'Account',
-          signOut: 'Sign Out',
-          deleteAccount: 'Delete Account',
-          deleteAccountConfirm:
-            'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.',
-          legal: 'Legal',
-          terms: 'Terms of Service',
-          privacy: 'Privacy Policy',
-          safety: 'Safety Guidelines',
-          admin: 'Admin',
-          adminPanel: 'Admin Panel',
-          help: 'Help & Feedback',
-          feedback: 'Send Feedback',
-          bugReport: 'Report a Bug',
-        }
-      : {
-          settings: 'Configuración',
-          language: 'Idioma',
-          english: 'Inglés',
-          spanish: 'Español',
-          account: 'Cuenta',
-          signOut: 'Cerrar Sesión',
-          deleteAccount: 'Eliminar Cuenta',
-          deleteAccountConfirm:
-            '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.',
-          legal: 'Legal',
-          terms: 'Términos de Servicio',
-          privacy: 'Política de Privacidad',
-          safety: 'Guías de Seguridad',
-          admin: 'Administrador',
-          adminPanel: 'Panel de Administrador',
-          help: 'Ayuda y Comentarios',
-          feedback: 'Enviar Comentarios',
-          bugReport: 'Reportar un Error',
-        };
+  const router = useRouter();
+  const {
+    txt,
+    userIsAdmin,
+    showDeleteConfirm,
+    deleteInput,
+    setDeleteInput,
+    notificationsEnabled,
+    sessionRemindersEnabled,
+    loadingReminders,
+    handleSignOut,
+    handleDeleteAccount,
+    toggleSessionReminders,
+    toggleNotifications,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+  } = useSettings(language);
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -296,9 +96,7 @@ export default function SettingsPage() {
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
               />
             </svg>
-            <h2 className="text-lg font-bold text-theme-primary">
-              {language === 'en' ? 'Push Notifications' : 'Notificaciones Push'}
-            </h2>
+            <h2 className="text-lg font-bold text-theme-primary">{txt.pushNotifications}</h2>
           </div>
           <div className="space-y-2">
             <button
@@ -309,13 +107,7 @@ export default function SettingsPage() {
                   : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
               }`}
             >
-              {notificationsEnabled
-                ? language === 'en'
-                  ? '✓ Notifications Enabled'
-                  : '✓ Notificaciones Activadas'
-                : language === 'en'
-                  ? 'Enable Notifications'
-                  : 'Activar Notificaciones'}
+              {notificationsEnabled ? txt.notificationsEnabledLabel : txt.enableNotifications}
             </button>
 
             {/* Session Reminders Toggle */}
@@ -333,20 +125,12 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-semibold">
-                    {sessionRemindersEnabled
-                      ? language === 'en'
-                        ? '✓ Session Reminders'
-                        : '✓ Recordatorios de Sesión'
-                      : language === 'en'
-                        ? 'Session Reminders'
-                        : 'Recordatorios de Sesión'}
+                    {sessionRemindersEnabled ? txt.sessionRemindersOn : txt.sessionRemindersOff}
                   </div>
                   <div
                     className={`text-xs mt-1 ${!notificationsEnabled ? 'text-stone-400' : sessionRemindersEnabled ? 'text-slate-700' : 'text-stone-500'}`}
                   >
-                    {language === 'en'
-                      ? '1 hour & 15 min before your sessions'
-                      : '1 hora y 15 min antes de tus sesiones'}
+                    {txt.sessionRemindersDesc}
                   </div>
                 </div>
                 {loadingReminders && (
@@ -421,10 +205,7 @@ export default function SettingsPage() {
             {txt.signOut}
           </button>
           <button
-            onClick={() => {
-              setDeleteInput('');
-              setShowDeleteConfirm(true);
-            }}
+            onClick={openDeleteConfirm}
             className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-[#3D4349] text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
           >
             <Trash2 className="w-5 h-5" />
@@ -438,45 +219,33 @@ export default function SettingsPage() {
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowDeleteConfirm(false);
-              setDeleteInput('');
-            }
+            if (e.target === e.currentTarget) closeDeleteConfirm();
           }}
         >
           <div className="bg-white dark:bg-[#404549] rounded-xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-bold text-red-600 mb-2">
-              {language === 'es' ? 'Eliminar cuenta' : 'Delete Account'}
-            </h3>
-            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
-              {language === 'es'
-                ? 'Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
-                : 'This will permanently delete your account and all data. Type DELETE to confirm.'}
-            </p>
+            <h3 className="text-lg font-bold text-red-600 mb-2">{txt.deleteModalTitle}</h3>
+            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{txt.deleteModalDesc}</p>
             <input
               type="text"
               value={deleteInput}
               onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder={language === 'es' ? 'ELIMINAR' : 'DELETE'}
+              placeholder={txt.deleteConfirmWord}
               className="w-full px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg mb-4 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
               autoComplete="off"
             />
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setDeleteInput('');
-                }}
+                onClick={closeDeleteConfirm}
                 className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
               >
-                {language === 'es' ? 'Cancelar' : 'Cancel'}
+                {txt.cancel}
               </button>
               <button
                 onClick={handleDeleteAccount}
-                disabled={deleteInput !== (language === 'es' ? 'ELIMINAR' : 'DELETE')}
+                disabled={deleteInput !== txt.deleteConfirmWord}
                 className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {language === 'es' ? 'Eliminar' : 'Delete'}
+                {txt.delete}
               </button>
             </div>
           </div>

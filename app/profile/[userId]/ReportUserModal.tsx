@@ -1,0 +1,76 @@
+'use client';
+
+import type { ProfileTranslations } from './translations';
+
+interface ReportUserModalProps {
+  t: ProfileTranslations;
+  reportReason: string;
+  reportDescription: string;
+  submitting: boolean;
+  onReasonChange: (v: string) => void;
+  onDescriptionChange: (v: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}
+
+export default function ReportUserModal({
+  t,
+  reportReason,
+  reportDescription,
+  submitting,
+  onReasonChange,
+  onDescriptionChange,
+  onClose,
+  onSubmit,
+}: ReportUserModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <h3 className="text-xl font-bold mb-4">{t.reportUser}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">{t.reason} *</label>
+            <select
+              value={reportReason}
+              onChange={(e) => onReasonChange(e.target.value)}
+              className="w-full p-2 border rounded-lg text-stone-900"
+            >
+              <option value="">{t.selectReason}</option>
+              <option value="harassment">{t.harassment}</option>
+              <option value="inappropriate">{t.inappropriate}</option>
+              <option value="spam">{t.spam}</option>
+              <option value="fake">{t.fake}</option>
+              <option value="no-show">{t.noShow}</option>
+              <option value="other">{t.other}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">{t.additionalDetails}</label>
+            <textarea
+              value={reportDescription}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder={t.provideContext}
+              className="w-full p-2 border rounded-lg h-24 resize-none text-stone-900"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50"
+            disabled={submitting}
+          >
+            {t.cancel}
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={submitting || !reportReason}
+            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+          >
+            {submitting ? t.submitting : t.submit}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

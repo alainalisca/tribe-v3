@@ -1,0 +1,194 @@
+'use client';
+
+import Link from 'next/link';
+import type { AuthTranslations } from './translations';
+
+interface EmailAuthFormProps {
+  t: AuthTranslations;
+  isLogin: boolean;
+  email: string;
+  password: string;
+  name: string;
+  birthDate: string;
+  acceptedTos: boolean;
+  loading: boolean;
+  message: string;
+  language: 'en' | 'es';
+  onEmailChange: (v: string) => void;
+  onPasswordChange: (v: string) => void;
+  onNameChange: (v: string) => void;
+  onBirthDateChange: (v: string) => void;
+  onAcceptedTosChange: (v: boolean) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onForgotPassword: () => void;
+}
+
+export default function EmailAuthForm({
+  t,
+  isLogin,
+  email,
+  password,
+  name,
+  birthDate,
+  acceptedTos,
+  loading,
+  message,
+  language,
+  onEmailChange,
+  onPasswordChange,
+  onNameChange,
+  onBirthDateChange,
+  onAcceptedTosChange,
+  onSubmit,
+  onForgotPassword,
+}: EmailAuthFormProps) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      {!isLogin && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.name}</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => onNameChange(e.target.value)}
+              placeholder={t.namePlaceholder}
+              required
+              autoComplete="name"
+              enterKeyHint="next"
+              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.birthDate}</label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => onBirthDateChange(e.target.value)}
+              required
+              max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+            />
+            <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{t.mustBe18Note}</p>
+
+            <div className="flex items-start gap-2 mt-4">
+              <input
+                type="checkbox"
+                id="tos"
+                checked={acceptedTos}
+                onChange={(e) => onAcceptedTosChange(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-stone-300 text-tribe-green focus:ring-tribe-green"
+              />
+              <label htmlFor="tos" className="text-sm text-stone-600 dark:text-gray-300">
+                {t.tosLabel}{' '}
+                <Link href="/legal/terms" className="text-tribe-green hover:underline">
+                  {t.termsOfService}
+                </Link>{' '}
+                {t.andThe}{' '}
+                <Link href="/legal/privacy" className="text-tribe-green hover:underline">
+                  {t.privacyPolicy}
+                </Link>
+              </label>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.email}</label>
+        <input
+          type="email"
+          placeholder="email@example.com"
+          value={email}
+          onChange={(e) => onEmailChange(e.target.value)}
+          required
+          autoComplete="email"
+          enterKeyHint="next"
+          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.password}</label>
+        <input
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => onPasswordChange(e.target.value)}
+          required
+          minLength={6}
+          autoComplete={isLogin ? 'current-password' : 'new-password'}
+          enterKeyHint={isLogin ? 'go' : 'next'}
+          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+        />
+        {!isLogin && password && (
+          <div className="mt-2">
+            <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all ${
+                  password.length < 6
+                    ? 'w-1/4 bg-red-500'
+                    : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                      ? 'w-2/4 bg-yellow-500'
+                      : 'w-full bg-green-500'
+                }`}
+              />
+            </div>
+            <p
+              className={`text-xs mt-1 ${
+                password.length < 6
+                  ? 'text-red-500'
+                  : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                    ? 'text-yellow-600'
+                    : 'text-green-600'
+              }`}
+            >
+              {password.length < 6
+                ? language === 'es'
+                  ? 'Muy corta'
+                  : 'Too short'
+                : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+                  ? language === 'es'
+                    ? 'Débil'
+                    : 'Weak'
+                  : language === 'es'
+                    ? 'Fuerte'
+                    : 'Strong'}
+            </p>
+          </div>
+        )}
+        {isLogin && (
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            disabled={loading}
+            className="mt-2 text-sm text-tribe-green hover:underline disabled:opacity-50"
+          >
+            {t.forgotPassword}
+          </button>
+        )}
+      </div>
+
+      {message && (
+        <div
+          className={`p-3 rounded-lg text-sm ${
+            message.includes('✅')
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {loading ? t.loading : isLogin ? t.signIn : t.signUp}
+      </button>
+    </form>
+  );
+}

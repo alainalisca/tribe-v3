@@ -2,31 +2,11 @@
 
 import { useState } from 'react';
 import { Camera, Upload, Trash2, Flag } from 'lucide-react';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { type RecapPhotosProps, handleRecapUpload, deleteRecapPhoto, reportRecapPhoto } from './recapPhotosHelpers';
 
-interface RecapPhoto {
-  id: string;
-  photo_url: string;
-  user_id: string | null;
-  reported?: boolean | null;
-  user?: { id: string; name: string | null; avatar_url: string | null };
-}
-
-interface RecapPhotosProps {
-  session: { id: string };
-  recapPhotos: RecapPhoto[];
-  user: { id: string } | null;
-  isPast: boolean;
-  canUploadRecap: boolean;
-  canModerate: boolean;
-  shouldPromptUpload: boolean;
-  userPhotoCount: number;
-  language: 'en' | 'es';
-  onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
-  onPhotosChanged: () => void;
-}
+// Re-export types for consumers
+export type { RecapPhoto, RecapPhotosProps } from './recapPhotosHelpers';
 
 export default function RecapPhotos({
   session,
@@ -43,141 +23,6 @@ export default function RecapPhotos({
 }: RecapPhotosProps) {
   const [uploadingRecap, setUploadingRecap] = useState(false);
   const [confirmDeletePhotoId, setConfirmDeletePhotoId] = useState<string | null>(null);
-
-  async function compressImage(file: File): Promise<Blob> {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              resolve(blob as Blob);
-            },
-            'image/jpeg',
-            0.8
-          );
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function handleRecapUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!user) return;
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    if (userPhotoCount + files.length > 3) {
-      showInfo('You can upload maximum 3 photos per session');
-      return;
-    }
-
-    setUploadingRecap(true);
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const compressedBlob = await compressImage(file);
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}-recap-${i}.${fileExt}`;
-
-        const { error } = await supabase.storage.from('session-photos').upload(fileName, compressedBlob, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-        if (error) throw error;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('session-photos').getPublicUrl(fileName);
-
-        const { error: insertError } = await supabase.from('session_recap_photos').insert({
-          session_id: session.id,
-          user_id: user.id,
-          photo_url: publicUrl,
-        });
-
-        if (insertError) throw insertError;
-      }
-
-      showSuccess('Recap photos uploaded!');
-      onPhotosChanged();
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'upload_photo', language));
-    } finally {
-      setUploadingRecap(false);
-    }
-  }
-
-  async function deleteRecapPhoto(photoId: string) {
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-
-      const { error } = await supabase.from('session_recap_photos').delete().eq('id', photoId);
-
-      if (error) throw error;
-
-      showSuccess('Photo deleted');
-      onPhotosChanged();
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'delete_session', language));
-    }
-  }
-
-  async function reportRecapPhoto(photoId: string) {
-    if (!user) return;
-    const reason = prompt('Report reason (optional):');
-
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-
-      const { error } = await supabase
-        .from('session_recap_photos')
-        .update({
-          reported: true,
-          reported_by: user.id,
-          reported_reason: reason || 'No reason provided',
-        })
-        .eq('id', photoId);
-
-      if (error) throw error;
-
-      showSuccess('Photo reported. Admin will review.');
-      onPhotosChanged();
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'send_message', language));
-    }
-  }
 
   return (
     <>
@@ -241,7 +86,7 @@ export default function RecapPhotos({
                     )}
                     {canModerate && photo.user_id !== user?.id && (
                       <button
-                        onClick={() => reportRecapPhoto(photo.id)}
+                        onClick={() => reportRecapPhoto(photo.id, user, language, onPhotosChanged)}
                         className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600"
                         title="Report"
                       >
@@ -277,7 +122,9 @@ export default function RecapPhotos({
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handleRecapUpload}
+                onChange={(e) =>
+                  handleRecapUpload(e, user, session.id, userPhotoCount, language, onPhotosChanged, setUploadingRecap)
+                }
                 disabled={uploadingRecap}
                 className="hidden"
               />
@@ -301,7 +148,7 @@ export default function RecapPhotos({
         cancelLabel={language === 'es' ? 'Cancelar' : 'Cancel'}
         variant="danger"
         onConfirm={() => {
-          if (confirmDeletePhotoId) deleteRecapPhoto(confirmDeletePhotoId);
+          if (confirmDeletePhotoId) deleteRecapPhoto(confirmDeletePhotoId, language, onPhotosChanged);
           setConfirmDeletePhotoId(null);
         }}
         onCancel={() => setConfirmDeletePhotoId(null)}

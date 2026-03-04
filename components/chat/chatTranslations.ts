@@ -1,0 +1,53 @@
+export function getChatTranslations(language: 'en' | 'es') {
+  return language === 'es'
+    ? {
+        loadingChat: 'Cargando chat...',
+        groupChat: 'Chat grupal',
+        messages: 'mensajes',
+        messageDeleted: 'Mensaje eliminado',
+        you: 'Tú',
+        typeMessage: 'Escribe un mensaje...',
+        reportMessage: 'Reportar mensaje',
+        reason: 'Razón *',
+        selectReason: 'Selecciona una razón',
+        spam: 'Spam',
+        harassment: 'Acoso',
+        inappropriate: 'Contenido inapropiado',
+        offensive: 'Lenguaje ofensivo',
+        other: 'Otro',
+        details: 'Detalles (opcional)',
+        moreContext: 'Proporciona más contexto...',
+        cancel: 'Cancelar',
+        submitReport: 'Enviar reporte',
+        admin: 'Admin',
+        host: 'Anfitrión',
+        delete: 'Eliminar',
+        report: 'Reportar',
+      }
+    : {
+        loadingChat: 'Loading chat...',
+        groupChat: 'Group Chat',
+        messages: 'messages',
+        messageDeleted: 'Message deleted',
+        you: 'You',
+        typeMessage: 'Type a message...',
+        reportMessage: 'Report Message',
+        reason: 'Reason *',
+        selectReason: 'Select a reason',
+        spam: 'Spam',
+        harassment: 'Harassment',
+        inappropriate: 'Inappropriate content',
+        offensive: 'Offensive language',
+        other: 'Other',
+        details: 'Details (optional)',
+        moreContext: 'Provide more context...',
+        cancel: 'Cancel',
+        submitReport: 'Submit Report',
+        admin: 'Admin',
+        host: 'Host',
+        delete: 'Delete',
+        report: 'Report',
+      };
+}
+
+export type ChatTranslations = ReturnType<typeof getChatTranslations>;

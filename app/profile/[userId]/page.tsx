@@ -6,13 +6,17 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Shield, Flag, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
+
+import { getProfileTranslations } from './translations';
+import ProfileLightbox from './ProfileLightbox';
+import ReportUserModal from './ReportUserModal';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -22,6 +26,7 @@ export default function PublicProfilePage() {
   const userId = params.userId as string;
   const supabase = createClient();
   const { language } = useLanguage();
+  const t = getProfileTranslations(language);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({
@@ -41,89 +46,16 @@ export default function PublicProfilePage() {
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const t =
-    language === 'es'
-      ? {
-          loading: 'Cargando...',
-          userNotFound: 'Usuario no encontrado',
-          goBack: 'Volver',
-          block: 'Bloquear',
-          unblock: 'Desbloquear',
-          report: 'Reportar',
-          sessionsCreated: 'Sesiones Creadas',
-          sessionsJoined: 'Sesiones Unidas',
-          totalSessions: 'Total Sesiones',
-          attendanceRate: 'Tasa de Asistencia',
-          photos: 'Fotos',
-          lowAttendance: 'Baja tasa de asistencia - Este usuario tiene una tasa de asistencia del',
-          reportUser: 'Reportar Usuario',
-          reason: 'Razón',
-          selectReason: 'Selecciona una razón',
-          harassment: 'Acoso',
-          inappropriate: 'Comportamiento inapropiado',
-          spam: 'Spam',
-          fake: 'Cuenta falsa',
-          noShow: 'Ausencias repetidas',
-          other: 'Otro',
-          additionalDetails: 'Detalles adicionales (opcional)',
-          provideContext: 'Proporciona más contexto...',
-          cancel: 'Cancelar',
-          submit: 'Enviar Reporte',
-          submitting: 'Enviando...',
-          blockConfirm: '¿Bloquear a este usuario? No verás sus sesiones ni mensajes.',
-          userBlocked: 'Usuario bloqueado',
-          userUnblocked: 'Usuario desbloqueado',
-          selectReasonError: 'Por favor selecciona una razón',
-          reportSuccess: 'Reporte enviado. Nuestro equipo lo revisará.',
-        }
-      : {
-          loading: 'Loading...',
-          userNotFound: 'User not found',
-          goBack: 'Go back',
-          block: 'Block',
-          unblock: 'Unblock',
-          report: 'Report',
-          sessionsCreated: 'Sessions Created',
-          sessionsJoined: 'Sessions Joined',
-          totalSessions: 'Total Sessions',
-          attendanceRate: 'Attendance Rate',
-          photos: 'Photos',
-          lowAttendance: 'Low attendance rate - This user has a show-up rate of',
-          reportUser: 'Report User',
-          reason: 'Reason',
-          selectReason: 'Select a reason',
-          harassment: 'Harassment',
-          inappropriate: 'Inappropriate behavior',
-          spam: 'Spam',
-          fake: 'Fake account',
-          noShow: 'Repeated no-shows',
-          other: 'Other',
-          additionalDetails: 'Additional details (optional)',
-          provideContext: 'Provide more context...',
-          cancel: 'Cancel',
-          submit: 'Submit Report',
-          submitting: 'Submitting...',
-          blockConfirm: "Block this user? You won't see their sessions or messages.",
-          userBlocked: 'User blocked',
-          userUnblocked: 'User unblocked',
-          selectReasonError: 'Please select a reason',
-          reportSuccess: 'Report submitted. Our team will review it.',
-        };
-
   useEffect(() => {
     loadProfile();
     checkCurrentUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [userId]);
 
-  // Lock body scroll and handle back button when lightbox is open
   useEffect(() => {
     function handlePopState() {
-      if (lightboxPhoto) {
-        setLightboxPhoto(null);
-      }
+      if (lightboxPhoto) setLightboxPhoto(null);
     }
-
     if (lightboxPhoto) {
       const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
@@ -132,7 +64,6 @@ export default function PublicProfilePage() {
       document.body.style.top = `-${scrollY}px`;
       window.addEventListener('popstate', handlePopState);
     }
-
     return () => {
       window.removeEventListener('popstate', handlePopState);
       if (lightboxPhoto) {
@@ -151,7 +82,6 @@ export default function PublicProfilePage() {
       data: { user },
     } = await supabase.auth.getUser();
     setCurrentUser(user);
-
     if (user) {
       const { data } = await supabase
         .from('blocked_users')
@@ -159,7 +89,6 @@ export default function PublicProfilePage() {
         .eq('user_id', user.id)
         .eq('blocked_user_id', userId)
         .single();
-
       setIsBlocked(!!data);
     }
   }
@@ -167,28 +96,18 @@ export default function PublicProfilePage() {
   async function loadProfile() {
     try {
       const { data: profileData } = await supabase.from('users').select('*').eq('id', userId).single();
-
       setProfile(profileData);
-
       const { count: created } = await supabase
         .from('sessions')
         .select('*', { count: 'exact', head: true })
         .eq('creator_id', userId)
         .eq('status', 'active');
-
       const { count: joined } = await supabase
         .from('session_participants')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
-
       const { data: attendanceData } = await supabase.rpc('get_user_attendance_stats', { user_uuid: userId });
-
-      const attendance = attendanceData?.[0] || {
-        total_sessions: 0,
-        attended_sessions: 0,
-        attendance_rate: 0,
-      };
-
+      const attendance = attendanceData?.[0] || { total_sessions: 0, attended_sessions: 0, attendance_rate: 0 };
       setStats({
         sessionsCreated: created || 0,
         sessionsJoined: joined || 0,
@@ -205,21 +124,14 @@ export default function PublicProfilePage() {
 
   async function handleBlock() {
     if (!currentUser) return;
-
     try {
       if (isBlocked) {
         await supabase.from('blocked_users').delete().eq('user_id', currentUser.id).eq('blocked_user_id', userId);
-
         setIsBlocked(false);
         showSuccess(t.userUnblocked);
       } else {
         if (!confirm(t.blockConfirm)) return;
-
-        await supabase.from('blocked_users').insert({
-          user_id: currentUser.id,
-          blocked_user_id: userId,
-        });
-
+        await supabase.from('blocked_users').insert({ user_id: currentUser.id, blocked_user_id: userId });
         setIsBlocked(true);
         showSuccess(t.userBlocked);
       }
@@ -233,7 +145,6 @@ export default function PublicProfilePage() {
       showInfo(t.selectReasonError);
       return;
     }
-
     setSubmitting(true);
     try {
       await supabase.from('reported_users').insert({
@@ -242,7 +153,6 @@ export default function PublicProfilePage() {
         reason: reportReason,
         description: reportDescription,
       });
-
       showSuccess(t.reportSuccess);
       setShowReportModal(false);
       setReportReason('');
@@ -254,15 +164,13 @@ export default function PublicProfilePage() {
     }
   }
 
-  if (loading) {
+  if (loading)
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
         <p className="text-theme-primary">{t.loading}</p>
       </div>
     );
-  }
-
-  if (!profile) {
+  if (!profile)
     return (
       <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center">
         <p className="text-theme-primary mb-4">{t.userNotFound}</p>
@@ -271,7 +179,6 @@ export default function PublicProfilePage() {
         </button>
       </div>
     );
-  }
 
   const isOwnProfile = currentUser?.id === userId;
   const sports = profile.sports || [];
@@ -287,16 +194,11 @@ export default function PublicProfilePage() {
             </button>
             <h1 className="text-xl font-bold text-theme-primary">{profile.name}</h1>
           </div>
-
           {currentUser && !isOwnProfile && (
             <div className="flex gap-2">
               <button
                 onClick={handleBlock}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  isBlocked
-                    ? 'bg-stone-200 text-stone-700 hover:bg-stone-300'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${isBlocked ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
               >
                 <Shield className="w-4 h-4 inline mr-1" />
                 {isBlocked ? t.unblock : t.block}
@@ -351,24 +253,22 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {/* Stats - 2x2 Grid Layout */}
           <div className="grid grid-cols-2 gap-3 mt-6">
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-sm text-theme-secondary mt-1">{t.sessionsCreated}</p>
-            </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-sm text-theme-secondary mt-1">{t.sessionsJoined}</p>
-            </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-sm text-theme-secondary mt-1">{t.totalSessions}</p>
-            </div>
+            {[
+              { value: stats.sessionsCreated, label: t.sessionsCreated },
+              { value: stats.sessionsJoined, label: t.sessionsJoined },
+              { value: stats.totalSessions, label: t.totalSessions },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]"
+              >
+                <p className="text-4xl font-bold text-theme-primary">{stat.value}</p>
+                <p className="text-sm text-theme-secondary mt-1">{stat.label}</p>
+              </div>
+            ))}
             <div
-              className={`bg-white rounded-2xl p-4 text-center border ${
-                hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'
-              }`}
+              className={`bg-white rounded-2xl p-4 text-center border ${hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'}`}
             >
               <p className={`text-4xl font-bold ${hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'}`}>
                 {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
@@ -383,12 +283,9 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {/* Social Media Links */}
           {(profile?.instagram_username || profile?.facebook_url) && (
             <div className="mt-6 bg-white rounded-2xl p-5 border border-stone-200">
-              <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
-                🔗 {language === 'es' ? 'Redes Sociales' : 'Social Media'}
-              </h3>
+              <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">🔗 {t.socialMedia}</h3>
               <div className="space-y-2">
                 {profile?.instagram_username && (
                   <a
@@ -452,107 +349,30 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {/* Photo Lightbox */}
       {lightboxPhoto && (
-        <div
-          className="fixed inset-0 bg-black z-[60] flex items-center justify-center overflow-hidden"
-          onClick={() => history.back()}
-        >
-          <button
-            onClick={() => history.back()}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition z-10"
-          >
-            <X className="w-8 h-8" />
-          </button>
-
-          {profile?.photos && profile.photos.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newIndex = (lightboxIndex - 1 + profile.photos!.length) % profile.photos!.length;
-                  setLightboxIndex(newIndex);
-                  setLightboxPhoto(profile.photos![newIndex]);
-                }}
-                className="absolute left-4 p-2 text-white hover:bg-white/10 rounded-full transition"
-              >
-                <ChevronLeft className="w-8 h-8" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newIndex = (lightboxIndex + 1) % profile.photos!.length;
-                  setLightboxIndex(newIndex);
-                  setLightboxPhoto(profile.photos![newIndex]);
-                }}
-                className="absolute right-4 p-2 text-white hover:bg-white/10 rounded-full transition"
-              >
-                <ChevronRight className="w-8 h-8" />
-              </button>
-            </>
-          )}
-
-          <img
-            src={lightboxPhoto}
-            alt="Full size"
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-          />
-        </div>
+        <ProfileLightbox
+          photo={lightboxPhoto}
+          photos={profile?.photos ?? null}
+          lightboxIndex={lightboxIndex}
+          onClose={() => history.back()}
+          onNavigate={(index, photo) => {
+            setLightboxIndex(index);
+            setLightboxPhoto(photo);
+          }}
+        />
       )}
 
       {showReportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">{t.reportUser}</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">{t.reason} *</label>
-                <select
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full p-2 border rounded-lg text-stone-900"
-                >
-                  <option value="">{t.selectReason}</option>
-                  <option value="harassment">{t.harassment}</option>
-                  <option value="inappropriate">{t.inappropriate}</option>
-                  <option value="spam">{t.spam}</option>
-                  <option value="fake">{t.fake}</option>
-                  <option value="no-show">{t.noShow}</option>
-                  <option value="other">{t.other}</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">{t.additionalDetails}</label>
-                <textarea
-                  value={reportDescription}
-                  onChange={(e) => setReportDescription(e.target.value)}
-                  placeholder={t.provideContext}
-                  className="w-full p-2 border rounded-lg h-24 resize-none text-stone-900"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowReportModal(false)}
-                className="flex-1 px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50"
-                disabled={submitting}
-              >
-                {t.cancel}
-              </button>
-              <button
-                onClick={handleReport}
-                disabled={submitting || !reportReason}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
-              >
-                {submitting ? t.submitting : t.submit}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReportUserModal
+          t={t}
+          reportReason={reportReason}
+          reportDescription={reportDescription}
+          submitting={submitting}
+          onReasonChange={setReportReason}
+          onDescriptionChange={setReportDescription}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleReport}
+        />
       )}
 
       <BottomNav />

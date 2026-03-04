@@ -1,183 +1,39 @@
 /** Page: /profile — Current user's profile with stats, reviews, and settings */
 'use client';
-import { logError } from '@/lib/logger';
-import { showError } from '@/lib/toast';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, MapPin, X, Settings } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
-import type { User } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
-
-type UserProfile = Database['public']['Tables']['users']['Row'];
+import { useProfile } from './useProfile';
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const supabase = createClient();
   const { language } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState({
-    sessionsCreated: 0,
-    sessionsJoined: 0,
-    totalSessions: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [showAllSports, setShowAllSports] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  // Lock body scroll and handle back button when lightbox is open
-  useEffect(() => {
-    function handlePopState() {
-      if (selectedPhoto) {
-        setSelectedPhoto(null);
-      }
-    }
-
-    if (selectedPhoto) {
-      const scrollY = window.scrollY;
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${scrollY}px`;
-      window.addEventListener('popstate', handlePopState);
-    }
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      if (selectedPhoto) {
-        const scrollY = document.body.style.top;
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
-        document.body.style.top = '';
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
-      }
-    };
-  }, [selectedPhoto]);
-
-  async function loadProfile() {
-    try {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push('/auth');
-        return;
-      }
-      setUser(authUser);
-
-      const { data: profileData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-
-      setProfile(profileData);
-
-      const { count: created } = await supabase
-        .from('sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('creator_id', authUser.id)
-        .eq('status', 'active');
-
-      const { count: joined } = await supabase
-        .from('session_participants')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', authUser.id);
-
-      setStats({
-        sessionsCreated: created || 0,
-        sessionsJoined: joined || 0,
-        totalSessions: (created || 0) + (joined || 0),
-      });
-    } catch (error) {
-      logError(error, { action: 'loadProfile' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('profile-images').getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      await loadProfile();
-    } catch (error) {
-      logError(error, { action: 'handleAvatarUpload' });
-      showError('Failed to upload image');
-    }
-  }
-
-  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner-${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `banners/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('profile-images').getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase.from('users').update({ banner_url: publicUrl }).eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      await loadProfile();
-    } catch (error) {
-      logError(error, { action: 'handleBannerUpload' });
-      showError('Failed to upload banner');
-    }
-  }
+  const {
+    txt,
+    profile,
+    stats,
+    loading,
+    showAllSports,
+    setShowAllSports,
+    selectedPhoto,
+    handleAvatarUpload,
+    handleBannerUpload,
+    openPhoto,
+    getInitials,
+    sports,
+    photos,
+    displayedSports,
+    getProfileCompleteness,
+    router,
+  } = useProfile(language);
 
   if (loading) {
     return <div className="min-h-screen bg-theme-page flex items-center justify-center"></div>;
   }
 
-  const getInitials = (name: string) => {
-    return (
-      name
-        ?.split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'U'
-    );
-  };
-
-  const sports = profile?.sports || [];
-  const photos = profile?.photos || [];
-  const displayedSports = showAllSports ? sports : sports.slice(0, 6);
+  const pct = getProfileCompleteness();
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -250,48 +106,33 @@ export default function ProfilePage() {
           </div>
 
           {/* Profile Completeness */}
-          {(() => {
-            const fields = [
-              !!profile?.name,
-              !!profile?.avatar_url,
-              !!profile?.bio,
-              (profile?.sports?.length || 0) > 0,
-              (profile?.photos?.length || 0) > 0,
-              !!profile?.location,
-            ];
-            const filled = fields.filter(Boolean).length;
-            const pct = Math.round((filled / fields.length) * 100);
-            if (pct >= 100) return null;
-            return (
-              <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4 border border-stone-200 dark:border-[#52575D]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-theme-primary">
-                    {language === 'es' ? `Perfil: ${pct}% completo` : `Profile: ${pct}% complete`}
-                  </span>
-                </div>
-                <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-tribe-green rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
+          {pct !== null && (
+            <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4 border border-stone-200 dark:border-[#52575D]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-theme-primary">{txt.profileComplete(pct)}</span>
               </div>
-            );
-          })()}
+              <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-tribe-green rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-sm text-theme-secondary mt-1">{language === 'es' ? 'Creadas' : 'Created'}</p>
+              <p className="text-sm text-theme-secondary mt-1">{txt.created}</p>
             </div>
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-sm text-theme-secondary mt-1">{language === 'es' ? 'Unidas' : 'Joined'}</p>
+              <p className="text-sm text-theme-secondary mt-1">{txt.joined}</p>
             </div>
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-sm text-theme-secondary mt-1">{language === 'es' ? 'Total' : 'Total'}</p>
+              <p className="text-sm text-theme-secondary mt-1">{txt.total}</p>
             </div>
           </div>
 
@@ -303,11 +144,7 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl p-5 border border-stone-200 text-center">
-                <p className="text-theme-secondary text-sm italic">
-                  {language === 'es'
-                    ? 'Sin bio aún. Haz clic en Editar Perfil para agregar una.'
-                    : 'No bio yet. Click Edit Profile to add one.'}
-                </p>
+                <p className="text-theme-secondary text-sm italic">{txt.noBio}</p>
               </div>
             )}
           </div>
@@ -316,7 +153,7 @@ export default function ProfilePage() {
           {(profile?.instagram_username || profile?.facebook_url) && (
             <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
-                🔗 {language === 'es' ? 'Redes Sociales Verificadas' : 'Verified Social Media'}
+                🔗 {txt.verifiedSocial}
               </h3>
               <div className="space-y-2">
                 {profile?.instagram_username && (
@@ -346,15 +183,12 @@ export default function ProfilePage() {
           {/* Photo Gallery */}
           {photos.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-bold text-theme-primary mb-3">{language === 'es' ? 'Fotos' : 'Photos'}</h3>
+              <h3 className="text-lg font-bold text-theme-primary mb-3">{txt.photos}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {photos.map((photo: string, index: number) => (
                   <div
                     key={index}
-                    onClick={() => {
-                      setSelectedPhoto(photo);
-                      history.pushState({ lightbox: true }, '');
-                    }}
+                    onClick={() => openPhoto(photo)}
                     className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
                   >
                     <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
@@ -382,13 +216,7 @@ export default function ProfilePage() {
                   onClick={() => setShowAllSports(!showAllSports)}
                   className="mt-3 text-sm text-tribe-green font-medium hover:underline"
                 >
-                  {showAllSports
-                    ? language === 'es'
-                      ? 'Mostrar Menos'
-                      : 'Show Less'
-                    : language === 'es'
-                      ? `Mostrar ${sports.length - 6} Más`
-                      : `Show ${sports.length - 6} More`}
+                  {showAllSports ? txt.showLess : txt.showMore(sports.length - 6)}
                 </button>
               )}
             </div>
@@ -399,7 +227,7 @@ export default function ProfilePage() {
             onClick={() => router.push('/profile/edit')}
             className="w-full mt-8 py-4 bg-tribe-green text-slate-900 font-bold rounded-2xl hover:opacity-90 transition text-lg"
           >
-            {language === 'es' ? 'Editar Perfil' : 'Edit Profile'}
+            {txt.editProfile}
           </button>
         </div>
       </div>

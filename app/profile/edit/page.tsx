@@ -1,216 +1,29 @@
 /** Page: /profile/edit — Edit profile details, photos, sports, and emergency contact */
 'use client';
-import { logError } from '@/lib/logger';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
 
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
 import { useLanguage } from '@/lib/LanguageContext';
-
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import type { User } from '@supabase/supabase-js';
+import { useEditProfile } from './useEditProfile';
 
 export default function EditProfilePage() {
-  const router = useRouter();
-  const supabase = createClient();
   const { language } = useLanguage();
   const getTranslatedSport = (sport: string) => (language === 'es' ? sportTranslations[sport]?.es || sport : sport);
 
-  const tr = {
-    editProfile: language === 'es' ? 'Editar Perfil' : 'Edit Profile',
-    save: language === 'es' ? 'Guardar' : 'Save',
-    saving: language === 'es' ? 'Guardando...' : 'Saving...',
-    loading: language === 'es' ? 'Cargando...' : 'Loading...',
-    name: language === 'es' ? 'Nombre' : 'Name',
-    namePlaceholder: language === 'es' ? 'Tu nombre' : 'Your name',
-    username: language === 'es' ? 'Nombre de usuario' : 'Username',
-    location: language === 'es' ? 'Ubicación' : 'Location',
-    locationPlaceholder: language === 'es' ? 'Ciudad, Estado/País' : 'City, State/Country',
-    bio: language === 'es' ? 'Biografía' : 'Bio',
-    bioPlaceholder: language === 'es' ? 'Cuéntanos sobre ti...' : 'Tell us about yourself...',
-    photos: language === 'es' ? 'Fotos' : 'Photos',
-    addPhoto: language === 'es' ? 'Agregar Foto' : 'Add Photo',
-    maxPhotos: language === 'es' ? 'Máximo 6 fotos permitidas' : 'Maximum 6 photos allowed',
-    sports: language === 'es' ? 'Deportes y Actividades' : 'Sports & Activities',
-    saveProfile: language === 'es' ? 'Guardar Perfil' : 'Save Profile',
-    profileUpdated: language === 'es' ? '¡Perfil actualizado con éxito!' : 'Profile updated successfully!',
-    emergencyContact:
-      language === 'es'
-        ? 'Contacto de Emergencia (Opcional pero Recomendado)'
-        : 'Emergency Contact (Optional but Recommended)',
-    emergencyDesc:
-      language === 'es'
-        ? 'Información de contacto de emergencia en caso de accidente durante una sesión'
-        : 'Emergency contact information in case of an incident during a session',
-    contactName: language === 'es' ? 'Nombre de Contacto' : 'Contact Name',
-    contactPhone: language === 'es' ? 'Teléfono de Contacto' : 'Contact Phone',
-    socialMedia: language === 'es' ? 'Redes Sociales (Recomendado)' : 'Social Media (Recommended)',
-    socialDesc:
-      language === 'es'
-        ? 'Ayuda a otros a verificar que eres una persona real. Los compañeros de entrenamiento pueden revisar tu perfil antes de unirse.'
-        : 'Help others verify you are a real person. Training partners can check your profile before joining.',
-    instagramLabel: language === 'es' ? '(nombre de usuario)' : '(username)',
-    facebookLabel: language === 'es' ? '(URL del perfil)' : '(profile URL)',
-    welcomeBanner:
-      language === 'es'
-        ? '¡Bienvenido a Tribe! Completa tu perfil para encontrar compañeros de entrenamiento cerca de ti.'
-        : 'Welcome to Tribe! Complete your profile to find training partners near you.',
-    contactNamePlaceholder: language === 'es' ? 'ej. Juan Pérez' : 'e.g. John Smith',
-    contactPhonePlaceholder: language === 'es' ? 'ej. +57 300 123 4567' : 'e.g. +1 (555) 123-4567',
-  };
-
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    bio: '',
-    location: '',
-    sports: [] as string[],
-    photos: [] as string[],
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    instagram_username: '',
-    facebook_url: '',
-  });
-
-  useEffect(() => {
-    loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  async function loadProfile() {
-    try {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
-      if (!authUser) {
-        router.push('/auth');
-        return;
-      }
-      setUser(authUser);
-
-      const { data: profileData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-
-      if (profileData) {
-        setFormData({
-          name: profileData.name || '',
-          username: profileData.username || '',
-          bio: profileData.bio || '',
-          location: profileData.location || '',
-          sports: profileData.sports || [],
-          photos: profileData.photos || [],
-          emergency_contact_name: profileData.emergency_contact_name || '',
-          emergency_contact_phone: profileData.emergency_contact_phone || '',
-          instagram_username: profileData.instagram_username || '',
-          facebook_url: profileData.facebook_url || '',
-        });
-      }
-    } catch (error) {
-      logError(error, { action: 'loadProfile' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    if (formData.photos.length >= 6) {
-      showInfo(tr.maxPhotos);
-      return;
-    }
-
-    try {
-      setUploadingPhoto(true);
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `photo-${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `photos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('profile-images').getPublicUrl(filePath);
-
-      setFormData({
-        ...formData,
-        photos: [...formData.photos, publicUrl],
-      });
-    } catch (error) {
-      logError(error, { action: 'handlePhotoUpload' });
-      showError(getErrorMessage(error, 'upload_photo', language));
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }
-
-  function removePhoto(index: number) {
-    setFormData({
-      ...formData,
-      photos: formData.photos.filter((_, i) => i !== index),
-    });
-  }
-
-  async function handleSave() {
-    if (!user) return;
-
-    try {
-      setSaving(true);
-
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: formData.name,
-          username: formData.username,
-          bio: formData.bio,
-          location: formData.location,
-          sports: formData.sports,
-          photos: formData.photos,
-          emergency_contact_name: formData.emergency_contact_name,
-          emergency_contact_phone: formData.emergency_contact_phone,
-          instagram_username: formData.instagram_username,
-          facebook_url: formData.facebook_url,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      showSuccess(tr.profileUpdated);
-      router.push('/profile');
-    } catch (error: unknown) {
-      logError(error, { action: 'handleSave' });
-      showError(getErrorMessage(error, 'update_profile', language));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function toggleSport(sport: string) {
-    if (formData.sports.includes(sport)) {
-      setFormData({
-        ...formData,
-        sports: formData.sports.filter((s) => s !== sport),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        sports: [...formData.sports, sport],
-      });
-    }
-  }
+  const {
+    tr,
+    loading,
+    saving,
+    uploadingPhoto,
+    formData,
+    setFormData,
+    handlePhotoUpload,
+    removePhoto,
+    handleSave,
+    toggleSport,
+  } = useEditProfile(language);
 
   if (loading) {
     return (
@@ -307,8 +120,6 @@ export default function EditProfilePage() {
           />
         </div>
 
-        {/* Photos */}
-
         {/* Social Media Links */}
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
           <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">🔗 {tr.socialMedia}</h3>
@@ -379,6 +190,8 @@ export default function EditProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Photos */}
         <div>
           <label className="block text-sm font-semibold text-theme-primary mb-3">
             {tr.photos} ({formData.photos.length}/6)

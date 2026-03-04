@@ -1,9 +1,6 @@
 /** Page: /admin — Admin dashboard for managing users, sessions, reports, and feedback */
 'use client';
-import { logError } from '@/lib/logger';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getErrorMessage } from '@/lib/errorMessages';
-import { showSuccess, showError } from '@/lib/toast';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -18,33 +15,9 @@ import {
   SessionManagement,
 } from '@/components/admin';
 import type { User as AuthUser } from '@supabase/supabase-js';
-import type { Database } from '@/lib/database.types';
 
-type UserRow = Database['public']['Tables']['users']['Row'];
-type SessionRow = Database['public']['Tables']['sessions']['Row'];
-type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row'];
-type ReportedUserRow = Database['public']['Tables']['reported_users']['Row'];
-type UserFeedbackRow = Database['public']['Tables']['user_feedback']['Row'];
-type BugReportRow = Database['public']['Tables']['bug_reports']['Row'];
-
-type AdminUser = UserRow & { sessions_created: number; sessions_joined: number };
-type AdminReport = ReportedUserRow & {
-  reporter: { id: string; name: string | null; email: string } | null;
-  reported: { id: string; name: string | null; email: string } | null;
-};
-type AdminFeedback = UserFeedbackRow & {
-  user: { id: string; name: string | null; email: string } | null;
-};
-type AdminBug = BugReportRow & {
-  user: { id: string; name: string | null; email: string } | null;
-};
-type AdminSession = SessionRow & {
-  creator: { id: string; name: string | null; email: string } | null;
-};
-type AdminMessage = ChatMessageRow & {
-  user: { id: string; name: string | null; email: string } | null;
-  session: { id: string; sport: string; location: string } | null;
-};
+import { useAdminData } from './useAdminData';
+import { useAdminActions } from './useAdminActions';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -54,422 +27,54 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    activeUsers: 0,
-    activeSessions: 0,
-    totalSessions: 0,
-    sessionsThisWeek: 0,
-    sessionsThisMonth: 0,
-    totalMessages: 0,
-    newUsersToday: 0,
-    completedSessions: 0,
-    cancelledSessions: 0,
-    averageParticipants: 0,
-    topSport: '',
-    topSportCount: 0,
-    avgSessionsPerUser: 0,
-    retentionPercent: 0,
-    totalCreated: 0,
-    totalJoined: 0,
-  });
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [reports, setReports] = useState<AdminReport[]>([]);
-  const [feedback, setFeedback] = useState<AdminFeedback[]>([]);
-  const [bugs, setBugs] = useState<AdminBug[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [loadingReports, setLoadingReports] = useState(false);
-  const [sessions, setSessions] = useState<AdminSession[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
-  const [messages, setMessages] = useState<AdminMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [loadingBugs, setLoadingBugs] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const data = useAdminData(supabase);
+  const actions = useAdminActions(supabase, user?.id, language, {
+    setUsers: data.setUsers,
+    setReports: data.setReports,
+    setFeedback: data.setFeedback,
+    setBugs: data.setBugs,
+    setSessions: data.setSessions,
+    setMessages: data.setMessages,
+  });
 
   useEffect(() => {
-    checkAdmin();
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth');
+        return;
+      }
+      const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
+      if (!profile?.is_admin) {
+        alert('Unauthorized access');
+        router.push('/');
+        return;
+      }
+      setUser(user);
+      setAuthorized(true);
+      await data.loadStats();
+      setLoading(false);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'users') loadUsers();
-    else if (activeTab === 'reports') loadReports();
-    else if (activeTab === 'feedback') loadFeedback();
-    else if (activeTab === 'bugs') loadBugs();
-    else if (activeTab === 'messages') loadMessages();
-    else if (activeTab === 'sessions') loadSessions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once after admin check
+    if (activeTab === 'users') data.loadUsers();
+    else if (activeTab === 'reports') data.loadReports();
+    else if (activeTab === 'feedback') data.loadFeedback();
+    else if (activeTab === 'bugs') data.loadBugs();
+    else if (activeTab === 'messages') data.loadMessages();
+    else if (activeTab === 'sessions') data.loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loads once per tab
   }, [activeTab]);
 
-  async function checkAdmin() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-      return;
-    }
-    const { data: profile } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
-    if (!profile?.is_admin) {
-      alert('Unauthorized access');
-      router.push('/');
-      return;
-    }
-    setUser(user);
-    setAuthorized(true);
-    await loadStats();
-    setLoading(false);
-  }
-
-  async function loadStats() {
-    try {
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const weekStart = new Date(now);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
-      const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-
-      // Parallel fetches
-      const [
-        { count: userCount },
-        { count: activeSessionCount },
-        { count: messageCount },
-        { count: newUsers },
-        { data: allSessions },
-        { data: allSessionCreators },
-        { data: allParticipants },
-      ] = await Promise.all([
-        supabase.from('users').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('sessions')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .gte('date', today),
-        supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
-        supabase.from('sessions').select('id, status, date, participants_count, sport, creator_id'),
-        supabase.from('sessions').select('creator_id'),
-        supabase.from('session_participants').select('user_id'),
-      ]);
-
-      const totalSessions = allSessions?.length || 0;
-      const pastSessions = allSessions?.filter((s) => new Date(s.date + 'T00:00:00') < new Date()) || [];
-      const completedCount = pastSessions.filter((s) => s.status === 'completed').length;
-      const cancelledCount = pastSessions.filter((s) => s.status === 'cancelled').length;
-      const avgParticipants =
-        totalSessions > 0
-          ? Math.round((allSessions || []).reduce((sum, s) => sum + (s.participants_count || 0), 0) / totalSessions)
-          : 0;
-
-      // Sessions this week/month
-      const sessionsThisWeek = allSessions?.filter((s) => s.date >= weekStr).length || 0;
-      const sessionsThisMonth = allSessions?.filter((s) => s.date >= monthStr).length || 0;
-
-      // Most popular sport
-      const sportCounts: Record<string, number> = {};
-      allSessions?.forEach((s) => {
-        sportCounts[s.sport] = (sportCounts[s.sport] || 0) + 1;
-      });
-      const topSportEntry = Object.entries(sportCounts).sort((a, b) => b[1] - a[1])[0];
-
-      // Active users (created or joined in last 30 days)
-      const activeCreatorIds = new Set<string>();
-      allSessions?.forEach((s) => {
-        if (new Date(s.date + 'T00:00:00') >= new Date(thirtyDaysAgo)) activeCreatorIds.add(s.creator_id);
-      });
-      const activeParticipantIds = new Set<string>();
-      // We can't filter participants by date easily, so count unique users
-      allParticipants?.forEach((p) => activeParticipantIds.add(p.user_id));
-      const activeUsers = new Set([...activeCreatorIds, ...activeParticipantIds]).size;
-
-      // Retention: % of creators who made >1 session
-      const creatorCounts = new Map<string, number>();
-      allSessionCreators?.forEach((s) => {
-        creatorCounts.set(s.creator_id, (creatorCounts.get(s.creator_id) || 0) + 1);
-      });
-      const creatorsWithMultiple = [...creatorCounts.values()].filter((c) => c > 1).length;
-      const retentionPercent =
-        creatorCounts.size > 0 ? Math.round((creatorsWithMultiple / creatorCounts.size) * 100) : 0;
-
-      // Avg sessions per user
-      const avgSessionsPerUser = (userCount || 0) > 0 ? Math.round((totalSessions / (userCount || 1)) * 10) / 10 : 0;
-
-      setStats({
-        totalUsers: userCount || 0,
-        activeUsers,
-        activeSessions: activeSessionCount || 0,
-        totalSessions,
-        sessionsThisWeek,
-        sessionsThisMonth,
-        totalMessages: messageCount || 0,
-        newUsersToday: newUsers || 0,
-        completedSessions: completedCount,
-        cancelledSessions: cancelledCount,
-        averageParticipants: avgParticipants,
-        topSport: topSportEntry?.[0] || '-',
-        topSportCount: topSportEntry?.[1] || 0,
-        avgSessionsPerUser,
-        retentionPercent,
-        totalCreated: allSessionCreators?.length || 0,
-        totalJoined: allParticipants?.length || 0,
-      });
-    } catch (error) {
-      logError(error, { action: 'loadStats' });
-    }
-  }
-
-  async function loadUsers() {
-    setLoadingUsers(true);
-    try {
-      const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-        supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
-        supabase.from('sessions').select('creator_id'),
-        supabase.from('session_participants').select('user_id'),
-      ]);
-      if (error) throw error;
-
-      const createdMap = new Map<string, number>();
-      sessionCounts?.forEach((s) => {
-        createdMap.set(s.creator_id, (createdMap.get(s.creator_id) || 0) + 1);
-      });
-      const joinedMap = new Map<string, number>();
-      participantCounts?.forEach((p) => {
-        if (p.user_id) joinedMap.set(p.user_id, (joinedMap.get(p.user_id) || 0) + 1);
-      });
-
-      const enrichedUsers = (data || []).map((u) => ({
-        ...u,
-        sessions_created: createdMap.get(u.id) || 0,
-        sessions_joined: joinedMap.get(u.id) || 0,
-      }));
-      setUsers(enrichedUsers);
-    } catch (error) {
-      logError(error, { action: 'loadUsers' });
-    } finally {
-      setLoadingUsers(false);
-    }
-  }
-
-  async function loadReports() {
-    setLoadingReports(true);
-    try {
-      const { data, error } = await supabase
-        .from('reported_users')
-        .select(
-          `*, reporter:users!reported_users_reporter_id_fkey(id, name, email),
-          reported:users!reported_users_reported_user_id_fkey(id, name, email)`
-        )
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setReports(data || []);
-    } catch (error) {
-      logError(error, { action: 'loadReports' });
-    } finally {
-      setLoadingReports(false);
-    }
-  }
-
-  async function loadFeedback() {
-    setLoadingFeedback(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_feedback')
-        .select(`*, user:users(id, name, email)`)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setFeedback(data || []);
-    } catch (error) {
-      logError(error, { action: 'loadFeedback' });
-    } finally {
-      setLoadingFeedback(false);
-    }
-  }
-
-  async function loadBugs() {
-    setLoadingBugs(true);
-    try {
-      const { data, error } = await supabase
-        .from('bug_reports')
-        .select(`*, user:users(id, name, email)`)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setBugs(data || []);
-    } catch (error) {
-      logError(error, { action: 'loadBugs' });
-    } finally {
-      setLoadingBugs(false);
-    }
-  }
-
-  async function loadMessages() {
-    setLoadingMessages(true);
-    try {
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select(`*, user:users(id, name, email), session:sessions(id, sport, location)`)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      logError(error, { action: 'loadMessages' });
-    } finally {
-      setLoadingMessages(false);
-    }
-  }
-
-  async function loadSessions() {
-    setLoadingSessions(true);
-    try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .select(`*, creator:users!sessions_creator_id_fkey(id, name, email)`)
-        .order('date', { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      setSessions(data || []);
-    } catch (error) {
-      logError(error, { action: 'loadSessions' });
-    } finally {
-      setLoadingSessions(false);
-    }
-  }
-
-  async function deleteMessage(messageId: string) {
-    if (!confirm('Delete this message?')) return;
-    setActionLoading(messageId);
-    try {
-      const { error } = await supabase.from('chat_messages').delete().eq('id', messageId);
-      if (error) throw error;
-      setMessages(messages.filter((m) => m.id !== messageId));
-      showSuccess('Message deleted');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function verifySessionPhotos(sessionId: string) {
-    if (!confirm('Verify these location photos as authentic?')) return;
-    try {
-      const { error } = await supabase
-        .from('sessions')
-        .update({ photo_verified: true, verified_by: user?.id, verified_at: new Date().toISOString() })
-        .eq('id', sessionId);
-      if (error) throw error;
-      setSessions(sessions.map((s) => (s.id === sessionId ? { ...s, photo_verified: true } : s)));
-      showSuccess('Photos verified');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  async function unverifySessionPhotos(sessionId: string) {
-    if (!confirm('Remove verification?')) return;
-    try {
-      const { error } = await supabase
-        .from('sessions')
-        .update({ photo_verified: false, verified_by: null, verified_at: null })
-        .eq('id', sessionId);
-      if (error) throw error;
-      setSessions(sessions.map((s) => (s.id === sessionId ? { ...s, photo_verified: false } : s)));
-      showSuccess('Verification removed');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  async function banUser(userId: string) {
-    if (!confirm('Ban this user?')) return;
-    setActionLoading(userId);
-    try {
-      const { error } = await supabase.from('users').update({ banned: true }).eq('id', userId);
-      if (error) throw error;
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, banned: true } : u)));
-      showSuccess('User banned');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function unbanUser(userId: string) {
-    if (!confirm('Unban this user?')) return;
-    setActionLoading(userId);
-    try {
-      const { error } = await supabase.from('users').update({ banned: false }).eq('id', userId);
-      if (error) throw error;
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, banned: false } : u)));
-      showSuccess('User unbanned');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function deleteUser(userId: string) {
-    if (!confirm('DELETE user and ALL data?')) return;
-    setActionLoading(userId);
-    try {
-      await supabase.from('chat_messages').delete().eq('user_id', userId);
-      await supabase.from('session_participants').delete().eq('user_id', userId);
-      await supabase.from('sessions').delete().eq('creator_id', userId);
-      const { error } = await supabase.from('users').delete().eq('id', userId);
-      if (error) throw error;
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-      showSuccess('User deleted');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function updateReportStatus(reportId: string, status: string) {
-    try {
-      const { error } = await supabase.from('reported_users').update({ status }).eq('id', reportId);
-      if (error) throw error;
-      setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status } : r)));
-      showSuccess(`Report marked as ${status}`);
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  async function updateFeedbackStatus(feedbackId: string, status: string) {
-    try {
-      const { error } = await supabase.from('user_feedback').update({ status }).eq('id', feedbackId);
-      if (error) throw error;
-      setFeedback((prev) => prev.map((f) => (f.id === feedbackId ? { ...f, status } : f)));
-      showSuccess(`Feedback marked as ${status}`);
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  async function updateBugStatus(bugId: string, status: string) {
-    try {
-      const { error } = await supabase.from('bug_reports').update({ status }).eq('id', bugId);
-      if (error) throw error;
-      setBugs((prev) => prev.map((b) => (b.id === bugId ? { ...b, status } : b)));
-      showSuccess(`Bug marked as ${status}`);
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  const pendingReports = reports.filter((r) => r.status === 'pending');
-  const pendingFeedback = feedback.filter((f) => f.status === 'pending');
-  const pendingBugs = bugs.filter((b) => b.status === 'pending');
+  const pendingReports = data.reports.filter((r) => r.status === 'pending');
+  const pendingFeedback = data.feedback.filter((f) => f.status === 'pending');
+  const pendingBugs = data.bugs.filter((b) => b.status === 'pending');
 
   if (loading) {
     return (
@@ -478,7 +83,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
   if (!authorized) return null;
 
   const tabs = [
@@ -528,54 +132,59 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {activeTab === 'dashboard' && <AdminStats stats={stats} />}
+        {activeTab === 'dashboard' && <AdminStats stats={data.stats} />}
         {activeTab === 'users' && (
           <UserManagement
-            users={users}
+            users={data.users}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            loading={loadingUsers}
-            actionLoading={actionLoading}
-            onBan={banUser}
-            onUnban={unbanUser}
-            onDelete={deleteUser}
+            loading={data.loadingUsers}
+            actionLoading={actions.actionLoading}
+            onBan={actions.banUser}
+            onUnban={actions.unbanUser}
+            onDelete={actions.deleteUser}
           />
         )}
         {activeTab === 'reports' && (
           <ReportedMessages
-            reports={reports}
-            loading={loadingReports}
+            reports={data.reports}
+            loading={data.loadingReports}
             language={language}
-            onBanUser={banUser}
-            onUpdateStatus={updateReportStatus}
+            onBanUser={actions.banUser}
+            onUpdateStatus={actions.updateReportStatus}
           />
         )}
         {activeTab === 'feedback' && (
           <FeedbackList
-            feedback={feedback}
-            loading={loadingFeedback}
+            feedback={data.feedback}
+            loading={data.loadingFeedback}
             language={language}
-            onUpdateStatus={updateFeedbackStatus}
+            onUpdateStatus={actions.updateFeedbackStatus}
           />
         )}
         {activeTab === 'bugs' && (
-          <BugReports bugs={bugs} loading={loadingBugs} language={language} onUpdateStatus={updateBugStatus} />
+          <BugReports
+            bugs={data.bugs}
+            loading={data.loadingBugs}
+            language={language}
+            onUpdateStatus={actions.updateBugStatus}
+          />
         )}
         {activeTab === 'messages' && (
           <MessageList
-            messages={messages}
-            loading={loadingMessages}
-            actionLoading={actionLoading}
-            onDelete={deleteMessage}
+            messages={data.messages}
+            loading={data.loadingMessages}
+            actionLoading={actions.actionLoading}
+            onDelete={actions.deleteMessage}
           />
         )}
         {activeTab === 'sessions' && (
           <SessionManagement
-            sessions={sessions}
-            loading={loadingSessions}
+            sessions={data.sessions}
+            loading={data.loadingSessions}
             language={language}
-            onVerify={verifySessionPhotos}
-            onUnverify={unverifySessionPhotos}
+            onVerify={actions.verifySessionPhotos}
+            onUnverify={actions.unverifySessionPhotos}
           />
         )}
       </div>

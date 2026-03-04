@@ -1,37 +1,20 @@
 /** Page: /training-now — Find and join live training sessions nearby */
 'use client';
-import { log, logError } from '@/lib/logger';
 
-import { useState, useEffect } from 'react';
 import { ArrowLeft, Navigation } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
-import { showSuccess, showError } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
-import { reverseGeocodeGoogle } from '@/lib/google-maps';
-import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
 import Link from 'next/link';
-import type { User } from '@supabase/supabase-js';
+import { getTrainingNowTranslations } from './translations';
+import { useTrainingNow } from './useTrainingNow';
 
 export default function TrainingNowPage() {
-  const supabase = createClient();
-  const router = useRouter();
   const { language } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [gettingLocation, setGettingLocation] = useState(false);
-
-  const [formData, setFormData] = useState({
-    sport: '',
-    location: '',
-    latitude: null as number | null,
-    longitude: null as number | null,
-    startIn: 30,
-    duration: 60,
-  });
+  const txt = getTrainingNowTranslations(language);
+  const { user, loading, gettingLocation, formData, setFormData, getCurrentLocation, handleSubmit } =
+    useTrainingNow(language);
 
   const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
@@ -41,180 +24,6 @@ export default function TrainingNowPage() {
     }
     return sport;
   };
-
-  useEffect(() => {
-    async function getUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/');
-        return;
-      }
-      setUser(user);
-    }
-    getUser();
-    getCurrentLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  async function getCurrentLocation() {
-    setGettingLocation(true);
-    try {
-      if (!navigator.geolocation) {
-        showError(language === 'es' ? 'Geolocalización no soportada' : 'Geolocation not supported');
-        setGettingLocation(false);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          setFormData((prev) => ({ ...prev, latitude, longitude }));
-
-          try {
-            const name = await reverseGeocodeGoogle(latitude, longitude);
-            if (name) {
-              setFormData((prev) => ({ ...prev, location: name }));
-            }
-          } catch (error) {
-            logError(error, { action: 'getCurrentLocation' });
-          }
-          setGettingLocation(false);
-        },
-        (error) => {
-          logError(error, { action: 'getCurrentLocation' });
-          showError(language === 'es' ? 'No se pudo obtener ubicación' : 'Could not get location');
-          setGettingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } catch {
-      setGettingLocation(false);
-    }
-  }
-
-  async function handleSubmit() {
-    if (!user || !formData.sport || !formData.location) {
-      showError(language === 'es' ? 'Por favor completa todos los campos' : 'Please fill in all fields');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const now = new Date();
-      const startTime = new Date(now.getTime() + formData.startIn * 60000);
-
-      const { data: session, error } = await supabase
-        .from('sessions')
-        .insert({
-          creator_id: user.id,
-          sport: formData.sport,
-          date: startTime.toISOString().split('T')[0],
-          start_time: startTime.toTimeString().split(' ')[0],
-          duration: formData.duration,
-          location: formData.location,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          max_participants: 10,
-          join_policy: 'open',
-          description:
-            language === 'es'
-              ? `¡Sesión espontánea de ${formData.sport}! Únete ahora.`
-              : `Spontaneous ${formData.sport} session! Join now.`,
-          status: 'active',
-          is_training_now: true,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await supabase.from('session_participants').insert({
-        session_id: session.id,
-        user_id: user.id,
-        status: 'confirmed',
-      });
-
-      // Fire-and-forget: don't block navigation waiting for notifications
-      notifyNearbyUsers(
-        session.id,
-        formData.sport,
-        formData.location,
-        formData.latitude!,
-        formData.longitude!,
-        formData.startIn
-      );
-
-      showSuccess(
-        language === 'es'
-          ? '¡Sesión creada! Notificando compañeros cercanos...'
-          : 'Session created! Notifying nearby partners...'
-      );
-      router.push(`/session/${session.id}`);
-    } catch (error: unknown) {
-      logError(error, { action: 'handleSubmit' });
-      showError(getErrorMessage(error, 'create_session', language));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function notifyNearbyUsers(
-    sessionId: string,
-    sport: string,
-    location: string,
-    lat: number,
-    lng: number,
-    startIn: number
-  ) {
-    try {
-      const response = await fetch('/api/notify-nearby', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          sport,
-          location,
-          latitude: lat,
-          longitude: lng,
-          startIn,
-          creatorId: user!.id,
-        }),
-      });
-
-      if (!response.ok) {
-        log('error', 'Failed to notify nearby users', { action: 'notifyNearbyUsers', sessionId });
-      }
-    } catch (error) {
-      logError(error, { action: 'notifyNearbyUsers' });
-    }
-  }
-
-  const txt =
-    language === 'es'
-      ? {
-          title: 'Entrenar Ahora',
-          whatTraining: '¿Qué vas a entrenar?',
-          where: '¿Dónde?',
-          useLocation: 'Usar mi ubicación',
-          whenStarting: '¿Cuándo empiezas?',
-          now: 'Ahora',
-          howLong: '¿Cuánto tiempo?',
-          notify: 'NOTIFICAR COMPAÑEROS CERCANOS',
-          creating: 'Creando...',
-        }
-      : {
-          title: 'Training Now',
-          whatTraining: 'What are you training?',
-          where: 'Where?',
-          useLocation: 'Use my location',
-          whenStarting: 'When are you starting?',
-          now: 'Now',
-          howLong: 'How long?',
-          notify: 'NOTIFY NEARBY PARTNERS',
-          creating: 'Creating...',
-        };
 
   const startOptions = [
     { value: 0, label: txt.now },
