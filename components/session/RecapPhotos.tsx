@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Camera, Upload, Trash2, Flag } from 'lucide-react';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface RecapPhoto {
   id: string;
@@ -41,6 +42,7 @@ export default function RecapPhotos({
   onPhotosChanged,
 }: RecapPhotosProps) {
   const [uploadingRecap, setUploadingRecap] = useState(false);
+  const [confirmDeletePhotoId, setConfirmDeletePhotoId] = useState<string | null>(null);
 
   async function compressImage(file: File): Promise<Blob> {
     return new Promise((resolve) => {
@@ -136,8 +138,6 @@ export default function RecapPhotos({
   }
 
   async function deleteRecapPhoto(photoId: string) {
-    if (!confirm('Delete this photo?')) return;
-
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
@@ -232,9 +232,9 @@ export default function RecapPhotos({
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     {(photo.user_id === user?.id || canModerate) && (
                       <button
-                        onClick={() => deleteRecapPhoto(photo.id)}
+                        onClick={() => setConfirmDeletePhotoId(photo.id)}
                         className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
-                        title="Delete"
+                        title={language === 'es' ? 'Eliminar' : 'Delete'}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -293,6 +293,19 @@ export default function RecapPhotos({
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDeletePhotoId}
+        title={language === 'es' ? 'Eliminar foto' : 'Delete photo'}
+        message={language === 'es' ? '¿Eliminar esta foto?' : 'Delete this photo?'}
+        confirmLabel={language === 'es' ? 'Eliminar' : 'Delete'}
+        cancelLabel={language === 'es' ? 'Cancelar' : 'Cancel'}
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDeletePhotoId) deleteRecapPhoto(confirmDeletePhotoId);
+          setConfirmDeletePhotoId(null);
+        }}
+        onCancel={() => setConfirmDeletePhotoId(null)}
+      />
     </>
   );
 }

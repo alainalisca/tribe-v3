@@ -84,8 +84,10 @@ export default function AuthCallbackPage() {
       logError(err, { action: 'getUser', route: '/auth/callback' });
     }
 
-    // Existing user — go home
-    window.location.href = returnTo ? decodeURIComponent(returnTo) : '/';
+    // Existing user — go home (validate returnTo to prevent open redirect)
+    const decoded = returnTo ? decodeURIComponent(returnTo) : '/';
+    const safeReturnTo = decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : '/';
+    window.location.href = safeReturnTo;
   }
 
   return (

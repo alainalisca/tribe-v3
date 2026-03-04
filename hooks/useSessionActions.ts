@@ -47,6 +47,11 @@ export function useSessionActions({
   const [guestData, setGuestData] = useState({ name: '', phone: '', email: '' });
   const [guestHasJoined, setGuestHasJoined] = useState(false);
   const [guestParticipantId, setGuestParticipantId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   async function handleJoin() {
     if (!user) {
@@ -153,13 +158,18 @@ export function useSessionActions({
     }
   }
 
-  async function handleGuestLeave() {
-    if (
-      !confirm(
-        language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?'
-      )
-    )
-      return;
+  function handleGuestLeave() {
+    setConfirmAction({
+      title: language === 'es' ? 'Salir de la sesión' : 'Leave session',
+      message:
+        language === 'es'
+          ? '¿Seguro que quieres salir de esta sesión?'
+          : 'Are you sure you want to leave this session?',
+      onConfirm: () => doGuestLeave(),
+    });
+  }
+
+  async function doGuestLeave() {
     const storedGuestPhone = localStorage.getItem(`guest_phone_${sessionId}`);
     if (!storedGuestPhone) {
       showError(language === 'es' ? 'No se encontró la información del invitado' : 'Guest information not found');
@@ -188,13 +198,18 @@ export function useSessionActions({
     }
   }
 
-  async function handleLeave() {
-    if (
-      !confirm(
-        language === 'es' ? '¿Seguro que quieres salir de esta sesión?' : 'Are you sure you want to leave this session?'
-      )
-    )
-      return;
+  function handleLeave() {
+    setConfirmAction({
+      title: language === 'es' ? 'Salir de la sesión' : 'Leave session',
+      message:
+        language === 'es'
+          ? '¿Seguro que quieres salir de esta sesión?'
+          : 'Are you sure you want to leave this session?',
+      onConfirm: () => doLeave(),
+    });
+  }
+
+  async function doLeave() {
     if (!user) return;
     try {
       const { error } = await supabase
@@ -214,15 +229,18 @@ export function useSessionActions({
     }
   }
 
-  async function handleCancel() {
-    if (
-      !confirm(
+  function handleCancel() {
+    setConfirmAction({
+      title: language === 'es' ? 'Cancelar sesión' : 'Cancel session',
+      message:
         language === 'es'
           ? '¿Cancelar esta sesión? Todos los participantes serán notificados. Esto no se puede deshacer.'
-          : 'Cancel this session? All participants will be notified. This cannot be undone.'
-      )
-    )
-      return;
+          : 'Cancel this session? All participants will be notified. This cannot be undone.',
+      onConfirm: () => doCancel(),
+    });
+  }
+
+  async function doCancel() {
     try {
       const result = await cancelSession(supabase, session.id);
       if (!result.success) throw new Error(result.error);
@@ -233,11 +251,15 @@ export function useSessionActions({
     }
   }
 
-  async function handleKickUser(userId: string, userName: string) {
-    if (
-      !confirm(language === 'es' ? `¿Eliminar a ${userName} de esta sesión?` : `Remove ${userName} from this session?`)
-    )
-      return;
+  function handleKickUser(userId: string, userName: string) {
+    setConfirmAction({
+      title: language === 'es' ? 'Eliminar participante' : 'Remove participant',
+      message: language === 'es' ? `¿Eliminar a ${userName} de esta sesión?` : `Remove ${userName} from this session?`,
+      onConfirm: () => doKickUser(userId),
+    });
+  }
+
+  async function doKickUser(userId: string) {
     try {
       const { error: deleteError } = await supabase
         .from('session_participants')
@@ -294,6 +316,8 @@ export function useSessionActions({
     setGuestData,
     guestHasJoined,
     guestParticipantId,
+    confirmAction,
+    setConfirmAction,
     handleJoin,
     handleGuestJoin,
     handleGuestLeave,

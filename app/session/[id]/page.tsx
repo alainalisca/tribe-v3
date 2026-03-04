@@ -24,6 +24,7 @@ import LiveStatusSection from '@/components/session/LiveStatusSection';
 import { fetchSessionWithDetails } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { downloadICS } from '@/lib/calendar';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
@@ -781,6 +782,21 @@ export default function SessionDetailPage() {
           onUploaded={() => loadSessionStories()}
         />
       )}
+
+      {/* Confirm Dialog from useSessionActions */}
+      <ConfirmDialog
+        open={!!sessionActions.confirmAction}
+        title={sessionActions.confirmAction?.title || ''}
+        message={sessionActions.confirmAction?.message || ''}
+        confirmLabel={language === 'es' ? 'Confirmar' : 'Confirm'}
+        cancelLabel={language === 'es' ? 'Cancelar' : 'Cancel'}
+        variant="danger"
+        onConfirm={() => {
+          sessionActions.confirmAction?.onConfirm();
+          sessionActions.setConfirmAction(null);
+        }}
+        onCancel={() => sessionActions.setConfirmAction(null)}
+      />
 
       {/* Story Viewer */}
       {showStoryViewer && sessionStories.length > 0 && session && (

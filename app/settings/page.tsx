@@ -10,6 +10,7 @@ import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lu
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import BottomNav from '@/components/BottomNav';
 import type { User } from '@supabase/supabase-js';
 
@@ -19,6 +20,8 @@ export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
 
   useEffect(() => {
     checkUser();
@@ -54,13 +57,10 @@ export default function SettingsPage() {
 
   async function handleDeleteAccount() {
     const confirmWord = language === 'es' ? 'ELIMINAR' : 'DELETE';
-    const input = prompt(
-      language === 'es'
-        ? '¿Estás seguro? Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
-        : 'Are you sure? This will permanently delete your account and all data. Type DELETE to confirm.'
-    );
-    if (input !== confirmWord) {
+    if (deleteInput !== confirmWord) {
       showInfo(language === 'es' ? 'Eliminación cancelada' : 'Deletion cancelled');
+      setShowDeleteConfirm(false);
+      setDeleteInput('');
       return;
     }
 
@@ -71,7 +71,9 @@ export default function SettingsPage() {
 
       await supabase.auth.signOut();
       showSuccess(language === 'es' ? 'Cuenta eliminada' : 'Account deleted');
-      router.push('/');
+      setShowDeleteConfirm(false);
+      setDeleteInput('');
+      window.location.href = '/auth';
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'update_settings', language));
     }
@@ -419,7 +421,10 @@ export default function SettingsPage() {
             {txt.signOut}
           </button>
           <button
-            onClick={handleDeleteAccount}
+            onClick={() => {
+              setDeleteInput('');
+              setShowDeleteConfirm(true);
+            }}
             className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 text-red-600 font-semibold rounded-xl hover:bg-stone-300 transition"
           >
             <Trash2 className="w-5 h-5" />
@@ -427,6 +432,56 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteConfirm(false);
+              setDeleteInput('');
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-[#404549] rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-red-600 mb-2">
+              {language === 'es' ? 'Eliminar cuenta' : 'Delete Account'}
+            </h3>
+            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">
+              {language === 'es'
+                ? 'Esto eliminará permanentemente tu cuenta y todos los datos. Escribe ELIMINAR para confirmar.'
+                : 'This will permanently delete your account and all data. Type DELETE to confirm.'}
+            </p>
+            <input
+              type="text"
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              placeholder={language === 'es' ? 'ELIMINAR' : 'DELETE'}
+              className="w-full px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg mb-4 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+              autoComplete="off"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeleteInput('');
+                }}
+                className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+              >
+                {language === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteInput !== (language === 'es' ? 'ELIMINAR' : 'DELETE')}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {language === 'es' ? 'Eliminar' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>

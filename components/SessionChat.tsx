@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import Link from 'next/link';
 
 interface Message {
@@ -38,6 +39,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
   const [reportingMessageId, setReportingMessageId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { t, language } = useLanguage();
@@ -214,8 +216,6 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   }
 
   async function deleteMessage(messageId: string) {
-    if (!confirm('Delete this message?')) return;
-
     try {
       const { error } = await supabase
         .from('chat_messages')
@@ -402,11 +402,14 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                     >
                       {canModerate && (
                         <button
-                          onClick={() => deleteMessage(msg.id)}
+                          onClick={() => {
+                            setConfirmDeleteId(msg.id);
+                            setSelectedMessage(null);
+                          }}
                           className="w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
-                          Delete
+                          {language === 'es' ? 'Eliminar' : 'Delete'}
                         </button>
                       )}
                       {!isOwnMessage && !canModerate && (
@@ -450,6 +453,21 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           </button>
         </form>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title={language === 'es' ? 'Eliminar mensaje' : 'Delete message'}
+        message={language === 'es' ? '¿Eliminar este mensaje?' : 'Delete this message?'}
+        confirmLabel={language === 'es' ? 'Eliminar' : 'Delete'}
+        cancelLabel={language === 'es' ? 'Cancelar' : 'Cancel'}
+        variant="danger"
+        onConfirm={() => {
+          if (confirmDeleteId) deleteMessage(confirmDeleteId);
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
 
       {/* Report Modal */}
       {showReportModal && (

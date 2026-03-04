@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import webpush from 'web-push';
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { log, logError } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -173,12 +174,22 @@ async function sendWebPushNotification(
 /**
  * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
  * @method POST
- * @auth Optional - rate limited by IP address (30 requests per minute). No user authentication required.
+ * @auth Required - validates the caller is authenticated via Supabase auth. Rate limited to 30 requests per minute.
  * @param {Object} request.body - JSON body with `userId` (string), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
  * @returns {{ success: boolean, method: 'fcm' | 'web-push', platform: string }} Delivery method used on success, or error details on failure.
  */
 export async function POST(request: Request) {
   try {
+    // AUTH: verify the caller is authenticated
+    const supabaseAuth = await createClient();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const { allowed } = rateLimit(ip, { maxRequests: 30, windowMs: 60_000 });
     if (!allowed) {
@@ -191,7 +202,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields: userId, title, body' }, { status: 400 });
     }
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get user's notification credentials
     const { data: user, error } = await supabase
@@ -289,13 +300,29 @@ export async function POST(request: Request) {
 /**
  * @description Batch sends push notifications to multiple users via FCM or Web Push, with automatic fallback and stale token/subscription cleanup.
  * @method PUT
- * @auth Optional - no authentication required. Intended for internal service-to-service calls.
+ * @auth Required - validates the caller is authenticated via Supabase auth. Rate limited to 10 requests per minute.
  * @param {Object} request.body - JSON body with `userIds` (string[]), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
  * @returns {{ success: boolean, results: { total: number, fcm: Object, webPush: Object, noSubscription: number } }} Breakdown of send results per notification channel.
  */
 // Batch send notifications to multiple users
 export async function PUT(request: Request) {
   try {
+    // AUTH: verify the caller is authenticated
+    const supabaseAuth = await createClient();
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const { userIds, title, body, url, data } = await request.json();
 
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
@@ -306,7 +333,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing required fields: title, body' }, { status: 400 });
     }
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     // Get all users' notification credentials
     const { data: users, error } = await supabase

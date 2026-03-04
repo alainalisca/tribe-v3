@@ -34,6 +34,14 @@ export default function AuthPage() {
   const supabase = createClient();
   const { language } = useLanguage();
 
+  // Validate returnTo is a safe relative path (prevents open redirect)
+  function getSafeReturnTo(): string {
+    const returnTo = searchParams.get('returnTo');
+    if (!returnTo) return '/';
+    const decoded = decodeURIComponent(returnTo);
+    return decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : '/';
+  }
+
   // If user is already authenticated, redirect to home
   useEffect(() => {
     supabase.auth
@@ -139,15 +147,14 @@ export default function AuthPage() {
 
         if (data.user) {
           const { isNewUser } = await upsertUserProfile(data.user);
-          const returnTo = searchParams.get('returnTo');
-          window.location.href = isNewUser ? '/profile/edit' : returnTo ? decodeURIComponent(returnTo) : '/';
+          window.location.href = isNewUser ? '/profile/edit' : getSafeReturnTo();
         }
       } else {
         // Web: redirect-based OAuth flow (works in real browsers)
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/auth/callback?returnTo=${searchParams.get('returnTo') || ''}`,
+            redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
           },
         });
         if (error) throw error;
@@ -203,15 +210,14 @@ export default function AuthPage() {
             ? `${result.response.givenName} ${result.response.familyName || ''}`.trim()
             : undefined;
           const { isNewUser } = await upsertUserProfile(data.user, fullName);
-          const returnTo = searchParams.get('returnTo');
-          window.location.href = isNewUser ? '/profile/edit' : returnTo ? decodeURIComponent(returnTo) : '/';
+          window.location.href = isNewUser ? '/profile/edit' : getSafeReturnTo();
         }
       } else {
         // Web: redirect-based OAuth flow (works in real browsers)
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
           options: {
-            redirectTo: `${window.location.origin}/auth/callback?returnTo=${searchParams.get('returnTo') || ''}`,
+            redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
           },
         });
         if (error) throw error;
@@ -267,8 +273,7 @@ export default function AuthPage() {
         }
 
         // Use hard redirect for Safari compatibility
-        const returnTo = searchParams.get('returnTo');
-        window.location.href = returnTo ? decodeURIComponent(returnTo) : '/';
+        window.location.href = getSafeReturnTo();
       } else {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
