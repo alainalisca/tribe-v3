@@ -10,6 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { fetchUserIsAdmin, fetchSession } from '@/lib/dal';
+import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -23,6 +24,8 @@ export default function ChatPage() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<SessionRow | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,57 +33,90 @@ export default function ChatPage() {
   }, []);
 
   async function loadData() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    setUser(user);
+    try {
+      setLoading(true);
+      setError(false);
 
-    if (user) {
-      const result = await fetchUserIsAdmin(supabase, user.id);
-      setUserIsAdmin(result.success ? !!result.data : false);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        const result = await fetchUserIsAdmin(supabase, user.id);
+        setUserIsAdmin(result.success ? !!result.data : false);
+      }
+
+      const sessionResult = await fetchSession(supabase, sessionId);
+      if (!sessionResult.success || !sessionResult.data) {
+        setError(true);
+        return;
+      }
+      setSession(sessionResult.data ?? null);
+    } catch (err) {
+      logError(err, { action: 'loadChatData', sessionId });
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-
-    const sessionResult = await fetchSession(supabase, sessionId);
-
-    setSession(sessionResult.success ? (sessionResult.data ?? null) : null);
   }
 
-  if (!user || !session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-theme-page">
-        <p className="text-theme-primary">{t('loading')}</p>
-      </div>
-    );
-  }
-
-  const isHost = session.creator_id === user.id;
+  const isHost = session ? session.creator_id === user?.id : false;
   const isAdmin = userIsAdmin;
   const sportName =
-    language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
+    session && language === 'es' && sportTranslations[session.sport]
+      ? sportTranslations[session.sport].es
+      : (session?.sport ?? '');
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-[#3D4349] pb-32">
+      {/* Header always renders so user can navigate back */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
-          <Link href={`/session/${sessionId}`}>
+          <Link
+            href={`/session/${sessionId}`}
+            className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          >
             <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
           </Link>
-          <div>
-            <h1 className="text-lg font-bold text-theme-primary leading-tight">
-              {sportName} {t('chat')}
-            </h1>
-            <p className="text-xs text-gray-500 leading-tight truncate max-w-[250px]">
-              {session.location}
-              {isAdmin && <span className="ml-2 text-red-500">• Admin</span>}
-              {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t('host')}</span>}
-            </p>
-          </div>
+          {session ? (
+            <div>
+              <h1 className="text-lg font-bold text-theme-primary leading-tight">
+                {sportName} {t('chat')}
+              </h1>
+              <p className="text-xs text-gray-500 leading-tight truncate max-w-[250px]">
+                {session.location}
+                {isAdmin && <span className="ml-2 text-red-500">• Admin</span>}
+                {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t('host')}</span>}
+              </p>
+            </div>
+          ) : (
+            <h1 className="text-lg font-bold text-theme-primary leading-tight">{t('chat')}</h1>
+          )}
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto">
         <div className="pt-header p-4">
-          <SessionChat sessionId={sessionId} currentUserId={user.id} isHost={isHost} isAdmin={isAdmin} />
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green" />
+            </div>
+          ) : error || !user || !session ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="text-4xl mb-4">💬</div>
+              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('couldNotLoadChat')}</p>
+              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{t('checkConnectionRetry')}</p>
+              <button
+                onClick={loadData}
+                className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+              >
+                {t('tryAgain')}
+              </button>
+            </div>
+          ) : (
+            <SessionChat sessionId={sessionId} currentUserId={user.id} isHost={isHost} isAdmin={isAdmin} />
+          )}
         </div>
       </div>
     </div>

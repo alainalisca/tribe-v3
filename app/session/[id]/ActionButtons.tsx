@@ -12,6 +12,7 @@ interface ActionButtonsProps {
   session: any;
   isCreator: boolean;
   hasJoined: boolean;
+  isPending: boolean;
   isPast: boolean;
   isFull: boolean;
   sessionActions: {
@@ -34,6 +35,7 @@ export default function ActionButtons({
   session,
   isCreator,
   hasJoined,
+  isPending,
   isPast,
   isFull,
   sessionActions,
@@ -105,6 +107,19 @@ export default function ActionButtons({
               </button>
             </>
           )}
+        </>
+      ) : isPending ? (
+        <>
+          <div className="w-full py-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-bold rounded-lg text-center">
+            ⏳ {t('pendingApproval')}
+          </div>
+          <button
+            onClick={sessionActions.handleLeave}
+            className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-5 h-5" />
+            {t('withdrawRequest')}
+          </button>
         </>
       ) : hasJoined ? (
         <button

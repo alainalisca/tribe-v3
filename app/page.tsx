@@ -128,14 +128,37 @@ export default function HomePage() {
             </div>
           ) : f.filteredSessions.length === 0 ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-              <div className="text-4xl mb-4">🏃‍♂️</div>
-              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('noSessionsFound')}</p>
-              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
-              <Link href="/create">
-                <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                  {f.t('createSession')}
-                </button>
-              </Link>
+              {f.searchQuery || f.selectedSport || f.dateFilter !== 'all' || f.genderFilter !== 'all' ? (
+                <>
+                  <div className="text-4xl mb-4">🔍</div>
+                  <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                    {f.t('noMatchingFilters')}
+                  </p>
+                  <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
+                  <button
+                    onClick={() => {
+                      f.setSearchQuery('');
+                      f.setSelectedSport('');
+                      f.setDateFilter('all');
+                      f.setGenderFilter('all');
+                    }}
+                    className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition"
+                  >
+                    {f.t('clearFilters')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="text-4xl mb-4">🏃‍♂️</div>
+                  <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('noSessionsFound')}</p>
+                  <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
+                  <Link href="/create">
+                    <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
+                      {f.t('createSession')}
+                    </button>
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

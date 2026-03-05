@@ -235,6 +235,13 @@ export const extEn = {
   banUser: 'Ban User',
   unbanUser: 'Unban User',
   deleteUserBtn: 'Delete User',
+
+  // P0 fixes
+  couldNotLoadChat: 'Could not load chat',
+  pendingApproval: 'Pending approval',
+  withdrawRequest: 'Withdraw Request',
+  noMatchingFilters: 'No sessions match your filters',
+  clearFilters: 'Clear filters',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -473,4 +480,11 @@ export const extEs: Record<keyof typeof extEn, string> = {
   banUser: 'Banear Usuario',
   unbanUser: 'Desbanear Usuario',
   deleteUserBtn: 'Eliminar Usuario',
+
+  // P0 fixes
+  couldNotLoadChat: 'No se pudo cargar el chat',
+  pendingApproval: 'Aprobacion pendiente',
+  withdrawRequest: 'Retirar Solicitud',
+  noMatchingFilters: 'No hay sesiones que coincidan con tus filtros',
+  clearFilters: 'Limpiar filtros',
 };

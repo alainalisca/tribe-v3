@@ -2,7 +2,9 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import BottomNav from '@/components/BottomNav';
 import AttendanceTracker from '@/components/AttendanceTracker';
 import StoryUpload from '@/components/StoryUpload';
 import StoryViewer from '@/components/StoryViewer';
@@ -38,8 +40,19 @@ export default function SessionDetailPage() {
     );
   if (!d.session)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <p className="text-stone-900 dark:text-white">{t('sessionNotFound')}</p>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center pb-32">
+        <div className="text-center p-6">
+          <div className="text-4xl mb-4">🔍</div>
+          <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('sessionNotFound')}</p>
+          <p className="text-sm text-stone-500 dark:text-gray-400 mb-6">{t('checkConnectionRetry')}</p>
+          <Link
+            href="/"
+            className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+          >
+            {t('goHome')}
+          </Link>
+        </div>
+        <BottomNav />
       </div>
     );
 
@@ -113,6 +126,7 @@ export default function SessionDetailPage() {
           session={d.session}
           isCreator={isCreator}
           hasJoined={d.hasJoined}
+          isPending={d.isPending}
           isPast={isPast}
           isFull={isFull}
           sessionActions={d.sessionActions}

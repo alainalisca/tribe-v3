@@ -32,6 +32,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   const [user, setUser] = useState<AuthUser | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoType, setPhotoType] = useState<'location' | 'recap'>('location');
@@ -143,7 +144,11 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (user) setHasJoined(!!result.data.participants.some((p) => p.user_id === user.id));
+      if (user) {
+        const userParticipant = result.data.participants.find((p) => p.user_id === user.id);
+        setHasJoined(!!userParticipant && userParticipant.status === 'confirmed');
+        setIsPending(!!userParticipant && userParticipant.status === 'pending');
+      }
       await checkAttendance();
       await loadRecapPhotos();
       await loadSessionStories();
@@ -234,6 +239,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     user,
     userIsAdmin,
     hasJoined,
+    isPending,
     lightboxOpen,
     currentPhotoIndex,
     photoType,

@@ -30,7 +30,11 @@ export default function ProfilePage() {
   } = useProfile(language);
 
   if (loading) {
-    return <div className="min-h-screen bg-theme-page flex items-center justify-center"></div>;
+    return (
+      <div className="min-h-screen bg-theme-page flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green" />
+      </div>
+    );
   }
 
   const pct = getProfileCompleteness();
