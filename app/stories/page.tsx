@@ -6,6 +6,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { getStoriesTranslations } from './translations';
 import { useStoriesData } from './useStoriesData';
 import { timeAgo } from './types';
@@ -29,8 +30,8 @@ export default function StoriesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green"></div>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+        <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   }
@@ -52,9 +53,7 @@ export default function StoriesPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green"></div>
-          </div>
+          <LoadingSpinner />
         ) : allStories.length === 0 ? (
           <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D] mt-4">
             <div className="text-4xl mb-4">📸</div>

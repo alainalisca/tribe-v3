@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
@@ -100,7 +101,7 @@ export default function AuthCallbackPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="w-8 h-8 border-3 border-tribe-green border-t-transparent rounded-full animate-spin mx-auto" />
+            <LoadingSpinner className="flex justify-center" />
             <p className="text-stone-600 dark:text-gray-300 text-sm">Signing in... / Iniciando sesión...</p>
           </div>
         )}

@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { Camera, MapPin, X, Settings } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
@@ -31,8 +32,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green" />
+      <div className="min-h-screen bg-theme-page">
+        <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   }

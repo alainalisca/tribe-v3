@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import LanguageToggle from '@/components/LanguageToggle';
 
 import OAuthButtons from './OAuthButtons';
@@ -16,8 +17,8 @@ export default function AuthPage() {
 
   if (h.checkingAuth) {
     return (
-      <div className="h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-tribe-green border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen bg-stone-50 dark:bg-[#52575D]">
+        <LoadingSpinner className="flex items-center justify-center h-screen" />
       </div>
     );
   }

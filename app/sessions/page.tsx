@@ -4,6 +4,7 @@
 import { Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { getSessionsTranslations } from './translations';
@@ -22,10 +23,8 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
-        <div className="animate-pulse text-stone-500 dark:text-gray-400">
-          <div className="w-8 h-8 border-4 border-tribe-green border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-        </div>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+        <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   }

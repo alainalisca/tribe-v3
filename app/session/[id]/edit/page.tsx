@@ -2,6 +2,7 @@
 'use client';
 
 import { useLanguage } from '@/lib/LanguageContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -15,8 +16,8 @@ export default function EditSessionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green"></div>
+      <div className="min-h-screen bg-theme-page">
+        <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   }

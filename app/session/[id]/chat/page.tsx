@@ -11,6 +11,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { fetchUserIsAdmin, fetchSession } from '@/lib/dal';
 import { logError } from '@/lib/logger';
+import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -77,7 +79,7 @@ export default function ChatPage() {
             href={`/session/${sessionId}`}
             className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
-            <ArrowLeft className="w-6 h-6 cursor-pointer hover:opacity-70" />
+            <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
           </Link>
           {session ? (
             <div>
@@ -99,9 +101,7 @@ export default function ChatPage() {
       <div className="max-w-2xl mx-auto">
         <div className="pt-header p-4">
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green" />
-            </div>
+            <LoadingSpinner className="flex items-center justify-center py-20" />
           ) : error || !user || !session ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="text-4xl mb-4">💬</div>
@@ -119,6 +119,8 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }
