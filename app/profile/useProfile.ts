@@ -126,7 +126,7 @@ export function useProfile(language: 'en' | 'es') {
       await loadProfile();
     } catch (error) {
       logError(error, { action: 'handleAvatarUpload' });
-      showError('Failed to upload image');
+      showError(language === 'es' ? 'Error al subir la imagen' : 'Failed to upload image');
     }
   }
 
@@ -160,7 +160,7 @@ export function useProfile(language: 'en' | 'es') {
       await loadProfile();
     } catch (error) {
       logError(error, { action: 'handleBannerUpload' });
-      showError('Failed to upload banner');
+      showError(language === 'es' ? 'Error al subir el banner' : 'Failed to upload banner');
     }
   }
 

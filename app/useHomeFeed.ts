@@ -245,19 +245,28 @@ export function useHomeFeed() {
       });
       if (!result.success) {
         const errorMessages: Record<string, string> = {
-          session_not_found: 'Session not found',
-          session_not_active: 'This session is no longer active',
-          self_join: 'You cannot join your own session!',
+          session_not_found: language === 'es' ? 'Sesión no encontrada' : 'Session not found',
+          session_not_active: language === 'es' ? 'Esta sesión ya no está activa' : 'This session is no longer active',
+          self_join: language === 'es' ? '¡No puedes unirte a tu propia sesión!' : 'You cannot join your own session!',
           already_joined: t('alreadyJoined'),
           capacity_full: t('sessionFullMsg'),
-          invite_only: 'This is a private session. You need a direct invitation from the host.',
+          invite_only:
+            language === 'es'
+              ? 'Esta es una sesión privada. Necesitas una invitación directa del anfitrión.'
+              : 'This is a private session. You need a direct invitation from the host.',
         };
-        showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
+        showInfo(
+          errorMessages[result.error!] ||
+            result.error ||
+            (language === 'es' ? 'No se pudo unir a la sesión' : 'Could not join session')
+        );
         return;
       }
       showSuccess(
         result.status === 'pending'
-          ? 'Request sent! The host will review your profile and decide.'
+          ? language === 'es'
+            ? '¡Solicitud enviada! El anfitrión revisará tu perfil y decidirá.'
+            : 'Request sent! The host will review your profile and decide.'
           : t('joinedSuccessfully')
       );
       await loadSessions();

@@ -158,7 +158,9 @@ export function useSettings(language: 'en' | 'es') {
 
       // Web path
       if (!('Notification' in window)) {
-        showError('This browser does not support notifications');
+        showError(
+          language === 'es' ? 'Este navegador no soporta notificaciones' : 'This browser does not support notifications'
+        );
         return;
       }
 

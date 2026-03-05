@@ -76,7 +76,7 @@ export default function UserManagement({
                     </p>
                     {u.banned && (
                       <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded flex-shrink-0">
-                        BANNED
+                        {language === 'es' ? 'BANEADO' : 'BANNED'}
                       </span>
                     )}
                   </div>
@@ -88,7 +88,7 @@ export default function UserManagement({
               <div className="flex items-center gap-3 text-xs text-stone-500 mb-2 ml-12">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(u.created_at ?? '').toLocaleDateString('en-US', {
+                  {new Date(u.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: '2-digit',

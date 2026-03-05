@@ -45,7 +45,9 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs font-medium text-[#272D34]">{msg.user?.name || 'Unknown User'}</p>
+                    <p className="text-xs font-medium text-[#272D34]">
+                      {msg.user?.name || (language === 'es' ? 'Usuario Desconocido' : 'Unknown User')}
+                    </p>
                     <span className="text-xs text-stone-500">{msg.user?.email}</span>
                   </div>
 
@@ -56,7 +58,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
                       {language === 'es' ? 'Sesion:' : 'Session:'} {msg.session?.sport} @ {msg.session?.location}
                     </span>
                     <span>&bull;</span>
-                    <span>{new Date(msg.created_at ?? '').toLocaleString()}</span>
+                    <span>{new Date(msg.created_at ?? '').toLocaleString(language === 'es' ? 'es-CO' : 'en-US')}</span>
                   </div>
                 </div>
 
@@ -64,7 +66,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
                   onClick={() => onDelete(msg.id)}
                   disabled={actionLoading === msg.id}
                   className="p-1.5 text-red-500 hover:bg-red-50 rounded disabled:opacity-50"
-                  title="Delete message"
+                  title={language === 'es' ? 'Eliminar mensaje' : 'Delete message'}
                 >
                   {actionLoading === msg.id ? (
                     <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />

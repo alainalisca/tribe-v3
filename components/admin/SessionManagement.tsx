@@ -83,7 +83,7 @@ export default function SessionManagement({
                             key={idx}
                             loading="lazy"
                             src={photo}
-                            alt={`Photo ${idx + 1}`}
+                            alt={`${language === 'es' ? 'Foto' : 'Photo'} ${idx + 1}`}
                             className="w-16 h-16 object-cover rounded border border-stone-200"
                           />
                         ))}

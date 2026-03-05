@@ -67,7 +67,9 @@ export default function ReportedMessages({
               )}
 
               <div className="flex items-center justify-between text-xs text-stone-500 mb-3">
-                <span>By: {report.reporter?.name}</span>
+                <span>
+                  {language === 'es' ? 'Por:' : 'By:'} {report.reporter?.name}
+                </span>
                 <span>
                   {new Date(report.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
                 </span>

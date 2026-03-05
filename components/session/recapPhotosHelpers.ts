@@ -89,7 +89,9 @@ export async function handleRecapUpload(
   }
 
   if (userPhotoCount + files.length > 3) {
-    showInfo('You can upload maximum 3 photos per session');
+    showInfo(
+      language === 'es' ? 'Puedes subir maximo 3 fotos por sesion' : 'You can upload maximum 3 photos per session'
+    );
     return;
   }
 
@@ -124,7 +126,7 @@ export async function handleRecapUpload(
       if (!insertResult.success) throw new Error(insertResult.error);
     }
 
-    showSuccess('Recap photos uploaded!');
+    showSuccess(language === 'es' ? '¡Fotos del resumen subidas!' : 'Recap photos uploaded!');
     onPhotosChanged();
   } catch (error: unknown) {
     showError(getErrorMessage(error, 'upload_photo', language));
@@ -141,7 +143,7 @@ export async function deleteRecapPhoto(photoId: string, language: 'en' | 'es', o
     const result = await dalDeleteRecapPhoto(supabase, photoId);
     if (!result.success) throw new Error(result.error);
 
-    showSuccess('Photo deleted');
+    showSuccess(language === 'es' ? 'Foto eliminada' : 'Photo deleted');
     onPhotosChanged();
   } catch (error: unknown) {
     showError(getErrorMessage(error, 'delete_session', language));

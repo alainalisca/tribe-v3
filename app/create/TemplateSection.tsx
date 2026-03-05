@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
-import { getErrorMessage } from '@/lib/errorMessages';
 import { insertTemplate, deleteTemplate as dalDeleteTemplate, fetchTemplatesByUser } from '@/lib/dal';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Database } from '@/lib/database.types';
@@ -100,8 +99,8 @@ export default function TemplateSection({
       if (!result.success) throw new Error(result.error);
       loadTemplates();
       showSuccess(t('templateDeleted'));
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'create_session', language));
+    } catch {
+      showError(language === 'es' ? 'No se pudo eliminar la plantilla' : 'Could not delete template');
     }
   }
 

@@ -59,7 +59,7 @@ export function useAdminActions(
           const result = await deleteChatMessage(supabase, messageId);
           if (!result.success) throw new Error(result.error);
           setters.setMessages((prev) => prev.filter((m) => m.id !== messageId));
-          showSuccess('Message deleted');
+          showSuccess(language === 'es' ? 'Mensaje eliminado' : 'Message deleted');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         } finally {
@@ -85,7 +85,7 @@ export function useAdminActions(
           });
           if (!result.success) throw new Error(result.error);
           setters.setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, photo_verified: true } : s)));
-          showSuccess('Photos verified');
+          showSuccess(language === 'es' ? 'Fotos verificadas' : 'Photos verified');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         }
@@ -109,7 +109,7 @@ export function useAdminActions(
           });
           if (!result.success) throw new Error(result.error);
           setters.setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, photo_verified: false } : s)));
-          showSuccess('Verification removed');
+          showSuccess(language === 'es' ? 'Verificación eliminada' : 'Verification removed');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         }
@@ -130,7 +130,7 @@ export function useAdminActions(
           const result = await updateUser(supabase, targetUserId, { banned: true });
           if (!result.success) throw new Error(result.error);
           setters.setUsers((prev) => prev.map((u) => (u.id === targetUserId ? { ...u, banned: true } : u)));
-          showSuccess('User banned');
+          showSuccess(language === 'es' ? 'Usuario baneado' : 'User banned');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         } finally {
@@ -153,7 +153,7 @@ export function useAdminActions(
           const result = await updateUser(supabase, targetUserId, { banned: false });
           if (!result.success) throw new Error(result.error);
           setters.setUsers((prev) => prev.map((u) => (u.id === targetUserId ? { ...u, banned: false } : u)));
-          showSuccess('User unbanned');
+          showSuccess(language === 'es' ? 'Usuario desbaneado' : 'User unbanned');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         } finally {
@@ -179,7 +179,7 @@ export function useAdminActions(
           const result = await dalDeleteUser(supabase, targetUserId);
           if (!result.success) throw new Error(result.error);
           setters.setUsers((prev) => prev.filter((u) => u.id !== targetUserId));
-          showSuccess('User deleted');
+          showSuccess(language === 'es' ? 'Usuario eliminado' : 'User deleted');
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'admin_action', language));
         } finally {
@@ -194,7 +194,7 @@ export function useAdminActions(
       const result = await dalUpdateReportStatus(supabase, reportId, status);
       if (!result.success) throw new Error(result.error);
       setters.setReports((prev) => prev.map((r) => (r.id === reportId ? { ...r, status } : r)));
-      showSuccess(`Report marked as ${status}`);
+      showSuccess(language === 'es' ? `Reporte marcado como ${status}` : `Report marked as ${status}`);
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
@@ -205,7 +205,7 @@ export function useAdminActions(
       const result = await dalUpdateFeedbackStatus(supabase, feedbackId, status);
       if (!result.success) throw new Error(result.error);
       setters.setFeedback((prev) => prev.map((f) => (f.id === feedbackId ? { ...f, status } : f)));
-      showSuccess(`Feedback marked as ${status}`);
+      showSuccess(language === 'es' ? `Comentario marcado como ${status}` : `Feedback marked as ${status}`);
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }
@@ -216,7 +216,7 @@ export function useAdminActions(
       const result = await dalUpdateBugStatus(supabase, bugId, status);
       if (!result.success) throw new Error(result.error);
       setters.setBugs((prev) => prev.map((b) => (b.id === bugId ? { ...b, status } : b)));
-      showSuccess(`Bug marked as ${status}`);
+      showSuccess(language === 'es' ? `Bug marcado como ${status}` : `Bug marked as ${status}`);
     } catch (error: unknown) {
       showError(getErrorMessage(error, 'admin_action', language));
     }

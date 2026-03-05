@@ -70,7 +70,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
 
               {bug.steps_to_reproduce && (
                 <p className="text-xs text-stone-600 mb-2 p-2 bg-blue-50 rounded whitespace-pre-wrap">
-                  <strong>Steps:</strong> {bug.steps_to_reproduce}
+                  <strong>{language === 'es' ? 'Pasos:' : 'Steps:'}</strong> {bug.steps_to_reproduce}
                 </p>
               )}
 
