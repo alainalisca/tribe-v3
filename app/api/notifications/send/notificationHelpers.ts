@@ -4,12 +4,18 @@ import { log, logError } from '@/lib/logger';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jwt = require('jsonwebtoken');
 
-// Initialize web-push with VAPID details
-webpush.setVapidDetails(
-  `mailto:${process.env.VAPID_EMAIL}`,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+// Lazy-initialize web-push VAPID details to avoid build-time validation errors
+// when env vars are placeholders (e.g. in CI)
+let vapidInitialized = false;
+function ensureVapidInitialized(): void {
+  if (vapidInitialized) return;
+  webpush.setVapidDetails(
+    `mailto:${process.env.VAPID_EMAIL}`,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+  vapidInitialized = true;
+}
 
 // Get FCM access token via direct OAuth2 JWT exchange
 export async function getFcmAccessToken(): Promise<string | null> {
@@ -136,6 +142,7 @@ export async function sendWebPushNotification(
   url?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    ensureVapidInitialized();
     const payload = JSON.stringify({
       title,
       body,
