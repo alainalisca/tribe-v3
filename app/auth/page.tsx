@@ -42,6 +42,31 @@ export default function AuthPage() {
           </div>
 
           {!h.isResetPassword && (
+            <div className="space-y-3 mb-6">
+              <div className="flex items-center gap-3 text-sm text-stone-600 dark:text-gray-300">
+                <span className="text-xl flex-shrink-0">🏃</span>
+                <span>
+                  {language === 'es'
+                    ? 'Encuentra compañeros para entrenar cerca de ti'
+                    : 'Find workout partners near you'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-stone-600 dark:text-gray-300">
+                <span className="text-xl flex-shrink-0">📅</span>
+                <span>
+                  {language === 'es' ? 'Crea y únete a sesiones de entrenamiento' : 'Create and join training sessions'}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-stone-600 dark:text-gray-300">
+                <span className="text-xl flex-shrink-0">💬</span>
+                <span>
+                  {language === 'es' ? 'Coordina con tu grupo en el chat' : 'Coordinate with your group in chat'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {!h.isResetPassword && (
             <OAuthButtons
               t={h.t}
               appleLoading={h.appleLoading}

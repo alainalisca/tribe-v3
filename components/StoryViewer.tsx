@@ -95,12 +95,15 @@ export default function StoryViewer({
                   setPaused(true);
                   setShowDeleteConfirm(true);
                 }}
-                className="p-1.5 hover:bg-white/10 rounded-full transition"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 rounded-full transition"
               >
                 <Trash2 className="w-5 h-5 text-white/70" />
               </button>
             )}
-            <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition">
+            <button
+              onClick={onClose}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 rounded-full transition"
+            >
               <X className="w-6 h-6 text-white" />
             </button>
           </div>

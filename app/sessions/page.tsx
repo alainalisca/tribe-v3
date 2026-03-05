@@ -14,8 +14,18 @@ import SessionCard from './SessionCard';
 export default function SessionsPage() {
   const { language } = useLanguage();
   const txt = getSessionsTranslations(language);
-  const { hostingSessions, joinedSessions, pastSessions, loading, activeTab, setActiveTab, fixedAreaRef, fixedHeight } =
-    useSessionsData();
+  const {
+    hostingSessions,
+    joinedSessions,
+    pastSessions,
+    loading,
+    error,
+    activeTab,
+    setActiveTab,
+    fixedAreaRef,
+    fixedHeight,
+    retry,
+  } = useSessionsData();
 
   const getSportName = (sport: string) => {
     return language === 'es' ? sportTranslations[sport]?.es || sport : sport;
@@ -25,6 +35,22 @@ export default function SessionsPage() {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+        <p className="text-stone-900 dark:text-white text-lg mb-4">
+          {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
+        </p>
+        <button
+          onClick={retry}
+          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+        >
+          {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
+        </button>
       </div>
     );
   }

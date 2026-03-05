@@ -42,6 +42,7 @@ export function useMatches() {
   const [joinRequests, setJoinRequests] = useState<JoinRequestItem[]>([]);
   const [tribeSessions, setTribeSessions] = useState<TribeSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
   const router = useRouter();
@@ -72,13 +73,15 @@ export function useMatches() {
   async function loadData() {
     setLoading(true);
     try {
+      setError(null);
       if (activeTab === 'requests') {
         await loadJoinRequests();
       } else {
         await loadTribeSessions();
       }
-    } catch (error) {
-      logError(error, { action: 'loadData' });
+    } catch (err) {
+      logError(err, { action: 'loadData' });
+      setError('load_failed');
     } finally {
       setLoading(false);
     }
@@ -177,6 +180,8 @@ export function useMatches() {
     joinRequests,
     tribeSessions,
     loading,
+    error,
     user,
+    retry: loadData,
   };
 }

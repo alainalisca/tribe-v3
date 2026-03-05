@@ -31,6 +31,7 @@ export function useEditProfile(language: 'en' | 'es') {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -54,6 +55,7 @@ export function useEditProfile(language: 'en' | 'es') {
 
   async function loadProfile() {
     try {
+      setError(null);
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
@@ -80,8 +82,9 @@ export function useEditProfile(language: 'en' | 'es') {
           facebook_url: profileData.facebook_url || '',
         });
       }
-    } catch (error) {
-      logError(error, { action: 'loadProfile' });
+    } catch (err) {
+      logError(err, { action: 'loadProfile' });
+      setError('load_failed');
     } finally {
       setLoading(false);
     }
@@ -185,6 +188,7 @@ export function useEditProfile(language: 'en' | 'es') {
     tr,
     user,
     loading,
+    error,
     saving,
     uploadingPhoto,
     formData,

@@ -7,7 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
 
 export default function MessagesPage() {
-  const { t, conversations, loading, formatTime, getTranslatedSport } = useMessages();
+  const { t, conversations, loading, error, formatTime, getTranslatedSport, retry } = useMessages();
 
   if (loading) {
     return (
@@ -33,6 +33,20 @@ export default function MessagesPage() {
           </div>
         </div>
         <BottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+        <p className="text-stone-900 dark:text-white text-lg mb-4">{t('somethingWentWrong')}</p>
+        <button
+          onClick={retry}
+          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+        >
+          {t('tryAgain')}
+        </button>
       </div>
     );
   }

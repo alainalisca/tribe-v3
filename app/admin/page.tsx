@@ -88,6 +88,20 @@ export default function AdminPage() {
   }
   if (!authorized) return null;
 
+  if (data.error) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
+        <p className="text-stone-900 text-lg mb-4">{language === 'es' ? 'Algo salió mal' : 'Something went wrong'}</p>
+        <button
+          onClick={data.loadStats}
+          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+        >
+          {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
+        </button>
+      </div>
+    );
+  }
+
   const tabs = [
     { id: 'dashboard', label: t('dashboard') },
     { id: 'users', label: t('users') },

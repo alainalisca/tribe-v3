@@ -56,9 +56,11 @@ export function useAdminData(supabase: SupabaseClient) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingBugs, setLoadingBugs] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function loadStats() {
     try {
+      setError(null);
       const result = await fetchAdminStatsRaw(supabase);
       if (!result.success || !result.data) return;
 
@@ -129,8 +131,9 @@ export function useAdminData(supabase: SupabaseClient) {
         totalCreated: allSessionCreators.length,
         totalJoined: allParticipants.length,
       });
-    } catch (error) {
-      logError(error, { action: 'loadStats' });
+    } catch (err) {
+      logError(err, { action: 'loadStats' });
+      setError('load_failed');
     }
   }
 
@@ -248,6 +251,7 @@ export function useAdminData(supabase: SupabaseClient) {
     loadingMessages,
     loadingFeedback,
     loadingBugs,
+    error,
     loadStats,
     loadUsers,
     loadReports,

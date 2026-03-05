@@ -44,6 +44,7 @@ export function useMessages() {
   const [, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -65,6 +66,7 @@ export function useMessages() {
   async function loadConversations(userId: string) {
     try {
       setLoading(true);
+      setError(null);
 
       // Get all sessions where user is a participant (including as creator)
       const participantResult = await fetchParticipantSessionIds(supabase, userId);
@@ -169,8 +171,9 @@ export function useMessages() {
       });
 
       setConversations(conversationsData);
-    } catch (error) {
-      logError(error, { action: 'loadConversations' });
+    } catch (err) {
+      logError(err, { action: 'loadConversations' });
+      setError('load_failed');
     } finally {
       setLoading(false);
     }
@@ -207,7 +210,9 @@ export function useMessages() {
     language,
     conversations,
     loading,
+    error,
     formatTime,
     getTranslatedSport,
+    retry: checkUser,
   };
 }

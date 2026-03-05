@@ -42,6 +42,7 @@ export function useSessionsData() {
   const [joinedSessions, setJoinedSessions] = useState<JoinedSession[]>([]);
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const router = useRouter();
   const supabase = createClient();
@@ -84,6 +85,7 @@ export function useSessionsData() {
 
   async function loadSessions(userId: string) {
     try {
+      setError(null);
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -150,8 +152,9 @@ export function useSessionsData() {
       setHostingSessions(upcomingHosting);
       setJoinedSessions(upcomingJoined);
       setPastSessions(uniquePast.slice(0, 20));
-    } catch (error) {
-      logError(error, { action: 'loadSessions' });
+    } catch (err) {
+      logError(err, { action: 'loadSessions' });
+      setError('load_failed');
     } finally {
       setLoading(false);
     }
@@ -162,9 +165,11 @@ export function useSessionsData() {
     joinedSessions,
     pastSessions,
     loading,
+    error,
     activeTab,
     setActiveTab,
     fixedAreaRef,
     fixedHeight,
+    retry: checkUser,
   };
 }

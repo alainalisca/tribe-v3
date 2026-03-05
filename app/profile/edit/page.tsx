@@ -15,6 +15,7 @@ export default function EditProfilePage() {
   const {
     tr,
     loading,
+    error,
     saving,
     uploadingPhoto,
     formData,
@@ -29,6 +30,22 @@ export default function EditProfilePage() {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
         <p className="text-theme-primary">{tr.loading}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center p-4">
+        <p className="text-theme-primary text-lg mb-4">
+          {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+        >
+          {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
+        </button>
       </div>
     );
   }

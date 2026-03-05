@@ -11,12 +11,29 @@ import { sportTranslations } from '@/lib/translations';
 import { useMatches } from './useMatches';
 
 export default function MatchesPage() {
-  const { t, language, activeTab, setActiveTab, joinRequests, tribeSessions, loading, user } = useMatches();
+  const { t, language, activeTab, setActiveTab, joinRequests, tribeSessions, loading, error, user, retry } =
+    useMatches();
 
   if (!user) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
         <p className="text-stone-900 dark:text-gray-100"></p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+        <p className="text-stone-900 dark:text-white text-lg mb-4">
+          {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
+        </p>
+        <button
+          onClick={retry}
+          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+        >
+          {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
+        </button>
       </div>
     );
   }
