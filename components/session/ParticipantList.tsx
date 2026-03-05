@@ -67,44 +67,60 @@ export default function ParticipantList({
           </div>
         )}
 
-        {participants.map((participant) => (
-          <div
-            key={participant.user_id}
-            className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
-          >
-            <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
-              {participant.user?.avatar_url ? (
-                <img
-                  loading="lazy"
-                  src={participant.user.avatar_url}
-                  alt={participant.user.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
-                  {participant.is_guest
-                    ? participant.guest_name?.[0]?.toUpperCase()
-                    : participant.user?.name?.[0]?.toUpperCase() || 'U'}
-                </div>
-              )}
-              <p className="font-medium text-stone-900 dark:text-white">
-                {participant.is_guest ? participant.guest_name : participant.user?.name || t('unknown')}
-              </p>
-            </Link>
+        {participants.map((participant, index) => {
+          const isGuest = !participant.user_id;
+          const displayName = participant.is_guest ? participant.guest_name : participant.user?.name || t('unknown');
+          const avatarInitial = participant.is_guest
+            ? participant.guest_name?.[0]?.toUpperCase()
+            : participant.user?.name?.[0]?.toUpperCase() || 'U';
 
-            {canKick && (
-              <button
-                onClick={() =>
-                  participant.user_id && onKickUser(participant.user_id, participant.user?.name || t('unknown'))
-                }
-                className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                title="Remove from session"
-              >
-                <UserX className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        ))}
+          const avatar = participant.user?.avatar_url ? (
+            <img
+              loading="lazy"
+              src={participant.user.avatar_url}
+              alt={displayName ?? ''}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
+              {avatarInitial}
+            </div>
+          );
+
+          return (
+            <div
+              key={participant.user_id ?? `guest-${index}`}
+              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+            >
+              {isGuest ? (
+                <div className="flex items-center gap-3 flex-1">
+                  {avatar}
+                  <div>
+                    <p className="font-medium text-stone-900 dark:text-white">{displayName}</p>
+                    <span className="text-xs text-stone-500 dark:text-gray-400 bg-stone-200 dark:bg-[#404549] px-2 py-0.5 rounded-full">
+                      {t('guest')}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
+                  {avatar}
+                  <p className="font-medium text-stone-900 dark:text-white">{displayName}</p>
+                </Link>
+              )}
+
+              {canKick && participant.user_id && (
+                <button
+                  onClick={() => onKickUser(participant.user_id!, participant.user?.name || t('unknown'))}
+                  className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                  title="Remove from session"
+                >
+                  <UserX className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

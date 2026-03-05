@@ -242,6 +242,12 @@ export const extEn = {
   withdrawRequest: 'Withdraw Request',
   noMatchingFilters: 'No sessions match your filters',
   clearFilters: 'Clear filters',
+
+  // P1 fixes
+  guest: 'Guest',
+  findYourTribe: 'Find Your Tribe',
+  onboardingDescBrowse: 'Browse sessions by sport, skill level, and location. Join with one tap.',
+  inviteOnlyLabel: 'Invite Only',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -487,4 +493,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
   withdrawRequest: 'Retirar Solicitud',
   noMatchingFilters: 'No hay sesiones que coincidan con tus filtros',
   clearFilters: 'Limpiar filtros',
+
+  // P1 fixes
+  guest: 'Invitado',
+  findYourTribe: 'Encuentra tu Tribu',
+  onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicacion. Unete con un toque.',
+  inviteOnlyLabel: 'Solo con Invitacion',
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, Trash2, MessageCircle } from 'lucide-react';
+import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -122,13 +122,22 @@ export default function ActionButtons({
           </button>
         </>
       ) : hasJoined ? (
-        <button
-          onClick={sessionActions.handleLeave}
-          className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
-        >
-          <LogOut className="w-5 h-5" />
-          {t('leaveSession')}
-        </button>
+        isPast ? (
+          <button
+            disabled
+            className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
+          >
+            {t('sessionEnded')}
+          </button>
+        ) : (
+          <button
+            onClick={sessionActions.handleLeave}
+            className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-5 h-5" />
+            {t('leaveSession')}
+          </button>
+        )
       ) : isPast ? (
         <button
           disabled
@@ -143,6 +152,11 @@ export default function ActionButtons({
         >
           {t('sessionFull')}
         </button>
+      ) : session.join_policy === 'invite_only' ? (
+        <div className="w-full py-3 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold rounded-lg text-center flex items-center justify-center gap-2">
+          <Lock className="w-5 h-5" />
+          {t('inviteOnlyLabel')}
+        </div>
       ) : (
         <button
           onClick={sessionActions.handleJoin}
@@ -153,7 +167,7 @@ export default function ActionButtons({
         </button>
       )}
 
-      {hasJoined && !isPast && (
+      {(hasJoined || isCreator) && !isPast && (
         <Link
           href={`/session/${session.id}/chat`}
           className="w-full py-3 bg-stone-700 text-white font-bold rounded-lg hover:bg-stone-600 transition flex items-center justify-center gap-2"
@@ -162,7 +176,7 @@ export default function ActionButtons({
           {t('groupChat')}
         </Link>
       )}
-      {hasJoined && !isPast && (
+      {(hasJoined || isCreator) && !isPast && (
         <button
           onClick={onInvite}
           disabled={creatingInvite}
@@ -171,7 +185,7 @@ export default function ActionButtons({
           {creatingInvite ? t('generating') : t('inviteFriend')}
         </button>
       )}
-      {hasJoined && (
+      {(hasJoined || isCreator) && (
         <button
           onClick={() =>
             downloadICS({

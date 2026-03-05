@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { upsertUserProfile } from '@/lib/auth-helpers';
-import { showError } from '@/lib/toast';
+import { showError, showSuccess } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { logError } from '@/lib/logger';
 import { getAuthTranslations } from './translations';
@@ -32,6 +32,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
   const [appleLoading, setAppleLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   function getSafeReturnTo(): string {
     const returnTo = searchParams.get('returnTo');
@@ -54,6 +56,12 @@ export function useAuthHandlers(language: 'en' | 'es') {
   useEffect(() => {
     if (mode === 'reset-password') setIsResetPassword(true);
   }, [mode]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (errorParam) {
@@ -182,6 +190,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
         if (error) throw error;
         if (!data.user?.email_confirmed_at) {
           setMessage(t.verifyEmail);
+          setNeedsVerification(true);
           await supabase.auth.signOut();
           return;
         }
@@ -245,6 +254,19 @@ export function useAuthHandlers(language: 'en' | 'es') {
     }
   }
 
+  async function handleResendVerification() {
+    if (resendCooldown > 0 || !email) return;
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+      showSuccess(t.verificationSent);
+      setResendCooldown(60);
+    } catch (error: unknown) {
+      logError(error, { action: 'handleResendVerification' });
+      showError(getErrorMessage(error, 'resend_verification', language));
+    }
+  }
+
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -289,10 +311,13 @@ export function useAuthHandlers(language: 'en' | 'es') {
     googleLoading,
     message,
     setMessage,
+    needsVerification,
+    resendCooldown,
     handleGoogleSignIn,
     handleAppleSignIn,
     handleSubmit,
     handleForgotPassword,
     handleResetPassword,
+    handleResendVerification,
   };
 }

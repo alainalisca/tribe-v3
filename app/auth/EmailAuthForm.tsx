@@ -19,8 +19,11 @@ interface EmailAuthFormProps {
   onNameChange: (v: string) => void;
   onBirthDateChange: (v: string) => void;
   onAcceptedTosChange: (v: boolean) => void;
+  needsVerification: boolean;
+  resendCooldown: number;
   onSubmit: (e: React.FormEvent) => void;
   onForgotPassword: () => void;
+  onResendVerification: () => void;
 }
 
 export default function EmailAuthForm({
@@ -39,8 +42,11 @@ export default function EmailAuthForm({
   onNameChange,
   onBirthDateChange,
   onAcceptedTosChange,
+  needsVerification,
+  resendCooldown,
   onSubmit,
   onForgotPassword,
+  onResendVerification,
 }: EmailAuthFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -180,6 +186,17 @@ export default function EmailAuthForm({
         >
           {message}
         </div>
+      )}
+
+      {needsVerification && (
+        <button
+          type="button"
+          onClick={onResendVerification}
+          disabled={resendCooldown > 0}
+          className="w-full py-3 border border-tribe-green text-tribe-green font-semibold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resendCooldown > 0 ? `${t.resendIn} ${resendCooldown}s` : t.resendVerification}
+        </button>
       )}
 
       <button

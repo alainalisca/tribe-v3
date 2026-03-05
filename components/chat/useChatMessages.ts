@@ -141,8 +141,8 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
     };
   }
 
-  async function sendMessage(messageText: string) {
-    if (!messageText.trim() || sending) return;
+  async function sendMessage(messageText: string): Promise<boolean> {
+    if (!messageText.trim() || sending) return false;
     try {
       setSending(true);
       const insertResult = await insertChatMessage(supabase, {
@@ -170,9 +170,11 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
           }).catch(() => {});
         }
       }
+      return true;
     } catch (error) {
       logError(error, { action: 'sendMessage', sessionId });
       showError(getErrorMessage(error, 'send_message', language));
+      return false;
     } finally {
       setSending(false);
     }

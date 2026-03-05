@@ -83,7 +83,14 @@ export default function CreateSessionPage() {
     if (!formData.start_time) newErrors.start_time = t('startTimeRequired');
     if (!formData.location) newErrors.location = t('locationRequired');
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const errorFields = Object.keys(newErrors);
+    if (errorFields.length > 0) {
+      const firstField = errorFields[0];
+      const el = document.querySelector<HTMLElement>(`[name="${firstField}"], [data-field="${firstField}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    return true;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -237,7 +244,7 @@ export default function CreateSessionPage() {
             </div>
 
             {/* Location */}
-            <div>
+            <div data-field="location">
               <label className="block text-sm font-medium text-theme-primary mb-2">{t('location')} *</label>
               <LocationPicker
                 value={formData.location}

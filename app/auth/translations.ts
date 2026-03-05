@@ -53,6 +53,9 @@ export function getAuthTranslations(language: 'en' | 'es') {
     appleSignInError: language === 'es' ? '❌ Error al iniciar sesión con Apple' : '❌ Failed to sign in with Apple',
     continueWithGoogle: language === 'es' ? 'Continuar con Google' : 'Continue with Google',
     googleSignInError: language === 'es' ? '❌ Error al iniciar sesión con Google' : '❌ Failed to sign in with Google',
+    resendVerification: language === 'es' ? 'Reenviar correo de verificación' : 'Resend verification email',
+    verificationSent: language === 'es' ? '✅ ¡Correo de verificación enviado!' : '✅ Verification email sent!',
+    resendIn: language === 'es' ? 'Reenviar en' : 'Resend in',
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Users, Calendar, User } from 'lucide-react';
+import { X, Users, MapPin, Calendar, User } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface OnboardingModalProps {
@@ -21,9 +21,9 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
       icon: Users,
     },
     {
-      title: t('neverTrainAlone'),
-      description: t('onboardingDesc1'),
-      icon: Users,
+      title: t('findYourTribe'),
+      description: t('onboardingDescBrowse'),
+      icon: MapPin,
     },
     {
       title: t('joinSessionsInstantly'),

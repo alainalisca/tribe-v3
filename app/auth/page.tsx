@@ -75,6 +75,8 @@ export default function AuthPage() {
               loading={h.loading}
               message={h.message}
               language={language}
+              needsVerification={h.needsVerification}
+              resendCooldown={h.resendCooldown}
               onEmailChange={h.setEmail}
               onPasswordChange={h.setPassword}
               onNameChange={h.setName}
@@ -82,6 +84,7 @@ export default function AuthPage() {
               onAcceptedTosChange={h.setAcceptedTos}
               onSubmit={h.handleSubmit}
               onForgotPassword={h.handleForgotPassword}
+              onResendVerification={h.handleResendVerification}
             />
           )}
 

@@ -108,11 +108,11 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
     }
   }
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    chat.sendMessage(newMessage.trim());
-    setNewMessage('');
+    const success = await chat.sendMessage(newMessage.trim());
+    if (success) setNewMessage('');
   }
 
   const selectedMsg = selectedMessage ? chat.messages.find((m) => m.id === selectedMessage) : null;
