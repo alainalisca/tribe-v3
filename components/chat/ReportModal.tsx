@@ -23,7 +23,7 @@ export default function ReportModal({
   onSubmit,
 }: ReportModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
       <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-stone-900 dark:text-white">{tr.reportMessage}</h3>

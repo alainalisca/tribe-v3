@@ -76,7 +76,7 @@ export default function EditProfilePage() {
             placeholder={tr.namePlaceholder}
             autoComplete="name"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -90,7 +90,7 @@ export default function EditProfilePage() {
             placeholder="@username"
             autoComplete="username"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -104,7 +104,7 @@ export default function EditProfilePage() {
             placeholder={tr.locationPlaceholder}
             autoComplete="address-level2"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
           />
         </div>
 
@@ -116,7 +116,7 @@ export default function EditProfilePage() {
             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
             placeholder={tr.bioPlaceholder}
             rows={4}
-            className="w-full px-4 py-3 bg-white border border-stone-300 rounded-xl text-stone-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green resize-none"
+            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green resize-none"
           />
         </div>
 
@@ -235,7 +235,7 @@ export default function EditProfilePage() {
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                   formData.sports.includes(sport)
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white text-theme-secondary border border-stone-300'
+                    : 'bg-white dark:bg-[#52575D] text-theme-secondary border border-stone-300 dark:border-gray-600'
                 }`}
               >
                 {getTranslatedSport(sport)}

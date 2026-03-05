@@ -307,7 +307,7 @@ export function useHomeFeed() {
         try {
           const result = await dalDeleteSession(supabase, id);
           if (!result.success) throw new Error(result.error);
-          showSuccess('Session deleted successfully!');
+          showSuccess(language === 'es' ? '¡Sesión eliminada exitosamente!' : 'Session deleted successfully!');
           await loadSessions();
         } catch (error: unknown) {
           showError(getErrorMessage(error, 'delete_session', language));

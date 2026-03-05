@@ -54,7 +54,11 @@ export function useSessionActions({
       });
       if (!result.success) {
         const errorMessages = getJoinErrorMessages(language);
-        showInfo(errorMessages[result.error!] || result.error || 'Could not join session');
+        showInfo(
+          errorMessages[result.error!] ||
+            result.error ||
+            (language === 'es' ? 'No se pudo unir a la sesión' : 'Could not join session')
+        );
         return;
       }
       if (result.status === 'pending') {

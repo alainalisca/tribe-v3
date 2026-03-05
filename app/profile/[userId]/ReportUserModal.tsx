@@ -24,16 +24,16 @@ export default function ReportUserModal({
   onSubmit,
 }: ReportUserModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold mb-4">{t.reportUser}</h3>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
+      <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
+        <h3 className="text-xl font-bold dark:text-white mb-4">{t.reportUser}</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">{t.reason} *</label>
+            <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.reason} *</label>
             <select
               value={reportReason}
               onChange={(e) => onReasonChange(e.target.value)}
-              className="w-full p-2 border rounded-lg text-stone-900"
+              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
             >
               <option value="">{t.selectReason}</option>
               <option value="harassment">{t.harassment}</option>
@@ -45,19 +45,19 @@ export default function ReportUserModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">{t.additionalDetails}</label>
+            <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.additionalDetails}</label>
             <textarea
               value={reportDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={t.provideContext}
-              className="w-full p-2 border rounded-lg h-24 resize-none text-stone-900"
+              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
             />
           </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50"
+            className="flex-1 px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-[#52575D]"
             disabled={submitting}
           >
             {t.cancel}

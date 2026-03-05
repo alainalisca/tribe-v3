@@ -74,17 +74,17 @@ export default function FeedbackPage() {
 
         {/* Feedback Form */}
         {activeTab === 'feedback' && (
-          <div className="bg-white rounded-xl p-6 shadow">
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow">
             <h2 className="text-lg font-bold text-theme-primary mb-4">{t.shareIdeas}</h2>
             <p className="text-sm text-theme-secondary mb-6">{t.shareIdeasDesc}</p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">{t.type} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.type} *</label>
                 <select
                   value={feedbackType}
                   onChange={(e) => setFeedbackType(e.target.value)}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 >
                   <option value="feature_request">{t.featureRequest}</option>
                   <option value="general">{t.general}</option>
@@ -92,23 +92,23 @@ export default function FeedbackPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t.title} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.title} *</label>
                 <input
                   type="text"
                   value={feedbackTitle}
                   onChange={(e) => setFeedbackTitle(e.target.value)}
                   placeholder={t.titlePlaceholder}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t.description} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.description} *</label>
                 <textarea
                   value={feedbackDescription}
                   onChange={(e) => setFeedbackDescription(e.target.value)}
                   placeholder={t.descriptionPlaceholder}
-                  className="w-full p-3 border border-stone-300 rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 />
               </div>
 
@@ -126,48 +126,48 @@ export default function FeedbackPage() {
 
         {/* Bug Report Form */}
         {activeTab === 'bug' && (
-          <div className="bg-white rounded-xl p-6 shadow">
+          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow">
             <h2 className="text-lg font-bold text-theme-primary mb-4">{t.reportBug}</h2>
             <p className="text-sm text-theme-secondary mb-6">{t.reportBugDesc}</p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">{t.title} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.title} *</label>
                 <input
                   type="text"
                   value={bugTitle}
                   onChange={(e) => setBugTitle(e.target.value)}
                   placeholder={t.bugTitlePlaceholder}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t.whatHappened} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.whatHappened} *</label>
                 <textarea
                   value={bugDescription}
                   onChange={(e) => setBugDescription(e.target.value)}
                   placeholder={t.whatHappenedPlaceholder}
-                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t.stepsToReproduce}</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.stepsToReproduce}</label>
                 <textarea
                   value={bugSteps}
                   onChange={(e) => setBugSteps(e.target.value)}
                   placeholder={t.stepsPlaceholder}
-                  className="w-full p-3 border border-stone-300 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">{t.severity} *</label>
+                <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.severity} *</label>
                 <select
                   value={bugSeverity}
                   onChange={(e) => setBugSeverity(e.target.value)}
-                  className="w-full p-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900"
+                  className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                 >
                   <option value="low">{t.low}</option>
                   <option value="medium">{t.medium}</option>
