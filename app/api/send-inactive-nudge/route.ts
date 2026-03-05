@@ -4,7 +4,11 @@ import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchUsersForAdmin, fetchParticipationsWithSession, fetchSessionsByCreator } from '@/lib/dal';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not configured');
+  return new Resend(key);
+}
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
 /**
@@ -16,6 +20,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
  */
 export async function POST(request: Request) {
   try {
+    const resend = getResendClient();
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
