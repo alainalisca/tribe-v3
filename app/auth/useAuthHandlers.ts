@@ -130,34 +130,14 @@ export function useAuthHandlers(language: 'en' | 'es') {
     setAppleLoading(true);
     setMessage('');
     try {
-      if (Capacitor.isNativePlatform()) {
-        const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
-        const result = await SignInWithApple.authorize({
-          clientId: process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || '',
-          redirectURI: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback`,
-          scopes: 'email name',
-        });
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'apple',
-          token: result.response.identityToken,
-        });
-        if (error) throw error;
-        if (data.user) {
-          const fullName = result.response.givenName
-            ? `${result.response.givenName} ${result.response.familyName || ''}`.trim()
-            : undefined;
-          const { isNewUser } = await upsertUserProfile(data.user, fullName);
-          window.location.href = isNewUser ? '/profile/edit' : getSafeReturnTo();
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
-          },
-        });
-        if (error) throw error;
-      }
+      // Use web OAuth flow for all platforms (native plugin removed until Capacitor 8 support)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
+        },
+      });
+      if (error) throw error;
     } catch (err) {
       if (err && typeof err === 'object' && 'code' in err) {
         const code = (err as Record<string, unknown>).code;
