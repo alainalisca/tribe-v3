@@ -22,7 +22,7 @@ export default function HomePage() {
   const f = useHomeFeed();
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D] overflow-y-auto">
       {f.showOnboarding && f.user && (
         <OnboardingModal
           onComplete={() => {
@@ -151,12 +151,7 @@ export default function HomePage() {
                 <>
                   <div className="text-4xl mb-4">🏃‍♂️</div>
                   <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('noSessionsFound')}</p>
-                  <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
-                  <Link href="/create">
-                    <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                      {f.t('createSession')}
-                    </button>
-                  </Link>
+                  <p className="text-sm text-stone-500 dark:text-gray-400">{f.t('tryDifferentSearch')}</p>
                 </>
               )}
             </div>

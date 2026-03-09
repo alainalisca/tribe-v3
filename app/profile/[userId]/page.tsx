@@ -194,11 +194,34 @@ export default function PublicProfilePage() {
     );
   if (!profile)
     return (
-      <div className="min-h-screen bg-theme-page flex flex-col items-center justify-center">
-        <p className="text-theme-primary mb-4">{t.userNotFound}</p>
-        <button onClick={() => router.back()} className="text-tribe-green hover:underline">
-          {t.goBack}
-        </button>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
+            </button>
+            <h1 className="text-lg font-bold text-theme-primary leading-tight">
+              Tribe<span className="text-tribe-green">.</span>
+            </h1>
+          </div>
+        </div>
+        <div className="pt-header flex items-center justify-center min-h-[60vh]">
+          <div className="text-center p-6">
+            <div className="text-4xl mb-4">🔍</div>
+            <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t.userNotFound}</p>
+            <p className="text-sm text-stone-500 dark:text-gray-400 mb-6">{globalT('checkConnectionRetry')}</p>
+            <button
+              onClick={() => router.back()}
+              className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+            >
+              {t.goBack}
+            </button>
+          </div>
+        </div>
+        <BottomNav />
       </div>
     );
 

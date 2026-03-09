@@ -48,7 +48,9 @@ export default function SessionDetailPage() {
             <Link href="/" className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
             </Link>
-            <h1 className="text-lg font-bold text-theme-primary leading-tight">Tribe</h1>
+            <h1 className="text-lg font-bold text-theme-primary leading-tight">
+              Tribe<span className="text-tribe-green">.</span>
+            </h1>
           </div>
         </div>
         <div className="pt-header flex items-center justify-center min-h-[60vh]">

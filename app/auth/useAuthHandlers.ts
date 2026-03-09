@@ -65,8 +65,13 @@ export function useAuthHandlers(language: 'en' | 'es') {
 
   useEffect(() => {
     if (errorParam) {
+      // Suppress transient OAuth errors that flash before successful redirect
+      const transientErrors = ['server_error', 'temporarily_unavailable', 'access_denied'];
       const decoded = decodeURIComponent(errorParam);
-      setMessage(language === 'es' ? `❌ Error de autenticación: ${decoded}` : `❌ Authentication error: ${decoded}`);
+      const isTransient = transientErrors.some((e) => decoded.toLowerCase().includes(e));
+      if (!isTransient) {
+        setMessage(language === 'es' ? `❌ Error de autenticación: ${decoded}` : `❌ Authentication error: ${decoded}`);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [errorParam]);
@@ -227,7 +232,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
       }
     } catch (error: unknown) {
       logError(error, { action: 'handleEmailAuth' });
-      setMessage('❌ ' + getErrorMessage(error, 'email_auth', language));
+      const context = isLogin ? 'login' : 'signup';
+      setMessage('❌ ' + getErrorMessage(error, context, language));
     } finally {
       setLoading(false);
     }

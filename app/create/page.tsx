@@ -185,10 +185,10 @@ export default function CreateSessionPage() {
                     key={level.value}
                     type="button"
                     onClick={() => setFormData({ ...formData, skill_level: level.value })}
-                    className={`p-3 rounded-lg font-medium transition-all text-center ${formData.skill_level === level.value ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
+                    className={`p-3 rounded-lg font-medium transition-all flex flex-col items-center justify-center ${formData.skill_level === level.value ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
                   >
                     <div className="text-lg mb-1">{level.emoji}</div>
-                    <div className="text-xs">{level.label}</div>
+                    <div className="text-xs text-center leading-tight">{level.label}</div>
                   </button>
                 ))}
               </div>

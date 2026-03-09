@@ -44,7 +44,7 @@ export default function FeedbackPage() {
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </button>
           <h1 className="text-xl font-bold text-theme-primary">
-            {t.pageTitle} <span className="text-tribe-green">Tribe.</span>
+            {t.pageTitle} Tribe<span className="text-tribe-green">.</span>
           </h1>
         </div>
       </div>
