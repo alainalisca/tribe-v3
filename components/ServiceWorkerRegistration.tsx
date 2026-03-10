@@ -7,9 +7,10 @@ import { updateUser } from '@/lib/dal';
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      registerAndSubscribe();
-    }
+    if (!('serviceWorker' in navigator && 'PushManager' in window)) return;
+    // Defer SW registration to avoid blocking initial render and scroll
+    const id = setTimeout(() => registerAndSubscribe(), 5000);
+    return () => clearTimeout(id);
   }, []);
 
   async function registerAndSubscribe() {

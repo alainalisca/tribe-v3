@@ -27,7 +27,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-stone-200 dark:border-[#52575D]">
+      <div className="bg-white dark:bg-[#6B7178] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-stone-200 dark:border-[#52575D]">
         <div className="p-5">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">

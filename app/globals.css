@@ -12,14 +12,16 @@
 }
 
 .dark {
-  --background: #52575D;
+  --background: #52575d;
   --foreground: #ffffff;
 }
 
-html, body {
+html,
+body {
   overscroll-behavior: none;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
 }
 
 html {
@@ -32,6 +34,7 @@ body {
   color: var(--foreground);
   background: var(--background);
   overflow-y: auto;
+  will-change: scroll-position;
 }
 
 @layer components {
@@ -131,6 +134,7 @@ body {
   }
 
   .safe-area-all {
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+      env(safe-area-inset-left, 0px);
   }
 }

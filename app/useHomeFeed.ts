@@ -73,16 +73,31 @@ export function useHomeFeed() {
 
   useEffect(() => {
     checkUser();
-    getUserLocation().then((loc) => {
-      if (loc) setUserLocation(loc);
-    });
+    // Defer geolocation — not needed for initial render
+    const idleId =
+      typeof requestIdleCallback !== 'undefined'
+        ? requestIdleCallback(() => getUserLocation().then((loc) => loc && setUserLocation(loc)))
+        : undefined;
+    const fallbackId =
+      idleId === undefined
+        ? setTimeout(() => getUserLocation().then((loc) => loc && setUserLocation(loc)), 3000)
+        : undefined;
+    return () => {
+      if (idleId !== undefined) cancelIdleCallback(idleId);
+      if (fallbackId !== undefined) clearTimeout(fallbackId);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!userChecked) return;
-    scheduleSessionReminders();
-    if (user) tryRegisterPushNotifications(user.id);
+    // Load visible content first
     loadProfile();
     loadSessions();
+    // Defer non-critical background tasks
+    const deferredId = setTimeout(() => {
+      scheduleSessionReminders();
+      if (user) tryRegisterPushNotifications(user.id);
+    }, 4000);
+    return () => clearTimeout(deferredId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user is set
   }, [userChecked]);
   useEffect(() => {
@@ -133,7 +148,10 @@ export function useHomeFeed() {
       const result = await fetchUpcomingSessions(supabase);
       if (!result.success) throw new Error(result.error);
       setSessions(result.data || []);
-      loadLiveStatuses((result.data || []).map((s) => s.id));
+      // Defer live status loading so session list renders immediately
+      requestAnimationFrame(() => {
+        loadLiveStatuses((result.data || []).map((s) => s.id));
+      });
     } catch (error) {
       logError(error, { action: 'loadSessions' });
       setFetchError(true);
@@ -145,9 +163,16 @@ export function useHomeFeed() {
   async function loadLiveStatuses(sessionIds: string[]) {
     if (sessionIds.length === 0) return;
     try {
-      const results = await Promise.all(
-        sessionIds.map((sid) => fetchLiveUsersWithDetails(supabase, sid).then((r) => ({ sid, r })))
-      );
+      // Batch in chunks of 5 to avoid flooding the main thread
+      const CHUNK_SIZE = 5;
+      const results: Array<{ sid: string; r: Awaited<ReturnType<typeof fetchLiveUsersWithDetails>> }> = [];
+      for (let i = 0; i < sessionIds.length; i += CHUNK_SIZE) {
+        const chunk = sessionIds.slice(i, i + CHUNK_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map((sid) => fetchLiveUsersWithDetails(supabase, sid).then((r) => ({ sid, r })))
+        );
+        results.push(...chunkResults);
+      }
       const map: Record<string, { count: number; users: Array<{ name: string; avatar_url: string | null }> }> = {};
       const userIds = new Set<string>();
       for (const { sid, r } of results) {

@@ -19,7 +19,9 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    checkUser();
+    // Defer notification check — not needed for initial render
+    const id = setTimeout(() => checkUser(), 6000);
+    return () => clearTimeout(id);
   }, []);
 
   async function checkUser() {
