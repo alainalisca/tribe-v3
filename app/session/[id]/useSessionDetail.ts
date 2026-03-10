@@ -86,7 +86,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   }, [session, user, loading]);
 
   useEffect(() => {
-    if (lightboxOpen || sessionActions.showGuestModal || showStoryUpload || showStoryViewer) {
+    if (lightboxOpen || sessionActions.showGuestModal || showStoryUpload || showStoryViewer || showInviteModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -94,7 +94,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [lightboxOpen, sessionActions.showGuestModal, showStoryUpload, showStoryViewer]);
+  }, [lightboxOpen, sessionActions.showGuestModal, showStoryUpload, showStoryViewer, showInviteModal]);
 
   useEffect(() => {
     function handlePopState() {
