@@ -17,15 +17,11 @@
 }
 
 html {
-  /* clip prevents horizontal scroll without creating a scroll container */
-  /* (overflow-x: hidden on html creates a nested scroll context that */
-  /* traps touch events on Android WebView / Chrome mobile) */
-  overflow-x: clip;
-  overscroll-behavior-x: none;
+  /* Do NOT set overflow on html — per CSS spec, non-visible overflow on */
+  /* the root element makes the viewport use html's values instead of */
+  /* body's. This prevents body's overflow-y: auto from enabling scroll. */
   -webkit-overflow-scrolling: touch;
-  /* Ensure safe area insets are available */
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  padding: 0; /* Reset - we'll handle padding per-element */
+  padding: 0;
 }
 
 body {
