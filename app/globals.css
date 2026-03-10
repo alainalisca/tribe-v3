@@ -16,15 +16,13 @@
   --foreground: #ffffff;
 }
 
-html,
-body {
-  overscroll-behavior: none;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  touch-action: manipulation;
-}
-
 html {
+  /* clip prevents horizontal scroll without creating a scroll container */
+  /* (overflow-x: hidden on html creates a nested scroll context that */
+  /* traps touch events on Android WebView / Chrome mobile) */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
   /* Ensure safe area insets are available */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   padding: 0; /* Reset - we'll handle padding per-element */
@@ -33,8 +31,11 @@ html {
 body {
   color: var(--foreground);
   background: var(--background);
+  overflow-x: hidden;
   overflow-y: auto;
-  will-change: scroll-position;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer components {
