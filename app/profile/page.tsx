@@ -118,9 +118,9 @@ export default function ProfilePage() {
 
           {/* Profile Completeness */}
           {pct !== null && (
-            <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4 border border-stone-200 dark:border-[#52575D]">
+            <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-theme-primary">{txt.profileComplete(pct)}</span>
+                <span className="text-xs font-medium text-theme-primary">{txt.profileComplete(pct)}</span>
               </div>
               <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
                 <div
@@ -134,27 +134,27 @@ export default function ProfilePage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
-              <p className="text-sm text-theme-secondary mt-1">{txt.created}</p>
+              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
+              <p className="text-xs text-muted-foreground mt-1">{txt.created}</p>
             </div>
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
-              <p className="text-sm text-theme-secondary mt-1">{txt.joined}</p>
+              <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
+              <p className="text-xs text-muted-foreground mt-1">{txt.joined}</p>
             </div>
             <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
-              <p className="text-4xl font-bold text-theme-primary">{stats.totalSessions}</p>
-              <p className="text-sm text-theme-secondary mt-1">{txt.total}</p>
+              <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
+              <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
           </div>
 
           {/* Bio */}
           <div className="mt-6">
             {profile?.bio ? (
-              <div className="bg-white rounded-2xl p-5 border border-stone-200">
+              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5">
                 <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-5 border border-stone-200 text-center">
+              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5 text-center">
                 <p className="text-theme-secondary text-sm italic">{txt.noBio}</p>
               </div>
             )}
@@ -163,7 +163,7 @@ export default function ProfilePage() {
           {/* Social Media Links */}
           {(profile?.instagram_username || profile?.facebook_url) && (
             <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                 🔗 {txt.verifiedSocial}
               </h3>
               <div className="space-y-2">
@@ -194,7 +194,7 @@ export default function ProfilePage() {
           {/* Photo Gallery */}
           {photos.length > 0 && (
             <div className="mt-6">
-              <h3 className="text-lg font-bold text-theme-primary mb-3">{txt.photos}</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{txt.photos}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {photos.map((photo: string, index: number) => (
                   <div
@@ -236,7 +236,7 @@ export default function ProfilePage() {
           {/* Edit Profile Button */}
           <Button
             onClick={() => router.push('/profile/edit')}
-            className="w-full mt-8 py-4 font-bold rounded-2xl text-lg"
+            className="w-full mt-6 py-4 font-bold rounded-2xl text-lg"
           >
             {txt.editProfile}
           </Button>

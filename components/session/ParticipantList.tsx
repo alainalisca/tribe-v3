@@ -56,7 +56,7 @@ export default function ParticipantList({
               </Avatar>
               <div>
                 <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
-                <p className="text-xs text-tribe-green font-semibold">{t('host')}</p>
+                <p className="text-sm text-muted-foreground">{t('host')}</p>
               </div>
             </Link>
           </div>
@@ -88,9 +88,7 @@ export default function ParticipantList({
                   {avatar}
                   <div>
                     <p className="font-medium text-stone-900 dark:text-white">{displayName}</p>
-                    <span className="text-xs text-stone-500 dark:text-gray-400 bg-stone-200 dark:bg-[#404549] px-2 py-0.5 rounded-full">
-                      {t('guest')}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{t('guest')}</span>
                   </div>
                 </div>
               ) : (

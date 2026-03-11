@@ -52,7 +52,7 @@ export default function ActionButtons({
           <Button
             onClick={sessionActions.handleGuestLeave}
             variant="destructive"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('leaveSession')}
@@ -72,12 +72,16 @@ export default function ActionButtons({
         )
       ) : isCreator ? (
         <>
-          <div className="w-full py-3 bg-blue-100 text-blue-800 font-bold rounded-lg text-center">
+          <div className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-medium text-sm rounded-lg text-center">
             {t('hostingThisSession')}
           </div>
           {!isPast && (
             <>
-              <Button onClick={onEdit} className="w-full py-3 font-bold flex items-center justify-center gap-2">
+              <Button
+                onClick={onEdit}
+                variant="outline"
+                className="w-full py-3 font-medium flex items-center justify-center gap-2"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -91,7 +95,7 @@ export default function ActionButtons({
               <Button
                 onClick={sessionActions.handleCancel}
                 variant="destructive"
-                className="w-full py-3 font-bold flex items-center justify-center gap-2"
+                className="w-full py-2 text-sm font-bold flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-5 h-5" />
                 {t('cancelSession')}
@@ -107,7 +111,7 @@ export default function ActionButtons({
           <Button
             onClick={sessionActions.handleLeave}
             variant="destructive"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('withdrawRequest')}
@@ -122,7 +126,7 @@ export default function ActionButtons({
           <Button
             onClick={sessionActions.handleLeave}
             variant="destructive"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
+            className="w-full py-2 text-sm bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('leaveSession')}
@@ -150,19 +154,14 @@ export default function ActionButtons({
       {(hasJoined || isCreator) && !isPast && (
         <Link
           href={`/session/${session.id}/chat`}
-          className="w-full py-3 bg-stone-700 text-white font-bold rounded-lg hover:bg-stone-600 transition flex items-center justify-center gap-2"
+          className="w-full py-3 bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-[#5d6269] transition flex items-center justify-center gap-2"
         >
           <MessageCircle className="w-5 h-5" />
           {t('groupChat')}
         </Link>
       )}
       {(hasJoined || isCreator) && !isPast && (
-        <Button
-          onClick={onInvite}
-          disabled={creatingInvite}
-          variant="secondary"
-          className="w-full py-3 bg-blue-500 text-white hover:bg-blue-600 font-bold"
-        >
+        <Button onClick={onInvite} disabled={creatingInvite} variant="outline" className="w-full py-3 font-medium">
           {creatingInvite ? t('generating') : t('inviteFriend')}
         </Button>
       )}
@@ -181,7 +180,7 @@ export default function ActionButtons({
             })
           }
           variant="outline"
-          className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-bold flex items-center justify-center gap-2"
+          className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-medium flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

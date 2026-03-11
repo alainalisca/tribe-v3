@@ -65,9 +65,9 @@ export default function OAuthButtons({
         {googleLoading ? t.loading : t.continueWithGoogle}
       </Button>
 
-      <div className="flex items-center gap-4 my-2">
+      <div className="flex items-center gap-4 my-3">
         <div className="flex-1 h-px bg-stone-300 dark:bg-gray-500"></div>
-        <span className="text-sm text-stone-500 dark:text-gray-400">{t.or}</span>
+        <span className="text-xs text-muted-foreground">{t.or}</span>
         <div className="flex-1 h-px bg-stone-300 dark:bg-gray-500"></div>
       </div>
     </>

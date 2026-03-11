@@ -56,7 +56,7 @@ export default function EmailAuthForm({
       {!isLogin && (
         <>
           <div>
-            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.name}</Label>
+            <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.name}</Label>
             <Input
               type="text"
               value={name}
@@ -70,7 +70,7 @@ export default function EmailAuthForm({
           </div>
 
           <div>
-            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.birthDate}</Label>
+            <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.birthDate}</Label>
             <Input
               type="date"
               value={birthDate}
@@ -105,7 +105,7 @@ export default function EmailAuthForm({
       )}
 
       <div>
-        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.email}</Label>
+        <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.email}</Label>
         <Input
           type="email"
           placeholder="email@example.com"
@@ -119,7 +119,7 @@ export default function EmailAuthForm({
       </div>
 
       <div>
-        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.password}</Label>
+        <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.password}</Label>
         <Input
           type="password"
           placeholder="••••••••"

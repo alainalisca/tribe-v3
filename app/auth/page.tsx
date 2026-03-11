@@ -33,12 +33,12 @@ export default function AuthPage() {
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
         <Card className="rounded-2xl dark:bg-[#6B7178] shadow-xl border-none">
           <CardContent className="p-8">
-            <div className="text-center mb-8">
+            <div className="text-center mb-10">
               <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">
                 Tribe<span className="text-tribe-green">.</span>
               </h1>
-              <p className="text-tribe-green font-semibold text-lg mb-2">{h.t.tagline}</p>
-              <p className="text-stone-600 dark:text-gray-300">
+              <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
+              <p className="text-muted-foreground">
                 {h.isResetPassword ? h.t.resetPassword : h.isLogin ? h.t.welcomeBack : h.t.joinCommunity}
               </p>
             </div>
@@ -91,7 +91,7 @@ export default function AuthPage() {
             )}
 
             {!h.isResetPassword && (
-              <div className="mt-6 text-center">
+              <div className="mt-8 text-center">
                 <button
                   onClick={() => {
                     h.setIsLogin(!h.isLogin);

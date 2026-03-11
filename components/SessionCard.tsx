@@ -31,11 +31,11 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
-      <Card className="dark:bg-[#6B7178] shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]">
+      <Card className="dark:bg-[#6B7178] shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]">
         <CardContent className="p-5">
           {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1 flex items-center gap-2">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1 flex flex-wrap items-center gap-2">
               <span className="inline-block px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-sm font-bold">
                 {sportName}
               </span>
@@ -103,7 +103,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           </div>
 
           {/* Participant Info */}
-          <div className="flex items-center justify-between text-stone-700 dark:text-[#E0E0E0] mb-4">
+          <div className="flex items-center justify-between text-stone-700 dark:text-[#E0E0E0] mb-3">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-2 text-tribe-green" />
               <span className="font-semibold">
@@ -124,9 +124,9 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           </div>
 
           {/* Date & Time */}
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center text-stone-900 dark:text-white">
-              <Calendar className="w-4 h-4 mr-2 text-tribe-green" />
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center text-muted-foreground">
+              <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
               <span className="text-sm font-medium">
                 {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
                   weekday: 'short',
@@ -136,8 +136,8 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               </span>
             </div>
 
-            <div className="flex items-center text-stone-900 dark:text-white">
-              <Clock className="w-4 h-4 mr-2 text-tribe-green" />
+            <div className="flex items-center text-muted-foreground">
+              <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
               <span className="text-sm">
                 {formatTime12Hour(session.start_time)} • {session.duration} {language === 'es' ? 'min' : 'min'}
               </span>
@@ -145,10 +145,10 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           </div>
 
           {/* Location */}
-          <div className="flex items-start mb-3">
-            <MapPin className="w-4 h-4 mr-2 mt-0.5 text-tribe-green flex-shrink-0" />
+          <div className="flex items-start mb-2">
+            <MapPin className="w-4 h-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <span className="text-sm text-stone-900 dark:text-white break-words">{session.location}</span>
+              <span className="text-sm text-muted-foreground break-words">{session.location}</span>
               {distance && (
                 <Badge className="ml-2 bg-tribe-green text-slate-900 rounded-full border-transparent">
                   {distance} {t('away')}
@@ -161,13 +161,13 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           {session.equipment && (
             <div className="flex items-start mt-2">
               <span className="text-sm mr-2">🎒</span>
-              <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">{session.equipment}</span>
+              <span className="text-sm text-muted-foreground">{session.equipment}</span>
             </div>
           )}
 
           {/* Description */}
           {session.description && (
-            <p className="text-sm text-stone-700 dark:text-[#E0E0E0] mt-2 line-clamp-2">{session.description}</p>
+            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{session.description}</p>
           )}
 
           {/* Creator with Thumbnail */}

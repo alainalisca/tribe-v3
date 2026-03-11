@@ -101,7 +101,7 @@ export default function SessionDetails({
       {session.photos && session.photos.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-tribe-green" />
+            <MapPin className="w-4 h-4 text-muted-foreground" />
             <p className="text-sm font-medium text-stone-700 dark:text-gray-300">{t('locationPhotos')}</p>
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -119,8 +119,8 @@ export default function SessionDetails({
       )}
 
       <div className="space-y-3 mb-6">
-        <div className="flex items-center text-stone-900 dark:text-white">
-          <Calendar className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
+        <div className="flex items-center text-muted-foreground">
+          <Calendar className="w-5 h-5 mr-3 text-muted-foreground" />
           <span className="font-medium">
             {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
               weekday: 'long',
@@ -131,23 +131,23 @@ export default function SessionDetails({
           </span>
         </div>
 
-        <div className="flex items-center text-stone-900 dark:text-white">
-          <Clock className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
+        <div className="flex items-center text-muted-foreground">
+          <Clock className="w-5 h-5 mr-3 text-muted-foreground" />
           <span>
             {formatTime12Hour(session.start_time)} • {session.duration} min
           </span>
         </div>
 
-        <div className="flex items-start text-stone-900 dark:text-white">
-          <MapPin className="w-5 h-5 mr-3 mt-0.5 text-stone-500 dark:text-gray-400" />
+        <div className="flex items-start text-muted-foreground">
+          <MapPin className="w-5 h-5 mr-3 mt-0.5 text-muted-foreground" />
           <span>{session.location}</span>
         </div>
 
         {session.equipment && (
-          <div className="flex items-start text-stone-900 dark:text-white">
+          <div className="flex items-start text-muted-foreground">
             <span className="w-5 h-5 mr-3 mt-0.5 text-lg">🎒</span>
             <div>
-              <p className="text-xs text-stone-500 dark:text-gray-400 mb-0.5">{t('equipmentNeeded')}</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{t('equipmentNeeded')}</p>
               <span>{session.equipment}</span>
             </div>
           </div>
@@ -158,9 +158,9 @@ export default function SessionDetails({
         </div>
 
         {creator && (
-          <div className="flex items-center justify-between text-stone-900 dark:text-white">
+          <div className="flex items-center justify-between text-muted-foreground">
             <div className="flex items-center">
-              <Users className="w-5 h-5 mr-3 text-stone-500 dark:text-gray-400" />
+              <Users className="w-5 h-5 mr-3 text-muted-foreground" />
               <span>
                 {t('hostedBy')} {creator.name}
               </span>

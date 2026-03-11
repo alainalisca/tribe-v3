@@ -99,11 +99,11 @@ export default function HomePage() {
           {f.user && (
             <button
               onClick={() => f.router.push('/training-now')}
-              className="w-full py-4 bg-gradient-to-r from-tribe-green to-lime-400 text-slate-900 font-bold rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-lg mb-4"
+              className="w-full py-4 bg-tribe-green/10 border border-tribe-green/30 text-theme-primary rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-none mb-4"
             >
               <div className="text-center">
-                <div className="text-lg">{f.t('trainingNowLabel')}</div>
-                <div className="text-xs font-normal opacity-75">{f.t('connectNearby')}</div>
+                <div className="text-base font-semibold">{f.t('trainingNowLabel')}</div>
+                <div className="text-xs text-muted-foreground">{f.t('connectNearby')}</div>
               </div>
             </button>
           )}
@@ -123,7 +123,7 @@ export default function HomePage() {
                 <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
                   {f.t('couldNotLoadSessions')}
                 </p>
-                <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('checkConnectionRetry')}</p>
+                <p className="text-sm text-muted-foreground mb-4">{f.t('checkConnectionRetry')}</p>
                 <Button onClick={() => f.loadSessions()} className="px-6 py-3 font-bold">
                   {f.t('retry')}
                 </Button>
@@ -138,7 +138,7 @@ export default function HomePage() {
                     <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
                       {f.t('noMatchingFilters')}
                     </p>
-                    <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{f.t('tryDifferentSearch')}</p>
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -158,7 +158,7 @@ export default function HomePage() {
                     <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
                       {f.t('noSessionsFound')}
                     </p>
-                    <p className="text-sm text-stone-500 dark:text-gray-400">{f.t('tryDifferentSearch')}</p>
+                    <p className="text-sm text-muted-foreground">{f.t('tryDifferentSearch')}</p>
                   </>
                 )}
               </CardContent>
