@@ -3,6 +3,7 @@
 import { formatTime12Hour } from '@/lib/utils';
 import { Calendar, Clock, MapPin, Users, Star } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
+import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -46,8 +47,8 @@ export default function SessionDetails({
             {session.sport}
           </span>
           {session.skill_level && (
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+            <Badge
+              className={`px-3 py-1 rounded-full text-sm border-transparent ${
                 session.skill_level === 'beginner'
                   ? 'bg-green-100 text-green-800'
                   : session.skill_level === 'intermediate'
@@ -71,17 +72,17 @@ export default function SessionDetails({
                   : session.skill_level === 'advanced'
                     ? t('advanced')
                     : t('allLevels')}
-            </span>
+            </Badge>
           )}
           {session.gender_preference && session.gender_preference !== 'all' && (
-            <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+            <Badge
+              className={`px-3 py-1 rounded-full text-sm border-transparent ${
                 session.gender_preference === 'women_only' ? 'bg-pink-100 text-pink-800' : 'bg-sky-100 text-sky-800'
               }`}
             >
               {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
               {session.gender_preference === 'women_only' ? t('womenOnly') : t('menOnly')}
-            </span>
+            </Badge>
           )}
         </div>
         <div className="text-right">
@@ -165,13 +166,13 @@ export default function SessionDetails({
               </span>
             </div>
             {creator.average_rating && creator.average_rating > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+              <Badge className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm border-transparent gap-1">
                 <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                 <span>{Number(creator.average_rating).toFixed(1)}</span>
                 {(creator.total_reviews ?? 0) > 0 && (
                   <span className="text-yellow-600 text-xs">({creator.total_reviews})</span>
                 )}
-              </div>
+              </Badge>
             )}
           </div>
         )}

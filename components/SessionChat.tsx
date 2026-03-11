@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, Shield } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -180,17 +181,12 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                 onTouchMove={handleTouchMove}
               >
                 <Link href={`/profile/${msg.user_id}`} className="flex-shrink-0">
-                  {msg.user?.avatar_url ? (
-                    <img
-                      src={msg.user.avatar_url}
-                      alt={msg.user.name}
-                      className="w-8 h-8 rounded-full cursor-pointer hover:opacity-80"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#C0E863] flex items-center justify-center text-xs font-semibold text-[#272D34] cursor-pointer hover:opacity-80">
+                  <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80">
+                    <AvatarImage src={msg.user?.avatar_url || undefined} alt={msg.user?.name || ''} />
+                    <AvatarFallback className="bg-[#C0E863] text-[#272D34] text-xs font-semibold">
                       {getInitials(msg.user?.name || 'U')}
-                    </div>
-                  )}
+                    </AvatarFallback>
+                  </Avatar>
                 </Link>
                 <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[70%]`}>
                   <div className="flex items-baseline gap-2 mb-1">

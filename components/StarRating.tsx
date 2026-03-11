@@ -2,6 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 interface StarRatingProps {
   rating: number;
@@ -57,9 +58,7 @@ export default function StarRating({
         <span className="text-sm font-medium text-stone-700 dark:text-stone-300 ml-1">
           {rating.toFixed(1)}
           {totalReviews !== undefined && (
-            <span className="text-stone-500 dark:text-stone-400 font-normal">
-              {' '}({totalReviews})
-            </span>
+            <span className="text-stone-500 dark:text-stone-400 font-normal"> ({totalReviews})</span>
           )}
         </span>
       )}
@@ -68,22 +67,14 @@ export default function StarRating({
 }
 
 // Compact version for displaying in cards
-export function HostRatingBadge({
-  rating,
-  totalReviews,
-}: {
-  rating: number | null;
-  totalReviews?: number;
-}) {
+export function HostRatingBadge({ rating, totalReviews }: { rating: number | null; totalReviews?: number }) {
   if (!rating || rating === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+    <Badge className="bg-yellow-100 text-yellow-800 rounded-full border-transparent gap-1">
       <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
       <span>{rating.toFixed(1)}</span>
-      {totalReviews !== undefined && totalReviews > 0 && (
-        <span className="text-yellow-600">({totalReviews})</span>
-      )}
-    </div>
+      {totalReviews !== undefined && totalReviews > 0 && <span className="text-yellow-600">({totalReviews})</span>}
+    </Badge>
   );
 }

@@ -2,6 +2,7 @@
 
 import { UserX } from 'lucide-react';
 import Link from 'next/link';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface CreatorInfo {
@@ -47,18 +48,12 @@ export default function ParticipantList({
         {creator && (
           <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
             <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
-              {creator.avatar_url ? (
-                <img
-                  loading="lazy"
-                  src={creator.avatar_url}
-                  alt={creator.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
+              <Avatar className="w-12 h-12">
+                <AvatarImage loading="lazy" src={creator.avatar_url || undefined} alt={creator.name || ''} />
+                <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-lg">
                   {creator.name[0]?.toUpperCase()}
-                </div>
-              )}
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
                 <p className="text-xs text-tribe-green font-semibold">{t('host')}</p>
@@ -74,17 +69,13 @@ export default function ParticipantList({
             ? participant.guest_name?.[0]?.toUpperCase()
             : participant.user?.name?.[0]?.toUpperCase() || 'U';
 
-          const avatar = participant.user?.avatar_url ? (
-            <img
-              loading="lazy"
-              src={participant.user.avatar_url}
-              alt={displayName ?? ''}
-              className="w-12 h-12 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-lg">
-              {avatarInitial}
-            </div>
+          const avatar = (
+            <Avatar className="w-12 h-12">
+              <AvatarImage loading="lazy" src={participant.user?.avatar_url || undefined} alt={displayName ?? ''} />
+              <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-lg">
+                {avatarInitial}
+              </AvatarFallback>
+            </Avatar>
           );
 
           return (

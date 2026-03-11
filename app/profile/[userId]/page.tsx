@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -262,20 +263,22 @@ export default function PublicProfilePage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
-          {profile.avatar_url && (
-            <div className="flex justify-center mb-4">
-              <img
-                loading="lazy"
-                src={profile.avatar_url}
-                alt={profile.name ?? undefined}
-                onClick={() => {
+          <div className="flex justify-center mb-4">
+            <Avatar
+              className="w-24 h-24 border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
+              onClick={() => {
+                if (profile.avatar_url) {
                   setLightboxPhoto(profile.avatar_url);
                   history.pushState({ lightbox: true }, '');
-                }}
-                className="w-24 h-24 rounded-full object-cover border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
-              />
-            </div>
-          )}
+                }
+              }}
+            >
+              <AvatarImage loading="lazy" src={profile.avatar_url || undefined} alt={profile.name ?? ''} />
+              <AvatarFallback className="bg-tribe-green text-3xl font-bold text-slate-900">
+                {profile.name?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+          </div>
 
           {hasLowAttendance && !isOwnProfile && (
             <div className="mt-4 bg-orange-100 border border-orange-300 rounded-lg p-3">

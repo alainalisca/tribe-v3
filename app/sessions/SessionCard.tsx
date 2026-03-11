@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Calendar, MapPin, Users, ChevronRight } from 'lucide-react';
 import { formatTime12Hour } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { SessionsTranslations } from './translations';
 
@@ -50,9 +51,9 @@ export default function SessionCard({
                   {getSportName(session.sport)}
                 </span>
                 {isHost && (
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-full">
+                  <Badge className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full border-transparent">
                     {txt.hosting}
-                  </span>
+                  </Badge>
                 )}
                 {isPast && <span className="text-xs text-stone-500 dark:text-gray-400">{txt.ended}</span>}
               </div>

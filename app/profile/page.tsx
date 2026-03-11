@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { Camera, MapPin, X, Settings } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
@@ -84,18 +85,12 @@ export default function ProfilePage() {
         <div className="px-4 -mt-16 relative z-10">
           {/* Avatar */}
           <div className="relative inline-block">
-            <div className="w-32 h-32 rounded-full border-4 border-white bg-tribe-green flex items-center justify-center overflow-hidden shadow-lg">
-              {profile?.avatar_url ? (
-                <img
-                  loading="lazy"
-                  src={profile.avatar_url}
-                  alt={profile.name ?? undefined}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-5xl font-bold text-slate-900">{getInitials(profile?.name || 'User')}</span>
-              )}
-            </div>
+            <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+              <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
+              <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
+                {getInitials(profile?.name || 'User')}
+              </AvatarFallback>
+            </Avatar>
             <label className="absolute bottom-0 right-0 bg-slate-900 p-2.5 rounded-full cursor-pointer hover:bg-slate-800 transition shadow-lg">
               <Camera className="w-5 h-5 text-white" />
               <input

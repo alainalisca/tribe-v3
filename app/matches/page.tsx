@@ -2,6 +2,8 @@
 'use client';
 import { formatTime12Hour } from '@/lib/utils';
 
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
@@ -84,20 +86,16 @@ export default function MatchesPage() {
                     <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
-                            {request.user?.avatar_url ? (
-                              <img
-                                loading="lazy"
-                                src={request.user.avatar_url}
-                                alt={request.user.name ?? undefined}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-slate-900">
-                                {request.user?.name?.charAt(0).toUpperCase() || '?'}
-                              </span>
-                            )}
-                          </div>
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage
+                              loading="lazy"
+                              src={request.user?.avatar_url || undefined}
+                              alt={request.user?.name ?? ''}
+                            />
+                            <AvatarFallback className="bg-tribe-green text-sm font-bold text-slate-900">
+                              {request.user?.name?.charAt(0).toUpperCase() || '?'}
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
                             <p className="text-[#272D34] dark:text-white font-semibold">
                               {request.user?.name || t('newJoinRequest')}
@@ -130,9 +128,9 @@ export default function MatchesPage() {
                   <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
-                        <span className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full text-sm font-medium">
+                        <Badge className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full border-transparent">
                           {language === 'es' ? sportTranslations[session.sport]?.es || session.sport : session.sport}
-                        </span>
+                        </Badge>
                         <div className="flex items-center gap-1 text-stone-600 dark:text-gray-300 text-sm">
                           <Users className="w-4 h-4" />
                           <span>

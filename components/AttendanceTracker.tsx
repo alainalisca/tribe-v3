@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, X } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
@@ -145,17 +146,12 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
               className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
             >
               <div className="flex items-center gap-3">
-                {participant.user?.avatar_url ? (
-                  <img
-                    src={participant.user.avatar_url}
-                    alt={participant.user.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={participant.user?.avatar_url || undefined} alt={participant.user?.name || ''} />
+                  <AvatarFallback className="bg-tribe-green text-slate-900 font-bold">
                     {participant.user?.name?.[0]?.toUpperCase()}
-                  </div>
-                )}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="font-medium text-stone-900 dark:text-white">{participant.user?.name}</span>
               </div>
 

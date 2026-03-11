@@ -2,6 +2,7 @@
 
 import { Camera } from 'lucide-react';
 import Link from 'next/link';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface LiveUser {
@@ -114,18 +115,12 @@ export default function LiveStatusSection({
                 <Link key={liveUser.user_id} href={`/profile/${liveUser.user_id}`}>
                   <div className="flex items-center gap-3 p-3 bg-white dark:bg-[#52575D] rounded-lg">
                     <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-red-500 to-red-400 animate-pulse">
-                      <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-[#3D4349] flex items-center justify-center">
-                        {liveUser.avatar_url ? (
-                          <img
-                            loading="lazy"
-                            src={liveUser.avatar_url}
-                            alt={liveUser.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-lg font-bold text-stone-500">{liveUser.name[0]?.toUpperCase()}</span>
-                        )}
-                      </div>
+                      <Avatar className="w-full h-full">
+                        <AvatarImage loading="lazy" src={liveUser.avatar_url || undefined} alt={liveUser.name || ''} />
+                        <AvatarFallback className="bg-white dark:bg-[#3D4349] text-lg font-bold text-stone-500">
+                          {liveUser.name[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
                     <div>
                       <p className="font-medium text-stone-900 dark:text-white">{liveUser.name}</p>

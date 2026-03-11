@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getSkillLevelDisplay, getGenderDisplay, computeSessionStatus } from './SessionCardHelpers';
@@ -43,9 +45,9 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
                 (() => {
                   const skillLevel = getSkillLevelDisplay(session.skill_level, t);
                   return (
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${skillLevel.color}`}>
+                    <Badge className={`px-2 py-1 rounded-full border-transparent ${skillLevel.color}`}>
                       {skillLevel.emoji} {skillLevel.label}
-                    </span>
+                    </Badge>
                   );
                 })()}
 
@@ -55,38 +57,40 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
                   const genderDisplay = getGenderDisplay(session.gender_preference, t);
                   if (!genderDisplay) return null;
                   return (
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${genderDisplay.color}`}>
+                    <Badge className={`px-2 py-1 rounded-full border-transparent ${genderDisplay.color}`}>
                       {genderDisplay.emoji} {genderDisplay.label}
-                    </span>
+                    </Badge>
                   );
                 })()}
 
               {/* Photo indicator badge */}
               {session.photos && session.photos.length > 0 && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold flex items-center gap-1">
+                <Badge className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full border-transparent gap-1">
                   <span className="font-bold">📍</span>
                   {session.photos.length}
-                </span>
+                </Badge>
               )}
 
               {isPast && (
-                <span className="px-3 py-1 bg-gray-300 text-gray-700 rounded-full text-xs font-semibold">
+                <Badge variant="secondary" className="px-3 py-1 rounded-full">
                   {t('ended')}
-                </span>
+                </Badge>
               )}
               {isFull && !isPast && (
-                <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold">{t('full')}</span>
+                <Badge variant="destructive" className="px-3 py-1 rounded-full border-transparent">
+                  {t('full')}
+                </Badge>
               )}
               {isStartingSoon && !isPast && !isFull && (
-                <span className="px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-semibold animate-pulse">
+                <Badge className="px-3 py-1 bg-orange-500 text-white rounded-full border-transparent animate-pulse">
                   🔥 {t('startingSoon')}
-                </span>
+                </Badge>
               )}
               {liveData && liveData.count > 0 && (
-                <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold flex items-center gap-1 animate-pulse">
+                <Badge variant="destructive" className="px-3 py-1 rounded-full border-transparent gap-1 animate-pulse">
                   <span className="w-2 h-2 bg-white rounded-full"></span>
                   {liveData.count} {t('live')}
-                </span>
+                </Badge>
               )}
             </div>
 
@@ -146,9 +150,9 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
             <div className="flex-1 min-w-0">
               <span className="text-sm text-stone-900 dark:text-white break-words">{session.location}</span>
               {distance && (
-                <span className="ml-2 px-2 py-0.5 bg-tribe-green text-slate-900 rounded-full text-xs font-semibold">
+                <Badge className="ml-2 bg-tribe-green text-slate-900 rounded-full border-transparent">
                   {distance} {t('away')}
-                </span>
+                </Badge>
               )}
             </div>
           </div>
@@ -170,27 +174,25 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
           {session.creator && (
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs">
-                  {session.creator.avatar_url ? (
-                    <img
-                      loading="lazy"
-                      src={session.creator.avatar_url}
-                      alt={session.creator.name}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                  ) : (
-                    session.creator.name?.[0]?.toUpperCase() || 'U'
-                  )}
-                </div>
+                <Avatar className="w-6 h-6">
+                  <AvatarImage
+                    loading="lazy"
+                    src={session.creator.avatar_url || undefined}
+                    alt={session.creator.name || ''}
+                  />
+                  <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-xs">
+                    {session.creator.name?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
                 <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
                   {t('hostedBy')} {session.creator.name}
                 </p>
               </div>
               {Number(session.creator.average_rating) > 0 && (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                <Badge className="bg-yellow-100 text-yellow-800 rounded-full border-transparent gap-1">
                   <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
                   <span>{Number(session.creator.average_rating).toFixed(1)}</span>
-                </div>
+                </Badge>
               )}
             </div>
           )}
@@ -201,12 +203,14 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               <div className="flex -space-x-2">
                 {confirmedParticipants.slice(0, 5).map((p, idx) => (
                   <Link key={idx} href={`/profile/${p.user_id}`}>
-                    <div
-                      className="w-8 h-8 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold text-xs border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110"
+                    <Avatar
+                      className="w-8 h-8 border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110"
                       title={p.user?.name}
                     >
-                      {p.user?.name?.[0]?.toUpperCase() || 'U'}
-                    </div>
+                      <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-xs">
+                        {p.user?.name?.[0]?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
                   </Link>
                 ))}
               </div>

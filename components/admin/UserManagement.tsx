@@ -1,4 +1,5 @@
 import { Search, Calendar } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { Database } from '@/lib/database.types';
 
@@ -62,13 +63,12 @@ export default function UserManagement({
           filteredUsers.map((u) => (
             <div key={u.id} className={`p-3 ${u.banned ? 'bg-red-50' : ''}`}>
               <div className="flex items-start gap-2 mb-2">
-                <div className="w-10 h-10 rounded-full bg-[#C0E863] flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
-                  {u.avatar_url ? (
-                    <img loading="lazy" src={u.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    u.name?.[0]?.toUpperCase() || 'U'
-                  )}
-                </div>
+                <Avatar className="w-10 h-10 flex-shrink-0">
+                  <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt="" />
+                  <AvatarFallback className="bg-[#C0E863] text-sm font-bold">
+                    {u.name?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <p className="text-sm font-bold text-[#272D34] truncate">

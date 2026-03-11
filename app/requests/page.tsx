@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Check, X, User } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -204,18 +205,16 @@ export default function RequestsPage() {
                   </div>
 
                   <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
-                    {request.users?.avatar_url ? (
-                      <img
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage
                         loading="lazy"
-                        src={request.users.avatar_url}
-                        alt={request.users.name ?? undefined}
-                        className="w-12 h-12 rounded-full object-cover"
+                        src={request.users?.avatar_url || undefined}
+                        alt={request.users?.name ?? ''}
                       />
-                    ) : (
-                      <div className="w-12 h-12 bg-stone-300 dark:bg-[#404549] rounded-full flex items-center justify-center">
+                      <AvatarFallback className="bg-stone-300 dark:bg-[#404549]">
                         <User className="w-6 h-6 text-stone-600 dark:text-gray-400" />
-                      </div>
-                    )}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <p className="font-semibold text-stone-900 dark:text-white">{request.users?.name}</p>
                     </div>
