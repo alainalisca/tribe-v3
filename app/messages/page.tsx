@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { MessageCircle, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
 
@@ -21,15 +22,17 @@ export default function MessagesPage() {
         <div className="pt-header max-w-2xl mx-auto p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white dark:bg-[#6B7178] rounded-xl p-4 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-stone-200 dark:bg-[#52575D] rounded-full" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-stone-200 dark:bg-[#52575D] rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-stone-200 dark:bg-[#52575D] rounded w-2/3" />
+              <Card key={i} className="dark:bg-[#6B7178] shadow-none animate-pulse">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-stone-200 dark:bg-[#52575D] rounded-full" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-stone-200 dark:bg-[#52575D] rounded w-1/3 mb-2" />
+                      <div className="h-3 bg-stone-200 dark:bg-[#52575D] rounded w-2/3" />
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
@@ -59,67 +62,73 @@ export default function MessagesPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         {conversations.length === 0 ? (
-          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-            <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="w-8 h-8 text-stone-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
-            <p className="text-stone-500 dark:text-gray-400 mb-4">{t('joinSessionToChat')}</p>
-            <Link href="/">
-              <Button className="font-bold">{t('findSessions')}</Button>
-            </Link>
-          </div>
+          <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="w-8 h-8 text-stone-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
+              <p className="text-stone-500 dark:text-gray-400 mb-4">{t('joinSessionToChat')}</p>
+              <Link href="/">
+                <Button className="font-bold">{t('findSessions')}</Button>
+              </Link>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-2">
             {conversations.map((conv) => (
               <Link key={conv.session_id} href={`/session/${conv.session_id}/chat`}>
-                <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:border-tribe-green transition cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-tribe-green rounded-full flex items-center justify-center text-lg flex-shrink-0">
-                      {conv.session.sport === 'Running'
-                        ? '🏃'
-                        : conv.session.sport === 'Cycling'
-                          ? '🚴'
-                          : conv.session.sport === 'Swimming'
-                            ? '🏊'
-                            : conv.session.sport === 'CrossFit'
-                              ? '🏋️'
-                              : conv.session.sport === 'Boxing'
-                                ? '🥊'
-                                : conv.session.sport === 'Yoga'
-                                  ? '🧘'
-                                  : conv.session.sport === 'Hiking'
-                                    ? '🥾'
-                                    : conv.session.sport === 'Basketball'
-                                      ? '🏀'
-                                      : conv.session.sport === 'Soccer'
-                                        ? '⚽'
-                                        : conv.session.sport === 'Tennis'
-                                          ? '🎾'
-                                          : '💪'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-stone-900 dark:text-white truncate">
-                          {getTranslatedSport(conv.session.sport)}
-                        </h3>
+                <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:border-tribe-green transition cursor-pointer shadow-none">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-tribe-green rounded-full flex items-center justify-center text-lg flex-shrink-0">
+                        {conv.session.sport === 'Running'
+                          ? '🏃'
+                          : conv.session.sport === 'Cycling'
+                            ? '🚴'
+                            : conv.session.sport === 'Swimming'
+                              ? '🏊'
+                              : conv.session.sport === 'CrossFit'
+                                ? '🏋️'
+                                : conv.session.sport === 'Boxing'
+                                  ? '🥊'
+                                  : conv.session.sport === 'Yoga'
+                                    ? '🧘'
+                                    : conv.session.sport === 'Hiking'
+                                      ? '🥾'
+                                      : conv.session.sport === 'Basketball'
+                                        ? '🏀'
+                                        : conv.session.sport === 'Soccer'
+                                          ? '⚽'
+                                          : conv.session.sport === 'Tennis'
+                                            ? '🎾'
+                                            : '💪'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-semibold text-stone-900 dark:text-white truncate">
+                            {getTranslatedSport(conv.session.sport)}
+                          </h3>
+                          {conv.last_message && (
+                            <span className="text-xs text-stone-500 dark:text-gray-400 flex-shrink-0 ml-2">
+                              {formatTime(conv.last_message.created_at)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-stone-500 dark:text-gray-400 truncate mb-1">
+                          {conv.session.location}
+                        </p>
                         {conv.last_message && (
-                          <span className="text-xs text-stone-500 dark:text-gray-400 flex-shrink-0 ml-2">
-                            {formatTime(conv.last_message.created_at)}
-                          </span>
+                          <p className="text-sm text-stone-600 dark:text-gray-300 truncate">
+                            <span className="font-medium">{conv.last_message.user.name}:</span>{' '}
+                            {conv.last_message.message}
+                          </p>
                         )}
                       </div>
-                      <p className="text-sm text-stone-500 dark:text-gray-400 truncate mb-1">{conv.session.location}</p>
-                      {conv.last_message && (
-                        <p className="text-sm text-stone-600 dark:text-gray-300 truncate">
-                          <span className="font-medium">{conv.last_message.user.name}:</span>{' '}
-                          {conv.last_message.message}
-                        </p>
-                      )}
+                      <ChevronRight className="w-5 h-5 text-stone-400 flex-shrink-0" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-stone-400 flex-shrink-0" />
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </Link>
             ))}
           </div>

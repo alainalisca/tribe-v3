@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { getSkillLevelDisplay, getGenderDisplay, computeSessionStatus } from './SessionCardHelpers';
 import type { SessionCardProps } from './SessionCardHelpers';
 
@@ -28,8 +29,8 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-stone-200 dark:border-[#52575D]">
-        <div className="p-5">
+      <Card className="dark:bg-[#6B7178] shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]">
+        <CardContent className="p-5">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 flex items-center gap-2">
@@ -240,8 +241,8 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
                 </Link>
               )}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

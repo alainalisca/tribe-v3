@@ -3,6 +3,7 @@
 import { formatTime12Hour } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -80,40 +81,42 @@ export default function MatchesPage() {
               <div className="space-y-3">
                 {joinRequests.map((request) => (
                   <Link key={request.id} href={`/session/${request.session_id}`}>
-                    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
-                          {request.user?.avatar_url ? (
-                            <img
-                              loading="lazy"
-                              src={request.user.avatar_url}
-                              alt={request.user.name ?? undefined}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-sm font-bold text-slate-900">
-                              {request.user?.name?.charAt(0).toUpperCase() || '?'}
-                            </span>
-                          )}
+                    <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden">
+                            {request.user?.avatar_url ? (
+                              <img
+                                loading="lazy"
+                                src={request.user.avatar_url}
+                                alt={request.user.name ?? undefined}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-sm font-bold text-slate-900">
+                                {request.user?.name?.charAt(0).toUpperCase() || '?'}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[#272D34] dark:text-white font-semibold">
+                              {request.user?.name || t('newJoinRequest')}
+                            </p>
+                            <p className="text-sm text-stone-600 dark:text-gray-300">{t('userWantsToJoin')}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[#272D34] dark:text-white font-semibold">
-                            {request.user?.name || t('newJoinRequest')}
-                          </p>
-                          <p className="text-sm text-stone-600 dark:text-gray-300">{t('userWantsToJoin')}</p>
-                        </div>
-                      </div>
-                      {request.session && (
-                        <div className="mt-2 pt-2 border-t border-stone-200 dark:border-[#52575D] text-sm text-stone-600 dark:text-gray-300">
-                          <span className="font-medium">
-                            {language === 'es'
-                              ? sportTranslations[request.session.sport]?.es || request.session.sport
-                              : request.session.sport}
-                          </span>{' '}
-                          • {request.session.location}
-                        </div>
-                      )}
-                    </div>
+                        {request.session && (
+                          <div className="mt-2 pt-2 border-t border-stone-200 dark:border-[#52575D] text-sm text-stone-600 dark:text-gray-300">
+                            <span className="font-medium">
+                              {language === 'es'
+                                ? sportTranslations[request.session.sport]?.es || request.session.sport
+                                : request.session.sport}
+                            </span>{' '}
+                            • {request.session.location}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </Link>
                 ))}
               </div>
@@ -124,37 +127,39 @@ export default function MatchesPage() {
             <div className="space-y-3">
               {tribeSessions.map((session) => (
                 <Link key={session.id} href={`/session/${session.id}`}>
-                  <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full text-sm font-medium">
-                        {language === 'es' ? sportTranslations[session.sport]?.es || session.sport : session.sport}
-                      </span>
-                      <div className="flex items-center gap-1 text-stone-600 dark:text-gray-300 text-sm">
-                        <Users className="w-4 h-4" />
-                        <span>
-                          {session.current_participants}/{session.max_participants}
+                  <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <span className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full text-sm font-medium">
+                          {language === 'es' ? sportTranslations[session.sport]?.es || session.sport : session.sport}
                         </span>
+                        <div className="flex items-center gap-1 text-stone-600 dark:text-gray-300 text-sm">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            {session.current_participants}/{session.max_participants}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-2 text-sm text-stone-600 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {format(parseISO(session.date + 'T00:00:00'), 'EEE, MMM d', {
-                            locale: language === 'es' ? es : undefined,
-                          })}
-                        </span>
+                      <div className="space-y-2 text-sm text-stone-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {format(parseISO(session.date + 'T00:00:00'), 'EEE, MMM d', {
+                              locale: language === 'es' ? es : undefined,
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatTime12Hour(session.start_time)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          <span>{session.location}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{formatTime12Hour(session.start_time)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{session.location}</span>
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </Link>
               ))}
             </div>

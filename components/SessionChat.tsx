@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/lib/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Link from 'next/link';
@@ -121,14 +122,16 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   if (chat.loading) {
     return (
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl p-4 border border-stone-300 dark:border-[#52575D]">
-        <p className="text-center text-stone-600 dark:text-gray-300">{tr.loadingChat}</p>
-      </div>
+      <Card className="dark:bg-[#6B7178] border-stone-300 dark:border-[#52575D] shadow-none">
+        <CardContent className="p-4">
+          <p className="text-center text-stone-600 dark:text-gray-300">{tr.loadingChat}</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl border border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[calc(100dvh-6rem)]">
+    <Card className="dark:bg-[#6B7178] border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[calc(100dvh-6rem)] shadow-none">
       {/* Chat Header */}
       <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -312,6 +315,6 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
           onSubmit={chat.submitReport}
         />
       )}
-    </div>
+    </Card>
   );
 }

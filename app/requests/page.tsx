@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Check, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -153,90 +154,94 @@ export default function RequestsPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         {requests.length === 0 ? (
-          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-            <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-[#52575D] rounded-full flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 text-stone-500 dark:text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('noPendingRequests')}</h2>
-            <p className="text-stone-600 dark:text-gray-300 mb-4">{t('requestsDescription')}</p>
-            <Link href="/create">
-              <Button className="font-bold">{t('createASession')}</Button>
-            </Link>
-          </div>
+          <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-[#52575D] rounded-full flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-8 h-8 text-stone-500 dark:text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('noPendingRequests')}</h2>
+              <p className="text-stone-600 dark:text-gray-300 mb-4">{t('requestsDescription')}</p>
+              <Link href="/create">
+                <Button className="font-bold">{t('createASession')}</Button>
+              </Link>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-4">
             {requests.map((request) => (
-              <div key={request.id} className="bg-white dark:bg-[#6B7178] rounded-xl p-4 shadow-sm">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-bold text-stone-900 dark:text-white">
-                      {request.session?.sport} - {request.session?.location}
-                    </h3>
-                    <p className="text-sm text-stone-600 dark:text-gray-400">
-                      {request.session &&
-                        new Date(request.session.date + 'T00:00:00').toLocaleDateString(
-                          language === 'es' ? 'es-ES' : 'en-US'
-                        )}{' '}
-                      {request.session && (
-                        <>
-                          {t('at')} {formatTime12Hour(request.session.start_time)}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
-                  {request.users?.avatar_url ? (
-                    <img
-                      loading="lazy"
-                      src={request.users.avatar_url}
-                      alt={request.users.name ?? undefined}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-stone-300 dark:bg-[#404549] rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-stone-600 dark:text-gray-400" />
+              <Card key={request.id} className="dark:bg-[#6B7178] shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-stone-900 dark:text-white">
+                        {request.session?.sport} - {request.session?.location}
+                      </h3>
+                      <p className="text-sm text-stone-600 dark:text-gray-400">
+                        {request.session &&
+                          new Date(request.session.date + 'T00:00:00').toLocaleDateString(
+                            language === 'es' ? 'es-ES' : 'en-US'
+                          )}{' '}
+                        {request.session && (
+                          <>
+                            {t('at')} {formatTime12Hour(request.session.start_time)}
+                          </>
+                        )}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="font-semibold text-stone-900 dark:text-white">{request.users?.name}</p>
                   </div>
-                  <Link href={`/profile/${request.user_id}`}>
-                    <button className="text-xs text-tribe-green hover:underline">{t('viewProfile')}</button>
-                  </Link>
-                </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleAccept(request.id)}
-                    className="flex-1 flex items-center justify-center gap-2 font-semibold"
-                  >
-                    <Check className="w-4 h-4" />
-                    {t('accept')}
-                  </Button>
-                  <button
-                    onClick={() => handleDecline(request.id)}
-                    className="flex-1 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    {t('decline')}
-                  </button>
-                </div>
-              </div>
+                  <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+                    {request.users?.avatar_url ? (
+                      <img
+                        loading="lazy"
+                        src={request.users.avatar_url}
+                        alt={request.users.name ?? undefined}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-stone-300 dark:bg-[#404549] rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-stone-600 dark:text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-semibold text-stone-900 dark:text-white">{request.users?.name}</p>
+                    </div>
+                    <Link href={`/profile/${request.user_id}`}>
+                      <button className="text-xs text-tribe-green hover:underline">{t('viewProfile')}</button>
+                    </Link>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleAccept(request.id)}
+                      className="flex-1 flex items-center justify-center gap-2 font-semibold"
+                    >
+                      <Check className="w-4 h-4" />
+                      {t('accept')}
+                    </Button>
+                    <button
+                      onClick={() => handleDecline(request.id)}
+                      className="flex-1 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      {t('decline')}
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

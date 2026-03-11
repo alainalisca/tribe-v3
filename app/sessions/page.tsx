@@ -3,6 +3,7 @@
 
 import { Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -95,21 +96,23 @@ export default function SessionsPage() {
           {activeTab === 'upcoming' ? (
             <>
               {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
-                <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-                  <Calendar className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
-                  <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noUpcoming}</h2>
-                  <p className="text-stone-600 dark:text-gray-300 mb-6">{txt.browseHome}</p>
-                  <div className="flex gap-3 justify-center">
-                    <Link href="/create">
-                      <Button className="font-bold">{txt.createSession}</Button>
-                    </Link>
-                    <Link href="/">
-                      <Button variant="outline" className="font-semibold">
-                        {txt.browseSessions}
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+                <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+                  <CardContent className="p-8 text-center">
+                    <Calendar className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noUpcoming}</h2>
+                    <p className="text-stone-600 dark:text-gray-300 mb-6">{txt.browseHome}</p>
+                    <div className="flex gap-3 justify-center">
+                      <Link href="/create">
+                        <Button className="font-bold">{txt.createSession}</Button>
+                      </Link>
+                      <Link href="/">
+                        <Button variant="outline" className="font-semibold">
+                          {txt.browseSessions}
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-6">
                   {/* Hosting Section */}
@@ -158,10 +161,12 @@ export default function SessionsPage() {
           ) : (
             <>
               {pastSessions.length === 0 ? (
-                <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-                  <Clock className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
-                  <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noPast}</h2>
-                </div>
+                <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+                  <CardContent className="p-8 text-center">
+                    <Clock className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noPast}</h2>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-3">
                   {pastSessions.map((session) => (

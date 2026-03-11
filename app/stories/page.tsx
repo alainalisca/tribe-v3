@@ -3,6 +3,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import Link from 'next/link';
@@ -56,11 +57,13 @@ export default function StoriesPage() {
         {loading ? (
           <LoadingSpinner />
         ) : allStories.length === 0 ? (
-          <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D] mt-4">
-            <div className="text-4xl mb-4">📸</div>
-            <p className="text-lg font-semibold text-theme-primary mb-2">{t.noStories}</p>
-            <p className="text-sm text-theme-secondary">{t.noStoriesDesc}</p>
-          </div>
+          <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none mt-4">
+            <CardContent className="p-8 text-center">
+              <div className="text-4xl mb-4">📸</div>
+              <p className="text-lg font-semibold text-theme-primary mb-2">{t.noStories}</p>
+              <p className="text-sm text-theme-secondary">{t.noStoriesDesc}</p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {allStories.map((story) => {

@@ -9,6 +9,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Database } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 
@@ -132,80 +133,84 @@ export default function TemplateSection({
       </div>
 
       {showNameInput && (
-        <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
-          <label className="text-sm font-bold text-theme-primary mb-2 block">{t('nameForTemplate')}</label>
-          <input
-            type="text"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') confirmSaveTemplate();
-              if (e.key === 'Escape') {
-                setShowNameInput(false);
-                setTemplateName('');
-              }
-            }}
-            autoFocus
-            className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowNameInput(false);
-                setTemplateName('');
+        <Card className="dark:bg-[#6B7178] rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+          <CardContent className="p-3">
+            <label className="text-sm font-bold text-theme-primary mb-2 block">{t('nameForTemplate')}</label>
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmSaveTemplate();
+                if (e.key === 'Escape') {
+                  setShowNameInput(false);
+                  setTemplateName('');
+                }
               }}
-              className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] text-sm font-medium"
-            >
-              {t('cancel')}
-            </button>
-            <Button
-              type="button"
-              onClick={confirmSaveTemplate}
-              disabled={!templateName.trim()}
-              className="flex-1 py-2 font-medium text-sm"
-            >
-              💾 {t('saveTemplate')}
-            </Button>
-          </div>
-        </div>
+              autoFocus
+              className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNameInput(false);
+                  setTemplateName('');
+                }}
+                className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] text-sm font-medium"
+              >
+                {t('cancel')}
+              </button>
+              <Button
+                type="button"
+                onClick={confirmSaveTemplate}
+                disabled={!templateName.trim()}
+                className="flex-1 py-2 font-medium text-sm"
+              >
+                💾 {t('saveTemplate')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {showTemplates && templates.length > 0 && (
-        <div className="mb-4 bg-white dark:bg-[#6B7178] rounded-lg border border-stone-200 dark:border-[#52575D] p-3">
-          <h3 className="text-sm font-bold text-theme-primary mb-2">{t('yourTemplates')}</h3>
-          <div className="space-y-2">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                className="flex items-center justify-between p-2 bg-stone-50 dark:bg-[#52575D] rounded"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-theme-primary">{template.name}</p>
-                  <p className="text-xs text-stone-600 dark:text-gray-400">
-                    {template.sport} • {template.location} • {template.duration}min
-                  </p>
+        <Card className="dark:bg-[#6B7178] rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+          <CardContent className="p-3">
+            <h3 className="text-sm font-bold text-theme-primary mb-2">{t('yourTemplates')}</h3>
+            <div className="space-y-2">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="flex items-center justify-between p-2 bg-stone-50 dark:bg-[#52575D] rounded"
+                >
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-theme-primary">{template.name}</p>
+                    <p className="text-xs text-stone-600 dark:text-gray-400">
+                      {template.sport} • {template.location} • {template.duration}min
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => handleLoadTemplate(template)}
+                      className="px-3 py-1 text-xs font-bold h-auto"
+                    >
+                      {t('use')}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(template.id)}
+                      className="px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs rounded"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => handleLoadTemplate(template)}
-                    className="px-3 py-1 text-xs font-bold h-auto"
-                  >
-                    {t('use')}
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteId(template.id)}
-                    className="px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs rounded"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <ConfirmDialog

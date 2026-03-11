@@ -17,6 +17,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useHomeFeed } from './useHomeFeed';
 
 export default function HomePage() {
@@ -116,44 +117,52 @@ export default function HomePage() {
               <SkeletonCard />
             </div>
           ) : f.fetchError ? (
-            <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-              <div className="text-4xl mb-4">⚠️</div>
-              <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('couldNotLoadSessions')}</p>
-              <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('checkConnectionRetry')}</p>
-              <Button onClick={() => f.loadSessions()} className="px-6 py-3 font-bold">
-                {f.t('retry')}
-              </Button>
-            </div>
+            <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+              <CardContent className="p-8 text-center">
+                <div className="text-4xl mb-4">⚠️</div>
+                <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                  {f.t('couldNotLoadSessions')}
+                </p>
+                <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('checkConnectionRetry')}</p>
+                <Button onClick={() => f.loadSessions()} className="px-6 py-3 font-bold">
+                  {f.t('retry')}
+                </Button>
+              </CardContent>
+            </Card>
           ) : f.filteredSessions.length === 0 ? (
-            <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
-              {f.searchQuery || f.selectedSport || f.dateFilter !== 'all' || f.genderFilter !== 'all' ? (
-                <>
-                  <div className="text-4xl mb-4">🔍</div>
-                  <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-                    {f.t('noMatchingFilters')}
-                  </p>
-                  <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      f.setSearchQuery('');
-                      f.setSelectedSport('');
-                      f.setDateFilter('all');
-                      f.setGenderFilter('all');
-                    }}
-                    className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold hover:bg-tribe-green hover:text-slate-900"
-                  >
-                    {f.t('clearFilters')}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="text-4xl mb-4">🏃‍♂️</div>
-                  <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('noSessionsFound')}</p>
-                  <p className="text-sm text-stone-500 dark:text-gray-400">{f.t('tryDifferentSearch')}</p>
-                </>
-              )}
-            </div>
+            <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+              <CardContent className="p-8 text-center">
+                {f.searchQuery || f.selectedSport || f.dateFilter !== 'all' || f.genderFilter !== 'all' ? (
+                  <>
+                    <div className="text-4xl mb-4">🔍</div>
+                    <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                      {f.t('noMatchingFilters')}
+                    </p>
+                    <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        f.setSearchQuery('');
+                        f.setSelectedSport('');
+                        f.setDateFilter('all');
+                        f.setGenderFilter('all');
+                      }}
+                      className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold hover:bg-tribe-green hover:text-slate-900"
+                    >
+                      {f.t('clearFilters')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-4xl mb-4">🏃‍♂️</div>
+                    <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                      {f.t('noSessionsFound')}
+                    </p>
+                    <p className="text-sm text-stone-500 dark:text-gray-400">{f.t('tryDifferentSearch')}</p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           ) : (
             <div className="space-y-4">
               {f.filteredSessions.slice(0, f.visibleCount).map((session) => (

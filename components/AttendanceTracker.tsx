@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, X } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -120,9 +121,11 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-        <p className="text-stone-500 dark:text-gray-400">{t('loadingAttendance')}</p>
-      </div>
+      <Card className="dark:bg-[#6B7178] shadow-lg">
+        <CardContent className="p-6">
+          <p className="text-stone-500 dark:text-gray-400">{t('loadingAttendance')}</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -131,63 +134,65 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
   }
 
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
-      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t('markAttendance')}</h2>
-      <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('markAttendanceDesc')}</p>
-      <div className="space-y-2">
-        {participants.map((participant) => (
-          <div
-            key={participant.user_id}
-            className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              {participant.user?.avatar_url ? (
-                <img
-                  src={participant.user.avatar_url}
-                  alt={participant.user.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold">
-                  {participant.user?.name?.[0]?.toUpperCase()}
-                </div>
-              )}
-              <span className="font-medium text-stone-900 dark:text-white">{participant.user?.name}</span>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => markAttendance(participant.user_id, true)}
-                disabled={participant.attended || sendingEmail === participant.user_id}
-                className={`p-2 rounded-lg transition ${
-                  participant.attended
-                    ? 'bg-green-500 text-white'
-                    : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
-                }`}
-                title="Mark as attended"
-              >
-                {sendingEmail === participant.user_id ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+    <Card className="dark:bg-[#6B7178] shadow-lg">
+      <CardContent className="p-6">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t('markAttendance')}</h2>
+        <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('markAttendanceDesc')}</p>
+        <div className="space-y-2">
+          {participants.map((participant) => (
+            <div
+              key={participant.user_id}
+              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                {participant.user?.avatar_url ? (
+                  <img
+                    src={participant.user.avatar_url}
+                    alt={participant.user.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
                 ) : (
-                  <Check className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center text-slate-900 font-bold">
+                    {participant.user?.name?.[0]?.toUpperCase()}
+                  </div>
                 )}
-              </button>
-              <button
-                onClick={() => markAttendance(participant.user_id, false)}
-                disabled={!participant.attended || sendingEmail === participant.user_id}
-                className={`p-2 rounded-lg transition ${
-                  !participant.attended
-                    ? 'bg-red-500 text-white'
-                    : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
-                }`}
-                title="Mark as not attended"
-              >
-                <X className="w-5 h-5" />
-              </button>
+                <span className="font-medium text-stone-900 dark:text-white">{participant.user?.name}</span>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => markAttendance(participant.user_id, true)}
+                  disabled={participant.attended || sendingEmail === participant.user_id}
+                  className={`p-2 rounded-lg transition ${
+                    participant.attended
+                      ? 'bg-green-500 text-white'
+                      : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
+                  }`}
+                  title="Mark as attended"
+                >
+                  {sendingEmail === participant.user_id ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
+                </button>
+                <button
+                  onClick={() => markAttendance(participant.user_id, false)}
+                  disabled={!participant.attended || sendingEmail === participant.user_id}
+                  className={`p-2 rounded-lg transition ${
+                    !participant.attended
+                      ? 'bg-red-500 text-white'
+                      : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
+                  }`}
+                  title="Mark as not attended"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

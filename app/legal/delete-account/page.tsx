@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Mail, Trash2, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function DeleteAccountPage() {
@@ -135,130 +136,132 @@ export default function DeleteAccountPage() {
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white dark:bg-[#272D34] rounded-xl p-8">
-          {language === 'es' && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
-              <p className="text-blue-800 dark:text-blue-200">{t.note}</p>
-            </div>
-          )}
-
-          <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">{t.subtitle}</h2>
-          <p className="text-stone-700 dark:text-gray-300 mb-8">{t.intro}</p>
-
-          <div className="space-y-8 text-stone-700 dark:text-gray-300">
-            {/* What Gets Deleted */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Trash2 className="w-6 h-6 text-tribe-red" />
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.whatDeleted}</h3>
+        <Card className="dark:bg-[#272D34] shadow-none border-none">
+          <CardContent className="p-8">
+            {language === 'es' && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
+                <p className="text-blue-800 dark:text-blue-200">{t.note}</p>
               </div>
-              <p className="mb-3">{t.whatDeletedDesc}</p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>{t.profileInfo}</li>
-                <li>{t.sessionData}</li>
-                <li>{t.messages}</li>
-                <li>{t.locationData}</li>
-                <li>{t.preferences}</li>
-                <li>{t.notifications}</li>
-              </ul>
-            </section>
+            )}
 
-            {/* Data Retention */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock className="w-6 h-6 text-tribe-green" />
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.retention}</h3>
-              </div>
-              <p className="mb-3">{t.retentionDesc}</p>
-              <ul className="list-disc pl-6 space-y-2">
-                <li>{t.retentionDays}</li>
-                <li>{t.retentionRecovery}</li>
-                <li>{t.retentionLegal}</li>
-              </ul>
-            </section>
+            <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">{t.subtitle}</h2>
+            <p className="text-stone-700 dark:text-gray-300 mb-8">{t.intro}</p>
 
-            {/* How to Delete */}
-            <section>
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">{t.howToDelete}</h3>
+            <div className="space-y-8 text-stone-700 dark:text-gray-300">
+              {/* What Gets Deleted */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <Trash2 className="w-6 h-6 text-tribe-red" />
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.whatDeleted}</h3>
+                </div>
+                <p className="mb-3">{t.whatDeletedDesc}</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>{t.profileInfo}</li>
+                  <li>{t.sessionData}</li>
+                  <li>{t.messages}</li>
+                  <li>{t.locationData}</li>
+                  <li>{t.preferences}</li>
+                  <li>{t.notifications}</li>
+                </ul>
+              </section>
 
-              {/* Option 1 */}
-              <div className="bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg p-4 mb-4">
-                <h4 className="font-bold text-lime-900 dark:text-lime-200 mb-3">{t.option1Title}</h4>
-                <ol className="list-decimal pl-6 space-y-2 text-lime-800 dark:text-lime-300">
-                  {t.option1Steps.map((step, index) => (
-                    <li key={index}>{step}</li>
-                  ))}
-                </ol>
-              </div>
+              {/* Data Retention */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-6 h-6 text-tribe-green" />
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.retention}</h3>
+                </div>
+                <p className="mb-3">{t.retentionDesc}</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>{t.retentionDays}</li>
+                  <li>{t.retentionRecovery}</li>
+                  <li>{t.retentionLegal}</li>
+                </ul>
+              </section>
 
-              {/* Option 2 */}
-              <div className="bg-gray-100 dark:bg-[#52575D] rounded-lg p-4">
-                <h4 className="font-bold text-stone-900 dark:text-white mb-3">{t.option2Title}</h4>
-                <p className="mb-4">{t.option2Desc}</p>
+              {/* How to Delete */}
+              <section>
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">{t.howToDelete}</h3>
 
-                <div className="space-y-3">
-                  <div>
-                    <span className="font-semibold">{t.emailSubject}:</span>
-                    <code className="ml-2 bg-gray-200 dark:bg-[#272D34] px-2 py-1 rounded text-sm">
-                      {t.emailSubjectText}
-                    </code>
-                  </div>
+                {/* Option 1 */}
+                <div className="bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg p-4 mb-4">
+                  <h4 className="font-bold text-lime-900 dark:text-lime-200 mb-3">{t.option1Title}</h4>
+                  <ol className="list-decimal pl-6 space-y-2 text-lime-800 dark:text-lime-300">
+                    {t.option1Steps.map((step, index) => (
+                      <li key={index}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
 
-                  <div>
-                    <span className="font-semibold">{t.emailInclude}:</span>
-                    <ul className="list-disc pl-6 mt-2 space-y-1">
-                      {t.emailIncludeItems.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                {/* Option 2 */}
+                <div className="bg-gray-100 dark:bg-[#52575D] rounded-lg p-4">
+                  <h4 className="font-bold text-stone-900 dark:text-white mb-3">{t.option2Title}</h4>
+                  <p className="mb-4">{t.option2Desc}</p>
 
-                  <div className="pt-2">
-                    <span className="font-semibold">{t.emailSendTo}</span>
-                    <div className="mt-2">
-                      <a
-                        href={`mailto:${contactEmail}?subject=${encodeURIComponent(t.emailSubjectText)}`}
-                        className="inline-flex items-center gap-2 bg-tribe-green text-tribe-dark px-4 py-2 rounded-lg font-semibold hover:bg-lime-400 transition"
-                      >
-                        <Mail className="w-5 h-5" />
-                        {contactEmail}
-                      </a>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-semibold">{t.emailSubject}:</span>
+                      <code className="ml-2 bg-gray-200 dark:bg-[#272D34] px-2 py-1 rounded text-sm">
+                        {t.emailSubjectText}
+                      </code>
+                    </div>
+
+                    <div>
+                      <span className="font-semibold">{t.emailInclude}:</span>
+                      <ul className="list-disc pl-6 mt-2 space-y-1">
+                        {t.emailIncludeItems.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-2">
+                      <span className="font-semibold">{t.emailSendTo}</span>
+                      <div className="mt-2">
+                        <a
+                          href={`mailto:${contactEmail}?subject=${encodeURIComponent(t.emailSubjectText)}`}
+                          className="inline-flex items-center gap-2 bg-tribe-green text-tribe-dark px-4 py-2 rounded-lg font-semibold hover:bg-lime-400 transition"
+                        >
+                          <Mail className="w-5 h-5" />
+                          {contactEmail}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            {/* Response Time */}
-            <section>
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-3">{t.responseTime}</h3>
-              <p>{t.responseTimeDesc}</p>
-            </section>
+              {/* Response Time */}
+              <section>
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-3">{t.responseTime}</h3>
+                <p>{t.responseTimeDesc}</p>
+              </section>
 
-            {/* Before You Delete */}
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-6 h-6 text-amber-500" />
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.beforeDelete}</h3>
-              </div>
-              <p className="mb-3">{t.beforeDeleteDesc}</p>
-              <ul className="list-disc pl-6 space-y-2">
-                {t.beforeDeleteItems.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </section>
+              {/* Before You Delete */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-6 h-6 text-amber-500" />
+                  <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.beforeDelete}</h3>
+                </div>
+                <p className="mb-3">{t.beforeDeleteDesc}</p>
+                <ul className="list-disc pl-6 space-y-2">
+                  {t.beforeDeleteItems.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </section>
 
-            {/* Questions */}
-            <section className="border-t border-gray-200 dark:border-gray-600 pt-6">
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-3">{t.questions}</h3>
-              <p className="mb-3">{t.questionsDesc}</p>
-              <a href={`mailto:${contactEmail}`} className="text-tribe-green hover:underline font-semibold">
-                {contactEmail}
-              </a>
-            </section>
-          </div>
-        </div>
+              {/* Questions */}
+              <section className="border-t border-gray-200 dark:border-gray-600 pt-6">
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-3">{t.questions}</h3>
+                <p className="mb-3">{t.questionsDesc}</p>
+                <a href={`mailto:${contactEmail}`} className="text-tribe-green hover:underline font-semibold">
+                  {contactEmail}
+                </a>
+              </section>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
