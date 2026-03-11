@@ -6,6 +6,7 @@ import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Label } from '@/components/ui/label';
 
 interface PhotoUploadSectionProps {
   supabase: SupabaseClient;
@@ -104,10 +105,10 @@ export default function PhotoUploadSection({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-theme-primary mb-2">
+      <Label className="text-theme-primary mb-2">
         <ImageIcon className="w-4 h-4 inline mr-2" />
         {t('locationPhotosMax')}
-      </label>
+      </Label>
       <p className="text-xs text-stone-500 mb-3">{t('helpFindMeetingSpot')}</p>
       <div className="flex gap-2 items-center">
         {photos.map((photo, index) => (

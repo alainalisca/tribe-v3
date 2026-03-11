@@ -9,6 +9,8 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Database } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
@@ -135,8 +137,8 @@ export default function TemplateSection({
       {showNameInput && (
         <Card className="dark:bg-[#6B7178] rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
           <CardContent className="p-3">
-            <label className="text-sm font-bold text-theme-primary mb-2 block">{t('nameForTemplate')}</label>
-            <input
+            <Label className="font-bold text-theme-primary mb-2">{t('nameForTemplate')}</Label>
+            <Input
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
@@ -148,7 +150,7 @@ export default function TemplateSection({
                 }
               }}
               autoFocus
-              className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
+              className="dark:border-[#52575D] bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
             />
             <div className="flex gap-2">
               <button

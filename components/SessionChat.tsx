@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, Shield } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -269,7 +270,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       {/* Message Input */}
       <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -277,7 +278,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             disabled={chat.sending}
             autoComplete="off"
             enterKeyHint="send"
-            className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C0E863] disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:ring-[#C0E863] disabled:opacity-50"
           />
           <Button
             type="submit"

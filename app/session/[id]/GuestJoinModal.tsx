@@ -2,6 +2,7 @@
 
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface GuestJoinModalProps {
@@ -32,26 +33,26 @@ export default function GuestJoinModal({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <input
+          <Input
             type="text"
             placeholder={t('fullName')}
             value={guestData.name}
             onChange={(e) => onGuestDataChange({ ...guestData, name: e.target.value })}
-            className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+            className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
           />
-          <input
+          <Input
             type="tel"
             placeholder={t('phone')}
             value={guestData.phone}
             onChange={(e) => onGuestDataChange({ ...guestData, phone: e.target.value })}
-            className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+            className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
           />
-          <input
+          <Input
             type="email"
             placeholder={t('emailOptional')}
             value={guestData.email}
             onChange={(e) => onGuestDataChange({ ...guestData, email: e.target.value })}
-            className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+            className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
           />
         </div>
         <Button onClick={onSubmit} disabled={joiningAsGuest} className="w-full mt-4 py-3 font-bold">

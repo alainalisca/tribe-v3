@@ -2,6 +2,8 @@
 
 import type { ProfileTranslations } from './translations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface ReportUserModalProps {
   t: ProfileTranslations;
@@ -33,7 +35,7 @@ export default function ReportUserModal({
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.reason} *</label>
+            <Label className="dark:text-gray-300 mb-2">{t.reason} *</Label>
             <select
               value={reportReason}
               onChange={(e) => onReasonChange(e.target.value)}
@@ -49,12 +51,12 @@ export default function ReportUserModal({
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.additionalDetails}</label>
-            <textarea
+            <Label className="dark:text-gray-300 mb-2">{t.additionalDetails}</Label>
+            <Textarea
               value={reportDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={t.provideContext}
-              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+              className="h-24 resize-none dark:text-white dark:bg-[#52575D] dark:border-[#52575D]"
             />
           </div>
         </div>

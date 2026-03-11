@@ -12,6 +12,8 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchInviteWithSession, fetchUsersByIds, insertParticipant, updateSession } from '@/lib/dal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
 import type { Database } from '@/lib/database.types';
@@ -210,35 +212,35 @@ export default function InvitePage() {
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-1">{t('fullName')}</label>
-                  <input
+                  <Label className="text-theme-primary mb-1">{t('fullName')}</Label>
+                  <Input
                     type="text"
                     value={guestData.name}
                     onChange={(e) => setGuestData({ ...guestData, name: e.target.value })}
                     placeholder={language === 'es' ? 'Juan Pérez' : 'John Smith'}
-                    className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-1">{t('phone')}</label>
-                  <input
+                  <Label className="text-theme-primary mb-1">{t('phone')}</Label>
+                  <Input
                     type="tel"
                     value={guestData.phone}
                     onChange={(e) => setGuestData({ ...guestData, phone: e.target.value })}
                     placeholder="+57 300 123 4567"
-                    className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-1">{t('emailOptional')}</label>
-                  <input
+                  <Label className="text-theme-primary mb-1">{t('emailOptional')}</Label>
+                  <Input
                     type="email"
                     value={guestData.email}
                     onChange={(e) => setGuestData({ ...guestData, email: e.target.value })}
                     placeholder="email@example.com"
-                    className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
                   />
                 </div>
 

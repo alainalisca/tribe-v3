@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { AuthTranslations } from './translations';
 
 interface EmailAuthFormProps {
@@ -54,8 +56,8 @@ export default function EmailAuthForm({
       {!isLogin && (
         <>
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.name}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.name}</Label>
+            <Input
               type="text"
               value={name}
               onChange={(e) => onNameChange(e.target.value)}
@@ -63,19 +65,19 @@ export default function EmailAuthForm({
               required
               autoComplete="name"
               enterKeyHint="next"
-              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+              className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.birthDate}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.birthDate}</Label>
+            <Input
               type="date"
               value={birthDate}
               onChange={(e) => onBirthDateChange(e.target.value)}
               required
               max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+              className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
             />
             <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{t.mustBe18Note}</p>
 
@@ -103,8 +105,8 @@ export default function EmailAuthForm({
       )}
 
       <div>
-        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.email}</label>
-        <input
+        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.email}</Label>
+        <Input
           type="email"
           placeholder="email@example.com"
           value={email}
@@ -112,13 +114,13 @@ export default function EmailAuthForm({
           required
           autoComplete="email"
           enterKeyHint="next"
-          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.password}</label>
-        <input
+        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.password}</Label>
+        <Input
           type="password"
           placeholder="••••••••"
           value={password}
@@ -127,7 +129,7 @@ export default function EmailAuthForm({
           minLength={6}
           autoComplete={isLogin ? 'current-password' : 'new-password'}
           enterKeyHint={isLogin ? 'go' : 'next'}
-          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
         />
         {!isLogin && password && (
           <div className="mt-2">

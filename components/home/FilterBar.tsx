@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { Search, X, MessageCircle, Film } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
@@ -87,14 +88,14 @@ export default function FilterBar({
         <div className="max-w-2xl mx-auto space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
-            <input
+            <Input
               type="text"
               placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoComplete="off"
               enterKeyHint="search"
-              className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="pl-10 pr-10 py-2.5 bg-white dark:bg-[#6B7178] dark:border-[#52575D] text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:ring-tribe-green text-sm"
             />
             {searchQuery && (
               <button

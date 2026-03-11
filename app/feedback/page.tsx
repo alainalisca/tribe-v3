@@ -4,6 +4,9 @@
 import { MessageSquare, Bug, ArrowLeft, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import BottomNav from '@/components/BottomNav';
 import { useFeedback } from './useFeedback';
 
@@ -83,7 +86,7 @@ export default function FeedbackPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.type} *</label>
+                  <Label className="dark:text-gray-300 mb-2">{t.type} *</Label>
                   <select
                     value={feedbackType}
                     onChange={(e) => setFeedbackType(e.target.value)}
@@ -95,23 +98,23 @@ export default function FeedbackPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.title} *</label>
-                  <input
+                  <Label className="dark:text-gray-300 mb-2">{t.title} *</Label>
+                  <Input
                     type="text"
                     value={feedbackTitle}
                     onChange={(e) => setFeedbackTitle(e.target.value)}
                     placeholder={t.titlePlaceholder}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+                    className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.description} *</label>
-                  <textarea
+                  <Label className="dark:text-gray-300 mb-2">{t.description} *</Label>
+                  <Textarea
                     value={feedbackDescription}
                     onChange={(e) => setFeedbackDescription(e.target.value)}
                     placeholder={t.descriptionPlaceholder}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-32 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+                    className="h-32 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                   />
                 </div>
 
@@ -137,38 +140,38 @@ export default function FeedbackPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.title} *</label>
-                  <input
+                  <Label className="dark:text-gray-300 mb-2">{t.title} *</Label>
+                  <Input
                     type="text"
                     value={bugTitle}
                     onChange={(e) => setBugTitle(e.target.value)}
                     placeholder={t.bugTitlePlaceholder}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+                    className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.whatHappened} *</label>
-                  <textarea
+                  <Label className="dark:text-gray-300 mb-2">{t.whatHappened} *</Label>
+                  <Textarea
                     value={bugDescription}
                     onChange={(e) => setBugDescription(e.target.value)}
                     placeholder={t.whatHappenedPlaceholder}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+                    className="h-24 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.stepsToReproduce}</label>
-                  <textarea
+                  <Label className="dark:text-gray-300 mb-2">{t.stepsToReproduce}</Label>
+                  <Textarea
                     value={bugSteps}
                     onChange={(e) => setBugSteps(e.target.value)}
                     placeholder={t.stepsPlaceholder}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+                    className="h-24 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.severity} *</label>
+                  <Label className="dark:text-gray-300 mb-2">{t.severity} *</Label>
                   <select
                     value={bugSeverity}
                     onChange={(e) => setBugSeverity(e.target.value)}

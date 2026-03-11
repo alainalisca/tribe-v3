@@ -2,6 +2,8 @@
 
 import type { ChatTranslations } from './chatTranslations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ReportModalProps {
   tr: ChatTranslations;
@@ -32,7 +34,7 @@ export default function ReportModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{tr.reason}</label>
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{tr.reason}</Label>
             <select
               value={reportReason}
               onChange={(e) => onReasonChange(e.target.value)}
@@ -48,12 +50,12 @@ export default function ReportModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{tr.details}</label>
-            <textarea
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{tr.details}</Label>
+            <Textarea
               value={reportDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={tr.moreContext}
-              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-stone-900 dark:text-white h-20 resize-none"
+              className="p-2 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-stone-900 dark:text-white h-20 resize-none"
             />
           </div>
         </div>

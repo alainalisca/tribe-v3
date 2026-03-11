@@ -1,6 +1,7 @@
 'use client';
 
 import { MapPin, Navigation, Loader2, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { LocationPickerProps } from './locationPicker/locationPickerTypes';
 import { DEFAULT_CENTER } from './locationPicker/locationPickerTypes';
@@ -33,15 +34,13 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       <div className="relative">
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <input
+            <Input
               ref={inputRef}
               type="text"
               value={value}
               onChange={handleInputChange}
               placeholder={placeholder}
-              className={`w-full p-3 pr-10 border rounded-lg bg-theme-card text-theme-primary ${
-                error ? 'border-red-500' : 'border-theme'
-              }`}
+              className={`p-3 pr-10 bg-theme-card text-theme-primary ${error ? 'border-red-500' : 'border-theme'}`}
             />
           </div>
           <button

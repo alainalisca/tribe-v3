@@ -18,6 +18,9 @@ import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
 
@@ -155,7 +158,7 @@ export default function CreateSessionPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Sport */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('sport')} *</label>
+              <Label className="text-theme-primary mb-2">{t('sport')} *</Label>
               <select
                 name="sport"
                 value={formData.sport}
@@ -174,7 +177,7 @@ export default function CreateSessionPage() {
 
             {/* Skill Level */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('skillLevel')}</label>
+              <Label className="text-theme-primary mb-2">{t('skillLevel')}</Label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { value: 'all_levels', label: t('allLevels'), emoji: '🌟' },
@@ -197,7 +200,7 @@ export default function CreateSessionPage() {
 
             {/* Gender Preference */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('genderPreference')}</label>
+              <Label className="text-theme-primary mb-2">{t('genderPreference')}</Label>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { value: 'all', label: t('allWelcome'), emoji: '👥' },
@@ -220,25 +223,25 @@ export default function CreateSessionPage() {
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">{t('date')} *</label>
-                <input
+                <Label className="text-theme-primary mb-2">{t('date')} *</Label>
+                <Input
                   type="date"
                   name="date"
                   value={formData.date}
                   onChange={handleChange}
                   min={today}
-                  className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${errors.date ? 'border-red-500' : 'border-theme'}`}
+                  className={`h-auto py-3 bg-theme-card text-theme-primary ${errors.date ? 'border-red-500' : 'border-theme'}`}
                 />
                 {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">{t('startTime')} *</label>
-                <input
+                <Label className="text-theme-primary mb-2">{t('startTime')} *</Label>
+                <Input
                   type="time"
                   name="start_time"
                   value={formData.start_time}
                   onChange={handleChange}
-                  className={`w-full p-3 border rounded-lg bg-theme-card text-theme-primary ${errors.start_time ? 'border-red-500' : 'border-theme'}`}
+                  className={`h-auto py-3 bg-theme-card text-theme-primary ${errors.start_time ? 'border-red-500' : 'border-theme'}`}
                 />
                 {errors.start_time && <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>}
               </div>
@@ -246,7 +249,7 @@ export default function CreateSessionPage() {
 
             {/* Location */}
             <div data-field="location">
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('location')} *</label>
+              <Label className="text-theme-primary mb-2">{t('location')} *</Label>
               <LocationPicker
                 value={formData.location}
                 onChange={(location, coords) => {
@@ -265,9 +268,9 @@ export default function CreateSessionPage() {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">
+              <Label className="text-theme-primary mb-2">
                 {t('duration')} ({t('minutes')})
-              </label>
+              </Label>
               <div className="grid grid-cols-4 gap-2">
                 {[15, 30, 45, 60, 90, 120, 150, 180].map((mins) => (
                   <button
@@ -284,21 +287,21 @@ export default function CreateSessionPage() {
 
             {/* Max Participants */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('maxParticipants')}</label>
-              <input
+              <Label className="text-theme-primary mb-2">{t('maxParticipants')}</Label>
+              <Input
                 type="number"
                 name="max_participants"
                 value={formData.max_participants}
                 onChange={handleChange}
                 min="2"
                 max="100000"
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
               />
             </div>
 
             {/* Join Policy */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('joinPolicy')}</label>
+              <Label className="text-theme-primary mb-2">{t('joinPolicy')}</Label>
               <select
                 name="join_policy"
                 value={formData.join_policy}
@@ -313,27 +316,27 @@ export default function CreateSessionPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('description')}</label>
-              <textarea
+              <Label className="text-theme-primary mb-2">{t('description')}</Label>
+              <Textarea
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
                 placeholder={t('describeSession')}
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary resize-none"
+                className="py-3 border-theme bg-theme-card text-theme-primary resize-none"
               />
             </div>
 
             {/* Equipment */}
             <div>
-              <label className="block text-sm font-medium text-theme-primary mb-2">🎒 {t('equipment')}</label>
-              <input
+              <Label className="text-theme-primary mb-2">🎒 {t('equipment')}</Label>
+              <Input
                 type="text"
                 name="equipment"
                 value={formData.equipment}
                 onChange={handleChange}
                 placeholder={t('equipmentPlaceholder')}
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
               />
             </div>
 

@@ -6,6 +6,9 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { updateSession } from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
@@ -58,83 +61,77 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('sport')}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('sport')}</Label>
+            <Input
               type="text"
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              className="px-4 py-3 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white focus:ring-tribe-green"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('date')}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('date')}</Label>
+            <Input
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              className="px-4 py-3 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white focus:ring-tribe-green"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('startTime')}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('startTime')}</Label>
+            <Input
               type="time"
               value={formData.start_time}
               onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              {t('durationMinutes')}
-            </label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('durationMinutes')}</Label>
+            <Input
               type="number"
               value={formData.duration}
               onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t('location')}</label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('location')}</Label>
+            <Input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              {t('maxParticipants')}
-            </label>
-            <input
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('maxParticipants')}</Label>
+            <Input
               type="number"
               value={formData.max_participants}
               onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">
-              {t('description')}
-            </label>
-            <textarea
+            <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('description')}</Label>
+            <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-[#52575D] dark:border-[#52575D] text-stone-900 dark:text-white"
               rows={3}
             />
           </div>

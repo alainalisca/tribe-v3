@@ -1,6 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { AuthTranslations } from './translations';
 
 interface ResetPasswordFormProps {
@@ -27,8 +29,8 @@ export default function ResetPasswordForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.newPassword}</label>
-        <input
+        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.newPassword}</Label>
+        <Input
           type="password"
           placeholder="••••••••"
           value={password}
@@ -37,13 +39,13 @@ export default function ResetPasswordForm({
           minLength={6}
           autoComplete="new-password"
           enterKeyHint="next"
-          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-stone-700 dark:text-gray-300 mb-2">{t.confirmPassword}</label>
-        <input
+        <Label className="text-stone-700 dark:text-gray-300 mb-2">{t.confirmPassword}</Label>
+        <Input
           type="password"
           placeholder="••••••••"
           value={confirmPassword}
@@ -52,7 +54,7 @@ export default function ResetPasswordForm({
           minLength={6}
           autoComplete="new-password"
           enterKeyHint="go"
-          className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:ring-2 focus:ring-tribe-green focus:border-transparent bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
         />
       </div>
 

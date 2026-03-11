@@ -4,6 +4,9 @@
 import { useLanguage } from '@/lib/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -39,18 +42,18 @@ export default function EditSessionPage() {
       <div className="pt-header max-w-2xl mx-auto p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.sport}</label>
-            <input
+            <Label className="mb-2 text-theme-primary">{txt.sport}</Label>
+            <Input
               type="text"
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.skillLevel}</label>
+            <Label className="mb-2 text-theme-primary">{txt.skillLevel}</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
                 { value: 'all_levels', label: txt.allLevels, emoji: '🌟' },
@@ -76,7 +79,7 @@ export default function EditSessionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.genderPref}</label>
+            <Label className="mb-2 text-theme-primary">{txt.genderPref}</Label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { value: 'all', label: txt.allWelcome, emoji: '👥' },
@@ -101,7 +104,7 @@ export default function EditSessionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.location}</label>
+            <Label className="mb-2 text-theme-primary">{txt.location}</Label>
             <LocationPicker
               value={formData.location}
               onChange={(location, coords) => {
@@ -118,30 +121,30 @@ export default function EditSessionPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.date}</label>
-              <input
+              <Label className="mb-2 text-theme-primary">{txt.date}</Label>
+              <Input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.time}</label>
-              <input
+              <Label className="mb-2 text-theme-primary">{txt.time}</Label>
+              <Input
                 type="time"
                 value={formData.start_time}
                 onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+                className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.duration}</label>
+            <Label className="mb-2 text-theme-primary">{txt.duration}</Label>
             <div className="grid grid-cols-4 gap-2">
               {[15, 30, 45, 60, 90, 120, 150, 180].map((mins) => (
                 <button
@@ -161,19 +164,19 @@ export default function EditSessionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.maxParticipants}</label>
-            <input
+            <Label className="mb-2 text-theme-primary">{txt.maxParticipants}</Label>
+            <Input
               type="number"
               value={formData.max_participants}
               onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) || 10 })}
               min="2"
               max="100000"
-              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.joinPolicy}</label>
+            <Label className="mb-2 text-theme-primary">{txt.joinPolicy}</Label>
             <select
               value={formData.join_policy}
               onChange={(e) => setFormData({ ...formData, join_policy: e.target.value })}
@@ -186,24 +189,24 @@ export default function EditSessionPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">{txt.description}</label>
-            <textarea
+            <Label className="mb-2 text-theme-primary">{txt.description}</Label>
+            <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary resize-none"
+              className="py-3 border-theme bg-theme-card text-theme-primary resize-none"
               rows={4}
               placeholder={txt.descPlaceholder}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-theme-primary">🎒 {txt.equipment}</label>
-            <input
+            <Label className="mb-2 text-theme-primary">🎒 {txt.equipment}</Label>
+            <Input
               type="text"
               value={formData.equipment}
               onChange={(e) => setFormData({ ...formData, equipment: e.target.value })}
               placeholder={txt.equipmentPlaceholder}
-              className="w-full p-3 border border-theme rounded-lg bg-theme-card text-theme-primary"
+              className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
             />
           </div>
 

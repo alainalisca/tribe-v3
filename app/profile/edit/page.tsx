@@ -7,6 +7,9 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useEditProfile } from './useEditProfile';
 
 export default function EditProfilePage() {
@@ -79,55 +82,55 @@ export default function EditProfilePage() {
 
         {/* Name */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.name}</label>
-          <input
+          <Label className="font-semibold text-theme-primary mb-2">{tr.name}</Label>
+          <Input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder={tr.namePlaceholder}
             autoComplete="name"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
         {/* Username */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.username}</label>
-          <input
+          <Label className="font-semibold text-theme-primary mb-2">{tr.username}</Label>
+          <Input
             type="text"
             value={formData.username}
             onChange={(e) => setFormData({ ...formData, username: e.target.value })}
             placeholder="@username"
             autoComplete="username"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
         {/* Location */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.location}</label>
-          <input
+          <Label className="font-semibold text-theme-primary mb-2">{tr.location}</Label>
+          <Input
             type="text"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
             placeholder={tr.locationPlaceholder}
             autoComplete="address-level2"
             enterKeyHint="next"
-            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
         {/* Bio */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.bio}</label>
-          <textarea
+          <Label className="font-semibold text-theme-primary mb-2">{tr.bio}</Label>
+          <Textarea
             value={formData.bio}
             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
             placeholder={tr.bioPlaceholder}
             rows={4}
-            className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green resize-none"
+            className="py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
           />
         </div>
 
@@ -137,32 +140,28 @@ export default function EditProfilePage() {
           <p className="text-xs text-stone-600 dark:text-gray-400 mb-4">{tr.socialDesc}</p>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-theme-secondary mb-1">
-                📷 Instagram {tr.instagramLabel}
-              </label>
+              <Label className="text-xs text-theme-secondary mb-1">📷 Instagram {tr.instagramLabel}</Label>
               <div className="flex items-center">
                 <span className="px-3 py-2 bg-stone-200 dark:bg-[#404549] border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">
                   @
                 </span>
-                <input
+                <Input
                   type="text"
                   value={formData.instagram_username}
                   onChange={(e) => setFormData({ ...formData, instagram_username: e.target.value.replace('@', '') })}
                   placeholder="username"
-                  className="flex-1 px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-r-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                  className="flex-1 rounded-l-none rounded-r-xl dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-theme-secondary mb-1">
-                📘 Facebook {tr.facebookLabel}
-              </label>
-              <input
+              <Label className="text-xs text-theme-secondary mb-1">📘 Facebook {tr.facebookLabel}</Label>
+              <Input
                 type="url"
                 value={formData.facebook_url}
                 onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
                 placeholder="https://facebook.com/yourprofile"
-                className="w-full px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
           </div>
@@ -177,26 +176,26 @@ export default function EditProfilePage() {
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.contactName}</label>
-              <input
+              <Label className="font-semibold text-theme-primary mb-2">{tr.contactName}</Label>
+              <Input
                 type="text"
                 value={formData.emergency_contact_name}
                 onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
                 placeholder={tr.contactNamePlaceholder}
-                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-theme-primary mb-2">{tr.contactPhone}</label>
-              <input
+              <Label className="font-semibold text-theme-primary mb-2">{tr.contactPhone}</Label>
+              <Input
                 type="tel"
                 value={formData.emergency_contact_phone}
                 onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
                 placeholder={tr.contactPhonePlaceholder}
                 autoComplete="tel"
                 enterKeyHint="done"
-                className="w-full px-4 py-3 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
           </div>
@@ -204,9 +203,9 @@ export default function EditProfilePage() {
 
         {/* Photos */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">
+          <Label className="font-semibold text-theme-primary mb-3">
             {tr.photos} ({formData.photos.length}/6)
-          </label>
+          </Label>
           <div className="grid grid-cols-3 gap-3">
             {formData.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
@@ -237,7 +236,7 @@ export default function EditProfilePage() {
 
         {/* Sports */}
         <div>
-          <label className="block text-sm font-semibold text-theme-primary mb-3">{tr.sports}</label>
+          <Label className="font-semibold text-theme-primary mb-3">{tr.sports}</Label>
           <div className="flex flex-wrap gap-2">
             {SPORTS_LIST.map((sport) => (
               <button
