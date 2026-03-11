@@ -85,8 +85,10 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when session loaded
   }, [session, user, loading]);
 
+  // Scroll lock for non-Dialog overlays (lightbox, story upload/viewer)
+  // GuestJoinModal and InviteModal scroll locking handled by Radix Dialog
   useEffect(() => {
-    if (lightboxOpen || sessionActions.showGuestModal || showStoryUpload || showStoryViewer || showInviteModal) {
+    if (lightboxOpen || showStoryUpload || showStoryViewer) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -94,7 +96,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [lightboxOpen, sessionActions.showGuestModal, showStoryUpload, showStoryViewer, showInviteModal]);
+  }, [lightboxOpen, showStoryUpload, showStoryViewer]);
 
   useEffect(() => {
     function handlePopState() {

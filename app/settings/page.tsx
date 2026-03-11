@@ -6,6 +6,7 @@ import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lu
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useSettings } from './useSettings';
 import { useRouter } from 'next/navigation';
 
@@ -231,42 +232,35 @@ export default function SettingsPage() {
       </div>
 
       {/* Delete Account Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeDeleteConfirm();
-          }}
-        >
-          <div className="bg-white dark:bg-[#404549] rounded-xl p-6 max-w-sm w-full shadow-xl">
-            <h3 className="text-lg font-bold text-red-600 mb-2">{txt.deleteModalTitle}</h3>
-            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{txt.deleteModalDesc}</p>
-            <input
-              type="text"
-              value={deleteInput}
-              onChange={(e) => setDeleteInput(e.target.value)}
-              placeholder={txt.deleteConfirmWord}
-              className="w-full px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg mb-4 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
-              autoComplete="off"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={closeDeleteConfirm}
-                className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
-              >
-                {txt.cancel}
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deleteInput !== txt.deleteConfirmWord}
-                className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {txt.delete}
-              </button>
-            </div>
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && closeDeleteConfirm()}>
+        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-[#404549]">
+          <DialogTitle className="text-lg font-bold text-red-600">{txt.deleteModalTitle}</DialogTitle>
+          <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{txt.deleteModalDesc}</p>
+          <input
+            type="text"
+            value={deleteInput}
+            onChange={(e) => setDeleteInput(e.target.value)}
+            placeholder={txt.deleteConfirmWord}
+            className="w-full px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg mb-4 bg-white dark:bg-[#52575D] text-stone-900 dark:text-white"
+            autoComplete="off"
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={closeDeleteConfirm}
+              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+            >
+              {txt.cancel}
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteInput !== txt.deleteConfirmWord}
+              className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {txt.delete}
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>

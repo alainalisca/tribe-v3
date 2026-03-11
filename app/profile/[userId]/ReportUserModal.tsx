@@ -1,6 +1,7 @@
 'use client';
 
 import type { ProfileTranslations } from './translations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface ReportUserModalProps {
   t: ProfileTranslations;
@@ -24,9 +25,12 @@ export default function ReportUserModal({
   onSubmit,
 }: ReportUserModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
-      <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-xl font-bold dark:text-white mb-4">{t.reportUser}</h3>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent data-modal="true" className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold dark:text-white">{t.reportUser}</DialogTitle>
+          <DialogDescription className="sr-only">{t.reportUser}</DialogDescription>
+        </DialogHeader>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium dark:text-gray-300 mb-2">{t.reason} *</label>
@@ -70,7 +74,7 @@ export default function ReportUserModal({
             {submitting ? t.submitting : t.submit}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

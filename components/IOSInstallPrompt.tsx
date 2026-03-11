@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Share, Plus, Home, MoreVertical, X } from 'lucide-react';
+import { Share, Plus, Home, MoreVertical } from 'lucide-react';
 import { logError } from '@/lib/logger';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function IOSInstallPrompt() {
@@ -53,14 +54,9 @@ export default function IOSInstallPrompt() {
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-[9999] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#2C3137] rounded-2xl max-w-md w-full p-6 relative">
-        <button
-          onClick={() => handleDismiss(true)}
-          className="absolute top-2 right-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <Dialog open={show} onOpenChange={(open) => !open && handleDismiss(true)}>
+      <DialogContent data-modal="true" className="max-w-md rounded-2xl p-6 dark:bg-[#2C3137]">
+        <DialogTitle className="sr-only">Install Tribe</DialogTitle>
 
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -136,7 +132,7 @@ export default function IOSInstallPrompt() {
         >
           {t('maybeLater')}
         </button>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

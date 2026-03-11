@@ -1,8 +1,8 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface GuestJoinModalProps {
   language: 'en' | 'es';
@@ -23,15 +23,14 @@ export default function GuestJoinModal({
 }: GuestJoinModalProps) {
   const { t } = useLanguage();
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-theme-primary">{t('joinAsGuest')}</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-theme-primary" />
-          </Button>
-        </div>
-        <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('enterDetailsToConfirm')}</p>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent data-modal="true" className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-theme-primary">{t('joinAsGuest')}</DialogTitle>
+          <DialogDescription className="text-sm text-stone-600 dark:text-gray-300">
+            {t('enterDetailsToConfirm')}
+          </DialogDescription>
+        </DialogHeader>
         <div className="space-y-3">
           <input
             type="text"
@@ -64,7 +63,7 @@ export default function GuestJoinModal({
             {t('signInLink')}
           </a>
         </p>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

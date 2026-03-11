@@ -1,8 +1,8 @@
 'use client';
 
-import { X, MapPin, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { MapPin, Calendar } from 'lucide-react';
 import { sportTranslations } from '@/lib/translations';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { ActiveSession } from './storyTypes';
 import { getSportEmoji } from './storiesRowHelpers';
 
@@ -20,18 +20,15 @@ export default function SessionPickerSheet({
   onClose,
 }: SessionPickerSheetProps) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:rounded-xl rounded-t-2xl max-h-[70vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        data-modal="true"
+        className="max-w-md rounded-xl p-0 max-h-[70vh] overflow-y-auto dark:bg-[#2C3137] gap-0"
       >
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-theme-primary">
+          <DialogTitle className="text-lg font-bold text-theme-primary">
             {language === 'es' ? 'Elegir Sesi\u00f3n' : 'Choose Session'}
-          </h3>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
-            <X className="w-5 h-5 text-theme-primary" />
-          </Button>
+          </DialogTitle>
         </div>
         <div className="p-2">
           {activeSessions.map((s) => (
@@ -67,7 +64,7 @@ export default function SessionPickerSheet({
             </button>
           ))}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

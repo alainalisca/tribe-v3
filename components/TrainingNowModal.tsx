@@ -1,9 +1,9 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import LocationPicker from '@/components/LocationPicker';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { getTrainingNowTexts } from './trainingNow/trainingNowTranslations';
 import { useTrainingNowForm } from './trainingNow/useTrainingNowForm';
 
@@ -39,22 +39,14 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
   const txt = getTrainingNowTexts(language);
 
   return (
-    <div
-      data-modal="true"
-      className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-white dark:bg-[#404549] w-full max-w-md rounded-2xl max-h-[80vh] flex flex-col shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        data-modal="true"
+        className="max-w-md rounded-2xl p-0 max-h-[80vh] flex flex-col dark:bg-[#404549] gap-0"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
-          <h2 className="text-lg font-bold text-theme-primary">{txt.title}</h2>
-          <button
-            data-modal-close="true"
-            onClick={onClose}
-            className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full"
-          >
-            <X className="w-5 h-5 text-theme-primary" />
-          </button>
+          <DialogTitle className="text-lg font-bold text-theme-primary">{txt.title}</DialogTitle>
         </div>
 
         <div className="p-4 space-y-5 overflow-y-auto flex-1">
@@ -163,7 +155,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
             {loading ? txt.creating : txt.notify}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

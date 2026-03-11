@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Users, MapPin, Calendar, User } from 'lucide-react';
+import { Users, MapPin, Calendar, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface OnboardingModalProps {
@@ -42,8 +43,14 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const Icon = currentStep.icon;
 
   return (
-    <div data-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#6B7178] rounded-2xl max-w-md w-full p-6 relative">
+    <Dialog open={true} onOpenChange={() => {}}>
+      <DialogContent
+        data-modal="true"
+        className="max-w-md rounded-2xl p-6 dark:bg-[#6B7178] [&>button:last-child]:hidden"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogTitle className="sr-only">Welcome to Tribe</DialogTitle>
+
         <Button
           data-modal-close="true"
           variant="ghost"
@@ -51,7 +58,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           onClick={onComplete}
           className="absolute top-4 right-4 rounded-full"
         >
-          <X className="w-5 h-5 text-stone-600 dark:text-gray-400" />
+          <span className="w-5 h-5 text-stone-600 dark:text-gray-400">✕</span>
         </Button>
 
         <div className="text-center mb-6">
@@ -118,7 +125,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 : 'Next'}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

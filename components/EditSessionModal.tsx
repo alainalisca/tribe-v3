@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { updateSession } from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
 
@@ -49,17 +49,12 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
   }
 
   return (
-    <div data-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#6B7178] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6 relative">
-        <button
-          data-modal-close="true"
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
-        >
-          <X className="w-5 h-5 text-stone-600 dark:text-gray-400" />
-        </button>
-
-        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-6">{t('editSession')}</h2>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        data-modal="true"
+        className="max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-6 dark:bg-[#6B7178]"
+      >
+        <DialogTitle className="text-2xl font-bold text-stone-900 dark:text-white">{t('editSession')}</DialogTitle>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -158,7 +153,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

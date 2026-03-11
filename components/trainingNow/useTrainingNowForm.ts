@@ -40,23 +40,7 @@ export function useTrainingNowForm({ isOpen, userId, language, onSessionCreated,
   const [gettingLocation, setGettingLocation] = useState(false);
   const [formData, setFormData] = useState<TrainingNowFormData>(INITIAL_FORM_DATA);
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, [isOpen]);
+  // Body scroll locking handled by Radix Dialog
 
   useEffect(() => {
     if (isOpen) {

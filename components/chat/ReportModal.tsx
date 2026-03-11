@@ -1,7 +1,7 @@
 'use client';
 
-import { X } from 'lucide-react';
 import type { ChatTranslations } from './chatTranslations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface ReportModalProps {
   tr: ChatTranslations;
@@ -23,17 +23,12 @@ export default function ReportModal({
   onSubmit,
 }: ReportModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
-      <div className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-stone-900 dark:text-white">{tr.reportMessage}</h3>
-          <button
-            onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
-          >
-            <X className="w-5 h-5 text-stone-500 dark:text-gray-400" />
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent data-modal="true" className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-stone-900 dark:text-white">{tr.reportMessage}</DialogTitle>
+          <DialogDescription className="sr-only">{tr.reportMessage}</DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-4">
           <div>
@@ -78,7 +73,7 @@ export default function ReportModal({
             {tr.submitReport}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

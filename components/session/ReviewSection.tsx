@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Star, X } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { insertReview } from '@/lib/dal';
 import { Button } from '@/components/ui/button';
 import StarRating from '@/components/StarRating';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface ReviewSectionProps {
   session: { id: string; creator_id: string };
@@ -88,46 +89,39 @@ export default function ReviewSection({
       </div>
 
       {/* Rating Modal */}
-      {showRatingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-theme-primary">{t('rateThisSession')}</h3>
-              <button
-                onClick={() => setShowRatingModal(false)}
-                className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded"
-              >
-                <X className="w-5 h-5 text-theme-primary" />
-              </button>
-            </div>
+      <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
+        <DialogContent data-modal="true" className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-theme-primary">{t('rateThisSession')}</DialogTitle>
+            <DialogDescription className="text-sm text-stone-600 dark:text-gray-300">
+              {t('howWasYourExperience')}
+            </DialogDescription>
+          </DialogHeader>
 
-            <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('howWasYourExperience')}</p>
-
-            <div className="flex justify-center mb-6">
-              <StarRating rating={userRating} onRatingChange={setUserRating} size="lg" />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-theme-primary mb-2">{t('leaveAComment')}</label>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={t('shareExperiencePlaceholder')}
-                rows={3}
-                className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary resize-none"
-              />
-            </div>
-
-            <Button
-              onClick={submitReview}
-              disabled={submittingReview || userRating === 0}
-              className="w-full py-3 font-bold rounded-lg"
-            >
-              {submittingReview ? t('submitting') : t('submitReview')}
-            </Button>
+          <div className="flex justify-center mb-6">
+            <StarRating rating={userRating} onRatingChange={setUserRating} size="lg" />
           </div>
-        </div>
-      )}
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-theme-primary mb-2">{t('leaveAComment')}</label>
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder={t('shareExperiencePlaceholder')}
+              rows={3}
+              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary resize-none"
+            />
+          </div>
+
+          <Button
+            onClick={submitReview}
+            disabled={submittingReview || userRating === 0}
+            className="w-full py-3 font-bold rounded-lg"
+          >
+            {submittingReview ? t('submitting') : t('submitReview')}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

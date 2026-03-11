@@ -1,9 +1,9 @@
 'use client';
 
-import { X } from 'lucide-react';
 import { showSuccess } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface InviteModalProps {
   language: 'en' | 'es';
@@ -35,15 +35,14 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-modal="true">
-      <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-theme-primary">{t('inviteFriend')}</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5 text-theme-primary" />
-          </Button>
-        </div>
-        <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('shareInviteDesc')}</p>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent data-modal="true" className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-theme-primary">{t('inviteFriend')}</DialogTitle>
+          <DialogDescription className="text-sm text-stone-600 dark:text-gray-300">
+            {t('shareInviteDesc')}
+          </DialogDescription>
+        </DialogHeader>
         <div className="bg-stone-50 dark:bg-[#52575D] p-3 rounded-lg mb-4 break-all text-sm">{inviteLink}</div>
         <div className="flex gap-3">
           <Button
@@ -57,7 +56,7 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
             {t('share')}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface SafetyWaiverModalProps {
@@ -51,9 +52,13 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
         };
 
   return (
-    <div data-modal="true" className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-4">{tr.title}</h2>
+    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent
+        data-modal="true"
+        className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-8 dark:bg-[#272D34] [&>button:last-child]:hidden"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogTitle className="text-2xl font-bold text-stone-900 dark:text-white">{tr.title}</DialogTitle>
 
         <p className="text-stone-600 dark:text-gray-300 mb-6">{tr.intro}</p>
 
@@ -148,7 +153,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
             {tr.cancel}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
