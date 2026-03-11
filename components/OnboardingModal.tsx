@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Users, MapPin, Calendar, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface OnboardingModalProps {
@@ -43,13 +44,15 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   return (
     <div data-modal="true" className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-[#6B7178] rounded-2xl max-w-md w-full p-6 relative">
-        <button
+        <Button
           data-modal-close="true"
+          variant="ghost"
+          size="icon"
           onClick={onComplete}
-          className="absolute top-4 right-4 p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
+          className="absolute top-4 right-4 rounded-full"
         >
           <X className="w-5 h-5 text-stone-600 dark:text-gray-400" />
-        </button>
+        </Button>
 
         <div className="text-center mb-6">
           {step === 1 ? (
@@ -87,14 +90,15 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
         <div className="flex gap-3">
           {step > 1 && (
-            <button
+            <Button
+              variant="outline"
               onClick={() => setStep(step - 1)}
-              className="flex-1 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
+              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
             >
               {language === 'es' ? 'Atrás' : 'Back'}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => {
               if (step === steps.length) {
                 onComplete();
@@ -103,7 +107,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                 setStep(step + 1);
               }
             }}
-            className="flex-1 py-3 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition"
+            className="flex-1 py-3 font-semibold rounded-lg"
           >
             {step === steps.length
               ? language === 'es'
@@ -112,7 +116,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
               : language === 'es'
                 ? 'Siguiente'
                 : 'Next'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

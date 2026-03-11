@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import { Button } from '@/components/ui/button';
 import { useSettings } from './useSettings';
 import { useRouter } from 'next/navigation';
 
@@ -33,9 +34,9 @@ export default function SettingsPage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
-            <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+            <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
-            </button>
+            </Button>
           </Link>
           <h1 className="text-xl font-bold text-theme-primary">{txt.settings}</h1>
         </div>
@@ -65,22 +66,26 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Link href="/feedback">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D] flex items-center gap-2"
+              >
                 <MessageSquare className="w-4 h-4" />
                 {txt.feedback}
-              </button>
+              </Button>
             </Link>
             <Link href="/feedback">
-              <button
+              <Button
+                variant="ghost"
                 onClick={(e) => {
                   e.preventDefault();
                   router.push('/feedback?tab=bug');
                 }}
-                className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D] flex items-center gap-2"
               >
                 <Bug className="w-4 h-4" />
                 {txt.bugReport}
-              </button>
+              </Button>
             </Link>
           </div>
         </div>
@@ -177,19 +182,28 @@ export default function SettingsPage() {
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
             <Link href="/legal/terms">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+              >
                 {txt.terms}
-              </button>
+              </Button>
             </Link>
             <Link href="/legal/privacy">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+              >
                 {txt.privacy}
-              </button>
+              </Button>
             </Link>
             <Link href="/legal/safety">
-              <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition">
+              <Button
+                variant="ghost"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+              >
                 {txt.safety}
-              </button>
+              </Button>
             </Link>
           </div>
         </div>
@@ -197,20 +211,22 @@ export default function SettingsPage() {
         {/* Account Section */}
         <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
-          <button
+          <Button
+            variant="destructive"
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition"
+            className="w-full flex items-center justify-center gap-2 py-3 font-semibold rounded-xl"
           >
             <LogOut className="w-5 h-5" />
             {txt.signOut}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={openDeleteConfirm}
-            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-[#3D4349] text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
+            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-[#3D4349] text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D]"
           >
             <Trash2 className="w-5 h-5" />
             {txt.deleteAccount}
-          </button>
+          </Button>
         </div>
       </div>
 

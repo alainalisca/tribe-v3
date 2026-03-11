@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { Button } from '@/components/ui/button';
 import { getSkillLevelDisplay, getGenderDisplay, computeSessionStatus } from './SessionCardHelpers';
 import type { SessionCardProps } from './SessionCardHelpers';
 
@@ -218,15 +219,15 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
           {/* Action Buttons */}
           <div className="flex gap-2 mt-4">
-            <button
-              className="flex-1 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-lime-500 transition-colors text-sm"
+            <Button
+              className="flex-1 py-2 font-semibold text-sm"
               onClick={(e) => {
                 e.preventDefault();
                 router.push(`/session/${session.id}`);
               }}
             >
               {t('viewDetails')}
-            </button>
+            </Button>
             {currentUserId &&
               (session.creator_id === currentUserId ||
                 confirmedParticipants.some((p) => p.user_id === currentUserId)) && (

@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPrivacyContent } from '../legalTranslations';
 
@@ -15,9 +16,9 @@ export default function PrivacyPage() {
       <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Link href="/settings">
-            <button className="p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition">
+            <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
-            </button>
+            </Button>
           </Link>
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.title}</h1>
         </div>

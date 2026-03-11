@@ -42,6 +42,7 @@ vi.mock('@/lib/translations', () => ({
 
 vi.mock('@/lib/utils', () => ({
   formatTime12Hour: (time: string) => time,
+  cn: (...inputs: string[]) => inputs.filter(Boolean).join(' '),
 }));
 
 function createMockSession(overrides: Partial<SessionWithRelations> = {}): SessionWithRelations {

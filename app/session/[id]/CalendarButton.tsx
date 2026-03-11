@@ -2,6 +2,7 @@
 
 import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 interface CalendarButtonProps {
   session: {
@@ -32,9 +33,10 @@ export default function CalendarButton({ session }: CalendarButtonProps) {
   };
 
   return (
-    <button
+    <Button
       onClick={handleAddToCalendar}
-      className="flex items-center gap-2 px-4 py-2 border border-stone-300 dark:border-stone-600 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+      variant="outline"
+      className="flex items-center gap-2 px-4 py-2 border-stone-300 dark:border-stone-600 hover:bg-stone-50 dark:hover:bg-stone-800"
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -45,6 +47,6 @@ export default function CalendarButton({ session }: CalendarButtonProps) {
         />
       </svg>
       <span className="text-sm font-medium">{t('addToCalendar')}</span>
-    </button>
+    </Button>
   );
 }

@@ -1,4 +1,5 @@
 import { MessageSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Database } from '@/lib/database.types';
 
 type UserFeedbackRow = Database['public']['Tables']['user_feedback']['Row'];
@@ -61,18 +62,20 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
               </div>
 
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={() => onUpdateStatus(item.id, 'reviewed')}
                   className="flex-1 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
+                  size="sm"
                 >
                   {language === 'es' ? 'Marcar Revisado' : 'Mark Reviewed'}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => onUpdateStatus(item.id, 'implemented')}
-                  className="flex-1 py-1.5 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
+                  className="flex-1 py-1.5 text-xs rounded"
+                  size="sm"
                 >
                   {language === 'es' ? 'Implementado' : 'Implemented'}
-                </button>
+                </Button>
               </div>
             </div>
           ))}

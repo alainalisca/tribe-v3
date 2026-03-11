@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Check, X, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -142,9 +143,9 @@ export default function RequestsPage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">
-            <button className="p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition">
+            <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
-            </button>
+            </Button>
           </Link>
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t('joinRequests')}</h1>
         </div>
@@ -172,9 +173,7 @@ export default function RequestsPage() {
             <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('noPendingRequests')}</h2>
             <p className="text-stone-600 dark:text-gray-300 mb-4">{t('requestsDescription')}</p>
             <Link href="/create">
-              <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                {t('createASession')}
-              </button>
+              <Button className="font-bold">{t('createASession')}</Button>
             </Link>
           </div>
         ) : (
@@ -222,13 +221,13 @@ export default function RequestsPage() {
                 </div>
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={() => handleAccept(request.id)}
-                    className="flex-1 py-2 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition flex items-center justify-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2 font-semibold"
                   >
                     <Check className="w-4 h-4" />
                     {t('accept')}
-                  </button>
+                  </Button>
                   <button
                     onClick={() => handleDecline(request.id)}
                     className="flex-1 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"

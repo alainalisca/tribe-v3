@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 import { updateSession } from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
 
@@ -144,20 +145,17 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="flex-1 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
+              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
             >
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-3 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={loading} className="flex-1 py-3 font-semibold rounded-lg">
               {loading ? t('saving') : t('saveChanges')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -2,6 +2,7 @@
 'use client';
 
 import { ArrowLeft, Navigation } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import BottomNav from '@/components/BottomNav';
@@ -46,9 +47,9 @@ export default function TrainingNowPage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
           <Link href="/">
-            <button className="p-2 hover:bg-lime-500 rounded-full transition">
+            <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-slate-900" />
-            </button>
+            </Button>
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">{txt.title}</h1>
         </div>
@@ -141,13 +142,13 @@ export default function TrainingNowPage() {
         </div>
 
         {/* Submit Button */}
-        <button
+        <Button
           onClick={handleSubmit}
           disabled={loading || !formData.sport || !formData.location}
-          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-xl hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+          className="w-full py-4 font-bold rounded-xl text-lg"
         >
           {loading ? txt.creating : txt.notify}
-        </button>
+        </Button>
       </div>
 
       <BottomNav />

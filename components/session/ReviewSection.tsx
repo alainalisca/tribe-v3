@@ -5,6 +5,7 @@ import { Star, X } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { insertReview } from '@/lib/dal';
+import { Button } from '@/components/ui/button';
 import StarRating from '@/components/StarRating';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -117,13 +118,13 @@ export default function ReviewSection({
               />
             </div>
 
-            <button
+            <Button
               onClick={submitReview}
               disabled={submittingReview || userRating === 0}
-              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full py-3 font-bold rounded-lg"
             >
               {submittingReview ? t('submitting') : t('submitReview')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

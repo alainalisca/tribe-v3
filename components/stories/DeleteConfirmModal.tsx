@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface DeleteConfirmModalProps {
@@ -22,17 +23,19 @@ export default function DeleteConfirmModal({
       <div className="bg-white dark:bg-[#2C3137] rounded-2xl p-6 mx-6 max-w-sm w-full">
         <p className="text-lg font-bold text-theme-primary text-center mb-4">{t('deleteThisStory')}</p>
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="secondary"
             onClick={onCancel}
             disabled={deleting}
-            className="flex-1 py-3 bg-stone-200 dark:bg-[#3D4349] text-theme-primary font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D] transition"
+            className="flex-1 py-3 font-semibold rounded-xl bg-stone-200 dark:bg-[#3D4349] hover:bg-stone-300 dark:hover:bg-[#52575D]"
           >
             {t('cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="destructive"
             onClick={onConfirm}
             disabled={deleting}
-            className="flex-1 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 py-3 font-semibold rounded-xl flex items-center justify-center gap-2"
           >
             {deleting ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
@@ -42,7 +45,7 @@ export default function DeleteConfirmModal({
                 {t('delete')}
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

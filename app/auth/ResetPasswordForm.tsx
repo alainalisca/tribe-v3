@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import type { AuthTranslations } from './translations';
 
 interface ResetPasswordFormProps {
@@ -67,13 +68,9 @@ export default function ResetPasswordForm({
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
         {loading ? t.loading : t.updatePassword}
-      </button>
+      </Button>
     </form>
   );
 }

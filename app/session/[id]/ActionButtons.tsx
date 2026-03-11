@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -48,34 +49,26 @@ export default function ActionButtons({
     <div className="space-y-2">
       {!user ? (
         sessionActions.guestHasJoined ? (
-          <button
+          <Button
             onClick={sessionActions.handleGuestLeave}
-            className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+            variant="destructive"
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('leaveSession')}
-          </button>
+          </Button>
         ) : isPast ? (
-          <button
-            disabled
-            className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-          >
+          <Button disabled className="w-full py-3 font-bold">
             {t('sessionEnded')}
-          </button>
+          </Button>
         ) : isFull ? (
-          <button
-            disabled
-            className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-          >
+          <Button disabled className="w-full py-3 font-bold">
             {t('sessionFull')}
-          </button>
+          </Button>
         ) : (
-          <button
-            onClick={() => sessionActions.setShowGuestModal(true)}
-            className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-          >
+          <Button onClick={() => sessionActions.setShowGuestModal(true)} className="w-full py-3 font-bold">
             {t('joinAsGuest')}
-          </button>
+          </Button>
         )
       ) : isCreator ? (
         <>
@@ -84,10 +77,7 @@ export default function ActionButtons({
           </div>
           {!isPast && (
             <>
-              <button
-                onClick={onEdit}
-                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition flex items-center justify-center gap-2"
-              >
+              <Button onClick={onEdit} className="w-full py-3 font-bold flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -97,14 +87,15 @@ export default function ActionButtons({
                   />
                 </svg>
                 {t('editSessionBtn')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={sessionActions.handleCancel}
-                className="w-full py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition flex items-center justify-center gap-2"
+                variant="destructive"
+                className="w-full py-3 font-bold flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-5 h-5" />
                 {t('cancelSession')}
-              </button>
+              </Button>
             </>
           )}
         </>
@@ -113,58 +104,47 @@ export default function ActionButtons({
           <div className="w-full py-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-bold rounded-lg text-center">
             ⏳ {t('pendingApproval')}
           </div>
-          <button
+          <Button
             onClick={sessionActions.handleLeave}
-            className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+            variant="destructive"
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('withdrawRequest')}
-          </button>
+          </Button>
         </>
       ) : hasJoined ? (
         isPast ? (
-          <button
-            disabled
-            className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-          >
+          <Button disabled className="w-full py-3 font-bold">
             {t('sessionEnded')}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             onClick={sessionActions.handleLeave}
-            className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2"
+            variant="destructive"
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 font-bold flex items-center justify-center gap-2"
           >
             <LogOut className="w-5 h-5" />
             {t('leaveSession')}
-          </button>
+          </Button>
         )
       ) : isPast ? (
-        <button
-          disabled
-          className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-        >
+        <Button disabled className="w-full py-3 font-bold">
           {t('sessionEnded')}
-        </button>
+        </Button>
       ) : isFull ? (
-        <button
-          disabled
-          className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 font-bold rounded-lg cursor-not-allowed"
-        >
+        <Button disabled className="w-full py-3 font-bold">
           {t('sessionFull')}
-        </button>
+        </Button>
       ) : session.join_policy === 'invite_only' ? (
         <div className="w-full py-3 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold rounded-lg text-center flex items-center justify-center gap-2">
           <Lock className="w-5 h-5" />
           {t('inviteOnlyLabel')}
         </div>
       ) : (
-        <button
-          onClick={sessionActions.handleJoin}
-          disabled={sessionActions.joining}
-          className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50 transition"
-        >
+        <Button onClick={sessionActions.handleJoin} disabled={sessionActions.joining} className="w-full py-3 font-bold">
           {sessionActions.joining ? t('joining') : t('joinSession')}
-        </button>
+        </Button>
       )}
 
       {(hasJoined || isCreator) && !isPast && (
@@ -177,16 +157,17 @@ export default function ActionButtons({
         </Link>
       )}
       {(hasJoined || isCreator) && !isPast && (
-        <button
+        <Button
           onClick={onInvite}
           disabled={creatingInvite}
-          className="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition disabled:opacity-50"
+          variant="secondary"
+          className="w-full py-3 bg-blue-500 text-white hover:bg-blue-600 font-bold"
         >
           {creatingInvite ? t('generating') : t('inviteFriend')}
-        </button>
+        </Button>
       )}
       {(hasJoined || isCreator) && (
-        <button
+        <Button
           onClick={() =>
             downloadICS({
               sport: session.sport,
@@ -199,7 +180,8 @@ export default function ActionButtons({
               sessionId: session.id,
             })
           }
-          className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green font-bold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition flex items-center justify-center gap-2"
+          variant="outline"
+          className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-bold flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -210,7 +192,7 @@ export default function ActionButtons({
             />
           </svg>
           {t('addToCalendar')}
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -6,6 +6,7 @@ import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { showInfo, showError as showErrorToast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface NotificationPromptProps {
@@ -92,19 +93,16 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{t('notifDescription')}</p>
 
           <div className="flex gap-2">
-            <button
-              onClick={handleEnable}
-              disabled={loading}
-              className="flex-1 bg-tribe-green text-slate-900 font-semibold py-2 px-4 rounded-lg hover:bg-[#b0d853] transition disabled:opacity-50"
-            >
+            <Button onClick={handleEnable} disabled={loading} className="flex-1 font-semibold py-2 px-4 rounded-lg">
               {loading ? t('enabling') : t('enable')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={handleDismiss}
-              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
               {t('later')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

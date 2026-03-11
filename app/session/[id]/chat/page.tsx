@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { Button } from '@/components/ui/button';
 import { fetchUserIsAdmin, fetchSession } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
@@ -107,12 +108,9 @@ export default function ChatPage() {
               <div className="text-4xl mb-4">💬</div>
               <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('couldNotLoadChat')}</p>
               <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{t('checkConnectionRetry')}</p>
-              <button
-                onClick={loadData}
-                className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-              >
+              <Button onClick={loadData} className="px-6 py-3 font-bold">
                 {t('tryAgain')}
-              </button>
+              </Button>
             </div>
           ) : (
             <SessionChat sessionId={sessionId} currentUserId={user.id} isHost={isHost} isAdmin={isAdmin} />

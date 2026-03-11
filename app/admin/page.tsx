@@ -4,6 +4,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { fetchUserIsAdmin } from '@/lib/dal';
 import { showError } from '@/lib/toast';
@@ -92,12 +93,9 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 text-lg mb-4">{language === 'es' ? 'Algo salió mal' : 'Something went wrong'}</p>
-        <button
-          onClick={data.loadStats}
-          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-        >
+        <Button onClick={data.loadStats} className="font-bold">
           {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
-        </button>
+        </Button>
       </div>
     );
   }

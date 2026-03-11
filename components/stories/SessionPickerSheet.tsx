@@ -1,6 +1,7 @@
 'use client';
 
 import { X, MapPin, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { sportTranslations } from '@/lib/translations';
 import type { ActiveSession } from './storyTypes';
 import { getSportEmoji } from './storiesRowHelpers';
@@ -28,9 +29,9 @@ export default function SessionPickerSheet({
           <h3 className="text-lg font-bold text-theme-primary">
             {language === 'es' ? 'Elegir Sesi\u00f3n' : 'Choose Session'}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition">
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5 text-theme-primary" />
-          </button>
+          </Button>
         </div>
         <div className="p-2">
           {activeSessions.map((s) => (

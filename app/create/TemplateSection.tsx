@@ -8,6 +8,7 @@ import { insertTemplate, deleteTemplate as dalDeleteTemplate, fetchTemplatesByUs
 import ConfirmDialog from '@/components/ConfirmDialog';
 import type { Database } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 
@@ -120,14 +121,14 @@ export default function TemplateSection({
         >
           📋 {t('useTemplate')} ({templates.length})
         </button>
-        <button
+        <Button
           type="button"
           onClick={startSaveAsTemplate}
           disabled={savingTemplate}
-          className="flex-1 py-3 px-3 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
+          className="flex-1 py-3 px-3 font-medium text-sm"
         >
           {savingTemplate ? '...' : `💾 ${t('saveTemplate')}`}
-        </button>
+        </Button>
       </div>
 
       {showNameInput && (
@@ -158,14 +159,14 @@ export default function TemplateSection({
             >
               {t('cancel')}
             </button>
-            <button
+            <Button
               type="button"
               onClick={confirmSaveTemplate}
               disabled={!templateName.trim()}
-              className="flex-1 py-2 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500 transition disabled:opacity-50 text-sm"
+              className="flex-1 py-2 font-medium text-sm"
             >
               💾 {t('saveTemplate')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -186,13 +187,13 @@ export default function TemplateSection({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => handleLoadTemplate(template)}
-                    className="px-3 py-1 bg-tribe-green text-slate-900 text-xs rounded hover:bg-lime-500"
+                    className="px-3 py-1 text-xs font-bold h-auto"
                   >
                     {t('use')}
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => setConfirmDeleteId(template.id)}

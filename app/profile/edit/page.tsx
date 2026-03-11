@@ -6,6 +6,7 @@ import { sportTranslations } from '@/lib/translations';
 import { useLanguage } from '@/lib/LanguageContext';
 import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useEditProfile } from './useEditProfile';
 
 export default function EditProfilePage() {
@@ -40,12 +41,9 @@ export default function EditProfilePage() {
         <p className="text-theme-primary text-lg mb-4">
           {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
         </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-        >
+        <Button onClick={() => window.location.reload()} className="px-6 py-3 font-bold">
           {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -57,20 +55,16 @@ export default function EditProfilePage() {
         <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <Link href="/profile">
-              <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+              <Button variant="ghost" size="icon" className="mr-3">
                 <ArrowLeft className="w-6 h-6 text-theme-primary" />
-              </button>
+              </Button>
             </Link>
             <h1 className="text-xl font-bold text-theme-primary">{tr.editProfile}</h1>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-tribe-green text-slate-900 font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50"
-          >
+          <Button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 font-semibold">
             <Save className="w-4 h-4" />
             {saving ? tr.saving : tr.save}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -262,13 +256,9 @@ export default function EditProfilePage() {
         </div>
 
         {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-4 bg-tribe-green text-slate-900 font-bold rounded-2xl hover:opacity-90 transition disabled:opacity-50 text-lg"
-        >
+        <Button onClick={handleSave} disabled={saving} className="w-full py-4 font-bold rounded-2xl text-lg">
           {saving ? tr.saving : tr.saveProfile}
-        </button>
+        </Button>
       </div>
     </div>
   );

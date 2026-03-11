@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Camera, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { insertSessionStory } from '@/lib/dal';
@@ -215,9 +216,9 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-[#2C3137]">
           <h3 className="text-lg font-bold text-theme-primary">{t.addStory}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-full transition">
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5 text-theme-primary" />
-          </button>
+          </Button>
         </div>
 
         {!preview ? (
@@ -272,10 +273,10 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               className="w-full px-4 py-3 bg-stone-100 dark:bg-[#3D4349] border border-stone-200 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
             />
 
-            <button
+            <Button
               onClick={handlePost}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-tribe-green text-slate-900 font-bold rounded-xl hover:opacity-90 transition disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 font-bold rounded-xl"
             >
               {uploading ? (
                 <>
@@ -288,7 +289,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
                   {t.post}
                 </>
               )}
-            </button>
+            </Button>
           </div>
         )}
       </div>

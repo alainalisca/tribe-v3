@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 interface GuestJoinModalProps {
   language: 'en' | 'es';
@@ -26,9 +27,9 @@ export default function GuestJoinModal({
       <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-theme-primary">{t('joinAsGuest')}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-theme-primary" />
-          </button>
+          </Button>
         </div>
         <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('enterDetailsToConfirm')}</p>
         <div className="space-y-3">
@@ -54,13 +55,9 @@ export default function GuestJoinModal({
             className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary"
           />
         </div>
-        <button
-          onClick={onSubmit}
-          disabled={joiningAsGuest}
-          className="w-full mt-4 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 disabled:opacity-50"
-        >
+        <Button onClick={onSubmit} disabled={joiningAsGuest} className="w-full mt-4 py-3 font-bold">
           {joiningAsGuest ? t('confirming') : t('confirmAttendance')}
-        </button>
+        </Button>
         <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
           {t('alreadyHaveAccount')}{' '}
           <a href="/auth" className="text-tribe-green hover:underline">

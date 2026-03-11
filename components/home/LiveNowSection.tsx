@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { calculateDistance, formatDistance } from '@/lib/distance';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { SessionWithRelations } from '@/lib/dal';
 
@@ -92,9 +93,7 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
                   </div>
                   <div className="text-right">
                     <div className="text-xs font-medium text-green-600 dark:text-green-400">{statusText}</div>
-                    <button className="mt-1 px-4 py-1.5 bg-tribe-green text-slate-900 text-sm font-bold rounded-full hover:bg-lime-500 transition">
-                      {t('join')}
-                    </button>
+                    <Button className="mt-1 px-4 py-1.5 text-sm font-bold rounded-full">{t('join')}</Button>
                   </div>
                 </div>
               </div>

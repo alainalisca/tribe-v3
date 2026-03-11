@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Camera, MapPin, X, Settings } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
@@ -238,12 +239,12 @@ export default function ProfilePage() {
           )}
 
           {/* Edit Profile Button */}
-          <button
+          <Button
             onClick={() => router.push('/profile/edit')}
-            className="w-full mt-8 py-4 bg-tribe-green text-slate-900 font-bold rounded-2xl hover:opacity-90 transition text-lg"
+            className="w-full mt-8 py-4 font-bold rounded-2xl text-lg"
           >
             {txt.editProfile}
-          </button>
+          </Button>
         </div>
       </div>
 

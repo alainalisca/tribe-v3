@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import type { AuthTranslations } from './translations';
 
 interface EmailAuthFormProps {
@@ -165,14 +166,15 @@ export default function EmailAuthForm({
           </div>
         )}
         {isLogin && (
-          <button
+          <Button
             type="button"
+            variant="link"
             onClick={onForgotPassword}
             disabled={loading}
-            className="mt-2 text-sm text-tribe-green hover:underline disabled:opacity-50"
+            className="mt-2 text-sm text-tribe-green hover:underline disabled:opacity-50 p-0 h-auto"
           >
             {t.forgotPassword}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -189,23 +191,20 @@ export default function EmailAuthForm({
       )}
 
       {needsVerification && (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={onResendVerification}
           disabled={resendCooldown > 0}
-          className="w-full py-3 border border-tribe-green text-tribe-green font-semibold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 border-tribe-green text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-semibold"
         >
           {resendCooldown > 0 ? `${t.resendIn} ${resendCooldown}s` : t.resendVerification}
-        </button>
+        </Button>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
         {loading ? t.loading : isLogin ? t.signIn : t.signUp}
-      </button>
+      </Button>
     </form>
   );
 }

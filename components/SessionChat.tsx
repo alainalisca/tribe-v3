@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Send, MoreVertical, Trash2, Flag, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import Link from 'next/link';
@@ -275,13 +276,14 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             enterKeyHint="send"
             className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#C0E863] disabled:opacity-50"
           />
-          <button
+          <Button
             type="submit"
             disabled={!newMessage.trim() || chat.sending}
-            className="p-2 bg-[#C0E863] text-[#272D34] rounded-full hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            size="icon"
+            className="p-2 bg-[#C0E863] text-[#272D34] rounded-full hover:opacity-90"
           >
             <Send className="w-5 h-5" />
-          </button>
+          </Button>
         </form>
       </div>
 

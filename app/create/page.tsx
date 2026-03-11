@@ -17,6 +17,7 @@ import { insertSession } from '@/lib/dal';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
+import { Button } from '@/components/ui/button';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
 
@@ -133,9 +134,9 @@ export default function CreateSessionPage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <Link href="/">
-            <button className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+            <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
-            </button>
+            </Button>
           </Link>
           <h1 className="text-xl font-bold text-theme-primary">{t('createSession')}</h1>
         </div>
@@ -345,13 +346,9 @@ export default function CreateSessionPage() {
               onPhotosChange={setPhotos}
             />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
-            >
+            <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
               {loading ? t('creating') : t('createSession')}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

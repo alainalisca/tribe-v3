@@ -1,6 +1,7 @@
 'use client';
 
 import { logError } from '@/lib/logger';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -13,12 +14,9 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <div className="text-5xl mb-4">😵</div>
         <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('somethingWentWrong')}</h2>
         <p className="text-stone-600 dark:text-stone-300 mb-6">{t('dontWorryDataSafe')}</p>
-        <button
-          onClick={reset}
-          className="bg-[#9EE551] text-black font-semibold px-6 py-3 rounded-xl hover:bg-[#8FD642] transition-colors"
-        >
+        <Button onClick={reset} className="font-semibold rounded-xl">
           {t('tryAgain')}
-        </button>
+        </Button>
       </div>
     </div>
   );

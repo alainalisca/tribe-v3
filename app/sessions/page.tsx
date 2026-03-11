@@ -2,6 +2,7 @@
 'use client';
 
 import { Calendar, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -45,12 +46,9 @@ export default function SessionsPage() {
         <p className="text-stone-900 dark:text-white text-lg mb-4">
           {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
         </p>
-        <button
-          onClick={retry}
-          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-        >
+        <Button onClick={retry} className="font-bold">
           {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -103,14 +101,12 @@ export default function SessionsPage() {
                   <p className="text-stone-600 dark:text-gray-300 mb-6">{txt.browseHome}</p>
                   <div className="flex gap-3 justify-center">
                     <Link href="/create">
-                      <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                        {txt.createSession}
-                      </button>
+                      <Button className="font-bold">{txt.createSession}</Button>
                     </Link>
                     <Link href="/">
-                      <button className="px-6 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition">
+                      <Button variant="outline" className="font-semibold">
                         {txt.browseSessions}
-                      </button>
+                      </Button>
                     </Link>
                   </div>
                 </div>

@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import { MessageCircle, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
 
@@ -41,12 +42,9 @@ export default function MessagesPage() {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 dark:text-white text-lg mb-4">{t('somethingWentWrong')}</p>
-        <button
-          onClick={retry}
-          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-        >
+        <Button onClick={retry} className="font-bold">
           {t('tryAgain')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -68,9 +66,7 @@ export default function MessagesPage() {
             <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
             <p className="text-stone-500 dark:text-gray-400 mb-4">{t('joinSessionToChat')}</p>
             <Link href="/">
-              <button className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition">
-                {t('findSessions')}
-              </button>
+              <Button className="font-bold">{t('findSessions')}</Button>
             </Link>
           </div>
         ) : (

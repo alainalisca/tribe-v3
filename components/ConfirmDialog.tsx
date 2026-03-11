@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -41,9 +42,6 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
-  const confirmStyle =
-    variant === 'danger' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-tribe-green text-slate-900 hover:bg-lime-500';
-
   return (
     <div
       data-confirm-dialog="true"
@@ -56,20 +54,22 @@ export default function ConfirmDialog({
         <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">{title}</h3>
         <p className="text-sm text-stone-600 dark:text-gray-300 mb-6">{message}</p>
         <div className="flex gap-3">
-          <button
+          <Button
             data-confirm-cancel="true"
+            variant="outline"
             onClick={onCancel}
-            className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+            className="flex-1 py-2.5 border-stone-300 dark:border-[#52575D] text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium rounded-lg"
           >
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             ref={confirmRef}
             onClick={onConfirm}
-            className={`flex-1 py-2.5 rounded-lg font-medium ${confirmStyle}`}
+            variant={variant === 'danger' ? 'destructive' : 'default'}
+            className="flex-1 py-2.5 rounded-lg font-medium"
           >
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

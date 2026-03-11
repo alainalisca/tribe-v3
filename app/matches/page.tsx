@@ -2,6 +2,7 @@
 'use client';
 import { formatTime12Hour } from '@/lib/utils';
 
+import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -28,12 +29,9 @@ export default function MatchesPage() {
         <p className="text-stone-900 dark:text-white text-lg mb-4">
           {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
         </p>
-        <button
-          onClick={retry}
-          className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-        >
+        <Button onClick={retry} className="font-bold">
           {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
-        </button>
+        </Button>
       </div>
     );
   }

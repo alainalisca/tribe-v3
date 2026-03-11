@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { showSuccess } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Button } from '@/components/ui/button';
 
 interface InviteModalProps {
   language: 'en' | 'es';
@@ -38,25 +39,23 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
       <div className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-theme-primary">{t('inviteFriend')}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded">
+          <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="w-5 h-5 text-theme-primary" />
-          </button>
+          </Button>
         </div>
         <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('shareInviteDesc')}</p>
         <div className="bg-stone-50 dark:bg-[#52575D] p-3 rounded-lg mb-4 break-all text-sm">{inviteLink}</div>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={copyInviteLink}
-            className="flex-1 py-3 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178]"
+            variant="secondary"
+            className="flex-1 py-3 bg-stone-200 dark:bg-[#52575D] text-theme-primary hover:bg-stone-300 dark:hover:bg-[#6B7178] font-medium"
           >
             {t('copy')}
-          </button>
-          <button
-            onClick={shareInviteLink}
-            className="flex-1 py-3 bg-tribe-green text-slate-900 font-medium rounded-lg hover:bg-lime-500"
-          >
+          </Button>
+          <Button onClick={shareInviteLink} className="flex-1 py-3 font-medium">
             {t('share')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

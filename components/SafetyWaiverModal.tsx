@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface SafetyWaiverModalProps {
@@ -135,20 +136,17 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={onAccept}
-            disabled={!allChecked}
-            className="flex-1 bg-tribe-green text-slate-900 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-tribe-green/90 transition"
-          >
+          <Button onClick={onAccept} disabled={!allChecked} className="flex-1 py-3 rounded-lg font-semibold">
             {tr.accept}
-          </button>
-          <button
+          </Button>
+          <Button
             data-modal-close="true"
+            variant="outline"
             onClick={onCancel}
-            className="px-6 py-3 border border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
+            className="px-6 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
           >
             {tr.cancel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

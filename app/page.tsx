@@ -16,6 +16,7 @@ import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { useHomeFeed } from './useHomeFeed';
 
 export default function HomePage() {
@@ -119,12 +120,9 @@ export default function HomePage() {
               <div className="text-4xl mb-4">⚠️</div>
               <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{f.t('couldNotLoadSessions')}</p>
               <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('checkConnectionRetry')}</p>
-              <button
-                onClick={() => f.loadSessions()}
-                className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-              >
+              <Button onClick={() => f.loadSessions()} className="px-6 py-3 font-bold">
                 {f.t('retry')}
-              </button>
+              </Button>
             </div>
           ) : f.filteredSessions.length === 0 ? (
             <div className="bg-white dark:bg-[#6B7178] rounded-xl p-8 text-center border border-stone-200 dark:border-[#52575D]">
@@ -135,17 +133,18 @@ export default function HomePage() {
                     {f.t('noMatchingFilters')}
                   </p>
                   <p className="text-sm text-stone-500 dark:text-gray-400 mb-4">{f.t('tryDifferentSearch')}</p>
-                  <button
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       f.setSearchQuery('');
                       f.setSelectedSport('');
                       f.setDateFilter('all');
                       f.setGenderFilter('all');
                     }}
-                    className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold rounded-lg hover:bg-tribe-green hover:text-slate-900 transition"
+                    className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold hover:bg-tribe-green hover:text-slate-900"
                   >
                     {f.t('clearFilters')}
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <>

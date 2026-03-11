@@ -10,6 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchInviteWithSession, fetchUsersByIds, insertParticipant, updateSession } from '@/lib/dal';
+import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Clock } from 'lucide-react';
 import Link from 'next/link';
 import type { Database } from '@/lib/database.types';
@@ -237,13 +238,9 @@ export default function InvitePage() {
                 />
               </div>
 
-              <button
-                onClick={handleGuestJoin}
-                disabled={joining}
-                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50"
-              >
+              <Button onClick={handleGuestJoin} disabled={joining} className="w-full font-bold">
                 {joining ? t('confirming') : t('confirmAttendance')}
-              </button>
+              </Button>
 
               <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
                 {t('infoSharedWithOrganizer')}

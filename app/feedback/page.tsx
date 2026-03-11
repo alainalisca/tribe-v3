@@ -2,6 +2,7 @@
 'use client';
 
 import { MessageSquare, Bug, ArrowLeft, Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 import { useFeedback } from './useFeedback';
 
@@ -40,9 +41,9 @@ export default function FeedbackPage() {
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <button onClick={() => router.back()} className="p-2 hover:bg-stone-200 rounded-lg transition mr-3">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
-          </button>
+          </Button>
           <h1 className="text-xl font-bold text-theme-primary">
             {t.pageTitle} Tribe<span className="text-tribe-green">.</span>
           </h1>
@@ -112,14 +113,14 @@ export default function FeedbackPage() {
                 />
               </div>
 
-              <button
+              <Button
                 onClick={submitFeedback}
                 disabled={submitting}
-                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 font-bold"
               >
                 <Send className="w-5 h-5" />
                 {submitting ? t.submitting : t.submitFeedback}
-              </button>
+              </Button>
             </div>
           </div>
         )}

@@ -2,6 +2,7 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import Link from 'next/link';
@@ -43,9 +44,9 @@ export default function StoriesPage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">
-            <button className="p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition">
+            <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
-            </button>
+            </Button>
           </Link>
           <h1 className="flex-1 text-xl font-bold text-stone-900 dark:text-white">{t.stories}</h1>
         </div>
