@@ -1,4 +1,4 @@
-/** Page: / — Home feed with session discovery, filters, and stories */
+/** Page: / — Landing page for visitors, home feed for logged-in users */
 'use client';
 
 import Link from 'next/link';
@@ -19,9 +19,15 @@ import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useHomeFeed } from './useHomeFeed';
+import LandingPage from './LandingPage';
 
 export default function HomePage() {
   const f = useHomeFeed();
+
+  // Show landing page for unauthenticated visitors (default before auth check completes)
+  if (!f.userChecked || !f.user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
