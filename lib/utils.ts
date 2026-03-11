@@ -1,3 +1,9 @@
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // Convert 24-hour time (HH:MM:SS or HH:MM) to 12-hour format
 export function formatTime12Hour(time: string): string {
