@@ -90,7 +90,7 @@ function StoreBadges() {
 }
 
 export default function LandingPage(): JSX.Element {
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const s = t[language];
 
   return (
@@ -104,6 +104,17 @@ export default function LandingPage(): JSX.Element {
 
       {/* Hero */}
       <section className="tl-hero">
+        <div className="tl-lang-toggle">
+          {(['en', 'es'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              className={`tl-lang-btn ${language === lang ? 'tl-lang-active' : ''}`}
+            >
+              {lang.toUpperCase()}
+            </button>
+          ))}
+        </div>
         <div className="tl-hero-glow" />
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
@@ -504,6 +515,35 @@ const landingStyles = `
 .tribe-landing .tl-copyright {
   font-size: 13px;
   color: #555;
+}
+
+/* ─── Language Toggle ─── */
+.tribe-landing .tl-lang-toggle {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 10;
+  display: flex;
+  background: rgba(255,255,255,0.1);
+  border-radius: 9999px;
+  padding: 3px;
+}
+.tribe-landing .tl-lang-btn {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.tribe-landing .tl-lang-btn:hover { color: #fff; }
+.tribe-landing .tl-lang-btn.tl-lang-active {
+  background: #C0E863;
+  color: #1a1f25;
 }
 
 /* ─── Animations ─── */
