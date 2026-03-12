@@ -62,10 +62,10 @@ const t = {
 } as const;
 
 const IMAGES = {
-  main: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&h=1200&fit=crop&q=80',
-  yoga: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=400&fit=crop&q=80',
-  group: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?w=400&h=400&fit=crop&q=80',
-  running: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400&h=400&fit=crop&q=80',
+  main: '/landing-hero.jpg',
+  yoga: '/landing-deadlift.jpg',
+  group: '/landing-rowers.jpg',
+  running: '/landing-hero.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
