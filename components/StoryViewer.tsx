@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2 } from 'lucide-react';
 import { log } from '@/lib/logger';
 import Link from 'next/link';
@@ -27,6 +29,12 @@ export default function StoryViewer({
   onStoryDeleted,
 }: StoryViewerProps) {
   const { t } = useLanguage();
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.body);
+  }, []);
+
   const {
     language,
     group,
@@ -53,9 +61,9 @@ export default function StoryViewer({
     onStoryDeleted,
   });
 
-  if (!group || !story) return null;
+  if (!group || !story || !portalTarget) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-[#272D34] z-[70] flex items-center justify-center">
       <div className="relative w-full h-full max-w-[430px] md:h-[100vh] md:max-h-[100vh] flex flex-col">
         {/* Progress bars */}
@@ -184,6 +192,7 @@ export default function StoryViewer({
           />
         )}
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }
