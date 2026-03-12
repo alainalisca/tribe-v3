@@ -27,8 +27,8 @@ export function getAuthTranslations(language: 'en' | 'es') {
     forgotPassword: language === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot password?',
     resetEmailSent:
       language === 'es'
-        ? '✅ Te enviamos un enlace para restablecer tu contraseña'
-        : '✅ Password reset link sent to your email',
+        ? '✅ Si existe una cuenta con este correo, recibirás un enlace para restablecer tu contraseña.'
+        : "✅ If an account exists with this email, you'll receive a password reset link shortly.",
     enterEmailFirst:
       language === 'es' ? '❌ Ingresa tu correo electrónico primero' : '❌ Please enter your email first',
     backHome: language === 'es' ? '← Volver al inicio' : '← Back to home',

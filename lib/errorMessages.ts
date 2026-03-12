@@ -6,12 +6,12 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
   const errorMap: Record<string, { en: string; es: string }> = {
     // Auth errors — match Supabase error strings
     'Invalid login credentials': {
-      en: 'Incorrect email or password. Please try again.',
-      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+      en: 'No account found with these credentials. Try signing in with Google or Apple, or create a new account.',
+      es: 'No se encontró una cuenta con estas credenciales. Intenta iniciar sesión con Google o Apple, o crea una cuenta nueva.',
     },
     invalid_credentials: {
-      en: 'Incorrect email or password. Please try again.',
-      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+      en: 'No account found with these credentials. Try signing in with Google or Apple, or create a new account.',
+      es: 'No se encontró una cuenta con estas credenciales. Intenta iniciar sesión con Google o Apple, o crea una cuenta nueva.',
     },
     'User already registered': {
       en: 'An account with this email already exists.',
@@ -124,8 +124,8 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       es: 'No se pudo iniciar sesión con Apple. Inténtalo de nuevo.',
     },
     login: {
-      en: 'Incorrect email or password. Please try again.',
-      es: 'Correo o contraseña incorrectos. Inténtalo de nuevo.',
+      en: 'No account found with these credentials. Try signing in with Google or Apple, or create a new account.',
+      es: 'No se encontró una cuenta con estas credenciales. Intenta iniciar sesión con Google o Apple, o crea una cuenta nueva.',
     },
     signup: {
       en: 'Could not create account. Please try again.',

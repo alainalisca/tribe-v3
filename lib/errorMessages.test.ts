@@ -64,12 +64,16 @@ describe('getErrorMessage', () => {
 
   it('login context returns EN fallback', () => {
     const result = getErrorMessage({ code: 'UNKNOWN' }, 'login', 'en');
-    expect(result).toBe('Incorrect email or password. Please try again.');
+    expect(result).toBe(
+      'No account found with these credentials. Try signing in with Google or Apple, or create a new account.'
+    );
   });
 
   it('login context returns ES fallback', () => {
     const result = getErrorMessage({ code: 'UNKNOWN' }, 'login', 'es');
-    expect(result).toBe('Correo o contraseña incorrectos. Inténtalo de nuevo.');
+    expect(result).toBe(
+      'No se encontró una cuenta con estas credenciales. Intenta iniciar sesión con Google o Apple, o crea una cuenta nueva.'
+    );
   });
 
   it('signup context returns EN fallback', () => {
@@ -107,7 +111,9 @@ describe('getErrorMessage', () => {
   it('maps "Invalid login credentials" error string', () => {
     const error = { message: 'Invalid login credentials' };
     const result = getErrorMessage(error, 'login', 'en');
-    expect(result).toBe('Incorrect email or password. Please try again.');
+    expect(result).toBe(
+      'No account found with these credentials. Try signing in with Google or Apple, or create a new account.'
+    );
   });
 
   it('maps "User already registered" error string', () => {
