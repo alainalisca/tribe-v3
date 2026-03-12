@@ -69,7 +69,7 @@ const IMAGES = {
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
-const APP_STORE = 'https://apps.apple.com/app/tribe-never-train-alone/id6742842816';
+const APP_STORE = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 
 const steps = [
   { icon: '🔍', num: '01' },
@@ -96,7 +96,7 @@ export default function LandingPage(): JSX.Element {
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
             <div className="tl-logo">
-              Tribe<span className="tl-dot">.</span>
+              <img src="/app-logo.png" alt="Tribe" className="tl-logo-img" />
             </div>
             <h1 className="tl-headline">
               {s.headline1}
@@ -108,17 +108,25 @@ export default function LandingPage(): JSX.Element {
               <Link href="/auth" className="tl-btn tl-btn-primary">
                 {s.getStarted}
               </Link>
-              <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-btn tl-btn-outline">
-                <svg width="18" height="20" viewBox="0 0 24 24" fill="currentColor">
+            </div>
+            <div className="tl-store-row">
+              <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+                <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+                </svg>
+                <div className="tl-store-text">
+                  <span className="tl-store-small">Download on the</span>
+                  <span className="tl-store-large">App Store</span>
+                </div>
+              </a>
+              <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+                <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
                 </svg>
-                {s.googlePlay}
-              </a>
-              <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-btn tl-btn-outline">
-                <svg width="16" height="20" viewBox="0 0 16 20" fill="currentColor">
-                  <path d="M13.3 10.5c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3.1-1.7-1.3-.1-2.6.8-3.2.8-.7 0-1.7-.8-2.8-.7-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7 1.3 0 1.7.7 2.8.7 1.2 0 2-1 2.7-2.1.9-1.2 1.2-2.4 1.2-2.5-.1 0-2.5-1-2.5-3.5zM10.9 3.8c.6-.7 1-1.7.9-2.8-.9 0-1.9.6-2.6 1.4-.6.7-1.1 1.7-.9 2.7.9.1 1.9-.5 2.6-1.3z" />
-                </svg>
-                {s.appStore}
+                <div className="tl-store-text">
+                  <span className="tl-store-small">GET IT ON</span>
+                  <span className="tl-store-large">Google Play</span>
+                </div>
               </a>
             </div>
           </div>
@@ -177,11 +185,25 @@ export default function LandingPage(): JSX.Element {
             <Link href="/auth" className="tl-btn tl-btn-primary">
               {s.signUpFree}
             </Link>
-            <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-btn tl-btn-outline">
-              <svg width="18" height="20" viewBox="0 0 24 24" fill="currentColor">
+          </div>
+          <div className="tl-store-row tl-cta-center">
+            <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+              <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+              </svg>
+              <div className="tl-store-text">
+                <span className="tl-store-small">Download on the</span>
+                <span className="tl-store-large">App Store</span>
+              </div>
+            </a>
+            <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+              <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
               </svg>
-              {s.googlePlay}
+              <div className="tl-store-text">
+                <span className="tl-store-small">GET IT ON</span>
+                <span className="tl-store-large">Google Play</span>
+              </div>
             </a>
           </div>
         </div>
@@ -191,7 +213,7 @@ export default function LandingPage(): JSX.Element {
       <footer className="tl-footer">
         <div className="tl-container tl-footer-inner">
           <div className="tl-footer-brand">
-            Tribe<span className="tl-dot">.</span>
+            <img src="/app-logo.png" alt="Tribe" className="tl-footer-logo" />
           </div>
           <div className="tl-footer-links">
             <a href="#">{s.about}</a>
@@ -256,12 +278,14 @@ const landingStyles = `
   align-items: center;
 }
 .tribe-landing .tl-logo {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 28px;
-  letter-spacing: -0.5px;
   margin-bottom: 32px;
 }
-.tribe-landing .tl-dot { color: #C0E863; }
+.tribe-landing .tl-logo-img {
+  width: auto;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 12px;
+}
 .tribe-landing .tl-headline {
   font-family: 'Archivo Black', sans-serif;
   font-size: clamp(40px, 5vw, 64px);
@@ -316,6 +340,53 @@ const landingStyles = `
   border: 1.5px solid rgba(255,255,255,0.25);
 }
 .tribe-landing .tl-btn-outline:hover { border-color: rgba(255,255,255,0.5); }
+
+/* ─── Store Badges ─── */
+.tribe-landing .tl-store-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  animation: tlSlideUp 0.8s 0.45s ease-out both;
+}
+.tribe-landing .tl-store-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #000;
+  color: #fff;
+  padding: 8px 16px 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 48px;
+}
+.tribe-landing .tl-store-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.tribe-landing .tl-store-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.tribe-landing .tl-store-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.tribe-landing .tl-store-small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.tribe-landing .tl-store-large {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
 
 /* ─── Photo Grid ─── */
 .tribe-landing .tl-hero-visual {
@@ -494,8 +565,14 @@ const landingStyles = `
   gap: 20px;
 }
 .tribe-landing .tl-footer-brand {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 22px;
+  display: flex;
+  justify-content: center;
+}
+.tribe-landing .tl-footer-logo {
+  width: auto;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 .tribe-landing .tl-footer-links {
   display: flex;
@@ -552,7 +629,8 @@ const landingStyles = `
 @media (max-width: 768px) {
   .tribe-landing .tl-hero { padding: 72px 0 56px; }
   .tribe-landing .tl-hero-grid { gap: 36px; }
-  .tribe-landing .tl-logo { font-size: 22px; margin-bottom: 24px; }
+  .tribe-landing .tl-logo-img { height: 40px; }
+  .tribe-landing .tl-logo { margin-bottom: 24px; }
   .tribe-landing .tl-tagline { font-size: 16px; }
   .tribe-landing .tl-cta-row { flex-direction: column; align-items: center; }
   .tribe-landing .tl-btn { width: 100%; max-width: 300px; justify-content: center; }
