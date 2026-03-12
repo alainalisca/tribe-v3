@@ -9,10 +9,8 @@ const t = {
     headline2: 'Alone',
     tagline: 'Find workout partners who match your schedule and goals. Join group sessions or create your own.',
     getStarted: 'Get Started',
-    googlePlay: 'Get it on Google Play',
-    appStore: 'App Store',
     howItWorks: 'How It Works',
-    howSubtitle: 'Three simple steps to find your training crew',
+    howSubtitle: 'Three simple steps to find your crew',
     step1: 'Browse Sessions',
     step1desc: 'Explore training sessions near you filtered by sport, skill level, and schedule.',
     step2: 'Join or Create',
@@ -20,16 +18,11 @@ const t = {
     step3: 'Train Together',
     step3desc: 'Meet up, push each other, and build your fitness community.',
     stopTraining: 'Stop Training Alone',
-    stopSubtitle: 'Join hundreds of athletes already finding their training partners on Tribe.',
+    stopSubtitle: 'Your next training partner is one tap away.',
     signUpFree: 'Sign Up Free',
-    about: 'About',
     contact: 'Contact',
     instagram: 'Instagram',
-    copyright: '© 2025 Tribe. Never train alone.',
-    crossfit: 'CrossFit',
-    yoga: 'Yoga Flow',
-    group: 'Group Training',
-    running: 'Trail Running',
+    copyright: '\u00A9 2026 Tribe. Never train alone.',
   },
   es: {
     headline1: 'Nunca Entrenes',
@@ -37,10 +30,8 @@ const t = {
     tagline:
       'Encuentra compañeros de entrenamiento que se adapten a tu horario y metas. Únete a sesiones grupales o crea las tuyas.',
     getStarted: 'Comenzar',
-    googlePlay: 'Google Play',
-    appStore: 'App Store',
     howItWorks: 'Cómo Funciona',
-    howSubtitle: 'Tres simples pasos para encontrar tu grupo de entrenamiento',
+    howSubtitle: 'Tres simples pasos para encontrar a tu grupo',
     step1: 'Explora Sesiones',
     step1desc: 'Explora sesiones de entrenamiento cerca de ti, filtradas por deporte, nivel y horario.',
     step2: 'Únete o Crea',
@@ -48,34 +39,55 @@ const t = {
     step3: 'Entrena Juntos',
     step3desc: 'Reúnete, motívense mutuamente y construye tu comunidad fitness.',
     stopTraining: 'Deja de Entrenar Solo',
-    stopSubtitle: 'Únete a cientos de atletas que ya encontraron sus compañeros de entrenamiento en Tribe.',
+    stopSubtitle: 'Tu próximo compañero de entrenamiento está a un tap de distancia.',
     signUpFree: 'Regístrate Gratis',
-    about: 'Acerca de',
     contact: 'Contacto',
     instagram: 'Instagram',
-    copyright: '© 2025 Tribe. Nunca entrenes solo.',
-    crossfit: 'CrossFit',
-    yoga: 'Yoga Flow',
-    group: 'Entrenamiento Grupal',
-    running: 'Trail Running',
+    copyright: '\u00A9 2026 Tribe. Nunca entrenes solo.',
   },
 } as const;
 
-const IMAGES = {
-  main: '/landing-hero.jpg',
-  yoga: '/landing-deadlift.jpg',
-  group: '/landing-rowers.jpg',
-  running: '/landing-hero.jpg',
+const PHOTOS = {
+  hero: '/landing-hero.jpg',
+  rowers: '/landing-rowers.jpg',
+  deadlift: '/landing-deadlift.jpg',
+  cycling: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80',
+  running: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
 const APP_STORE = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 
-const steps = [
+const STEPS = [
   { icon: '🔍', num: '01' },
   { icon: '🤝', num: '02' },
   { icon: '💪', num: '03' },
 ] as const;
+
+function StoreBadges() {
+  return (
+    <div className="tl-store-row">
+      <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+        <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+        </svg>
+        <div className="tl-store-text">
+          <span className="tl-store-small">Download on the</span>
+          <span className="tl-store-large">App Store</span>
+        </div>
+      </a>
+      <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
+        <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
+        </svg>
+        <div className="tl-store-text">
+          <span className="tl-store-small">GET IT ON</span>
+          <span className="tl-store-large">Google Play</span>
+        </div>
+      </a>
+    </div>
+  );
+}
 
 export default function LandingPage(): JSX.Element {
   const { language } = useLanguage();
@@ -109,49 +121,25 @@ export default function LandingPage(): JSX.Element {
                 {s.getStarted}
               </Link>
             </div>
-            <div className="tl-store-row">
-              <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
-                <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                </svg>
-                <div className="tl-store-text">
-                  <span className="tl-store-small">Download on the</span>
-                  <span className="tl-store-large">App Store</span>
-                </div>
-              </a>
-              <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
-                <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
-                </svg>
-                <div className="tl-store-text">
-                  <span className="tl-store-small">GET IT ON</span>
-                  <span className="tl-store-large">Google Play</span>
-                </div>
-              </a>
-            </div>
+            <StoreBadges />
           </div>
           <div className="tl-hero-visual">
             <div className="tl-photo-grid">
-              <div className="tl-main-card">
-                <img src={IMAGES.main} alt="CrossFit training" />
-                <div className="tl-main-overlay">
-                  <span className="tl-badge">{s.crossfit}</span>
-                </div>
+              <div className="tl-photo tl-photo-main">
+                <img src={PHOTOS.hero} alt="Barbell training" />
               </div>
-              <div className="tl-float-card tl-float-1">
-                <img src={IMAGES.yoga} alt={s.yoga} />
-                <span className="tl-float-label">{s.yoga}</span>
+              <div className="tl-photo tl-photo-sm tl-photo-1">
+                <img src={PHOTOS.rowers} alt="Rowing together" />
               </div>
-              <div className="tl-float-card tl-float-2">
-                <img src={IMAGES.group} alt={s.group} />
-                <span className="tl-float-label">{s.group}</span>
+              <div className="tl-photo tl-photo-sm tl-photo-2">
+                <img src={PHOTOS.deadlift} alt="Deadlift training" />
               </div>
-              <div className="tl-float-card tl-float-3">
-                <img src={IMAGES.running} alt={s.running} />
-                <span className="tl-float-label">{s.running}</span>
+              <div className="tl-photo tl-photo-sm tl-photo-3">
+                <img src={PHOTOS.cycling} alt="Cycling" />
               </div>
-              <div className="tl-emoji tl-emoji-1">🔥</div>
-              <div className="tl-emoji tl-emoji-2">💪</div>
+              <div className="tl-photo tl-photo-sm tl-photo-4">
+                <img src={PHOTOS.running} alt="Running" />
+              </div>
             </div>
           </div>
         </div>
@@ -165,8 +153,8 @@ export default function LandingPage(): JSX.Element {
           <div className="tl-steps">
             {([s.step1, s.step2, s.step3] as const).map((title, i) => (
               <div className="tl-step" key={i}>
-                <div className="tl-step-num">{steps[i].num}</div>
-                <div className="tl-step-icon">{steps[i].icon}</div>
+                <div className="tl-step-num">{STEPS[i].num}</div>
+                <div className="tl-step-icon">{STEPS[i].icon}</div>
                 <h3 className="tl-step-title">{title}</h3>
                 <p className="tl-step-desc">{[s.step1desc, s.step2desc, s.step3desc][i]}</p>
               </div>
@@ -187,24 +175,7 @@ export default function LandingPage(): JSX.Element {
             </Link>
           </div>
           <div className="tl-store-row tl-cta-center">
-            <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
-              <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-              </svg>
-              <div className="tl-store-text">
-                <span className="tl-store-small">Download on the</span>
-                <span className="tl-store-large">App Store</span>
-              </div>
-            </a>
-            <a href={PLAY_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
-              <svg className="tl-store-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
-              </svg>
-              <div className="tl-store-text">
-                <span className="tl-store-small">GET IT ON</span>
-                <span className="tl-store-large">Google Play</span>
-              </div>
-            </a>
+            <StoreBadges />
           </div>
         </div>
       </section>
@@ -216,9 +187,8 @@ export default function LandingPage(): JSX.Element {
             <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img tl-footer-logo" />
           </div>
           <div className="tl-footer-links">
-            <a href="#">{s.about}</a>
-            <a href="mailto:hello@tribesports.app">{s.contact}</a>
-            <a href="https://instagram.com/tribe" target="_blank" rel="noopener noreferrer">
+            <a href="mailto:alainalisca@aplusfitnessllc.com">{s.contact}</a>
+            <a href="https://www.instagram.com/tribe.nevertrainalone" target="_blank" rel="noopener noreferrer">
               {s.instagram}
             </a>
           </div>
@@ -336,12 +306,6 @@ const landingStyles = `
   box-shadow: 0 4px 20px rgba(192,232,99,0.3);
 }
 .tribe-landing .tl-btn-primary:hover { box-shadow: 0 6px 28px rgba(192,232,99,0.45); }
-.tribe-landing .tl-btn-outline {
-  background: transparent;
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.25);
-}
-.tribe-landing .tl-btn-outline:hover { border-color: rgba(255,255,255,0.5); }
 
 /* ─── Store Badges ─── */
 .tribe-landing .tl-store-row {
@@ -395,75 +359,32 @@ const landingStyles = `
   animation: tlFadeIn 1s 0.4s ease-out both;
 }
 .tribe-landing .tl-photo-grid {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 3/4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  max-width: 520px;
   margin: 0 auto;
 }
-.tribe-landing .tl-main-card {
-  position: relative;
-  width: 72%;
-  height: 85%;
-  border-radius: 20px;
+.tribe-landing .tl-photo {
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-  margin: 0 auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
-.tribe-landing .tl-main-overlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+.tribe-landing .tl-photo-main {
+  grid-column: 1 / -1;
+  border-radius: 16px;
+  aspect-ratio: 16/9;
 }
-.tribe-landing .tl-badge {
-  background: #C0E863;
-  color: #1a1f25;
-  font-weight: 700;
-  font-size: 12px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.tribe-landing .tl-photo-sm {
+  border-radius: 12px;
+  aspect-ratio: 1;
 }
-.tribe-landing .tl-float-card {
-  position: absolute;
-  width: 110px;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  animation: tlFloat 4s ease-in-out infinite;
-}
-.tribe-landing .tl-float-card img { height: 80px; }
-.tribe-landing .tl-float-label {
-  display: block;
-  background: #272D34;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 6px 10px;
-  text-align: center;
-}
-.tribe-landing .tl-float-1 { top: 5%; left: 0; animation-delay: 0s; }
-.tribe-landing .tl-float-2 { bottom: 18%; left: -5%; animation-delay: 1.3s; }
-.tribe-landing .tl-float-3 { top: 15%; right: 0; animation-delay: 2.6s; }
 
-.tribe-landing .tl-emoji {
-  position: absolute;
-  font-size: 28px;
-  animation: tlPulseEmoji 2s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
-}
-.tribe-landing .tl-emoji-1 { bottom: 10%; right: 5%; animation-delay: 0.5s; }
-.tribe-landing .tl-emoji-2 { top: 0; right: 20%; animation-delay: 1.5s; }
-
-/* ─── How It Works ─── */
+/* ─── How It Works — Dark ─── */
 .tribe-landing .tl-how {
-  background: #fff;
-  color: #272D34;
-  padding: 100px 0;
+  background: #1a1f25;
+  color: #fff;
+  padding: 80px 0;
 }
 .tribe-landing .tl-section-title {
   font-family: 'Archivo Black', sans-serif;
@@ -471,30 +392,32 @@ const landingStyles = `
   text-align: center;
   letter-spacing: -1px;
   margin-bottom: 12px;
+  color: #fff;
 }
 .tribe-landing .tl-section-sub {
   text-align: center;
-  color: #7F8C8D;
+  color: #8a929a;
   font-size: 17px;
-  margin-bottom: 64px;
+  margin-bottom: 56px;
 }
 .tribe-landing .tl-steps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
+  gap: 28px;
 }
 .tribe-landing .tl-step {
   position: relative;
   text-align: center;
   padding: 40px 24px;
   border-radius: 20px;
-  background: #f8f9fa;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
   transition: transform 0.3s, box-shadow 0.3s;
 }
 .tribe-landing .tl-step:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
 }
 .tribe-landing .tl-step-num {
   position: absolute;
@@ -502,7 +425,7 @@ const landingStyles = `
   right: 16px;
   font-family: 'Archivo Black', sans-serif;
   font-size: 100px;
-  color: rgba(192,232,99,0.12);
+  color: rgba(255,255,255,0.04);
   line-height: 1;
   pointer-events: none;
 }
@@ -515,18 +438,19 @@ const landingStyles = `
   font-size: 20px;
   margin-bottom: 12px;
   letter-spacing: -0.3px;
+  color: #fff;
 }
 .tribe-landing .tl-step-desc {
   font-size: 15px;
   line-height: 1.6;
-  color: #7F8C8D;
+  color: #8a929a;
 }
 
 /* ─── Final CTA ─── */
 .tribe-landing .tl-final {
   position: relative;
   background: #272D34;
-  padding: 100px 0;
+  padding: 80px 0;
   overflow: hidden;
   text-align: center;
 }
@@ -554,6 +478,7 @@ const landingStyles = `
   margin: 0 auto 40px;
   line-height: 1.6;
 }
+.tribe-landing .tl-final .tl-store-row { justify-content: center; margin-top: 16px; }
 
 /* ─── Footer ─── */
 .tribe-landing .tl-footer {
@@ -590,14 +515,6 @@ const landingStyles = `
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-@keyframes tlFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-10px); }
-}
-@keyframes tlPulseEmoji {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.15); }
-}
 @keyframes tlPulseGlow {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50%      { opacity: 1; transform: scale(1.1); }
@@ -609,31 +526,31 @@ const landingStyles = `
     grid-template-columns: 1fr;
     gap: 48px;
   }
-  .tribe-landing .tl-hero-visual { order: -1; }
-  .tribe-landing .tl-photo-grid { max-width: 380px; }
   .tribe-landing .tl-hero-text { text-align: center; }
   .tribe-landing .tl-tagline { margin-left: auto; margin-right: auto; }
   .tribe-landing .tl-cta-row { justify-content: center; }
-  .tribe-landing .tl-steps { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+  .tribe-landing .tl-store-row { justify-content: center; }
+  .tribe-landing .tl-photo-grid { max-width: 420px; }
+  .tribe-landing .tl-steps { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; gap: 20px; }
 }
 
 /* ─── Responsive: Mobile ─── */
 @media (max-width: 768px) {
-  .tribe-landing .tl-hero { padding: 72px 0 56px; }
-  .tribe-landing .tl-hero-grid { gap: 36px; }
+  .tribe-landing .tl-hero { padding: 48px 0 40px; }
+  .tribe-landing .tl-hero-grid { gap: 32px; }
+  .tribe-landing .tl-hero-visual { order: 1; }
+  .tribe-landing .tl-hero-text { order: 0; }
   .tribe-landing .tl-logo-img { height: 44px; }
-  .tribe-landing .tl-logo { margin-bottom: 24px; }
-  .tribe-landing .tl-tagline { font-size: 16px; }
+  .tribe-landing .tl-logo { margin-bottom: 20px; }
+  .tribe-landing .tl-tagline { font-size: 16px; margin-bottom: 28px; }
   .tribe-landing .tl-cta-row { flex-direction: column; align-items: center; }
   .tribe-landing .tl-btn { width: 100%; max-width: 300px; justify-content: center; }
-  .tribe-landing .tl-photo-grid { max-width: 300px; }
-  .tribe-landing .tl-float-card { width: 88px; }
-  .tribe-landing .tl-float-card img { height: 64px; }
-  .tribe-landing .tl-float-label { font-size: 10px; padding: 4px 8px; }
-  .tribe-landing .tl-how { padding: 64px 0; }
-  .tribe-landing .tl-section-sub { font-size: 15px; margin-bottom: 40px; }
-  .tribe-landing .tl-step { padding: 32px 20px; }
-  .tribe-landing .tl-final { padding: 64px 0; }
+  .tribe-landing .tl-photo-grid { max-width: 100%; gap: 8px; }
+  .tribe-landing .tl-how { padding: 56px 0; }
+  .tribe-landing .tl-section-sub { font-size: 15px; margin-bottom: 36px; }
+  .tribe-landing .tl-steps { gap: 16px; }
+  .tribe-landing .tl-step { padding: 28px 20px; }
+  .tribe-landing .tl-final { padding: 56px 0; }
   .tribe-landing .tl-final-sub { font-size: 15px; }
 }
 `;
