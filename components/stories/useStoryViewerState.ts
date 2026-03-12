@@ -285,5 +285,7 @@ export function useStoryViewerState({
     handleTap,
     handleTouchStart,
     handleTouchEnd,
+    goNext,
+    goPrev,
   };
 }

@@ -52,6 +52,8 @@ export default function StoryViewer({
     handleTap,
     handleTouchStart,
     handleTouchEnd,
+    goNext,
+    goPrev,
   } = useStoryViewerState({
     initialGroups,
     startGroupIndex,
@@ -166,6 +168,44 @@ export default function StoryViewer({
             />
           )}
         </div>
+
+        {/* Navigation arrows — visible on desktop, hidden on mobile (tap zones handle it) */}
+        <button
+          onClick={goPrev}
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-30 min-w-[44px] min-h-[44px] rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center opacity-0 hover:opacity-100 md:opacity-50 md:hover:opacity-100 transition-opacity"
+          aria-label="Previous story"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <button
+          onClick={goNext}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-30 min-w-[44px] min-h-[44px] rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center opacity-0 hover:opacity-100 md:opacity-50 md:hover:opacity-100 transition-opacity"
+          aria-label="Next story"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
 
         {/* Bottom overlay: caption + view session */}
         <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-6 pt-16">
