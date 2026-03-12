@@ -126,19 +126,19 @@ export default function LandingPage(): JSX.Element {
           <div className="tl-hero-visual">
             <div className="tl-photo-grid">
               <div className="tl-photo tl-photo-main">
-                <img src={PHOTOS.hero} alt="Barbell training" />
+                <img src={PHOTOS.hero} alt="Barbell training" style={{ objectPosition: 'center 60%' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-1">
-                <img src={PHOTOS.rowers} alt="Rowing together" />
+                <img src={PHOTOS.rowers} alt="Rowing together" style={{ objectPosition: 'top' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-2">
-                <img src={PHOTOS.deadlift} alt="Deadlift training" />
+                <img src={PHOTOS.deadlift} alt="Deadlift training" style={{ objectPosition: 'top' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-3">
-                <img src={PHOTOS.cycling} alt="Cycling" />
+                <img src={PHOTOS.cycling} alt="Cycling" style={{ objectPosition: 'center' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-4">
-                <img src={PHOTOS.running} alt="Running" />
+                <img src={PHOTOS.running} alt="Running" style={{ objectPosition: 'center' }} />
               </div>
             </div>
           </div>
