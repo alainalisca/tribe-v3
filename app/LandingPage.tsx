@@ -606,6 +606,9 @@ const landingStyles = `
   color: #1a1f25;
   background: #f5f5f5;
 }
+:root:not(.dark) .tribe-landing .tl-logo-img {
+  filter: invert(1) hue-rotate(180deg);
+}
 :root:not(.dark) .tribe-landing .tl-hero {
   background: #ffffff;
 }
