@@ -27,15 +27,7 @@ export default function HomePage() {
   // Show minimal splash while auth is resolving
   if (!f.userChecked) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#272D34',
-        }}
-      >
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#272D34]">
         <img src="/tribe-wordmark.png" alt="Tribe" style={{ height: 64, objectFit: 'contain' }} />
       </div>
     );

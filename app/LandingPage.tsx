@@ -600,4 +600,79 @@ const landingStyles = `
   .tribe-landing .tl-final { padding: 56px 0; }
   .tribe-landing .tl-final-sub { font-size: 15px; }
 }
+
+/* ─── Light Mode ─── */
+:root:not(.dark) .tribe-landing {
+  color: #1a1f25;
+  background: #f5f5f5;
+}
+:root:not(.dark) .tribe-landing .tl-hero {
+  background: #ffffff;
+}
+:root:not(.dark) .tribe-landing .tl-hero-glow {
+  background: radial-gradient(circle, rgba(192,232,99,0.08) 0%, transparent 70%);
+}
+:root:not(.dark) .tribe-landing .tl-tagline {
+  color: #6b7280;
+}
+:root:not(.dark) .tribe-landing .tl-photo {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
+:root:not(.dark) .tribe-landing .tl-how {
+  background: #f5f5f5;
+  color: #1a1f25;
+}
+:root:not(.dark) .tribe-landing .tl-section-title {
+  color: #1a1f25;
+}
+:root:not(.dark) .tribe-landing .tl-section-sub {
+  color: #6b7280;
+}
+:root:not(.dark) .tribe-landing .tl-step {
+  background: #ffffff;
+  border-color: #e5e7eb;
+}
+:root:not(.dark) .tribe-landing .tl-step:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+}
+:root:not(.dark) .tribe-landing .tl-step-num {
+  color: rgba(0,0,0,0.04);
+}
+:root:not(.dark) .tribe-landing .tl-step-title {
+  color: #1a1f25;
+}
+:root:not(.dark) .tribe-landing .tl-step-desc {
+  color: #6b7280;
+}
+:root:not(.dark) .tribe-landing .tl-final {
+  background: #ffffff;
+}
+:root:not(.dark) .tribe-landing .tl-final-glow {
+  background: radial-gradient(circle, rgba(192,232,99,0.06) 0%, transparent 70%);
+}
+:root:not(.dark) .tribe-landing .tl-final-sub {
+  color: #6b7280;
+}
+:root:not(.dark) .tribe-landing .tl-footer {
+  background: #1a1f25;
+  color: #fff;
+}
+:root:not(.dark) .tribe-landing .tl-footer-links a {
+  color: #9ca3af;
+}
+:root:not(.dark) .tribe-landing .tl-copyright {
+  color: #6b7280;
+}
+:root:not(.dark) .tribe-landing .tl-lang-toggle {
+  background: rgba(0,0,0,0.08);
+}
+:root:not(.dark) .tribe-landing .tl-lang-btn {
+  color: rgba(0,0,0,0.4);
+}
+:root:not(.dark) .tribe-landing .tl-lang-btn:hover {
+  color: #1a1f25;
+}
+:root:not(.dark) .tribe-landing .tl-store-badge {
+  border-color: rgba(0,0,0,0.15);
+}
 `;
