@@ -24,8 +24,25 @@ import LandingPage from './LandingPage';
 export default function HomePage() {
   const f = useHomeFeed();
 
-  // Show landing page for unauthenticated visitors (default before auth check completes)
-  if (!f.userChecked || !f.user) {
+  // Show minimal splash while auth is resolving
+  if (!f.userChecked) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#272D34',
+        }}
+      >
+        <img src="/tribe-wordmark.png" alt="Tribe" style={{ height: 64, objectFit: 'contain' }} />
+      </div>
+    );
+  }
+
+  // Show landing page for unauthenticated visitors
+  if (!f.user) {
     return <LandingPage />;
   }
 
