@@ -28,7 +28,18 @@ export default function HomePage() {
   if (!f.userChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#272D34]">
-        <img src="/tribe-wordmark.png" alt="Tribe" style={{ height: 64, objectFit: 'contain' }} />
+        <img
+          src="/tribe-wordmark.png"
+          alt="Tribe"
+          className="hidden dark:block"
+          style={{ height: 64, objectFit: 'contain' }}
+        />
+        <img
+          src="/tribe-wordmark-dark.png"
+          alt="Tribe"
+          className="block dark:hidden"
+          style={{ height: 64, objectFit: 'contain' }}
+        />
       </div>
     );
   }
