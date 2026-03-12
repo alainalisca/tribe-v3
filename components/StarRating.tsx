@@ -23,17 +23,24 @@ export default function StarRating({
 }: StarRatingProps) {
   const [hoverRating, setHoverRating] = useState(0);
 
-  const sizeClasses = {
+  const iconSizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-5 h-5',
-    lg: 'w-6 h-6',
+    lg: 'w-7 h-7',
+  };
+
+  // Ensure minimum 44x44px touch targets for interactive stars
+  const buttonPadClasses = {
+    sm: 'p-1',
+    md: 'p-2',
+    lg: 'p-2',
   };
 
   const displayRating = hoverRating || rating;
 
   return (
     <div className="flex items-center gap-1">
-      <div className="flex">
+      <div className="flex -mx-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
@@ -42,10 +49,12 @@ export default function StarRating({
             onClick={() => !readonly && onRatingChange?.(star)}
             onMouseEnter={() => !readonly && setHoverRating(star)}
             onMouseLeave={() => !readonly && setHoverRating(0)}
-            className={`${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'} transition-transform`}
+            className={`${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110 active:scale-95'} ${
+              readonly ? '' : buttonPadClasses[size]
+            } transition-transform touch-manipulation`}
           >
             <Star
-              className={`${sizeClasses[size]} ${
+              className={`${iconSizeClasses[size]} ${
                 star <= displayRating
                   ? 'fill-yellow-400 text-yellow-400'
                   : 'fill-none text-stone-300 dark:text-stone-500'
