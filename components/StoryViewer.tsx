@@ -56,7 +56,7 @@ export default function StoryViewer({
   if (!group || !story) return null;
 
   return (
-    <div className="fixed inset-0 bg-black z-[70] flex items-center justify-center">
+    <div className="fixed inset-0 bg-[#272D34] z-[70] flex items-center justify-center">
       <div className="relative w-full h-full max-w-[430px] md:h-[100vh] md:max-h-[100vh] flex flex-col">
         {/* Progress bars */}
         <div className="absolute top-0 left-0 right-0 z-20 px-2 pt-2 safe-area-top">
