@@ -22,6 +22,8 @@ const t = {
     signUpFree: 'Sign Up Free',
     contact: 'Contact',
     instagram: 'Instagram',
+    appStorePrefix: 'Download on the',
+    playStorePrefix: 'GET IT ON',
     copyright: '\u00A9 2026 Tribe. Never train alone.',
   },
   es: {
@@ -43,6 +45,8 @@ const t = {
     signUpFree: 'Regístrate Gratis',
     contact: 'Contacto',
     instagram: 'Instagram',
+    appStorePrefix: 'Descargar en',
+    playStorePrefix: 'DISPONIBLE EN',
     copyright: '\u00A9 2026 Tribe. Nunca entrenes solo.',
   },
 } as const;
@@ -64,7 +68,7 @@ const STEPS = [
   { icon: '💪', num: '03' },
 ] as const;
 
-function StoreBadges() {
+function StoreBadges({ appStorePrefix, playStorePrefix }: { appStorePrefix: string; playStorePrefix: string }) {
   return (
     <div className="tl-store-row">
       <a href={APP_STORE} target="_blank" rel="noopener noreferrer" className="tl-store-badge">
@@ -72,7 +76,7 @@ function StoreBadges() {
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
         </svg>
         <div className="tl-store-text">
-          <span className="tl-store-small">Download on the</span>
+          <span className="tl-store-small">{appStorePrefix}</span>
           <span className="tl-store-large">App Store</span>
         </div>
       </a>
@@ -81,7 +85,7 @@ function StoreBadges() {
           <path d="M3.61 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734c0-.382.218-.718.61-.92zM14.852 13.06l2.71 2.71-11.378 6.39 8.668-9.1zM21.41 10.89l-3.27 1.838-2.98-2.98 2.98-2.98 3.27 1.838c.93.522.93 1.762 0 2.284zM6.184 2.84l11.378 6.39-2.71 2.71-8.668-9.1z" />
         </svg>
         <div className="tl-store-text">
-          <span className="tl-store-small">GET IT ON</span>
+          <span className="tl-store-small">{playStorePrefix}</span>
           <span className="tl-store-large">Google Play</span>
         </div>
       </a>
@@ -132,7 +136,7 @@ export default function LandingPage(): JSX.Element {
                 {s.getStarted}
               </Link>
             </div>
-            <StoreBadges />
+            <StoreBadges appStorePrefix={s.appStorePrefix} playStorePrefix={s.playStorePrefix} />
           </div>
           <div className="tl-hero-visual">
             <div className="tl-photo-grid">
@@ -140,7 +144,7 @@ export default function LandingPage(): JSX.Element {
                 <img src={PHOTOS.hero} alt="Barbell training" style={{ objectPosition: 'center 35%' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-1">
-                <img src={PHOTOS.rowers} alt="Rowing together" style={{ objectPosition: 'top' }} />
+                <img src={PHOTOS.rowers} alt="CrossFit community handshake" style={{ objectPosition: 'top' }} />
               </div>
               <div className="tl-photo tl-photo-sm tl-photo-2">
                 <img src={PHOTOS.deadlift} alt="Deadlift training" style={{ objectPosition: 'center 30%' }} />
@@ -186,7 +190,7 @@ export default function LandingPage(): JSX.Element {
             </Link>
           </div>
           <div className="tl-store-row tl-cta-center">
-            <StoreBadges />
+            <StoreBadges appStorePrefix={s.appStorePrefix} playStorePrefix={s.playStorePrefix} />
           </div>
         </div>
       </section>
@@ -529,7 +533,8 @@ const landingStyles = `
   padding: 3px;
 }
 .tribe-landing .tl-lang-btn {
-  padding: 4px 12px;
+  padding: 8px 16px;
+  min-height: 44px;
   border-radius: 9999px;
   border: none;
   background: transparent;
@@ -539,6 +544,7 @@ const landingStyles = `
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
+  touch-action: manipulation;
 }
 .tribe-landing .tl-lang-btn:hover { color: #fff; }
 .tribe-landing .tl-lang-btn.tl-lang-active {
