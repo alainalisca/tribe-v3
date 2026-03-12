@@ -63,6 +63,18 @@ export default function StoryViewer({
     onStoryDeleted,
   });
 
+  // Keyboard navigation: ArrowLeft/Right/Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showDeleteConfirm) return;
+      if (e.key === 'ArrowLeft') goPrev();
+      else if (e.key === 'ArrowRight') goNext();
+      else if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showDeleteConfirm, goPrev, goNext, onClose]);
+
   if (!group || !story || !portalTarget) return null;
 
   return createPortal(
@@ -123,7 +135,7 @@ export default function StoryViewer({
 
         {/* Media */}
         <div
-          className="flex-1 flex items-center justify-center overflow-hidden"
+          className="flex-1 flex items-center justify-center overflow-hidden relative"
           onClick={handleTap}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -137,6 +149,12 @@ export default function StoryViewer({
             if (!showDeleteConfirm) setPaused(false);
           }}
         >
+          {/* Loading spinner — sits behind media, visible until image/video covers it */}
+          {story.media_url && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 border-3 border-white/20 border-t-white/80 rounded-full animate-spin" />
+            </div>
+          )}
           {!story.media_url ? (
             <div className="w-full h-full flex items-center justify-center bg-stone-800">
               <p className="text-white/60">{t('mediaUnavailable')}</p>
@@ -146,7 +164,7 @@ export default function StoryViewer({
               key={story.id}
               src={story.media_url}
               alt=""
-              className="w-full h-full object-cover md:object-contain select-none"
+              className="w-full h-full object-cover md:object-contain select-none relative z-[1]"
               draggable={false}
               onError={(e) => {
                 log('error', 'Story image failed to load', { action: 'StoryViewer', mediaUrl: story.media_url });
@@ -158,10 +176,10 @@ export default function StoryViewer({
               key={story.id}
               ref={videoRef}
               src={story.media_url}
-              className="w-full h-full object-cover md:object-contain"
+              className="w-full h-full object-cover md:object-contain relative z-[1]"
               playsInline
               autoPlay
-              muted={false}
+              muted
               onError={() => {
                 log('error', 'Story video failed to load', { action: 'StoryViewer', mediaUrl: story.media_url });
               }}
