@@ -96,7 +96,9 @@ export default function LandingPage(): JSX.Element {
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
             <div className="tl-logo">
-              <img src="/app-logo.png" alt="Tribe" className="tl-logo-img" />
+              <span className="tl-logo-text">
+                Tribe<span className="tl-dot">.</span>
+              </span>
             </div>
             <h1 className="tl-headline">
               {s.headline1}
@@ -213,7 +215,9 @@ export default function LandingPage(): JSX.Element {
       <footer className="tl-footer">
         <div className="tl-container tl-footer-inner">
           <div className="tl-footer-brand">
-            <img src="/app-logo.png" alt="Tribe" className="tl-footer-logo" />
+            <span className="tl-logo-text">
+              Tribe<span className="tl-dot">.</span>
+            </span>
           </div>
           <div className="tl-footer-links">
             <a href="#">{s.about}</a>
@@ -280,11 +284,15 @@ const landingStyles = `
 .tribe-landing .tl-logo {
   margin-bottom: 32px;
 }
-.tribe-landing .tl-logo-img {
-  width: auto;
-  height: 48px;
-  object-fit: contain;
-  border-radius: 12px;
+.tribe-landing .tl-logo-text {
+  font-family: 'Archivo Black', 'Arial Black', sans-serif;
+  font-size: 40px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+.tribe-landing .tl-dot {
+  color: #C0E863;
 }
 .tribe-landing .tl-headline {
   font-family: 'Archivo Black', sans-serif;
@@ -564,15 +572,8 @@ const landingStyles = `
   align-items: center;
   gap: 20px;
 }
-.tribe-landing .tl-footer-brand {
-  display: flex;
-  justify-content: center;
-}
-.tribe-landing .tl-footer-logo {
-  width: auto;
-  height: 36px;
-  object-fit: contain;
-  border-radius: 8px;
+.tribe-landing .tl-footer-brand .tl-logo-text {
+  font-size: 24px;
 }
 .tribe-landing .tl-footer-links {
   display: flex;
@@ -629,7 +630,7 @@ const landingStyles = `
 @media (max-width: 768px) {
   .tribe-landing .tl-hero { padding: 72px 0 56px; }
   .tribe-landing .tl-hero-grid { gap: 36px; }
-  .tribe-landing .tl-logo-img { height: 40px; }
+  .tribe-landing .tl-logo-text { font-size: 32px; }
   .tribe-landing .tl-logo { margin-bottom: 24px; }
   .tribe-landing .tl-tagline { font-size: 16px; }
   .tribe-landing .tl-cta-row { flex-direction: column; align-items: center; }
