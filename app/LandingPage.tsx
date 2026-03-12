@@ -123,8 +123,8 @@ export default function LandingPage(): JSX.Element {
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
             <div className="tl-logo">
-              <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img hidden dark:block" />
-              <img src="/tribe-wordmark-dark.png" alt="Tribe" className="tl-logo-img block dark:hidden" />
+              <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img tl-logo-white" />
+              <img src="/tribe-wordmark-dark.png" alt="Tribe" className="tl-logo-img tl-logo-dark" />
             </div>
             <h1 className="tl-headline">
               {s.headline1}
@@ -607,6 +607,11 @@ const landingStyles = `
   color: #1a1f25;
   background: #f5f5f5;
 }
+/* Logo swapping: dark mode shows white, light mode shows dark */
+.tribe-landing .tl-logo-dark { display: none; }
+:root:not(.dark) .tribe-landing .tl-logo-white { display: none; }
+:root:not(.dark) .tribe-landing .tl-logo-dark { display: block; }
+
 :root:not(.dark) .tribe-landing .tl-hero {
   background: #ffffff;
 }
