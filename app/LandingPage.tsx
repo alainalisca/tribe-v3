@@ -123,7 +123,8 @@ export default function LandingPage(): JSX.Element {
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
             <div className="tl-logo">
-              <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img" />
+              <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img hidden dark:block" />
+              <img src="/tribe-wordmark-dark.png" alt="Tribe" className="tl-logo-img block dark:hidden" />
             </div>
             <h1 className="tl-headline">
               {s.headline1}
@@ -605,9 +606,6 @@ const landingStyles = `
 :root:not(.dark) .tribe-landing {
   color: #1a1f25;
   background: #f5f5f5;
-}
-:root:not(.dark) .tribe-landing .tl-logo-img {
-  filter: invert(1) hue-rotate(180deg);
 }
 :root:not(.dark) .tribe-landing .tl-hero {
   background: #ffffff;
