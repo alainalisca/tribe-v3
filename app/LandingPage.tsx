@@ -245,7 +245,7 @@ const landingStyles = `
 .tribe-landing .tl-hero {
   position: relative;
   background: #272D34;
-  padding: 100px 0 80px;
+  padding: calc(env(safe-area-inset-top, 0px) + 100px) 0 80px;
   overflow: hidden;
 }
 .tribe-landing .tl-hero-glow {
@@ -526,7 +526,7 @@ const landingStyles = `
 /* ─── Language Toggle ─── */
 .tribe-landing .tl-lang-toggle {
   position: absolute;
-  top: 16px;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
   right: 24px;
   z-index: 10;
   display: flex;
