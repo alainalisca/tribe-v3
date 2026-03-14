@@ -35,7 +35,14 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
       return null;
     }
 
-    // Get the FCM token
+    // Delete old token to force a fresh one (clears stale NotRegistered tokens)
+    try {
+      await FirebaseMessaging.deleteToken();
+    } catch {
+      // Token may not exist yet, that's fine
+    }
+
+    // Get a fresh FCM token
     log('debug', 'Getting FCM token', { action: 'initializeFirebaseMessaging', userId });
     const tokenResult = await FirebaseMessaging.getToken();
     const token = tokenResult.token;
@@ -52,6 +59,7 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
     // Save token to Supabase
     log('debug', 'Saving FCM token to Supabase', { action: 'initializeFirebaseMessaging', userId });
     await saveFcmToken(userId, token);
+    console.log('[FCM] New token registered:', token.substring(0, 20) + '...');
 
     // Set up token refresh listener
     setupTokenRefreshListener(userId);
