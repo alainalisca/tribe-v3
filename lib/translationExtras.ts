@@ -144,6 +144,7 @@ export const extEn = {
 
   // Home page
   enableLocationSettings: 'Enable location in your browser settings',
+  enableLocationSettingsNative: 'Go to Settings > Apps > Tribe > Permissions to enable location',
   enableLocationNearby: 'Enable location to see sessions near you',
   trainingNowLabel: 'TRAINING NOW',
   connectNearby: 'Connect with people training nearby',
@@ -395,6 +396,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // Home page
   enableLocationSettings: 'Habilita la ubicacion en la configuracion del navegador',
+  enableLocationSettingsNative: 'Ve a Ajustes > Apps > Tribe > Permisos para activar la ubicación',
   enableLocationNearby: 'Activa la ubicacion para ver sesiones cerca',
   trainingNowLabel: 'ENTRENANDO AHORA',
   connectNearby: 'Conecta con personas entrenando cerca',
