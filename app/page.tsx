@@ -16,7 +16,6 @@ import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
-import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useHomeFeed } from './useHomeFeed';
@@ -106,10 +105,12 @@ export default function HomePage() {
               onClick={async () => {
                 const loc = await getUserLocation();
                 if (loc) f.setUserLocation(loc);
-                else
+                else {
+                  const { Capacitor } = await import('@capacitor/core');
                   showInfo(
                     f.t(Capacitor.isNativePlatform() ? 'enableLocationSettingsNative' : 'enableLocationSettings')
                   );
+                }
               }}
               className="w-full mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
             >
