@@ -159,23 +159,16 @@ export function useSettings(language: 'en' | 'es') {
   }
 
   async function toggleNotifications() {
-    if (!user) return;
-
     try {
       const { Capacitor } = await import('@capacitor/core');
-      const isNative = Capacitor.isNativePlatform();
-
-      if (isNative) {
-        log('debug', 'Toggling notifications for native user', {
-          userId: user.id,
-          action: 'toggleNotifications',
-        });
+      if (Capacitor.isNativePlatform()) {
         const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
-        const success = await registerForPushNotifications(user.id);
-        if (success) {
+        const token = await registerForPushNotifications(user?.id || '');
+        if (token) {
           setNotificationsEnabled(true);
           showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
         } else {
+          setNotificationsEnabled(false);
           showError(
             language === 'en'
               ? 'Could not enable notifications. Check your device settings.'
@@ -186,41 +179,20 @@ export function useSettings(language: 'en' | 'es') {
       }
 
       // Web path
-      if (!('Notification' in window)) {
-        showError(
-          language === 'es' ? 'Este navegador no soporta notificaciones' : 'This browser does not support notifications'
-        );
-        return;
-      }
-
-      if (Notification.permission === 'granted') {
-        setNotificationsEnabled(false);
-        showInfo(language === 'en' ? 'Notifications disabled' : 'Notificaciones desactivadas');
-      } else if (Notification.permission !== 'denied') {
-        log('debug', 'Requesting web push for user', {
-          userId: user.id,
-          action: 'toggleNotifications',
-        });
-        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
-        const success = await registerForPushNotifications(user.id);
-        log('debug', 'Web push registration result', {
-          success,
-          action: 'toggleNotifications',
-        });
-        if (success) {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted' && user?.id) {
+          const { requestNotificationPermission } = await import('@/lib/notifications');
+          await requestNotificationPermission(user.id);
           setNotificationsEnabled(true);
           showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+        } else {
+          setNotificationsEnabled(false);
         }
-      } else {
-        showError(
-          language === 'en'
-            ? 'Notifications are blocked. Please enable them in your browser settings.'
-            : 'Las notificaciones están bloqueadas. Por favor actívalas en la configuración de tu navegador.'
-        );
       }
     } catch (error) {
-      logError(error, { action: 'toggleNotifications' });
-      showError(language === 'en' ? 'Error enabling notifications' : 'Error al activar notificaciones');
+      console.error('[Notifications] Toggle failed:', error);
+      setNotificationsEnabled(false);
     }
   }
 

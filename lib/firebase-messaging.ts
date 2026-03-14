@@ -253,7 +253,7 @@ export async function unsubscribeFromTopic(topic: string): Promise<void> {
 }
 
 // Unified notification registration that handles both native and web
-export async function registerForPushNotifications(userId: string): Promise<boolean> {
+export async function registerForPushNotifications(userId: string): Promise<string | null> {
   log('debug', 'registerForPushNotifications called', {
     action: 'registerForPushNotifications',
     userId,
@@ -269,7 +269,7 @@ export async function registerForPushNotifications(userId: string): Promise<bool
       userId,
       tokenObtained: token !== null,
     });
-    return token !== null;
+    return token;
   } else {
     // Use web push for browser
     log('debug', 'Using web push for browser', { action: 'registerForPushNotifications', userId });
@@ -280,6 +280,6 @@ export async function registerForPushNotifications(userId: string): Promise<bool
       userId,
       subscriptionObtained: subscription !== null,
     });
-    return subscription !== null;
+    return subscription ? 'web-push' : null;
   }
 }
