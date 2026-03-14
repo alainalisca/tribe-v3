@@ -29,11 +29,40 @@ export function useSettings(language: 'en' | 'es') {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
+  // Check notification permission using native API on Capacitor, web API otherwise,
+  // and also check DB for fcm_token as a persistence signal
   useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted');
+    async function checkNotificationStatus() {
+      // 1. Check OS-level permission
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { checkNotificationPermission } = await import('@/lib/firebase-messaging');
+          const status = await checkNotificationPermission();
+          if (status === 'granted') {
+            setNotificationsEnabled(true);
+            return;
+          }
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+          setNotificationsEnabled(true);
+          return;
+        }
+      } catch {
+        // Fall through to DB check
+      }
+
+      // 2. Fall back to DB — if user has an fcm_token, they previously enabled notifications
+      if (user) {
+        const result = await fetchUserField(supabase, user.id, 'fcm_token');
+        if (result.success && result.data) {
+          setNotificationsEnabled(true);
+          return;
+        }
+      }
     }
-  }, []);
+    checkNotificationStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check when user loads
+  }, [user]);
 
   // Load user's reminder preference
   useEffect(() => {

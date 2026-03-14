@@ -163,7 +163,7 @@ export async function fetchUsersWithPush(
   }
 ): Promise<DalResult<unknown[]>> {
   try {
-    let query = supabase.from('users').select(fields).not('push_subscription', 'is', null);
+    let query = supabase.from('users').select(fields).or('push_subscription.not.is.null,fcm_token.not.is.null');
     if (filters?.lastMotivationBefore)
       query = query.or(`last_motivation_sent.is.null,last_motivation_sent.lt.${filters.lastMotivationBefore}`);
     if (filters?.updatedAfter) query = query.gte('updated_at', filters.updatedAfter);
