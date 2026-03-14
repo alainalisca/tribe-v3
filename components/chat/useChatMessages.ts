@@ -152,24 +152,32 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
       });
       if (!insertResult.success) throw new Error(insertResult.error);
 
-      const participantsResult = await fetchParticipantUserIdsForSession(supabase, sessionId, currentUserId);
-      const participantUserIds = participantsResult.success ? (participantsResult.data ?? []) : [];
-      const senderResult = await fetchUserName(supabase, currentUserId);
-      const sender = senderResult.success ? { name: senderResult.data } : null;
-      if (participantUserIds.length > 0) {
-        for (const userId of participantUserIds) {
-          fetch('/api/notifications/send', {
-            method: 'POST',
+      // Fire-and-forget: notify other participants via batch push
+      void (async () => {
+        try {
+          const [participantsResult, senderResult] = await Promise.all([
+            fetchParticipantUserIdsForSession(supabase, sessionId, currentUserId),
+            fetchUserName(supabase, currentUserId),
+          ]);
+          const userIds = participantsResult.success ? (participantsResult.data ?? []) : [];
+          if (userIds.length === 0) return;
+          const senderName = senderResult.success ? senderResult.data : null;
+          const truncatedBody = messageText.length > 100 ? messageText.slice(0, 100) + '…' : messageText;
+          await fetch('/api/notifications/send', {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId,
-              title: 'New message in Tribe',
-              body: `${sender?.name || 'Someone'}: ${messageText.slice(0, 50)}`,
-              url: `/session/${sessionId}/chat`,
+              userIds,
+              title: `${senderName || 'Someone'}: New message`,
+              body: truncatedBody,
+              url: `/session/${sessionId}`,
+              data: { type: 'chat_message', sessionId },
             }),
-          }).catch(() => {});
+          });
+        } catch {
+          // Notification delivery is best-effort — never block chat UX
         }
-      }
+      })();
       return true;
     } catch (error) {
       logError(error, { action: 'sendMessage', sessionId });
