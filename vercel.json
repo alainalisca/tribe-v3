@@ -9,16 +9,8 @@
       "schedule": "0 14 * * 1"
     },
     {
-      "path": "/api/cron/session-reminders",
-      "schedule": "*/30 * * * *"
-    },
-    {
       "path": "/api/cron/engagement",
       "schedule": "0 23 * * *"
-    },
-    {
-      "path": "/api/cron/post-session-followups",
-      "schedule": "0 * * * *"
     }
   ]
 }
