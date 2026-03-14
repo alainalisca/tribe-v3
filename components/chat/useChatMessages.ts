@@ -163,17 +163,19 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
           if (userIds.length === 0) return;
           const senderName = senderResult.success ? senderResult.data : null;
           const truncatedBody = messageText.length > 100 ? messageText.slice(0, 100) + '…' : messageText;
-          await fetch('/api/notifications/send', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userIds,
-              title: `${senderName || 'Someone'}: New message`,
-              body: truncatedBody,
-              url: `/session/${sessionId}`,
-              data: { type: 'chat_message', sessionId },
-            }),
-          });
+          for (const userId of userIds) {
+            fetch('/api/notifications/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId,
+                title: `${senderName || 'Someone'}: New message`,
+                body: truncatedBody,
+                url: `/session/${sessionId}`,
+                data: { type: 'chat_message', sessionId },
+              }),
+            }).catch(() => {});
+          }
         } catch {
           // Notification delivery is best-effort — never block chat UX
         }
