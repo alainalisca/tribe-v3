@@ -119,18 +119,27 @@ function setupForegroundNotificationListener(): void {
       notification: JSON.stringify(event.notification),
     });
 
-    // You can show a local notification or update UI here
-    // For now, we'll let the system handle it
     const notification = event.notification;
+    const data = notification.data as Record<string, string> | undefined;
 
-    // Optionally show a toast or in-app notification
     if (notification.title) {
-      // Could trigger a toast notification here
       log('debug', 'Foreground notification displayed', {
         action: 'setupForegroundNotificationListener',
         title: notification.title,
         body: notification.body,
       });
+
+      // Show in-app toast via custom event
+      window.dispatchEvent(
+        new CustomEvent('tribe-foreground-notification', {
+          detail: {
+            title: notification.title,
+            body: notification.body,
+            url: data?.url,
+            data,
+          },
+        })
+      );
     }
   });
 }
