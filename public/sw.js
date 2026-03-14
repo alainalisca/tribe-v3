@@ -2,9 +2,14 @@
 
 const CACHE_NAME = 'tribe-v1';
 
-// Install event
+const OFFLINE_PAGE = '/offline.html';
+
+// Install event — pre-cache the offline fallback page
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_PAGE))
+  );
   self.skipWaiting();
 });
 
@@ -14,8 +19,17 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Fetch event - basic caching strategy
+// Fetch event — network-first with offline fallback for navigation requests
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() =>
+        caches.match(OFFLINE_PAGE).then((cached) => cached || new Response('Offline', { status: 503 }))
+      )
+    );
+    return;
+  }
+  // Non-navigation: cache-first
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
