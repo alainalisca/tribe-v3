@@ -12,6 +12,7 @@ import {
   insertGuestParticipant,
   storeGuestLocally,
   notifyHostOfGuestJoin,
+  sendGuestConfirmationEmail,
   removeGuestParticipant,
   checkGuestStatus,
   removeUserFromSession,
@@ -93,6 +94,7 @@ export function useSessionActions({
       setGuestHasJoined(true);
       setGuestParticipantId(data.id);
       notifyHostOfGuestJoin(session, guestData.name);
+      sendGuestConfirmationEmail(session, guestData, language);
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
       setShowGuestModal(false);
       celebrateJoin();

@@ -64,6 +64,33 @@ export function notifyHostOfGuestJoin(session: Session, guestName: string): void
   }).catch((err) => logError(err, { action: 'handleGuestJoin', sessionId: session.id }));
 }
 
+/** Fire-and-forget confirmation email to a guest who provided an email address */
+export function sendGuestConfirmationEmail(
+  session: Session & { creator?: { name?: string } },
+  guestData: GuestData,
+  language: 'en' | 'es'
+): void {
+  if (!guestData.email) {
+    // TODO: SMS confirmation via Twilio is a future enhancement for phone-only guests
+    return;
+  }
+  fetch('/api/send-guest-confirmation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: guestData.email,
+      guestName: guestData.name,
+      sessionId: session.id,
+      sessionSport: session.sport,
+      sessionDate: session.date,
+      sessionTime: session.start_time,
+      sessionLocation: session.location,
+      hostName: session.creator?.name || 'Tribe',
+      language,
+    }),
+  }).catch((err) => logError(err, { action: 'sendGuestConfirmationEmail', sessionId: session.id }));
+}
+
 /** Remove a guest participant using their stored token or phone */
 export async function removeGuestParticipant(
   supabase: SupabaseClient,
