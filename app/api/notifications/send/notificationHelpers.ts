@@ -74,7 +74,12 @@ export async function sendFcmNotification(
         data: data || {},
         android: {
           priority: 'high',
-          notification: { sound: 'default', channel_id: 'tribe_notifications' },
+          notification: {
+            sound: 'default',
+            channel_id: 'tribe_notifications',
+            icon: 'ic_notification',
+            color: '#C0E863',
+          },
         },
         apns: {
           headers: { 'apns-priority': '10' },
