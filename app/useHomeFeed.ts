@@ -8,7 +8,6 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
 import { calculateDistance, formatDistance } from '@/lib/distance';
-import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { joinSession } from '@/lib/sessions';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
@@ -118,8 +117,10 @@ export function useHomeFeed() {
   async function tryRegisterPushNotifications(userId: string) {
     try {
       const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform();
-      if (isNative || ('Notification' in window && Notification.permission === 'granted'))
+      if (isNative || ('Notification' in window && Notification.permission === 'granted')) {
+        const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
         await registerForPushNotifications(userId);
+      }
     } catch (error) {
       logError(error, { action: 'tryRegisterPushNotifications' });
     }

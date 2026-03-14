@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
-import { registerForPushNotifications } from '@/lib/firebase-messaging';
 import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { showInfo, showError as showErrorToast } from '@/lib/toast';
@@ -50,6 +49,7 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
     try {
       log('debug', 'NotificationPrompt: enabling for user', { userId });
+      const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
       const success = await registerForPushNotifications(userId);
       log('debug', 'NotificationPrompt: registration result', { userId, success });
 

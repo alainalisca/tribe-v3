@@ -1,6 +1,6 @@
 'use client';
 
-import { Capacitor } from '@capacitor/core';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import type { AuthTranslations } from './translations';
 
@@ -13,8 +13,6 @@ interface OAuthButtonsProps {
   onGoogleSignIn: () => void;
 }
 
-const showApple = !(Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android');
-
 export default function OAuthButtons({
   t,
   appleLoading,
@@ -23,6 +21,17 @@ export default function OAuthButtons({
   onAppleSignIn,
   onGoogleSignIn,
 }: OAuthButtonsProps) {
+  const [showApple, setShowApple] = useState(true);
+  useEffect(() => {
+    import('@capacitor/core')
+      .then(({ Capacitor }) => {
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+          setShowApple(false);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <>
       {showApple && (

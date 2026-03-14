@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { upsertUserProfile } from '@/lib/auth-helpers';
@@ -80,6 +79,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
     setGoogleLoading(true);
     setMessage('');
     try {
+      const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform()) {
         const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
         await GoogleAuth.initialize();
