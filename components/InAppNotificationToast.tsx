@@ -86,7 +86,7 @@ export default function InAppNotificationToast() {
       <style jsx>{`
         .in-app-toast-container {
           position: fixed;
-          top: max(env(safe-area-inset-top, 0px), 12px);
+          top: calc(max(env(safe-area-inset-top, 0px), 12px) + 8px);
           left: 12px;
           right: 12px;
           z-index: 9999;
