@@ -24,18 +24,10 @@ export const extEn = {
   enable: 'Enable',
   later: 'Later',
 
-  // IOSInstallPrompt
-  installTribe: 'Install Tribe',
-  getFullExperience: 'Get the full app experience',
-  tapShare: 'Tap Share',
-  atBottomOfSafari: 'at the bottom of Safari',
-  addToHomeScreen: 'Add to Home Screen',
-  fromTheMenu: 'from the menu',
-  tapMenu: 'Tap menu',
-  inYourBrowser: 'in your browser',
-  installApp: 'Install app',
-  orAddToHomeScreen: 'or "Add to Home screen"',
-  maybeLater: 'Maybe later',
+  // AppStoreBanner
+  getTheTribeApp: 'Get the Tribe App',
+  availableOnIOSAndAndroid: 'Available on iOS and Android',
+  continueInBrowser: 'Continue in browser',
 
   // CalendarButton
   addToCalendar: 'Add to Calendar',
@@ -276,18 +268,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
   enable: 'Activar',
   later: 'Despues',
 
-  // IOSInstallPrompt
-  installTribe: 'Instalar Tribe',
-  getFullExperience: 'Obtiene la experiencia completa',
-  tapShare: 'Toca Compartir',
-  atBottomOfSafari: 'en la parte inferior de Safari',
-  addToHomeScreen: 'Agregar a Inicio',
-  fromTheMenu: 'del menu',
-  tapMenu: 'Toca menu',
-  inYourBrowser: 'en tu navegador',
-  installApp: 'Instalar app',
-  orAddToHomeScreen: 'o "Agregar a pantalla de inicio"',
-  maybeLater: 'Quiza despues',
+  // AppStoreBanner
+  getTheTribeApp: 'Descarga la App de Tribe',
+  availableOnIOSAndAndroid: 'Disponible en iOS y Android',
+  continueInBrowser: 'Continuar en el navegador',
 
   // CalendarButton
   addToCalendar: 'Agregar al Calendario',

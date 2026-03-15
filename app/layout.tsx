@@ -1,7 +1,7 @@
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
-import IOSInstallPrompt from '@/components/IOSInstallPrompt';
+import AppStoreBanner from '@/components/IOSInstallPrompt';
 import BackButtonHandler from '@/components/BackButtonHandler';
 import InAppNotificationToast from '@/components/InAppNotificationToast';
 import { LanguageProvider } from '@/lib/LanguageContext';
@@ -49,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 }}
               />
               <ServiceWorkerRegistration />
-              <IOSInstallPrompt />
+              <AppStoreBanner />
               <BackButtonHandler />
               <InAppNotificationToast />
               {children}
