@@ -526,7 +526,7 @@ const landingStyles = `
 /* ─── Language Toggle ─── */
 .tribe-landing .tl-lang-toggle {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  top: 60px;
   right: 24px;
   z-index: 10;
   display: flex;
