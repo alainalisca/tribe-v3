@@ -86,6 +86,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message || 'Signup failed' }, { status: 400 });
     }
 
+    // Fire-and-forget admin notification
+    const origin = request.nextUrl.origin;
+    fetch(`${origin}/api/notify-admin-signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userName: name, userEmail: email, signupMethod: 'Email' }),
+    }).catch((err) => logError(err, { action: 'notifyAdminSignup', route: '/api/auth/signup' }));
+
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
     logError(error, { route: '/api/auth/signup', action: 'signup' });

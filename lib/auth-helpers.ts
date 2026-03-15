@@ -45,6 +45,21 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
 
     // Detect new user: no existing profile or account created within last 60s
     isNewUser = !existingProfile || Date.now() - new Date(user.created_at).getTime() < 60_000;
+
+    // Fire-and-forget admin notification for new OAuth signups
+    if (isNewUser) {
+      const provider = user.app_metadata?.provider;
+      const signupMethod = provider === 'apple' ? 'Apple' : provider === 'google' ? 'Google' : 'Email';
+      fetch('/api/notify-admin-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: name,
+          userEmail: user.email || 'unknown',
+          signupMethod,
+        }),
+      }).catch((err) => logError(err, { action: 'notifyAdminSignup', userId: user.id }));
+    }
   } catch (err) {
     logError(err, { action: 'upsertUserProfile', userId: user.id });
   }
