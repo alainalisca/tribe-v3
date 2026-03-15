@@ -35,14 +35,7 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
       return null;
     }
 
-    // Delete old token to force a fresh one (clears stale NotRegistered tokens)
-    try {
-      await FirebaseMessaging.deleteToken();
-    } catch {
-      // Token may not exist yet, that's fine
-    }
-
-    // Get a fresh FCM token
+    // Get FCM token
     log('debug', 'Getting FCM token', { action: 'initializeFirebaseMessaging', userId });
     const tokenResult = await FirebaseMessaging.getToken();
     const token = tokenResult.token;
