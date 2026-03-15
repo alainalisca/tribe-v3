@@ -29,6 +29,9 @@ export default function SettingsPage() {
     toggleNotifications,
     openDeleteConfirm,
     closeDeleteConfirm,
+    debugInfo,
+    debugRunning,
+    runNotificationDiagnostic,
   } = useSettings(language);
 
   return (
@@ -146,6 +149,28 @@ export default function SettingsPage() {
               </div>
             </button>
           </div>
+        </div>
+
+        {/* Notification Debug Section */}
+        <div className="bg-[#1a1a2e] rounded-2xl p-5 border border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <Bug className="w-5 h-5 text-yellow-400" />
+            <h2 className="text-lg font-bold text-yellow-400">Notification Debug</h2>
+          </div>
+          <button
+            onClick={runNotificationDiagnostic}
+            disabled={debugRunning}
+            className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black hover:bg-yellow-400 disabled:opacity-50 mb-3"
+          >
+            {debugRunning ? 'Running...' : 'Run Diagnostic'}
+          </button>
+          {debugInfo.length > 0 && (
+            <div className="bg-black rounded-lg p-3 font-mono text-xs text-green-400 space-y-1 max-h-64 overflow-y-auto">
+              {debugInfo.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Language Section */}

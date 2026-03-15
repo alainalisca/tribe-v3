@@ -79,7 +79,7 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
 }
 
 // Save FCM token to Supabase
-async function saveFcmToken(userId: string, token: string): Promise<void> {
+export async function saveFcmToken(userId: string, token: string): Promise<void> {
   const supabase = createClient();
   const platform = getPlatform();
 

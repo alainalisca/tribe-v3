@@ -23,6 +23,8 @@ export function useSettings(language: 'en' | 'es') {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [sessionRemindersEnabled, setSessionRemindersEnabled] = useState(true);
   const [loadingReminders, setLoadingReminders] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [debugRunning, setDebugRunning] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -196,6 +198,94 @@ export function useSettings(language: 'en' | 'es') {
     }
   }
 
+  async function runNotificationDiagnostic() {
+    setDebugRunning(true);
+    const lines: string[] = [];
+    const addLine = (line: string) => {
+      lines.push(line);
+      setDebugInfo([...lines]);
+    };
+
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      const platform = Capacitor.getPlatform();
+      const isNative = Capacitor.isNativePlatform();
+      addLine(`Platform: ${platform} (native: ${isNative})`);
+
+      if (!isNative) {
+        addLine('Not a native app — FCM diagnostics require native');
+        // Show web permission status
+        if ('Notification' in window) {
+          addLine(`Web permission: ${Notification.permission}`);
+        }
+        setDebugRunning(false);
+        return;
+      }
+
+      const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
+
+      // Step 1: Check permissions
+      addLine('Checking permissions...');
+      const permResult = await FirebaseMessaging.checkPermissions();
+      addLine(`Permission: ${permResult.receive}`);
+
+      if (permResult.receive !== 'granted') {
+        addLine('Requesting permissions...');
+        const reqResult = await FirebaseMessaging.requestPermissions();
+        addLine(`After request: ${reqResult.receive}`);
+        if (reqResult.receive !== 'granted') {
+          addLine('BLOCKED — cannot proceed without permission');
+          setDebugRunning(false);
+          return;
+        }
+      }
+
+      // Step 2: Check DB token
+      if (user) {
+        const dbResult = await fetchUserField(supabase, user.id, 'fcm_token');
+        const dbToken = dbResult.success ? (dbResult.data as string | null) : null;
+        addLine(`DB token: ${dbToken ? dbToken.substring(0, 20) + '...' : 'null'}`);
+      }
+
+      // Step 3: Delete old token
+      addLine('Deleting old token...');
+      try {
+        await FirebaseMessaging.deleteToken();
+        addLine('Old token deleted');
+      } catch (err) {
+        addLine(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // Step 4: Get new token
+      addLine('Getting new token...');
+      const tokenResult = await FirebaseMessaging.getToken();
+      const newToken = tokenResult.token;
+      addLine(`New token: ${newToken ? newToken.substring(0, 20) + '...' : 'null'}`);
+
+      if (!newToken) {
+        addLine('ERROR: getToken returned empty');
+        setDebugRunning(false);
+        return;
+      }
+
+      // Step 5: Save to DB
+      if (user) {
+        addLine('Saving to DB...');
+        const { saveFcmToken } = await import('@/lib/firebase-messaging');
+        await saveFcmToken(user.id, newToken);
+        addLine('Token saved to DB');
+      } else {
+        addLine('No user — skipping DB save');
+      }
+
+      addLine('Done');
+    } catch (err) {
+      addLine(`FATAL: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDebugRunning(false);
+    }
+  }
+
   function openDeleteConfirm() {
     setDeleteInput('');
     setShowDeleteConfirm(true);
@@ -222,5 +312,8 @@ export function useSettings(language: 'en' | 'es') {
     toggleNotifications,
     openDeleteConfirm,
     closeDeleteConfirm,
+    debugInfo,
+    debugRunning,
+    runNotificationDiagnostic,
   };
 }
