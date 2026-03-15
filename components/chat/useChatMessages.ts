@@ -6,13 +6,11 @@ import { logError } from '@/lib/logger';
 import { showError, showSuccess, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
-  fetchUserName,
   fetchUserProfileMaybe,
   insertReportedMessage,
   fetchChatMessagesWithUsers,
   insertChatMessage,
   softDeleteChatMessage,
-  fetchParticipantUserIdsForSession,
 } from '@/lib/dal';
 
 export interface ChatMessage {
@@ -152,34 +150,7 @@ export function useChatMessages({ supabase, sessionId, currentUserId, language }
       });
       if (!insertResult.success) throw new Error(insertResult.error);
 
-      // Fire-and-forget: notify other participants via batch push
-      void (async () => {
-        try {
-          const [participantsResult, senderResult] = await Promise.all([
-            fetchParticipantUserIdsForSession(supabase, sessionId, currentUserId),
-            fetchUserName(supabase, currentUserId),
-          ]);
-          const userIds = participantsResult.success ? (participantsResult.data ?? []) : [];
-          if (userIds.length === 0) return;
-          const senderName = senderResult.success ? senderResult.data : null;
-          const truncatedBody = messageText.length > 100 ? messageText.slice(0, 100) + '…' : messageText;
-          for (const userId of userIds) {
-            fetch('/api/notifications/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId,
-                title: `${senderName || 'Someone'}: New message`,
-                body: truncatedBody,
-                url: `/session/${sessionId}`,
-                data: { type: 'chat_message', sessionId },
-              }),
-            }).catch(() => {});
-          }
-        } catch {
-          // Notification delivery is best-effort — never block chat UX
-        }
-      })();
+      // Chat notifications are now handled server-side via Supabase webhook
       return true;
     } catch (error) {
       logError(error, { action: 'sendMessage', sessionId });
