@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Search, Calendar } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -5,6 +6,19 @@ import type { Database } from '@/lib/database.types';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 type AdminUser = UserRow & { sessions_created: number; sessions_joined: number };
+
+const BOT_EMAIL_PATTERNS = ['cloudtestlabaccounts', 'cloudtestlab'];
+
+function isBotAccount(email: string | null): boolean {
+  if (!email) return false;
+  const lower = email.toLowerCase();
+  return BOT_EMAIL_PATTERNS.some((p) => lower.includes(p));
+}
+
+function isAppleRelay(email: string | null): boolean {
+  if (!email) return false;
+  return email.toLowerCase().includes('@privaterelay.appleid.com');
+}
 
 interface UserManagementProps {
   users: AdminUser[];
@@ -28,11 +42,17 @@ export default function UserManagement({
   onDelete,
 }: UserManagementProps) {
   const { language } = useLanguage();
-  const filteredUsers = users.filter(
-    (u) =>
+  const [showBots, setShowBots] = useState(false);
+
+  const botCount = users.filter((u) => isBotAccount(u.email)).length;
+
+  const filteredUsers = users.filter((u) => {
+    if (!showBots && isBotAccount(u.email)) return false;
+    return (
       u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    );
+  });
 
   return (
     <div className="bg-white rounded shadow">
@@ -47,9 +67,25 @@ export default function UserManagement({
             className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#C0E863]"
           />
         </div>
-        <p className="text-xs text-stone-500 mt-1">
-          {filteredUsers.length} {language === 'es' ? 'usuarios' : 'users'}
-        </p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-stone-500">
+            {filteredUsers.length} {language === 'es' ? 'usuarios' : 'users'}
+          </p>
+          {botCount > 0 && (
+            <button
+              onClick={() => setShowBots(!showBots)}
+              className={`text-xs px-2 py-0.5 rounded ${showBots ? 'bg-orange-100 text-orange-700' : 'bg-stone-100 text-stone-500'}`}
+            >
+              {showBots
+                ? language === 'es'
+                  ? `Ocultar bots (${botCount})`
+                  : `Hide bots (${botCount})`
+                : language === 'es'
+                  ? `Mostrar bots (${botCount})`
+                  : `Show bots (${botCount})`}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="divide-y max-h-[500px] overflow-y-auto">
@@ -77,6 +113,16 @@ export default function UserManagement({
                     {u.banned && (
                       <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded flex-shrink-0">
                         {language === 'es' ? 'BANEADO' : 'BANNED'}
+                      </span>
+                    )}
+                    {isBotAccount(u.email) && (
+                      <span className="px-1.5 py-0.5 bg-orange-400 text-white text-[10px] rounded flex-shrink-0">
+                        BOT
+                      </span>
+                    )}
+                    {isAppleRelay(u.email) && (
+                      <span className="px-1.5 py-0.5 bg-gray-500 text-white text-[10px] rounded flex-shrink-0">
+                        Apple Relay
                       </span>
                     )}
                   </div>
