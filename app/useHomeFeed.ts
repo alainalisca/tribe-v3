@@ -118,17 +118,15 @@ export function useHomeFeed() {
     try {
       const { Capacitor } = await import('@capacitor/core');
       const isNative = Capacitor.isNativePlatform();
-      console.log('[FCM] Startup registration check, isNative:', isNative);
       if (isNative) {
         const { registerForPushNotifications } = await import('@/lib/firebase-messaging');
-        const token = await registerForPushNotifications(userId);
-        console.log('[FCM] Startup registration result:', token ? 'success' : 'no token');
+        await registerForPushNotifications(userId);
       } else if ('Notification' in window && Notification.permission === 'granted') {
         const { requestNotificationPermission } = await import('@/lib/notifications');
         await requestNotificationPermission(userId);
       }
     } catch (error) {
-      console.error('[FCM] Startup registration error:', error);
+      logError(error, { action: 'tryRegisterPushNotifications' });
     }
   }
   async function checkUser() {

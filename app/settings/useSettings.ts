@@ -193,7 +193,7 @@ export function useSettings(language: 'en' | 'es') {
         }
       }
     } catch (error) {
-      console.error('[Notifications] Toggle failed:', error);
+      logError(error, { action: 'toggleNotifications' });
       setNotificationsEnabled(false);
     }
   }

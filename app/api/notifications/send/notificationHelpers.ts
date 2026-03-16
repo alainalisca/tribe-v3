@@ -20,15 +20,10 @@ function ensureVapidInitialized(): void {
 // Get FCM access token via direct OAuth2 JWT exchange
 export async function getFcmAccessToken(): Promise<string | null> {
   try {
-    console.log('[FCM-AUTH] Getting access token...');
     const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (!serviceAccount) {
-      console.log('[FCM-AUTH] FIREBASE_SERVICE_ACCOUNT_KEY not set');
-      return null;
-    }
+    if (!serviceAccount) return null;
 
     const parsed = JSON.parse(serviceAccount);
-    console.log('[FCM-AUTH] Service account parsed, project:', parsed.project_id);
     const now = Math.floor(Date.now() / 1000);
     const token = jwt.sign(
       {
@@ -42,7 +37,6 @@ export async function getFcmAccessToken(): Promise<string | null> {
       parsed.private_key,
       { algorithm: 'RS256' }
     );
-    console.log('[FCM-AUTH] JWT signed, length:', token.length);
 
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -51,13 +45,8 @@ export async function getFcmAccessToken(): Promise<string | null> {
     });
 
     const data = await response.json();
-    console.log('[FCM-AUTH] OAuth2 response status:', response.status, 'has token:', !!data.access_token);
-    if (!data.access_token) {
-      console.log('[FCM-AUTH] OAuth2 error:', JSON.stringify(data));
-    }
     return data.access_token || null;
   } catch (error) {
-    console.error('[FCM-AUTH] FATAL:', error instanceof Error ? error.message : String(error));
     logError(error, { route: '/api/notifications/send', action: 'get_fcm_access_token' });
     return null;
   }
@@ -70,15 +59,12 @@ export async function sendFcmNotification(
   body: string,
   data?: Record<string, string>
 ): Promise<{ success: boolean; error?: string }> {
-  console.log('[FCM-SEND] Starting, token:', fcmToken?.substring(0, 20), 'title:', title);
-  try {
-    const accessToken = await getFcmAccessToken();
-    if (!accessToken) {
-      console.log('[FCM-SEND] Failed to get access token');
-      return { success: false, error: 'Failed to obtain FCM access token' };
-    }
-    console.log('[FCM-SEND] Got access token, length:', accessToken.length);
+  const accessToken = await getFcmAccessToken();
+  if (!accessToken) {
+    return { success: false, error: 'Failed to obtain FCM access token' };
+  }
 
+  try {
     const projectId = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!).project_id;
 
     const message = {
@@ -102,11 +88,7 @@ export async function sendFcmNotification(
       },
     };
 
-    const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
-    console.log('[FCM-SEND] Sending to:', fcmUrl);
-    console.log('[FCM-SEND] Payload token:', fcmToken?.substring(0, 30));
-
-    const response = await fetch(fcmUrl, {
+    const response = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -116,12 +98,9 @@ export async function sendFcmNotification(
     });
 
     const result = await response.json();
-    console.log('[FCM-SEND] Response status:', response.status);
-    console.log('[FCM-SEND] Response body:', JSON.stringify(result));
 
     if (!response.ok) {
       const errorMsg = result.error?.message || JSON.stringify(result);
-      console.error('[FCM-SEND] ERROR:', errorMsg);
       log('error', 'FCM HTTP v1 error', { route: '/api/notifications/send', action: 'fcm_send', error: errorMsg });
 
       if (result.error?.code === 404 || result.error?.code === 400) {
@@ -134,7 +113,6 @@ export async function sendFcmNotification(
       return { success: false, error: errorMsg };
     }
 
-    console.log('[FCM-SEND] SUCCESS, message:', result.name);
     log('info', 'FCM notification sent via HTTP v1', {
       route: '/api/notifications/send',
       action: 'fcm_sent',
@@ -142,9 +120,8 @@ export async function sendFcmNotification(
     });
     return { success: true };
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error('[FCM-SEND] FATAL:', msg);
-    return { success: false, error: `FCM HTTP error: ${msg}` };
+    const message = error instanceof Error ? error.message : String(error);
+    return { success: false, error: `FCM HTTP error: ${message}` };
   }
 }
 
