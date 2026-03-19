@@ -6,7 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types';
 import { logError } from '@/lib/logger';
 
-import type { DalResult } from './types';
+import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
 
 // --- Query return types (with joined relations) ---
@@ -277,9 +277,16 @@ export async function fetchActiveSessionsForDates(
   dates: string[]
 ): Promise<DalResult<Session[]>> {
   try {
-    const { data, error } = await supabase.from('sessions').select('*').eq('status', 'active').in('date', dates);
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(
+        'id, creator_id, sport, location, date, start_time, duration, status, reminder_1hr_sent, reminder_15min_sent, is_training_now'
+      )
+      .eq('status', 'active')
+      .in('date', dates);
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    // Cast: select returns subset of Session columns used by cron reminders
+    return { success: true, data: (data || []) as unknown as Session[] };
   } catch (error) {
     logError(error, { action: 'fetchActiveSessionsForDates' });
     return { success: false, error: 'Failed' };
@@ -291,7 +298,7 @@ export async function fetchActiveSessionCount(supabase: SupabaseClient, fromDate
   try {
     const { count, error } = await supabase
       .from('sessions')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
       .gte('date', fromDate);
     if (error) return { success: false, error: error.message };
@@ -324,12 +331,11 @@ export async function fetchSessionsByCreator(
   }
 }
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
 /** Fetch sessions with creator join (for cron/reminders). */
 export async function fetchSessionsWithCreator(
   supabase: SupabaseClient,
   filters: { status?: string; reminder_sent?: boolean; dateGte?: string; dateLte?: string; followup_sent?: boolean }
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<SessionWithCreator[]>> {
   try {
     let query = supabase
       .from('sessions')
@@ -341,7 +347,7 @@ export async function fetchSessionsWithCreator(
     if (filters.dateLte) query = query.lte('date', filters.dateLte);
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as SessionWithCreator[] };
   } catch (error) {
     logError(error, { action: 'fetchSessionsWithCreator' });
     return { success: false, error: 'Failed' };

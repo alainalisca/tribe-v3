@@ -1,8 +1,14 @@
 /** DAL: session_participants table — join, leave, accept/decline */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import type { DalResult } from './types';
-import type { SessionParticipantInsert } from '@/lib/database.types';
+import type {
+  DalResult,
+  ParticipantWithUser,
+  ParticipantWithUserDetails,
+  ParticipationWithSession,
+  PendingParticipantWithUser,
+} from './types';
+import type { SessionParticipant, SessionParticipantInsert } from '@/lib/database.types';
 
 export async function insertParticipant(
   supabase: SupabaseClient,
@@ -66,11 +72,10 @@ export async function fetchParticipantUserIds(supabase: SupabaseClient): Promise
   }
 }
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
 export async function fetchConfirmedParticipantsWithUsers(
   supabase: SupabaseClient,
   sessionId: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<ParticipantWithUser[]>> {
   try {
     const { data, error } = await supabase
       .from('session_participants')
@@ -78,7 +83,7 @@ export async function fetchConfirmedParticipantsWithUsers(
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as ParticipantWithUser[] };
   } catch (error) {
     logError(error, { action: 'fetchConfirmedParticipantsWithUsers' });
     return { success: false, error: 'Failed' };
@@ -145,12 +150,11 @@ export async function deleteGuestParticipantsForSession(
   }
 }
 
-// REASON: returns raw Supabase join shape for cron/weekly recap queries
 export async function fetchParticipationsWithSession(
   supabase: SupabaseClient,
   userId: string,
   opts?: { dateGte?: string; dateLte?: string; status?: string; userJoinFields?: string }
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<ParticipationWithSession[]>> {
   try {
     const joinFields = opts?.userJoinFields || 'session_id, sessions!inner(date, sport, duration)';
     let query = supabase.from('session_participants').select(joinFields).eq('user_id', userId);
@@ -159,20 +163,19 @@ export async function fetchParticipationsWithSession(
     if (opts?.dateLte) query = query.lte('sessions.date', opts.dateLte);
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as ParticipationWithSession[] };
   } catch (error) {
     logError(error, { action: 'fetchParticipationsWithSession' });
     return { success: false, error: 'Failed' };
   }
 }
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
 /** Fetch participants with user details (for cron session reminders). */
 export async function fetchParticipantsWithUserDetails(
   supabase: SupabaseClient,
   sessionId: string,
   userFields?: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<ParticipantWithUserDetails[]>> {
   try {
     const fields = userFields || 'id, preferred_language, session_reminders_enabled';
     const { data, error } = await supabase
@@ -181,7 +184,7 @@ export async function fetchParticipantsWithUserDetails(
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as ParticipantWithUserDetails[] };
   } catch (error) {
     logError(error, { action: 'fetchParticipantsWithUserDetails' });
     return { success: false, error: 'Failed' };
@@ -231,7 +234,7 @@ export async function deleteParticipantBySessionAndUser(
 export async function insertParticipantReturning(
   supabase: SupabaseClient,
   data: SessionParticipantInsert
-): Promise<DalResult<unknown>> {
+): Promise<DalResult<SessionParticipant>> {
   try {
     const { data: row, error } = await supabase.from('session_participants').insert(data).select().single();
     if (error) return { success: false, error: error.message };
@@ -247,16 +250,16 @@ export async function checkExistingParticipation(
   supabase: SupabaseClient,
   sessionId: string,
   userId: string
-): Promise<DalResult<unknown | null>> {
+): Promise<DalResult<SessionParticipant | null>> {
   try {
     const { data, error } = await supabase
       .from('session_participants')
-      .select('*')
+      .select('id, session_id, user_id, status, is_guest, guest_token, joined_at, guest_name, guest_phone, guest_email')
       .eq('session_id', sessionId)
       .eq('user_id', userId)
       .maybeSingle();
     if (error) return { success: false, error: error.message };
-    return { success: true, data };
+    return { success: true, data: data as unknown as SessionParticipant | null };
   } catch (error) {
     logError(error, { action: 'checkExistingParticipation' });
     return { success: false, error: 'Failed' };
@@ -287,26 +290,29 @@ export async function fetchGuestParticipant(
   supabase: SupabaseClient,
   sessionId: string,
   filter: { guest_phone?: string; guest_email?: string }
-): Promise<DalResult<unknown | null>> {
+): Promise<DalResult<SessionParticipant | null>> {
   try {
-    let query = supabase.from('session_participants').select('*').eq('session_id', sessionId).eq('is_guest', true);
+    let query = supabase
+      .from('session_participants')
+      .select('id, session_id, user_id, status, is_guest, guest_name, guest_phone, guest_email, guest_token, joined_at')
+      .eq('session_id', sessionId)
+      .eq('is_guest', true);
     if (filter.guest_phone) query = query.eq('guest_phone', filter.guest_phone);
     if (filter.guest_email) query = query.eq('guest_email', filter.guest_email);
     const { data, error } = await query.maybeSingle();
     if (error) return { success: false, error: error.message };
-    return { success: true, data };
+    return { success: true, data: data as unknown as SessionParticipant | null };
   } catch (error) {
     logError(error, { action: 'fetchGuestParticipant' });
     return { success: false, error: 'Failed' };
   }
 }
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
 /** Fetch pending participants with user details for multiple sessions. */
 export async function fetchPendingParticipantsForSessions(
   supabase: SupabaseClient,
   sessionIds: string[]
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<PendingParticipantWithUser[]>> {
   try {
     const { data, error } = await supabase
       .from('session_participants')

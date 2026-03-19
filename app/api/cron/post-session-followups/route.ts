@@ -60,25 +60,33 @@ export async function GET(request: Request) {
 
       if (attendees.length === 0) continue;
 
-      // Send email to each attendee
-      for (const attendee of attendees) {
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+      // Send emails in parallel batches of 10 to avoid overwhelming the API
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < attendees.length; i += BATCH_SIZE) {
+        const batch = attendees.slice(i, i + BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map((attendee) =>
+            fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: session.id,
+                userId: attendee.user_id,
+              }),
+            })
+          )
+        );
+        for (let j = 0; j < results.length; j++) {
+          if (results[j].status === 'fulfilled') {
+            sentCount++;
+          } else {
+            logError((results[j] as PromiseRejectedResult).reason, {
+              route: '/api/cron/post-session-followups',
+              action: 'send_followup_email',
               sessionId: session.id,
-              userId: attendee.user_id,
-            }),
-          });
-          sentCount++;
-        } catch (err) {
-          logError(err, {
-            route: '/api/cron/post-session-followups',
-            action: 'send_followup_email',
-            sessionId: session.id,
-            userId: attendee.user_id,
-          });
+              userId: batch[j].user_id,
+            });
+          }
         }
       }
 

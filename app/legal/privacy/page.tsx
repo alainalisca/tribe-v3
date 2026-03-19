@@ -42,7 +42,7 @@ export default function PrivacyPage() {
                   {sec.list && (
                     <ul className="list-disc pl-6 space-y-1">
                       {sec.list.map((item, k) => (
-                        <li key={k} dangerouslySetInnerHTML={{ __html: item }} />
+                        <li key={k}>{item}</li>
                       ))}
                     </ul>
                   )}

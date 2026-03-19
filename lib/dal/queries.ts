@@ -5,21 +5,28 @@
  */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import type { DalResult } from './types';
+import type {
+  DalResult,
+  StoryWithDetails,
+  ChatMessageWithUser,
+  PendingParticipantWithUser,
+  JoinedSessionWithDetails,
+} from './types';
 
 /** Fetch multiple sessions by an array of IDs, with optional custom select fields. */
+// REASON: dynamic field selection — callers specify which fields they need
 export async function fetchSessionsByIds(
   supabase: SupabaseClient,
   ids: string[],
   fields?: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<Record<string, unknown>[]>> {
   try {
     const { data, error } = await supabase
       .from('sessions')
       .select(fields || '*')
       .in('id', ids);
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as Record<string, unknown>[] };
   } catch (error) {
     logError(error, { action: 'fetchSessionsByIds' });
     return { success: false, error: 'Failed to fetch sessions by IDs' };
@@ -33,7 +40,7 @@ export async function fetchSessionsByIds(
 export async function fetchChatMessagesForSessions(
   supabase: SupabaseClient,
   sessionIds: string[]
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<ChatMessageWithUser[]>> {
   try {
     const { data, error } = await supabase
       .from('chat_messages')
@@ -42,7 +49,7 @@ export async function fetchChatMessagesForSessions(
       .eq('deleted', false)
       .order('created_at', { ascending: false });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as ChatMessageWithUser[] };
   } catch (error) {
     logError(error, { action: 'fetchChatMessagesForSessions' });
     return { success: false, error: 'Failed to fetch chat messages' };
@@ -77,7 +84,7 @@ export async function fetchUserReviewExists(
 export async function fetchAllRecapPhotosForSession(
   supabase: SupabaseClient,
   sessionId: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<Record<string, unknown>[]>> {
   try {
     const { data, error } = await supabase
       .from('session_recap_photos')
@@ -99,7 +106,7 @@ export async function fetchAllRecapPhotosForSession(
 export async function fetchActiveStoriesForSession(
   supabase: SupabaseClient,
   sessionId: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<StoryWithDetails[]>> {
   try {
     const { data, error } = await supabase
       .from('session_stories')
@@ -110,7 +117,7 @@ export async function fetchActiveStoriesForSession(
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: true });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as StoryWithDetails[] };
   } catch (error) {
     logError(error, { action: 'fetchActiveStoriesForSession' });
     return { success: false, error: 'Failed to fetch stories' };
@@ -121,7 +128,7 @@ export async function fetchActiveStoriesForSession(
  * Fetch all active (non-expired) stories globally, with user + session joins.
  * Used by the stories page and stories row component.
  */
-export async function fetchAllActiveStories(supabase: SupabaseClient): Promise<DalResult<unknown[]>> {
+export async function fetchAllActiveStories(supabase: SupabaseClient): Promise<DalResult<StoryWithDetails[]>> {
   try {
     const { data, error } = await supabase
       .from('session_stories')
@@ -133,7 +140,7 @@ export async function fetchAllActiveStories(supabase: SupabaseClient): Promise<D
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as StoryWithDetails[] };
   } catch (error) {
     logError(error, { action: 'fetchAllActiveStories' });
     return { success: false, error: 'Failed to fetch stories' };
@@ -148,7 +155,7 @@ export async function fetchParticipantsForSessions(
   supabase: SupabaseClient,
   sessionIds: string[],
   status: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<PendingParticipantWithUser[]>> {
   try {
     const { data, error } = await supabase
       .from('session_participants')
@@ -160,7 +167,7 @@ export async function fetchParticipantsForSessions(
       .eq('status', status)
       .order('joined_at', { ascending: false });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as PendingParticipantWithUser[] };
   } catch (error) {
     logError(error, { action: 'fetchParticipantsForSessions' });
     return { success: false, error: 'Failed to fetch participants' };
@@ -196,7 +203,7 @@ export async function fetchConfirmedParticipations(
 export async function fetchJoinedSessionsWithDetails(
   supabase: SupabaseClient,
   userId: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<JoinedSessionWithDetails[]>> {
   try {
     const { data, error } = await supabase
       .from('session_participants')
@@ -204,7 +211,7 @@ export async function fetchJoinedSessionsWithDetails(
       .eq('user_id', userId)
       .eq('sessions.status', 'active');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as JoinedSessionWithDetails[] };
   } catch (error) {
     logError(error, { action: 'fetchJoinedSessionsWithDetails' });
     return { success: false, error: 'Failed to fetch joined sessions' };

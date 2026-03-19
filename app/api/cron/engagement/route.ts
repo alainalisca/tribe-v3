@@ -72,23 +72,23 @@ export async function GET(request: Request) {
 
       if (users.length > 0) {
         for (const user of users) {
-          // Get user's session participation for the past week
-          const participationsResult = await fetchParticipationsWithSession(supabase, user.id, {
-            status: 'confirmed',
-            dateGte: oneWeekAgo.toISOString().split('T')[0],
-            dateLte: today,
-          });
+          // Fetch participation and hosted sessions in parallel (independent queries)
+          const [participationsResult, hostedResult] = await Promise.all([
+            fetchParticipationsWithSession(supabase, user.id, {
+              status: 'confirmed',
+              dateGte: oneWeekAgo.toISOString().split('T')[0],
+              dateLte: today,
+            }),
+            fetchSessionsByCreator(supabase, user.id, {
+              dateGte: oneWeekAgo.toISOString().split('T')[0],
+              dateLte: today,
+              fields: 'id, date, sport, duration, current_participants',
+            }),
+          ]);
           const participations = (participationsResult.data || []) as Array<{
             session_id: string;
             sessions: { date: string; sport: string; duration: number | null } | null;
           }>;
-
-          // Get sessions the user hosted
-          const hostedResult = await fetchSessionsByCreator(supabase, user.id, {
-            dateGte: oneWeekAgo.toISOString().split('T')[0],
-            dateLte: today,
-            fields: 'id, date, sport, duration, current_participants',
-          });
           const hostedSessions = (hostedResult.data || []) as Array<{
             id: string;
             date: string;

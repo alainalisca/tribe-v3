@@ -34,7 +34,7 @@ export async function insertGuestParticipant(
   });
 
   if (!result.success) throw new Error(result.error);
-  const data = result.data as { id: string; guest_token: string | null };
+  const data = result.data as unknown as { id: string; guest_token: string | null };
 
   const newCount = (session.current_participants ?? 0) + 1;
   await updateParticipantCount(supabase, session.id, newCount);

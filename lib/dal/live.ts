@@ -1,7 +1,7 @@
 /** DAL: live_status + session_attendance tables */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import type { DalResult } from './types';
+import type { DalResult, LiveUserWithDetails } from './types';
 import type { Database } from '@/lib/database.types';
 
 type LiveStatusRow = Database['public']['Tables']['live_status']['Row'];
@@ -67,18 +67,17 @@ export async function fetchMyLiveExpiry(
   }
 }
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
 export async function fetchLiveUsersWithDetails(
   supabase: SupabaseClient,
   sessionId: string
-): Promise<DalResult<unknown[]>> {
+): Promise<DalResult<LiveUserWithDetails[]>> {
   try {
     const { data } = await supabase
       .from('live_status')
       .select('user_id, started_at, user:users(name, avatar_url)')
       .eq('session_id', sessionId)
       .gt('expires_at', new Date().toISOString());
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []) as unknown as LiveUserWithDetails[] };
   } catch (error) {
     logError(error, { action: 'fetchLiveUsersWithDetails' });
     return { success: false, error: 'Failed' };

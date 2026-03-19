@@ -158,7 +158,7 @@ export function useMatches() {
         'id, sport, date, start_time, location, creator_id, current_participants, max_participants, status'
       );
       // REASON: DAL returns unknown[] — cast for field access, then filter/sort client-side
-      const allSessions = (sessionsResult.success ? sessionsResult.data : []) as Array<
+      const allSessions = (sessionsResult.success ? sessionsResult.data : []) as unknown as Array<
         TribeSession & { status?: string }
       >;
       const sessions = allSessions

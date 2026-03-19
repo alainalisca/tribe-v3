@@ -50,7 +50,7 @@ export async function POST(request: Request) {
           dateGte: oneWeekAgoStr,
           userJoinFields: 'session:sessions(id, sport, location, date, start_time, creator:users!creator_id(name))',
         });
-        const participatedSessions = (participatedResult.data || []) as Array<{
+        const participatedSessions = (participatedResult.data || []) as unknown as Array<{
           session: {
             id: string;
             sport: string;

@@ -14,6 +14,25 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://us.i.posthog.com",
+              "style-src 'self' 'unsafe-inline' https://unpkg.com",
+              "img-src 'self' https: data: blob:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://maps.googleapis.com https://fcm.googleapis.com",
+              "frame-src 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+            ].join('; '),
+          },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(self)',
+          },
         ],
       },
     ];

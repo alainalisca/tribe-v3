@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createEvents, type EventAttributes } from 'ics';
 import { log, logError } from '@/lib/logger';
 import { fetchSessionFields } from '@/lib/dal';
+import { rateLimit } from '@/lib/rate-limit';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
@@ -16,6 +17,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 // PUBLIC: Calendar .ics files are shared via link — no auth required
 export async function GET(request: Request) {
   try {
+    // Rate limit to prevent abuse on this public endpoint
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 30, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
 

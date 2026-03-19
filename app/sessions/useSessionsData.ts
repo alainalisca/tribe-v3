@@ -107,7 +107,7 @@ export function useSessionsData() {
         userJoinFields: 'session:sessions(*, creator:users!sessions_creator_id_fkey(name, avatar_url))',
       });
       // REASON: DAL returns unknown[] — cast for field access on joined session rows
-      const joined = (joinedResult.success ? joinedResult.data : []) as Array<{ session: unknown }>;
+      const joined = (joinedResult.success ? joinedResult.data : []) as unknown as Array<{ session: unknown }>;
 
       // Filter joined sessions to only upcoming ones (not past their end time)
       const upcomingJoined =

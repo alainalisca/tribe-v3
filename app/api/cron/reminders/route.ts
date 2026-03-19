@@ -9,6 +9,7 @@ import {
   fetchParticipantsWithUserDetails,
   fetchUsersWithPush,
 } from '@/lib/dal';
+import type { SessionWithCreator } from '@/lib/dal/types';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -56,15 +57,7 @@ export async function GET(request: Request) {
       dateGte: now.toISOString().split('T')[0],
       dateLte: twoHoursFifteenMinsFromNow.toISOString().split('T')[0],
     });
-    const sessions = sessionsResult.data as Array<{
-      id: string;
-      sport: string;
-      location: string;
-      date: string;
-      start_time: string;
-      creator: { id: string; name: string; email: string; preferred_language: string | null };
-      [key: string]: unknown;
-    }> | null;
+    const sessions = sessionsResult.data as SessionWithCreator[] | null;
 
     let remindersSent = 0;
 
@@ -85,23 +78,25 @@ export async function GET(request: Request) {
           user: { id: string; name: string; email: string; preferred_language: string | null } | null;
         }>;
 
-        const hostLang = session.creator?.preferred_language || 'en';
-        const hostTitle = hostLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Your session starts soon!';
-        const hostBody =
-          hostLang === 'es'
-            ? `${session.sport} comienza en 2 horas en ${session.location}`
-            : `${session.sport} starts in 2 hours at ${session.location}`;
+        if (session.creator) {
+          const hostLang = session.creator.preferred_language || 'en';
+          const hostTitle = hostLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Your session starts soon!';
+          const hostBody =
+            hostLang === 'es'
+              ? `${session.sport} comienza en 2 horas en ${session.location}`
+              : `${session.sport} starts in 2 hours at ${session.location}`;
 
-        await fetch(`${SITE_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: session.creator.id,
-            title: hostTitle,
-            body: hostBody,
-            url: `/session/${session.id}`,
-          }),
-        });
+          await fetch(`${SITE_URL}/api/notifications/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: session.creator.id,
+              title: hostTitle,
+              body: hostBody,
+              url: `/session/${session.id}`,
+            }),
+          });
+        }
 
         for (const participant of participants) {
           const pLang = participant.user?.preferred_language || 'en';

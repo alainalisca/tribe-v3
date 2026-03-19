@@ -35,13 +35,8 @@ ON session_recap_photos FOR DELETE
 TO authenticated
 USING (auth.uid() = user_id);
 
+-- Uses is_app_admin() from add_admin_rls.sql (checks users.is_admin = true)
 CREATE POLICY "Admins can moderate recap photos"
 ON session_recap_photos FOR ALL
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM users
-    WHERE users.id = auth.uid()
-    AND users.email = 'alainalisca@aplusfitnessllc.com'
-  )
-);
+USING (is_app_admin());

@@ -90,15 +90,16 @@ export default function RequestsPage() {
       const sessionIds = mySessions.map((s) => s.id);
 
       const pendingResult = await fetchPendingParticipantsForSessions(supabase, sessionIds);
-      const pendingRequests = (pendingResult.data || []) as Array<Record<string, unknown>>;
+      const pendingRequests = pendingResult.data || [];
 
       const requestsWithSessions =
         pendingRequests?.map((req) => ({
           ...req,
+          users: req.user ? { name: req.user.name, avatar_url: req.user.avatar_url, sports: null } : null,
           session: mySessions.find((s) => s.id === req.session_id),
         })) || [];
 
-      setRequests(requestsWithSessions as JoinRequest[]);
+      setRequests(requestsWithSessions as unknown as JoinRequest[]);
     } catch (error) {
       logError(error, { action: 'loadRequests' });
     } finally {

@@ -1,7 +1,7 @@
 /** DAL: users table — profile reads, updates, admin checks */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import type { DalResult } from './types';
+import type { DalResult, UserForNotification } from './types';
 import type { User as UserRow, UserUpdate } from '@/lib/database.types';
 
 export async function fetchUserProfile(supabase: SupabaseClient, userId: string): Promise<DalResult<UserRow>> {
@@ -206,7 +206,7 @@ export async function fetchBlockedStatus(
 export async function fetchUserForNotification(
   supabase: SupabaseClient,
   userId: string
-): Promise<DalResult<Record<string, unknown> | null>> {
+): Promise<DalResult<UserForNotification | null>> {
   try {
     const { data, error } = await supabase
       .from('users')
@@ -214,7 +214,7 @@ export async function fetchUserForNotification(
       .eq('id', userId)
       .single();
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data as Record<string, unknown> };
+    return { success: true, data: data as UserForNotification };
   } catch (error) {
     logError(error, { action: 'fetchUserForNotification' });
     return { success: false, error: 'Failed' };

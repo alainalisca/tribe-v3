@@ -87,20 +87,16 @@ export async function GET(request: Request) {
         !session.reminder_15min_sent && sessionDateTime >= fifteenMinFromNow && sessionDateTime <= twentyMinFromNow;
 
       if (needsOneHourReminder || needsFifteenMinReminder) {
-        // Get session creator
-        const creatorResult = await fetchUserProfileMaybe(
-          supabase,
-          session.creator_id,
-          'id, preferred_language, session_reminders_enabled'
-        );
+        // Fetch creator and participants in parallel (independent queries)
+        const [creatorResult, participantsResult] = await Promise.all([
+          fetchUserProfileMaybe(supabase, session.creator_id, 'id, preferred_language, session_reminders_enabled'),
+          fetchParticipantsWithUserDetails(supabase, session.id),
+        ]);
         const creator = creatorResult.data as {
           id: string;
           preferred_language: string | null;
           session_reminders_enabled: boolean | null;
         } | null;
-
-        // Get all confirmed participants
-        const participantsResult = await fetchParticipantsWithUserDetails(supabase, session.id);
         const participants = (participantsResult.data || []) as Array<{
           user_id: string;
           user: { id: string; preferred_language: string | null; session_reminders_enabled: boolean | null } | null;
@@ -128,38 +124,44 @@ export async function GET(request: Request) {
           }
         }
 
-        // Send notifications
-        for (const userInfo of usersToNotify) {
-          const lang = userInfo.lang as 'en' | 'es';
-          const messages = needsOneHourReminder ? reminderMessages.oneHour : reminderMessages.fifteenMin;
+        // Send notifications in parallel batches
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < usersToNotify.length; i += BATCH_SIZE) {
+          const batch = usersToNotify.slice(i, i + BATCH_SIZE);
+          const results = await Promise.allSettled(
+            batch.map((userInfo) => {
+              const lang = userInfo.lang as 'en' | 'es';
+              const messages = needsOneHourReminder ? reminderMessages.oneHour : reminderMessages.fifteenMin;
+              const title = messages[lang]?.title || messages.en.title;
+              const body = (messages[lang]?.body || messages.en.body)(session.sport, session.location);
 
-          const title = messages[lang]?.title || messages.en.title;
-          const body = (messages[lang]?.body || messages.en.body)(session.sport, session.location);
-
-          try {
-            await fetch(`${SITE_URL}/api/notifications/send`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: userInfo.id,
-                title,
-                body,
-                url: `/session/${session.id}`,
-              }),
-            });
-
-            if (needsOneHourReminder) {
-              oneHourRemindersSent++;
+              return fetch(`${SITE_URL}/api/notifications/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: userInfo.id,
+                  title,
+                  body,
+                  url: `/session/${session.id}`,
+                }),
+              });
+            })
+          );
+          for (let j = 0; j < results.length; j++) {
+            if (results[j].status === 'fulfilled') {
+              if (needsOneHourReminder) {
+                oneHourRemindersSent++;
+              } else {
+                fifteenMinRemindersSent++;
+              }
             } else {
-              fifteenMinRemindersSent++;
+              logError((results[j] as PromiseRejectedResult).reason, {
+                route: '/api/cron/session-reminders',
+                action: 'send_reminder',
+                userId: batch[j].id,
+                sessionId: session.id,
+              });
             }
-          } catch (err) {
-            logError(err, {
-              route: '/api/cron/session-reminders',
-              action: 'send_reminder',
-              userId: userInfo.id,
-              sessionId: session.id,
-            });
           }
         }
 
