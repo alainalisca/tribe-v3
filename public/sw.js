@@ -21,6 +21,16 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event — network-first with offline fallback for navigation requests
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Only handle same-origin requests — let cross-origin requests
+  // (PostHog, map tiles, Google Maps, unpkg, etc.) pass through
+  // without service worker interception. This avoids CSP issues
+  // where the SW fetch context can block allowed external domains.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() =>
@@ -29,7 +39,7 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  // Non-navigation: cache-first
+  // Non-navigation same-origin: cache-first
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
