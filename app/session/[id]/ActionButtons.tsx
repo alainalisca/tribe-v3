@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
+import { LogOut, Trash2, MessageCircle, Lock, CreditCard, Loader2 } from 'lucide-react';
 import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { showError } from '@/lib/toast';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -45,6 +47,42 @@ export default function ActionButtons({
   creatingInvite,
 }: ActionButtonsProps) {
   const { t } = useLanguage();
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  const isPaidSession = !!session.is_paid && session.price_cents > 0;
+
+  // Format price for display
+  const formatPrice = (cents: number, currency: string) => {
+    const amount = cents / 100;
+    if (currency === 'COP') {
+      return `COP $${amount.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+    }
+    return `USD $${amount.toFixed(2)}`;
+  };
+
+  // Handle paid session checkout — calls /api/payment/create and redirects to gateway
+  async function handlePaidJoin() {
+    if (!user || !session) return;
+    setProcessingPayment(true);
+    try {
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: session.id }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.redirect_url) {
+        window.location.href = data.data.redirect_url;
+      } else {
+        showError(data.error || (_language === 'es' ? 'Error al procesar pago' : 'Payment processing failed'));
+        setProcessingPayment(false);
+      }
+    } catch {
+      showError(_language === 'es' ? 'Error de conexión' : 'Connection error');
+      setProcessingPayment(false);
+    }
+  }
+
   return (
     <div className="space-y-2">
       {!user ? (
@@ -144,6 +182,46 @@ export default function ActionButtons({
         <div className="w-full py-3 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 font-bold rounded-lg text-center flex items-center justify-center gap-2">
           <Lock className="w-5 h-5" />
           {t('inviteOnlyLabel')}
+        </div>
+      ) : isPaidSession ? (
+        /* ── Paid session: show price + Pay button ── */
+        <div className="space-y-2">
+          <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                  {_language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+                </p>
+                <p className="text-lg font-bold text-green-800 dark:text-green-200">
+                  {formatPrice(session.price_cents, session.currency || 'COP')}
+                </p>
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400 text-right">
+                {session.currency === 'USD' ? '💳 Stripe' : '🇨🇴 Wompi'}
+                <br />
+                {session.currency === 'USD'
+                  ? (_language === 'es' ? 'Tarjeta de crédito/débito' : 'Credit/debit card')
+                  : (_language === 'es' ? 'Nequi, PSE, tarjeta' : 'Nequi, PSE, card')}
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={handlePaidJoin}
+            disabled={processingPayment || sessionActions.joining}
+            className="w-full py-3 font-bold bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+          >
+            {processingPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {_language === 'es' ? 'Procesando...' : 'Processing...'}
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-5 h-5" />
+                {_language === 'es' ? 'Pagar y unirse' : 'Pay & Join'}
+              </>
+            )}
+          </Button>
         </div>
       ) : (
         <Button onClick={sessionActions.handleJoin} disabled={sessionActions.joining} className="w-full py-3 font-bold">

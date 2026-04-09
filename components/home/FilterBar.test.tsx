@@ -29,6 +29,8 @@ function createDefaultProps(overrides = {}) {
     setDateFilter: vi.fn(),
     genderFilter: 'all',
     setGenderFilter: vi.fn(),
+    pricingFilter: 'all',
+    setPricingFilter: vi.fn(),
     maxDistance: 50,
     setMaxDistance: vi.fn(),
     userLocation: null,

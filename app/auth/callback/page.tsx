@@ -77,7 +77,7 @@ export default function AuthCallbackPage() {
       if (data?.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         if (isNewUser) {
-          window.location.href = '/profile/edit';
+          window.location.href = '/onboarding/role';
           return;
         }
       }

@@ -535,9 +535,11 @@ const landingStyles = `
   padding: 3px;
 }
 .tribe-landing .tl-lang-btn {
-  padding: 8px 16px;
+  padding: 8px 18px;
+  min-width: 48px;
   min-height: 44px;
   border-radius: 9999px;
+  text-align: center;
   border: none;
   background: transparent;
   color: rgba(255,255,255,0.5);

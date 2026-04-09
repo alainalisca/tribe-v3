@@ -22,6 +22,18 @@ export interface EditProfileFormData {
   emergency_contact_phone: string;
   instagram_username: string;
   facebook_url: string;
+  // Instructor profile fields
+  is_instructor: boolean;
+  instructor_bio: string;
+  specialties: string[];
+  certifications: string[];
+  years_experience: number | null;
+  website_url: string;
+  // Storefront fields (wizard step 2)
+  storefront_tagline: string;
+  storefront_banner_url: string;
+  // Monetization fields (wizard step 3)
+  earnings_currency: string;
 }
 
 export function useEditProfile(language: 'en' | 'es') {
@@ -46,6 +58,15 @@ export function useEditProfile(language: 'en' | 'es') {
     emergency_contact_phone: '',
     instagram_username: '',
     facebook_url: '',
+    is_instructor: false,
+    instructor_bio: '',
+    specialties: [],
+    certifications: [],
+    years_experience: null,
+    website_url: '',
+    storefront_tagline: '',
+    storefront_banner_url: '',
+    earnings_currency: 'COP',
   });
 
   useEffect(() => {
@@ -80,6 +101,15 @@ export function useEditProfile(language: 'en' | 'es') {
           emergency_contact_phone: profileData.emergency_contact_phone || '',
           instagram_username: profileData.instagram_username || '',
           facebook_url: profileData.facebook_url || '',
+          is_instructor: profileData.is_instructor || false,
+          instructor_bio: profileData.instructor_bio || '',
+          specialties: profileData.specialties || [],
+          certifications: profileData.certifications || [],
+          years_experience: profileData.years_experience ?? null,
+          website_url: profileData.website_url || '',
+          storefront_tagline: profileData.storefront_tagline || '',
+          storefront_banner_url: profileData.storefront_banner_url || '',
+          earnings_currency: profileData.earnings_currency || 'COP',
         });
       }
     } catch (err) {
@@ -156,6 +186,15 @@ export function useEditProfile(language: 'en' | 'es') {
         emergency_contact_phone: formData.emergency_contact_phone,
         instagram_username: formData.instagram_username,
         facebook_url: formData.facebook_url,
+        is_instructor: formData.is_instructor,
+        instructor_bio: formData.instructor_bio || null,
+        specialties: formData.specialties,
+        certifications: formData.certifications,
+        years_experience: formData.years_experience,
+        website_url: formData.website_url || null,
+        storefront_tagline: formData.storefront_tagline || null,
+        storefront_banner_url: formData.storefront_banner_url || null,
+        earnings_currency: formData.earnings_currency || 'COP',
       });
 
       if (!updateResult.success) throw new Error(updateResult.error);

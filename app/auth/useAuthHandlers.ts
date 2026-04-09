@@ -91,7 +91,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
         if (error) throw error;
         if (data.user) {
           const { isNewUser } = await upsertUserProfile(data.user);
-          window.location.href = isNewUser ? '/profile/edit' : getSafeReturnTo();
+          window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
         }
       } else {
         const { error } = await supabase.auth.signInWithOAuth({

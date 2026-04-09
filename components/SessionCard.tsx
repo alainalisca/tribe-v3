@@ -170,29 +170,51 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{session.description}</p>
           )}
 
-          {/* Creator with Thumbnail */}
+          {/* Creator with Social Proof */}
           {session.creator && (
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-2">
-                <Avatar className="w-6 h-6">
-                  <AvatarImage
-                    loading="lazy"
-                    src={session.creator.avatar_url || undefined}
-                    alt={session.creator.name || ''}
-                  />
-                  <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-xs">
-                    {session.creator.name?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
-                  {t('hostedBy')} {session.creator.name}
-                </p>
+            <div className="mt-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Avatar className="w-6 h-6">
+                    <AvatarImage
+                      loading="lazy"
+                      src={session.creator.avatar_url || undefined}
+                      alt={session.creator.name || ''}
+                    />
+                    <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-xs">
+                      {session.creator.name?.[0]?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
+                    {t('hostedBy')} {session.creator.name}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {Number(session.creator.average_rating) > 0 && (
+                    <Badge className="bg-yellow-100 text-yellow-800 rounded-full border-transparent gap-1">
+                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                      <span>{Number(session.creator.average_rating).toFixed(1)}</span>
+                      {Number(session.creator.total_reviews) > 0 && (
+                        <span className="text-yellow-600 text-[10px]">({session.creator.total_reviews})</span>
+                      )}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              {Number(session.creator.average_rating) > 0 && (
-                <Badge className="bg-yellow-100 text-yellow-800 rounded-full border-transparent gap-1">
-                  <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                  <span>{Number(session.creator.average_rating).toFixed(1)}</span>
-                </Badge>
+              {/* Social proof stats */}
+              {(Number(session.creator.total_reviews) > 0 || confirmedParticipants.length >= session.max_participants * 0.7) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {confirmedParticipants.length >= session.max_participants * 0.7 && !isPast && !isFull && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 text-[10px] font-semibold rounded-full">
+                      🔥 {language === 'es' ? 'Llenándose rápido' : 'Filling up fast'}
+                    </span>
+                  )}
+                  {Number(session.creator.total_reviews) >= 5 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-tribe-green/10 text-tribe-green text-[10px] font-semibold rounded-full">
+                      ✓ {language === 'es' ? 'Instructor verificado por la comunidad' : 'Community-verified instructor'}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           )}

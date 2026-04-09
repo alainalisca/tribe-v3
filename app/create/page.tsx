@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -23,9 +23,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
+import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
-type FormErrors = Partial<Record<'sport' | 'date' | 'start_time' | 'location', string>>;
+type FormErrors = Partial<Record<'sport' | 'date' | 'start_time' | 'location' | 'price_cents' | 'payment_instructions', string>>;
+
+type PromoCode = {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  currency: string | null;
+};
 
 export default function CreateSessionPage() {
   const router = useRouter();
@@ -35,6 +44,10 @@ export default function CreateSessionPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [photos, setPhotos] = useState<string[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [showBoostPrompt, setShowBoostPrompt] = useState(false);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
+  const [expandPromoSection, setExpandPromoSection] = useState(false);
   const [formData, setFormData] = useState({
     sport: '',
     date: '',
@@ -49,6 +62,18 @@ export default function CreateSessionPage() {
     skill_level: 'all_levels',
     gender_preference: 'all',
     equipment: '',
+    is_paid: false,
+    price_display: '',          // human-readable price (e.g. "15000") — converted to price_cents on submit
+    currency: 'COP' as 'COP' | 'USD',
+    payment_instructions: '',
+    attached_promo_id: null as string | null,
+  });
+
+  // Recurring session state (managed separately because RecurringSessionToggle uses its own shape)
+  const [recurringValue, setRecurringValue] = useState({
+    is_recurring: false,
+    recurrence_pattern: '',
+    recurrence_end_date: '',
   });
 
   const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
@@ -86,6 +111,15 @@ export default function CreateSessionPage() {
     if (!formData.date) newErrors.date = t('dateRequired');
     if (!formData.start_time) newErrors.start_time = t('startTimeRequired');
     if (!formData.location) newErrors.location = t('locationRequired');
+    if (formData.is_paid) {
+      const price = parseFloat(formData.price_display);
+      if (!formData.price_display || isNaN(price) || price <= 0) {
+        newErrors.price_cents = language === 'es' ? 'El precio es obligatorio para sesiones de pago' : 'Price is required for paid sessions';
+      }
+      if (!formData.payment_instructions.trim()) {
+        newErrors.payment_instructions = language === 'es' ? 'Las instrucciones de pago son obligatorias' : 'Payment instructions are required for paid sessions';
+      }
+    }
     setErrors(newErrors);
     const errorFields = Object.keys(newErrors);
     if (errorFields.length > 0) {
@@ -102,8 +136,32 @@ export default function CreateSessionPage() {
     if (!validate()) return;
     setLoading(true);
     try {
+      // Build the session payload — strip UI-only fields and add paid fields
+      const { price_display, is_paid, currency, payment_instructions, ...rest } = formData;
+      const paidFields = is_paid
+        ? {
+            is_paid: true as const,
+            price_cents: Math.round(parseFloat(price_display) * 100),
+            currency,
+            payment_instructions,
+          }
+        : { is_paid: false as const };
+
+      // Build recurring fields if enabled
+      const recurringFields = recurringValue.is_recurring
+        ? {
+            is_recurring: true,
+            recurrence_pattern: recurringValue.recurrence_pattern || null,
+            recurrence_end_date: recurringValue.recurrence_end_date
+              ? new Date(recurringValue.recurrence_end_date + 'T00:00:00').toISOString()
+              : null,
+          }
+        : { is_recurring: false };
+
       const result = await insertSession(supabase, {
-        ...formData,
+        ...rest,
+        ...paidFields,
+        ...recurringFields,
         creator_id: user!.id,
         current_participants: 0,
         status: 'active',
@@ -337,6 +395,112 @@ export default function CreateSessionPage() {
                 onChange={handleChange}
                 placeholder={t('equipmentPlaceholder')}
                 className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
+              />
+            </div>
+
+            {/* ─── Paid Session Toggle ─── */}
+            <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-theme-primary font-semibold text-base">
+                    {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+                  </Label>
+                  <p className="text-xs text-theme-secondary mt-0.5">
+                    {language === 'es'
+                      ? 'Cobra a los participantes por esta sesión'
+                      : 'Charge participants for this session'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={formData.is_paid}
+                  onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-gray-400'}`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+
+              {formData.is_paid && (
+                <div className="space-y-3 pt-2 border-t border-theme">
+                  {/* Currency selector */}
+                  <div>
+                    <Label className="text-theme-primary mb-2">
+                      {language === 'es' ? 'Moneda' : 'Currency'}
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['COP', 'USD'] as const).map((cur) => (
+                        <button
+                          key={cur}
+                          type="button"
+                          onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
+                          className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
+                        >
+                          {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price input */}
+                  <div>
+                    <Label className="text-theme-primary mb-2">
+                      {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
+                        {formData.currency === 'COP' ? '$' : '$'}
+                      </span>
+                      <Input
+                        type="number"
+                        name="price_display"
+                        value={formData.price_display}
+                        onChange={handleChange}
+                        min="0"
+                        step={formData.currency === 'COP' ? '1000' : '0.01'}
+                        placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
+                        className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
+                      />
+                    </div>
+                    {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
+                    {formData.price_display && !isNaN(parseFloat(formData.price_display)) && (
+                      <p className="text-xs text-theme-secondary mt-1">
+                        {formData.currency === 'COP'
+                          ? `$${Number(formData.price_display).toLocaleString('es-CO')} COP`
+                          : `$${Number(formData.price_display).toFixed(2)} USD`}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Payment instructions */}
+                  <div>
+                    <Label className="text-theme-primary mb-2">
+                      {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
+                    </Label>
+                    <Textarea
+                      name="payment_instructions"
+                      value={formData.payment_instructions}
+                      onChange={handleChange}
+                      rows={3}
+                      placeholder={language === 'es'
+                        ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
+                        : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'}
+                      className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
+                    />
+                    {errors.payment_instructions && <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ─── Recurring Session Toggle ─── */}
+            <div className="border border-theme rounded-lg p-4 bg-theme-card">
+              <RecurringSessionToggle
+                value={recurringValue}
+                onChange={setRecurringValue}
               />
             </div>
 

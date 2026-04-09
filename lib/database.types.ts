@@ -327,6 +327,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          recipient_id: string
+          actor_id: string | null
+          type: string
+          entity_type: string | null
+          entity_id: string | null
+          message: string
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          recipient_id: string
+          actor_id?: string | null
+          type: string
+          entity_type?: string | null
+          entity_id?: string | null
+          message: string
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          recipient_id?: string
+          actor_id?: string | null
+          type?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          message?: string
+          is_read?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_notifications: {
         Row: {
           body: string
@@ -440,6 +491,90 @@ export type Database = {
           },
           {
             foreignKeyName: "reported_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          currency: string
+          gateway: string
+          gateway_payment_id: string | null
+          gateway_reference: string | null
+          id: string
+          instructor_payout_cents: number | null
+          paid_out_at: string | null
+          participant_user_id: string
+          payout_gateway: string | null
+          payout_reference: string | null
+          payout_status: string
+          platform_fee_cents: number | null
+          session_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_payment_intent_id: string | null
+          updated_at: string | null
+          wompi_payment_method: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          currency: string
+          gateway: string
+          gateway_payment_id?: string | null
+          gateway_reference?: string | null
+          id?: string
+          instructor_payout_cents?: number | null
+          paid_out_at?: string | null
+          participant_user_id: string
+          payout_gateway?: string | null
+          payout_reference?: string | null
+          payout_status?: string
+          platform_fee_cents?: number | null
+          session_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          wompi_payment_method?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          currency?: string
+          gateway?: string
+          gateway_payment_id?: string | null
+          gateway_reference?: string | null
+          id?: string
+          instructor_payout_cents?: number | null
+          paid_out_at?: string | null
+          participant_user_id?: string
+          payout_gateway?: string | null
+          payout_reference?: string | null
+          payout_status?: string
+          platform_fee_cents?: number | null
+          session_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_payment_intent_id?: string | null
+          updated_at?: string | null
+          wompi_payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_participant_user_id_fkey"
+            columns: ["participant_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
@@ -617,6 +752,11 @@ export type Database = {
           id: string
           is_guest: boolean | null
           joined_at: string | null
+          paid_at: string | null
+          payment_confirmed_by: string | null
+          payment_gateway: string | null
+          payment_id: string | null
+          payment_status: string | null
           session_id: string
           status: string | null
           user_id: string | null
@@ -628,6 +768,11 @@ export type Database = {
           id?: string
           is_guest?: boolean | null
           joined_at?: string | null
+          paid_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_gateway?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
           session_id: string
           status?: string | null
           user_id?: string | null
@@ -639,6 +784,11 @@ export type Database = {
           id?: string
           is_guest?: boolean | null
           joined_at?: string | null
+          paid_at?: string | null
+          payment_confirmed_by?: string | null
+          payment_gateway?: string | null
+          payment_id?: string | null
+          payment_status?: string | null
           session_id?: string
           status?: string | null
           user_id?: string | null
@@ -820,6 +970,7 @@ export type Database = {
         Row: {
           created_at: string | null
           creator_id: string
+          currency: string | null
           current_participants: number | null
           date: string
           description: string | null
@@ -830,6 +981,7 @@ export type Database = {
           gender_preference: string | null
           id: string
           is_immediate: boolean | null
+          is_paid: boolean | null
           is_training_now: boolean | null
           join_policy: string | null
           latitude: number | null
@@ -837,9 +989,14 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           longitude: number | null
+          max_paid_spots: number | null
           max_participants: number
+          payment_gateway: string | null
+          payment_instructions: string | null
           photo_verified: boolean | null
           photos: string[] | null
+          platform_fee_percent: number | null
+          price_cents: number | null
           recap_photos: string[] | null
           reminder_15min_sent: boolean | null
           reminder_1hr_sent: boolean | null
@@ -857,6 +1014,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           creator_id: string
+          currency?: string | null
           current_participants?: number | null
           date: string
           description?: string | null
@@ -867,6 +1025,7 @@ export type Database = {
           gender_preference?: string | null
           id?: string
           is_immediate?: boolean | null
+          is_paid?: boolean | null
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null
@@ -874,9 +1033,14 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           longitude?: number | null
+          max_paid_spots?: number | null
           max_participants: number
+          payment_gateway?: string | null
+          payment_instructions?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
+          platform_fee_percent?: number | null
+          price_cents?: number | null
           recap_photos?: string[] | null
           reminder_15min_sent?: boolean | null
           reminder_1hr_sent?: boolean | null
@@ -894,6 +1058,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           creator_id?: string
+          currency?: string | null
           current_participants?: number | null
           date?: string
           description?: string | null
@@ -904,6 +1069,7 @@ export type Database = {
           gender_preference?: string | null
           id?: string
           is_immediate?: boolean | null
+          is_paid?: boolean | null
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null
@@ -911,9 +1077,14 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           longitude?: number | null
+          max_paid_spots?: number | null
           max_participants?: number
+          payment_gateway?: string | null
+          payment_instructions?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
+          platform_fee_percent?: number | null
+          price_cents?: number | null
           recap_photos?: string[] | null
           reminder_15min_sent?: boolean | null
           reminder_1hr_sent?: boolean | null
@@ -993,8 +1164,10 @@ export type Database = {
           banned: boolean | null
           banner_url: string | null
           bio: string | null
+          certifications: string[] | null
           created_at: string | null
           date_of_birth: string | null
+          earnings_currency: string | null
           email: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -1002,9 +1175,14 @@ export type Database = {
           fcm_platform: string | null
           fcm_token: string | null
           fcm_updated_at: string | null
+          follower_count: number
+          following_count: number
           id: string
           instagram_username: string | null
+          instructor_bio: string | null
           is_admin: boolean | null
+          is_instructor: boolean | null
+          is_verified_instructor: boolean | null
           last_login_at: string | null
           last_motivation_message_id: string | null
           last_motivation_sent: string | null
@@ -1015,6 +1193,12 @@ export type Database = {
           location_lng: number | null
           name: string | null
           photos: string[] | null
+          payout_account_number: string | null
+          payout_account_type: string | null
+          payout_bank_name: string | null
+          payout_document_number: string | null
+          payout_document_type: string | null
+          payout_method: string | null
           preferred_language: string | null
           preferred_sports: string[] | null
           push_subscription: Json | null
@@ -1024,13 +1208,27 @@ export type Database = {
           session_reminders_enabled: boolean | null
           sessions_completed: number | null
           show_rate: number | null
+          specialties: string[] | null
           sports: string[] | null
+          storefront_banner_url: string | null
+          storefront_pro_expires: string | null
+          storefront_pro_since: string | null
+          storefront_tagline: string | null
+          storefront_tier: string | null
+          storefront_video_url: string | null
+          stripe_account_id: string | null
           terms_accepted: boolean | null
           terms_accepted_at: string | null
+          total_earnings_cents: number | null
+          total_participants_served: number | null
           total_reviews: number | null
+          total_sessions_hosted: number | null
           updated_at: string | null
           username: string | null
           verified_credentials: Json | null
+          website_url: string | null
+          wompi_merchant_id: string | null
+          years_experience: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1038,8 +1236,10 @@ export type Database = {
           banned?: boolean | null
           banner_url?: string | null
           bio?: string | null
+          certifications?: string[] | null
           created_at?: string | null
           date_of_birth?: string | null
+          earnings_currency?: string | null
           email: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -1047,9 +1247,14 @@ export type Database = {
           fcm_platform?: string | null
           fcm_token?: string | null
           fcm_updated_at?: string | null
+          follower_count?: number
+          following_count?: number
           id: string
           instagram_username?: string | null
+          instructor_bio?: string | null
           is_admin?: boolean | null
+          is_instructor?: boolean | null
+          is_verified_instructor?: boolean | null
           last_login_at?: string | null
           last_motivation_message_id?: string | null
           last_motivation_sent?: string | null
@@ -1060,6 +1265,12 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           photos?: string[] | null
+          payout_account_number?: string | null
+          payout_account_type?: string | null
+          payout_bank_name?: string | null
+          payout_document_number?: string | null
+          payout_document_type?: string | null
+          payout_method?: string | null
           preferred_language?: string | null
           preferred_sports?: string[] | null
           push_subscription?: Json | null
@@ -1069,13 +1280,27 @@ export type Database = {
           session_reminders_enabled?: boolean | null
           sessions_completed?: number | null
           show_rate?: number | null
+          specialties?: string[] | null
           sports?: string[] | null
+          storefront_banner_url?: string | null
+          storefront_pro_expires?: string | null
+          storefront_pro_since?: string | null
+          storefront_tagline?: string | null
+          storefront_tier?: string | null
+          storefront_video_url?: string | null
+          stripe_account_id?: string | null
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
+          total_earnings_cents?: number | null
+          total_participants_served?: number | null
           total_reviews?: number | null
+          total_sessions_hosted?: number | null
           updated_at?: string | null
           username?: string | null
           verified_credentials?: Json | null
+          website_url?: string | null
+          wompi_merchant_id?: string | null
+          years_experience?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -1083,8 +1308,10 @@ export type Database = {
           banned?: boolean | null
           banner_url?: string | null
           bio?: string | null
+          certifications?: string[] | null
           created_at?: string | null
           date_of_birth?: string | null
+          earnings_currency?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -1092,9 +1319,14 @@ export type Database = {
           fcm_platform?: string | null
           fcm_token?: string | null
           fcm_updated_at?: string | null
+          follower_count?: number
+          following_count?: number
           id?: string
           instagram_username?: string | null
+          instructor_bio?: string | null
           is_admin?: boolean | null
+          is_instructor?: boolean | null
+          is_verified_instructor?: boolean | null
           last_login_at?: string | null
           last_motivation_message_id?: string | null
           last_motivation_sent?: string | null
@@ -1105,6 +1337,12 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           photos?: string[] | null
+          payout_account_number?: string | null
+          payout_account_type?: string | null
+          payout_bank_name?: string | null
+          payout_document_number?: string | null
+          payout_document_type?: string | null
+          payout_method?: string | null
           preferred_language?: string | null
           preferred_sports?: string[] | null
           push_subscription?: Json | null
@@ -1114,15 +1352,450 @@ export type Database = {
           session_reminders_enabled?: boolean | null
           sessions_completed?: number | null
           show_rate?: number | null
+          specialties?: string[] | null
           sports?: string[] | null
+          storefront_banner_url?: string | null
+          storefront_pro_expires?: string | null
+          storefront_pro_since?: string | null
+          storefront_tagline?: string | null
+          storefront_tier?: string | null
+          storefront_video_url?: string | null
+          stripe_account_id?: string | null
           terms_accepted?: boolean | null
           terms_accepted_at?: string | null
+          total_earnings_cents?: number | null
+          total_participants_served?: number | null
           total_reviews?: number | null
+          total_sessions_hosted?: number | null
           updated_at?: string | null
           username?: string | null
           verified_credentials?: Json | null
+          website_url?: string | null
+          wompi_merchant_id?: string | null
+          years_experience?: number | null
         }
         Relationships: []
+      }
+      user_follows: {
+        Row: {
+          id: string
+          follower_id: string
+          following_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          follower_id: string
+          following_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          follower_id?: string
+          following_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_media: {
+        Row: {
+          id: string
+          user_id: string
+          media_url: string
+          media_type: string
+          thumbnail_url: string | null
+          caption: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          media_url: string
+          media_type: string
+          thumbnail_url?: string | null
+          caption?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          media_url?: string
+          media_type?: string
+          thumbnail_url?: string | null
+          caption?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_media_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_packages: {
+        Row: {
+          id: string
+          instructor_id: string
+          name: string
+          description: string | null
+          price_cents: number
+          currency: string
+          package_type: string
+          session_count: number | null
+          duration_days: number | null
+          is_active: boolean
+          tag: string | null
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          instructor_id: string
+          name: string
+          description?: string | null
+          price_cents: number
+          currency?: string
+          package_type?: string
+          session_count?: number | null
+          duration_days?: number | null
+          is_active?: boolean
+          tag?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          instructor_id?: string
+          name?: string
+          description?: string | null
+          price_cents?: number
+          currency?: string
+          package_type?: string
+          session_count?: number | null
+          duration_days?: number | null
+          is_active?: boolean
+          tag?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_packages_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instructor_posts: {
+        Row: {
+          id: string
+          author_id: string
+          content: string
+          media_url: string | null
+          media_type: string | null
+          linked_session_id: string | null
+          like_count: number
+          view_count: number
+          is_pinned: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          author_id: string
+          content: string
+          media_url?: string | null
+          media_type?: string | null
+          linked_session_id?: string | null
+          like_count?: number
+          view_count?: number
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          author_id?: string
+          content?: string
+          media_url?: string | null
+          media_type?: string | null
+          linked_session_id?: string | null
+          like_count?: number
+          view_count?: number
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instructor_posts_linked_session_id_fkey"
+            columns: ["linked_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          id: string
+          instructor_id: string
+          code: string
+          discount_type: string
+          discount_value: number
+          currency: string | null
+          max_uses: number | null
+          current_uses: number
+          applies_to: string
+          applies_to_id: string | null
+          min_amount_cents: number | null
+          starts_at: string
+          expires_at: string | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          instructor_id: string
+          code: string
+          discount_type: string
+          discount_value?: number
+          currency?: string | null
+          max_uses?: number | null
+          current_uses?: number
+          applies_to?: string
+          applies_to_id?: string | null
+          min_amount_cents?: number | null
+          starts_at?: string
+          expires_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          instructor_id?: string
+          code?: string
+          discount_type?: string
+          discount_value?: number
+          currency?: string | null
+          max_uses?: number | null
+          current_uses?: number
+          applies_to?: string
+          applies_to_id?: string | null
+          min_amount_cents?: number | null
+          starts_at?: string
+          expires_at?: string | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_codes_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_redemptions: {
+        Row: {
+          id: string
+          promo_code_id: string
+          user_id: string
+          payment_id: string | null
+          discount_amount_cents: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          promo_code_id: string
+          user_id: string
+          payment_id?: string | null
+          discount_amount_cents: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          promo_code_id?: string
+          user_id?: string
+          payment_id?: string | null
+          discount_amount_cents?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_redemptions_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_redemptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boost_campaigns: {
+        Row: {
+          id: string
+          instructor_id: string
+          boost_type: string
+          boosted_session_id: string | null
+          boosted_post_id: string | null
+          tier: string
+          daily_budget_cents: number
+          currency: string
+          total_budget_cents: number
+          spent_cents: number
+          starts_at: string
+          ends_at: string
+          impressions: number
+          clicks: number
+          conversions: number
+          status: string
+          boost_payment_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          instructor_id: string
+          boost_type: string
+          boosted_session_id?: string | null
+          boosted_post_id?: string | null
+          tier: string
+          daily_budget_cents: number
+          currency?: string
+          total_budget_cents: number
+          spent_cents?: number
+          starts_at?: string
+          ends_at: string
+          impressions?: number
+          clicks?: number
+          conversions?: number
+          status?: string
+          boost_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          instructor_id?: string
+          boost_type?: string
+          boosted_session_id?: string | null
+          boosted_post_id?: string | null
+          tier?: string
+          daily_budget_cents?: number
+          currency?: string
+          total_budget_cents?: number
+          spent_cents?: number
+          starts_at?: string
+          ends_at?: string
+          impressions?: number
+          clicks?: number
+          conversions?: number
+          status?: string
+          boost_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boost_campaigns_instructor_id_fkey"
+            columns: ["instructor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_campaigns_boosted_session_id_fkey"
+            columns: ["boosted_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boost_campaigns_boosted_post_id_fkey"
+            columns: ["boosted_post_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

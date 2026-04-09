@@ -6,6 +6,7 @@ import BackButtonHandler from '@/components/BackButtonHandler';
 import InAppNotificationToast from '@/components/InAppNotificationToast';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
+import FeedbackWidget from '@/components/FeedbackWidget';
 import './globals.css';
 import type { Metadata } from 'next';
 
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <BackButtonHandler />
               <InAppNotificationToast />
               {children}
+              <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
             </LanguageProvider>
           </ThemeProvider>
         </PostHogProvider>

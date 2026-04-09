@@ -27,12 +27,28 @@ import GuestJoinModal from './GuestJoinModal';
 import InviteModal from './InviteModal';
 import SessionStories from './SessionStories';
 import { useSessionDetail } from './useSessionDetail';
+import { confirmParticipantPayment } from '@/lib/dal';
+import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
+import PostSessionPrompt from '@/components/PostSessionPrompt';
 
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { t, language } = useLanguage();
+  const supabase = createClient();
   const d = useSessionDetail(params.id as string, language, (path) => router.push(path));
+
+  async function handleConfirmPayment(participantUserId: string) {
+    if (!d.user || !d.session) return;
+    const result = await confirmParticipantPayment(supabase, d.session.id, participantUserId, d.user.id);
+    if (result.success) {
+      showSuccess(language === 'es' ? 'Pago confirmado' : 'Payment confirmed');
+      d.loadSession();
+    } else {
+      showError(result.error || (language === 'es' ? 'Error al confirmar pago' : 'Failed to confirm payment'));
+    }
+  }
 
   if (d.loading)
     return (
@@ -177,6 +193,19 @@ export default function SessionDetailPage() {
           }}
         />
 
+        {/* Post-Session Follow-Through Prompt */}
+        {isPast && d.hasJoined && !isCreator && d.user && d.creator && !d.hasReviewed && (
+          <PostSessionPrompt
+            sessionId={d.session.id}
+            instructorId={d.creator.id}
+            instructorName={d.creator.name || ''}
+            instructorAvatar={d.creator.avatar_url}
+            userId={d.user.id}
+            sport={d.session.sport || ''}
+            onDismiss={() => {}}
+          />
+        )}
+
         <SessionStories
           stories={d.sessionStories}
           language={language}
@@ -187,8 +216,11 @@ export default function SessionDetailPage() {
           creator={d.creator}
           participants={d.participants}
           canKick={canKick}
+          isCreator={isCreator}
+          isPaidSession={!!d.session.is_paid}
           language={language}
           onKickUser={d.sessionActions.handleKickUser}
+          onConfirmPayment={handleConfirmPayment}
         />
 
         {d.user && (

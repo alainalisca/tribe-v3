@@ -1,7 +1,7 @@
 'use client';
 
 import { formatTime12Hour } from '@/lib/utils';
-import { Calendar, Clock, MapPin, Users, Star } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Star, DollarSign } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
@@ -150,6 +150,32 @@ export default function SessionDetails({
               <p className="text-xs text-muted-foreground mb-0.5">{t('equipmentNeeded')}</p>
               <span>{session.equipment}</span>
             </div>
+          </div>
+        )}
+
+        {session.is_paid && session.price_cents != null && (
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
+                {session.currency === 'COP'
+                  ? `$${(session.price_cents / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
+                  : `$${(session.price_cents / 100).toFixed(2)} USD`}
+              </span>
+              <Badge className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-xs border-transparent">
+                {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+              </Badge>
+            </div>
+            {session.payment_instructions && (
+              <div className="mt-2">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                  {language === 'es' ? 'Instrucciones de pago:' : 'Payment Instructions:'}
+                </p>
+                <p className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">
+                  {session.payment_instructions}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

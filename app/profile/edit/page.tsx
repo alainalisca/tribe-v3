@@ -4,8 +4,9 @@
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
 import { useLanguage } from '@/lib/LanguageContext';
-import { ArrowLeft, Save, Upload, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, Sparkles, DollarSign, Tag, Zap, Bell, Check, Store } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +16,8 @@ import { useEditProfile } from './useEditProfile';
 export default function EditProfilePage() {
   const { language } = useLanguage();
   const getTranslatedSport = (sport: string) => (language === 'es' ? sportTranslations[sport]?.es || sport : sport);
+
+  const [wizardStep, setWizardStep] = useState<0 | 1 | 2 | 3>(0);
 
   const {
     tr,
@@ -165,6 +168,390 @@ export default function EditProfilePage() {
               />
             </div>
           </div>
+        </div>
+
+        {/* ─── Instructor Profile ─── */}
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 space-y-4">
+          {wizardStep === 0 ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-theme-primary flex items-center gap-2">
+                    {language === 'es' ? '🏋️ Perfil de Instructor' : '🏋️ Instructor Profile'}
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
+                    {language === 'es'
+                      ? 'Activa para crear sesiones de pago y aparecer en Discover'
+                      : 'Enable to create paid sessions and appear on Discover'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={formData.is_instructor}
+                  onClick={() => {
+                    if (!formData.is_instructor) {
+                      setFormData({ ...formData, is_instructor: true });
+                      setWizardStep(1);
+                    } else {
+                      setFormData({ ...formData, is_instructor: false });
+                    }
+                  }}
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_instructor ? 'bg-tribe-green' : 'bg-gray-400'}`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform ${formData.is_instructor ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Step Indicator */}
+              <div className="flex items-center justify-between px-2 mb-6">
+                {[1, 2, 3].map((step) => (
+                  <div key={step} className="flex items-center">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition ${
+                        wizardStep > step
+                          ? 'bg-tribe-green text-slate-900'
+                          : wizardStep === step
+                            ? 'bg-tribe-green text-slate-900'
+                            : 'border-2 border-stone-300 dark:border-gray-600 text-theme-secondary'
+                      }`}
+                    >
+                      {wizardStep > step ? <Check className="w-4 h-4" /> : step}
+                    </div>
+                    {step < 3 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-2 transition ${wizardStep > step ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-gray-600'}`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center mb-4">
+                <h3 className="text-sm font-bold text-theme-primary">
+                  {wizardStep === 1 &&
+                    (language === 'es' ? '1. Identidad Profesional' : '1. Professional Identity')}
+                  {wizardStep === 2 && (language === 'es' ? '2. Tu Escaparate' : '2. Your Storefront')}
+                  {wizardStep === 3 && (language === 'es' ? '3. Monetización' : '3. Monetization')}
+                </h3>
+              </div>
+
+              {/* Step 1: Professional Identity */}
+              {wizardStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Bio profesional' : 'Professional Bio'}
+                    </Label>
+                    <Textarea
+                      value={formData.instructor_bio}
+                      onChange={(e) => setFormData({ ...formData, instructor_bio: e.target.value })}
+                      placeholder={
+                        language === 'es'
+                          ? 'Ej: NASM-CPT con 8 años de experiencia en...'
+                          : 'E.g. NASM-CPT with 8 years of experience in...'
+                      }
+                      rows={3}
+                      className="py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
+                    />
+                    <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
+                      {language === 'es'
+                        ? 'Esto aparece en tu escaparate y ayuda a los participantes a decidir reservar contigo'
+                        : 'This appears on your storefront and helps participants decide to book with you'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Especialidades (separadas por coma)' : 'Specialties (comma-separated)'}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={formData.specialties.join(', ')}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          specialties: e.target.value
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder="E.g. CrossFit, HIIT, Yoga, Pilates"
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Certificaciones (separadas por coma)' : 'Certifications (comma-separated)'}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={formData.certifications.join(', ')}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          certifications: e.target.value
+                            .split(',')
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      placeholder="E.g. NASM-CPT, Yoga RYT-200"
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Años de experiencia' : 'Years of Experience'}
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formData.years_experience ?? ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          years_experience: e.target.value ? parseInt(e.target.value, 10) : null,
+                        })
+                      }
+                      min="0"
+                      max="60"
+                      placeholder="5"
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Sitio web' : 'Website'}
+                    </Label>
+                    <Input
+                      type="url"
+                      value={formData.website_url}
+                      onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                      placeholder="https://yourwebsite.com"
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => {
+                        setFormData({ ...formData, is_instructor: false });
+                        setWizardStep(0);
+                      }}
+                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                    >
+                      {language === 'es' ? 'Atrás' : 'Back'}
+                    </button>
+                    <button
+                      onClick={() => setWizardStep(2)}
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                    >
+                      {language === 'es' ? 'Siguiente' : 'Next'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Your Storefront */}
+              {wizardStep === 2 && (
+                <div className="space-y-4">
+                  <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] mb-4">
+                    <h4 className="text-xs font-semibold text-theme-secondary mb-3">
+                      {language === 'es' ? 'Vista previa de tu escaparate' : 'Storefront Preview'}
+                    </h4>
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-tribe-green rounded-full flex items-center justify-center text-slate-900 font-bold mb-2">
+                        {formData.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .substring(0, 2)
+                          .toUpperCase() || 'IN'}
+                      </div>
+                      <h3 className="font-semibold text-theme-primary text-sm">{formData.name || 'Your Name'}</h3>
+                      <p className="text-xs text-stone-600 dark:text-gray-400 mb-2">
+                        {formData.storefront_tagline || (language === 'es' ? 'Tu descripción' : 'Your tagline')}
+                      </p>
+                      {formData.specialties.length > 0 && (
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {formData.specialties.slice(0, 3).map((spec) => (
+                            <span
+                              key={spec}
+                              className="px-2 py-0.5 bg-tribe-green text-slate-900 rounded-full text-xs font-semibold"
+                            >
+                              {spec}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Descripción de una línea (tagline)' : 'One-line tagline'}
+                    </Label>
+                    <Input
+                      type="text"
+                      value={formData.storefront_tagline}
+                      onChange={(e) => setFormData({ ...formData, storefront_tagline: e.target.value })}
+                      placeholder={
+                        language === 'es' ? 'Ej: Entrenador de fitness certificado' : 'E.g. Certified fitness coach'
+                      }
+                      maxLength={100}
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                    <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
+                      {language === 'es'
+                        ? 'Una descripción de una línea que aparece debajo de tu nombre'
+                        : 'A one-line description that appears under your name'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'URL de imagen de banner' : 'Banner Image URL'}
+                    </Label>
+                    <Input
+                      type="url"
+                      value={formData.storefront_banner_url}
+                      onChange={(e) => setFormData({ ...formData, storefront_banner_url: e.target.value })}
+                      placeholder="https://example.com/banner.jpg"
+                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    />
+                    <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
+                      {language === 'es'
+                        ? 'URL para una imagen de banner en tu escaparate'
+                        : 'URL to a banner image for your storefront'}
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p className="text-xs text-stone-700 dark:text-gray-300">
+                      {language === 'es'
+                        ? 'Tu escaparate es tu página pública en /storefront/tu-id. Los participantes te descubren aquí.'
+                        : 'Your storefront is your public page at /storefront/your-id. Participants discover you here.'}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setWizardStep(1)}
+                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                    >
+                      {language === 'es' ? 'Atrás' : 'Back'}
+                    </button>
+                    <button
+                      onClick={() => setWizardStep(3)}
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                    >
+                      {language === 'es' ? 'Siguiente' : 'Next'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Monetization Overview */}
+              {wizardStep === 3 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                      <DollarSign className="w-6 h-6 text-tribe-green mb-2" />
+                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
+                        {language === 'es' ? 'Sesiones de Pago' : 'Paid Sessions'}
+                      </h4>
+                      <p className="text-xs text-stone-600 dark:text-gray-400">
+                        {language === 'es'
+                          ? 'Establece precios en tus sesiones y cobra pagos'
+                          : 'Set prices on your sessions and collect payments'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                      <Tag className="w-6 h-6 text-tribe-green mb-2" />
+                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
+                        {language === 'es' ? 'Códigos Promo' : 'Promo Codes'}
+                      </h4>
+                      <p className="text-xs text-stone-600 dark:text-gray-400">
+                        {language === 'es'
+                          ? 'Crea códigos de descuento para atraer nuevos clientes'
+                          : 'Create discount codes to attract new clients'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                      <Zap className="w-6 h-6 text-tribe-green mb-2" />
+                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
+                        {language === 'es' ? 'Campañas de Impulso' : 'Boost Campaigns'}
+                      </h4>
+                      <p className="text-xs text-stone-600 dark:text-gray-400">
+                        {language === 'es'
+                          ? 'Paga para promocionar sesiones en el feed de descubrimiento'
+                          : 'Pay to promote sessions in the discovery feed'}
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                      <Bell className="w-6 h-6 text-tribe-green mb-2" />
+                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
+                        {language === 'es' ? 'Anuncios' : 'Announcements'}
+                      </h4>
+                      <p className="text-xs text-stone-600 dark:text-gray-400">
+                        {language === 'es'
+                          ? 'Publica actualizaciones que llegan a tus seguidores'
+                          : 'Post updates that push to your followers'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-theme-secondary mb-1 block">
+                      {language === 'es' ? 'Moneda de ganancias' : 'Earnings Currency'}
+                    </Label>
+                    <select
+                      value={formData.earnings_currency || 'COP'}
+                      onChange={(e) => setFormData({ ...formData, earnings_currency: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-theme-primary dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
+                    >
+                      <option value="COP">{language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}</option>
+                      <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p className="text-xs text-stone-700 dark:text-gray-300">
+                      {language === 'es'
+                        ? 'Puedes configurar estas funciones en cualquier momento desde el hub de Promoción (/promote)'
+                        : 'You can set up these features anytime from the Promote hub (/promote)'}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setWizardStep(2)}
+                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                    >
+                      {language === 'es' ? 'Atrás' : 'Back'}
+                    </button>
+                    <button
+                      onClick={() => setWizardStep(0)}
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                    >
+                      {language === 'es' ? 'Listo' : 'Done'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Emergency Contact */}

@@ -13,6 +13,7 @@ interface FilterState {
   maxDistance: number;
   dateFilter: string;
   genderFilter: string;
+  pricingFilter: string; // 'all' | 'free' | 'paid'
 }
 
 interface UseSessionFilteringArgs {
@@ -27,6 +28,7 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
     maxDistance: 100,
     dateFilter: 'all',
     genderFilter: 'all',
+    pricingFilter: 'all',
   });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -86,6 +88,11 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
         (s) => s.gender_preference === filters.genderFilter || s.gender_preference === 'all' || !s.gender_preference
       );
     }
+    if (filters.pricingFilter !== 'all') {
+      filtered = filtered.filter((s) =>
+        filters.pricingFilter === 'paid' ? s.is_paid === true : !s.is_paid
+      );
+    }
     return filtered;
   }, [sessions, filters, userLocation]);
 
@@ -94,6 +101,7 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
   const setMaxDistance = useCallback((v: number) => setFilters((f) => ({ ...f, maxDistance: v })), []);
   const setDateFilter = useCallback((v: string) => setFilters((f) => ({ ...f, dateFilter: v })), []);
   const setGenderFilter = useCallback((v: string) => setFilters((f) => ({ ...f, genderFilter: v })), []);
+  const setPricingFilter = useCallback((v: string) => setFilters((f) => ({ ...f, pricingFilter: v })), []);
 
   return {
     filteredSessions,
@@ -108,6 +116,8 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
     setDateFilter,
     genderFilter: filters.genderFilter,
     setGenderFilter,
+    pricingFilter: filters.pricingFilter,
+    setPricingFilter,
     visibleCount,
     setVisibleCount,
     PAGE_SIZE,

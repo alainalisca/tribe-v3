@@ -16,6 +16,7 @@ export interface SessionParticipantWithUser {
   status: string | null;
   is_guest?: boolean | null;
   guest_name?: string | null;
+  payment_status?: string | null;
   user: { id: string; name: string; avatar_url: string | null } | null;
 }
 
@@ -74,7 +75,7 @@ export async function fetchSessionWithDetails(
 
     const { data: participants } = await supabase
       .from('session_participants')
-      .select('user_id, status, is_guest, guest_name, user:users(id, name, avatar_url)')
+      .select('user_id, status, is_guest, guest_name, payment_status, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
 
@@ -109,7 +110,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
         participants:session_participants(
           user_id,
           status,
-          user:users(id, name, avatar_url)
+          user:users!session_participants_user_id_fkey(id, name, avatar_url)
         ),
         creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
       `
@@ -367,5 +368,33 @@ export async function fetchSessionFields(
   } catch (error) {
     logError(error, { action: 'fetchSessionFields' });
     return { success: false, error: 'Failed' };
+  }
+}
+
+/**
+ * Confirms a participant's payment for a paid session.
+ * Only the session creator should call this (RLS enforces at DB level).
+ */
+export async function confirmParticipantPayment(
+  supabase: SupabaseClient,
+  sessionId: string,
+  participantUserId: string,
+  confirmedByUserId: string
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('session_participants')
+      .update({
+        payment_status: 'confirmed',
+        paid_at: new Date().toISOString(),
+        payment_confirmed_by: confirmedByUserId,
+      })
+      .eq('session_id', sessionId)
+      .eq('user_id', participantUserId);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'confirmParticipantPayment', sessionId, participantUserId });
+    return { success: false, error: 'Failed to confirm payment' };
   }
 }

@@ -188,6 +188,8 @@ export function useHomeFeed() {
     setDateFilter: filtering.setDateFilter,
     genderFilter: filtering.genderFilter,
     setGenderFilter: filtering.setGenderFilter,
+    pricingFilter: filtering.pricingFilter,
+    setPricingFilter: filtering.setPricingFilter,
     showSafetyWaiver: actions.showSafetyWaiver,
     setShowSafetyWaiver: actions.setShowSafetyWaiver,
     setPendingSessionId: actions.setPendingSessionId,

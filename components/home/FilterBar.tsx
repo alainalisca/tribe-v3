@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { Search, X, MessageCircle, Film } from 'lucide-react';
+import { Search, X, MessageCircle, Film, Search as SearchIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
+import NotificationBell from '@/components/NotificationBell';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
 
 interface FilterBarProps {
@@ -16,6 +17,8 @@ interface FilterBarProps {
   setDateFilter: (filter: string) => void;
   genderFilter: string;
   setGenderFilter: (filter: string) => void;
+  pricingFilter: string;
+  setPricingFilter: (filter: string) => void;
   maxDistance: number;
   setMaxDistance: (distance: number) => void;
   userLocation: { latitude: number; longitude: number } | null;
@@ -35,6 +38,8 @@ export default function FilterBar({
   setDateFilter,
   genderFilter,
   setGenderFilter,
+  pricingFilter,
+  setPricingFilter,
   maxDistance,
   setMaxDistance,
   userLocation,
@@ -74,12 +79,16 @@ export default function FilterBar({
           </h1>
         </Link>
         <div className="flex items-center gap-3">
+          <Link href="/search" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
+            <SearchIcon className="w-5 h-5" />
+          </Link>
           <Link href="/stories" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
             <Film className="w-6 h-6" />
           </Link>
           <Link href="/messages" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
             <MessageCircle className="w-6 h-6" />
           </Link>
+          <NotificationBell />
           <LanguageToggle />
         </div>
       </div>
@@ -107,7 +116,7 @@ export default function FilterBar({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <select
               value={selectedSport}
               onChange={(e) => setSelectedSport(e.target.value)}
@@ -141,6 +150,16 @@ export default function FilterBar({
               <option value="women_only">👩 {t('women')}</option>
               <option value="men_only">👨 {t('men')}</option>
             </select>
+
+            <select
+              value={pricingFilter}
+              onChange={(e) => setPricingFilter(e.target.value)}
+              className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+            >
+              <option value="all">{language === 'es' ? '💰 Todos' : '💰 All'}</option>
+              <option value="free">{language === 'es' ? '🆓 Gratis' : '🆓 Free'}</option>
+              <option value="paid">{language === 'es' ? '💳 De pago' : '💳 Paid'}</option>
+            </select>
           </div>
 
           {userLocation && (
@@ -170,13 +189,14 @@ export default function FilterBar({
                   {filteredCount} {t('sessionsCount')}
                 </p>
               )}
-              {(searchQuery || selectedSport || dateFilter !== 'all' || genderFilter !== 'all') && (
+              {(searchQuery || selectedSport || dateFilter !== 'all' || genderFilter !== 'all' || pricingFilter !== 'all') && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     setSelectedSport('');
                     setDateFilter('all');
                     setGenderFilter('all');
+                    setPricingFilter('all');
                   }}
                   className="text-xs text-tribe-green hover:underline"
                 >

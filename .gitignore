@@ -22,3 +22,8 @@ android/app/app.keystore
 *.p8
 generate-apple-secret.js
 supabase/.temp/
+
+# Firebase service account keys
+tribe-*.json
+*.csv
+tribe_v3_skills.zip

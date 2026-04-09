@@ -6,7 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -22,6 +22,7 @@ import {
   fetchBlockedStatus,
   fetchSessionsByCreatorCount,
   fetchParticipantCountForUser,
+  getOrCreateDirectConversation,
 } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
@@ -57,6 +58,7 @@ export default function PublicProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [startingChat, setStartingChat] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -188,6 +190,24 @@ export default function PublicProfilePage() {
     }
   }
 
+  async function handleMessage() {
+    if (!currentUser) return;
+    setStartingChat(true);
+    try {
+      const result = await getOrCreateDirectConversation(supabase, currentUser.id, userId);
+      if (!result.success || !result.data) {
+        showError(language === 'es' ? 'No se pudo iniciar la conversación' : 'Could not start conversation');
+        return;
+      }
+      router.push(`/messages/${result.data}`);
+    } catch (error: unknown) {
+      logError(error, { action: 'handleMessage' });
+      showError(language === 'es' ? 'Error al iniciar chat' : 'Error starting chat');
+    } finally {
+      setStartingChat(false);
+    }
+  }
+
   if (loading)
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
@@ -242,6 +262,16 @@ export default function PublicProfilePage() {
           </div>
           {currentUser && !isOwnProfile && (
             <div className="flex gap-2">
+              <button
+                onClick={handleMessage}
+                disabled={startingChat}
+                className="px-3 py-1.5 bg-tribe-green text-slate-900 rounded-lg text-sm font-bold hover:bg-[#8FD642] transition disabled:opacity-50"
+              >
+                <MessageCircle className="w-4 h-4 inline mr-1" />
+                {startingChat
+                  ? (language === 'es' ? 'Abriendo...' : 'Opening...')
+                  : (language === 'es' ? 'Mensaje' : 'Message')}
+              </button>
               <button
                 onClick={handleBlock}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${isBlocked ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
@@ -328,6 +358,63 @@ export default function PublicProfilePage() {
           {profile?.bio && (
             <div className="mt-6 bg-white rounded-2xl p-5 border border-stone-200">
               <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
+            </div>
+          )}
+
+          {profile?.is_instructor && (
+            <div className="mt-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                  {language === 'es' ? '🏋️ Instructor' : '🏋️ Instructor'}
+                </h3>
+                {profile.is_verified_instructor && (
+                  <span className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-700 text-emerald-800 dark:text-emerald-200 rounded-full text-xs font-bold">
+                    {language === 'es' ? 'Verificado' : 'Verified'}
+                  </span>
+                )}
+              </div>
+              {profile.instructor_bio && (
+                <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed mb-3">{profile.instructor_bio}</p>
+              )}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {profile.specialties && (profile.specialties as string[]).map((s: string, i: number) => (
+                  <span key={i} className="px-3 py-1 bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 rounded-full text-xs font-medium">
+                    {s}
+                  </span>
+                ))}
+              </div>
+              {profile.certifications && (profile.certifications as string[]).length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                    {language === 'es' ? 'Certificaciones' : 'Certifications'}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {(profile.certifications as string[]).map((c: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 bg-white dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded text-xs border border-emerald-300 dark:border-emerald-700">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-4 text-xs text-emerald-700 dark:text-emerald-400">
+                {profile.years_experience != null && (
+                  <span>{profile.years_experience} {language === 'es' ? 'años exp.' : 'yrs exp.'}</span>
+                )}
+                {profile.total_sessions_hosted != null && profile.total_sessions_hosted > 0 && (
+                  <span>{profile.total_sessions_hosted} {language === 'es' ? 'sesiones' : 'sessions hosted'}</span>
+                )}
+              </div>
+              {profile.website_url && (
+                <a
+                  href={profile.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-xs text-blue-600 hover:underline"
+                >
+                  {profile.website_url}
+                </a>
+              )}
             </div>
           )}
 

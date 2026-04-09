@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
+import AchievementBadges from '@/components/AchievementBadges';
 
 export default function ProfilePage() {
   const { language, t } = useLanguage();
@@ -146,6 +147,13 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
           </div>
+
+          {/* Achievement Badges */}
+          {profile?.id && (
+            <div className="mt-6">
+              <AchievementBadges userId={profile.id} isOwnProfile={true} />
+            </div>
+          )}
 
           {/* Bio */}
           <div className="mt-6">

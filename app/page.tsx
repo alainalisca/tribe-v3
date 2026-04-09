@@ -8,6 +8,8 @@ import SessionCard from '@/components/SessionCard';
 import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
 import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
+import StreakBanner from '@/components/StreakBanner';
+import ReferralBanner from '@/components/ReferralBanner';
 import { SkeletonCard } from '@/components/Skeleton';
 import SafetyWaiverModal from '@/components/SafetyWaiverModal';
 import StoriesRow from '@/components/StoriesRow';
@@ -69,6 +71,8 @@ export default function HomePage() {
         setDateFilter={f.setDateFilter}
         genderFilter={f.genderFilter}
         setGenderFilter={f.setGenderFilter}
+        pricingFilter={f.pricingFilter}
+        setPricingFilter={f.setPricingFilter}
         maxDistance={f.maxDistance}
         setMaxDistance={f.setMaxDistance}
         userLocation={f.userLocation}
@@ -126,6 +130,12 @@ export default function HomePage() {
               userId={f.user.id}
             />
           )}
+
+          {/* Streak Banner */}
+          {f.user && <StreakBanner userId={f.user.id} />}
+
+          {/* Referral Banner */}
+          {f.user && <ReferralBanner userId={f.user.id} />}
 
           {f.user && (
             <button
