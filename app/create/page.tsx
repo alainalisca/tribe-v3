@@ -412,9 +412,7 @@ export default function CreateSessionPage() {
                     {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
                   </Label>
                   <p className="text-xs text-theme-secondary mt-0.5">
-                    {language === 'es'
-                      ? 'Cobra a los participantes por esta sesión'
-                      : 'Charge participants for this session'}
+                    {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
                   </p>
                 </div>
                 <button
@@ -480,7 +478,7 @@ export default function CreateSessionPage() {
                           <div className="space-y-1">
                             <div className="flex justify-between text-sm">
                               <span className="text-emerald-800 dark:text-emerald-300">
-                                {language === 'es' ? 'Precio del participante' : 'Participant pays'}
+                                {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
                               </span>
                               <span className="font-medium text-emerald-800 dark:text-emerald-300">
                                 {formData.currency === 'COP'

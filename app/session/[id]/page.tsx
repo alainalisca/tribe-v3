@@ -1,4 +1,4 @@
-/** Page: /session/[id] — Session detail with participants, chat, live status, and actions */
+/** Page: /session/[id] — Session detail with athletes, chat, live status, and actions */
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';

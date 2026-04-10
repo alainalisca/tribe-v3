@@ -129,7 +129,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
         {/* Location */}
         <div className="text-xs text-gray-300 line-clamp-1">📍 {event.location_name}</div>
 
-        {/* Participant Count */}
+        {/* Athlete Count */}
         {event.participant_count && (
           <div className="text-xs text-gray-400">👥 {event.participant_count} interested</div>
         )}

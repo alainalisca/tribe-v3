@@ -21,18 +21,15 @@ import {
 
 const getTranslations = (language: 'en' | 'es') => ({
   welcome: language === 'es' ? '¡Bienvenido a Tribe!' : 'Welcome to Tribe!',
-  subtitle:
-    language === 'es'
-      ? '¿Cómo usarás la plataforma?'
-      : 'How will you use the platform?',
-  participantTitle: language === 'es' ? 'Quiero Entrenar' : 'I Want to Train',
-  participantDesc:
+  subtitle: language === 'es' ? '¿Cómo usarás la plataforma?' : 'How will you use the platform?',
+  athleteTitle: language === 'es' ? 'Quiero Entrenar' : 'I Want to Train',
+  athleteDesc:
     language === 'es'
       ? 'Descubre sesiones, conecta con instructores y entrena con tu tribu'
       : 'Discover sessions, connect with instructors, and train with your tribe',
-  participantFeature1: language === 'es' ? 'Buscar sesiones cercanas' : 'Find nearby sessions',
-  participantFeature2: language === 'es' ? 'Seguir instructores favoritos' : 'Follow favorite instructors',
-  participantFeature3: language === 'es' ? 'Conectar con tu comunidad' : 'Connect with your community',
+  athleteFeature1: language === 'es' ? 'Buscar sesiones cercanas' : 'Find nearby sessions',
+  athleteFeature2: language === 'es' ? 'Seguir instructores favoritos' : 'Follow favorite instructors',
+  athleteFeature3: language === 'es' ? 'Conectar con tu comunidad' : 'Connect with your community',
   instructorTitle: language === 'es' ? 'Quiero Enseñar' : 'I Want to Teach',
   instructorDesc:
     language === 'es'
@@ -43,9 +40,7 @@ const getTranslations = (language: 'en' | 'es') => ({
   instructorFeature3: language === 'es' ? 'Promocionar y crecer tu audiencia' : 'Promote and grow your audience',
   getStarted: language === 'es' ? 'Empezar' : 'Get Started',
   canChangeLater:
-    language === 'es'
-      ? 'Puedes cambiar esto después en tu perfil'
-      : 'You can always change this later in your profile',
+    language === 'es' ? 'Puedes cambiar esto después en tu perfil' : 'You can always change this later in your profile',
 });
 
 export default function OnboardingRolePage() {
@@ -111,12 +106,8 @@ export default function OnboardingRolePage() {
       <div className="w-full max-w-lg space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-stone-900 dark:text-white">
-            {t.welcome}
-          </h1>
-          <p className="text-stone-600 dark:text-gray-300 text-base">
-            {t.subtitle}
-          </p>
+          <h1 className="text-3xl font-bold text-stone-900 dark:text-white">{t.welcome}</h1>
+          <p className="text-stone-600 dark:text-gray-300 text-base">{t.subtitle}</p>
         </div>
 
         {/* Role Cards */}
@@ -141,24 +132,20 @@ export default function OnboardingRolePage() {
                 <Dumbbell className="w-7 h-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
-                  {t.participantTitle}
-                </h2>
-                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">
-                  {t.participantDesc}
-                </p>
+                <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">{t.athleteTitle}</h2>
+                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">{t.athleteDesc}</p>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
                     <Calendar className="w-3.5 h-3.5 text-tribe-green shrink-0" />
-                    <span>{t.participantFeature1}</span>
+                    <span>{t.athleteFeature1}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
                     <Star className="w-3.5 h-3.5 text-tribe-green shrink-0" />
-                    <span>{t.participantFeature2}</span>
+                    <span>{t.athleteFeature2}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
                     <Users className="w-3.5 h-3.5 text-tribe-green shrink-0" />
-                    <span>{t.participantFeature3}</span>
+                    <span>{t.athleteFeature3}</span>
                   </div>
                 </div>
               </div>
@@ -170,9 +157,7 @@ export default function OnboardingRolePage() {
                     : 'border-stone-300 dark:border-gray-500'
                 }`}
               >
-                {selectedRole === 'participant' && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
-                )}
+                {selectedRole === 'participant' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </div>
           </button>
@@ -197,12 +182,8 @@ export default function OnboardingRolePage() {
                 <GraduationCap className="w-7 h-7" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
-                  {t.instructorTitle}
-                </h2>
-                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">
-                  {t.instructorDesc}
-                </p>
+                <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">{t.instructorTitle}</h2>
+                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">{t.instructorDesc}</p>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
                     <TrendingUp className="w-3.5 h-3.5 text-tribe-green shrink-0" />
@@ -226,9 +207,7 @@ export default function OnboardingRolePage() {
                     : 'border-stone-300 dark:border-gray-500'
                 }`}
               >
-                {selectedRole === 'instructor' && (
-                  <div className="w-2.5 h-2.5 rounded-full bg-white" />
-                )}
+                {selectedRole === 'instructor' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </div>
           </button>
@@ -255,9 +234,7 @@ export default function OnboardingRolePage() {
         </button>
 
         {/* Disclaimer */}
-        <p className="text-center text-xs text-stone-400 dark:text-gray-500">
-          {t.canChangeLater}
-        </p>
+        <p className="text-center text-xs text-stone-400 dark:text-gray-500">{t.canChangeLater}</p>
       </div>
     </div>
   );

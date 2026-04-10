@@ -233,8 +233,7 @@ export default function EditProfilePage() {
 
               <div className="text-center mb-4">
                 <h3 className="text-sm font-bold text-theme-primary">
-                  {wizardStep === 1 &&
-                    (language === 'es' ? '1. Identidad Profesional' : '1. Professional Identity')}
+                  {wizardStep === 1 && (language === 'es' ? '1. Identidad Profesional' : '1. Professional Identity')}
                   {wizardStep === 2 && (language === 'es' ? '2. Tu Escaparate' : '2. Your Storefront')}
                   {wizardStep === 3 && (language === 'es' ? '3. Monetización' : '3. Monetization')}
                 </h3>
@@ -260,8 +259,8 @@ export default function EditProfilePage() {
                     />
                     <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
                       {language === 'es'
-                        ? 'Esto aparece en tu escaparate y ayuda a los participantes a decidir reservar contigo'
-                        : 'This appears on your storefront and helps participants decide to book with you'}
+                        ? 'Esto aparece en tu escaparate y ayuda a los atletas a decidir reservar contigo'
+                        : 'This appears on your storefront and helps athletes decide to book with you'}
                     </p>
                   </div>
 
@@ -437,8 +436,8 @@ export default function EditProfilePage() {
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                     <p className="text-xs text-stone-700 dark:text-gray-300">
                       {language === 'es'
-                        ? 'Tu escaparate es tu página pública en /storefront/tu-id. Los participantes te descubren aquí.'
-                        : 'Your storefront is your public page at /storefront/your-id. Participants discover you here.'}
+                        ? 'Tu escaparate es tu página pública en /storefront/tu-id. Los atletas te descubren aquí.'
+                        : 'Your storefront is your public page at /storefront/your-id. Athletes discover you here.'}
                     </p>
                   </div>
 
@@ -521,7 +520,9 @@ export default function EditProfilePage() {
                       onChange={(e) => setFormData({ ...formData, earnings_currency: e.target.value })}
                       className="w-full px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-theme-primary dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
                     >
-                      <option value="COP">{language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}</option>
+                      <option value="COP">
+                        {language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}
+                      </option>
                       <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
                     </select>
                   </div>

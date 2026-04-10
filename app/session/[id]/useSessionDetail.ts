@@ -24,7 +24,7 @@ import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
 export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNavigate: (path: string) => void) {
   const supabase = createClient();
 
-  // REASON: Session/creator/participants are complex DB shapes — full typing deferred
+  // REASON: Session/creator/athletes are complex DB shapes — full typing deferred
   const [session, setSession] = useState<any>(null);
   const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);

@@ -45,7 +45,7 @@ export const extEn = {
   // Session detail
   sessionNotFound: 'Session not found',
   sessionDetails: 'Session Details',
-  participants: 'Participants',
+  participants: 'Athletes',
   host: 'Host',
   unknown: 'Unknown',
   locationPhotos: 'Location Photos',
@@ -193,7 +193,7 @@ export const extEn = {
   // PhotoUploadSection
   maxPhotosAllowed: 'Maximum 3 photos allowed',
   locationPhotosMax: 'Location photos (max 3)',
-  helpFindMeetingSpot: 'Help participants find the meeting spot',
+  helpFindMeetingSpot: 'Help athletes find the meeting spot',
 
   // Training Now
   thirtyMin: '30 min',
@@ -289,7 +289,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // Session detail
   sessionNotFound: 'Sesion no encontrada',
   sessionDetails: 'Detalles de la Sesion',
-  participants: 'Participantes',
+  participants: 'Atletas',
   host: 'Anfitrion',
   unknown: 'Desconocido',
   locationPhotos: 'Fotos del Lugar',
@@ -437,7 +437,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // PhotoUploadSection
   maxPhotosAllowed: 'Maximo 3 fotos permitidas',
   locationPhotosMax: 'Fotos del lugar (max 3)',
-  helpFindMeetingSpot: 'Ayuda a los participantes a encontrar el punto de encuentro',
+  helpFindMeetingSpot: 'Ayuda a los atletas a encontrar el punto de encuentro',
 
   // Training Now
   thirtyMin: '30 min',

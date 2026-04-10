@@ -1,4 +1,4 @@
-/** Page: /session/[id]/chat — Real-time chat for session participants */
+/** Page: /session/[id]/chat — Real-time chat for session athletes */
 'use client';
 
 import { useParams } from 'next/navigation';

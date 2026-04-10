@@ -86,7 +86,7 @@ export function useMessages() {
 
   async function loadSessionConversations(userId: string) {
     try {
-      // Get all sessions where user is a participant (including as creator)
+      // Get all sessions where user is an athlete (including as creator)
       const participantResult = await fetchParticipantSessionIds(supabase, userId);
       if (!participantResult.success) throw new Error(participantResult.error);
 

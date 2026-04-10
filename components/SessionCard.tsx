@@ -102,7 +102,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
             </button>
           </div>
 
-          {/* Participant Info */}
+          {/* Athlete Info */}
           <div className="flex items-center justify-between text-stone-700 dark:text-[#E0E0E0] mb-3">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-2 text-tribe-green" />
@@ -202,7 +202,8 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
                 </div>
               </div>
               {/* Social proof stats */}
-              {(Number(session.creator.total_reviews) > 0 || confirmedParticipants.length >= session.max_participants * 0.7) && (
+              {(Number(session.creator.total_reviews) > 0 ||
+                confirmedParticipants.length >= session.max_participants * 0.7) && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {confirmedParticipants.length >= session.max_participants * 0.7 && !isPast && !isFull && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 text-[10px] font-semibold rounded-full">
@@ -219,7 +220,7 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
             </div>
           )}
 
-          {/* Participants Avatars */}
+          {/* Athletes Avatars */}
           {confirmedParticipants.length > 0 && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex -space-x-2">

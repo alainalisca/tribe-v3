@@ -73,7 +73,7 @@ export const baseEn = {
   selectSport: 'Select a sport',
   startTime: 'Start Time',
   location: 'Location',
-  maxParticipants: 'Max Participants',
+  maxParticipants: 'Max Athletes',
   description: 'Description',
   skillLevel: 'Skill Level',
   beginner: 'Beginner',
@@ -107,7 +107,7 @@ export const baseEn = {
   noMessagesYet: 'No messages yet',
   startConversation: 'Start the conversation!',
   noConversations: 'No conversations yet',
-  joinSessionToChat: 'Join a session to start chatting with other participants',
+  joinSessionToChat: 'Join a session to start chatting with other athletes',
 
   // Session Actions
   sessionCreated: 'Session created!',
@@ -233,7 +233,7 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   selectSport: 'Selecciona un deporte',
   startTime: 'Hora de Inicio',
   location: 'Ubicacion',
-  maxParticipants: 'Maximo de Participantes',
+  maxParticipants: 'Maximo de Atletas',
   description: 'Descripcion',
   skillLevel: 'Nivel',
   beginner: 'Principiante',
@@ -267,7 +267,7 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   noMessagesYet: 'No hay mensajes aun',
   startConversation: 'Inicia la conversacion!',
   noConversations: 'No hay conversaciones aun',
-  joinSessionToChat: 'Unete a una sesion para chatear con otros participantes',
+  joinSessionToChat: 'Unete a una sesion para chatear con otros atletas',
 
   // Session Actions
   sessionCreated: 'Sesion creada!',

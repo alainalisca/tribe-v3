@@ -95,7 +95,7 @@ export default function LiveStatusSection({
         </div>
       )}
 
-      {/* Live Participants */}
+      {/* Live Athletes */}
       {liveUsers.length > 0 && (
         <div className="bg-red-50 dark:bg-red-900/10 border-2 border-red-400 dark:border-red-600 rounded-xl p-6 shadow-lg">
           <div className="flex items-center gap-2 mb-4">

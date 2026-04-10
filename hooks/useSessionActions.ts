@@ -159,8 +159,8 @@ export function useSessionActions({
       title: language === 'es' ? 'Cancelar sesión' : 'Cancel session',
       message:
         language === 'es'
-          ? '¿Cancelar esta sesión? Todos los participantes serán notificados. Esto no se puede deshacer.'
-          : 'Cancel this session? All participants will be notified. This cannot be undone.',
+          ? '¿Cancelar esta sesión? Todos los atletas serán notificados. Esto no se puede deshacer.'
+          : 'Cancel this session? All athletes will be notified. This cannot be undone.',
       onConfirm: () => doCancel(),
     });
   }
@@ -178,7 +178,7 @@ export function useSessionActions({
 
   function handleKickUser(userId: string, userName: string) {
     setConfirmAction({
-      title: language === 'es' ? 'Eliminar participante' : 'Remove participant',
+      title: language === 'es' ? 'Eliminar atleta' : 'Remove athlete',
       message: language === 'es' ? `¿Eliminar a ${userName} de esta sesión?` : `Remove ${userName} from this session?`,
       onConfirm: () => doKickUser(userId),
     });

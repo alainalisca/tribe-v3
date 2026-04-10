@@ -456,7 +456,7 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
         {
           heading: 'Antes de la Sesion',
           items: [
-            'Revisa los perfiles, calificaciones y actividad de los participantes',
+            'Revisa los perfiles, calificaciones y actividad de los atletas',
             'Elige lugares de encuentro publicos y bien iluminados (parques, gimnasios, instalaciones deportivas)',
             'Informa a alguien a donde vas, con quien te reuniras y cuando volveras',
             'Confia en tu instinto — si algo se siente mal, no vayas',
@@ -516,7 +516,7 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
       {
         heading: 'Before the Session',
         items: [
-          'Check participant profiles, ratings, and past activity',
+          'Check athlete profiles, ratings, and past activity',
           'Choose public, well-lit meeting locations (parks, gyms, sports facilities)',
           "Tell someone where you're going, who you're meeting, and when you'll be back",
           "Trust your instincts - if something feels off, don't go",

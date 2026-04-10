@@ -16,6 +16,7 @@ import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import FeaturedInstructors from '@/components/FeaturedInstructors';
 import FindTrainingPartners from '@/components/FindTrainingPartners';
 import NearbyEvents from '@/components/NearbyEvents';
 import PopularVenuesSection from '@/components/PopularVenuesSection';
@@ -141,6 +142,9 @@ export default function HomePage() {
 
           {/* Referral Banner */}
           {f.user && <ReferralBanner userId={f.user.id} />}
+
+          {/* Featured Instructors — marketplace teaser */}
+          {f.user && <FeaturedInstructors language={f.language} />}
 
           {f.user && (
             <button

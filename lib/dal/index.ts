@@ -22,3 +22,4 @@ export * from './externalEvents';
 export * from './connections';
 export * from './venues';
 export * from './stravaRoutes';
+export * from './instructors';

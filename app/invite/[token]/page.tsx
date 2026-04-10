@@ -102,7 +102,7 @@ export default function InvitePage() {
         return;
       }
 
-      // Add guest to participants
+      // Add guest to athletes
       const result = await insertParticipant(supabase, {
         session_id: session.id,
         user_id: null,
@@ -115,7 +115,7 @@ export default function InvitePage() {
 
       if (!result.success) throw new Error(result.error);
 
-      // Update participant count
+      // Update athlete count
       await updateSession(supabase, session.id, {
         current_participants: (session.current_participants ?? 0) + 1,
       });

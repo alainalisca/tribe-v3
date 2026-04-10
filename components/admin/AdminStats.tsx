@@ -115,7 +115,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
             icon={<span className="text-red-500 text-sm">&#10007;</span>}
           />
           <StatCard
-            label={language === 'es' ? 'Prom Participantes' : 'Avg Participants'}
+            label={language === 'es' ? 'Prom Atletas' : 'Avg Athletes'}
             value={stats.averageParticipants}
             icon={<Users className="w-4 h-4 text-blue-500" />}
           />

@@ -1,46 +1,41 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import {
-  fetchUserChallenges,
-  fetchPublicChallenges,
-  isInChallenge,
-  ChallengeWithCreator,
-} from '@/lib/dal/challenges'
-import { sportTranslations } from '@/lib/translations'
-import { Plus, Search, Calendar, Users, Zap, Loader } from 'lucide-react'
-import Image from 'next/image'
-import BottomNav from '@/components/BottomNav'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import { fetchUserChallenges, fetchPublicChallenges, isInChallenge, ChallengeWithCreator } from '@/lib/dal/challenges';
+import { sportTranslations } from '@/lib/translations';
+import { Plus, Search, Calendar, Users, Zap, Loader } from 'lucide-react';
+import Image from 'next/image';
+import BottomNav from '@/components/BottomNav';
 
 const CHALLENGE_TYPE_LABELS = {
   session_count: 'Session Count',
   streak: 'Streak',
   sport_variety: 'Sport Variety',
   custom: 'Custom',
-}
+};
 
 const CHALLENGE_TYPE_LABELS_ES = {
   session_count: 'Contador de sesiones',
   streak: 'Racha',
   sport_variety: 'Variedad de deportes',
   custom: 'Personalizado',
-}
+};
 
 export default function ChallengesPage() {
-  const router = useRouter()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const router = useRouter();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [userChallenges, setUserChallenges] = useState<(ChallengeWithCreator & { userProgress?: number })[]>([])
-  const [publicChallenges, setPublicChallenges] = useState<ChallengeWithCreator[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSport, setSelectedSport] = useState<string | undefined>()
-  const [userChallengeIds, setUserChallengeIds] = useState<Set<string>>(new Set())
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userChallenges, setUserChallenges] = useState<(ChallengeWithCreator & { userProgress?: number })[]>([]);
+  const [publicChallenges, setPublicChallenges] = useState<ChallengeWithCreator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSport, setSelectedSport] = useState<string | undefined>();
+  const [userChallengeIds, setUserChallengeIds] = useState<Set<string>>(new Set());
 
   const t = {
     en: {
@@ -55,7 +50,7 @@ export default function ChallengesPage() {
       progress: 'Progress',
       join: 'Join',
       joined: 'Joined',
-      participants: 'participants',
+      participants: 'athletes',
       loading: 'Loading...',
     },
     es: {
@@ -70,13 +65,13 @@ export default function ChallengesPage() {
       progress: 'Progreso',
       join: 'Unirse',
       joined: 'Unido',
-      participants: 'participantes',
+      participants: 'atletas',
       loading: 'Cargando...',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
-  const typeLabels = language === 'es' ? CHALLENGE_TYPE_LABELS_ES : CHALLENGE_TYPE_LABELS
+  const strings = t[language as keyof typeof t] || t.en;
+  const typeLabels = language === 'es' ? CHALLENGE_TYPE_LABELS_ES : CHALLENGE_TYPE_LABELS;
 
   // Get current user and load challenges
   useEffect(() => {
@@ -84,70 +79,70 @@ export default function ChallengesPage() {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser()
+        } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/auth/login')
-          return
+          router.push('/auth/login');
+          return;
         }
 
-        setCurrentUserId(user.id)
+        setCurrentUserId(user.id);
 
         // Load user's challenges
-        const userChallengesResult = await fetchUserChallenges(supabase, user.id)
+        const userChallengesResult = await fetchUserChallenges(supabase, user.id);
         if (userChallengesResult.success && userChallengesResult.data) {
-          setUserChallenges(userChallengesResult.data)
-          const ids = new Set(userChallengesResult.data.map((c) => c.id))
-          setUserChallengeIds(ids)
+          setUserChallenges(userChallengesResult.data);
+          const ids = new Set(userChallengesResult.data.map((c) => c.id));
+          setUserChallengeIds(ids);
         }
 
         // Load public challenges
-        const publicChallengesResult = await fetchPublicChallenges(supabase)
+        const publicChallengesResult = await fetchPublicChallenges(supabase);
         if (publicChallengesResult.success && publicChallengesResult.data) {
-          setPublicChallenges(publicChallengesResult.data)
+          setPublicChallenges(publicChallengesResult.data);
         }
       } catch (error) {
-        console.error('Error loading challenges:', error)
+        console.error('Error loading challenges:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadInitialData()
-  }, [supabase, router])
+    loadInitialData();
+  }, [supabase, router]);
 
   const handleSearch = async (query: string, sport?: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
       const result = await fetchPublicChallenges(supabase, {
         search: query || undefined,
         sport: sport || undefined,
-      })
+      });
 
       if (result.success && result.data) {
-        setPublicChallenges(result.data)
+        setPublicChallenges(result.data);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSportFilter = (sport: string) => {
-    setSelectedSport(sport === '' ? undefined : sport)
-    handleSearch(searchQuery, sport === '' ? undefined : sport)
-  }
+    setSelectedSport(sport === '' ? undefined : sport);
+    handleSearch(searchQuery, sport === '' ? undefined : sport);
+  };
 
   const daysUntilEnd = (endDate: string) => {
-    const now = new Date()
-    const end = new Date(endDate)
-    const days = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return Math.max(0, days)
-  }
+    const now = new Date();
+    const end = new Date(endDate);
+    const days = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, days);
+  };
 
   // Filter public challenges to exclude already joined ones if needed
-  const filteredPublic = publicChallenges.filter((c) => !userChallengeIds.has(c.id))
+  const filteredPublic = publicChallenges.filter((c) => !userChallengeIds.has(c.id));
 
-  const sports = Object.keys(sportTranslations.en || {})
+  const sports = Object.keys(sportTranslations.en || {});
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -213,8 +208,8 @@ export default function ChallengesPage() {
                     placeholder={strings.search}
                     value={searchQuery}
                     onChange={(e) => {
-                      setSearchQuery(e.target.value)
-                      handleSearch(e.target.value, selectedSport)
+                      setSearchQuery(e.target.value);
+                      handleSearch(e.target.value, selectedSport);
                     }}
                     className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#272D34] border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
                   />
@@ -242,7 +237,9 @@ export default function ChallengesPage() {
                           : 'bg-stone-100 dark:bg-[#3D4349] text-theme-primary hover:bg-tribe-green/20'
                       }`}
                     >
-                      {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[sport] || sport}
+                      {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[
+                        sport
+                      ] || sport}
                     </button>
                   ))}
                 </div>
@@ -275,16 +272,16 @@ export default function ChallengesPage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }
 
 interface ChallengeCardProps {
-  challenge: ChallengeWithCreator
-  isJoined?: boolean
-  progress?: number
-  language: 'en' | 'es'
-  onCardClick: () => void
-  typeLabels: Record<string, string>
+  challenge: ChallengeWithCreator;
+  isJoined?: boolean;
+  progress?: number;
+  language: 'en' | 'es';
+  onCardClick: () => void;
+  typeLabels: Record<string, string>;
 }
 
 function ChallengeCard({
@@ -295,34 +292,24 @@ function ChallengeCard({
   onCardClick,
   typeLabels,
 }: ChallengeCardProps) {
-  const daysLeft = Math.ceil(
-    (new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-  )
+  const daysLeft = Math.ceil((new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
-  const progressPercent = challenge.target_value > 0 ? Math.min((progress / challenge.target_value) * 100, 100) : 0
+  const progressPercent = challenge.target_value > 0 ? Math.min((progress / challenge.target_value) * 100, 100) : 0;
 
   const strings = {
-    en: { daysLeft: `${daysLeft} days left`, participants: 'participants' },
-    es: { daysLeft: `${daysLeft} días restantes`, participants: 'participantes' },
-  }
+    en: { daysLeft: `${daysLeft} days left`, participants: 'athletes' },
+    es: { daysLeft: `${daysLeft} días restantes`, participants: 'atletas' },
+  };
 
-  const s = strings[language] || strings.en
+  const s = strings[language] || strings.en;
 
   return (
-    <button
-      onClick={onCardClick}
-      className="text-left transition hover:shadow-lg"
-    >
+    <button onClick={onCardClick} className="text-left transition hover:shadow-lg">
       <div className="bg-white dark:bg-[#272D34] rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
         {/* Cover Image or Gradient */}
         <div className="h-40 bg-gradient-to-br from-tribe-green to-[#8FD642] relative overflow-hidden">
           {challenge.cover_image_url && (
-            <Image
-              src={challenge.cover_image_url}
-              alt={challenge.title}
-              fill
-              className="object-cover"
-            />
+            <Image src={challenge.cover_image_url} alt={challenge.title} fill className="object-cover" />
           )}
           <div className="absolute top-3 right-3 flex gap-2">
             <span className="bg-slate-900/80 text-tribe-green text-xs font-semibold px-2 py-1 rounded-full">
@@ -337,7 +324,9 @@ function ChallengeCard({
             <h3 className="font-semibold text-theme-primary text-lg line-clamp-2">{challenge.title}</h3>
             {challenge.sport && (
               <p className="text-sm text-theme-secondary">
-                {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[challenge.sport] || challenge.sport}
+                {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[
+                  challenge.sport
+                ] || challenge.sport}
               </p>
             )}
           </div>
@@ -376,5 +365,5 @@ function ChallengeCard({
         </div>
       </div>
     </button>
-  )
+  );
 }

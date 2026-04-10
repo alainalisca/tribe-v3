@@ -79,8 +79,8 @@ export default function PostSessionConnect({
         es: 'Solicitud Enviada',
       },
       noOtherParticipants: {
-        en: 'No other participants to connect with',
-        es: 'Sin otros participantes para conectar',
+        en: 'No other athletes to connect with',
+        es: 'Sin otros atletas para conectar',
       },
     };
 

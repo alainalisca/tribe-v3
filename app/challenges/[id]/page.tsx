@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
+import { useEffect, useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
 import {
   fetchChallengeById,
   fetchChallengeLeaderboard,
@@ -13,40 +13,40 @@ import {
   getUserChallengeProgress,
   ChallengeWithCreator,
   ChallengeParticipant,
-} from '@/lib/dal/challenges'
-import { sportTranslations } from '@/lib/translations'
-import { ArrowLeft, Calendar, Users, Trophy, Loader, Heart } from 'lucide-react'
-import Image from 'next/image'
-import BottomNav from '@/components/BottomNav'
+} from '@/lib/dal/challenges';
+import { sportTranslations } from '@/lib/translations';
+import { ArrowLeft, Calendar, Users, Trophy, Loader, Heart } from 'lucide-react';
+import Image from 'next/image';
+import BottomNav from '@/components/BottomNav';
 
 const CHALLENGE_TYPE_LABELS = {
   session_count: 'Session Count',
   streak: 'Streak',
   sport_variety: 'Sport Variety',
   custom: 'Custom',
-}
+};
 
 const CHALLENGE_TYPE_LABELS_ES = {
   session_count: 'Contador de sesiones',
   streak: 'Racha',
   sport_variety: 'Variedad de deportes',
   custom: 'Personalizado',
-}
+};
 
 export default function ChallengePage() {
-  const router = useRouter()
-  const params = useParams()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const router = useRouter();
+  const params = useParams();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const challengeId = params.id as string
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [challenge, setChallenge] = useState<ChallengeWithCreator | null>(null)
-  const [leaderboard, setLeaderboard] = useState<ChallengeParticipant[]>([])
-  const [isUserInChallenge, setIsUserInChallenge] = useState(false)
-  const [userProgress, setUserProgress] = useState<ChallengeParticipant | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [actionLoading, setActionLoading] = useState(false)
+  const challengeId = params.id as string;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<ChallengeWithCreator | null>(null);
+  const [leaderboard, setLeaderboard] = useState<ChallengeParticipant[]>([]);
+  const [isUserInChallenge, setIsUserInChallenge] = useState(false);
+  const [userProgress, setUserProgress] = useState<ChallengeParticipant | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const t = {
     en: {
@@ -57,7 +57,7 @@ export default function ChallengePage() {
       yourProgress: 'Your Progress',
       daysLeft: (days: number) => `${days} days left`,
       createdBy: 'Created by',
-      participants: 'participants',
+      participants: 'athletes',
       rank: 'Rank',
       name: 'Name',
       progress: 'Progress',
@@ -72,17 +72,17 @@ export default function ChallengePage() {
       yourProgress: 'Tu Progreso',
       daysLeft: (days: number) => `${days} días restantes`,
       createdBy: 'Creado por',
-      participants: 'participantes',
+      participants: 'atletas',
       rank: 'Rango',
       name: 'Nombre',
       progress: 'Progreso',
       loading: 'Cargando...',
       error: 'Error al cargar reto',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
-  const typeLabels = language === 'es' ? CHALLENGE_TYPE_LABELS_ES : CHALLENGE_TYPE_LABELS
+  const strings = t[language as keyof typeof t] || t.en;
+  const typeLabels = language === 'es' ? CHALLENGE_TYPE_LABELS_ES : CHALLENGE_TYPE_LABELS;
 
   // Load initial data
   useEffect(() => {
@@ -90,105 +90,105 @@ export default function ChallengePage() {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser()
+        } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/auth/login')
-          return
+          router.push('/auth/login');
+          return;
         }
 
-        setCurrentUserId(user.id)
+        setCurrentUserId(user.id);
 
         // Fetch challenge
-        const challengeResult = await fetchChallengeById(supabase, challengeId)
+        const challengeResult = await fetchChallengeById(supabase, challengeId);
         if (challengeResult.success && challengeResult.data) {
-          setChallenge(challengeResult.data)
+          setChallenge(challengeResult.data);
         }
 
         // Check if user is in challenge
-        const inChallengeResult = await isInChallenge(supabase, challengeId, user.id)
+        const inChallengeResult = await isInChallenge(supabase, challengeId, user.id);
         if (inChallengeResult.success) {
-          setIsUserInChallenge(inChallengeResult.data ?? false)
+          setIsUserInChallenge(inChallengeResult.data ?? false);
 
           // Get user progress if in challenge
           if (inChallengeResult.data) {
-            const progressResult = await getUserChallengeProgress(supabase, challengeId, user.id)
+            const progressResult = await getUserChallengeProgress(supabase, challengeId, user.id);
             if (progressResult.success && progressResult.data) {
-              setUserProgress(progressResult.data)
+              setUserProgress(progressResult.data);
             }
           }
         }
 
         // Fetch leaderboard
-        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId)
+        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId);
         if (leaderboardResult.success && leaderboardResult.data) {
-          setLeaderboard(leaderboardResult.data)
+          setLeaderboard(leaderboardResult.data);
         }
       } catch (error) {
-        console.error('Error loading challenge:', error)
+        console.error('Error loading challenge:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadData()
-  }, [supabase, router, challengeId])
+    loadData();
+  }, [supabase, router, challengeId]);
 
   const handleJoinChallenge = async () => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      const result = await joinChallenge(supabase, challengeId, currentUserId)
+      const result = await joinChallenge(supabase, challengeId, currentUserId);
       if (result.success) {
-        setIsUserInChallenge(true)
+        setIsUserInChallenge(true);
         // Refresh leaderboard
-        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId)
+        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId);
         if (leaderboardResult.success && leaderboardResult.data) {
-          setLeaderboard(leaderboardResult.data)
+          setLeaderboard(leaderboardResult.data);
         }
       }
     } catch (error) {
-      console.error('Error joining challenge:', error)
+      console.error('Error joining challenge:', error);
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   const handleLeaveChallenge = async () => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
-    if (!confirm(language === 'es' ? '¿Estás seguro?' : 'Are you sure?')) return
+    if (!confirm(language === 'es' ? '¿Estás seguro?' : 'Are you sure?')) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      const result = await leaveChallenge(supabase, challengeId, currentUserId)
+      const result = await leaveChallenge(supabase, challengeId, currentUserId);
       if (result.success) {
-        setIsUserInChallenge(false)
-        setUserProgress(null)
+        setIsUserInChallenge(false);
+        setUserProgress(null);
         // Refresh leaderboard
-        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId)
+        const leaderboardResult = await fetchChallengeLeaderboard(supabase, challengeId);
         if (leaderboardResult.success && leaderboardResult.data) {
-          setLeaderboard(leaderboardResult.data)
+          setLeaderboard(leaderboardResult.data);
         }
       }
     } catch (error) {
-      console.error('Error leaving challenge:', error)
+      console.error('Error leaving challenge:', error);
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   const daysLeft = challenge
     ? Math.ceil((new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    : 0
+    : 0;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
         <Loader className="h-8 w-8 animate-spin text-tribe-green" />
       </div>
-    )
+    );
   }
 
   if (!challenge) {
@@ -196,18 +196,16 @@ export default function ChallengePage() {
       <div className="min-h-screen bg-theme-page pb-12">
         <div className="max-w-2xl mx-auto p-4 text-center pt-20">
           <p className="text-theme-secondary">{strings.error}</p>
-          <button
-            onClick={() => router.back()}
-            className="mt-4 text-tribe-green font-semibold hover:underline"
-          >
+          <button onClick={() => router.back()} className="mt-4 text-tribe-green font-semibold hover:underline">
             {strings.back}
           </button>
         </div>
       </div>
-    )
+    );
   }
 
-  const progressPercent = challenge.target_value > 0 ? Math.min(((userProgress?.progress || 0) / challenge.target_value) * 100, 100) : 0
+  const progressPercent =
+    challenge.target_value > 0 ? Math.min(((userProgress?.progress || 0) / challenge.target_value) * 100, 100) : 0;
 
   return (
     <div className="min-h-screen bg-theme-page pb-20">
@@ -229,12 +227,7 @@ export default function ChallengePage() {
         {/* Cover Banner */}
         <div className="h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-tribe-green to-[#8FD642] relative">
           {challenge.cover_image_url && (
-            <Image
-              src={challenge.cover_image_url}
-              alt={challenge.title}
-              fill
-              className="object-cover"
-            />
+            <Image src={challenge.cover_image_url} alt={challenge.title} fill className="object-cover" />
           )}
           <div className="absolute top-4 right-4">
             <span className="bg-slate-900/80 text-tribe-green text-xs font-semibold px-3 py-1 rounded-full">
@@ -255,7 +248,9 @@ export default function ChallengePage() {
             {challenge.sport && (
               <div className="flex items-center gap-2">
                 <span className="text-theme-secondary">
-                  {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[challenge.sport] || challenge.sport}
+                  {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[
+                    challenge.sport
+                  ] || challenge.sport}
                 </span>
               </div>
             )}
@@ -290,11 +285,7 @@ export default function ChallengePage() {
                 : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
             } disabled:opacity-50`}
           >
-            {actionLoading
-              ? strings.loading
-              : isUserInChallenge
-                ? strings.leave
-                : strings.join}
+            {actionLoading ? strings.loading : isUserInChallenge ? strings.leave : strings.join}
           </button>
         </div>
 
@@ -337,7 +328,7 @@ export default function ChallengePage() {
 
           {leaderboard.length === 0 ? (
             <p className="text-center text-theme-secondary py-8">
-              {language === 'es' ? 'Sin participantes aún' : 'No participants yet'}
+              {language === 'es' ? 'Sin atletas aún' : 'No athletes yet'}
             </p>
           ) : (
             <div className="space-y-2">
@@ -374,5 +365,5 @@ export default function ChallengePage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }

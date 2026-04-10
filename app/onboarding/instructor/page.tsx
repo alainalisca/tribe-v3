@@ -32,10 +32,26 @@ import {
 } from 'lucide-react';
 
 const SPORTS_LIST = [
-  'Yoga', 'CrossFit', 'Running', 'Cycling', 'Swimming', 'Boxing',
-  'Pilates', 'Functional Training', 'HIIT', 'Strength Training',
-  'Dance', 'Martial Arts', 'Tennis', 'Basketball', 'Soccer',
-  'Volleyball', 'Calisthenics', 'Stretching', 'Meditation', 'Other',
+  'Yoga',
+  'CrossFit',
+  'Running',
+  'Cycling',
+  'Swimming',
+  'Boxing',
+  'Pilates',
+  'Functional Training',
+  'HIIT',
+  'Strength Training',
+  'Dance',
+  'Martial Arts',
+  'Tennis',
+  'Basketball',
+  'Soccer',
+  'Volleyball',
+  'Calisthenics',
+  'Stretching',
+  'Meditation',
+  'Other',
 ];
 
 const getTranslations = (language: 'en' | 'es') => ({
@@ -51,10 +67,7 @@ const getTranslations = (language: 'en' | 'es') => ({
       : 'This info appears on your public profile and storefront',
   name: language === 'es' ? 'Nombre completo' : 'Full name',
   bio: language === 'es' ? 'Sobre ti (bio)' : 'About you (bio)',
-  bioPlaceholder:
-    language === 'es'
-      ? 'Cuéntale a tu comunidad quién eres...'
-      : 'Tell your community who you are...',
+  bioPlaceholder: language === 'es' ? 'Cuéntale a tu comunidad quién eres...' : 'Tell your community who you are...',
   professionalBio: language === 'es' ? 'Bio profesional' : 'Professional bio',
   profBioPlaceholder:
     language === 'es'
@@ -71,20 +84,21 @@ const getTranslations = (language: 'en' | 'es') => ({
   step2Title: language === 'es' ? 'Configura tu vitrina' : 'Set up your storefront',
   step2Subtitle:
     language === 'es'
-      ? 'Tu vitrina es tu página pública donde los participantes te encuentran y reservan'
-      : 'Your storefront is your public page where participants find you and book',
+      ? 'Tu vitrina es tu página pública donde los atletas te encuentran y reservan'
+      : 'Your storefront is your public page where athletes find you and book',
   tagline: language === 'es' ? 'Eslogan' : 'Tagline',
   taglinePlaceholder:
     language === 'es'
       ? 'Ej: Transforma tu cuerpo, transforma tu vida'
       : 'E.g. Transform your body, transform your life',
-  taglineHint: language === 'es' ? 'Aparece debajo de tu nombre (máx. 100 caracteres)' : 'Shows below your name (max 100 chars)',
+  taglineHint:
+    language === 'es' ? 'Aparece debajo de tu nombre (máx. 100 caracteres)' : 'Shows below your name (max 100 chars)',
   bannerUrl: language === 'es' ? 'URL de imagen de banner (opcional)' : 'Banner image URL (optional)',
   storefrontPreview: language === 'es' ? 'Vista previa de tu vitrina' : 'Your storefront preview',
   previewNote:
     language === 'es'
       ? 'Así se verá tu vitrina en /storefront/tu-id'
-      : "This is how your storefront looks at /storefront/your-id",
+      : 'This is how your storefront looks at /storefront/your-id',
   // Step 3
   step3Title: language === 'es' ? 'Herramientas para ganar' : 'Tools to earn',
   step3Subtitle:
@@ -94,13 +108,17 @@ const getTranslations = (language: 'en' | 'es') => ({
   earningsCurrency: language === 'es' ? 'Moneda de ganancias' : 'Earnings currency',
   featurePaidSessions: language === 'es' ? 'Sesiones Pagadas' : 'Paid Sessions',
   featurePaidSessionsDesc:
-    language === 'es' ? 'Cobra por tus sesiones. Los pagos van directo a ti.' : 'Charge for your sessions. Payments go directly to you.',
+    language === 'es'
+      ? 'Cobra por tus sesiones. Los pagos van directo a ti.'
+      : 'Charge for your sessions. Payments go directly to you.',
   featurePromoCodes: language === 'es' ? 'Códigos Promocionales' : 'Promo Codes',
   featurePromoCodesDesc:
-    language === 'es' ? 'Crea descuentos para atraer nuevos participantes.' : 'Create discounts to attract new participants.',
+    language === 'es' ? 'Crea descuentos para atraer nuevos atletas.' : 'Create discounts to attract new athletes.',
   featureBoosts: language === 'es' ? 'Campañas de Boost' : 'Boost Campaigns',
   featureBoostsDesc:
-    language === 'es' ? 'Paga para aparecer primero en la página de descubrimiento.' : 'Pay to appear first on the discovery page.',
+    language === 'es'
+      ? 'Paga para aparecer primero en la página de descubrimiento.'
+      : 'Pay to appear first on the discovery page.',
   featureAnnouncements: language === 'es' ? 'Anuncios' : 'Announcements',
   featureAnnouncementsDesc:
     language === 'es' ? 'Publica actualizaciones para tus seguidores.' : 'Post updates to your followers.',
@@ -299,8 +317,8 @@ export default function InstructorOnboardingPage() {
                     step > s.num
                       ? 'bg-tribe-green text-slate-900'
                       : step === s.num
-                      ? 'bg-tribe-green text-slate-900 ring-4 ring-tribe-green/30'
-                      : 'bg-stone-200 dark:bg-gray-600 text-stone-500 dark:text-gray-400'
+                        ? 'bg-tribe-green text-slate-900 ring-4 ring-tribe-green/30'
+                        : 'bg-stone-200 dark:bg-gray-600 text-stone-500 dark:text-gray-400'
                   }`}
                 >
                   {step > s.num ? <Check className="w-5 h-5" /> : s.num}
@@ -346,11 +364,7 @@ export default function InstructorOnboardingPage() {
                   disabled={uploadingPhoto}
                   className="absolute -bottom-1 -right-1 w-8 h-8 bg-tribe-green text-slate-900 rounded-full flex items-center justify-center shadow-md hover:bg-[#8FD642]"
                 >
-                  {uploadingPhoto ? (
-                    <LoadingSpinner className="w-4 h-4" />
-                  ) : (
-                    <Camera className="w-4 h-4" />
-                  )}
+                  {uploadingPhoto ? <LoadingSpinner className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
                 </button>
               </div>
               <input
@@ -466,9 +480,7 @@ export default function InstructorOnboardingPage() {
               <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.tagline}</Label>
               <Input
                 value={form.storefront_tagline}
-                onChange={(e) =>
-                  setForm({ ...form, storefront_tagline: e.target.value.slice(0, 100) })
-                }
+                onChange={(e) => setForm({ ...form, storefront_tagline: e.target.value.slice(0, 100) })}
                 placeholder={t.taglinePlaceholder}
                 className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
               />
@@ -514,13 +526,9 @@ export default function InstructorOnboardingPage() {
                       {form.name ? form.name[0]?.toUpperCase() : '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <h3 className="text-lg font-bold text-stone-900 dark:text-white mt-2">
-                    {form.name || 'Your Name'}
-                  </h3>
+                  <h3 className="text-lg font-bold text-stone-900 dark:text-white mt-2">{form.name || 'Your Name'}</h3>
                   {form.storefront_tagline && (
-                    <p className="text-sm text-stone-500 dark:text-gray-400 mt-0.5">
-                      {form.storefront_tagline}
-                    </p>
+                    <p className="text-sm text-stone-500 dark:text-gray-400 mt-0.5">{form.storefront_tagline}</p>
                   )}
                   {form.specialties.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
@@ -536,9 +544,7 @@ export default function InstructorOnboardingPage() {
                   )}
                 </div>
               </div>
-              <p className="text-[10px] text-stone-400 dark:text-gray-500 mt-2 text-center">
-                {t.previewNote}
-              </p>
+              <p className="text-[10px] text-stone-400 dark:text-gray-500 mt-2 text-center">{t.previewNote}</p>
             </div>
           </div>
         )}
@@ -588,41 +594,29 @@ export default function InstructorOnboardingPage() {
                   className={`${feat.bg} rounded-xl p-3 border border-stone-100 dark:border-gray-700`}
                 >
                   <feat.icon className={`w-6 h-6 ${feat.color} mb-2`} />
-                  <h4 className="text-xs font-bold text-stone-900 dark:text-white mb-1">
-                    {feat.title}
-                  </h4>
-                  <p className="text-[10px] text-stone-500 dark:text-gray-400 leading-relaxed">
-                    {feat.desc}
-                  </p>
+                  <h4 className="text-xs font-bold text-stone-900 dark:text-white mb-1">{feat.title}</h4>
+                  <p className="text-[10px] text-stone-500 dark:text-gray-400 leading-relaxed">{feat.desc}</p>
                 </div>
               ))}
             </div>
 
             {/* Currency Selector */}
             <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">
-                {t.earningsCurrency}
-              </Label>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.earningsCurrency}</Label>
               <select
                 value={form.earnings_currency}
                 onChange={(e) => setForm({ ...form, earnings_currency: e.target.value })}
                 className="w-full px-3 py-2.5 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
               >
-                <option value="COP">
-                  {language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}
-                </option>
-                <option value="USD">
-                  {language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}
-                </option>
+                <option value="COP">{language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}</option>
+                <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
               </select>
             </div>
 
             {/* Info note */}
             <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-4 flex items-start gap-3">
               <Sparkles className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
-              <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">
-                {t.readyNote}
-              </p>
+              <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">{t.readyNote}</p>
             </div>
           </div>
         )}
