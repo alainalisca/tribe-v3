@@ -16,6 +16,11 @@ import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import FindTrainingPartners from '@/components/FindTrainingPartners';
+import NearbyEvents from '@/components/NearbyEvents';
+import PopularVenuesSection from '@/components/PopularVenuesSection';
+import PopularRoutesSection from '@/components/PopularRoutesSection';
+import FirstMoverCTA from '@/components/FirstMoverCTA';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -151,6 +156,12 @@ export default function HomePage() {
 
           <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />
 
+          {/* Discovery & Cold-Start Sections */}
+          {f.user && <FindTrainingPartners language={f.language} />}
+          {f.user && <NearbyEvents language={f.language} />}
+          {f.user && <PopularVenuesSection language={f.language} />}
+          {f.user && <PopularRoutesSection language={f.language} />}
+
           {f.loading ? (
             <div className="space-y-4">
               <SkeletonCard />
@@ -200,6 +211,20 @@ export default function HomePage() {
                       {f.t('noSessionsFound')}
                     </p>
                     <p className="text-sm text-muted-foreground">{f.t('tryDifferentSearch')}</p>
+                    <div className="mt-4">
+                      <FirstMoverCTA
+                        locationName={
+                          f.userLocation
+                            ? f.language === 'es'
+                              ? 'tu zona'
+                              : 'your area'
+                            : f.language === 'es'
+                              ? 'tu zona'
+                              : 'your area'
+                        }
+                        language={f.language}
+                      />
+                    </div>
                   </>
                 )}
               </CardContent>

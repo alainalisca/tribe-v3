@@ -31,6 +31,7 @@ import { confirmParticipantPayment } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import PostSessionPrompt from '@/components/PostSessionPrompt';
+import PostSessionConnect from '@/components/PostSessionConnect';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -203,6 +204,23 @@ export default function SessionDetailPage() {
             userId={d.user.id}
             sport={d.session.sport || ''}
             onDismiss={() => {}}
+          />
+        )}
+
+        {/* Post-Session Connect — suggest connecting with fellow participants */}
+        {isPast && d.user && d.participants.length > 0 && (
+          <PostSessionConnect
+            sessionId={d.session.id}
+            currentUserId={d.user.id}
+            participants={d.participants
+              .filter((p: any) => p.user_id !== d.user!.id && !p.is_guest)
+              .map((p: any) => ({
+                id: p.user_id,
+                name: p.user?.name || p.guest_name || 'Unknown',
+                avatar_url: p.user?.avatar_url || null,
+                sports: p.user?.sports || [],
+              }))}
+            language={language}
           />
         )}
 

@@ -18,3 +18,7 @@ export * from './notifications';
 export * from './communities';
 export * from './comments';
 export * from './challenges';
+export * from './externalEvents';
+export * from './connections';
+export * from './venues';
+export * from './stravaRoutes';
