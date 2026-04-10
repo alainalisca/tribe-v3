@@ -3,7 +3,7 @@
  * Handles routing between Wompi (Colombia - COP) and Stripe (US - USD)
  */
 
-export const PLATFORM_FEE_PERCENT = 10;
+export const PLATFORM_FEE_PERCENT = 15;
 
 export type PaymentGateway = 'wompi' | 'stripe';
 export type Currency = 'COP' | 'USD';

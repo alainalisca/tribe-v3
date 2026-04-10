@@ -135,6 +135,7 @@ export default function SessionDetailPage() {
           participants={d.participants}
           isFull={isFull}
           language={language}
+          isCreator={isCreator}
           onOpenLightbox={d.openLightbox}
         />
 

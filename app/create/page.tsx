@@ -26,7 +26,9 @@ import PhotoUploadSection from './PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
-type FormErrors = Partial<Record<'sport' | 'date' | 'start_time' | 'location' | 'price_cents' | 'payment_instructions', string>>;
+type FormErrors = Partial<
+  Record<'sport' | 'date' | 'start_time' | 'location' | 'price_cents' | 'payment_instructions', string>
+>;
 
 type PromoCode = {
   id: string;
@@ -63,7 +65,7 @@ export default function CreateSessionPage() {
     gender_preference: 'all',
     equipment: '',
     is_paid: false,
-    price_display: '',          // human-readable price (e.g. "15000") — converted to price_cents on submit
+    price_display: '', // human-readable price (e.g. "15000") — converted to price_cents on submit
     currency: 'COP' as 'COP' | 'USD',
     payment_instructions: '',
     attached_promo_id: null as string | null,
@@ -114,10 +116,14 @@ export default function CreateSessionPage() {
     if (formData.is_paid) {
       const price = parseFloat(formData.price_display);
       if (!formData.price_display || isNaN(price) || price <= 0) {
-        newErrors.price_cents = language === 'es' ? 'El precio es obligatorio para sesiones de pago' : 'Price is required for paid sessions';
+        newErrors.price_cents =
+          language === 'es' ? 'El precio es obligatorio para sesiones de pago' : 'Price is required for paid sessions';
       }
       if (!formData.payment_instructions.trim()) {
-        newErrors.payment_instructions = language === 'es' ? 'Las instrucciones de pago son obligatorias' : 'Payment instructions are required for paid sessions';
+        newErrors.payment_instructions =
+          language === 'es'
+            ? 'Las instrucciones de pago son obligatorias'
+            : 'Payment instructions are required for paid sessions';
       }
     }
     setErrors(newErrors);
@@ -428,9 +434,7 @@ export default function CreateSessionPage() {
                 <div className="space-y-3 pt-2 border-t border-theme">
                   {/* Currency selector */}
                   <div>
-                    <Label className="text-theme-primary mb-2">
-                      {language === 'es' ? 'Moneda' : 'Currency'}
-                    </Label>
+                    <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
                     <div className="grid grid-cols-2 gap-2">
                       {(['COP', 'USD'] as const).map((cur) => (
                         <button
@@ -466,13 +470,49 @@ export default function CreateSessionPage() {
                       />
                     </div>
                     {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
-                    {formData.price_display && !isNaN(parseFloat(formData.price_display)) && (
-                      <p className="text-xs text-theme-secondary mt-1">
-                        {formData.currency === 'COP'
-                          ? `$${Number(formData.price_display).toLocaleString('es-CO')} COP`
-                          : `$${Number(formData.price_display).toFixed(2)} USD`}
-                      </p>
-                    )}
+                    {formData.price_display &&
+                      !isNaN(parseFloat(formData.price_display)) &&
+                      parseFloat(formData.price_display) > 0 && (
+                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                            {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
+                          </p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-emerald-800 dark:text-emerald-300">
+                                {language === 'es' ? 'Precio del participante' : 'Participant pays'}
+                              </span>
+                              <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                                {formData.currency === 'COP'
+                                  ? `$${Number(formData.price_display).toLocaleString('es-CO')} COP`
+                                  : `$${Number(formData.price_display).toFixed(2)} USD`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-stone-500 dark:text-gray-400">
+                                {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                              </span>
+                              <span className="text-stone-500 dark:text-gray-400">
+                                {formData.currency === 'COP'
+                                  ? `-$${Math.round(Number(formData.price_display) * 0.15).toLocaleString('es-CO')} COP`
+                                  : `-$${(Number(formData.price_display) * 0.15).toFixed(2)} USD`}
+                              </span>
+                            </div>
+                            <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
+                              <div className="flex justify-between text-sm font-bold">
+                                <span className="text-emerald-800 dark:text-emerald-300">
+                                  {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
+                                </span>
+                                <span className="text-emerald-800 dark:text-emerald-300">
+                                  {formData.currency === 'COP'
+                                    ? `$${Math.round(Number(formData.price_display) * 0.85).toLocaleString('es-CO')} COP`
+                                    : `$${(Number(formData.price_display) * 0.85).toFixed(2)} USD`}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                   </div>
 
                   {/* Payment instructions */}
@@ -485,12 +525,16 @@ export default function CreateSessionPage() {
                       value={formData.payment_instructions}
                       onChange={handleChange}
                       rows={3}
-                      placeholder={language === 'es'
-                        ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
-                        : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'}
+                      placeholder={
+                        language === 'es'
+                          ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
+                          : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                      }
                       className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
                     />
-                    {errors.payment_instructions && <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>}
+                    {errors.payment_instructions && (
+                      <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -498,10 +542,7 @@ export default function CreateSessionPage() {
 
             {/* ─── Recurring Session Toggle ─── */}
             <div className="border border-theme rounded-lg p-4 bg-theme-card">
-              <RecurringSessionToggle
-                value={recurringValue}
-                onChange={setRecurringValue}
-              />
+              <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
             </div>
 
             {/* Photos */}

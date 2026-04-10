@@ -27,6 +27,7 @@ interface SessionDetailsProps {
   participants: ParticipantInfo[];
   isFull: boolean;
   language: 'en' | 'es';
+  isCreator?: boolean;
   onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
 }
 
@@ -36,6 +37,7 @@ export default function SessionDetails({
   participants,
   isFull,
   language,
+  isCreator = false,
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
@@ -174,6 +176,59 @@ export default function SessionDetails({
                 <p className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">
                   {session.payment_instructions}
                 </p>
+              </div>
+            )}
+            {isCreator && (
+              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                  {language === 'es' ? 'Tu desglose de pago' : 'Your Earnings Breakdown'}
+                </p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {language === 'es' ? 'Precio por persona' : 'Price per person'}
+                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      {session.currency === 'COP'
+                        ? `$${(session.price_cents! / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
+                        : `$${(session.price_cents! / 100).toFixed(2)} USD`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-stone-500 dark:text-gray-400">
+                      {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                    </span>
+                    <span className="text-stone-500 dark:text-gray-400">
+                      {session.currency === 'COP'
+                        ? `-$${Math.round((session.price_cents! * 0.15) / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
+                        : `-$${((session.price_cents! * 0.15) / 100).toFixed(2)} USD`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
+                    <span className="text-emerald-800 dark:text-emerald-300">
+                      {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
+                    </span>
+                    <span className="text-emerald-800 dark:text-emerald-300">
+                      {session.currency === 'COP'
+                        ? `$${Math.round((session.price_cents! * 0.85) / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
+                        : `$${((session.price_cents! * 0.85) / 100).toFixed(2)} USD`}
+                    </span>
+                  </div>
+                  {participants.filter((p) => p.status === 'confirmed').length > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 pt-1">
+                      <span>
+                        {language === 'es'
+                          ? `Total estimado (${participants.filter((p) => p.status === 'confirmed').length} confirmados)`
+                          : `Est. total (${participants.filter((p) => p.status === 'confirmed').length} confirmed)`}
+                      </span>
+                      <span>
+                        {session.currency === 'COP'
+                          ? `$${Math.round(((session.price_cents! * 0.85) / 100) * participants.filter((p) => p.status === 'confirmed').length).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
+                          : `$${(((session.price_cents! * 0.85) / 100) * participants.filter((p) => p.status === 'confirmed').length).toFixed(2)} USD`}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
