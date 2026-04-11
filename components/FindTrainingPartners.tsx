@@ -128,9 +128,9 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
   };
 
   return (
-    <div className="space-y-4">
+    <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between px-4">
+      <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">🏋️ {t('findTrainingPartners')}</h2>
         <Link
           href="/training-partners"
@@ -141,7 +141,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
       </div>
 
       {/* Sport filter pills */}
-      <div className="overflow-x-auto scrollbar-hide px-4">
+      <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-2 w-max">
           <button
             onClick={() => setSelectedSport(null)}

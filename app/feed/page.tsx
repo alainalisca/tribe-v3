@@ -1,67 +1,82 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import { Heart, Eye, Share2, Play, MapPin, Calendar, DollarSign, CheckCircle, Loader, MessageSquare, MessageCircle } from 'lucide-react'
-import Image from 'next/image'
-import BottomNav from '@/components/BottomNav'
-import PostCommentSection from '@/components/PostCommentSection'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import {
+  Heart,
+  Eye,
+  Share2,
+  Play,
+  MapPin,
+  Calendar,
+  DollarSign,
+  CheckCircle,
+  Loader,
+  MessageSquare,
+  MessageCircle,
+} from 'lucide-react';
+import Image from 'next/image';
+import BottomNav from '@/components/BottomNav';
+import PostCommentSection from '@/components/PostCommentSection';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface InstructorPost {
-  id: string
-  author_id: string
-  content: string
-  media_url?: string | null
-  media_type?: string | null
-  linked_session_id?: string | null
-  created_at: string
-  updated_at: string
-  comments_count?: number
+  id: string;
+  author_id: string;
+  content: string;
+  media_url?: string | null;
+  media_type?: string | null;
+  linked_session_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  comments_count?: number;
   author: {
-    id: string
-    name: string
-    avatar_url?: string | null
-    is_verified_instructor: boolean
-  }
+    id: string;
+    name: string;
+    avatar_url?: string | null;
+    is_verified_instructor: boolean;
+  };
 }
 
 interface SessionDetails {
-  id: string
-  sport: string
-  date: string
-  price_cents: number
-  location: string
-  instructor_id: string
-  title: string
+  id: string;
+  sport: string;
+  date: string;
+  price_cents: number;
+  currency: string | null;
+  location: string;
+  instructor_id: string;
+  title: string;
 }
 
 interface PostLike {
-  id: string
-  post_id: string
-  user_id: string
+  id: string;
+  post_id: string;
+  user_id: string;
 }
 
-const POSTS_PER_PAGE = 20
+const POSTS_PER_PAGE = 20;
 
 export default function FeedPage() {
-  const router = useRouter()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const router = useRouter();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const [posts, setPosts] = useState<InstructorPost[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(true)
-  const [offset, setOffset] = useState(0)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isInstructor, setIsInstructor] = useState(false)
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
-  const [sessionDetails, setSessionDetails] = useState<Record<string, SessionDetails>>({})
-  const [shareMessage, setShareMessage] = useState('')
-  const [postViews, setPostViews] = useState<Record<string, number>>({})
-  const [expandedCommentPost, setExpandedCommentPost] = useState<string | null>(null)
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [posts, setPosts] = useState<InstructorPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [sessionDetails, setSessionDetails] = useState<Record<string, SessionDetails>>({});
+  const [shareMessage, setShareMessage] = useState('');
+  const [postViews, setPostViews] = useState<Record<string, number>>({});
+  const [expandedCommentPost, setExpandedCommentPost] = useState<string | null>(null);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
   const t = {
     en: {
@@ -92,58 +107,54 @@ export default function FeedPage() {
       viewSession: 'Ver clase',
       people: 'personas',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
+  const strings = t[language as keyof typeof t] || t.en;
 
   useEffect(() => {
     const getCurrentUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/login')
-        return
+        router.push('/auth/login');
+        return;
       }
 
-      setCurrentUserId(user.id)
+      setCurrentUserId(user.id);
 
       // Check if user is instructor
-      const { data: userData } = await supabase
-        .from('users')
-        .select('is_instructor')
-        .eq('id', user.id)
-        .single()
+      const { data: userData } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
 
-      setIsInstructor(userData?.is_instructor || false)
-    }
+      setIsInstructor(userData?.is_instructor || false);
+    };
 
-    getCurrentUser()
-  }, [supabase, router])
+    getCurrentUser();
+  }, [supabase, router]);
 
   useEffect(() => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
     const loadFeed = async () => {
-      setLoading(true)
+      setLoading(true);
 
       try {
         // Get users this person follows
         const { data: follows, error: followsError } = await supabase
           .from('user_follows')
           .select('following_id')
-          .eq('follower_id', currentUserId)
+          .eq('follower_id', currentUserId);
 
-        if (followsError) throw followsError
+        if (followsError) throw followsError;
 
-        const followingIds = follows?.map((f: { following_id: string }) => f.following_id) || []
+        const followingIds = follows?.map((f: { following_id: string }) => f.following_id) || [];
 
         if (followingIds.length === 0) {
-          setPosts([])
-          setHasMore(false)
-          setLoading(false)
-          return
+          setPosts([]);
+          setHasMore(false);
+          setLoading(false);
+          return;
         }
 
         // Get posts from followed users
@@ -170,129 +181,123 @@ export default function FeedPage() {
           )
           .in('author_id', followingIds)
           .order('created_at', { ascending: false })
-          .range(offset, offset + POSTS_PER_PAGE - 1)
+          .range(offset, offset + POSTS_PER_PAGE - 1);
 
-        if (postsError) throw postsError
+        if (postsError) throw postsError;
 
         // Map Supabase join arrays to single objects
         const postsData: InstructorPost[] = (rawPosts || []).map((p: Record<string, unknown>) => ({
           ...p,
           author: Array.isArray(p.author) ? p.author[0] : p.author,
-        })) as InstructorPost[]
+        })) as InstructorPost[];
 
         // Get post stats
         if (postsData && postsData.length > 0) {
-          const postIds = postsData.map((p) => p.id)
+          const postIds = postsData.map((p) => p.id);
 
           // Get likes count
-          const { data: likesData } = await supabase.from('post_likes').select('post_id').in('post_id', postIds)
+          const { data: likesData } = await supabase.from('post_likes').select('post_id').in('post_id', postIds);
 
-          const likeCounts: Record<string, number> = {}
+          const likeCounts: Record<string, number> = {};
           likesData?.forEach((like: { post_id: string }) => {
-            likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1
-          })
+            likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
+          });
 
-          setPostViews(likeCounts)
+          setPostViews(likeCounts);
 
           // Check user's likes
           const { data: userLikes } = await supabase
             .from('post_likes')
             .select('post_id')
             .in('post_id', postIds)
-            .eq('user_id', currentUserId)
+            .eq('user_id', currentUserId);
 
-          const liked = new Set<string>(userLikes?.map((l: { post_id: string }) => l.post_id) || [])
-          setLikedPosts(liked)
+          const liked = new Set<string>(userLikes?.map((l: { post_id: string }) => l.post_id) || []);
+          setLikedPosts(liked);
 
           // Fetch session details if needed
-          const sessionIds = postsData
-            .filter((p) => p.linked_session_id)
-            .map((p) => p.linked_session_id) as string[]
+          const sessionIds = postsData.filter((p) => p.linked_session_id).map((p) => p.linked_session_id) as string[];
 
           if (sessionIds.length > 0) {
             const { data: sessions } = await supabase
               .from('sessions')
-              .select('id, sport, date, price_cents, location, instructor_id, title')
-              .in('id', sessionIds)
+              .select('id, sport, date, price_cents, currency, location, instructor_id, title')
+              .in('id', sessionIds);
 
             if (sessions) {
-              const sessionMap: Record<string, SessionDetails> = {}
+              const sessionMap: Record<string, SessionDetails> = {};
               sessions.forEach((s) => {
-                const sd = s as unknown as SessionDetails
-                sessionMap[sd.id] = sd
-              })
-              setSessionDetails(sessionMap)
+                const sd = s as unknown as SessionDetails;
+                sessionMap[sd.id] = sd;
+              });
+              setSessionDetails(sessionMap);
             }
           }
 
-          setPosts((prevPosts) => (offset === 0 ? postsData : [...prevPosts, ...postsData]))
-          setHasMore(postsData.length === POSTS_PER_PAGE)
+          setPosts((prevPosts) => (offset === 0 ? postsData : [...prevPosts, ...postsData]));
+          setHasMore(postsData.length === POSTS_PER_PAGE);
         } else {
-          setHasMore(false)
+          setHasMore(false);
         }
       } catch (error) {
-        console.error('Error loading feed:', error)
+        console.error('Error loading feed:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadFeed()
-  }, [currentUserId, offset, supabase])
+    loadFeed();
+  }, [currentUserId, offset, supabase]);
 
   const toggleLike = async (postId: string) => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
-    const isLiked = likedPosts.has(postId)
+    const isLiked = likedPosts.has(postId);
 
     // Optimistic update
-    const newLikedPosts = new Set(likedPosts)
+    const newLikedPosts = new Set(likedPosts);
     if (isLiked) {
-      newLikedPosts.delete(postId)
+      newLikedPosts.delete(postId);
     } else {
-      newLikedPosts.add(postId)
+      newLikedPosts.add(postId);
     }
-    setLikedPosts(newLikedPosts)
+    setLikedPosts(newLikedPosts);
 
     try {
       if (isLiked) {
-        await supabase
-          .from('post_likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', currentUserId)
+        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUserId);
       } else {
         await supabase.from('post_likes').insert({
           post_id: postId,
           user_id: currentUserId,
           created_at: new Date().toISOString(),
-        })
+        });
       }
     } catch (error) {
-      console.error('Error toggling like:', error)
+      console.error('Error toggling like:', error);
       // Revert optimistic update
-      setLikedPosts(likedPosts)
+      setLikedPosts(likedPosts);
     }
-  }
+  };
 
   const recordView = async (_postId: string) => {
     // View tracking placeholder — post_views table not yet created
-  }
+  };
 
   const sharePost = async (postId: string) => {
-    const url = `${window.location.origin}/feed/${postId}`
+    const url = `${window.location.origin}/feed/${postId}`;
     try {
-      await navigator.clipboard.writeText(url)
-      setShareMessage(postId)
-      setTimeout(() => setShareMessage(''), 2000)
+      await navigator.clipboard.writeText(url);
+      setShareMessage(postId);
+      setTimeout(() => setShareMessage(''), 2000);
     } catch (error) {
-      console.error('Error copying to clipboard:', error)
+      console.error('Error copying to clipboard:', error);
     }
-  }
+  };
 
   const handleLoadMore = () => {
-    setOffset((prev) => prev + POSTS_PER_PAGE)
-  }
+    setOffset((prev) => prev + POSTS_PER_PAGE);
+  };
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -341,9 +346,7 @@ export default function FeedPage() {
                   onToggleLike={() => toggleLike(post.id)}
                   onShare={() => sharePost(post.id)}
                   onView={() => recordView(post.id)}
-                  onToggleComments={() =>
-                    setExpandedCommentPost(expandedCommentPost === post.id ? null : post.id)
-                  }
+                  onToggleComments={() => setExpandedCommentPost(expandedCommentPost === post.id ? null : post.id)}
                   session={post.linked_session_id ? sessionDetails[post.linked_session_id] : undefined}
                   viewCount={postViews[post.id] || 0}
                   shareMessage={shareMessage === post.id}
@@ -375,9 +378,7 @@ export default function FeedPage() {
               </button>
             )}
 
-            {!hasMore && posts.length > 0 && (
-              <p className="py-4 text-center text-theme-secondary">{strings.noMore}</p>
-            )}
+            {!hasMore && posts.length > 0 && <p className="py-4 text-center text-theme-secondary">{strings.noMore}</p>}
           </div>
         )}
       </div>
@@ -385,32 +386,34 @@ export default function FeedPage() {
       {/* Bottom Navigation */}
       <BottomNav />
     </div>
-  )
+  );
 }
 
 export function formatTimeAgo(dateString: string, language: string) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`
-  if (seconds < 3600) return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`
-  return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`
+  if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`;
+  if (seconds < 3600)
+    return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400)
+    return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`;
+  return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`;
 }
 
 interface PostCardProps {
-  post: InstructorPost
-  isLiked: boolean
-  onToggleLike: () => void
-  onShare: () => void
-  onView: () => void
-  onToggleComments: () => void
-  session?: SessionDetails
-  viewCount: number
-  shareMessage: boolean
-  commentCount: number
-  language: string
+  post: InstructorPost;
+  isLiked: boolean;
+  onToggleLike: () => void;
+  onShare: () => void;
+  onView: () => void;
+  onToggleComments: () => void;
+  session?: SessionDetails;
+  viewCount: number;
+  shareMessage: boolean;
+  commentCount: number;
+  language: string;
 }
 
 function PostCard({
@@ -426,13 +429,13 @@ function PostCard({
   commentCount,
   language,
 }: PostCardProps) {
-  const [showFullContent, setShowFullContent] = useState(false)
+  const [showFullContent, setShowFullContent] = useState(false);
 
   useEffect(() => {
-    onView()
-  }, [onView])
+    onView();
+  }, [onView]);
 
-  const isLongContent = post.content.length > 280
+  const isLongContent = post.content.length > 280;
 
   const t = {
     en: {
@@ -453,9 +456,9 @@ function PostCard({
       readMore: 'Leer más',
       readLess: 'Leer menos',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
+  const strings = t[language as keyof typeof t] || t.en;
 
   return (
     <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
@@ -497,24 +500,14 @@ function PostCard({
       {/* Media */}
       {post.media_url && post.media_type === 'image' && (
         <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-[#3D4349]">
-          <Image
-            src={post.media_url!}
-            alt="Post media"
-            width={500}
-            height={400}
-            className="max-h-96 w-auto"
-          />
+          <Image src={post.media_url!} alt="Post media" width={500} height={400} className="max-h-96 w-auto" />
         </div>
       )}
 
       {post.media_url && post.media_type === 'video' && (
         <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-[#3D4349]">
           <div className="relative w-full">
-            <video
-              src={post.media_url!}
-              className="max-h-96 w-full"
-              controls
-            />
+            <video src={post.media_url!} className="max-h-96 w-full" controls />
             <Play className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-tribe-green opacity-70" />
           </div>
         </div>
@@ -538,7 +531,7 @@ function PostCard({
             </div>
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-tribe-green" />
-              <span>${(session.price_cents / 100).toFixed(2)}</span>
+              <span>{formatPrice(session.price_cents, (session.currency || 'USD') as Currency)}</span>
             </div>
           </div>
         </div>
@@ -546,13 +539,8 @@ function PostCard({
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-stone-200 dark:border-gray-700">
-        <button
-          onClick={onToggleLike}
-          className="flex items-center gap-2 transition"
-        >
-          <Heart
-            className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-theme-secondary'}`}
-          />
+        <button onClick={onToggleLike} className="flex items-center gap-2 transition">
+          <Heart className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-theme-secondary'}`} />
           <span className={`text-sm ${isLiked ? 'text-red-500' : 'text-theme-secondary'}`}>
             {/* Like count would go here if fetched */}
           </span>
@@ -576,9 +564,11 @@ function PostCard({
           className="flex items-center gap-2 text-theme-secondary transition hover:text-tribe-green"
         >
           <Share2 className="h-5 w-5" />
-          {shareMessage && <span className="text-xs text-tribe-green">{language === 'es' ? '¡Copiado!' : 'Copied!'}</span>}
+          {shareMessage && (
+            <span className="text-xs text-tribe-green">{language === 'es' ? '¡Copiado!' : 'Copied!'}</span>
+          )}
         </button>
       </div>
     </div>
-  )
+  );
 }

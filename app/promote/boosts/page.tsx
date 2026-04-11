@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import { getTrialStatus, isFeatureFree } from '@/lib/trial'
-import TrialBanner from '@/components/TrialBanner'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import { getTrialStatus, isFeatureFree } from '@/lib/trial';
+import TrialBanner from '@/components/TrialBanner';
 import {
   Plus,
   Zap,
@@ -25,14 +25,16 @@ import {
   ArrowLeft,
   CreditCard,
   Gift,
-} from 'lucide-react'
-import BottomNav from '@/components/BottomNav'
+} from 'lucide-react';
+import BottomNav from '@/components/BottomNav';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 const BOOST_TIERS = {
   starter: { cop: 500000, usd: 200, label: 'Starter' },
   growth: { cop: 1500000, usd: 500, label: 'Growth' },
-  spotlight: { cop: 5000000, usd: 1500, label: 'Spotlight' }
-}
+  spotlight: { cop: 5000000, usd: 1500, label: 'Spotlight' },
+};
 
 const TIER_CONFIG = {
   starter: {
@@ -42,7 +44,7 @@ const TIER_CONFIG = {
     color: 'bg-blue-100',
     textColor: 'text-blue-700',
     borderColor: 'border-blue-500',
-    badge: 'Starter'
+    badge: 'Starter',
   },
   growth: {
     dailyCopCents: 1500000,
@@ -52,7 +54,7 @@ const TIER_CONFIG = {
     textColor: 'text-slate-900',
     borderColor: 'border-tribe-green',
     badge: 'Growth',
-    recommended: true
+    recommended: true,
   },
   spotlight: {
     dailyCopCents: 5000000,
@@ -61,68 +63,68 @@ const TIER_CONFIG = {
     color: 'bg-amber-100',
     textColor: 'text-amber-700',
     borderColor: 'border-amber-500',
-    badge: 'Spotlight'
-  }
-}
+    badge: 'Spotlight',
+  },
+};
 
-type BoostType = 'session' | 'post' | 'profile'
-type BoostTier = 'starter' | 'growth' | 'spotlight'
-type Currency = 'COP' | 'USD'
+type BoostType = 'session' | 'post' | 'profile';
+type BoostTier = 'starter' | 'growth' | 'spotlight';
+// Currency type imported from @/lib/payments/config
 
 interface BoostCampaign {
-  id: string
-  instructor_id: string
-  boost_type: BoostType
-  tier: BoostTier
-  session_id?: string
-  post_id?: string
-  status: 'active' | 'paused' | 'completed' | 'cancelled'
-  total_budget_cents: number
-  spent_cents: number
-  starts_at: string
-  ends_at: string
-  impressions: number
-  clicks: number
-  created_at: string
-  session?: { sport: string; date: string; start_time: string }
-  post?: { content: string }
+  id: string;
+  instructor_id: string;
+  boost_type: BoostType;
+  tier: BoostTier;
+  session_id?: string;
+  post_id?: string;
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+  total_budget_cents: number;
+  spent_cents: number;
+  starts_at: string;
+  ends_at: string;
+  impressions: number;
+  clicks: number;
+  created_at: string;
+  session?: { sport: string; date: string; start_time: string };
+  post?: { content: string };
 }
 
 interface Session {
-  id: string
-  sport: string
-  date: string
-  start_time: string
+  id: string;
+  sport: string;
+  date: string;
+  start_time: string;
 }
 
 interface Post {
-  id: string
-  content: string
+  id: string;
+  content: string;
 }
 
 export default function BoostsPage() {
-  const supabase = createClient()
-  const { language } = useLanguage()
+  const supabase = createClient();
+  const { language } = useLanguage();
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [isInstructor, setIsInstructor] = useState(false)
-  const [instructorSince, setInstructorSince] = useState<string | null>(null)
-  const [campaigns, setCampaigns] = useState<BoostCampaign[]>([])
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showNewBoostForm, setShowNewBoostForm] = useState(false)
-  const [currency, setCurrency] = useState<Currency>('USD')
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [pendingBoostData, setPendingBoostData] = useState<Record<string, unknown> | null>(null)
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [instructorSince, setInstructorSince] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<BoostCampaign[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showNewBoostForm, setShowNewBoostForm] = useState(false);
+  const [currency, setCurrency] = useState<Currency>('USD');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingBoostData, setPendingBoostData] = useState<Record<string, unknown> | null>(null);
 
   // Form state
-  const [boostType, setBoostType] = useState<BoostType>('session')
-  const [selectedSession, setSelectedSession] = useState<string>('')
-  const [selectedPost, setSelectedPost] = useState<string>('')
-  const [selectedTier, setSelectedTier] = useState<BoostTier>('growth')
-  const [duration, setDuration] = useState(7)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [boostType, setBoostType] = useState<BoostType>('session');
+  const [selectedSession, setSelectedSession] = useState<string>('');
+  const [selectedPost, setSelectedPost] = useState<string>('');
+  const [selectedTier, setSelectedTier] = useState<BoostTier>('growth');
+  const [duration, setDuration] = useState(7);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Translations
   const t = {
@@ -178,7 +180,7 @@ export default function BoostsPage() {
       errorCreate: 'Error creating boost',
       successCreate: 'Boost campaign created successfully!',
       by: 'by',
-      learn: 'Learn about boost campaigns'
+      learn: 'Learn about boost campaigns',
     },
     es: {
       boostCampaigns: 'Campañas de Impulso',
@@ -232,50 +234,52 @@ export default function BoostsPage() {
       errorCreate: 'Error al crear impulso',
       successCreate: '¡Campaña de impulso creada exitosamente!',
       by: 'por',
-      learn: 'Aprende sobre campañas de impulso'
-    }
-  }
+      learn: 'Aprende sobre campañas de impulso',
+    },
+  };
 
-  const i18n = t[language as keyof typeof t]
+  const i18n = t[language as keyof typeof t];
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) {
-          alert(i18n.errorAuth)
-          return
+          alert(i18n.errorAuth);
+          return;
         }
 
-        setUserId(user.id)
+        setUserId(user.id);
 
         // Check if user is instructor and get trial info
         const { data: profile } = await supabase
           .from('users')
           .select('is_instructor, instructor_since')
           .eq('id', user.id)
-          .single()
+          .single();
 
         if (!profile?.is_instructor) {
-          alert(i18n.errorAuth)
-          return
+          alert(i18n.errorAuth);
+          return;
         }
 
-        setIsInstructor(true)
-        setInstructorSince(profile.instructor_since || null)
-        await fetchCampaigns(user.id)
-        await fetchSessions(user.id)
-        await fetchPosts(user.id)
+        setIsInstructor(true);
+        setInstructorSince(profile.instructor_since || null);
+        await fetchCampaigns(user.id);
+        await fetchSessions(user.id);
+        await fetchPosts(user.id);
       } catch (error) {
-        console.error('Auth check error:', error)
-        alert(i18n.errorAuth)
+        console.error('Auth check error:', error);
+        alert(i18n.errorAuth);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    checkAuth()
-  }, [])
+    checkAuth();
+  }, []);
 
   const fetchCampaigns = async (instructorId: string) => {
     try {
@@ -283,32 +287,32 @@ export default function BoostsPage() {
         .from('boost_campaigns')
         .select('*, session:sessions(sport, date, start_time), post:instructor_posts(content)')
         .eq('instructor_id', instructorId)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
-      setCampaigns(data || [])
+      if (error) throw error;
+      setCampaigns(data || []);
     } catch (error) {
-      console.error('Error fetching campaigns:', error)
-      alert(i18n.errorFetch)
+      console.error('Error fetching campaigns:', error);
+      alert(i18n.errorFetch);
     }
-  }
+  };
 
   const fetchSessions = async (creatorId: string) => {
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('sessions')
         .select('id, sport, date, start_time')
         .eq('creator_id', creatorId)
         .gte('date', today)
-        .order('date', { ascending: true })
+        .order('date', { ascending: true });
 
-      if (error) throw error
-      setSessions(data || [])
+      if (error) throw error;
+      setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching sessions:', error)
+      console.error('Error fetching sessions:', error);
     }
-  }
+  };
 
   const fetchPosts = async (authorId: string) => {
     try {
@@ -317,53 +321,48 @@ export default function BoostsPage() {
         .select('id, content')
         .eq('author_id', authorId)
         .order('created_at', { ascending: false })
-        .limit(20)
+        .limit(20);
 
-      if (error) throw error
-      setPosts(data || [])
+      if (error) throw error;
+      setPosts(data || []);
     } catch (error) {
-      console.error('Error fetching posts:', error)
+      console.error('Error fetching posts:', error);
     }
-  }
+  };
 
   const calculateTotalMetrics = () => {
-    const active = campaigns.filter(c => c.status === 'active')
-    const totalImpressions = active.reduce((sum, c) => sum + (c.impressions || 0), 0)
-    const totalClicks = active.reduce((sum, c) => sum + (c.clicks || 0), 0)
-    const totalSpent = active.reduce((sum, c) => sum + c.spent_cents, 0)
-    const avgCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0.00'
+    const active = campaigns.filter((c) => c.status === 'active');
+    const totalImpressions = active.reduce((sum, c) => sum + (c.impressions || 0), 0);
+    const totalClicks = active.reduce((sum, c) => sum + (c.clicks || 0), 0);
+    const totalSpent = active.reduce((sum, c) => sum + c.spent_cents, 0);
+    const avgCTR = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0.00';
 
-    return { totalImpressions, totalClicks, avgCTR, totalSpent }
-  }
+    return { totalImpressions, totalClicks, avgCTR, totalSpent };
+  };
 
   const getBoostLabel = (campaign: BoostCampaign) => {
     if (campaign.boost_type === 'session' && campaign.session) {
-      return `${campaign.session.sport} - ${new Date(campaign.session.date).toLocaleDateString()}`
+      return `${campaign.session.sport} - ${new Date(campaign.session.date).toLocaleDateString()}`;
     } else if (campaign.boost_type === 'post' && campaign.post) {
-      return campaign.post.content.substring(0, 50) + (campaign.post.content.length > 50 ? '...' : '')
+      return campaign.post.content.substring(0, 50) + (campaign.post.content.length > 50 ? '...' : '');
     }
-    return i18n.profile
-  }
+    return i18n.profile;
+  };
 
   const getDaysRemaining = (endsAt: string) => {
-    const now = new Date()
-    const end = new Date(endsAt)
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return Math.max(0, diff)
-  }
+    const now = new Date();
+    const end = new Date(endsAt);
+    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  };
 
-  const formatCurrency = (cents: number, cur: Currency) => {
-    if (cur === 'COP') {
-      return `$${(cents / 100).toLocaleString('es-CO')}`
-    }
-    return `$${(cents / 100).toFixed(2)}`
-  }
+  // formatPrice imported from @/lib/formatCurrency
 
   const getTotalBudget = () => {
-    const tierConfig = TIER_CONFIG[selectedTier]
-    const dailyCents = currency === 'COP' ? tierConfig.dailyCopCents : tierConfig.dailyUsdCents
-    return dailyCents * duration
-  }
+    const tierConfig = TIER_CONFIG[selectedTier];
+    const dailyCents = currency === 'COP' ? tierConfig.dailyCopCents : tierConfig.dailyUsdCents;
+    return dailyCents * duration;
+  };
 
   /**
    * Creates a boost campaign. Two paths:
@@ -377,15 +376,15 @@ export default function BoostsPage() {
    *    to the appropriate payment checkout URL.
    */
   const handleCreateBoost = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!userId) return
+    e.preventDefault();
+    if (!userId) return;
 
     try {
-      setIsSubmitting(true)
+      setIsSubmitting(true);
 
-      const now = new Date()
-      const endsAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000)
-      const isFree = isFeatureFree(instructorSince)
+      const now = new Date();
+      const endsAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+      const isFree = isFeatureFree(instructorSince);
 
       const boostData = {
         instructor_id: userId,
@@ -400,25 +399,21 @@ export default function BoostsPage() {
         ends_at: endsAt.toISOString(),
         impressions: 0,
         clicks: 0,
-        currency: currency
-      }
+        currency: currency,
+      };
 
       // Insert the campaign record
-      const { data: campaign, error } = await supabase
-        .from('boost_campaigns')
-        .insert(boostData)
-        .select('id')
-        .single()
+      const { data: campaign, error } = await supabase.from('boost_campaigns').insert(boostData).select('id').single();
 
-      if (error) throw error
+      if (error) throw error;
 
       if (isFree) {
         // Free trial — campaign is immediately active
-        alert(i18n.successCreate)
+        alert(i18n.successCreate);
       } else {
         // Payment required — redirect to checkout
-        const totalBudget = getTotalBudget()
-        const campaignId = campaign.id
+        const totalBudget = getTotalBudget();
+        const campaignId = campaign.id;
 
         // Call our payment API which handles both Stripe and Wompi routing
         const response = await fetch('/api/payment/create', {
@@ -432,42 +427,42 @@ export default function BoostsPage() {
             success_url: `${window.location.origin}/promote/boosts?payment=success&campaign=${campaignId}`,
             cancel_url: `${window.location.origin}/promote/boosts?payment=cancelled&campaign=${campaignId}`,
           }),
-        })
+        });
 
-        const paymentResult = await response.json()
+        const paymentResult = await response.json();
 
         if (paymentResult.checkout_url) {
           // Redirect to Stripe or Wompi checkout page
-          window.location.href = paymentResult.checkout_url
-          return
+          window.location.href = paymentResult.checkout_url;
+          return;
         } else {
           // Payment creation failed — remove the pending campaign
-          await supabase.from('boost_campaigns').delete().eq('id', campaignId)
-          throw new Error(paymentResult.error || 'Payment creation failed')
+          await supabase.from('boost_campaigns').delete().eq('id', campaignId);
+          throw new Error(paymentResult.error || 'Payment creation failed');
         }
       }
 
-      setShowNewBoostForm(false)
-      setBoostType('session')
-      setSelectedSession('')
-      setSelectedPost('')
-      setSelectedTier('growth')
-      setDuration(7)
-      setCurrency('USD')
-      await fetchCampaigns(userId)
+      setShowNewBoostForm(false);
+      setBoostType('session');
+      setSelectedSession('');
+      setSelectedPost('');
+      setSelectedTier('growth');
+      setDuration(7);
+      setCurrency('USD');
+      await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error creating boost:', error)
-      alert(i18n.errorCreate)
+      console.error('Error creating boost:', error);
+      alert(i18n.errorCreate);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Handle payment return (success/cancelled from Stripe/Wompi redirect)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const paymentStatus = params.get('payment')
-    const campaignId = params.get('campaign')
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const campaignId = params.get('campaign');
 
     if (paymentStatus === 'success' && campaignId) {
       // Activate the campaign after successful payment
@@ -476,11 +471,11 @@ export default function BoostsPage() {
         .update({ status: 'active' })
         .eq('id', campaignId)
         .then(() => {
-          alert(i18n.successCreate)
+          alert(i18n.successCreate);
           // Clean URL
-          window.history.replaceState({}, '', '/promote/boosts')
-          if (userId) fetchCampaigns(userId)
-        })
+          window.history.replaceState({}, '', '/promote/boosts');
+          if (userId) fetchCampaigns(userId);
+        });
     } else if (paymentStatus === 'cancelled' && campaignId) {
       // Remove the pending campaign
       supabase
@@ -489,41 +484,35 @@ export default function BoostsPage() {
         .eq('id', campaignId)
         .eq('status', 'pending_payment')
         .then(() => {
-          window.history.replaceState({}, '', '/promote/boosts')
-          if (userId) fetchCampaigns(userId)
-        })
+          window.history.replaceState({}, '', '/promote/boosts');
+          if (userId) fetchCampaigns(userId);
+        });
     }
-  }, [userId])
+  }, [userId]);
 
   const handlePauseCampaign = async (campaignId: string) => {
     try {
-      const { error } = await supabase
-        .from('boost_campaigns')
-        .update({ status: 'paused' })
-        .eq('id', campaignId)
+      const { error } = await supabase.from('boost_campaigns').update({ status: 'paused' }).eq('id', campaignId);
 
-      if (error) throw error
-      if (userId) await fetchCampaigns(userId)
+      if (error) throw error;
+      if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error pausing campaign:', error)
-      alert('Error pausing campaign')
+      console.error('Error pausing campaign:', error);
+      alert('Error pausing campaign');
     }
-  }
+  };
 
   const handleCancelCampaign = async (campaignId: string) => {
     try {
-      const { error } = await supabase
-        .from('boost_campaigns')
-        .update({ status: 'cancelled' })
-        .eq('id', campaignId)
+      const { error } = await supabase.from('boost_campaigns').update({ status: 'cancelled' }).eq('id', campaignId);
 
-      if (error) throw error
-      if (userId) await fetchCampaigns(userId)
+      if (error) throw error;
+      if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error cancelling campaign:', error)
-      alert('Error cancelling campaign')
+      console.error('Error cancelling campaign:', error);
+      alert('Error cancelling campaign');
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -533,7 +522,7 @@ export default function BoostsPage() {
           <p className="mt-4 text-theme-secondary">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isInstructor) {
@@ -543,25 +532,29 @@ export default function BoostsPage() {
           <p className="text-xl text-red-500">{i18n.errorAuth}</p>
         </div>
       </div>
-    )
+    );
   }
 
-  const activeCampaigns = campaigns.filter(c => c.status === 'active')
-  const pastCampaigns = campaigns.filter(c => c.status !== 'active')
-  const { totalImpressions, totalClicks, avgCTR, totalSpent } = calculateTotalMetrics()
+  const activeCampaigns = campaigns.filter((c) => c.status === 'active');
+  const pastCampaigns = campaigns.filter((c) => c.status !== 'active');
+  const { totalImpressions, totalClicks, avgCTR, totalSpent } = calculateTotalMetrics();
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <Link href="/promote" className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition">
+          <Link
+            href="/promote"
+            className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex-1 ml-3">
             <h1 className="text-lg font-bold text-theme-primary">{i18n.boostCampaigns}</h1>
             <p className="text-xs text-theme-secondary">
-              {activeCampaigns.length} {activeCampaigns.length === 1 ? i18n.activeCampaigns.toLowerCase() : i18n.activeCampaigns.toLowerCase()}
+              {activeCampaigns.length}{' '}
+              {activeCampaigns.length === 1 ? i18n.activeCampaigns.toLowerCase() : i18n.activeCampaigns.toLowerCase()}
             </p>
           </div>
         </div>
@@ -600,7 +593,7 @@ export default function BoostsPage() {
               <span className="text-theme-secondary text-xs">{i18n.totalSpent}</span>
               <DollarSign size={14} className="text-tribe-green" />
             </div>
-            <p className="text-xl font-bold text-tribe-green">{formatCurrency(totalSpent, currency)}</p>
+            <p className="text-xl font-bold text-tribe-green">{formatPrice(totalSpent, currency)}</p>
           </div>
         </div>
 
@@ -633,20 +626,26 @@ export default function BoostsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {activeCampaigns.map(campaign => {
-                const tierConfig = TIER_CONFIG[campaign.tier]
-                const daysLeft = getDaysRemaining(campaign.ends_at)
-                const progressPercent = Math.min(100, (campaign.spent_cents / campaign.total_budget_cents) * 100)
-                const ctr = campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : '0.00'
+              {activeCampaigns.map((campaign) => {
+                const tierConfig = TIER_CONFIG[campaign.tier];
+                const daysLeft = getDaysRemaining(campaign.ends_at);
+                const progressPercent = Math.min(100, (campaign.spent_cents / campaign.total_budget_cents) * 100);
+                const ctr =
+                  campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : '0.00';
 
                 return (
-                  <div key={campaign.id} className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+                  <div
+                    key={campaign.id}
+                    className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                  >
                     {/* Header with Status */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <p className="text-xs text-theme-secondary mb-1">{getBoostLabel(campaign)}</p>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierConfig.color} ${tierConfig.textColor}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-bold ${tierConfig.color} ${tierConfig.textColor}`}
+                          >
                             {tierConfig.badge}
                           </span>
                           <div className="flex items-center gap-1">
@@ -713,7 +712,7 @@ export default function BoostsPage() {
                       </button>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -724,17 +723,23 @@ export default function BoostsPage() {
           <div>
             <h2 className="text-lg font-bold text-theme-primary mb-3">{i18n.pastCampaigns}</h2>
             <div className="space-y-3">
-              {pastCampaigns.map(campaign => {
-                const tierConfig = TIER_CONFIG[campaign.tier]
-                const ctr = campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : '0.00'
+              {pastCampaigns.map((campaign) => {
+                const tierConfig = TIER_CONFIG[campaign.tier];
+                const ctr =
+                  campaign.impressions > 0 ? ((campaign.clicks / campaign.impressions) * 100).toFixed(2) : '0.00';
 
                 return (
-                  <div key={campaign.id} className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75">
+                  <div
+                    key={campaign.id}
+                    className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75"
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <p className="text-xs text-theme-secondary mb-1">{getBoostLabel(campaign)}</p>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${tierConfig.color} ${tierConfig.textColor}`}>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-bold ${tierConfig.color} ${tierConfig.textColor}`}
+                          >
                             {tierConfig.badge}
                           </span>
                           <span className="text-xs text-theme-secondary">
@@ -761,7 +766,7 @@ export default function BoostsPage() {
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -795,17 +800,17 @@ export default function BoostsPage() {
                   {[
                     { value: 'session' as BoostType, label: i18n.session, icon: Radio },
                     { value: 'post' as BoostType, label: i18n.post, icon: MessageSquare },
-                    { value: 'profile' as BoostType, label: i18n.profile, icon: User }
-                  ].map(option => {
-                    const Icon = option.icon
+                    { value: 'profile' as BoostType, label: i18n.profile, icon: User },
+                  ].map((option) => {
+                    const Icon = option.icon;
                     return (
                       <button
                         key={option.value}
                         type="button"
                         onClick={() => {
-                          setBoostType(option.value)
-                          setSelectedSession('')
-                          setSelectedPost('')
+                          setBoostType(option.value);
+                          setSelectedSession('');
+                          setSelectedPost('');
                         }}
                         className={`p-3 rounded-lg border transition flex flex-col items-center justify-center gap-1 text-xs ${
                           boostType === option.value
@@ -816,7 +821,7 @@ export default function BoostsPage() {
                         <Icon size={16} />
                         <span className="font-medium">{option.label}</span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -827,7 +832,7 @@ export default function BoostsPage() {
                   <label className="block text-sm font-bold text-theme-primary mb-2">{i18n.selectSession}</label>
                   <select
                     value={selectedSession}
-                    onChange={e => setSelectedSession(e.target.value)}
+                    onChange={(e) => setSelectedSession(e.target.value)}
                     className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
@@ -835,7 +840,7 @@ export default function BoostsPage() {
                     {sessions.length === 0 ? (
                       <option disabled>{i18n.noUpcomingSessions}</option>
                     ) : (
-                      sessions.map(session => (
+                      sessions.map((session) => (
                         <option key={session.id} value={session.id}>
                           {session.sport} - {new Date(session.date).toLocaleDateString()}
                         </option>
@@ -851,7 +856,7 @@ export default function BoostsPage() {
                   <label className="block text-sm font-bold text-theme-primary mb-2">{i18n.selectPost}</label>
                   <select
                     value={selectedPost}
-                    onChange={e => setSelectedPost(e.target.value)}
+                    onChange={(e) => setSelectedPost(e.target.value)}
                     className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
@@ -859,7 +864,7 @@ export default function BoostsPage() {
                     {posts.length === 0 ? (
                       <option disabled>{i18n.noRecentPosts}</option>
                     ) : (
-                      posts.map(post => (
+                      posts.map((post) => (
                         <option key={post.id} value={post.id}>
                           {post.content.substring(0, 60)}
                           {post.content.length > 60 ? '...' : ''}
@@ -874,9 +879,12 @@ export default function BoostsPage() {
               <div>
                 <label className="block text-sm font-bold text-theme-primary mb-2">{i18n.chooseATier}</label>
                 <div className="grid grid-cols-1 gap-2">
-                  {(['starter', 'growth', 'spotlight'] as const).map(tier => {
-                    const config = TIER_CONFIG[tier]
-                    const dailyCost = currency === 'COP' ? `$${(config.dailyCopCents / 100).toLocaleString('es-CO')}` : `$${(config.dailyUsdCents / 100).toFixed(2)}`
+                  {(['starter', 'growth', 'spotlight'] as const).map((tier) => {
+                    const config = TIER_CONFIG[tier];
+                    const dailyCost =
+                      currency === 'COP'
+                        ? formatPrice(config.dailyCopCents, 'COP')
+                        : formatPrice(config.dailyUsdCents, 'USD');
 
                     return (
                       <button
@@ -897,12 +905,14 @@ export default function BoostsPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-theme-secondary mb-1">{dailyCost} {i18n.perDay}</p>
+                        <p className="text-xs text-theme-secondary mb-1">
+                          {dailyCost} {i18n.perDay}
+                        </p>
                         <p className="text-xs text-theme-secondary">
                           {config.impressions.toLocaleString()} {i18n.impressions}
                         </p>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -915,7 +925,7 @@ export default function BoostsPage() {
                   min="1"
                   max="30"
                   value={duration}
-                  onChange={e => setDuration(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => setDuration(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
                   className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 />
               </div>
@@ -924,7 +934,7 @@ export default function BoostsPage() {
               <div>
                 <label className="block text-sm font-bold text-theme-primary mb-2">{i18n.currencyLabel}</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['USD', 'COP'].map(cur => (
+                  {['USD', 'COP'].map((cur) => (
                     <button
                       key={cur}
                       type="button"
@@ -944,11 +954,12 @@ export default function BoostsPage() {
               {/* Total Budget Display */}
               <div className="bg-stone-100 dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg p-4">
                 <p className="text-xs text-theme-secondary mb-1">{i18n.totalBudget}</p>
-                <p className="text-2xl font-bold text-tribe-green">
-                  {formatCurrency(getTotalBudget(), currency)}
-                </p>
+                <p className="text-2xl font-bold text-tribe-green">{formatPrice(getTotalBudget(), currency)}</p>
                 <p className="text-xs text-theme-secondary mt-2">
-                  {duration} {duration === 1 ? i18n.day : i18n.days} × {currency === 'COP' ? `$${(TIER_CONFIG[selectedTier].dailyCopCents / 100).toLocaleString('es-CO')}` : `$${(TIER_CONFIG[selectedTier].dailyUsdCents / 100).toFixed(2)}`}
+                  {duration} {duration === 1 ? i18n.day : i18n.days} ×{' '}
+                  {currency === 'COP'
+                    ? formatPrice(TIER_CONFIG[selectedTier].dailyCopCents, 'COP')
+                    : formatPrice(TIER_CONFIG[selectedTier].dailyUsdCents, 'USD')}
                 </p>
               </div>
 
@@ -979,8 +990,8 @@ export default function BoostsPage() {
                     <>
                       <CreditCard size={18} />
                       {language === 'en'
-                        ? `Pay & Launch (${formatCurrency(getTotalBudget(), currency)})`
-                        : `Pagar y Lanzar (${formatCurrency(getTotalBudget(), currency)})`}
+                        ? `Pay & Launch (${formatPrice(getTotalBudget(), currency)})`
+                        : `Pagar y Lanzar (${formatPrice(getTotalBudget(), currency)})`}
                     </>
                   )}
                 </button>
@@ -992,5 +1003,5 @@ export default function BoostsPage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }

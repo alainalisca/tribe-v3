@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import AvatarStack from '@/components/AvatarStack';
+import type { AvatarStackParticipant } from '@/components/AvatarStack';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,6 +70,13 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
                 <Badge className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full border-transparent gap-1">
                   <span className="font-bold">📍</span>
                   {session.photos.length}
+                </Badge>
+              )}
+
+              {/* Recurring badge */}
+              {session.is_recurring && (
+                <Badge className="px-2 py-1 bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 rounded-full border-transparent">
+                  {language === 'es' ? 'Recurrente' : 'Recurring'}
                 </Badge>
               )}
 
@@ -222,26 +231,19 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
           {/* Athletes Avatars */}
           {confirmedParticipants.length > 0 && (
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex -space-x-2">
-                {confirmedParticipants.slice(0, 5).map((p, idx) => (
-                  <Link key={idx} href={`/profile/${p.user_id}`}>
-                    <Avatar
-                      className="w-8 h-8 border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110"
-                      title={p.user?.name}
-                    >
-                      <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-xs">
-                        {p.user?.name?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                ))}
-              </div>
-              {confirmedParticipants.length > 5 && (
-                <span className="text-xs text-stone-600 dark:text-[#B1B3B6]">
-                  +{confirmedParticipants.length - 5} {t('more')}
-                </span>
-              )}
+            <div className="mt-3">
+              <AvatarStack
+                participants={confirmedParticipants.map(
+                  (p): AvatarStackParticipant => ({
+                    user_id: p.user_id || p.user?.id || '',
+                    name: p.user?.name || 'U',
+                    avatar_url: p.user?.avatar_url ?? null,
+                  })
+                )}
+                max={5}
+                size="md"
+                linkToProfile
+              />
             </div>
           )}
 

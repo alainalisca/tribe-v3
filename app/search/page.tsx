@@ -8,6 +8,8 @@ import { sportTranslations } from '@/lib/translations';
 import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface SearchResult {
   id: string;
@@ -135,7 +137,7 @@ export default function SearchPage() {
         // Search sessions
         const { data: sessionsData } = await supabase
           .from('sessions')
-          .select('id, sport, location, date, price_cents, status, session_participants(id)')
+          .select('id, sport, location, date, price_cents, currency, status, session_participants(id)')
           .or(`sport.ilike.${query},location.ilike.${query}`)
           .eq('status', 'scheduled')
           .limit(10);
@@ -453,7 +455,7 @@ function SessionResult({ session, language, onSelect }: SessionResultProps) {
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            <span>${(session.price_cents / 100).toFixed(2)}</span>
+            <span>{formatPrice(session.price_cents, (session.currency || 'USD') as Currency)}</span>
           </div>
         </div>
       </div>

@@ -33,6 +33,7 @@ export interface UserProfile {
   bio: string | null;
   sports: string[] | null;
   safety_waiver_accepted: boolean | null;
+  is_instructor: boolean | null;
 }
 
 export function useHomeFeed() {
@@ -155,7 +156,7 @@ export function useHomeFeed() {
     const result = await fetchUserProfileMaybe(
       supabase,
       user.id,
-      'name, avatar_url, bio, sports, safety_waiver_accepted'
+      'name, avatar_url, bio, sports, safety_waiver_accepted, is_instructor'
     );
     setUserProfile((result.data as UserProfile | null) ?? null);
   }

@@ -1,7 +1,6 @@
 /** Page: / — Landing page for visitors, home feed for logged-in users */
 'use client';
 
-import Link from 'next/link';
 import OnboardingModal from '@/components/OnboardingModal';
 import EditSessionModal from '@/components/EditSessionModal';
 import SessionCard from '@/components/SessionCard';
@@ -22,6 +21,7 @@ import NearbyEvents from '@/components/NearbyEvents';
 import PopularVenuesSection from '@/components/PopularVenuesSection';
 import PopularRoutesSection from '@/components/PopularRoutesSection';
 import FirstMoverCTA from '@/components/FirstMoverCTA';
+import InstructorUpsellBanner from '@/components/InstructorUpsellBanner';
 import { getUserLocation } from '@/lib/location';
 import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,7 @@ export default function HomePage() {
             />
           )}
 
+          {/* ── Stories ── */}
           <div className="mt-1">
             <StoriesRow
               userId={f.user?.id || null}
@@ -110,6 +111,7 @@ export default function HomePage() {
             />
           </div>
 
+          {/* ── Location prompt (only if needed) ── */}
           {f.user && !f.userLocation && !f.loading && (
             <button
               onClick={async () => {
@@ -128,44 +130,23 @@ export default function HomePage() {
             </button>
           )}
 
-          {f.user && f.userProfile && (
-            <ProfileCompletionBanner
-              hasPhoto={!!f.userProfile.avatar_url}
-              hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
-              hasName={!!f.userProfile.name}
-              userId={f.user.id}
-            />
-          )}
+          {/* ── Live Now (only when sessions exist) ── */}
+          <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />
 
-          {/* Streak Banner */}
-          {f.user && <StreakBanner userId={f.user.id} />}
-
-          {/* Referral Banner */}
-          {f.user && <ReferralBanner userId={f.user.id} />}
-
-          {/* Featured Instructors — marketplace teaser */}
-          {f.user && <FeaturedInstructors language={f.language} />}
-
+          {/* ── Training Now CTA ── */}
           {f.user && (
             <button
               onClick={() => f.router.push('/training-now')}
-              className="w-full py-4 bg-tribe-green/10 border border-tribe-green/30 text-theme-primary rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-none mb-4"
+              className="w-full py-3 bg-tribe-green/10 border border-tribe-green/30 text-theme-primary rounded-xl hover:opacity-90 transition flex items-center justify-center gap-3 shadow-none mb-4"
             >
               <div className="text-center">
-                <div className="text-base font-semibold">{f.t('trainingNowLabel')}</div>
+                <div className="text-sm font-semibold">{f.t('trainingNowLabel')}</div>
                 <div className="text-xs text-muted-foreground">{f.t('connectNearby')}</div>
               </div>
             </button>
           )}
 
-          <LiveNowSection liveNowSessions={f.liveNowSessions} userLocation={f.userLocation} language={f.language} />
-
-          {/* Discovery & Cold-Start Sections */}
-          {f.user && <FindTrainingPartners language={f.language} />}
-          {f.user && <NearbyEvents language={f.language} />}
-          {f.user && <PopularVenuesSection language={f.language} />}
-          {f.user && <PopularRoutesSection language={f.language} />}
-
+          {/* ══ MAIN FEED: Sessions with interleaved discovery ══ */}
           {f.loading ? (
             <div className="space-y-4">
               <SkeletonCard />
@@ -235,23 +216,89 @@ export default function HomePage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {f.filteredSessions.slice(0, f.visibleCount).map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  onJoin={f.handleJoinSession}
-                  userLocation={f.userLocation}
-                  currentUserId={f.user?.id}
-                  onEdit={(id: string) => {
-                    const s = f.sessions.find((s) => s.id === id);
-                    if (s) f.setEditingSession(s);
-                  }}
-                  onDelete={f.handleDeleteSession}
-                  onShare={f.handleShareSession}
-                  distance={f.getDistanceText(session)}
-                  liveData={f.liveStatusMap[session.id]}
-                />
-              ))}
+              {(() => {
+                const visibleSessions = f.filteredSessions.slice(0, f.visibleCount);
+                const INTERLEAVE_INTERVAL = 3;
+
+                // Discovery sections to interleave after every N session cards
+                const discoverySlots: Record<number, React.ReactNode> = {
+                  [INTERLEAVE_INTERVAL]: f.user ? (
+                    <FeaturedInstructors key="disc-instructors" language={f.language} />
+                  ) : null,
+                  [INTERLEAVE_INTERVAL * 2]: f.user ? (
+                    <FindTrainingPartners key="disc-partners" language={f.language} />
+                  ) : null,
+                  [INTERLEAVE_INTERVAL * 3]: f.user ? <NearbyEvents key="disc-events" language={f.language} /> : null,
+                  [INTERLEAVE_INTERVAL * 4]: f.user ? (
+                    <PopularVenuesSection key="disc-venues" language={f.language} />
+                  ) : null,
+                  [INTERLEAVE_INTERVAL * 5]: f.user ? (
+                    <PopularRoutesSection key="disc-routes" language={f.language} />
+                  ) : null,
+                };
+
+                // Conditional banners: tuck after first session card
+                const bannerSlot = (
+                  <div key="banners" className="space-y-3">
+                    {f.user && f.userProfile && (
+                      <ProfileCompletionBanner
+                        hasPhoto={!!f.userProfile.avatar_url}
+                        hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
+                        hasName={!!f.userProfile.name}
+                        userId={f.user.id}
+                      />
+                    )}
+                    {f.user && <StreakBanner userId={f.user.id} />}
+                    {f.user && <ReferralBanner userId={f.user.id} />}
+                    {f.user && f.userProfile && !f.userProfile.is_instructor && (
+                      <InstructorUpsellBanner userId={f.user.id} language={f.language} />
+                    )}
+                  </div>
+                );
+
+                const items: React.ReactNode[] = [];
+
+                visibleSessions.forEach((session, index) => {
+                  items.push(
+                    <SessionCard
+                      key={session.id}
+                      session={session}
+                      onJoin={f.handleJoinSession}
+                      userLocation={f.userLocation}
+                      currentUserId={f.user?.id}
+                      onEdit={(id: string) => {
+                        const s = f.sessions.find((s) => s.id === id);
+                        if (s) f.setEditingSession(s);
+                      }}
+                      onDelete={f.handleDeleteSession}
+                      onShare={f.handleShareSession}
+                      distance={f.getDistanceText(session)}
+                      liveData={f.liveStatusMap[session.id]}
+                    />
+                  );
+
+                  const position = index + 1;
+
+                  // Insert banners after first session card
+                  if (position === 1) {
+                    items.push(bannerSlot);
+                  }
+
+                  // Insert discovery sections at interleave points
+                  if (discoverySlots[position]) {
+                    items.push(discoverySlots[position]);
+                  }
+                });
+
+                // If fewer sessions than discovery slots, append remaining discovery at the end
+                Object.entries(discoverySlots).forEach(([pos, node]) => {
+                  if (Number(pos) > visibleSessions.length && node) {
+                    items.push(node);
+                  }
+                });
+
+                return items;
+              })()}
               {f.visibleCount < f.filteredSessions.length && (
                 <button
                   onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}

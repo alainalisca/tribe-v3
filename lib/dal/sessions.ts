@@ -75,7 +75,9 @@ export async function fetchSessionWithDetails(
 
     const { data: participants } = await supabase
       .from('session_participants')
-      .select('user_id, status, is_guest, guest_name, payment_status, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
+      .select(
+        'user_id, status, is_guest, guest_name, payment_status, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
+      )
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
 
@@ -355,6 +357,36 @@ export async function fetchSessionsWithCreator(
   }
 }
 
+/**
+ * Fetches upcoming active sessions created by a specific user.
+ * Used by ConnectionButton to show a funnel toward shared training.
+ */
+export async function fetchUpcomingSessionsByUser(
+  supabase: SupabaseClient,
+  userId: string,
+  limit: number = 3
+): Promise<DalResult<Array<{ id: string; sport: string; date: string; start_time: string; location: string }>>> {
+  try {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('id, sport, date, start_time, location')
+      .eq('creator_id', userId)
+      .eq('status', 'active')
+      .gte('date', today)
+      .order('date', { ascending: true })
+      .limit(limit);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchUpcomingSessionsByUser', userId });
+    return { success: false, error: 'Failed to fetch upcoming sessions' };
+  }
+}
+
 /** Fetch a session with specific fields. */
 export async function fetchSessionFields(
   supabase: SupabaseClient,
@@ -368,6 +400,78 @@ export async function fetchSessionFields(
   } catch (error) {
     logError(error, { action: 'fetchSessionFields' });
     return { success: false, error: 'Failed' };
+  }
+}
+
+/**
+ * Check if a child session already exists for a given recurring parent and date.
+ * Used by the recurring-sessions cron to ensure idempotency.
+ */
+export async function childSessionExists(
+  supabase: SupabaseClient,
+  parentId: string,
+  date: string
+): Promise<DalResult<boolean>> {
+  try {
+    const { count, error } = await supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('recurring_parent_id', parentId)
+      .eq('date', date);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (count ?? 0) > 0 };
+  } catch (error) {
+    logError(error, { action: 'childSessionExists', parentId, date });
+    return { success: false, error: 'Failed to check child session' };
+  }
+}
+
+/**
+ * Create a child session instance from a recurring parent session.
+ * Copies relevant fields and sets the new date. Returns the new session ID.
+ */
+export async function createChildSession(
+  supabase: SupabaseClient,
+  parent: Session,
+  targetDate: string
+): Promise<DalResult<string>> {
+  try {
+    const childData: SessionInsert = {
+      creator_id: parent.creator_id,
+      sport: parent.sport,
+      location: parent.location,
+      date: targetDate,
+      start_time: parent.start_time,
+      duration: parent.duration,
+      max_participants: parent.max_participants,
+      description: parent.description,
+      equipment: parent.equipment,
+      skill_level: parent.skill_level,
+      gender_preference: parent.gender_preference,
+      join_policy: parent.join_policy,
+      is_paid: parent.is_paid,
+      price_cents: parent.price_cents,
+      currency: parent.currency,
+      photos: parent.photos,
+      latitude: parent.latitude,
+      longitude: parent.longitude,
+      title: parent.title,
+      visibility: parent.visibility,
+      platform_fee_percent: parent.platform_fee_percent,
+      recurring_parent_id: parent.id,
+      is_recurring: false,
+      current_participants: 0,
+      status: 'active',
+    };
+
+    const { data: session, error } = await supabase.from('sessions').insert(childData).select('id').single();
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: session.id };
+  } catch (error) {
+    logError(error, { action: 'createChildSession', parentId: parent.id, targetDate });
+    return { success: false, error: 'Failed to create child session' };
   }
 }
 

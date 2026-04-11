@@ -38,7 +38,7 @@ export default function FeaturedInstructors({ language }: FeaturedInstructorsPro
   if (!loading && instructors.length === 0) return null;
 
   return (
-    <div className="mb-4">
+    <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4">
       {/* Section header */}
       <div className="flex items-center justify-between mb-3">
         <div>

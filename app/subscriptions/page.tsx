@@ -15,6 +15,8 @@ import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
 import { formatTime12Hour } from '@/lib/utils';
 import { sportTranslations } from '@/lib/translations';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface Subscription {
   session_id: string;
@@ -147,9 +149,7 @@ export default function SubscriptionsPage() {
 
       if (error) throw error;
 
-      setSubscriptions((prev) =>
-        prev.filter((sub) => sub.session_id !== unsubscribeModal.sessionId)
-      );
+      setSubscriptions((prev) => prev.filter((sub) => sub.session_id !== unsubscribeModal.sessionId));
       setUnsubscribeModal({ isOpen: false, sessionId: null });
       showSuccess(language === 'es' ? 'Suscripción cancelada' : 'Unsubscribed successfully');
     } catch (err) {
@@ -247,7 +247,7 @@ export default function SubscriptionsPage() {
 
               const price =
                 subscription.session.price_cents && subscription.session.price_cents > 0
-                  ? (subscription.session.price_cents / 100).toFixed(2)
+                  ? formatPrice(subscription.session.price_cents, (subscription.session.currency || 'USD') as Currency)
                   : null;
 
               return (
@@ -316,9 +316,7 @@ export default function SubscriptionsPage() {
                       <div className="mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
                         <p className="text-xs font-semibold text-stone-700 dark:text-gray-300">
                           {language === 'es' ? 'Costo por sesión: ' : 'Cost per session: '}
-                          <span className="text-tribe-green font-bold">
-                            {price} {subscription.session.currency || 'USD'}
-                          </span>
+                          <span className="text-tribe-green font-bold">{price}</span>
                         </p>
                       </div>
                     )}
@@ -355,9 +353,12 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Unsubscribe Confirmation Modal */}
-      <Dialog open={unsubscribeModal.isOpen} onOpenChange={(open) => {
-        if (!open) setUnsubscribeModal({ isOpen: false, sessionId: null });
-      }}>
+      <Dialog
+        open={unsubscribeModal.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setUnsubscribeModal({ isOpen: false, sessionId: null });
+        }}
+      >
         <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 bg-white dark:bg-[#6B7178]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-red-600">
@@ -384,8 +385,12 @@ export default function SubscriptionsPage() {
               className="flex-1 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {unsubscribing
-                ? (language === 'es' ? 'Cancelando...' : 'Unsubscribing...')
-                : (language === 'es' ? 'Desuscribirse' : 'Unsubscribe')}
+                ? language === 'es'
+                  ? 'Cancelando...'
+                  : 'Unsubscribing...'
+                : language === 'es'
+                  ? 'Desuscribirse'
+                  : 'Unsubscribe'}
             </button>
           </div>
         </DialogContent>

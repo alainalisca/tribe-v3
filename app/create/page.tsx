@@ -14,6 +14,8 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { insertSession } from '@/lib/dal';
+import { formatDisplayAmount } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -481,9 +483,8 @@ export default function CreateSessionPage() {
                                 {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
                               </span>
                               <span className="font-medium text-emerald-800 dark:text-emerald-300">
-                                {formData.currency === 'COP'
-                                  ? `$${Number(formData.price_display).toLocaleString('es-CO')} COP`
-                                  : `$${Number(formData.price_display).toFixed(2)} USD`}
+                                {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}{' '}
+                                {formData.currency}
                               </span>
                             </div>
                             <div className="flex justify-between text-sm">
@@ -491,9 +492,12 @@ export default function CreateSessionPage() {
                                 {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
                               </span>
                               <span className="text-stone-500 dark:text-gray-400">
-                                {formData.currency === 'COP'
-                                  ? `-$${Math.round(Number(formData.price_display) * 0.15).toLocaleString('es-CO')} COP`
-                                  : `-$${(Number(formData.price_display) * 0.15).toFixed(2)} USD`}
+                                -
+                                {formatDisplayAmount(
+                                  Math.round(Number(formData.price_display) * 0.15),
+                                  formData.currency as Currency
+                                )}{' '}
+                                {formData.currency}
                               </span>
                             </div>
                             <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
@@ -502,9 +506,11 @@ export default function CreateSessionPage() {
                                   {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
                                 </span>
                                 <span className="text-emerald-800 dark:text-emerald-300">
-                                  {formData.currency === 'COP'
-                                    ? `$${Math.round(Number(formData.price_display) * 0.85).toLocaleString('es-CO')} COP`
-                                    : `$${(Number(formData.price_display) * 0.85).toFixed(2)} USD`}
+                                  {formatDisplayAmount(
+                                    Math.round(Number(formData.price_display) * 0.85),
+                                    formData.currency as Currency
+                                  )}{' '}
+                                  {formData.currency}
                                 </span>
                               </div>
                             </div>

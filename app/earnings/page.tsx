@@ -11,6 +11,8 @@ import BottomNav from '@/components/BottomNav';
 import { DollarSign, TrendingUp, Clock, ArrowUpRight, AlertCircle, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { logError } from '@/lib/logger';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface PaymentTransaction {
   id: string;
@@ -40,18 +42,7 @@ interface SummaryStats {
   currency: 'COP' | 'USD';
 }
 
-const formatPrice = (cents: number, currency: 'COP' | 'USD'): string => {
-  const amount = cents / 100;
-  if (currency === 'COP') {
-    return amount.toLocaleString('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  }
-  return `$${amount.toFixed(2)}`;
-};
+// formatPrice imported from @/lib/formatCurrency
 
 const getPaymentStatusColor = (status: string) => {
   switch (status) {
@@ -135,10 +126,7 @@ export default function EarningsPage() {
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
-  const paginatedTransactions = transactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedTransactions = transactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   useEffect(() => {
     loadEarningsData();
@@ -306,9 +294,7 @@ export default function EarningsPage() {
                 <ChevronLeft className="w-6 h-6 text-theme-primary" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold text-theme-primary">
-              {language === 'es' ? 'Ganancias' : 'Earnings'}
-            </h1>
+            <h1 className="text-xl font-bold text-theme-primary">{language === 'es' ? 'Ganancias' : 'Earnings'}</h1>
           </div>
         </div>
 
@@ -365,9 +351,7 @@ export default function EarningsPage() {
               <ChevronLeft className="w-6 h-6 text-theme-primary" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold text-theme-primary">
-            {language === 'es' ? 'Ganancias' : 'Earnings'}
-          </h1>
+          <h1 className="text-xl font-bold text-theme-primary">{language === 'es' ? 'Ganancias' : 'Earnings'}</h1>
         </div>
       </div>
 
@@ -387,9 +371,7 @@ export default function EarningsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-theme-primary">
-                {formatPrice(stats.totalEarned, stats.currency)}
-              </p>
+              <p className="text-3xl font-bold text-theme-primary">{formatPrice(stats.totalEarned, stats.currency)}</p>
               <p className="text-xs text-theme-secondary mt-2">
                 {transactions.length} {language === 'es' ? 'pagos aprobados' : 'approved payments'}
               </p>
@@ -412,9 +394,7 @@ export default function EarningsPage() {
               <p className="text-3xl font-bold text-theme-primary">
                 {formatPrice(stats.pendingPayouts, stats.currency)}
               </p>
-              <p className="text-xs text-theme-secondary mt-2">
-                {language === 'es' ? 'Procesándose' : 'In progress'}
-              </p>
+              <p className="text-xs text-theme-secondary mt-2">{language === 'es' ? 'Procesándose' : 'In progress'}</p>
             </CardContent>
           </Card>
 
@@ -431,9 +411,7 @@ export default function EarningsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-theme-primary">
-                {formatPrice(stats.platformFees, stats.currency)}
-              </p>
+              <p className="text-2xl font-bold text-theme-primary">{formatPrice(stats.platformFees, stats.currency)}</p>
               <p className="text-xs text-theme-secondary mt-2">
                 {language === 'es' ? 'De todas las transacciones' : 'From all transactions'}
               </p>
@@ -457,10 +435,9 @@ export default function EarningsPage() {
                   <div
                     className="w-4/5 bg-tribe-green rounded-t-lg flex items-center justify-center transition-all"
                     style={{
-                      height: Math.max(
-                        20,
-                        (thisMonthEarnings / Math.max(thisMonthEarnings, lastMonthEarnings, 1)) * 100
-                      ) + '%',
+                      height:
+                        Math.max(20, (thisMonthEarnings / Math.max(thisMonthEarnings, lastMonthEarnings, 1)) * 100) +
+                        '%',
                     }}
                   >
                     <span className="text-white font-bold text-sm">
@@ -479,10 +456,9 @@ export default function EarningsPage() {
                   <div
                     className="w-4/5 bg-gray-400 rounded-t-lg flex items-center justify-center transition-all"
                     style={{
-                      height: Math.max(
-                        20,
-                        (lastMonthEarnings / Math.max(thisMonthEarnings, lastMonthEarnings, 1)) * 100
-                      ) + '%',
+                      height:
+                        Math.max(20, (lastMonthEarnings / Math.max(thisMonthEarnings, lastMonthEarnings, 1)) * 100) +
+                        '%',
                     }}
                   >
                     <span className="text-white font-bold text-sm">
@@ -508,8 +484,8 @@ export default function EarningsPage() {
                   ? 'No hay transacciones aún'
                   : 'No transactions yet'
                 : language === 'es'
-                ? `${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''}`
-                : `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`}
+                  ? `${transactions.length} transacción${transactions.length !== 1 ? 'es' : ''}`
+                  : `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -572,7 +548,9 @@ export default function EarningsPage() {
                           </td>
                           <td className="py-3 px-2">
                             <div className="flex flex-col gap-1">
-                              <Badge className={`text-xs whitespace-nowrap ${getPaymentStatusColor(transaction.status)}`}>
+                              <Badge
+                                className={`text-xs whitespace-nowrap ${getPaymentStatusColor(transaction.status)}`}
+                              >
                                 {formatStatusLabel(transaction.status, language)}
                               </Badge>
                               {transaction.payout_status && (

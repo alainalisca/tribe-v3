@@ -120,8 +120,8 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
 
   if (loading) {
     return (
-      <div className="bg-[#3D4349] rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-bold text-white mb-4">
+      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
@@ -140,8 +140,8 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
 
   if (error && events.length === 0) {
     return (
-      <div className="bg-[#3D4349] rounded-xl p-6 mb-6 border border-[#52575D]">
-        <h2 className="text-lg font-bold text-white mb-4">
+      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 border border-[#52575D]">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
         <div className="text-center py-8">
@@ -161,9 +161,9 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
   }
 
   return (
-    <div className="bg-[#3D4349] rounded-xl p-6 mb-6">
+    <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4">
       {/* Header */}
-      <h2 className="text-lg font-bold text-white mb-4">
+      <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
         🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
       </h2>
 

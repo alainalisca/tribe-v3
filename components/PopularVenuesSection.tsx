@@ -85,8 +85,8 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
 
   if (loading) {
     return (
-      <section className="w-full px-4 py-6 space-y-4">
-        <h2 className="text-xl font-bold text-theme-primary">
+      <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
         </h2>
         <div className="flex items-center justify-center h-32 bg-[#3D4349] dark:bg-[#3D4349] rounded-lg">
@@ -98,8 +98,8 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
 
   if (error || venues.length === 0) {
     return (
-      <section className="w-full px-4 py-6 space-y-4">
-        <h2 className="text-xl font-bold text-theme-primary">
+      <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
         </h2>
         <div className="flex items-center justify-center h-32 bg-[#3D4349] dark:bg-[#3D4349] rounded-lg">
@@ -112,8 +112,8 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
   }
 
   return (
-    <section className="w-full px-4 py-6 space-y-4">
-      <h2 className="text-xl font-bold text-theme-primary">
+    <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+      <h2 className="text-lg font-bold text-stone-900 dark:text-white">
         📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
       </h2>
 

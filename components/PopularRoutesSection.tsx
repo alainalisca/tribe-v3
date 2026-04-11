@@ -111,9 +111,9 @@ export default function PopularRoutesSection({ language }: PopularRoutesSectionP
   }
 
   return (
-    <section className="w-full px-4 py-6 space-y-4">
+    <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-theme-primary">
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           🗺️ {lang === 'es' ? 'Rutas Populares Cerca' : 'Popular Routes Near You'}
         </h2>
       </div>
@@ -127,7 +127,7 @@ export default function PopularRoutesSection({ language }: PopularRoutesSectionP
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedSport === sport
                 ? 'bg-[#A3E635] text-[#272D34]'
-                : 'bg-[#3D4349] dark:bg-[#3D4349] text-stone-400 dark:text-gray-400 hover:text-stone-300 dark:hover:text-gray-300'
+                : 'bg-stone-200 dark:bg-[#52575D] text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-[#5e6369]'
             }`}
           >
             {sport === 'Running' ? (lang === 'es' ? 'Correr' : 'Running') : lang === 'es' ? 'Ciclismo' : 'Cycling'}

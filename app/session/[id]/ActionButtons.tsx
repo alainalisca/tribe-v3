@@ -7,6 +7,8 @@ import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { showError } from '@/lib/toast';
+import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -51,14 +53,7 @@ export default function ActionButtons({
 
   const isPaidSession = !!session.is_paid && session.price_cents > 0;
 
-  // Format price for display
-  const formatPrice = (cents: number, currency: string) => {
-    const amount = cents / 100;
-    if (currency === 'COP') {
-      return `COP $${amount.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
-    }
-    return `USD $${amount.toFixed(2)}`;
-  };
+  // formatPrice imported from @/lib/formatCurrency
 
   // Handle paid session checkout — calls /api/payment/create and redirects to gateway
   async function handlePaidJoin() {
@@ -193,15 +188,20 @@ export default function ActionButtons({
                   {_language === 'es' ? 'Sesión de pago' : 'Paid Session'}
                 </p>
                 <p className="text-lg font-bold text-green-800 dark:text-green-200">
-                  {formatPrice(session.price_cents, session.currency || 'COP')}
+                  {session.currency || 'COP'}{' '}
+                  {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}
                 </p>
               </div>
               <div className="text-xs text-green-600 dark:text-green-400 text-right">
                 {session.currency === 'USD' ? '💳 Stripe' : '🇨🇴 Wompi'}
                 <br />
                 {session.currency === 'USD'
-                  ? (_language === 'es' ? 'Tarjeta de crédito/débito' : 'Credit/debit card')
-                  : (_language === 'es' ? 'Nequi, PSE, tarjeta' : 'Nequi, PSE, card')}
+                  ? _language === 'es'
+                    ? 'Tarjeta de crédito/débito'
+                    : 'Credit/debit card'
+                  : _language === 'es'
+                    ? 'Nequi, PSE, tarjeta'
+                    : 'Nequi, PSE, card'}
               </div>
             </div>
           </div>

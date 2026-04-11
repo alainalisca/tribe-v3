@@ -1,6 +1,7 @@
 /** Page: /session/[id] — Session detail with athletes, chat, live status, and actions */
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -30,8 +31,8 @@ import { useSessionDetail } from './useSessionDetail';
 import { confirmParticipantPayment } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
-import PostSessionPrompt from '@/components/PostSessionPrompt';
 import PostSessionConnect from '@/components/PostSessionConnect';
+import PostSessionFlow from '@/components/PostSessionFlow';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -39,6 +40,22 @@ export default function SessionDetailPage() {
   const { t, language } = useLanguage();
   const supabase = createClient();
   const d = useSessionDetail(params.id as string, language, (path) => router.push(path));
+  const [showPostSessionFlow, setShowPostSessionFlow] = useState(false);
+
+  // Auto-show post-session flow for past sessions the user attended
+  useEffect(() => {
+    if (!d.session || !d.user) return;
+    const sessionDate = new Date(d.session.date + 'T00:00:00');
+    if (d.session.start_time) {
+      const [hours, minutes] = d.session.start_time.split(':').map(Number);
+      sessionDate.setHours(hours, minutes, 0, 0);
+      sessionDate.setMinutes(sessionDate.getMinutes() + (d.session.duration || 60));
+    } else sessionDate.setHours(23, 59, 59, 999);
+    const sessionIsPast = sessionDate < new Date();
+    if (sessionIsPast && d.hasJoined && d.creator && !d.hasReviewed) {
+      setShowPostSessionFlow(true);
+    }
+  }, [d.session, d.user, d.hasJoined, d.creator, d.hasReviewed]);
 
   async function handleConfirmPayment(participantUserId: string) {
     if (!d.user || !d.session) return;
@@ -195,20 +212,7 @@ export default function SessionDetailPage() {
           }}
         />
 
-        {/* Post-Session Follow-Through Prompt */}
-        {isPast && d.hasJoined && !isCreator && d.user && d.creator && !d.hasReviewed && (
-          <PostSessionPrompt
-            sessionId={d.session.id}
-            instructorId={d.creator.id}
-            instructorName={d.creator.name || ''}
-            instructorAvatar={d.creator.avatar_url}
-            userId={d.user.id}
-            sport={d.session.sport || ''}
-            onDismiss={() => {}}
-          />
-        )}
-
-        {/* Post-Session Connect — suggest connecting with fellow participants */}
+        {/* Post-Session Connect — standalone fallback below session details */}
         {isPast && d.user && d.participants.length > 0 && (
           <PostSessionConnect
             sessionId={d.session.id}
@@ -278,6 +282,30 @@ export default function SessionDetailPage() {
           userId={d.user.id}
           onClose={() => d.setShowStoryUpload(false)}
           onUploaded={() => d.loadSessionStories()}
+        />
+      )}
+
+      {/* Post-Session Flow Modal */}
+      {d.user && d.creator && (
+        <PostSessionFlow
+          open={showPostSessionFlow}
+          onClose={() => setShowPostSessionFlow(false)}
+          sessionId={d.session.id}
+          userId={d.user.id}
+          creatorId={d.creator.id}
+          creatorName={d.creator.name || ''}
+          creatorAvatar={d.creator.avatar_url}
+          sport={d.session.sport || ''}
+          participants={d.participants
+            .filter((p: any) => p.user_id !== d.user!.id && !p.is_guest)
+            .map((p: any) => ({
+              user_id: p.user_id,
+              name: p.user?.name || p.guest_name || 'Unknown',
+              avatar_url: p.user?.avatar_url || null,
+              primary_sport: p.user?.sports?.[0] || undefined,
+            }))}
+          language={language}
+          hasReviewed={d.hasReviewed}
         />
       )}
 

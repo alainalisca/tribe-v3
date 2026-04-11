@@ -11,19 +11,34 @@ import {
   declineConnection,
   hasSharedSession,
 } from '@/lib/dal/connections';
+import { fetchUpcomingSessionsByUser } from '@/lib/dal/sessions';
 import { Button } from '@/components/ui/button';
-import type { Connection } from '@/lib/dal/connections';
+
+interface UpcomingSession {
+  id: string;
+  sport: string;
+  date: string;
+  start_time: string;
+  location: string;
+}
 
 interface ConnectionButtonProps {
   currentUserId: string;
   profileUserId: string;
   language: string;
+  profileUserName?: string;
   onConnect?: () => void;
 }
 
 type ConnectionStatus = 'none' | 'pending_sent' | 'pending_received' | 'connected' | 'no_shared_session';
 
-export default function ConnectionButton({ currentUserId, profileUserId, language, onConnect }: ConnectionButtonProps) {
+export default function ConnectionButton({
+  currentUserId,
+  profileUserId,
+  language,
+  profileUserName,
+  onConnect,
+}: ConnectionButtonProps) {
   const supabase = createClient();
 
   const [status, setStatus] = useState<ConnectionStatus>('none');
@@ -31,6 +46,7 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([]);
 
   // Check connection status and shared session
   useEffect(() => {
@@ -42,6 +58,13 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
 
       if (!sharedResult.success || !sharedResult.data) {
         setStatus('no_shared_session');
+
+        // Fetch upcoming sessions to show as a funnel
+        const sessionsResult = await fetchUpcomingSessionsByUser(supabase, profileUserId);
+        if (sessionsResult.success && sessionsResult.data) {
+          setUpcomingSessions(sessionsResult.data);
+        }
+
         setLoading(false);
         return;
       }
@@ -161,6 +184,22 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
         en: 'Message',
         es: 'Mensaje',
       },
+      joinSessionTitle: {
+        en: 'Join a session with {name} to connect',
+        es: 'Únete a una sesión con {name} para conectar',
+      },
+      connectionsUnlock: {
+        en: 'Connections unlock after training together',
+        es: 'Las conexiones se desbloquean después de entrenar juntos',
+      },
+      viewSessions: {
+        en: 'View their sessions',
+        es: 'Ver sus sesiones',
+      },
+      noUpcomingSessions: {
+        en: 'No upcoming sessions yet',
+        es: 'No hay sesiones próximas aún',
+      },
     };
 
     return translations[key]?.[language] || key;
@@ -174,20 +213,29 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
     );
   }
 
-  // a) No shared session
+  // a) No shared session — funnel toward training together
   if (status === 'no_shared_session') {
+    const displayName = profileUserName || t('connect');
+    const title = t('joinSessionTitle').replace('{name}', displayName);
+
     return (
-      <Button
-        disabled
-        aria-label={t('trainTogether')}
-        className="w-full bg-stone-300 dark:bg-[#52575D] text-stone-600 dark:text-gray-400 cursor-not-allowed"
-      >
-        <Lock className="w-4 h-4 mr-2" aria-hidden="true" />
-        <div className="text-left">
-          <div>{t('connect')}</div>
-          <div className="text-xs">{t('trainTogether')}</div>
+      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Lock className="w-4 h-4 text-stone-500 dark:text-gray-400" aria-hidden="true" />
+          <p className="text-sm font-semibold text-stone-800 dark:text-gray-200">{title}</p>
         </div>
-      </Button>
+        <p className="text-xs text-stone-500 dark:text-gray-400 mb-3">{t('connectionsUnlock')}</p>
+
+        {upcomingSessions.length > 0 ? (
+          <Link href={`/profile/${profileUserId}#sessions`}>
+            <Button className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold">
+              {t('viewSessions')}
+            </Button>
+          </Link>
+        ) : (
+          <p className="text-xs text-stone-400 dark:text-gray-500 text-center">{t('noUpcomingSessions')}</p>
+        )}
+      </div>
     );
   }
 

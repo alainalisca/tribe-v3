@@ -333,7 +333,12 @@ export default function PublicProfilePage() {
           {/* Connection Button — session-gated: Connect / Message */}
           {currentUser && !isOwnProfile && (
             <div className="mt-6">
-              <ConnectionButton currentUserId={currentUser.id} profileUserId={userId} language={language} />
+              <ConnectionButton
+                currentUserId={currentUser.id}
+                profileUserId={userId}
+                language={language}
+                profileUserName={profile?.name ?? undefined}
+              />
             </div>
           )}
 

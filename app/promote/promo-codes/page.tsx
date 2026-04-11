@@ -18,6 +18,8 @@ import {
   DollarSign,
   ArrowLeft,
 } from 'lucide-react';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 import BottomNav from '@/components/BottomNav';
 
 interface PromoCode {
@@ -391,10 +393,7 @@ export default function PromoCodesPage() {
         is_active: true,
       };
 
-      const { data, error } = await supabase
-        .from('promo_codes')
-        .insert([newPromoCode])
-        .select();
+      const { data, error } = await supabase.from('promo_codes').insert([newPromoCode]).select();
 
       if (error) throw error;
 
@@ -425,10 +424,7 @@ export default function PromoCodesPage() {
 
   const handleDeactivate = async (promoId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('promo_codes')
-        .update({ is_active: !currentStatus })
-        .eq('id', promoId);
+      const { error } = await supabase.from('promo_codes').update({ is_active: !currentStatus }).eq('id', promoId);
 
       if (error) throw error;
 
@@ -446,12 +442,17 @@ export default function PromoCodesPage() {
   };
 
   const getPromoStatus = (promo: PromoCode) => {
-    if (!promo.is_active) return { status: 'inactive', label: 'Inactive', color: 'bg-stone-200 dark:bg-gray-700 text-stone-500' };
+    if (!promo.is_active)
+      return { status: 'inactive', label: 'Inactive', color: 'bg-stone-200 dark:bg-gray-700 text-stone-500' };
     if (promo.expiry_date && new Date(promo.expiry_date) < new Date()) {
       return { status: 'expired', label: t.expired, color: 'bg-stone-200 dark:bg-gray-700 text-stone-500' };
     }
     if (promo.max_uses !== null && promo.current_uses >= promo.max_uses) {
-      return { status: 'maxed_out', label: t.maxedOut, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' };
+      return {
+        status: 'maxed_out',
+        label: t.maxedOut,
+        color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+      };
     }
     return { status: 'active', label: t.active, color: 'bg-tribe-green/20 text-tribe-green' };
   };
@@ -460,8 +461,7 @@ export default function PromoCodesPage() {
     if (promo.discount_type === 'percentage') {
       return `${promo.discount_value}${t.percentOff}`;
     } else if (promo.discount_type === 'fixed') {
-      const amount = promo.discount_value / 100;
-      return `${promo.currency} ${amount.toFixed(2)} ${t.off}`;
+      return `${formatPrice(promo.discount_value, (promo.currency || 'USD') as Currency)} ${t.off}`;
     } else {
       return 'Free session';
     }
@@ -471,7 +471,9 @@ export default function PromoCodesPage() {
     if (promo.applies_to === 'all') return t.allSessions;
     if (promo.applies_to === 'specific_session') {
       const session = sessions.find((s) => s.id === promo.session_id);
-      return session ? `${session.sport} - ${new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}` : t.sessionNotFound;
+      return session
+        ? `${session.sport} - ${new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}`
+        : t.sessionNotFound;
     }
     if (promo.applies_to === 'specific_package') {
       const pkg = packages.find((p) => p.id === promo.package_id);
@@ -504,7 +506,10 @@ export default function PromoCodesPage() {
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <Link href="/promote" className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition">
+          <Link
+            href="/promote"
+            className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex-1 ml-3">
@@ -525,9 +530,7 @@ export default function PromoCodesPage() {
           </div>
         )}
         {success && (
-          <div className="bg-tribe-green/20 border border-tribe-green text-tribe-green p-4 rounded-lg">
-            {success}
-          </div>
+          <div className="bg-tribe-green/20 border border-tribe-green text-tribe-green p-4 rounded-lg">{success}</div>
         )}
 
         {/* Stats */}
@@ -546,9 +549,7 @@ export default function PromoCodesPage() {
           </div>
           <div className="border-tribe-green/30 bg-gradient-to-br from-tribe-green/10 to-lime-50 dark:from-tribe-green/5 dark:to-green-900/20 rounded-2xl p-4 border">
             <p className="text-theme-secondary text-xs mb-2">{t.revenueGenerated}</p>
-            <p className="text-xl font-bold text-tribe-green">
-              ${(stats.revenue_generated / 100).toFixed(2)}
-            </p>
+            <p className="text-xl font-bold text-tribe-green">${(stats.revenue_generated / 100).toFixed(2)}</p>
           </div>
         </div>
 
@@ -568,9 +569,7 @@ export default function PromoCodesPage() {
             <div className="space-y-4">
               {/* Code Input */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.code}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.code}</label>
                 <input
                   type="text"
                   maxLength={20}
@@ -588,9 +587,7 @@ export default function PromoCodesPage() {
 
               {/* Discount Type */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.discountType}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.discountType}</label>
                 <select
                   value={formData.discountType}
                   onChange={(e) =>
@@ -610,9 +607,7 @@ export default function PromoCodesPage() {
               {/* Discount Value */}
               {formData.discountType !== 'free_session' && (
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-2">
-                    {t.discountValue}
-                  </label>
+                  <label className="block text-sm font-medium text-theme-primary mb-2">{t.discountValue}</label>
                   <input
                     type="number"
                     value={formData.discountValue}
@@ -633,9 +628,7 @@ export default function PromoCodesPage() {
               {/* Currency (only for fixed) */}
               {formData.discountType === 'fixed' && (
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-2">
-                    {t.currency}
-                  </label>
+                  <label className="block text-sm font-medium text-theme-primary mb-2">{t.currency}</label>
                   <select
                     value={formData.currency}
                     onChange={(e) =>
@@ -654,9 +647,7 @@ export default function PromoCodesPage() {
 
               {/* Max Uses */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.maxUses}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.maxUses}</label>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 text-theme-secondary">
                     <input
@@ -693,9 +684,7 @@ export default function PromoCodesPage() {
 
               {/* Applies To */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.appliesTo}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.appliesTo}</label>
                 <select
                   value={formData.appliesTo}
                   onChange={(e) =>
@@ -717,9 +706,7 @@ export default function PromoCodesPage() {
               {/* Specific Session Dropdown */}
               {formData.appliesTo === 'specific_session' && (
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-2">
-                    {t.selectSession}
-                  </label>
+                  <label className="block text-sm font-medium text-theme-primary mb-2">{t.selectSession}</label>
                   <select
                     value={formData.sessionId}
                     onChange={(e) =>
@@ -744,9 +731,7 @@ export default function PromoCodesPage() {
               {/* Specific Package Dropdown */}
               {formData.appliesTo === 'specific_package' && (
                 <div>
-                  <label className="block text-sm font-medium text-theme-primary mb-2">
-                    {t.selectPackage}
-                  </label>
+                  <label className="block text-sm font-medium text-theme-primary mb-2">{t.selectPackage}</label>
                   <select
                     value={formData.packageId}
                     onChange={(e) =>
@@ -769,9 +754,7 @@ export default function PromoCodesPage() {
 
               {/* Start Date */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.startDate}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.startDate}</label>
                 <input
                   type="date"
                   value={formData.startDate}
@@ -787,9 +770,7 @@ export default function PromoCodesPage() {
 
               {/* Expiry Date */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.expiryDate}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.expiryDate}</label>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-2 text-theme-secondary">
                     <input
@@ -824,9 +805,7 @@ export default function PromoCodesPage() {
 
               {/* Min Amount */}
               <div>
-                <label className="block text-sm font-medium text-theme-primary mb-2">
-                  {t.minAmount}
-                </label>
+                <label className="block text-sm font-medium text-theme-primary mb-2">{t.minAmount}</label>
                 <input
                   type="number"
                   value={formData.minAmount}
@@ -899,9 +878,7 @@ export default function PromoCodesPage() {
                   </div>
 
                   {/* Discount Description */}
-                  <p className="text-lg font-bold text-tribe-green mb-3">
-                    {getDiscountDescription(promo)}
-                  </p>
+                  <p className="text-lg font-bold text-tribe-green mb-3">{getDiscountDescription(promo)}</p>
 
                   {/* Usage Stats */}
                   <div className="bg-stone-50 dark:bg-[#3D4349] rounded px-3 py-2 mb-3 text-sm">
@@ -917,9 +894,7 @@ export default function PromoCodesPage() {
                   {promo.expiry_date ? (
                     <p className="text-theme-secondary text-sm mb-2">
                       {t.expiresOn}:{' '}
-                      {new Date(promo.expiry_date).toLocaleDateString(
-                        language === 'es' ? 'es-ES' : 'en-US'
-                      )}
+                      {new Date(promo.expiry_date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
                     </p>
                   ) : (
                     <p className="text-theme-secondary text-sm mb-2">No expiry date</p>

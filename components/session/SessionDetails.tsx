@@ -6,6 +6,8 @@ import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface CreatorInfo {
   id: string;
@@ -160,9 +162,7 @@ export default function SessionDetails({
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
-                {session.currency === 'COP'
-                  ? `$${(session.price_cents / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-                  : `$${(session.price_cents / 100).toFixed(2)} USD`}
+                {formatPrice(session.price_cents, (session.currency || 'USD') as Currency)} {session.currency || 'USD'}
               </span>
               <Badge className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-xs border-transparent">
                 {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
@@ -189,9 +189,8 @@ export default function SessionDetails({
                       {language === 'es' ? 'Precio por persona' : 'Price per person'}
                     </span>
                     <span className="text-emerald-700 dark:text-emerald-300">
-                      {session.currency === 'COP'
-                        ? `$${(session.price_cents! / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-                        : `$${(session.price_cents! / 100).toFixed(2)} USD`}
+                      {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
@@ -199,9 +198,8 @@ export default function SessionDetails({
                       {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
                     </span>
                     <span className="text-stone-500 dark:text-gray-400">
-                      {session.currency === 'COP'
-                        ? `-$${Math.round((session.price_cents! * 0.15) / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-                        : `-$${((session.price_cents! * 0.15) / 100).toFixed(2)} USD`}
+                      -{formatPrice(Math.round(session.price_cents! * 0.15), (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
@@ -209,9 +207,8 @@ export default function SessionDetails({
                       {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
                     </span>
                     <span className="text-emerald-800 dark:text-emerald-300">
-                      {session.currency === 'COP'
-                        ? `$${Math.round((session.price_cents! * 0.85) / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-                        : `$${((session.price_cents! * 0.85) / 100).toFixed(2)} USD`}
+                      {formatPrice(Math.round(session.price_cents! * 0.85), (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
                     </span>
                   </div>
                   {participants.filter((p) => p.status === 'confirmed').length > 0 && (
@@ -222,9 +219,13 @@ export default function SessionDetails({
                           : `Est. total (${participants.filter((p) => p.status === 'confirmed').length} confirmed)`}
                       </span>
                       <span>
-                        {session.currency === 'COP'
-                          ? `$${Math.round(((session.price_cents! * 0.85) / 100) * participants.filter((p) => p.status === 'confirmed').length).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-                          : `$${(((session.price_cents! * 0.85) / 100) * participants.filter((p) => p.status === 'confirmed').length).toFixed(2)} USD`}
+                        {formatPrice(
+                          Math.round(
+                            session.price_cents! * 0.85 * participants.filter((p) => p.status === 'confirmed').length
+                          ),
+                          (session.currency || 'USD') as Currency
+                        )}{' '}
+                        {session.currency || 'USD'}
                       </span>
                     </div>
                   )}

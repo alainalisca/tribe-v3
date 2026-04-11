@@ -982,6 +982,7 @@ export type Database = {
           id: string
           is_immediate: boolean | null
           is_paid: boolean | null
+          is_recurring: boolean | null
           is_training_now: boolean | null
           join_policy: string | null
           latitude: number | null
@@ -998,6 +999,10 @@ export type Database = {
           platform_fee_percent: number | null
           price_cents: number | null
           recap_photos: string[] | null
+          recurrence_days: string[] | null
+          recurrence_end_date: string | null
+          recurrence_pattern: string | null
+          recurring_parent_id: string | null
           reminder_15min_sent: boolean | null
           reminder_1hr_sent: boolean | null
           reminder_sent: boolean | null
@@ -1026,6 +1031,7 @@ export type Database = {
           id?: string
           is_immediate?: boolean | null
           is_paid?: boolean | null
+          is_recurring?: boolean | null
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null
@@ -1042,6 +1048,10 @@ export type Database = {
           platform_fee_percent?: number | null
           price_cents?: number | null
           recap_photos?: string[] | null
+          recurrence_days?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          recurring_parent_id?: string | null
           reminder_15min_sent?: boolean | null
           reminder_1hr_sent?: boolean | null
           reminder_sent?: boolean | null
@@ -1070,6 +1080,7 @@ export type Database = {
           id?: string
           is_immediate?: boolean | null
           is_paid?: boolean | null
+          is_recurring?: boolean | null
           is_training_now?: boolean | null
           join_policy?: string | null
           latitude?: number | null
@@ -1086,6 +1097,10 @@ export type Database = {
           platform_fee_percent?: number | null
           price_cents?: number | null
           recap_photos?: string[] | null
+          recurrence_days?: string[] | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          recurring_parent_id?: string | null
           reminder_15min_sent?: boolean | null
           reminder_1hr_sent?: boolean | null
           reminder_sent?: boolean | null
