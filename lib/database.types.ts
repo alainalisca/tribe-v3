@@ -868,6 +868,41 @@ export type Database = {
           },
         ]
       }
+      session_comments: {
+        Row: {
+          id: string
+          session_id: string
+          author_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          author_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          content?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_comments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_stories: {
         Row: {
           caption: string | null
@@ -1974,3 +2009,5 @@ export type ChatMessage = Database['public']['Tables']['chat_messages']['Row'];
 export type Review = Database['public']['Tables']['reviews']['Row'];
 export type LiveStatus = Database['public']['Tables']['live_status']['Row'];
 export type SessionStory = Database['public']['Tables']['session_stories']['Row'];
+export type SessionComment = Database['public']['Tables']['session_comments']['Row'];
+export type SessionCommentInsert = Database['public']['Tables']['session_comments']['Insert'];

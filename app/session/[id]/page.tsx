@@ -33,6 +33,7 @@ import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import PostSessionConnect from '@/components/PostSessionConnect';
 import PostSessionFlow from '@/components/PostSessionFlow';
+import SessionQA from '@/components/session/SessionQA';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -167,6 +168,14 @@ export default function SessionDetailPage() {
           onEndLive={d.liveStatus.handleEndLive}
           onRenewLive={d.liveStatus.handleRenewLive}
           onShareMoment={() => d.setShowStoryUpload(true)}
+        />
+
+        <SessionQA
+          sessionId={d.session.id}
+          currentUserId={d.user?.id || null}
+          isCreator={isCreator}
+          creatorId={d.session.creator_id}
+          language={language}
         />
 
         <ActionButtons
