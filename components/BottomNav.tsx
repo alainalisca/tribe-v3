@@ -143,7 +143,7 @@ export default function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center min-w-0 w-16 transition-colors relative ${
+                className={`flex flex-col items-center justify-center min-w-0 flex-1 transition-colors relative ${
                   isActive
                     ? 'text-[#9EE551]'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'

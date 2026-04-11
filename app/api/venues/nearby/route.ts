@@ -55,16 +55,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Google API key not configured' }, { status: 500 });
     }
 
-    // Search for multiple types to build a comprehensive list
+    // Search for multiple types to build a comprehensive variety
     const searchQueries = [
       { keyword: 'gym', type: 'gym' },
-      { keyword: 'park', type: 'park' },
-      { keyword: 'crossfit', type: 'gym' },
+      { keyword: 'fitness park', type: 'park' },
+      { keyword: 'crossfit box', type: 'gym' },
       { keyword: 'yoga studio', type: 'studio' },
       { keyword: 'swimming pool', type: 'pool' },
+      { keyword: 'public pool', type: 'pool' },
       { keyword: 'running track', type: 'track' },
       { keyword: 'tennis court', type: 'park' },
-      { keyword: 'stadium', type: 'park' },
+      { keyword: 'soccer field cancha', type: 'park' },
+      { keyword: 'parque deportivo', type: 'park' },
+      { keyword: 'calisthenics park', type: 'park' },
+      { keyword: 'sports center centro deportivo', type: 'gym' },
+      { keyword: 'martial arts gym', type: 'gym' },
+      { keyword: 'dance studio', type: 'studio' },
+      { keyword: 'climbing gym', type: 'gym' },
     ];
 
     const allVenues = new Map();

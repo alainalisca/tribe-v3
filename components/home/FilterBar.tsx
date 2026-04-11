@@ -147,7 +147,7 @@ export default function FilterBar({
               onChange={(e) => setPricingFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">{language === 'es' ? '💰 Todos' : '💰 All'}</option>
+              <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
               <option value="free">{language === 'es' ? '🆓 Gratis' : '🆓 Free'}</option>
               <option value="paid">{language === 'es' ? '💳 De pago' : '💳 Paid'}</option>
             </select>

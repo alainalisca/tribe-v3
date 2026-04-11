@@ -104,7 +104,7 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
   }
 
   const streakLabel = language === 'es' ? 'Racha de' : 'Streak';
-  const weeksLabel = language === 'es' ? 'semanas' : 'weeks';
+  const weeksLabel = streak === 1 ? (language === 'es' ? 'semana' : 'week') : language === 'es' ? 'semanas' : 'weeks';
   const showSparkle = streak >= 4;
 
   return (
@@ -123,11 +123,11 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
       </div>
 
       {/* Week days indicator */}
-      <div className="flex gap-1.5">
+      <div className="flex justify-center gap-1.5">
         {weekDays.map((hasAttendance, index) => {
           const days = language === 'es' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
           return (
-            <div key={index} className="flex flex-col items-center gap-0.5 flex-1">
+            <div key={index} className="flex flex-col items-center flex-1 max-w-[40px]">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
                   hasAttendance
@@ -135,13 +135,10 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
                     : 'bg-gray-300 dark:bg-[#6B7178] text-gray-500 dark:text-gray-400'
                 }`}
               >
-                {hasAttendance ? (
-                  <span className="text-sm font-bold">✓</span>
-                ) : (
-                  <span className="text-xs font-medium">{days[index]}</span>
-                )}
+                <span className={`font-bold ${hasAttendance ? 'text-sm' : 'text-xs'}`}>
+                  {hasAttendance ? '✓' : days[index]}
+                </span>
               </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{days[index]}</span>
             </div>
           );
         })}

@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import BottomNav from '@/components/BottomNav'
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import BottomNav from '@/components/BottomNav';
 import {
   Heart,
   MessageCircle,
@@ -22,92 +22,92 @@ import {
   Search,
   Eye,
   ArrowLeft,
-} from 'lucide-react'
+} from 'lucide-react';
 
 // Type definitions
 interface Instructor {
-  id: string
-  name: string
-  avatar_url: string
-  tagline: string
-  location: string
-  specialties: string[]
-  verified: boolean
-  storefront_banner_url: string
-  bio: string
+  id: string;
+  name: string;
+  avatar_url: string;
+  tagline: string;
+  location: string;
+  specialties: string[];
+  verified: boolean;
+  storefront_banner_url: string;
+  bio: string;
 }
 
 interface Session {
-  id: string
-  title: string
-  sport: string
-  date: string
-  time: string
-  price: number
-  spots_available: number
-  spots_total: number
-  creator_id: string
-  is_boosted?: boolean
+  id: string;
+  title: string;
+  sport: string;
+  date: string;
+  time: string;
+  price: number;
+  spots_available: number;
+  spots_total: number;
+  creator_id: string;
+  is_boosted?: boolean;
 }
 
 interface ServicePackage {
-  id: string
-  name: string
-  description: string
-  price: number
-  session_count?: number
-  duration?: string
-  instructor_id: string
-  is_active: boolean
-  tag?: string
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  session_count?: number;
+  duration?: string;
+  instructor_id: string;
+  is_active: boolean;
+  tag?: string;
 }
 
 interface StorefrontMedia {
-  id: string
-  url: string
-  media_type: 'image' | 'video'
-  instructor_id: string
+  id: string;
+  url: string;
+  media_type: 'image' | 'video';
+  instructor_id: string;
 }
 
 interface InstructorPost {
-  id: string
-  content: string
-  media_url?: string
-  media_type?: 'image' | 'video'
-  likes_count: number
-  views_count: number
-  created_at: string
-  author_id: string
+  id: string;
+  content: string;
+  media_url?: string;
+  media_type?: 'image' | 'video';
+  likes_count: number;
+  views_count: number;
+  created_at: string;
+  author_id: string;
 }
 
 interface FollowState {
-  isFollowing: boolean
-  followerCount: number
-  followingCount: number
+  isFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
 }
 
 export default function StorefrontPage() {
-  const params = useParams()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const params = useParams();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const instructorId = params.id as string
+  const instructorId = params.id as string;
 
   // State
-  const [instructor, setInstructor] = useState<Instructor | null>(null)
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [packages, setPackages] = useState<ServicePackage[]>([])
-  const [media, setMedia] = useState<StorefrontMedia[]>([])
-  const [posts, setPosts] = useState<InstructorPost[]>([])
+  const [instructor, setInstructor] = useState<Instructor | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [packages, setPackages] = useState<ServicePackage[]>([]);
+  const [media, setMedia] = useState<StorefrontMedia[]>([]);
+  const [posts, setPosts] = useState<InstructorPost[]>([]);
   const [followState, setFollowState] = useState<FollowState>({
     isFollowing: false,
     followerCount: 0,
     followingCount: 0,
-  })
+  });
 
-  const [activeTab, setActiveTab] = useState('sessions')
-  const [loading, setLoading] = useState(true)
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set())
+  const [activeTab, setActiveTab] = useState('sessions');
+  const [loading, setLoading] = useState(true);
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   // Translations
   const translations = {
@@ -132,7 +132,7 @@ export default function StorefrontPage() {
     verified: language === 'es' ? 'Verificado' : 'Verified',
     spotsLeft: language === 'es' ? 'Lugares' : 'Spots',
     viewsAgo: language === 'es' ? 'hace' : 'ago',
-  }
+  };
 
   // Fetch instructor details
   useEffect(() => {
@@ -140,39 +140,38 @@ export default function StorefrontPage() {
       try {
         const { data: instructorData, error } = await supabase
           .from('users')
-          .select(
-            'id, name, avatar_url, tagline, location, specialties, verified, storefront_banner_url, bio'
-          )
+          .select('id, name, avatar_url, tagline, location, specialties, verified, storefront_banner_url, bio')
           .eq('id', instructorId)
-          .single()
+          .single();
 
-        if (error) throw error
-        setInstructor(instructorData)
+        if (error) throw error;
+        setInstructor(instructorData);
       } catch (err) {
-        console.error('Error fetching instructor:', err)
+        console.error('Error fetching instructor:', err);
       }
-    }
+    };
 
     if (instructorId) {
-      fetchInstructor()
+      fetchInstructor();
     }
-  }, [instructorId, supabase])
+  }, [instructorId, supabase]);
 
   // Fetch all storefront data
   useEffect(() => {
     const fetchStorefrontData = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
 
-        // Fetch sessions
-        const now = new Date().toISOString()
+        // Fetch sessions — use date-only string for proper comparison with date column
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const { data: sessionsData } = await supabase
           .from('sessions')
           .select('*')
           .eq('creator_id', instructorId)
           .eq('status', 'open')
-          .gte('date', now)
-          .order('date', { ascending: true })
+          .gte('date', todayStr)
+          .order('date', { ascending: true });
 
         if (sessionsData) {
           // Check for boosted campaigns
@@ -180,15 +179,15 @@ export default function StorefrontPage() {
             .from('boost_campaigns')
             .select('session_id')
             .eq('instructor_id', instructorId)
-            .eq('is_active', true)
+            .eq('is_active', true);
 
-          const boostedSessionIds = new Set(boostData?.map((b: { session_id: string }) => b.session_id) || [])
+          const boostedSessionIds = new Set(boostData?.map((b: { session_id: string }) => b.session_id) || []);
           const enhancedSessions = sessionsData.map((s: Session) => ({
             ...s,
             is_boosted: boostedSessionIds.has(s.id),
-          }))
+          }));
 
-          setSessions(enhancedSessions)
+          setSessions(enhancedSessions);
         }
 
         // Fetch packages
@@ -196,56 +195,56 @@ export default function StorefrontPage() {
           .from('service_packages')
           .select('*')
           .eq('instructor_id', instructorId)
-          .eq('is_active', true)
+          .eq('is_active', true);
 
-        if (packagesData) setPackages(packagesData)
+        if (packagesData) setPackages(packagesData);
 
         // Fetch media
         const { data: mediaData } = await supabase
           .from('storefront_media')
           .select('*')
           .eq('instructor_id', instructorId)
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false });
 
-        if (mediaData) setMedia(mediaData)
+        if (mediaData) setMedia(mediaData);
 
         // Fetch posts
         const { data: postsData } = await supabase
           .from('instructor_posts')
           .select('*')
           .eq('author_id', instructorId)
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false });
 
-        if (postsData) setPosts(postsData)
+        if (postsData) setPosts(postsData);
 
         // Fetch follow state
         const { data: followerData } = await supabase
           .from('user_follows')
           .select('follower_id')
-          .eq('following_id', instructorId)
+          .eq('following_id', instructorId);
 
         const { data: followingData } = await supabase
           .from('user_follows')
           .select('following_id')
-          .eq('follower_id', instructorId)
+          .eq('follower_id', instructorId);
 
         setFollowState({
           isFollowing: false,
           followerCount: followerData?.length || 0,
           followingCount: followingData?.length || 0,
-        })
+        });
 
-        setLoading(false)
+        setLoading(false);
       } catch (err) {
-        console.error('Error fetching storefront data:', err)
-        setLoading(false)
+        console.error('Error fetching storefront data:', err);
+        setLoading(false);
       }
-    }
+    };
 
     if (instructorId) {
-      fetchStorefrontData()
+      fetchStorefrontData();
     }
-  }, [instructorId, supabase])
+  }, [instructorId, supabase]);
 
   // Handle follow/unfollow
   const handleFollowToggle = async () => {
@@ -255,61 +254,58 @@ export default function StorefrontPage() {
           .from('user_follows')
           .delete()
           .eq('follower_id', 'current_user_id')
-          .eq('following_id', instructorId)
+          .eq('following_id', instructorId);
 
         setFollowState((prev) => ({
           ...prev,
           isFollowing: false,
           followerCount: prev.followerCount - 1,
-        }))
+        }));
       } else {
         await supabase.from('user_follows').insert({
           follower_id: 'current_user_id',
           following_id: instructorId,
-        })
+        });
 
         setFollowState((prev) => ({
           ...prev,
           isFollowing: true,
           followerCount: prev.followerCount + 1,
-        }))
+        }));
       }
     } catch (err) {
-      console.error('Error toggling follow:', err)
+      console.error('Error toggling follow:', err);
     }
-  }
+  };
 
   // Handle post like
   const handlePostLike = async (postId: string) => {
     try {
       if (likedPosts.has(postId)) {
-        likedPosts.delete(postId)
-        setLikedPosts(new Set(likedPosts))
+        likedPosts.delete(postId);
+        setLikedPosts(new Set(likedPosts));
       } else {
-        likedPosts.add(postId)
-        setLikedPosts(new Set(likedPosts))
+        likedPosts.add(postId);
+        setLikedPosts(new Set(likedPosts));
       }
     } catch (err) {
-      console.error('Error liking post:', err)
+      console.error('Error liking post:', err);
     }
-  }
+  };
 
   // Format time ago
   const timeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (seconds < 60) return language === 'es' ? 'Ahora' : 'Now'
-    if (seconds < 3600)
-      return `${Math.floor(seconds / 60)}m ${language === 'es' ? 'atrás' : 'ago'}`
-    if (seconds < 86400)
-      return `${Math.floor(seconds / 3600)}h ${language === 'es' ? 'atrás' : 'ago'}`
-    if (seconds < 2592000)
-      return `${Math.floor(seconds / 86400)}d ${language === 'es' ? 'atrás' : 'ago'}`
+    if (seconds < 60) return language === 'es' ? 'Ahora' : 'Now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${language === 'es' ? 'atrás' : 'ago'}`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${language === 'es' ? 'atrás' : 'ago'}`;
+    if (seconds < 2592000) return `${Math.floor(seconds / 86400)}d ${language === 'es' ? 'atrás' : 'ago'}`;
 
-    return `${Math.floor(seconds / 2592000)}mo ${language === 'es' ? 'atrás' : 'ago'}`
-  }
+    return `${Math.floor(seconds / 2592000)}mo ${language === 'es' ? 'atrás' : 'ago'}`;
+  };
 
   if (loading) {
     return (
@@ -319,17 +315,47 @@ export default function StorefrontPage() {
           <p className="text-theme-primary">Loading storefront...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!instructor) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-theme-primary text-xl">Instructor not found</p>
+      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+            <button
+              onClick={() => window.history.back()}
+              className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
+            </button>
+            <h1 className="text-lg font-bold text-stone-900 dark:text-white leading-tight">
+              {language === 'es' ? 'Perfil del Instructor' : 'Instructor Profile'}
+            </h1>
+          </div>
         </div>
+        <div className="pt-header flex items-center justify-center min-h-[60vh]">
+          <div className="text-center p-6">
+            <div className="text-4xl mb-4">🏋️</div>
+            <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+              {language === 'es' ? 'Instructor no encontrado' : 'Instructor not found'}
+            </p>
+            <p className="text-sm text-stone-500 dark:text-gray-400 mb-6">
+              {language === 'es'
+                ? 'Este perfil no existe o no está disponible.'
+                : "This profile doesn't exist or is not available."}
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+            >
+              {language === 'es' ? 'Volver' : 'Go Back'}
+            </button>
+          </div>
+        </div>
+        <BottomNav />
       </div>
-    )
+    );
   }
 
   return (
@@ -348,11 +374,7 @@ export default function StorefrontPage() {
       {/* Hero Section */}
       <div className="relative h-56 bg-gradient-to-br from-tribe-green to-lime-500 overflow-hidden pt-14">
         {instructor.storefront_banner_url ? (
-          <img
-            src={instructor.storefront_banner_url}
-            alt="Banner"
-            className="w-full h-full object-cover opacity-60"
-          />
+          <img src={instructor.storefront_banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-tribe-green to-lime-500"></div>
         )}
@@ -380,9 +402,7 @@ export default function StorefrontPage() {
                 <div className="flex-1">
                   <h1 className="text-xl font-bold text-theme-primary">{instructor.name}</h1>
                   {instructor.verified && (
-                    <p className="text-tribe-green text-xs font-semibold">
-                      ✓ {translations.verified}
-                    </p>
+                    <p className="text-tribe-green text-xs font-semibold">✓ {translations.verified}</p>
                   )}
                 </div>
               </div>
@@ -437,16 +457,12 @@ export default function StorefrontPage() {
         </div>
 
         <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg font-bold text-tribe-green">
-            {sessions.length}
-          </p>
+          <p className="text-lg font-bold text-tribe-green">{sessions.length}</p>
           <p className="text-xs text-theme-secondary">{translations.totalSessions}</p>
         </div>
 
         <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg font-bold text-tribe-green">
-            {followState.followerCount}
-          </p>
+          <p className="text-lg font-bold text-tribe-green">{followState.followerCount}</p>
           <p className="text-xs text-theme-secondary">{translations.followers}</p>
         </div>
 
@@ -531,9 +547,7 @@ export default function StorefrontPage() {
 
                     {/* Price and Button */}
                     <div className="flex items-center justify-between pt-3 border-t border-stone-200 dark:border-gray-700">
-                      <span className="text-lg font-bold text-tribe-green">
-                        ${session.price}
-                      </span>
+                      <span className="text-lg font-bold text-tribe-green">${session.price}</span>
                       <button className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs">
                         {session.price > 0 ? translations.payJoin : translations.join}
                       </button>
@@ -584,9 +598,7 @@ export default function StorefrontPage() {
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-stone-200 dark:border-gray-700">
-                      <span className="text-lg font-bold text-tribe-green">
-                        ${pkg.price}
-                      </span>
+                      <span className="text-lg font-bold text-tribe-green">${pkg.price}</span>
                       <button className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs">
                         {translations.payJoin}
                       </button>
@@ -671,13 +683,7 @@ export default function StorefrontPage() {
                           onClick={() => handlePostLike(post.id)}
                           className="flex items-center gap-1 hover:text-tribe-green transition-colors"
                         >
-                          <Heart
-                            className={`w-4 h-4 ${
-                              likedPosts.has(post.id)
-                                ? 'fill-red-500 text-red-500'
-                                : ''
-                            }`}
-                          />
+                          <Heart className={`w-4 h-4 ${likedPosts.has(post.id) ? 'fill-red-500 text-red-500' : ''}`} />
                           <span>{post.likes_count}</span>
                         </button>
                         <div className="flex items-center gap-1">
@@ -701,5 +707,5 @@ export default function StorefrontPage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }
