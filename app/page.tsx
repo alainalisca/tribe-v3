@@ -16,6 +16,7 @@ import FilterBar from '@/components/home/FilterBar';
 import LiveNowSection from '@/components/home/LiveNowSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FeaturedInstructors from '@/components/FeaturedInstructors';
+import FeaturedPartnerBanner from '@/components/FeaturedPartnerBanner';
 import FindTrainingPartners from '@/components/FindTrainingPartners';
 import NearbyEvents from '@/components/NearbyEvents';
 import PopularVenuesSection from '@/components/PopularVenuesSection';
@@ -220,6 +221,9 @@ export default function HomePage() {
                 const visibleSessions = f.filteredSessions.slice(0, f.visibleCount);
                 const INTERLEAVE_INTERVAL = 3;
 
+                // Featured Partner banner after 2nd session card
+                const partnerSlotPosition = 2;
+
                 // Discovery sections to interleave after every N session cards
                 const discoverySlots: Record<number, React.ReactNode> = {
                   [INTERLEAVE_INTERVAL]: f.user ? (
@@ -282,6 +286,11 @@ export default function HomePage() {
                   // Insert banners after first session card
                   if (position === 1) {
                     items.push(bannerSlot);
+                  }
+
+                  // Insert Featured Partner banner after 2nd session card
+                  if (position === partnerSlotPosition && f.user) {
+                    items.push(<FeaturedPartnerBanner key="featured-partner" />);
                   }
 
                   // Insert discovery sections at interleave points

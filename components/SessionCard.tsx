@@ -15,7 +15,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { getSkillLevelDisplay, getGenderDisplay, computeSessionStatus } from './SessionCardHelpers';
 import type { SessionCardProps } from './SessionCardHelpers';
 
-export default function SessionCard({ session, onShare, distance, liveData, currentUserId }: SessionCardProps) {
+export default function SessionCard({
+  session,
+  onShare,
+  distance,
+  liveData,
+  currentUserId,
+  featuredPartnerUserIds,
+}: SessionCardProps) {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
@@ -33,7 +40,9 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
 
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
-      <Card className="dark:bg-[#6B7178] shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]">
+      <Card
+        className={`dark:bg-[#6B7178] shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden ${featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id) ? 'border-tribe-green/40' : 'border-stone-200 dark:border-[#52575D]'}`}
+      >
         <CardContent className="p-5">
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
@@ -77,6 +86,14 @@ export default function SessionCard({ session, onShare, distance, liveData, curr
               {session.is_recurring && (
                 <Badge className="px-2 py-1 bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300 rounded-full border-transparent">
                   {language === 'es' ? 'Recurrente' : 'Recurring'}
+                </Badge>
+              )}
+
+              {/* Featured Partner badge */}
+              {featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id) && (
+                <Badge className="px-2 py-1 bg-tribe-green/15 text-tribe-green rounded-full border border-tribe-green/30 gap-1">
+                  <Star className="w-3 h-3 fill-tribe-green" />
+                  {language === 'es' ? 'Socio Destacado' : 'Featured Partner'}
                 </Badge>
               )}
 

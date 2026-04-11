@@ -25,6 +25,10 @@ import {
   Eye,
   ArrowLeft,
 } from 'lucide-react';
+import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
+import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
+import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
+import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
 
 // Type definitions
 interface Instructor {
@@ -119,6 +123,8 @@ export default function StorefrontPage() {
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(new Set());
+  const [partnerData, setPartnerData] = useState<FeaturedPartner | null>(null);
+  const [partnerInstructors, setPartnerInstructors] = useState<PartnerInstructor[]>([]);
 
   // Translations
   const translations = {
@@ -193,6 +199,16 @@ export default function StorefrontPage() {
 
         if (error) throw error;
         setInstructor(instructorData);
+
+        // Check if this instructor is a featured partner
+        const pResult = await fetchPartnerByUserId(supabase, instructorId);
+        if (pResult.success && pResult.data && pResult.data.status === 'active') {
+          setPartnerData(pResult.data);
+          const iResult = await fetchPartnerInstructors(supabase, pResult.data.id);
+          if (iResult.success && iResult.data) {
+            setPartnerInstructors(iResult.data);
+          }
+        }
       } catch (err) {
         console.error('Error fetching instructor:', err);
       }
@@ -521,11 +537,19 @@ export default function StorefrontPage() {
 
       {/* Main Content */}
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+        {/* Featured Partner Badge */}
+        {partnerData && <PartnerStorefrontBadge partner={partnerData} language={language} />}
+
         {/* Bio Section */}
         {instructor.bio && (
           <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <p className="text-theme-secondary text-sm leading-relaxed">{instructor.bio}</p>
           </div>
+        )}
+
+        {/* Partner Instructor Roster */}
+        {partnerData && partnerInstructors.length > 0 && (
+          <PartnerInstructorRoster instructors={partnerInstructors} language={language} />
         )}
 
         {/* Tab Navigation */}

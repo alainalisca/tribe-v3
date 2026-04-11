@@ -2214,3 +2214,72 @@ export type UserTrainingPreferencesUpdate = Database['public']['Tables']['user_t
 
 export type SmartMatchRow = Database['public']['Tables']['smart_matches']['Row'];
 export type SmartMatchInsert = Database['public']['Tables']['smart_matches']['Insert'];
+
+// Featured Partners types (table created in migration 018)
+export interface FeaturedPartnerRow {
+  id: string;
+  user_id: string;
+  business_name: string;
+  business_type: string;
+  description: string | null;
+  description_es: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  website_url: string | null;
+  phone: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  specialties: string[];
+  tier: string;
+  status: string;
+  starts_at: string | null;
+  expires_at: string | null;
+  monthly_fee_cents: number;
+  currency: string;
+  total_impressions: number;
+  total_clicks: number;
+  total_bookings: number;
+  min_sessions_per_month: number;
+  min_rating: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeaturedPartnerInsert {
+  user_id: string;
+  business_name: string;
+  business_type?: string;
+  description?: string | null;
+  description_es?: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  website_url?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  specialties?: string[];
+  tier?: string;
+  status?: string;
+  starts_at?: string | null;
+  expires_at?: string | null;
+  monthly_fee_cents?: number;
+  currency?: string;
+}
+
+export interface PartnerInstructorRow {
+  id: string;
+  partner_id: string;
+  instructor_id: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PartnerInstructorInsert {
+  partner_id: string;
+  instructor_id: string;
+  role?: string;
+  is_active?: boolean;
+}

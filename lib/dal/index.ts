@@ -26,3 +26,4 @@ export * from './instructors';
 export * from './smartMatch';
 export * from './communityNews';
 export * from './instructorDashboard';
+export * from './featuredPartners';
