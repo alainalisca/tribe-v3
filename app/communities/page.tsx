@@ -19,9 +19,8 @@ const getTranslations = (language: 'en' | 'es') => ({
   search: language === 'es' ? 'Buscar comunidades...' : 'Search communities...',
   create: language === 'es' ? 'Crear Comunidad' : 'Create Community',
   noCommunities: language === 'es' ? 'No hay comunidades' : 'No communities',
-  noCommunitiesDesc: language === 'es'
-    ? 'Únete a una comunidad o crea una nueva'
-    : 'Join a community or create a new one',
+  noCommunitiesDesc:
+    language === 'es' ? 'Únete a una comunidad o crea una nueva' : 'Join a community or create a new one',
   loading: language === 'es' ? 'Cargando...' : 'Loading...',
   all: language === 'es' ? 'Todos' : 'All',
 });
@@ -37,6 +36,7 @@ export default function CommunitiesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState('All');
+  const [showAllSports, setShowAllSports] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,9 +88,7 @@ export default function CommunitiesPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       results = results.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          (c.description?.toLowerCase().includes(query) ?? false)
+        (c) => c.name.toLowerCase().includes(query) || (c.description?.toLowerCase().includes(query) ?? false)
       );
     }
 
@@ -150,9 +148,8 @@ export default function CommunitiesPage() {
             {language === 'es' ? 'Filtrar por deporte' : 'Filter by sport'}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {sportOptions.slice(0, 8).map((sport) => {
-              const sportName =
-                sport === 'All' ? t.all : sportTranslations[sport]?.[language] || sport;
+            {(showAllSports ? sportOptions : sportOptions.slice(0, 8)).map((sport) => {
+              const sportName = sport === 'All' ? t.all : sportTranslations[sport]?.[language] || sport;
               return (
                 <button
                   key={sport}
@@ -167,6 +164,22 @@ export default function CommunitiesPage() {
                 </button>
               );
             })}
+            {!showAllSports && sportOptions.length > 8 && (
+              <button
+                onClick={() => setShowAllSports(true)}
+                className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-[#52575D] text-tribe-green hover:bg-stone-300 dark:hover:bg-[#6B7178]"
+              >
+                {language === 'es' ? 'Mas' : 'More'}
+              </button>
+            )}
+            {showAllSports && (
+              <button
+                onClick={() => setShowAllSports(false)}
+                className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-[#52575D] text-tribe-green hover:bg-stone-300 dark:hover:bg-[#6B7178]"
+              >
+                {language === 'es' ? 'Menos' : 'Less'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -177,7 +190,9 @@ export default function CommunitiesPage() {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-64"><SkeletonCard /></div>
+                <div key={i} className="h-64">
+                  <SkeletonCard />
+                </div>
               ))}
             </div>
           ) : filteredCommunities.length > 0 ? (

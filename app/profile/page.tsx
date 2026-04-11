@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Camera, MapPin, X, Settings } from 'lucide-react';
+import { Camera, MapPin, X, Settings, Store } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -153,6 +153,19 @@ export default function ProfilePage() {
             <div className="mt-6">
               <AchievementBadges userId={profile.id} isOwnProfile={true} />
             </div>
+          )}
+
+          {/* Manage Storefront (instructors only) */}
+          {profile?.is_instructor && profile?.id && (
+            <Link
+              href={`/storefront/${profile.id}`}
+              className="mt-6 flex items-center gap-3 w-full px-5 py-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-tribe-green text-tribe-green hover:bg-tribe-green/10 transition"
+            >
+              <Store className="w-5 h-5 flex-shrink-0" />
+              <span className="font-semibold text-sm">
+                {language === 'es' ? 'Gestionar Vitrina' : 'Manage Storefront'}
+              </span>
+            </Link>
           )}
 
           {/* Bio */}

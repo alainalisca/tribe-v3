@@ -9,6 +9,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getEditProfileTranslations } from './translations';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
+import { compressImage } from '@/components/stories/storyUploadHelpers';
 import type { User } from '@supabase/supabase-js';
 
 export interface EditProfileFormData {
@@ -46,6 +47,7 @@ export function useEditProfile(language: 'en' | 'es') {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const [formData, setFormData] = useState<EditProfileFormData>({
     name: '',
@@ -169,6 +171,38 @@ export function useEditProfile(language: 'en' | 'es') {
     });
   }
 
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
+    try {
+      setUploadingBanner(true);
+      const compressed = await compressImage(file);
+      const path = `banners/banner-${user.id}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from('profile-images').upload(path, compressed, {
+        contentType: 'image/jpeg',
+      });
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(path);
+
+      setFormData({ ...formData, storefront_banner_url: publicUrl });
+    } catch (error) {
+      logError(error, { action: 'handleBannerUpload' });
+      showError(getErrorMessage(error, 'upload_photo', language));
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
   async function handleSave() {
     if (!user) return;
 
@@ -230,9 +264,11 @@ export function useEditProfile(language: 'en' | 'es') {
     error,
     saving,
     uploadingPhoto,
+    uploadingBanner,
     formData,
     setFormData,
     handlePhotoUpload,
+    handleBannerUpload,
     removePhoto,
     handleSave,
     toggleSport,

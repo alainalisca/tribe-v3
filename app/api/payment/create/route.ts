@@ -128,6 +128,15 @@ export async function POST(request: NextRequest) {
 
         if (!wompiResult) {
           await serviceSupabase.from('payments').update({ status: 'error' }).eq('id', paymentId);
+          logError(new Error('Wompi transaction creation returned null'), {
+            route: '/api/payment/create',
+            action: 'wompi_boost_transaction',
+            paymentId,
+            amountCents: amount_cents,
+            hasPublicKey: !!process.env.WOMPI_PUBLIC_KEY,
+            hasPrivateKey: !!process.env.WOMPI_PRIVATE_KEY,
+            isSandbox: process.env.WOMPI_SANDBOX,
+          });
           return NextResponse.json({ success: false, error: 'Failed to create Wompi transaction' }, { status: 500 });
         }
 
@@ -259,6 +268,16 @@ export async function POST(request: NextRequest) {
 
       if (!wompiResult) {
         await serviceSupabase.from('payments').update({ status: 'error' }).eq('id', paymentId);
+        logError(new Error('Wompi transaction creation returned null'), {
+          route: '/api/payment/create',
+          action: 'wompi_session_transaction',
+          paymentId,
+          sessionId: session_id,
+          amountCents,
+          hasPublicKey: !!process.env.WOMPI_PUBLIC_KEY,
+          hasPrivateKey: !!process.env.WOMPI_PRIVATE_KEY,
+          isSandbox: process.env.WOMPI_SANDBOX,
+        });
         return NextResponse.json({ success: false, error: 'Failed to create Wompi transaction' }, { status: 500 });
       }
 

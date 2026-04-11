@@ -76,7 +76,7 @@ export async function createWompiTransaction(
   params: WompiCreateTransactionParams
 ): Promise<{ transaction_id: string; redirect_url: string } | null> {
   try {
-    const { publicKey } = getCredentials();
+    const { privateKey } = getCredentials();
     const baseUrl = getBaseUrl();
 
     const payload = {
@@ -91,17 +91,26 @@ export async function createWompiTransaction(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${publicKey}`,
+        Authorization: `Bearer ${privateKey}`,
       },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      logError(new Error('Wompi API error'), {
+      const errorText = await response.text().catch(() => '');
+      let errorData: Record<string, unknown> = {};
+      try {
+        errorData = JSON.parse(errorText) as Record<string, unknown>;
+      } catch {
+        errorData = { raw: errorText };
+      }
+      logError(new Error(`Wompi API error: HTTP ${response.status} — ${JSON.stringify(errorData)}`), {
         action: 'createWompiTransaction',
         status: response.status,
+        statusText: response.statusText,
         error: errorData,
+        isSandbox: process.env.WOMPI_SANDBOX === 'true',
+        baseUrl,
       });
       return null;
     }
@@ -109,7 +118,7 @@ export async function createWompiTransaction(
     const data = (await response.json()) as { data?: WompiTransaction };
 
     if (!data.data) {
-      logError(new Error('Invalid Wompi response'), {
+      logError(new Error('Invalid Wompi response: missing data field'), {
         action: 'createWompiTransaction',
         response: data,
       });
@@ -163,11 +172,7 @@ export async function getWompiTransaction(transactionId: string): Promise<WompiT
  * Verify Wompi webhook signature using HMAC SHA256
  * Signature = SHA256(concatenation of transaction properties + timestamp + events_secret)
  */
-export function verifyWompiWebhookSignature(
-  body: string,
-  signature: string,
-  timestamp: string
-): boolean {
+export function verifyWompiWebhookSignature(body: string, signature: string, timestamp: string): boolean {
   try {
     const eventsSecret = process.env.WOMPI_EVENTS_SECRET;
 

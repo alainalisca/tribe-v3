@@ -4,9 +4,23 @@
 import { SPORTS_LIST } from '@/lib/sports';
 import { sportTranslations } from '@/lib/translations';
 import { useLanguage } from '@/lib/LanguageContext';
-import { ArrowLeft, Save, Upload, X, Sparkles, DollarSign, Tag, Zap, Bell, Check, Store } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  Upload,
+  X,
+  Sparkles,
+  DollarSign,
+  Tag,
+  Zap,
+  Bell,
+  Check,
+  Store,
+  Image as ImageIcon,
+  Link as LinkIcon,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,13 +39,18 @@ export default function EditProfilePage() {
     error,
     saving,
     uploadingPhoto,
+    uploadingBanner,
     formData,
     setFormData,
     handlePhotoUpload,
+    handleBannerUpload,
     removePhoto,
     handleSave,
     toggleSport,
   } = useEditProfile(language);
+
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [bannerUseUrl, setBannerUseUrl] = useState(false);
 
   if (loading) {
     return (
@@ -417,20 +436,96 @@ export default function EditProfilePage() {
 
                   <div>
                     <Label className="text-xs text-theme-secondary mb-1 block">
-                      {language === 'es' ? 'URL de imagen de banner' : 'Banner Image URL'}
+                      {language === 'es' ? 'Imagen de banner (opcional)' : 'Banner image (optional)'}
                     </Label>
-                    <Input
-                      type="url"
-                      value={formData.storefront_banner_url}
-                      onChange={(e) => setFormData({ ...formData, storefront_banner_url: e.target.value })}
-                      placeholder="https://example.com/banner.jpg"
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                    <input
+                      ref={bannerInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        handleBannerUpload(e);
+                        if (bannerInputRef.current) bannerInputRef.current.value = '';
+                      }}
+                      className="hidden"
                     />
-                    <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
-                      {language === 'es'
-                        ? 'URL para una imagen de banner en tu escaparate'
-                        : 'URL to a banner image for your storefront'}
-                    </p>
+
+                    {formData.storefront_banner_url && !bannerUseUrl ? (
+                      <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
+                        <img
+                          src={formData.storefront_banner_url}
+                          alt="Banner preview"
+                          className="w-full h-24 object-cover"
+                        />
+                        <div className="absolute bottom-2 right-2 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => bannerInputRef.current?.click()}
+                            disabled={uploadingBanner}
+                            className="px-2 py-1 bg-white/90 dark:bg-black/70 text-xs font-medium rounded-md text-stone-700 dark:text-gray-200 hover:bg-white dark:hover:bg-black/90"
+                          >
+                            {language === 'es' ? 'Cambiar' : 'Change'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, storefront_banner_url: '' })}
+                            className="px-2 py-1 bg-red-500/90 text-xs font-medium rounded-md text-white hover:bg-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : !bannerUseUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => bannerInputRef.current?.click()}
+                        disabled={uploadingBanner}
+                        className="w-full h-20 border-2 border-dashed border-stone-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-tribe-green transition"
+                      >
+                        {uploadingBanner ? (
+                          <>
+                            <span className="text-xs text-stone-500 dark:text-gray-400">
+                              {language === 'es' ? 'Subiendo...' : 'Uploading...'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="w-5 h-5 text-stone-400 dark:text-gray-500" />
+                            <span className="text-xs text-stone-500 dark:text-gray-400">
+                              {language === 'es' ? 'Subir imagen' : 'Upload image'}
+                            </span>
+                          </>
+                        )}
+                      </button>
+                    ) : null}
+
+                    {bannerUseUrl ? (
+                      <div className="space-y-2">
+                        <Input
+                          type="url"
+                          value={formData.storefront_banner_url}
+                          onChange={(e) => setFormData({ ...formData, storefront_banner_url: e.target.value })}
+                          placeholder="https://example.com/banner.jpg"
+                          className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setBannerUseUrl(false)}
+                          className="text-xs text-tribe-green hover:underline flex items-center gap-1"
+                        >
+                          <ImageIcon className="w-3 h-3" />
+                          {language === 'es' ? 'Subir imagen' : 'Upload image'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setBannerUseUrl(true)}
+                        className="mt-1 text-xs text-stone-500 dark:text-gray-400 hover:text-tribe-green flex items-center gap-1"
+                      >
+                        <LinkIcon className="w-3 h-3" />
+                        {language === 'es' ? 'O pegar una URL' : 'Or paste a URL'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">

@@ -13,6 +13,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { compressImage } from '@/components/stories/storyUploadHelpers';
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,6 +25,8 @@ import {
   DollarSign,
   Sparkles,
   Camera,
+  Image as ImageIcon,
+  Link as LinkIcon,
   Star,
   Zap,
   Tag,
@@ -97,7 +100,12 @@ const getTranslations = (language: 'en' | 'es') => ({
       : 'E.g. Transform your body, transform your life',
   taglineHint:
     language === 'es' ? 'Aparece debajo de tu nombre (máx. 100 caracteres)' : 'Shows below your name (max 100 chars)',
-  bannerUrl: language === 'es' ? 'URL de imagen de banner (opcional)' : 'Banner image URL (optional)',
+  bannerImage: language === 'es' ? 'Imagen de banner (opcional)' : 'Banner image (optional)',
+  uploadBanner: language === 'es' ? 'Subir imagen' : 'Upload image',
+  orPasteUrl: language === 'es' ? 'O pegar una URL' : 'Or paste a URL',
+  uploadingBanner: language === 'es' ? 'Subiendo...' : 'Uploading...',
+  changeBanner: language === 'es' ? 'Cambiar' : 'Change',
+  removeBanner: language === 'es' ? 'Quitar' : 'Remove',
   storefrontPreview: language === 'es' ? 'Vista previa de tu vitrina' : 'Your storefront preview',
   previewNote:
     language === 'es'
@@ -144,11 +152,14 @@ export default function InstructorOnboardingPage() {
   const t = getTranslations(language);
   const supabase = createClient();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerUseUrl, setBannerUseUrl] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -239,6 +250,41 @@ export default function InstructorOnboardingPage() {
       showError(getErrorMessage(err, 'upload_photo', language));
     } finally {
       setUploadingPhoto(false);
+    }
+  }
+
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
+    try {
+      setUploadingBanner(true);
+      const compressed = await compressImage(file);
+      const ext = 'jpg';
+      const path = `banners/banner-${userId}-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from('profile-images').upload(path, compressed, {
+        contentType: 'image/jpeg',
+      });
+      if (uploadErr) throw uploadErr;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(path);
+
+      setForm((prev) => ({ ...prev, storefront_banner_url: publicUrl }));
+    } catch (err) {
+      logError(err, { action: 'instructorOnboarding.bannerUpload' });
+      showError(getErrorMessage(err, 'upload_photo', language));
+    } finally {
+      setUploadingBanner(false);
+      // Reset input so same file can be re-selected
+      if (bannerInputRef.current) bannerInputRef.current.value = '';
     }
   }
 
@@ -543,16 +589,88 @@ export default function InstructorOnboardingPage() {
               </p>
             </div>
 
-            {/* Banner URL */}
+            {/* Banner Image Upload */}
             <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.bannerUrl}</Label>
-              <Input
-                type="url"
-                value={form.storefront_banner_url}
-                onChange={(e) => setForm({ ...form, storefront_banner_url: e.target.value })}
-                placeholder="https://..."
-                className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.bannerImage}</Label>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleBannerUpload}
+                className="hidden"
               />
+
+              {form.storefront_banner_url && !bannerUseUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
+                  <img src={form.storefront_banner_url} alt="Banner preview" className="w-full h-28 object-cover" />
+                  <div className="absolute bottom-2 right-2 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => bannerInputRef.current?.click()}
+                      disabled={uploadingBanner}
+                      className="px-2 py-1 bg-white/90 dark:bg-black/70 text-xs font-medium rounded-md text-stone-700 dark:text-gray-200 hover:bg-white dark:hover:bg-black/90"
+                    >
+                      {t.changeBanner}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, storefront_banner_url: '' })}
+                      className="px-2 py-1 bg-red-500/90 text-xs font-medium rounded-md text-white hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : !bannerUseUrl ? (
+                <button
+                  type="button"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={uploadingBanner}
+                  className="w-full h-24 border-2 border-dashed border-stone-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-tribe-green transition"
+                >
+                  {uploadingBanner ? (
+                    <>
+                      <LoadingSpinner className="w-5 h-5" />
+                      <span className="text-xs text-stone-500 dark:text-gray-400">{t.uploadingBanner}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-6 h-6 text-stone-400 dark:text-gray-500" />
+                      <span className="text-xs text-stone-500 dark:text-gray-400">{t.uploadBanner}</span>
+                    </>
+                  )}
+                </button>
+              ) : null}
+
+              {/* URL fallback toggle */}
+              {bannerUseUrl ? (
+                <div className="space-y-2">
+                  <Input
+                    type="url"
+                    value={form.storefront_banner_url}
+                    onChange={(e) => setForm({ ...form, storefront_banner_url: e.target.value })}
+                    placeholder="https://..."
+                    className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setBannerUseUrl(false)}
+                    className="text-xs text-tribe-green hover:underline flex items-center gap-1"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    {t.uploadBanner}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setBannerUseUrl(true)}
+                  className="mt-2 text-xs text-stone-500 dark:text-gray-400 hover:text-tribe-green flex items-center gap-1"
+                >
+                  <LinkIcon className="w-3 h-3" />
+                  {t.orPasteUrl}
+                </button>
+              )}
             </div>
 
             {/* Live Preview */}

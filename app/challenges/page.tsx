@@ -36,6 +36,7 @@ export default function ChallengesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSport, setSelectedSport] = useState<string | undefined>();
   const [userChallengeIds, setUserChallengeIds] = useState<Set<string>>(new Set());
+  const [showAllSports, setShowAllSports] = useState(false);
 
   const t = {
     en: {
@@ -142,7 +143,7 @@ export default function ChallengesPage() {
   // Filter public challenges to exclude already joined ones if needed
   const filteredPublic = publicChallenges.filter((c) => !userChallengeIds.has(c.id));
 
-  const sports = Object.keys(sportTranslations.en || {});
+  const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -227,7 +228,7 @@ export default function ChallengesPage() {
                   >
                     {strings.filterSport}
                   </button>
-                  {sports.slice(0, 8).map((sport) => (
+                  {(showAllSports ? sports : sports.slice(0, 6)).map((sport) => (
                     <button
                       key={sport}
                       onClick={() => handleSportFilter(sport)}
@@ -237,11 +238,25 @@ export default function ChallengesPage() {
                           : 'bg-stone-100 dark:bg-[#3D4349] text-theme-primary hover:bg-tribe-green/20'
                       }`}
                     >
-                      {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[
-                        sport
-                      ] || sport}
+                      {sportTranslations[sport]?.[language] || sport}
                     </button>
                   ))}
+                  {!showAllSports && sports.length > 6 && (
+                    <button
+                      onClick={() => setShowAllSports(true)}
+                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-[#3D4349] text-tribe-green hover:bg-tribe-green/20"
+                    >
+                      {language === 'es' ? 'Mas' : 'More'}
+                    </button>
+                  )}
+                  {showAllSports && (
+                    <button
+                      onClick={() => setShowAllSports(false)}
+                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-[#3D4349] text-tribe-green hover:bg-tribe-green/20"
+                    >
+                      {language === 'es' ? 'Menos' : 'Less'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -324,9 +339,7 @@ function ChallengeCard({
             <h3 className="font-semibold text-theme-primary text-lg line-clamp-2">{challenge.title}</h3>
             {challenge.sport && (
               <p className="text-sm text-theme-secondary">
-                {(sportTranslations as Record<string, Record<string, string>>)[language === 'es' ? 'es' : 'en']?.[
-                  challenge.sport
-                ] || challenge.sport}
+                {sportTranslations[challenge.sport]?.[language] || challenge.sport}
               </p>
             )}
           </div>
