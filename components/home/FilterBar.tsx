@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { Search, X, MessageCircle, Film, Search as SearchIcon } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -79,15 +79,6 @@ export default function FilterBar({
           </h1>
         </Link>
         <div className="flex items-center gap-3">
-          <Link href="/search" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
-            <SearchIcon className="w-5 h-5" />
-          </Link>
-          <Link href="/stories" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
-            <Film className="w-6 h-6" />
-          </Link>
-          <Link href="/messages" className="text-stone-700 dark:text-gray-300 hover:text-tribe-green transition-colors">
-            <MessageCircle className="w-6 h-6" />
-          </Link>
           <NotificationBell />
           <LanguageToggle />
         </div>
@@ -189,7 +180,11 @@ export default function FilterBar({
                   {filteredCount} {t('sessionsCount')}
                 </p>
               )}
-              {(searchQuery || selectedSport || dateFilter !== 'all' || genderFilter !== 'all' || pricingFilter !== 'all') && (
+              {(searchQuery ||
+                selectedSport ||
+                dateFilter !== 'all' ||
+                genderFilter !== 'all' ||
+                pricingFilter !== 'all') && (
                 <button
                   onClick={() => {
                     setSearchQuery('');

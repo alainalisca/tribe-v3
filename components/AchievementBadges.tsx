@@ -236,15 +236,15 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
                   title={badgeName}
                   disabled
                 >
-                  <span className="text-2xl">{isEarned ? badge.emoji : badge.lockEmoji}</span>
+                  <span className="text-2xl leading-none flex items-center justify-center w-full h-full">
+                    {isEarned ? badge.emoji : badge.lockEmoji}
+                  </span>
                 </button>
 
                 {/* Badge label */}
                 <span
                   className={`text-xs font-medium text-center max-w-[60px] leading-tight ${
-                    isEarned
-                      ? 'text-stone-900 dark:text-white'
-                      : 'text-gray-500 dark:text-gray-400'
+                    isEarned ? 'text-stone-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   {badgeName}

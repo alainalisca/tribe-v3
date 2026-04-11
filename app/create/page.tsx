@@ -13,7 +13,7 @@ import { ArrowLeft, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
-import { insertSession } from '@/lib/dal';
+import { insertSession, fetchUserProfile } from '@/lib/dal';
 import { formatDisplayAmount } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import type { User as AuthUser } from '@supabase/supabase-js';
@@ -45,6 +45,7 @@ export default function CreateSessionPage() {
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [photos, setPhotos] = useState<string[]>([]);
@@ -83,9 +84,16 @@ export default function CreateSessionPage() {
   const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push('/auth');
-      else setUser(user);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        router.push('/auth');
+        return;
+      }
+      setUser(user);
+      const profileResult = await fetchUserProfile(supabase, user.id);
+      if (profileResult.data?.is_instructor) {
+        setIsInstructor(true);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
@@ -145,7 +153,7 @@ export default function CreateSessionPage() {
     setLoading(true);
     try {
       // Build the session payload — strip UI-only fields and add paid fields
-      const { price_display, is_paid, currency, payment_instructions, ...rest } = formData;
+      const { price_display, is_paid, currency, payment_instructions, attached_promo_id, ...rest } = formData;
       const paidFields = is_paid
         ? {
             is_paid: true as const,
@@ -406,143 +414,145 @@ export default function CreateSessionPage() {
               />
             </div>
 
-            {/* ─── Paid Session Toggle ─── */}
-            <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-theme-primary font-semibold text-base">
-                    {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
-                  </Label>
-                  <p className="text-xs text-theme-secondary mt-0.5">
-                    {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={formData.is_paid}
-                  onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
-                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-gray-400'}`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
-                  />
-                </button>
-              </div>
-
-              {formData.is_paid && (
-                <div className="space-y-3 pt-2 border-t border-theme">
-                  {/* Currency selector */}
+            {/* ─── Paid Session Toggle (instructors only) ─── */}
+            {isInstructor && (
+              <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['COP', 'USD'] as const).map((cur) => (
-                        <button
-                          key={cur}
-                          type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
-                          className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
-                        >
-                          {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price input */}
-                  <div>
-                    <Label className="text-theme-primary mb-2">
-                      {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                    <Label className="text-theme-primary font-semibold text-base">
+                      {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
-                        {formData.currency === 'COP' ? '$' : '$'}
-                      </span>
-                      <Input
-                        type="number"
-                        name="price_display"
-                        value={formData.price_display}
-                        onChange={handleChange}
-                        min="0"
-                        step={formData.currency === 'COP' ? '1000' : '0.01'}
-                        placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
-                        className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
-                      />
+                    <p className="text-xs text-theme-secondary mt-0.5">
+                      {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.is_paid}
+                    onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-gray-400'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+
+                {formData.is_paid && (
+                  <div className="space-y-3 pt-2 border-t border-theme">
+                    {/* Currency selector */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['COP', 'USD'] as const).map((cur) => (
+                          <button
+                            key={cur}
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
+                            className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
+                          >
+                            {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
-                    {formData.price_display &&
-                      !isNaN(parseFloat(formData.price_display)) &&
-                      parseFloat(formData.price_display) > 0 && (
-                        <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
-                            {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
-                          </p>
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-emerald-800 dark:text-emerald-300">
-                                {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
-                              </span>
-                              <span className="font-medium text-emerald-800 dark:text-emerald-300">
-                                {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}{' '}
-                                {formData.currency}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-stone-500 dark:text-gray-400">
-                                {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
-                              </span>
-                              <span className="text-stone-500 dark:text-gray-400">
-                                -
-                                {formatDisplayAmount(
-                                  Math.round(Number(formData.price_display) * 0.15),
-                                  formData.currency as Currency
-                                )}{' '}
-                                {formData.currency}
-                              </span>
-                            </div>
-                            <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
-                              <div className="flex justify-between text-sm font-bold">
+
+                    {/* Price input */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">
+                        {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
+                          {formData.currency === 'COP' ? '$' : '$'}
+                        </span>
+                        <Input
+                          type="number"
+                          name="price_display"
+                          value={formData.price_display}
+                          onChange={handleChange}
+                          min="0"
+                          step={formData.currency === 'COP' ? '1000' : '0.01'}
+                          placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
+                          className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
+                        />
+                      </div>
+                      {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
+                      {formData.price_display &&
+                        !isNaN(parseFloat(formData.price_display)) &&
+                        parseFloat(formData.price_display) > 0 && (
+                          <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                              {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
+                            </p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
                                 <span className="text-emerald-800 dark:text-emerald-300">
-                                  {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
+                                  {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
                                 </span>
-                                <span className="text-emerald-800 dark:text-emerald-300">
+                                <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                                  {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}{' '}
+                                  {formData.currency}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-stone-500 dark:text-gray-400">
+                                  {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                                </span>
+                                <span className="text-stone-500 dark:text-gray-400">
+                                  -
                                   {formatDisplayAmount(
-                                    Math.round(Number(formData.price_display) * 0.85),
+                                    Math.round(Number(formData.price_display) * 0.15),
                                     formData.currency as Currency
                                   )}{' '}
                                   {formData.currency}
                                 </span>
                               </div>
+                              <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
+                                <div className="flex justify-between text-sm font-bold">
+                                  <span className="text-emerald-800 dark:text-emerald-300">
+                                    {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
+                                  </span>
+                                  <span className="text-emerald-800 dark:text-emerald-300">
+                                    {formatDisplayAmount(
+                                      Math.round(Number(formData.price_display) * 0.85),
+                                      formData.currency as Currency
+                                    )}{' '}
+                                    {formData.currency}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                  </div>
+                        )}
+                    </div>
 
-                  {/* Payment instructions */}
-                  <div>
-                    <Label className="text-theme-primary mb-2">
-                      {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
-                    </Label>
-                    <Textarea
-                      name="payment_instructions"
-                      value={formData.payment_instructions}
-                      onChange={handleChange}
-                      rows={3}
-                      placeholder={
-                        language === 'es'
-                          ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
-                          : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
-                      }
-                      className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
-                    />
-                    {errors.payment_instructions && (
-                      <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
-                    )}
+                    {/* Payment instructions */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">
+                        {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
+                      </Label>
+                      <Textarea
+                        name="payment_instructions"
+                        value={formData.payment_instructions}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder={
+                          language === 'es'
+                            ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
+                            : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                        }
+                        className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
+                      />
+                      {errors.payment_instructions && (
+                        <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* ─── Recurring Session Toggle ─── */}
             <div className="border border-theme rounded-lg p-4 bg-theme-card">

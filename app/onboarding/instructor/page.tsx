@@ -74,6 +74,10 @@ const getTranslations = (language: 'en' | 'es') => ({
       ? 'Tu experiencia, enfoque de entrenamiento, qué te hace único...'
       : 'Your experience, training approach, what makes you unique...',
   specialties: language === 'es' ? 'Especialidades' : 'Specialties',
+  customSpecialtyPlaceholder:
+    language === 'es'
+      ? 'Agregar otras especialidades separadas por coma...'
+      : 'Add other specialties, comma-separated...',
   certifications: language === 'es' ? 'Certificaciones' : 'Certifications',
   certPlaceholder: language === 'es' ? 'Ej: ACE, NASM, Yoga Alliance...' : 'E.g. ACE, NASM, Yoga Alliance...',
   yearsExperience: language === 'es' ? 'Años de experiencia' : 'Years of experience',
@@ -149,6 +153,8 @@ export default function InstructorOnboardingPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Form state
+  const [customSpecialty, setCustomSpecialty] = useState('');
+
   const [form, setForm] = useState({
     name: '',
     bio: '',
@@ -243,6 +249,27 @@ export default function InstructorOnboardingPage() {
         ? prev.specialties.filter((s) => s !== sport)
         : [...prev.specialties, sport],
     }));
+  }
+
+  function handleCustomSpecialtyKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addCustomSpecialties();
+    }
+  }
+
+  function addCustomSpecialties() {
+    const newSpecialties = customSpecialty
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && !form.specialties.includes(s));
+    if (newSpecialties.length > 0) {
+      setForm((prev) => ({
+        ...prev,
+        specialties: [...prev.specialties, ...newSpecialties],
+      }));
+    }
+    setCustomSpecialty('');
   }
 
   async function handleFinish() {
@@ -428,6 +455,33 @@ export default function InstructorOnboardingPage() {
                   </button>
                 ))}
               </div>
+              {/* Custom specialties as removable tags */}
+              {form.specialties.filter((s) => !SPORTS_LIST.includes(s)).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.specialties
+                    .filter((s) => !SPORTS_LIST.includes(s))
+                    .map((s) => (
+                      <span
+                        key={s}
+                        className="px-3 py-1 rounded-full text-xs font-medium bg-tribe-green text-slate-900 flex items-center gap-1"
+                      >
+                        {s}
+                        <button type="button" onClick={() => toggleSpecialty(s)} className="ml-0.5 hover:text-red-700">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              )}
+              {/* Custom specialty input */}
+              <Input
+                value={customSpecialty}
+                onChange={(e) => setCustomSpecialty(e.target.value)}
+                onKeyDown={handleCustomSpecialtyKeyDown}
+                onBlur={addCustomSpecialties}
+                placeholder={t.customSpecialtyPlaceholder}
+                className="mt-2 bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+              />
             </div>
 
             {/* Certifications */}

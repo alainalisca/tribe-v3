@@ -145,11 +145,10 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
         <div className="text-center py-8">
-          <p className="text-gray-400 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-gray-400 mb-4">
             {lang === 'es'
-              ? 'Crea tu propia sesión o vuelve más tarde para ver eventos cercanos.'
-              : 'Create your own session or check back later for nearby events.'}
+              ? 'No hay eventos cercanos en este momento. \u00A1Vuelve m\u00E1s tarde!'
+              : 'No nearby events at this time. Check back later!'}
           </p>
         </div>
       </div>
