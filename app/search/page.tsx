@@ -1,39 +1,39 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import { sportTranslations } from '@/lib/translations'
-import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react'
-import Image from 'next/image'
-import BottomNav from '@/components/BottomNav'
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import { sportTranslations } from '@/lib/translations';
+import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
+import Image from 'next/image';
+import BottomNav from '@/components/BottomNav';
 
 interface SearchResult {
-  id: string
-  type: 'user' | 'community' | 'challenge' | 'session'
-  [key: string]: unknown
+  id: string;
+  type: 'user' | 'community' | 'challenge' | 'session';
+  [key: string]: unknown;
 }
 
-const TAB_KEYS = ['people', 'communities', 'challenges', 'sessions'] as const
-type TabKey = (typeof TAB_KEYS)[number]
+const TAB_KEYS = ['people', 'communities', 'challenges', 'sessions'] as const;
+type TabKey = (typeof TAB_KEYS)[number];
 
 export default function SearchPage() {
-  const router = useRouter()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const router = useRouter();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<TabKey>('people')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<TabKey>('people');
   const [results, setResults] = useState<Record<TabKey, SearchResult[]>>({
     people: [],
     communities: [],
     challenges: [],
     sessions: [],
-  })
-  const [loading, setLoading] = useState(false)
-  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  });
+  const [loading, setLoading] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   const t = {
     en: {
@@ -45,8 +45,8 @@ export default function SearchPage() {
       searchPlaceholder: 'Search...',
       noResults: 'No results found',
       loading: 'Loading...',
-      follow: 'Follow',
-      following: 'Following',
+      follow: 'Connect',
+      following: 'Connected',
       members: 'members',
       participants: 'participants',
     },
@@ -59,37 +59,37 @@ export default function SearchPage() {
       searchPlaceholder: 'Buscar...',
       noResults: 'No se encontraron resultados',
       loading: 'Cargando...',
-      follow: 'Seguir',
-      following: 'Siguiendo',
+      follow: 'Conectar',
+      following: 'Conectado',
       members: 'miembros',
       participants: 'participantes',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
+  const strings = t[language as keyof typeof t] || t.en;
 
   // Get current user
   useEffect(() => {
     const getCurrentUser = async () => {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/login')
-        return
+        router.push('/auth/login');
+        return;
       }
 
-      setCurrentUserId(user.id)
-    }
+      setCurrentUserId(user.id);
+    };
 
-    getCurrentUser()
-  }, [supabase, router])
+    getCurrentUser();
+  }, [supabase, router]);
 
   // Debounced search function
   useEffect(() => {
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
 
     if (!searchQuery.trim()) {
@@ -98,22 +98,22 @@ export default function SearchPage() {
         communities: [],
         challenges: [],
         sessions: [],
-      })
-      return
+      });
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const query = `%${searchQuery}%`
+        const query = `%${searchQuery}%`;
 
         // Search people
         const { data: usersData } = await supabase
           .from('users')
           .select('id, name, avatar_url, bio')
           .ilike('name', query)
-          .limit(10)
+          .limit(10);
 
         // Search communities
         const { data: communitiesData } = await supabase
@@ -121,7 +121,7 @@ export default function SearchPage() {
           .select('id, name, sport, member_count')
           .eq('is_private', false)
           .or(`name.ilike.${query},sport.ilike.${query}`)
-          .limit(10)
+          .limit(10);
 
         // Search challenges
         const { data: challengesData } = await supabase
@@ -130,7 +130,7 @@ export default function SearchPage() {
           .eq('is_public', true)
           .ilike('title', query)
           .gte('end_date', new Date().toISOString())
-          .limit(10)
+          .limit(10);
 
         // Search sessions
         const { data: sessionsData } = await supabase
@@ -138,23 +138,23 @@ export default function SearchPage() {
           .select('id, sport, location, date, price_cents, status, session_participants(id)')
           .or(`sport.ilike.${query},location.ilike.${query}`)
           .eq('status', 'scheduled')
-          .limit(10)
+          .limit(10);
 
         setResults({
           people: usersData?.map((u) => ({ ...u, type: 'user' })) || [],
           communities: communitiesData?.map((c) => ({ ...c, type: 'community' })) || [],
           challenges: challengesData?.map((c) => ({ ...c, type: 'challenge' })) || [],
           sessions: sessionsData?.map((s) => ({ ...s, type: 'session' })) || [],
-        })
+        });
       } catch (error) {
-        console.error('Search error:', error)
+        console.error('Search error:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }, 300) // 300ms debounce
-  }, [searchQuery, supabase])
+    }, 300); // 300ms debounce
+  }, [searchQuery, supabase]);
 
-  const tabResults = results[activeTab]
+  const tabResults = results[activeTab];
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -211,9 +211,7 @@ export default function SearchPage() {
         ) : !searchQuery ? (
           <div className="flex flex-col items-center justify-center py-12 text-center gap-4">
             <SearchIcon className="h-12 w-12 text-theme-secondary" />
-            <p className="text-theme-secondary">
-              {language === 'es' ? 'Comienza a buscar' : 'Start searching'}
-            </p>
+            <p className="text-theme-secondary">{language === 'es' ? 'Comienza a buscar' : 'Start searching'}</p>
           </div>
         ) : tabResults.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center gap-4">
@@ -269,64 +267,60 @@ export default function SearchPage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }
 
 interface PeopleResultProps {
-  user: any
-  currentUserId: string | null
-  language: string
-  supabase: any
-  onFollowChange: () => void
+  user: any;
+  currentUserId: string | null;
+  language: string;
+  supabase: any;
+  onFollowChange: () => void;
 }
 
 function PeopleResult({ user, currentUserId, language, supabase, onFollowChange }: PeopleResultProps) {
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [actionLoading, setActionLoading] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const checkFollow = async () => {
-      if (!currentUserId || user.id === currentUserId) return
+      if (!currentUserId || user.id === currentUserId) return;
 
       const { data } = await supabase
         .from('user_follows')
         .select('id')
         .eq('follower_id', currentUserId)
         .eq('following_id', user.id)
-        .single()
+        .single();
 
-      setIsFollowing(!!data)
-    }
+      setIsFollowing(!!data);
+    };
 
-    checkFollow()
-  }, [currentUserId, user.id, supabase])
+    checkFollow();
+  }, [currentUserId, user.id, supabase]);
 
   const handleToggleFollow = async () => {
-    if (!currentUserId || user.id === currentUserId) return
+    if (!currentUserId || user.id === currentUserId) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
       if (isFollowing) {
-        await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', user.id)
+        await supabase.from('user_follows').delete().eq('follower_id', currentUserId).eq('following_id', user.id);
       } else {
         await supabase.from('user_follows').insert({
           follower_id: currentUserId,
           following_id: user.id,
-        })
+        });
       }
 
-      setIsFollowing(!isFollowing)
-      onFollowChange()
+      setIsFollowing(!isFollowing);
+      onFollowChange();
     } catch (error) {
-      console.error('Error toggling follow:', error)
+      console.error('Error toggling follow:', error);
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   return (
     <div className="bg-white dark:bg-[#272D34] rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
@@ -356,17 +350,17 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
               : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
           } disabled:opacity-50`}
         >
-          {language === 'es' ? (isFollowing ? 'Siguiendo' : 'Seguir') : isFollowing ? 'Following' : 'Follow'}
+          {language === 'es' ? (isFollowing ? 'Conectado' : 'Conectar') : isFollowing ? 'Connected' : 'Connect'}
         </button>
       )}
     </div>
-  )
+  );
 }
 
 interface CommunityResultProps {
-  community: any
-  language: string
-  onSelect: () => void
+  community: any;
+  language: string;
+  onSelect: () => void;
 }
 
 function CommunityResult({ community, language, onSelect }: CommunityResultProps) {
@@ -392,19 +386,17 @@ function CommunityResult({ community, language, onSelect }: CommunityResultProps
         </div>
       </div>
     </button>
-  )
+  );
 }
 
 interface ChallengeResultProps {
-  challenge: any
-  language: string
-  onSelect: () => void
+  challenge: any;
+  language: string;
+  onSelect: () => void;
 }
 
 function ChallengeResult({ challenge, language, onSelect }: ChallengeResultProps) {
-  const daysLeft = Math.ceil(
-    (new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-  )
+  const daysLeft = Math.ceil((new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
     <button
@@ -422,22 +414,24 @@ function ChallengeResult({ challenge, language, onSelect }: ChallengeResultProps
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            <span>{daysLeft} {language === 'es' ? 'días' : 'days'}</span>
+            <span>
+              {daysLeft} {language === 'es' ? 'días' : 'days'}
+            </span>
           </div>
         </div>
       </div>
     </button>
-  )
+  );
 }
 
 interface SessionResultProps {
-  session: any
-  language: string
-  onSelect: () => void
+  session: any;
+  language: string;
+  onSelect: () => void;
 }
 
 function SessionResult({ session, language, onSelect }: SessionResultProps) {
-  const sessionDate = new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')
+  const sessionDate = new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US');
 
   return (
     <button
@@ -464,5 +458,5 @@ function SessionResult({ session, language, onSelect }: SessionResultProps) {
         </div>
       </div>
     </button>
-  )
+  );
 }

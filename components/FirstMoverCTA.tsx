@@ -59,14 +59,16 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
       </div>
 
       {/* CTA Button */}
-      <Link href="/create" className="inline-block pt-2">
-        <button className="bg-[#A3E635] hover:bg-[#94D91E] dark:bg-[#A3E635] dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto">
-          {buttonText} <span>→</span>
-        </button>
+      <Link
+        href="/create"
+        aria-label={buttonText}
+        className="inline-block pt-2 bg-[#A3E635] hover:bg-[#94D91E] dark:bg-[#A3E635] dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto"
+      >
+        {buttonText} <span aria-hidden="true">→</span>
       </Link>
 
       {/* Confidence note */}
-      <p className="text-xs text-stone-500 dark:text-gray-500 pt-2">
+      <p className="text-xs text-stone-500 dark:text-gray-400 pt-2">
         {lang === 'es'
           ? 'Tu sesión sera visible para miles de personas en tu area'
           : 'Your session will be visible to thousands of people in your area'}

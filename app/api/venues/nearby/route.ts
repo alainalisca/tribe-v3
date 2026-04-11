@@ -97,8 +97,9 @@ export async function GET(request: NextRequest) {
               location_lng: place.geometry.location.lng,
               address: place.vicinity || '',
               rating: place.rating || null,
+              photo_reference: place.photos?.[0]?.photo_reference || null,
               photo_url: place.photos?.[0]
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${apiKey}`
+                ? `/api/venues/photo?ref=${encodeURIComponent(place.photos[0].photo_reference)}`
                 : null,
               suggested_sports: suggestedSports,
               cached_at: new Date().toISOString(),

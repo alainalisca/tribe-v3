@@ -9,10 +9,12 @@ Tribe is a mobile-first PWA for connecting athletes to train together. Users can
 ## Code Quality Standards
 
 Before writing ANY code, consult these two files:
+
 - `engineering-standards.md` — Senior-engineer-level SOPs for all code quality decisions
 - `CONVENTIONS.md` — Project-specific UI and spacing conventions
 
 All new code MUST:
+
 - Use typed props and return types (no `any` without a comment explaining why)
 - Use the data access layer pattern (lib/dal/) for database operations — no inline Supabase calls in components
 - Include proper error handling (never empty catch blocks, use lib/logger.ts when available)
@@ -27,14 +29,14 @@ Project-specific skills live in `.claude/skills/`. Before writing code in a doma
 
 ```bash
 npm run dev      # Start development server
-npm run build    # Build for production (static export)
+npm run build    # Build for production
 npm run lint     # Run ESLint
 npm start        # Start production server
 ```
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 with App Router (static export via `output: 'export'`)
+- **Framework**: Next.js 16 with App Router (server-rendered, deployed to Vercel with Node.js runtime)
 - **Database/Auth**: Supabase (PostgreSQL with RLS policies)
 - **Styling**: Tailwind CSS with custom brand colors
 - **Mobile**: Capacitor for iOS/Android builds
@@ -46,6 +48,7 @@ npm start        # Start production server
 ## Architecture
 
 ### Directory Structure
+
 - `app/` - Next.js App Router pages (all client components with `'use client'`)
 - `components/` - Reusable React components
 - `lib/` - Utilities, Supabase clients, translations
@@ -56,31 +59,37 @@ npm start        # Start production server
 ### Key Patterns
 
 **Supabase Client Usage**
+
 - Client-side: `import { createClient } from '@/lib/supabase/client'`
 - Server-side: `import { createClient } from '@/lib/supabase/server'`
 
 **Translations**
+
 - Use `useLanguage()` hook from `@/lib/LanguageContext`
 - Access translations via `t('key')` or `language` for conditional text
 - Sport names use `sportTranslations` from `lib/translations.ts`
 
 **Theming**
+
 - Use `useTheme()` hook from `@/contexts/ThemeContext`
 - Brand colors defined in `tailwind.config.ts`: `tribe-green`, `tribe-dark`, `tribe-gray-*`, `tribe-red`
 - Dark mode uses class-based switching
 
 **Toast Notifications**
+
 - Use helpers from `@/lib/toast`: `showSuccess()`, `showError()`, `showInfo()`
 
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
+
 - `users` - Profiles linked to Supabase Auth
 - `sessions` - Training sessions with location, sport, date/time
 - `session_participants` - Join table with status (pending/confirmed)
 - `match_requests` - Request system for curated sessions
 
 RLS enabled on all tables. Key policies allow:
+
 - Public read on sessions/users
 - Users can only modify their own data
 - Session creators can manage their sessions
@@ -88,6 +97,7 @@ RLS enabled on all tables. Key policies allow:
 ### API Routes
 
 Located in `app/api/`:
+
 - `/api/cron/*` - Scheduled jobs (reminders, motivation, followups)
 - `/api/notifications/*` - Push notification endpoints
 - `/api/geocode` - Location geocoding
@@ -96,6 +106,7 @@ Located in `app/api/`:
 ### Session Join Policies
 
 Sessions have three join policies:
+
 - `open` - Anyone can join immediately
 - `curated` - Host reviews and approves requests
 - `invite_only` - Private, requires direct invitation
@@ -103,14 +114,17 @@ Sessions have three join policies:
 ## Environment Variables
 
 Required in `.env.local`:
+
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-## Static Export Notes
+## Deployment Notes
 
-The app uses `output: 'export'` in next.config.ts for static site generation. This means:
-- No Server Components (all pages use `'use client'`)
-- API routes only work in development; production uses Supabase Edge Functions
+The app is deployed to Vercel with the Node.js runtime (NOT static export). All pages use `'use client'` but API routes run server-side in production. Key notes:
+
+- All pages use `'use client'` (no Server Components)
+- API routes work in both development and production on Vercel
 - Images are unoptimized (`images: { unoptimized: true }`)
+- For Capacitor mobile builds, the static HTML pages are bundled into the native app

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { fetchNearbyExternalEvents, isCacheFresh, type ExternalEvent } from '@/lib/dal/externalEvents';
 import { logError } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * GET /api/events/sync?lat=40.7128&lng=-74.0060&radius=25&sport=running
@@ -15,6 +17,23 @@ import { logError } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Auth check
+    const authSupabase = await createAuthClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await authSupabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limit
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 20, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const lat = parseFloat(searchParams.get('lat') || '0');
     const lng = parseFloat(searchParams.get('lng') || '0');

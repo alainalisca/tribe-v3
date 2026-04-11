@@ -12,11 +12,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import {
-  getPaymentGateway,
-  isSupportedCurrency,
-  calculateFees,
-} from '@/lib/payments/config';
+import { rateLimit } from '@/lib/rate-limit';
+import { getPaymentGateway, isSupportedCurrency, calculateFees, PLATFORM_FEE_PERCENT } from '@/lib/payments/config';
 import { createWompiTransaction } from '@/lib/payments/wompi';
 import { createStripeCheckoutSession } from '@/lib/payments/stripe';
 
@@ -25,6 +22,13 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: max 10 payment creation attempts per minute
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+
     const supabase = await createClient();
 
     // Get authenticated user
@@ -42,11 +46,11 @@ export async function POST(request: NextRequest) {
 
     // ──── BOOST CAMPAIGN / PRO STOREFRONT PAYMENTS ────
     if (paymentType === 'boost_campaign' || paymentType === 'pro_storefront') {
-      const { amount_cents, currency, reference_id, success_url, cancel_url } = body;
+      const { currency, reference_id, success_url, cancel_url } = body;
 
-      if (!amount_cents || !currency || !reference_id) {
+      if (!currency || !reference_id) {
         return NextResponse.json(
-          { success: false, error: 'Missing required fields: amount_cents, currency, reference_id' },
+          { success: false, error: 'Missing required fields: currency, reference_id' },
           { status: 400 }
         );
       }
@@ -60,6 +64,32 @@ export async function POST(request: NextRequest) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
       const serviceSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
+
+      // Server-side price validation: never trust client-submitted amount_cents
+      let validatedAmountCents: number;
+      if (paymentType === 'boost_campaign') {
+        const { data: campaign, error: campaignError } = await serviceSupabase
+          .from('boost_campaigns')
+          .select('total_budget_cents')
+          .eq('id', reference_id)
+          .eq('instructor_id', user.id)
+          .single();
+        if (campaignError || !campaign) {
+          return NextResponse.json(
+            { success: false, error: 'Boost campaign not found or not owned by you' },
+            { status: 404 }
+          );
+        }
+        validatedAmountCents = campaign.total_budget_cents;
+      } else {
+        // pro_storefront: use fixed known price tiers
+        const PRO_STOREFRONT_PRICE_CENTS: Record<string, number> = {
+          COP: 9900000, // ~$99,000 COP
+          USD: 2999, // $29.99 USD
+        };
+        validatedAmountCents = PRO_STOREFRONT_PRICE_CENTS[currency] || 2999;
+      }
+      const amount_cents = validatedAmountCents;
 
       // Create payment record
       const { data: paymentRecord, error: paymentError } = await serviceSupabase
@@ -187,7 +217,7 @@ export async function POST(request: NextRequest) {
     }
 
     const amountCents = session.price_cents;
-    const feePercent = session.platform_fee_percent || 10;
+    const feePercent = session.platform_fee_percent || PLATFORM_FEE_PERCENT;
     const { platformFeeCents, instructorPayoutCents } = calculateFees(amountCents, feePercent);
     const gateway = getPaymentGateway(currency as 'COP' | 'USD');
     const userEmail = user.email || '';
@@ -242,7 +272,6 @@ export async function POST(request: NextRequest) {
           status: 'processing',
         })
         .eq('id', paymentId);
-
     } else {
       const successUrl = `${siteUrl}/payment/confirm?payment_id=${paymentId}&gateway=stripe`;
       const cancelUrl = `${siteUrl}/session/${session_id}?payment=cancelled`;

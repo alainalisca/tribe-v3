@@ -179,9 +179,10 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
     return (
       <Button
         disabled
+        aria-label={t('trainTogether')}
         className="w-full bg-stone-300 dark:bg-[#52575D] text-stone-600 dark:text-gray-400 cursor-not-allowed"
       >
-        <Lock className="w-4 h-4 mr-2" />
+        <Lock className="w-4 h-4 mr-2" aria-hidden="true" />
         <div className="text-left">
           <div>{t('connect')}</div>
           <div className="text-xs">{t('trainTogether')}</div>
@@ -196,6 +197,7 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
       <Button
         onClick={handleConnect}
         disabled={actionLoading}
+        aria-label={t('connect')}
         className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold"
       >
         {actionLoading ? '...' : t('connect')}
@@ -206,7 +208,11 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
   // c) Pending sent
   if (status === 'pending_sent') {
     return (
-      <Button disabled className="w-full bg-amber-500 dark:bg-amber-600 text-white font-semibold">
+      <Button
+        disabled
+        aria-label={t('requestSent')}
+        className="w-full bg-amber-500 dark:bg-amber-600 text-white font-semibold"
+      >
         {t('requestSent')}
       </Button>
     );
@@ -219,6 +225,7 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
         <Button
           onClick={handleAccept}
           disabled={actionLoading}
+          aria-label={t('accept')}
           className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold"
         >
           {actionLoading ? '...' : t('accept')}
@@ -227,6 +234,7 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
           onClick={handleDecline}
           disabled={actionLoading}
           variant="outline"
+          aria-label={t('decline')}
           className="w-full text-stone-600 dark:text-gray-400"
         >
           {t('decline')}
@@ -246,8 +254,8 @@ export default function ConnectionButton({ currentUserId, profileUserId, languag
           {t('connected')} ✓
         </Button>
         <Link href={`/messages?user=${profileUserId}`}>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
-            <MessageCircle className="w-4 h-4 mr-2" />
+          <Button aria-label={t('message')} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+            <MessageCircle className="w-4 h-4 mr-2" aria-hidden="true" />
             {t('message')}
           </Button>
         </Link>

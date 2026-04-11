@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import {
   sendFcmNotification,
   sendWebPushNotification,
@@ -160,8 +160,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('users').update({ push_subscription: null }).in('id', invalidWebPushUserIds);
     }
 
-    // eslint-disable-next-line no-console
-    console.log(`[WEBHOOK] Chat: ${senderName} → ${notified}/${userIds.length} in session ${session_id}`);
+    log('info', 'Chat webhook notification sent', { notified, total: userIds.length, session_id });
 
     return NextResponse.json({ success: true, notified });
   } catch (error: unknown) {

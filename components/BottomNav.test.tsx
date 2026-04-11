@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import BottomNav from './BottomNav';
 
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+    }),
+  }),
+}));
+
 let mockPathname = '/';
 
 vi.mock('next/navigation', () => ({
@@ -21,9 +33,7 @@ vi.mock('@/lib/LanguageContext', () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         home: 'Home',
-        mySessions: 'My Sessions',
         create: 'Create',
-        requests: 'Requests',
         profile: 'Profile',
       };
       return map[key] || key;
@@ -37,9 +47,9 @@ describe('BottomNav', () => {
     render(<BottomNav />);
 
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('My Sessions')).toBeInTheDocument();
+    expect(screen.getByText('Messages')).toBeInTheDocument();
     expect(screen.getByText('Create')).toBeInTheDocument();
-    expect(screen.getByText('Requests')).toBeInTheDocument();
+    expect(screen.getByText('Community')).toBeInTheDocument();
     expect(screen.getByText('Profile')).toBeInTheDocument();
   });
 
@@ -47,9 +57,9 @@ describe('BottomNav', () => {
     render(<BottomNav />);
 
     expect(screen.getByTestId('link-/')).toBeInTheDocument();
-    expect(screen.getByTestId('link-/sessions')).toBeInTheDocument();
+    expect(screen.getByTestId('link-/messages')).toBeInTheDocument();
     expect(screen.getByTestId('link-/create')).toBeInTheDocument();
-    expect(screen.getByTestId('link-/requests')).toBeInTheDocument();
+    expect(screen.getByTestId('link-/communities')).toBeInTheDocument();
     expect(screen.getByTestId('link-/profile')).toBeInTheDocument();
   });
 

@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -23,8 +24,15 @@ interface AdminSignupNotificationBody {
  * @param {AdminSignupNotificationBody} request.body - New user details.
  * @returns {{ success: boolean }} 200 on success, 400 if required fields are missing, 500 on failure.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: max 5 signup notifications per minute per IP
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 5, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = (await request.json()) as AdminSignupNotificationBody;
     const { userName, userEmail, signupMethod } = body;
 

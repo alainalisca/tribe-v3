@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { rateLimit } from '@/lib/rate-limit';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -29,8 +30,15 @@ interface GuestConfirmationBody {
  * @param {GuestConfirmationBody} request.body - Guest and session details for the confirmation email.
  * @returns {{ success: boolean }} 200 on success, 400 if required fields are missing, 500 on failure.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limit: max 10 guest confirmations per minute per IP
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body = (await request.json()) as GuestConfirmationBody;
     const { email, guestName, sessionId, sessionSport, sessionDate, sessionTime, sessionLocation, hostName, language } =
       body;

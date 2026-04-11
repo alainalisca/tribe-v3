@@ -52,7 +52,7 @@ export async function initializeFirebaseMessaging(userId: string): Promise<strin
     // Save token to Supabase
     log('debug', 'Saving FCM token to Supabase', { action: 'initializeFirebaseMessaging', userId });
     await saveFcmToken(userId, token);
-    console.log('[FCM] New token registered:', token.substring(0, 20) + '...');
+    log('info', 'FCM token registered', { action: 'initializeFirebaseMessaging', userId });
 
     // Set up token refresh listener
     setupTokenRefreshListener(userId);

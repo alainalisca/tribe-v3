@@ -5,7 +5,7 @@
  */
 
 import { logError } from '@/lib/logger';
-import { PaymentStatus } from './config';
+import { PaymentStatus, PLATFORM_FEE_PERCENT } from './config';
 import Stripe from 'stripe';
 
 let stripeInstance: Stripe | null = null;
@@ -42,7 +42,7 @@ interface CreateStripeCheckoutSessionParams {
 
 /**
  * Create Stripe Checkout session for payment
- * Includes 10% platform fee as application_fee_amount
+ * Includes platform fee as application_fee_amount (uses PLATFORM_FEE_PERCENT from config)
  */
 export async function createStripeCheckoutSession(
   params: CreateStripeCheckoutSessionParams
@@ -51,7 +51,7 @@ export async function createStripeCheckoutSession(
     const stripe = getStripeInstance();
 
     // Calculate application fee (platform fee)
-    const platformFeeCents = Math.round((params.amountCents * 10) / 100); // 10% fee
+    const platformFeeCents = Math.round((params.amountCents * PLATFORM_FEE_PERCENT) / 100);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],

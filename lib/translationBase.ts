@@ -119,7 +119,7 @@ export const baseEn = {
 
   // Matches/Tribe
   matches: 'Matches',
-  myTribe: 'My Tribe',
+  myTribe: 'Tribe - Fitness Community',
   noJoinRequests: 'No join requests',
   newJoinRequest: 'New join request',
   userWantsToJoin: 'wants to join your session',
@@ -279,7 +279,7 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
 
   // Matches/Tribe
   matches: 'Coincidencias',
-  myTribe: 'Mi Tribu',
+  myTribe: 'Tribe - Comunidad Fitness',
   noJoinRequests: 'Sin solicitudes',
   newJoinRequest: 'Nueva solicitud',
   userWantsToJoin: 'quiere unirse a tu sesion',
