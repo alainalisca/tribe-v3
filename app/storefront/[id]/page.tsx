@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import StorefrontSessionCard from '@/components/storefront/StorefrontSessionCard';
+import StorefrontPackageCard from '@/components/storefront/StorefrontPackageCard';
 import {
   Heart,
   MessageCircle,
@@ -48,6 +50,11 @@ interface Session {
   spots_total: number;
   creator_id: string;
   is_boosted?: boolean;
+  currency?: string;
+  is_paid?: boolean;
+  price_cents?: number;
+  location?: string;
+  join_policy?: string;
 }
 
 interface ServicePackage {
@@ -60,6 +67,8 @@ interface ServicePackage {
   instructor_id: string;
   is_active: boolean;
   tag?: string;
+  currency?: string;
+  price_cents?: number;
 }
 
 interface StorefrontMedia {
@@ -108,6 +117,8 @@ export default function StorefrontPage() {
   const [activeTab, setActiveTab] = useState('sessions');
   const [loading, setLoading] = useState(true);
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(new Set());
 
   // Translations
   const translations = {
@@ -133,6 +144,42 @@ export default function StorefrontPage() {
     spotsLeft: language === 'es' ? 'Lugares' : 'Spots',
     viewsAgo: language === 'es' ? 'hace' : 'ago',
   };
+
+  // Fetch current user + their joined sessions for this instructor's sessions
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    fetchCurrentUser();
+  }, [supabase]);
+
+  // Track which sessions the current user has joined
+  const refreshJoinedSessions = useCallback(async () => {
+    if (!currentUserId || sessions.length === 0) return;
+    const sessionIds = sessions.map((s) => s.id);
+    const { data } = await supabase
+      .from('session_participants')
+      .select('session_id')
+      .eq('user_id', currentUserId)
+      .in('session_id', sessionIds)
+      .in('status', ['confirmed', 'pending']);
+    if (data) {
+      setJoinedSessionIds(new Set(data.map((d: { session_id: string }) => d.session_id)));
+    }
+  }, [currentUserId, sessions, supabase]);
+
+  useEffect(() => {
+    refreshJoinedSessions();
+  }, [refreshJoinedSessions]);
+
+  const handleSessionJoined = useCallback((sessionId: string) => {
+    setJoinedSessionIds((prev) => new Set([...prev, sessionId]));
+  }, []);
 
   // Fetch instructor details
   useEffect(() => {
@@ -511,48 +558,14 @@ export default function StorefrontPage() {
             {sessions.length > 0 ? (
               <div className="space-y-3">
                 {sessions.map((session) => (
-                  <div
+                  <StorefrontSessionCard
                     key={session.id}
-                    className="bg-white dark:bg-[#404549] rounded-xl border border-stone-200 dark:border-[#52575D] p-4 overflow-hidden hover:border-tribe-green/50 transition-all"
-                  >
-                    {/* Boosted Badge */}
-                    {session.is_boosted && (
-                      <div className="flex items-center gap-1 mb-3 w-fit">
-                        <Zap className="w-3 h-3 text-tribe-green" />
-                        <span className="text-xs font-bold text-tribe-green bg-tribe-green/20 px-2 py-0.5 rounded-full">
-                          {translations.boosted}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Sport and Title */}
-                    <h3 className="text-base font-bold text-theme-primary mb-1">{session.sport}</h3>
-                    <p className="text-sm text-theme-secondary mb-3">{session.title}</p>
-
-                    {/* Details */}
-                    <div className="space-y-2 mb-4 text-xs">
-                      <div className="flex items-center gap-2 text-theme-secondary">
-                        <Clock className="w-4 h-4 text-tribe-green flex-shrink-0" />
-                        <span>
-                          {new Date(session.date).toLocaleDateString()} • {session.time}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-theme-secondary">
-                        <Users className="w-4 h-4 text-tribe-green flex-shrink-0" />
-                        <span>
-                          {session.spots_available} / {session.spots_total} {translations.spotsLeft}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Price and Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-stone-200 dark:border-gray-700">
-                      <span className="text-lg font-bold text-tribe-green">${session.price}</span>
-                      <button className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs">
-                        {session.price > 0 ? translations.payJoin : translations.join}
-                      </button>
-                    </div>
-                  </div>
+                    session={session}
+                    language={language as 'en' | 'es'}
+                    currentUserId={currentUserId}
+                    joinedSessionIds={joinedSessionIds}
+                    onJoined={handleSessionJoined}
+                  />
                 ))}
               </div>
             ) : (
@@ -569,41 +582,12 @@ export default function StorefrontPage() {
             {packages.length > 0 ? (
               <div className="space-y-3">
                 {packages.map((pkg) => (
-                  <div
+                  <StorefrontPackageCard
                     key={pkg.id}
-                    className="bg-white dark:bg-[#404549] rounded-xl border border-stone-200 dark:border-[#52575D] p-4 hover:border-tribe-green/50 transition-all"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-base font-bold text-theme-primary flex-1">{pkg.name}</h3>
-                      {pkg.tag && (
-                        <span className="bg-tribe-green/20 text-tribe-green px-2 py-0.5 rounded-full text-xs font-semibold ml-2 flex-shrink-0">
-                          {pkg.tag}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-theme-secondary text-sm mb-3">{pkg.description}</p>
-
-                    <div className="space-y-1 mb-4 text-xs text-theme-secondary">
-                      {pkg.session_count && (
-                        <div>
-                          Sessions: <span className="font-semibold text-theme-primary">{pkg.session_count}</span>
-                        </div>
-                      )}
-                      {pkg.duration && (
-                        <div>
-                          Duration: <span className="font-semibold text-theme-primary">{pkg.duration}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-stone-200 dark:border-gray-700">
-                      <span className="text-lg font-bold text-tribe-green">${pkg.price}</span>
-                      <button className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs">
-                        {translations.payJoin}
-                      </button>
-                    </div>
-                  </div>
+                    pkg={pkg}
+                    language={language as 'en' | 'es'}
+                    instructorId={instructorId}
+                  />
                 ))}
               </div>
             ) : (

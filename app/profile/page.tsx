@@ -155,15 +155,15 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Manage Storefront (instructors only) */}
+          {/* Instructor Dashboard (instructors only) */}
           {profile?.is_instructor && profile?.id && (
             <Link
-              href={`/storefront/${profile.id}`}
+              href="/dashboard/instructor"
               className="mt-6 flex items-center gap-3 w-full px-5 py-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-tribe-green text-tribe-green hover:bg-tribe-green/10 transition"
             >
               <Store className="w-5 h-5 flex-shrink-0" />
               <span className="font-semibold text-sm">
-                {language === 'es' ? 'Gestionar Vitrina' : 'Manage Storefront'}
+                {language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard'}
               </span>
             </Link>
           )}

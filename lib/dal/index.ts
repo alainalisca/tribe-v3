@@ -24,3 +24,5 @@ export * from './venues';
 export * from './stravaRoutes'; // popular routes (formerly strava)
 export * from './instructors';
 export * from './smartMatch';
+export * from './communityNews';
+export * from './instructorDashboard';

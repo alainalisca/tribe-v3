@@ -1998,6 +1998,51 @@ export type Database = {
           },
         ]
       }
+      community_news: {
+        Row: {
+          id: string
+          title: string
+          title_es: string | null
+          summary: string
+          summary_es: string | null
+          body_url: string
+          image_url: string | null
+          source: string
+          category: string
+          published_at: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          title_es?: string | null
+          summary: string
+          summary_es?: string | null
+          body_url: string
+          image_url?: string | null
+          source: string
+          category?: string
+          published_at?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          title_es?: string | null
+          summary?: string
+          summary_es?: string | null
+          body_url?: string
+          image_url?: string | null
+          source?: string
+          category?: string
+          published_at?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
