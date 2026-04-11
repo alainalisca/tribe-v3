@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
+import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug, Dumbbell } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,14 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useSettings } from './useSettings';
 import { useRouter } from 'next/navigation';
+import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
   const router = useRouter();
   const {
     txt,
+    user,
     userIsAdmin,
     showDeleteConfirm,
     deleteInput,
@@ -94,6 +96,18 @@ export default function SettingsPage() {
             </Link>
           </div>
         </div>
+
+        {/* Training Preferences Section */}
+        {user && (
+          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-2">
+              <Dumbbell className="w-5 h-5 text-tribe-green" />
+              <h2 className="text-lg font-bold text-theme-primary">{txt.trainingPreferences}</h2>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.trainingPreferencesDesc}</p>
+            <TrainingPreferencesForm userId={user.id} />
+          </div>
+        )}
 
         {/* Notifications Section */}
         <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

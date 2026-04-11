@@ -1847,6 +1847,98 @@ export type Database = {
           },
         ]
       }
+      user_training_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          preferred_sports: string[]
+          availability: Json
+          gender_preference: string
+          max_distance_km: number
+          active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          preferred_sports?: string[]
+          availability?: Json
+          gender_preference?: string
+          max_distance_km?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          preferred_sports?: string[]
+          availability?: Json
+          gender_preference?: string
+          max_distance_km?: number
+          active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_training_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_matches: {
+        Row: {
+          id: string
+          user_id: string
+          matched_user_id: string
+          score: number
+          shared_sports: string[]
+          distance_km: number | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          matched_user_id: string
+          score?: number
+          shared_sports?: string[]
+          distance_km?: number | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          matched_user_id?: string
+          score?: number
+          shared_sports?: string[]
+          distance_km?: number | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_matches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_matches_matched_user_id_fkey"
+            columns: ["matched_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2011,3 +2103,10 @@ export type LiveStatus = Database['public']['Tables']['live_status']['Row'];
 export type SessionStory = Database['public']['Tables']['session_stories']['Row'];
 export type SessionComment = Database['public']['Tables']['session_comments']['Row'];
 export type SessionCommentInsert = Database['public']['Tables']['session_comments']['Insert'];
+
+export type UserTrainingPreferences = Database['public']['Tables']['user_training_preferences']['Row'];
+export type UserTrainingPreferencesInsert = Database['public']['Tables']['user_training_preferences']['Insert'];
+export type UserTrainingPreferencesUpdate = Database['public']['Tables']['user_training_preferences']['Update'];
+
+export type SmartMatchRow = Database['public']['Tables']['smart_matches']['Row'];
+export type SmartMatchInsert = Database['public']['Tables']['smart_matches']['Insert'];

@@ -23,3 +23,4 @@ export * from './connections';
 export * from './venues';
 export * from './stravaRoutes';
 export * from './instructors';
+export * from './smartMatch';

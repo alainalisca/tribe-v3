@@ -5,6 +5,105 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 
+/** Full instructor profile for Browse Instructors page */
+export interface InstructorProfile {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+  tagline: string | null;
+  location: string | null;
+  specialties: string[];
+  verified: boolean;
+  average_rating: number;
+  total_reviews: number;
+  total_sessions: number;
+  is_instructor: boolean;
+  created_at: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  years_experience: number;
+}
+
+/**
+ * Fetch instructors for the Browse Instructors page with optional filters.
+ */
+export async function fetchInstructors(
+  supabase: SupabaseClient,
+  options?: {
+    sport?: string;
+    searchQuery?: string;
+    sortBy?: 'rating' | 'sessions' | 'newest' | 'nearest';
+    lat?: number;
+    lng?: number;
+    limit?: number;
+  }
+): Promise<DalResult<InstructorProfile[]>> {
+  try {
+    let query = supabase
+      .from('users')
+      .select(
+        'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience'
+      )
+      .eq('is_instructor', true);
+
+    // Filter by sport in specialties array
+    if (options?.sport) {
+      query = query.contains('specialties', [options.sport]);
+    }
+
+    // Search by name
+    if (options?.searchQuery) {
+      query = query.ilike('name', `%${options.searchQuery}%`);
+    }
+
+    // Sort
+    const sortBy = options?.sortBy ?? 'sessions';
+    switch (sortBy) {
+      case 'rating':
+        query = query.order('average_rating', { ascending: false, nullsFirst: false });
+        break;
+      case 'newest':
+        query = query.order('created_at', { ascending: false });
+        break;
+      case 'nearest':
+      case 'sessions':
+      default:
+        query = query.order('total_sessions_hosted', { ascending: false, nullsFirst: false });
+        break;
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+
+    const { data, error } = await query;
+    if (error) return { success: false, error: error.message };
+
+    const instructors: InstructorProfile[] = (data || []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      avatar_url: row.avatar_url,
+      tagline: row.storefront_tagline ?? null,
+      location: row.location ?? null,
+      specialties: (row.specialties as string[]) || [],
+      verified: row.is_verified_instructor ?? false,
+      average_rating: row.average_rating ?? 0,
+      total_reviews: row.total_reviews ?? 0,
+      total_sessions: row.total_sessions_hosted ?? 0,
+      is_instructor: true,
+      created_at: row.created_at,
+      location_lat: row.location_lat ?? null,
+      location_lng: row.location_lng ?? null,
+      years_experience: row.years_experience ?? 0,
+    }));
+
+    return { success: true, data: instructors };
+  } catch (error) {
+    logError(error, { action: 'fetchInstructors' });
+    return { success: false, error: 'Failed to fetch instructors' };
+  }
+}
+
 export interface FeaturedInstructor {
   id: string;
   name: string;

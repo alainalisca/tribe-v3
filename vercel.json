@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/recurring-sessions",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/smart-match",
+      "schedule": "0 10 * * *"
     }
   ]
 }

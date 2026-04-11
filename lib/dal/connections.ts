@@ -501,6 +501,72 @@ export async function fetchTrainingPartners(
 }
 
 /**
+ * Fetch nearby athletes from the users table (no session-gating).
+ * Uses Haversine formula in JS. Filters by radius and optional sport.
+ */
+export async function fetchNearbyAthletes(
+  supabase: SupabaseClient,
+  userId: string,
+  lat: number,
+  lng: number,
+  sport?: string,
+  radiusKm: number = 25,
+  limit: number = 30
+): Promise<DalResult<TrainingPartner[]>> {
+  try {
+    let query = supabase
+      .from('users')
+      .select('id, name, avatar_url, sports, location_lat, location_lng')
+      .neq('id', userId)
+      .not('location_lat', 'is', null)
+      .not('location_lng', 'is', null);
+
+    if (sport) {
+      query = query.contains('sports', [sport]);
+    }
+
+    const { data: users, error } = await query;
+    if (error) return { success: false, error: error.message };
+
+    const partners: TrainingPartner[] = (users || [])
+      .map((u: Record<string, unknown>) => {
+        const uLat = u.location_lat as number;
+        const uLng = u.location_lng as number;
+        const uSports = (Array.isArray(u.sports) ? u.sports : []) as string[];
+
+        // Haversine
+        const lat1 = (lat * Math.PI) / 180;
+        const lat2 = (uLat * Math.PI) / 180;
+        const dLat = ((uLat - lat) * Math.PI) / 180;
+        const dLng = ((uLng - lng) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = Math.round(6371 * c * 10) / 10;
+
+        return {
+          id: (u.id as string) || '',
+          name: (u.name as string) || 'Unknown',
+          avatar_url: (u.avatar_url as string | null) || null,
+          primary_sport: uSports[0] || 'Running',
+          distance_km: distance,
+          shared_sport_count: uSports.length,
+          sports: uSports,
+        };
+      })
+      .filter((p) => p.distance_km <= radiusKm)
+      .sort((a, b) => a.distance_km - b.distance_km)
+      .slice(0, limit);
+
+    return { success: true, data: partners };
+  } catch (error) {
+    logError(error, { action: 'fetchNearbyAthletes', userId, lat, lng, sport });
+    return { success: false, error: 'Failed to fetch nearby athletes' };
+  }
+}
+
+/**
  * Check if two users have shared a session (RPC wrapper).
  */
 export async function hasSharedSession(

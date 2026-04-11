@@ -59,10 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // 1. Authenticate the user via their access token
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Missing authorization header' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Missing authorization header' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -72,10 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid or expired token' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
     }
 
     // 2. Parse and validate the payload
@@ -89,25 +83,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     if (!body.message || body.message.trim().length < 10) {
-      return NextResponse.json(
-        { success: false, error: 'Message must be at least 10 characters.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Message must be at least 10 characters.' }, { status: 400 });
     }
 
     if (body.message.trim().length > 2000) {
-      return NextResponse.json(
-        { success: false, error: 'Message must be under 2000 characters.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Message must be under 2000 characters.' }, { status: 400 });
     }
 
     // 3. Build a title from the category + first chunk of the message
     const trimmedMessage = body.message.trim();
-    const titleSnippet =
-      trimmedMessage.length > 60
-        ? `${trimmedMessage.slice(0, 57)}...`
-        : trimmedMessage;
+    const titleSnippet = trimmedMessage.length > 60 ? `${trimmedMessage.slice(0, 57)}...` : trimmedMessage;
     const generatedTitle = `[Widget] ${CATEGORY_LABELS[body.category]}: ${titleSnippet}`;
 
     // 4. Insert feedback into the existing user_feedback table
@@ -163,6 +148,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logError(emailError, { action: 'widget-feedback-email', feedbackId: feedback.id });
     }
 
+    // Send SMS notification to admin (non-blocking)
+    try {
+      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+      const twilioAuth = process.env.TWILIO_AUTH_TOKEN;
+      const twilioFrom = process.env.TWILIO_PHONE_NUMBER;
+      const smsTo = process.env.FEEDBACK_SMS_NUMBER;
+
+      if (twilioSid && twilioAuth && twilioFrom && smsTo) {
+        const smsAuthHeader = Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');
+        const smsBody = `[Tribe] ${CATEGORY_LABELS[body.category]} from ${user.email ?? 'unknown'}: ${trimmedMessage.slice(0, 120)}`;
+
+        await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${smsAuthHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: smsTo,
+            From: twilioFrom,
+            Body: smsBody,
+          }),
+        });
+      }
+    } catch (smsError) {
+      logError(smsError, { action: 'widget-feedback-sms', feedbackId: feedback.id });
+    }
+
     // 6. Return success
     return NextResponse.json({
       success: true,
@@ -170,9 +183,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     logError(error, { action: 'widget-feedback-route' });
-    return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'An unexpected error occurred.' }, { status: 500 });
   }
 }

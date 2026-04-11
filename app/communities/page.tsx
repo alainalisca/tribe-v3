@@ -10,7 +10,7 @@ import CommunityCard from '@/components/CommunityCard';
 import { SkeletonCard } from '@/components/Skeleton';
 import { fetchCommunities, fetchUserCommunities, type CommunityWithCreator } from '@/lib/dal/communities';
 import { sportTranslations } from '@/lib/translations';
-import { Search, Plus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2, Dumbbell, ChevronRight } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
   title: language === 'es' ? 'Comunidades' : 'Communities',
@@ -128,6 +128,29 @@ export default function CommunitiesPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
+        {/* Train with an Instructor Banner */}
+        <Link
+          href="/instructors"
+          className="block rounded-xl border-2 border-tribe-green/40 bg-gradient-to-r from-tribe-green/10 to-tribe-green/5 p-4 hover:border-tribe-green transition"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-tribe-green/20 shrink-0">
+              <Dumbbell className="w-5 h-5 text-tribe-green" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-theme-primary text-sm">
+                {language === 'es' ? 'Entrena con un Instructor' : 'Train with an Instructor'}
+              </h3>
+              <p className="text-xs text-theme-secondary truncate">
+                {language === 'es'
+                  ? 'Encuentra instructores certificados cerca de ti'
+                  : 'Find certified instructors near you'}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-tribe-green shrink-0" />
+          </div>
+        </Link>
+
         {/* My Communities Section */}
         {!loading && userCommunities.length > 0 && (
           <section>

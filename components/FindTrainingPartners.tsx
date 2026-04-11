@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { fetchTrainingPartners } from '@/lib/dal/connections';
+import { fetchNearbyAthletes } from '@/lib/dal/connections';
 import TrainingPartnerCard from './TrainingPartnerCard';
+import InviteToSessionSheet from './InviteToSessionSheet';
 import { sportTranslations } from '@/lib/translations';
 import type { TrainingPartner } from '@/lib/dal/connections';
 
@@ -36,6 +37,9 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [inviteTarget, setInviteTarget] = useState<TrainingPartner | null>(null);
+
+  const isEs = language === 'es';
 
   // Get current user and location
   useEffect(() => {
@@ -51,7 +55,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
 
     getUser();
 
-    // Get user's location
+    // Get user's location — fallback to Medellin
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -61,24 +65,23 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
           });
         },
         () => {
-          // Fallback to default location
-          setUserLocation({ lat: 40.7128, lng: -74.006 }); // NYC
+          setUserLocation({ lat: 6.2442, lng: -75.5812 });
         }
       );
     } else {
-      setUserLocation({ lat: 40.7128, lng: -74.006 });
+      setUserLocation({ lat: 6.2442, lng: -75.5812 });
     }
   }, [supabase]);
 
-  // Fetch training partners
+  // Fetch nearby athletes
   useEffect(() => {
-    const fetch = async () => {
+    const load = async () => {
       if (!userId || !userLocation) return;
 
       setLoading(true);
       setError(null);
 
-      const result = await fetchTrainingPartners(
+      const result = await fetchNearbyAthletes(
         supabase,
         userId,
         userLocation.lat,
@@ -87,7 +90,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
       );
 
       if (result.success && result.data) {
-        setPartners(result.data.slice(0, 10)); // Show top 10
+        setPartners(result.data);
       } else {
         setError(result.error || null);
       }
@@ -95,35 +98,26 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
       setLoading(false);
     };
 
-    fetch();
+    load();
   }, [supabase, userId, userLocation, selectedSport]);
-
-  const filteredPartners = selectedSport ? partners.filter((p) => p.sports.includes(selectedSport)) : partners;
 
   const t = (key: string): string => {
     const translations: Record<string, Record<string, string>> = {
       findTrainingPartners: {
         en: 'Find Training Partners',
-        es: 'Encontrar Compañeros de Entrenamiento',
+        es: 'Encontrar Companeros de Entrenamiento',
       },
-      seeAll: {
-        en: 'See All',
-        es: 'Ver Todo',
-      },
+      seeAll: { en: 'See All', es: 'Ver Todo' },
       noPartnersFound: {
-        en: 'No training partners found nearby',
-        es: 'Sin compañeros de entrenamiento cerca',
+        en: 'No athletes nearby yet',
+        es: 'No hay atletas cerca aun',
       },
       createSession: {
-        en: 'Create a session to attract them!',
-        es: 'Crea una sesión para atraerlos!',
+        en: 'Be the first to create a session!',
+        es: 'Se el primero en crear una sesion!',
       },
-      allSports: {
-        en: 'All',
-        es: 'Todo',
-      },
+      allSports: { en: 'All', es: 'Todo' },
     };
-
     return translations[key]?.[language] || key;
   };
 
@@ -131,7 +125,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
     <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-stone-900 dark:text-white">🏋️ {t('findTrainingPartners')}</h2>
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white">{t('findTrainingPartners')}</h2>
         <Link
           href="/training-partners"
           className="flex items-center gap-1 text-[#A3E635] font-semibold text-sm hover:text-[#8fd61d]"
@@ -170,7 +164,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
         </div>
       </div>
 
-      {/* Partners scroll */}
+      {/* Athletes scroll */}
       {loading ? (
         <div className="px-4 overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 w-max">
@@ -182,19 +176,39 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
             ))}
           </div>
         </div>
-      ) : filteredPartners.length === 0 ? (
+      ) : partners.length === 0 ? (
         <div className="mx-4 p-6 bg-stone-100 dark:bg-[#3D4349] rounded-lg text-center">
           <p className="text-sm text-stone-600 dark:text-gray-400 mb-2">{t('noPartnersFound')}</p>
-          <p className="text-xs text-stone-500 dark:text-gray-500">{t('createSession')}</p>
+          <Link
+            href="/create"
+            className="inline-block mt-2 px-4 py-2 bg-[#A3E635] text-stone-900 text-sm font-semibold rounded-full hover:bg-[#8fd61d] transition"
+          >
+            {t('createSession')}
+          </Link>
         </div>
       ) : (
         <div ref={scrollContainerRef} className="px-4 overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 w-max">
-            {filteredPartners.map((partner) => (
-              <TrainingPartnerCard key={partner.id} partner={partner} language={language} />
+            {partners.map((partner) => (
+              <TrainingPartnerCard
+                key={partner.id}
+                partner={partner}
+                language={language}
+                onInvite={() => setInviteTarget(partner)}
+              />
             ))}
           </div>
         </div>
+      )}
+
+      {/* Invite sheet */}
+      {inviteTarget && (
+        <InviteToSessionSheet
+          open={!!inviteTarget}
+          onClose={() => setInviteTarget(null)}
+          athlete={inviteTarget}
+          language={language}
+        />
       )}
     </div>
   );
