@@ -46,25 +46,6 @@ const SPORT_LABELS: Record<string, Record<string, string>> = {
   },
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  meetup: 'bg-red-600 text-white',
-  eventbrite: 'bg-blue-600 text-white',
-  strava: 'bg-orange-600 text-white',
-};
-
-const SOURCE_LABELS: Record<string, Record<string, string>> = {
-  en: {
-    meetup: 'Meetup',
-    eventbrite: 'Eventbrite',
-    strava: 'Strava',
-  },
-  es: {
-    meetup: 'Meetup',
-    eventbrite: 'Eventbrite',
-    strava: 'Strava',
-  },
-};
-
 export default function ExternalEventCard({ event, language }: ExternalEventCardProps) {
   const lang = (language === 'es' ? 'es' : 'en') as 'en' | 'es';
   const startTime = new Date(event.start_time);
@@ -81,10 +62,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
   const sportLabel = SPORT_LABELS[lang][event.sport as keyof (typeof SPORT_LABELS)['en']] || event.sport;
   const sportIcon = SPORT_ICONS[event.sport as keyof typeof SPORT_ICONS] || '🏋️';
 
-  const sourceLabel = SOURCE_LABELS[lang][event.source] || event.source;
-  const sourceColor = SOURCE_COLORS[event.source] || 'bg-gray-600 text-white';
-
-  const createSessionText = lang === 'es' ? 'Crear Sesión Tribe' : 'Create Tribe Session';
+  const createSessionText = lang === 'es' ? 'Crear Sesion Tribe' : 'Create Tribe Session';
   const viewEventText = lang === 'es' ? 'Ver Evento' : 'View Event';
 
   return (
@@ -109,16 +87,22 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
 
       {/* Card Content */}
       <div className="p-4 space-y-3">
-        {/* Source Badge */}
+        {/* Sport Badge + External indicator */}
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-bold px-3 py-1 rounded-full ${sourceColor}`}>{sourceLabel}</span>
+          <span className="text-xs bg-blue-600 text-white font-bold px-3 py-1 rounded-full">
+            {lang === 'es' ? 'Externo' : 'External'}
+          </span>
           <span className="text-xs bg-[#52575D] text-white px-3 py-1 rounded-full">
             {sportIcon} {sportLabel}
           </span>
         </div>
 
-        {/* Title */}
-        <h3 className="text-sm font-bold text-white line-clamp-2">{event.title}</h3>
+        {/* Title — clickable link to Eventbrite page */}
+        <a href={event.event_url} target="_blank" rel="noopener noreferrer" className="block">
+          <h3 className="text-sm font-bold text-white line-clamp-2 hover:text-[#A3E635] transition-colors">
+            {event.title}
+          </h3>
+        </a>
 
         {/* Date and Time */}
         <div className="text-xs text-gray-300">
@@ -131,7 +115,9 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
 
         {/* Athlete Count */}
         {event.participant_count && (
-          <div className="text-xs text-gray-400">👥 {event.participant_count} interested</div>
+          <div className="text-xs text-gray-400">
+            👥 {event.participant_count} {lang === 'es' ? 'interesados' : 'interested'}
+          </div>
         )}
 
         {/* Organizer */}

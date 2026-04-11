@@ -21,6 +21,6 @@ export * from './challenges';
 export * from './externalEvents';
 export * from './connections';
 export * from './venues';
-export * from './stravaRoutes';
+export * from './stravaRoutes'; // popular routes (formerly strava)
 export * from './instructors';
 export * from './smartMatch';

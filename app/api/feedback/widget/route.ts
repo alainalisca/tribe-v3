@@ -157,7 +157,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       if (twilioSid && twilioAuth && twilioFrom && smsTo) {
         const smsAuthHeader = Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');
-        const smsBody = `[Tribe] ${CATEGORY_LABELS[body.category]} from ${user.email ?? 'unknown'}: ${trimmedMessage.slice(0, 120)}`;
+        const smsBody = `New Tribe feedback [${CATEGORY_LABELS[body.category]}] from @${user.email ?? user.id} — check dashboard for details.`;
 
         await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
           method: 'POST',

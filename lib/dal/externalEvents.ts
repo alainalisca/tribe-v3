@@ -1,11 +1,11 @@
-/** DAL: external_events table (Meetup, Eventbrite, Strava events) */
+/** DAL: external_events table (Eventbrite, Strava events) */
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 
 export interface ExternalEvent {
   id: string;
-  source: 'meetup' | 'eventbrite' | 'strava';
+  source: 'eventbrite' | 'strava';
   external_id: string;
   title: string;
   description: string | null;

@@ -582,6 +582,65 @@ export type Database = {
           },
         ]
       }
+      popular_routes: {
+        Row: {
+          id: string
+          name: string
+          sport_type: string
+          distance_km: number
+          elevation_gain_m: number
+          difficulty: string
+          start_lat: number
+          start_lng: number
+          description_en: string | null
+          description_es: string | null
+          image_url: string | null
+          is_active: boolean
+          submitted_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          sport_type: string
+          distance_km: number
+          elevation_gain_m?: number
+          difficulty: string
+          start_lat: number
+          start_lng: number
+          description_en?: string | null
+          description_es?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          submitted_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          sport_type?: string
+          distance_km?: number
+          elevation_gain_m?: number
+          difficulty?: string
+          start_lat?: number
+          start_lng?: number
+          description_en?: string | null
+          description_es?: string | null
+          image_url?: string | null
+          is_active?: boolean
+          submitted_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popular_routes_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reported_users: {
         Row: {
           created_at: string | null
