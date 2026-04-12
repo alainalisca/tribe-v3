@@ -10,7 +10,7 @@ export default function PartnerBenefits({ language }: Props) {
   const benefits =
     language === 'es'
       ? [
-          { icon: <Star className="w-4 h-4" />, text: 'Insignia de Socio Destacado en tu perfil' },
+          { icon: <Star className="w-4 h-4" />, text: 'Insignia de Afiliado Destacado en tu perfil' },
           { icon: <TrendingUp className="w-4 h-4" />, text: 'Ubicación prioritaria en el feed de inicio' },
           { icon: <Users className="w-4 h-4" />, text: 'Vitrina mejorada con lista de instructores' },
           { icon: <BarChart3 className="w-4 h-4" />, text: 'Panel de analíticas en tiempo real' },
@@ -18,7 +18,7 @@ export default function PartnerBenefits({ language }: Props) {
           { icon: <Ticket className="w-4 h-4" />, text: 'Códigos promocionales (próximamente)' },
         ]
       : [
-          { icon: <Star className="w-4 h-4" />, text: 'Featured Partner badge on your profile' },
+          { icon: <Star className="w-4 h-4" />, text: 'Featured Affiliate badge on your profile' },
           { icon: <TrendingUp className="w-4 h-4" />, text: 'Priority placement in the home feed' },
           { icon: <Users className="w-4 h-4" />, text: 'Enhanced storefront with instructor roster' },
           { icon: <BarChart3 className="w-4 h-4" />, text: 'Real-time analytics dashboard' },

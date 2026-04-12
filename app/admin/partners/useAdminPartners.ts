@@ -52,7 +52,7 @@ export function useAdminPartners(language: 'en' | 'es') {
     setActionLoading(partnerId);
     const result = await updatePartnerStatus(supabase, partnerId, 'active');
     if (result.success) {
-      showSuccess(t('Partner approved', 'Socio aprobado'));
+      showSuccess(t('Affiliate approved', 'Afiliado aprobado'));
       await loadPartners();
     } else {
       showError(result.error ?? t('Failed to approve', 'Error al aprobar'));
@@ -66,7 +66,9 @@ export function useAdminPartners(language: 'en' | 'es') {
     const result = await updatePartnerStatus(supabase, partner.id, newStatus);
     if (result.success) {
       showSuccess(
-        newStatus === 'paused' ? t('Partner paused', 'Socio pausado') : t('Partner reactivated', 'Socio reactivado')
+        newStatus === 'paused'
+          ? t('Affiliate paused', 'Afiliado pausado')
+          : t('Affiliate reactivated', 'Afiliado reactivado')
       );
       await loadPartners();
     } else {

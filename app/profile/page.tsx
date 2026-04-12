@@ -168,15 +168,15 @@ export default function ProfilePage() {
             </Link>
           )}
 
-          {/* Become a Featured Partner (instructors who are NOT already partners) */}
+          {/* Become a Featured Affiliate (instructors who are NOT already affiliates) */}
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/partners"
-              className="mt-3 flex items-center gap-3 w-full px-5 py-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-[#3D4349] rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition text-center"
             >
-              <HeartHandshake className="w-5 h-5 flex-shrink-0" />
-              <span className="font-semibold text-sm">
-                {language === 'es' ? 'Ser Socio Destacado' : 'Become a Featured Partner'}
+              <HeartHandshake className="w-6 h-6 flex-shrink-0" />
+              <span className="font-bold text-base text-center">
+                {language === 'es' ? 'Ser Afiliado Destacado' : 'Become a Featured Affiliate'}
               </span>
             </Link>
           )}

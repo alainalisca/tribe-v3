@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
 import CommunityCard from '@/components/CommunityCard';
 import CommunityNewsTab from '@/components/CommunityNewsTab';
+import CommunityBulletinTab from '@/components/CommunityBulletinTab';
 import { SkeletonCard } from '@/components/Skeleton';
 import { fetchCommunities, fetchUserCommunities, type CommunityWithCreator } from '@/lib/dal/communities';
 import { sportTranslations } from '@/lib/translations';
@@ -27,6 +28,7 @@ function getTranslations(language: 'en' | 'es') {
     all: language === 'es' ? 'Todos' : 'All',
     tabCommunities: language === 'es' ? 'Comunidades' : 'Communities',
     tabNews: language === 'es' ? 'Noticias' : 'News',
+    tabBulletin: language === 'es' ? 'Tablon' : 'Bulletin',
   };
 }
 
@@ -35,7 +37,7 @@ export default function CommunitiesPage() {
   const { language } = useLanguage();
   const t = getTranslations(language);
 
-  const [activeTab, setActiveTab] = useState<'communities' | 'news'>('communities');
+  const [activeTab, setActiveTab] = useState<'communities' | 'news' | 'bulletin'>('communities');
   const [userCommunities, setUserCommunities] = useState<CommunityWithCreator[]>([]);
   const [allCommunities, setAllCommunities] = useState<CommunityWithCreator[]>([]);
   const [filteredCommunities, setFilteredCommunities] = useState<CommunityWithCreator[]>([]);
@@ -131,6 +133,16 @@ export default function CommunitiesPage() {
             >
               {t.tabNews}
             </button>
+            <button
+              onClick={() => setActiveTab('bulletin')}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
+                activeTab === 'bulletin'
+                  ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm'
+                  : 'text-stone-500 dark:text-gray-400 hover:text-theme-primary'
+              }`}
+            >
+              {t.tabBulletin}
+            </button>
           </div>
 
           {/* Search bar — communities tab only */}
@@ -154,7 +166,9 @@ export default function CommunitiesPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {activeTab === 'news' ? (
+        {activeTab === 'bulletin' ? (
+          <CommunityBulletinTab />
+        ) : activeTab === 'news' ? (
           <CommunityNewsTab />
         ) : (
           <CommunitiesTabContent

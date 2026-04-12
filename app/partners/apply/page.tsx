@@ -125,7 +125,7 @@ export default function PartnerApplyPage() {
             <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
           </button>
           <h1 className="text-lg font-bold text-stone-900 dark:text-white">
-            {t('Partner Application', 'Solicitud de Socio')}
+            {t('Affiliate Application', 'Solicitud de Afiliado')}
           </h1>
         </div>
       </div>

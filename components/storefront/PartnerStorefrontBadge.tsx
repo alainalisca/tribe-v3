@@ -22,7 +22,7 @@ export default function PartnerStorefrontBadge({ partner, language }: Props) {
   return (
     <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-xs font-bold px-3 py-1.5 rounded-full mb-3">
       <Star className="w-3.5 h-3.5 fill-tribe-green" />
-      {language === 'es' ? 'Socio Destacado' : 'Featured Partner'}
+      {language === 'es' ? 'Afiliado Destacado' : 'Featured Affiliate'}
       <span className="text-tribe-green/70 font-normal">
         &middot; {language === 'es' ? 'Desde' : 'Since'} {sinceDate}
       </span>

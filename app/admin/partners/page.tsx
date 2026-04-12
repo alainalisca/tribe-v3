@@ -60,7 +60,7 @@ export default function AdminPartnersPage() {
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
               <Store className="w-5 h-5 text-tribe-green" />
-              {t('Manage Partners', 'Gestionar Socios')}
+              {t('Manage Affiliates', 'Gestionar Afiliados')}
             </h1>
             <p className="text-xs text-[#B1B3B6]">
               {t(`${counts.all} total, ${counts.pending} pending`, `${counts.all} total, ${counts.pending} pendientes`)}
@@ -89,7 +89,7 @@ export default function AdminPartnersPage() {
         {partners.length === 0 ? (
           <div className="text-center py-12">
             <Store className="w-12 h-12 text-[#52575D] mx-auto mb-3" />
-            <p className="text-[#B1B3B6] text-sm">{t('No partners found', 'No se encontraron socios')}</p>
+            <p className="text-[#B1B3B6] text-sm">{t('No affiliates found', 'No se encontraron afiliados')}</p>
           </div>
         ) : (
           <div className="space-y-3">

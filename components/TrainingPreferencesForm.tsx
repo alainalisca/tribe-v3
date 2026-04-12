@@ -10,6 +10,7 @@ import type { AvailabilitySlot } from '@/lib/dal/smartMatch';
 import { showSuccess, showError } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
+import MatchingInstructorResults from '@/components/MatchingInstructorResults';
 
 const DAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -51,8 +52,8 @@ export default function TrainingPreferencesForm({ userId }: Props) {
   const [maxDistance, setMaxDistance] = useState(10);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  // Initialize availability state
   useEffect(() => {
     const initial: Record<string, { enabled: boolean; start: string; end: string }> = {};
     DAY_KEYS.forEach((day) => {
@@ -69,8 +70,6 @@ export default function TrainingPreferencesForm({ userId }: Props) {
       setSelectedSports(result.data.preferred_sports || []);
       setGenderPref((result.data.gender_preference as 'any' | 'male' | 'female') || 'any');
       setMaxDistance(result.data.max_distance_km || 10);
-
-      // Restore availability from JSONB
       const slots = (result.data.availability as AvailabilitySlot[] | null) || [];
       const restored: Record<string, { enabled: boolean; start: string; end: string }> = {};
       DAY_KEYS.forEach((day) => {
@@ -80,6 +79,9 @@ export default function TrainingPreferencesForm({ userId }: Props) {
           : { enabled: false, start: '08:00', end: '12:00' };
       });
       setAvailability(restored);
+      if (result.data.preferred_sports && result.data.preferred_sports.length > 0) {
+        setSaved(true);
+      }
     }
     setLoaded(true);
   }
@@ -105,7 +107,6 @@ export default function TrainingPreferencesForm({ userId }: Props) {
   async function handleSave() {
     setSaving(true);
     try {
-      // Convert availability state to slots array
       const slots: AvailabilitySlot[] = [];
       DAY_KEYS.forEach((day) => {
         const slot = availability[day];
@@ -124,6 +125,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
 
       if (!result.success) throw new Error(result.error);
       showSuccess(isEs ? 'Preferencias guardadas' : 'Preferences saved');
+      setSaved(true);
     } catch {
       showError(isEs ? 'Error al guardar preferencias' : 'Failed to save preferences');
     } finally {
@@ -140,6 +142,62 @@ export default function TrainingPreferencesForm({ userId }: Props) {
   }
 
   const days = isEs ? DAYS_ES : DAYS_EN;
+  // Split days: Mon-Thu (indices 0-3) left column, Fri-Sun (indices 4-6) right column
+  const leftDays = [0, 1, 2, 3];
+  const rightDays = [4, 5, 6];
+
+  function renderDayToggle(dayIndex: number) {
+    const day = DAY_KEYS[dayIndex];
+    const slot = availability[day];
+    const active = slot?.enabled;
+
+    return (
+      <div key={day} className="space-y-1.5">
+        <button
+          onClick={() => toggleDay(day)}
+          className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
+            active
+              ? 'bg-tribe-green text-slate-900'
+              : 'bg-stone-100 dark:bg-[#3D4349] text-stone-600 dark:text-gray-400 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+          }`}
+        >
+          <span>{days[dayIndex]}</span>
+          {!active && (
+            <span className="ml-1.5 text-xs text-stone-400 dark:text-gray-500">
+              {isEs ? 'No disponible' : 'Not available'}
+            </span>
+          )}
+        </button>
+        {active && (
+          <div className="flex items-center gap-1.5 px-1">
+            <select
+              value={slot.start}
+              onChange={(e) => updateDayTime(day, 'start', e.target.value)}
+              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0 flex-1 min-w-0"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <span className="text-stone-400 text-xs">-</span>
+            <select
+              value={slot.end}
+              onChange={(e) => updateDayTime(day, 'end', e.target.value)}
+              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0 flex-1 min-w-0"
+            >
+              {TIME_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -169,54 +227,12 @@ export default function TrainingPreferencesForm({ userId }: Props) {
         </div>
       </div>
 
-      {/* Availability */}
+      {/* Availability — 2-column grid: Mon-Thu | Fri-Sun */}
       <div>
         <h3 className="text-sm font-semibold text-theme-primary mb-3">{isEs ? 'Disponibilidad' : 'Availability'}</h3>
-        <div className="space-y-2">
-          {DAY_KEYS.map((day, i) => {
-            const slot = availability[day];
-            return (
-              <div key={day} className="flex items-center gap-3">
-                <button
-                  onClick={() => toggleDay(day)}
-                  className={`w-12 text-center py-1.5 rounded-lg text-sm font-medium transition ${
-                    slot?.enabled
-                      ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#3D4349] text-stone-600 dark:text-gray-400'
-                  }`}
-                >
-                  {days[i]}
-                </button>
-                {slot?.enabled && (
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={slot.start}
-                      onChange={(e) => updateDayTime(day, 'start', e.target.value)}
-                      className="text-sm rounded-lg px-2 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0"
-                    >
-                      {TIME_OPTIONS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-stone-400">-</span>
-                    <select
-                      value={slot.end}
-                      onChange={(e) => updateDayTime(day, 'end', e.target.value)}
-                      className="text-sm rounded-lg px-2 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0"
-                    >
-                      {TIME_OPTIONS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">{leftDays.map(renderDayToggle)}</div>
+          <div className="space-y-2">{rightDays.map(renderDayToggle)}</div>
         </div>
       </div>
 
@@ -276,6 +292,9 @@ export default function TrainingPreferencesForm({ userId }: Props) {
       >
         {saving ? (isEs ? 'Guardando...' : 'Saving...') : isEs ? 'Guardar preferencias' : 'Save preferences'}
       </Button>
+
+      {/* Matching Instructors — always shown after save or if preferences exist */}
+      {saved && <MatchingInstructorResults selectedSports={selectedSports} />}
     </div>
   );
 }

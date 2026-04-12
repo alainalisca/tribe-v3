@@ -2093,6 +2093,77 @@ export type Database = {
           },
         ]
       }
+      community_bulletin: {
+        Row: {
+          id: string
+          author_id: string
+          title: string
+          description_en: string | null
+          description_es: string | null
+          category: string
+          sport_type: string | null
+          event_date: string | null
+          event_time: string | null
+          location_name: string | null
+          location_lat: number | null
+          location_lng: number | null
+          image_url: string | null
+          external_url: string | null
+          status: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          author_id: string
+          title: string
+          description_en?: string | null
+          description_es?: string | null
+          category?: string
+          sport_type?: string | null
+          event_date?: string | null
+          event_time?: string | null
+          location_name?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          image_url?: string | null
+          external_url?: string | null
+          status?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          author_id?: string
+          title?: string
+          description_en?: string | null
+          description_es?: string | null
+          category?: string
+          sport_type?: string | null
+          event_date?: string | null
+          event_time?: string | null
+          location_name?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          image_url?: string | null
+          external_url?: string | null
+          status?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_bulletin_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       community_news: {
         Row: {
           id: string

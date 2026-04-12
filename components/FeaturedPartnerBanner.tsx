@@ -70,7 +70,7 @@ export default function FeaturedPartnerBanner() {
         {/* Badge */}
         <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-3">
           <Star className="w-3 h-3 fill-tribe-green" />
-          {language === 'es' ? 'Socio Destacado' : 'Featured Partner'}
+          {language === 'es' ? 'Afiliado Destacado' : 'Featured Affiliate'}
         </div>
 
         {/* Content */}
@@ -170,7 +170,7 @@ function BecomePartnerCTA({ language }: { language: string }) {
       <div className="p-4 text-center">
         <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-2">
           <Star className="w-3 h-3 fill-tribe-green" />
-          {language === 'es' ? 'Socios Destacados' : 'Featured Partners'}
+          {language === 'es' ? 'Afiliados Destacados' : 'Featured Affiliates'}
         </div>
         <p className="text-white font-bold text-sm mb-1">
           {language === 'es' ? '¿Tienes un estudio o gimnasio?' : 'Own a studio or gym?'}

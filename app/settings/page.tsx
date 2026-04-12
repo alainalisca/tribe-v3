@@ -102,12 +102,12 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3 mb-4">
             <HeartHandshake className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">
-              {language === 'es' ? 'Socios Destacados' : 'Featured Partners'}
+              {language === 'es' ? 'Afiliados Destacados' : 'Featured Affiliates'}
             </h2>
           </div>
           <Link href="/partners">
             <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition font-semibold text-sm">
-              {language === 'es' ? 'Explorar socios y aplicar' : 'Explore partners & apply'}
+              {language === 'es' ? 'Explorar afiliados y aplicar' : 'Explore affiliates & apply'}
             </button>
           </Link>
         </div>

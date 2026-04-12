@@ -31,7 +31,8 @@ const getCards = (language: string) => [
   {
     icon: <Users className="w-6 h-6 text-tribe-green" />,
     title: language === 'es' ? 'Construye Tu Base de Atletas' : 'Build Your Athlete Base',
-    desc: language === 'es' ? '68% tasa de retorno promedio entre socios' : '68% average return rate among partners',
+    desc:
+      language === 'es' ? '68% tasa de retorno promedio entre afiliados' : '68% average return rate among affiliates',
     stat: '68%',
   },
   {

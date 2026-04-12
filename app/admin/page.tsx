@@ -159,12 +159,35 @@ export default function AdminPage() {
                 <span className="text-2xl">🤝</span>
                 <div>
                   <p className="text-sm font-bold text-[#272D34]">
-                    {language === 'es' ? 'Gestionar Socios' : 'Manage Partners'}
+                    {language === 'es' ? 'Gestionar Afiliados' : 'Manage Affiliates'}
                   </p>
                   <p className="text-xs text-stone-500">
                     {language === 'es'
-                      ? 'Aprobar, pausar y administrar socios destacados'
-                      : 'Approve, pause, and manage featured partners'}
+                      ? 'Aprobar, pausar y administrar afiliados destacados'
+                      : 'Approve, pause, and manage featured affiliates'}
+                  </p>
+                </div>
+              </Link>
+              <Link
+                href="/admin/bulletin"
+                className="flex items-center gap-3 w-full p-4 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 transition"
+              >
+                <svg className="w-6 h-6 text-[#C0E863]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#272D34]">
+                    {language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Revisar y aprobar publicaciones del tablon comunitario'
+                      : 'Review and approve community bulletin posts'}
                   </p>
                 </div>
               </Link>

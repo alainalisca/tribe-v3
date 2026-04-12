@@ -25,7 +25,7 @@ export default function PartnersPage() {
             <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
           </button>
           <h1 className="text-lg font-bold text-stone-900 dark:text-white">
-            {language === 'es' ? 'Socios Destacados' : 'Featured Partners'}
+            {language === 'es' ? 'Afiliados Destacados' : 'Featured Affiliates'}
           </h1>
         </div>
       </div>
@@ -44,8 +44,8 @@ export default function PartnersPage() {
           </h3>
           <p className="text-sm text-stone-600 dark:text-[#B1B3B6] mb-4">
             {language === 'es'
-              ? 'Oferta introductoria para los primeros socios. Sin costo, sin compromiso.'
-              : 'Introductory offer for early partners. No cost, no commitment.'}
+              ? 'Oferta introductoria para los primeros afiliados. Sin costo, sin compromiso.'
+              : 'Introductory offer for early affiliates. No cost, no commitment.'}
           </p>
           <button
             onClick={() => router.push('/partners/apply')}

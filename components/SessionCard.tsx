@@ -93,7 +93,7 @@ export default function SessionCard({
               {featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id) && (
                 <Badge className="px-2 py-1 bg-tribe-green/15 text-tribe-green rounded-full border border-tribe-green/30 gap-1">
                   <Star className="w-3 h-3 fill-tribe-green" />
-                  {language === 'es' ? 'Socio Destacado' : 'Featured Partner'}
+                  {language === 'es' ? 'Afiliado Destacado' : 'Featured Affiliate'}
                 </Badge>
               )}
 
