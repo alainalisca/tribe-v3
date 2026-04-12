@@ -135,15 +135,17 @@ export default function CommunitiesPage() {
 
           {/* Search bar — communities tab only */}
           {activeTab === 'communities' ? (
-            <div className="relative mt-3 pb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
-              <input
-                type="text"
-                placeholder={t.search}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-              />
+            <div className="mt-3 pb-4">
+              <div className="relative flex items-center">
+                <Search className="absolute left-3 w-5 h-5 text-stone-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={t.search}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+                />
+              </div>
             </div>
           ) : (
             <div className="h-3" />

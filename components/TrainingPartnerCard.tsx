@@ -50,7 +50,13 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
           </div>
 
           {/* Distance */}
-          <p className="text-xs text-stone-600 dark:text-gray-400">{partner.distance_km} km</p>
+          <p className="text-xs text-stone-600 dark:text-gray-400">
+            {partner.distance_km < 0
+              ? language === 'es'
+                ? 'Ubicacion desconocida'
+                : 'Location unknown'
+              : `${partner.distance_km} km`}
+          </p>
         </div>
       </Link>
 

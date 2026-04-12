@@ -124,13 +124,17 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#272D34] border-t border-gray-200 dark:border-[#52575D] shadow-lg z-50 safe-area-bottom">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-around items-center h-16 px-4">
+        <div className="flex items-center h-16 px-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
 
             if (item.isCreate) {
               return (
-                <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center -mt-8">
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex flex-col items-center justify-center flex-1 -mt-8"
+                >
                   <div className="bg-[#9EE551] rounded-full p-4 shadow-lg hover:bg-[#8FD642] transition-colors">
                     {item.icon}
                   </div>

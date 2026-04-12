@@ -219,16 +219,16 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
 
       {/* Badges scroll container */}
       <div className="overflow-x-auto pb-2 -mx-4 px-4">
-        <div className="flex gap-4 min-w-min">
+        <div className="flex gap-4 min-w-min justify-center">
           {BADGES.map((badge) => {
             const isEarned = earnedBadges.some((b) => b.id === badge.id);
             const badgeName = language === 'es' ? badge.nameEs : badge.name;
 
             return (
-              <div key={badge.id} className="flex flex-col items-center gap-2">
+              <div key={badge.id} className="flex flex-col items-center gap-2 w-16">
                 {/* Badge circle */}
                 <button
-                  className={`w-16 h-16 rounded-full flex items-center justify-center transition relative ${
+                  className={`w-16 h-16 rounded-full flex items-center justify-center transition relative mx-auto ${
                     isEarned
                       ? 'bg-tribe-green text-slate-900 shadow-md hover:shadow-lg'
                       : 'bg-gray-300 dark:bg-[#6B7178] text-gray-500 dark:text-gray-400'
@@ -236,14 +236,14 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
                   title={badgeName}
                   disabled
                 >
-                  <span className="text-2xl leading-none flex items-center justify-center w-full h-full">
+                  <span className="text-2xl leading-none flex items-center justify-center">
                     {isEarned ? badge.emoji : badge.lockEmoji}
                   </span>
                 </button>
 
                 {/* Badge label */}
                 <span
-                  className={`text-xs font-medium text-center max-w-[60px] leading-tight ${
+                  className={`text-xs font-medium text-center w-full leading-tight ${
                     isEarned ? 'text-stone-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >

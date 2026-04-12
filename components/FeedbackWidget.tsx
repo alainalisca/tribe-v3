@@ -17,12 +17,7 @@ import { MessageSquare, X, Image as ImageIcon, CheckCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import type {
-  FeedbackCategory,
-  DeviceInfo,
-  FeedbackSubmitPayload,
-  FeedbackSubmitResponse,
-} from '@/types/feedback';
+import type { FeedbackCategory, DeviceInfo, FeedbackSubmitPayload, FeedbackSubmitResponse } from '@/types/feedback';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -90,10 +85,8 @@ function useWidgetTranslations() {
 // ---------------------------------------------------------------------------
 
 function collectDeviceInfo(): DeviceInfo {
-  const isCapacitor =
-    typeof window !== 'undefined' && 'Capacitor' in window;
-  const ua =
-    typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
+  const isCapacitor = typeof window !== 'undefined' && 'Capacitor' in window;
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
   const uaLower = ua.toLowerCase();
 
   let platform: 'ios' | 'android' | 'web' = 'web';
@@ -105,9 +98,7 @@ function collectDeviceInfo(): DeviceInfo {
     userAgent: ua,
     screenWidth: typeof window !== 'undefined' ? window.screen.width : 0,
     screenHeight: typeof window !== 'undefined' ? window.screen.height : 0,
-    nativePlatform: isCapacitor
-      ? String((window as unknown as Record<string, unknown>).Capacitor)
-      : undefined,
+    nativePlatform: isCapacitor ? String((window as unknown as Record<string, unknown>).Capacitor) : undefined,
   };
 }
 
@@ -121,28 +112,22 @@ const CATEGORIES: { value: FeedbackCategory; labelKey: 'bug' | 'featureRequest' 
   { value: 'general', labelKey: 'general' },
 ];
 
-export default function FeedbackWidget({
-  appVersion,
-  bottomOffset = 80,
-}: FeedbackWidgetProps) {
+export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: FeedbackWidgetProps) {
   // Wait for client mount before rendering — ThemeProvider's context value
   // is only available after its own useEffect sets mounted=true, so we must
   // delay our first render to avoid calling useTheme() before that.
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!mounted) return null;
 
-  return (
-    <FeedbackWidgetInner appVersion={appVersion} bottomOffset={bottomOffset} />
-  );
+  return <FeedbackWidgetInner appVersion={appVersion} bottomOffset={bottomOffset} />;
 }
 
 /** Inner component — only rendered after mount, so useTheme() is safe. */
-function FeedbackWidgetInner({
-  appVersion,
-  bottomOffset = 80,
-}: FeedbackWidgetProps) {
+function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetProps) {
   const supabase = createClient();
   const { theme } = useTheme();
   const t = useWidgetTranslations();
@@ -233,7 +218,15 @@ function FeedbackWidgetInner({
         body: JSON.stringify(payload),
       });
 
-      const result: FeedbackSubmitResponse = await response.json();
+      let result: FeedbackSubmitResponse;
+      try {
+        result = await response.json();
+      } catch {
+        // Response was not JSON (e.g. HTML error page)
+        setErrorMessage(t.genericError);
+        setSubmitState('error');
+        return;
+      }
 
       if (!response.ok || !result.success) {
         setErrorMessage(result.error ?? t.genericError);
@@ -272,10 +265,7 @@ function FeedbackWidgetInner({
 
       {/* ── Overlay ── */}
       {isOpen && (
-        <div
-          onClick={handleClose}
-          className="fixed inset-0 z-[1001] bg-black/50 transition-opacity duration-300"
-        />
+        <div onClick={handleClose} className="fixed inset-0 z-[1001] bg-black/50 transition-opacity duration-300" />
       )}
 
       {/* ── Bottom Sheet ── */}
@@ -292,9 +282,7 @@ function FeedbackWidgetInner({
 
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t.sendFeedback}
-          </h2>
+          <h2 className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{t.sendFeedback}</h2>
           <button
             onClick={handleClose}
             aria-label="Close"
@@ -312,17 +300,13 @@ function FeedbackWidgetInner({
             <p className={`text-sm font-medium mt-3 mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {t.thanksTitle}
             </p>
-            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {t.thanksSubtitle}
-            </p>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t.thanksSubtitle}</p>
           </div>
         ) : (
           /* ── Form ── */
           <>
             {/* Category selector */}
-            <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {t.category}
-            </p>
+            <p className={`text-xs mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t.category}</p>
             <div className="flex gap-2 mb-4">
               {CATEGORIES.map((cat) => {
                 const isActive = category === cat.value;
@@ -347,9 +331,7 @@ function FeedbackWidgetInner({
 
             {/* Message textarea */}
             <div className="flex justify-between items-center mb-1">
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                {t.message}
-              </p>
+              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t.message}</p>
               {charCount > 0 && (
                 <p
                   className={`text-xs ${
@@ -391,9 +373,7 @@ function FeedbackWidgetInner({
             />
 
             {/* Error message */}
-            {errorMessage && (
-              <p className="text-tribe-red text-xs mt-2">{errorMessage}</p>
-            )}
+            {errorMessage && <p className="text-tribe-red text-xs mt-2">{errorMessage}</p>}
 
             {/* Submit button */}
             <button

@@ -37,7 +37,9 @@ export default function FeaturedPartnerBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, partners]);
 
-  if (partners.length === 0) return null;
+  if (partners.length === 0) {
+    return <BecomePartnerCTA language={language} />;
+  }
 
   const partner = partners[currentIndex];
   if (!partner) return null;
@@ -152,6 +154,37 @@ function PartnerStat({ value, label }: { value: string; label: string }) {
     <div className="text-center">
       <div className="text-lg font-extrabold text-tribe-green">{value}</div>
       <div className="text-[10px] text-[#B1B3B6]">{label}</div>
+    </div>
+  );
+}
+
+/** Fallback CTA banner shown when no active partners exist */
+function BecomePartnerCTA({ language }: { language: string }) {
+  const router = useRouter();
+
+  return (
+    <div
+      onClick={() => router.push('/partners')}
+      className="relative cursor-pointer rounded-2xl border border-dashed border-tribe-green/40 overflow-hidden mb-4 bg-[#272D34] hover:border-tribe-green/60 transition"
+    >
+      <div className="p-4 text-center">
+        <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-2">
+          <Star className="w-3 h-3 fill-tribe-green" />
+          {language === 'es' ? 'Socios Destacados' : 'Featured Partners'}
+        </div>
+        <p className="text-white font-bold text-sm mb-1">
+          {language === 'es' ? '¿Tienes un estudio o gimnasio?' : 'Own a studio or gym?'}
+        </p>
+        <p className="text-[#B1B3B6] text-xs mb-3">
+          {language === 'es'
+            ? 'Destaca tu negocio y conecta con atletas locales'
+            : 'Get featured and connect with local athletes'}
+        </p>
+        <span className="inline-flex items-center gap-1 bg-tribe-green text-slate-900 font-bold text-xs px-4 py-2 rounded-xl">
+          {language === 'es' ? 'Conocer más' : 'Learn More'}
+          <ChevronRight className="w-3.5 h-3.5" />
+        </span>
+      </div>
     </div>
   );
 }

@@ -14,7 +14,7 @@ type Tab = 'sessions' | 'direct';
 
 export default function MessagesPage() {
   const [activeTab, setActiveTab] = useState<Tab>('sessions');
-  const { t, conversations, directConversations, loading, error, formatTime, getTranslatedSport, retry } =
+  const { t, language, conversations, directConversations, loading, error, formatTime, getTranslatedSport, retry } =
     useMessages();
 
   if (loading) {
@@ -75,30 +75,30 @@ export default function MessagesPage() {
         <div className="flex border-b border-stone-300 dark:border-[#52575D] px-4 gap-0">
           <button
             onClick={() => setActiveTab('sessions')}
-            className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition ${
+            className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition flex items-center justify-center gap-2 ${
               activeTab === 'sessions'
                 ? 'border-[#A3E635] text-stone-900 dark:text-white'
                 : 'border-transparent text-stone-600 dark:text-gray-400'
             }`}
           >
-            Sessions
+            {language === 'es' ? 'Sesiones' : 'Sessions'}
             {hasSessionConversations && (
-              <span className="ml-2 text-xs bg-stone-300 dark:bg-[#52575D] px-2 py-1 rounded-full">
+              <span className="inline-flex items-center justify-center text-[10px] font-bold min-w-[20px] h-5 px-1.5 rounded-full bg-[#A3E635] text-slate-900">
                 {conversations.length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('direct')}
-            className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition ${
+            className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition flex items-center justify-center gap-2 ${
               activeTab === 'direct'
                 ? 'border-[#A3E635] text-stone-900 dark:text-white'
                 : 'border-transparent text-stone-600 dark:text-gray-400'
             }`}
           >
-            Direct
+            {language === 'es' ? 'Directo' : 'Direct'}
             {hasDirectConversations && (
-              <span className="ml-2 text-xs bg-stone-300 dark:bg-[#52575D] px-2 py-1 rounded-full">
+              <span className="inline-flex items-center justify-center text-[10px] font-bold min-w-[20px] h-5 px-1.5 rounded-full bg-[#A3E635] text-slate-900">
                 {directConversations.length}
               </span>
             )}
@@ -130,7 +130,9 @@ export default function MessagesPage() {
                     <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageCircle className="w-8 h-8 text-stone-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
+                    <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                      {t('noConversations')}
+                    </h3>
                     <p className="text-stone-500 dark:text-gray-400 mb-4">{t('joinSessionToChat')}</p>
                     <Link href="/">
                       <Button className="font-bold">{t('findSessions')}</Button>
@@ -205,7 +207,9 @@ export default function MessagesPage() {
                       <MessageSquare className="w-8 h-8 text-stone-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">No direct messages</h3>
-                    <p className="text-stone-500 dark:text-gray-400 mb-4">Start a conversation by visiting someone&apos;s profile</p>
+                    <p className="text-stone-500 dark:text-gray-400 mb-4">
+                      Start a conversation by visiting someone&apos;s profile
+                    </p>
                   </CardContent>
                 </Card>
               ) : (

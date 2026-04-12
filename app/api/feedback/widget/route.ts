@@ -22,9 +22,12 @@ function getSupabaseAdmin() {
   return createClient(url, key);
 }
 
-function getResendClient() {
+function getResendClient(): Resend | null {
   const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error('RESEND_API_KEY is not configured');
+  if (!key) {
+    logError(new Error('RESEND_API_KEY is not configured'), { action: 'getResendClient' });
+    return null;
+  }
   return new Resend(key);
 }
 
@@ -123,6 +126,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     try {
       const resend = getResendClient();
+      if (!resend) throw new Error('Resend not configured — skipping email');
       await resend.emails.send({
         from: 'Tribe Feedback <tribe@aplusfitnessllc.com>',
         to: [ADMIN_EMAIL],
@@ -183,6 +187,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     logError(error, { action: 'widget-feedback-route' });
-    return NextResponse.json({ success: false, error: 'An unexpected error occurred.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+    // If Supabase env vars are missing, give a clearer server-config error
+    const isConfigError = message.includes('Missing Supabase env');
+    return NextResponse.json(
+      { success: false, error: isConfigError ? 'Server configuration error. Please try again later.' : message },
+      { status: 500 }
+    );
   }
 }

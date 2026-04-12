@@ -4,9 +4,9 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { celebrateSessionCreated } from '@/lib/confetti';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
 import { ArrowLeft, Zap, ChevronDown, ChevronUp } from 'lucide-react';
@@ -41,7 +41,16 @@ type PromoCode = {
 };
 
 export default function CreateSessionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-theme-page" />}>
+      <CreateSessionPageInner />
+    </Suspense>
+  );
+}
+
+function CreateSessionPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -95,6 +104,23 @@ export default function CreateSessionPage() {
         setIsInstructor(true);
       }
     });
+
+    // Pre-fill from URL query params (e.g. from Popular Routes)
+    const qSport = searchParams.get('sport');
+    const qTitle = searchParams.get('title');
+    const qLocation = searchParams.get('location');
+    const qLat = searchParams.get('lat');
+    const qLng = searchParams.get('lng');
+
+    if (qSport || qTitle || qLocation || qLat || qLng) {
+      setFormData((prev) => ({
+        ...prev,
+        ...(qSport ? { sport: qSport.charAt(0).toUpperCase() + qSport.slice(1) } : {}),
+        ...(qTitle || qLocation ? { location: qTitle || qLocation || '' } : {}),
+        ...(qLat ? { latitude: parseFloat(qLat) } : {}),
+        ...(qLng ? { longitude: parseFloat(qLng) } : {}),
+      }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 

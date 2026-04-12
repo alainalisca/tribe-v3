@@ -147,7 +147,30 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {activeTab === 'dashboard' && <AdminStats stats={data.stats} />}
+        {activeTab === 'dashboard' && (
+          <>
+            <AdminStats stats={data.stats} />
+            {/* Quick-access cards */}
+            <div className="mt-4">
+              <Link
+                href="/admin/partners"
+                className="flex items-center gap-3 w-full p-4 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 transition"
+              >
+                <span className="text-2xl">🤝</span>
+                <div>
+                  <p className="text-sm font-bold text-[#272D34]">
+                    {language === 'es' ? 'Gestionar Socios' : 'Manage Partners'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Aprobar, pausar y administrar socios destacados'
+                      : 'Approve, pause, and manage featured partners'}
+                  </p>
+                </div>
+              </Link>
+            </div>
+          </>
+        )}
         {activeTab === 'users' && (
           <UserManagement
             users={data.users}

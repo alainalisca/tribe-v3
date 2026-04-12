@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Camera, MapPin, X, Settings, Store } from 'lucide-react';
+import { Camera, MapPin, X, Settings, Store, HeartHandshake } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -159,11 +159,24 @@ export default function ProfilePage() {
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/dashboard/instructor"
-              className="mt-6 flex items-center gap-3 w-full px-5 py-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-tribe-green text-tribe-green hover:bg-tribe-green/10 transition"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-[#A3E635] rounded-2xl shadow-md hover:bg-[#94D91E] transition"
             >
-              <Store className="w-5 h-5 flex-shrink-0" />
-              <span className="font-semibold text-sm">
+              <Store className="w-6 h-6 text-slate-900 flex-shrink-0" />
+              <span className="font-bold text-base text-slate-900 text-center">
                 {language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard'}
+              </span>
+            </Link>
+          )}
+
+          {/* Become a Featured Partner (instructors who are NOT already partners) */}
+          {profile?.is_instructor && profile?.id && (
+            <Link
+              href="/partners"
+              className="mt-3 flex items-center gap-3 w-full px-5 py-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition"
+            >
+              <HeartHandshake className="w-5 h-5 flex-shrink-0" />
+              <span className="font-semibold text-sm">
+                {language === 'es' ? 'Ser Socio Destacado' : 'Become a Featured Partner'}
               </span>
             </Link>
           )}

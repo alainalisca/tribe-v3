@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { applyForPartnership, fetchPartnerByUserId } from '@/lib/dal/featuredPartners';
+import { createNotification, fetchAdminUserIds } from '@/lib/dal';
 import { showSuccess, showError } from '@/lib/toast';
 import BottomNav from '@/components/BottomNav';
 import PartnerApplyForm from '@/components/partner/PartnerApplyForm';
@@ -82,6 +83,21 @@ export default function PartnerApplyPage() {
     if (result.success) {
       setSubmitted(true);
       showSuccess(language === 'es' ? 'Solicitud enviada' : 'Application submitted');
+
+      // Notify admin(s) about the new application
+      const adminResult = await fetchAdminUserIds(supabase);
+      if (adminResult.success && adminResult.data) {
+        for (const adminId of adminResult.data) {
+          await createNotification(supabase, {
+            recipient_id: adminId,
+            actor_id: userId,
+            type: 'partner_application',
+            entity_type: 'featured_partner',
+            entity_id: result.data?.id ?? null,
+            message: `New partner application: ${businessName.trim()}`,
+          });
+        }
+      }
     } else {
       showError(result.error || (language === 'es' ? 'Error al enviar' : 'Failed to submit'));
     }

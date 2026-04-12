@@ -205,6 +205,72 @@ export async function fetchPartnerStats(supabase: SupabaseClient, partnerId: str
   }
 }
 
+// --- Admin operations ---
+
+/** Fetch ALL partners regardless of status (admin only — requires admin RLS policy) */
+export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalResult<FeaturedPartner[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('featured_partners')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data ?? [] };
+  } catch (error) {
+    logError(error, { action: 'fetchAllPartners' });
+    return { success: false, error: 'Failed to fetch all partners' };
+  }
+}
+
+/** Update a partner's status (and optionally expires_at) */
+export async function updatePartnerStatus(
+  supabase: SupabaseClient,
+  partnerId: string,
+  status: string,
+  expiresAt?: string | null
+): Promise<DalResult<null>> {
+  try {
+    const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+    if (status === 'active') {
+      update.starts_at = new Date().toISOString();
+      if (expiresAt) {
+        update.expires_at = expiresAt;
+      } else {
+        // Default: 6 months from now
+        const exp = new Date();
+        exp.setMonth(exp.getMonth() + 6);
+        update.expires_at = exp.toISOString();
+      }
+    }
+    const { error } = await supabase.from('featured_partners').update(update).eq('id', partnerId);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'updatePartnerStatus', sessionId: partnerId });
+    return { success: false, error: 'Failed to update partner status' };
+  }
+}
+
+/** Update a partner's tier */
+export async function updatePartnerTier(
+  supabase: SupabaseClient,
+  partnerId: string,
+  tier: string
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('featured_partners')
+      .update({ tier, updated_at: new Date().toISOString() })
+      .eq('id', partnerId);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'updatePartnerTier', sessionId: partnerId });
+    return { success: false, error: 'Failed to update partner tier' };
+  }
+}
+
 // --- Write operations ---
 
 type PartnerMetric = 'total_impressions' | 'total_clicks' | 'total_bookings';

@@ -26,6 +26,18 @@ export async function fetchUserIsAdmin(supabase: SupabaseClient, userId: string)
   }
 }
 
+/** Fetch all admin user IDs (for sending admin notifications) */
+export async function fetchAdminUserIds(supabase: SupabaseClient): Promise<DalResult<string[]>> {
+  try {
+    const { data, error } = await supabase.from('users').select('id').eq('is_admin', true);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data ?? []).map((u) => u.id) };
+  } catch (error) {
+    logError(error, { action: 'fetchAdminUserIds' });
+    return { success: false, error: 'Failed to fetch admin user IDs' };
+  }
+}
+
 export async function fetchUserName(supabase: SupabaseClient, userId: string): Promise<DalResult<string>> {
   try {
     const { data, error } = await supabase.from('users').select('name').eq('id', userId).single();

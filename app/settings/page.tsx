@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug, Dumbbell, HeartHandshake } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,21 @@ export default function SettingsPage() {
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* Featured Partners */}
+        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <HeartHandshake className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">
+              {language === 'es' ? 'Socios Destacados' : 'Featured Partners'}
+            </h2>
+          </div>
+          <Link href="/partners">
+            <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D] transition font-semibold text-sm">
+              {language === 'es' ? 'Explorar socios y aplicar' : 'Explore partners & apply'}
+            </button>
+          </Link>
         </div>
 
         {/* Training Preferences Section */}

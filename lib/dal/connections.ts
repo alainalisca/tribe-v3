@@ -514,12 +514,11 @@ export async function fetchNearbyAthletes(
   limit: number = 30
 ): Promise<DalResult<TrainingPartner[]>> {
   try {
+    // Query ALL users (including those without location) so we can show people on the app
     let query = supabase
       .from('users')
       .select('id, name, avatar_url, sports, location_lat, location_lng')
-      .neq('id', userId)
-      .not('location_lat', 'is', null)
-      .not('location_lng', 'is', null);
+      .neq('id', userId);
 
     if (sport) {
       query = query.contains('sports', [sport]);
@@ -528,13 +527,14 @@ export async function fetchNearbyAthletes(
     const { data: users, error } = await query;
     if (error) return { success: false, error: error.message };
 
-    const partners: TrainingPartner[] = (users || [])
-      .map((u: Record<string, unknown>) => {
-        const uLat = u.location_lat as number;
-        const uLng = u.location_lng as number;
-        const uSports = (Array.isArray(u.sports) ? u.sports : []) as string[];
+    const partners: TrainingPartner[] = (users || []).map((u: Record<string, unknown>) => {
+      const uLat = u.location_lat as number | null;
+      const uLng = u.location_lng as number | null;
+      const uSports = (Array.isArray(u.sports) ? u.sports : []) as string[];
 
-        // Haversine
+      // Calculate distance if user has coordinates, otherwise mark as unknown (-1)
+      let distance = -1;
+      if (uLat != null && uLng != null) {
         const lat1 = (lat * Math.PI) / 180;
         const lat2 = (uLat * Math.PI) / 180;
         const dLat = ((uLat - lat) * Math.PI) / 180;
@@ -543,23 +543,43 @@ export async function fetchNearbyAthletes(
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
           Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = Math.round(6371 * c * 10) / 10;
+        distance = Math.round(6371 * c * 10) / 10;
+      }
 
-        return {
-          id: (u.id as string) || '',
-          name: (u.name as string) || 'Unknown',
-          avatar_url: (u.avatar_url as string | null) || null,
-          primary_sport: uSports[0] || 'Running',
-          distance_km: distance,
-          shared_sport_count: uSports.length,
-          sports: uSports,
-        };
-      })
-      .filter((p) => p.distance_km <= radiusKm)
-      .sort((a, b) => a.distance_km - b.distance_km)
-      .slice(0, limit);
+      return {
+        id: (u.id as string) || '',
+        name: (u.name as string) || 'Unknown',
+        avatar_url: (u.avatar_url as string | null) || null,
+        primary_sport: uSports[0] || 'Running',
+        distance_km: distance,
+        shared_sport_count: uSports.length,
+        sports: uSports,
+      };
+    });
 
-    return { success: true, data: partners };
+    // First: try users within the requested radius
+    let nearby = partners.filter((p) => p.distance_km >= 0 && p.distance_km <= radiusKm);
+
+    // If too few results, expand to 50km
+    if (nearby.length < 3) {
+      nearby = partners.filter((p) => p.distance_km >= 0 && p.distance_km <= 50);
+    }
+
+    // Include users without location (distance_km === -1) if still few results
+    if (nearby.length < 3) {
+      const noLocation = partners.filter((p) => p.distance_km < 0);
+      nearby = [...nearby, ...noLocation];
+    }
+
+    nearby.sort((a, b) => {
+      // Users with known location first, sorted by distance
+      if (a.distance_km >= 0 && b.distance_km >= 0) return a.distance_km - b.distance_km;
+      if (a.distance_km >= 0) return -1;
+      if (b.distance_km >= 0) return 1;
+      return 0;
+    });
+
+    return { success: true, data: nearby.slice(0, limit) };
   } catch (error) {
     logError(error, { action: 'fetchNearbyAthletes', userId, lat, lng, sport });
     return { success: false, error: 'Failed to fetch nearby athletes' };

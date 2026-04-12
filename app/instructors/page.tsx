@@ -281,7 +281,7 @@ export default function InstructorsPage() {
         </div>
 
         {/* View Toggle + Near Me + Sort */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex bg-stone-100 dark:bg-[#3D4349] rounded-lg p-0.5 shrink-0">
             <button
               onClick={() => setViewMode('list')}
@@ -317,26 +317,26 @@ export default function InstructorsPage() {
             )}
             {gettingLocation ? t.gettingLocation : t.nearMe}
           </button>
-        </div>
 
-        {/* Sort Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 flex items-center whitespace-nowrap">
-            {t.sort}:
-          </span>
-          {sortOpts.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setSortBy(opt)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
-                sortBy === opt
-                  ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
-              }`}
-            >
-              {sortLabel[opt]}
-            </button>
-          ))}
+          {/* Sort Pills — inline with view controls */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 whitespace-nowrap">
+              {t.sort}:
+            </span>
+            {sortOpts.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => setSortBy(opt)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
+                  sortBy === opt
+                    ? 'bg-tribe-green text-slate-900 font-semibold'
+                    : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                }`}
+              >
+                {sortLabel[opt]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Featured Carousel */}

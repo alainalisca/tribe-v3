@@ -190,6 +190,7 @@ function RouteCard({ route, language }: { route: PopularRoute; language: string 
 
   const createParams = new URLSearchParams({
     title: route.name,
+    location: route.name,
     sport: route.sport_type,
     lat: route.start_lat.toString(),
     lng: route.start_lng.toString(),
