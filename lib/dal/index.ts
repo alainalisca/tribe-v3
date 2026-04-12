@@ -27,3 +27,4 @@ export * from './smartMatch';
 export * from './communityNews';
 export * from './instructorDashboard';
 export * from './featuredPartners';
+export * from './localEvents';

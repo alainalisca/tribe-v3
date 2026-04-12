@@ -6,7 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Shield, Flag } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag, UserPlus } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -28,6 +28,7 @@ import type { Database } from '@/lib/database.types';
 
 import ConnectionButton from '@/components/ConnectionButton';
 import TrailblazerBadge from '@/components/TrailblazerBadge';
+import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { getProfileTranslations } from './translations';
 import ProfileLightbox from './ProfileLightbox';
 import ReportUserModal from './ReportUserModal';
@@ -59,6 +60,7 @@ export default function PublicProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showInviteSheet, setShowInviteSheet] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     message: string;
@@ -330,6 +332,20 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
+          {/* Invite to Session — always visible */}
+          {currentUser && !isOwnProfile && (
+            <div className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteSheet(true)}
+                className="w-full py-3 border-2 border-tribe-green text-tribe-green font-semibold hover:bg-tribe-green hover:text-slate-900 transition"
+              >
+                <UserPlus className="w-5 h-5 mr-2" />
+                {language === 'es' ? 'Invitar a Sesion' : 'Invite to Session'}
+              </Button>
+            </div>
+          )}
+
           {/* Connection Button — session-gated: Connect / Message */}
           {currentUser && !isOwnProfile && (
             <div className="mt-6">
@@ -483,6 +499,23 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      {currentUser && !isOwnProfile && profile && (
+        <InviteToSessionSheet
+          open={showInviteSheet}
+          onClose={() => setShowInviteSheet(false)}
+          athlete={{
+            id: userId,
+            name: profile.name ?? '',
+            avatar_url: profile.avatar_url ?? null,
+            primary_sport: sports[0] ?? '',
+            distance_km: 0,
+            shared_sport_count: 0,
+            sports: sports,
+          }}
+          language={language}
+        />
+      )}
 
       {lightboxPhoto && (
         <ProfileLightbox

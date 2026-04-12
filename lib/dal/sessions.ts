@@ -256,6 +256,71 @@ export async function insertSession(supabase: SupabaseClient, data: SessionInser
   }
 }
 
+/**
+ * Fetches real-time activity stats for the LiveActivityPulse component.
+ * - activeAthletes: distinct users who joined sessions in the last 7 days
+ * - sessionsThisWeek: sessions with date >= Monday of the current week and status active
+ * - totalSessions: total count of all sessions
+ */
+export async function fetchActivityStats(
+  supabase: SupabaseClient
+): Promise<DalResult<{ activeAthletes: number; sessionsThisWeek: number; totalSessions: number }>> {
+  try {
+    const now = new Date();
+
+    // 7 days ago for active athletes
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+    // Monday of current week
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon, ...
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
+    // Run all three queries in parallel
+    const [athletesResult, weekResult, totalResult] = await Promise.all([
+      // Distinct users from session_participants in last 7 days
+      supabase
+        .from('session_participants')
+        .select('user_id', { count: 'exact', head: false })
+        .gte('created_at', sevenDaysAgoISO),
+
+      // Active sessions this week
+      supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gte('date', mondayStr),
+
+      // Total sessions
+      supabase.from('sessions').select('id', { count: 'exact', head: true }),
+    ]);
+
+    if (athletesResult.error) return { success: false, error: athletesResult.error.message };
+    if (weekResult.error) return { success: false, error: weekResult.error.message };
+    if (totalResult.error) return { success: false, error: totalResult.error.message };
+
+    // Count distinct user_ids from participants result
+    const distinctUsers = new Set(
+      (athletesResult.data || []).map((row: { user_id: string | null }) => row.user_id).filter(Boolean)
+    );
+
+    return {
+      success: true,
+      data: {
+        activeAthletes: distinctUsers.size,
+        sessionsThisWeek: weekResult.count ?? 0,
+        totalSessions: totalResult.count ?? 0,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'fetchActivityStats' });
+    return { success: false, error: 'Failed to fetch activity stats' };
+  }
+}
+
 /** Count sessions created by a user. */
 export async function fetchSessionsByCreatorCount(
   supabase: SupabaseClient,

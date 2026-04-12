@@ -18,7 +18,9 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import FeaturedInstructors from '@/components/FeaturedInstructors';
 import FeaturedPartnerBanner from '@/components/FeaturedPartnerBanner';
 import FindTrainingPartners from '@/components/FindTrainingPartners';
-import NearbyEvents from '@/components/NearbyEvents';
+import LocalFitnessEventsSection from '@/components/LocalFitnessEventsSection';
+import LiveActivityPulse from '@/components/LiveActivityPulse';
+import StoriesCarousel from '@/components/StoriesCarousel';
 import PopularVenuesSection from '@/components/PopularVenuesSection';
 import PopularRoutesSection from '@/components/PopularRoutesSection';
 import FirstMoverCTA from '@/components/FirstMoverCTA';
@@ -111,6 +113,9 @@ export default function HomePage() {
               liveUserIds={f.liveUserIdSet}
             />
           </div>
+
+          {/* ── Live Activity Pulse ── */}
+          <LiveActivityPulse />
 
           {/* ── Location prompt (only if needed) ── */}
           {f.user && !f.userLocation && !f.loading && (
@@ -232,11 +237,16 @@ export default function HomePage() {
                   [INTERLEAVE_INTERVAL * 2]: f.user ? (
                     <FindTrainingPartners key="disc-partners" language={f.language} />
                   ) : null,
-                  [INTERLEAVE_INTERVAL * 3]: f.user ? <NearbyEvents key="disc-events" language={f.language} /> : null,
+                  [INTERLEAVE_INTERVAL * 3]: f.user ? (
+                    <LocalFitnessEventsSection key="disc-events" language={f.language} />
+                  ) : null,
                   [INTERLEAVE_INTERVAL * 4]: f.user ? (
-                    <PopularVenuesSection key="disc-venues" language={f.language} />
+                    <StoriesCarousel key="disc-stories" language={f.language} userId={f.user?.id || null} />
                   ) : null,
                   [INTERLEAVE_INTERVAL * 5]: f.user ? (
+                    <PopularVenuesSection key="disc-venues" language={f.language} />
+                  ) : null,
+                  [INTERLEAVE_INTERVAL * 6]: f.user ? (
                     <PopularRoutesSection key="disc-routes" language={f.language} />
                   ) : null,
                 };

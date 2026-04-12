@@ -74,52 +74,85 @@ export async function GET(request: NextRequest) {
       { keyword: 'climbing gym', type: 'gym' },
     ];
 
-    const allVenues = new Map();
-
+    // Group queries by category so we can take a balanced number from each
+    const categoryQueries: Record<string, typeof searchQueries> = {};
     for (const query of searchQueries) {
-      try {
-        const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-        url.searchParams.set('location', `${lat},${lng}`);
-        url.searchParams.set('radius', radius.toString());
-        url.searchParams.set('keyword', query.keyword);
-        url.searchParams.set('key', apiKey);
+      const cat = query.type;
+      if (!categoryQueries[cat]) categoryQueries[cat] = [];
+      categoryQueries[cat].push(query);
+    }
 
-        const response = await fetch(url.toString());
-        if (!response.ok) continue;
+    // Fetch each category's results separately for diversity
+    const categoryResults: Record<string, Map<string, any>> = {};
 
-        const data = await response.json();
-        const results = data.results || [];
+    for (const [cat, queries] of Object.entries(categoryQueries)) {
+      categoryResults[cat] = new Map();
 
-        for (const place of results) {
-          // Deduplicate by place_id
-          if (!allVenues.has(place.place_id)) {
-            const mapCategory = mapGoogleTypeToCategory(query.type);
-            const suggestedSports = mapCategoryToSports(mapCategory);
+      for (const query of queries) {
+        try {
+          const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
+          url.searchParams.set('location', `${lat},${lng}`);
+          url.searchParams.set('radius', radius.toString());
+          url.searchParams.set('keyword', query.keyword);
+          url.searchParams.set('key', apiKey);
 
-            allVenues.set(place.place_id, {
-              place_id: place.place_id,
-              name: place.name,
-              category: mapCategory,
-              location_lat: place.geometry.location.lat,
-              location_lng: place.geometry.location.lng,
-              address: place.vicinity || '',
-              rating: place.rating || null,
-              photo_reference: place.photos?.[0]?.photo_reference || null,
-              photo_url: place.photos?.[0]
-                ? `/api/venues/photo?ref=${encodeURIComponent(place.photos[0].photo_reference)}`
-                : null,
-              suggested_sports: suggestedSports,
-              cached_at: new Date().toISOString(),
-              expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            });
+          const response = await fetch(url.toString());
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          const results = data.results || [];
+
+          for (const place of results) {
+            if (!categoryResults[cat].has(place.place_id)) {
+              const mapCategory = mapGoogleTypeToCategory(query.type);
+              const suggestedSports = mapCategoryToSports(mapCategory);
+
+              categoryResults[cat].set(place.place_id, {
+                place_id: place.place_id,
+                name: place.name,
+                category: mapCategory,
+                location_lat: place.geometry.location.lat,
+                location_lng: place.geometry.location.lng,
+                address: place.vicinity || '',
+                rating: place.rating || null,
+                photo_reference: place.photos?.[0]?.photo_reference || null,
+                photo_url: place.photos?.[0]
+                  ? `/api/venues/photo?ref=${encodeURIComponent(place.photos[0].photo_reference)}`
+                  : null,
+                suggested_sports: suggestedSports,
+                cached_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              });
+            }
           }
+        } catch (error) {
+          logError(error, { action: 'google_places_query', query: query.keyword });
         }
-      } catch (error) {
-        logError(error, { action: 'google_places_query', query: query.keyword });
       }
     }
 
-    const venuesArray = Array.from(allVenues.values()).slice(0, limit);
+    // Take top N from each category (sorted by rating), then interleave for diversity
+    const categories = Object.keys(categoryResults);
+    const perCategory = Math.max(2, Math.ceil(limit / categories.length));
+    const categorySlices: any[][] = categories.map((cat) => {
+      const venues = Array.from(categoryResults[cat].values());
+      // Sort by rating descending, nulls last
+      venues.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      return venues.slice(0, perCategory);
+    });
+
+    // Interleave: round-robin across categories for a mixed feed
+    const seen = new Set<string>();
+    const venuesArray: any[] = [];
+    const maxSliceLen = Math.max(...categorySlices.map((s) => s.length), 0);
+    for (let i = 0; i < maxSliceLen && venuesArray.length < limit; i++) {
+      for (const slice of categorySlices) {
+        if (i < slice.length && !seen.has(slice[i].place_id) && venuesArray.length < limit) {
+          seen.add(slice[i].place_id);
+          venuesArray.push(slice[i]);
+        }
+      }
+    }
 
     if (venuesArray.length > 0) {
       await upsertVenues(supabase, venuesArray);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/dal/notifications';
 import { fetchSession } from '@/lib/dal/sessions';
 import { logError } from '@/lib/logger';
@@ -99,8 +100,12 @@ export async function POST(request: Request) {
     const senderName = senderProfile?.name || 'Someone';
     const message = `${senderName} invited you to ${session.sport} on ${session.date}`;
 
-    // Create notification
-    const notifResult = await createNotification(supabase, {
+    // Create notification using service role client to bypass RLS
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const notifResult = await createNotification(serviceSupabase, {
       recipient_id: recipient_user_id,
       actor_id: user.id,
       type: 'session_invite',

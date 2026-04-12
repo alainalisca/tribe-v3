@@ -137,7 +137,7 @@ export default function CommunitiesPage() {
           {activeTab === 'communities' ? (
             <div className="mt-3 pb-4">
               <div className="relative flex items-center">
-                <Search className="absolute left-3 w-5 h-5 text-stone-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder={t.search}

@@ -151,7 +151,7 @@ export default function AdminPage() {
           <>
             <AdminStats stats={data.stats} />
             {/* Quick-access cards */}
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Link
                 href="/admin/partners"
                 className="flex items-center gap-3 w-full p-4 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 transition"
@@ -165,6 +165,27 @@ export default function AdminPage() {
                     {language === 'es'
                       ? 'Aprobar, pausar y administrar socios destacados'
                       : 'Approve, pause, and manage featured partners'}
+                  </p>
+                </div>
+              </Link>
+              <Link
+                href="/admin/events"
+                className="flex items-center gap-3 w-full p-4 bg-white border border-stone-200 rounded-xl hover:bg-stone-50 transition"
+              >
+                <svg className="w-6 h-6 text-[#C0E863]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-[#272D34]">
+                    {language === 'es' ? 'Gestionar Eventos' : 'Manage Events'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Agregar y gestionar eventos fitness locales'
+                      : 'Add and manage local fitness events'}
                   </p>
                 </div>
               </Link>

@@ -137,9 +137,9 @@ export default function FilterBar({
               onChange={(e) => setGenderFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">👥 {t('all')}</option>
-              <option value="women_only">👩 {t('women')}</option>
-              <option value="men_only">👨 {t('men')}</option>
+              <option value="all">{t('all')}</option>
+              <option value="women_only">{t('women')}</option>
+              <option value="men_only">{t('men')}</option>
             </select>
 
             <select
@@ -148,8 +148,8 @@ export default function FilterBar({
               className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
-              <option value="free">{language === 'es' ? '🆓 Gratis' : '🆓 Free'}</option>
-              <option value="paid">{language === 'es' ? '💳 De pago' : '💳 Paid'}</option>
+              <option value="free">{language === 'es' ? 'Gratis' : 'Free'}</option>
+              <option value="paid">{language === 'es' ? 'De pago' : 'Paid'}</option>
             </select>
           </div>
 

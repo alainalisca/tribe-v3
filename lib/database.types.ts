@@ -236,6 +236,101 @@ export type Database = {
           },
         ]
       }
+      local_fitness_events: {
+        Row: {
+          id: string
+          name: string
+          description_en: string | null
+          description_es: string | null
+          sport_type: string
+          event_type: string
+          location_name: string
+          location_lat: number | null
+          location_lng: number | null
+          address: string | null
+          start_date: string | null
+          end_date: string | null
+          recurrence_pattern: string | null
+          recurrence_day: string | null
+          start_time: string | null
+          end_time: string | null
+          organizer: string | null
+          website_url: string | null
+          is_free: boolean
+          price_info: string | null
+          difficulty: string
+          image_url: string | null
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description_en?: string | null
+          description_es?: string | null
+          sport_type: string
+          event_type?: string
+          location_name: string
+          location_lat?: number | null
+          location_lng?: number | null
+          address?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          recurrence_pattern?: string | null
+          recurrence_day?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          organizer?: string | null
+          website_url?: string | null
+          is_free?: boolean
+          price_info?: string | null
+          difficulty?: string
+          image_url?: string | null
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description_en?: string | null
+          description_es?: string | null
+          sport_type?: string
+          event_type?: string
+          location_name?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          address?: string | null
+          start_date?: string | null
+          end_date?: string | null
+          recurrence_pattern?: string | null
+          recurrence_day?: string | null
+          start_time?: string | null
+          end_time?: string | null
+          organizer?: string | null
+          website_url?: string | null
+          is_free?: boolean
+          price_info?: string | null
+          difficulty?: string
+          image_url?: string | null
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "local_fitness_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_requests: {
         Row: {
           created_at: string | null
