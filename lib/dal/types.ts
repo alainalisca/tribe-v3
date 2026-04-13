@@ -110,5 +110,5 @@ export interface UserForNotification {
   push_subscription: string | null;
   preferred_language: string | null;
   fcm_token: string | null;
-  native_push_token: string | null;
+  fcm_platform: string | null;
 }
