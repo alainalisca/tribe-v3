@@ -44,7 +44,7 @@ export default function SessionDetails({
 }: SessionDetailsProps) {
   const { t } = useLanguage();
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+    <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
@@ -93,7 +93,7 @@ export default function SessionDetails({
           <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
             {participants.length}/{session.max_participants} {t('joined')}
           </div>
-          <div className="w-24 h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+          <div className="w-24 h-2 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
             <div
               className={`h-full ${isFull ? 'bg-red-500' : 'bg-tribe-green'}`}
               style={{ width: `${(participants.length / session.max_participants) * 100}%` }}
@@ -261,7 +261,7 @@ export default function SessionDetails({
       </div>
 
       {session.description && (
-        <div className="mb-6 p-4 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+        <div className="mb-6 p-4 bg-stone-50 dark:bg-tribe-mid rounded-lg">
           <p className="text-stone-700 dark:text-gray-300">{session.description}</p>
         </div>
       )}

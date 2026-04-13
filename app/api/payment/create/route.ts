@@ -225,7 +225,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Payment already completed' }, { status: 400 });
     }
 
-    const amountCents = session.price_cents;
+    // Apply promo code discount if provided
+    let finalAmountCents = session.price_cents;
+    let discountCents = 0;
+    let promoCodeId: string | null = null;
+
+    const promoCode = body.promo_code as string | undefined;
+    if (promoCode) {
+      const { validatePromoCode } = await import('@/lib/dal/promote');
+      const validation = await validatePromoCode(serviceSupabase, promoCode, session_id);
+
+      if (validation.success && validation.data) {
+        const promo = validation.data;
+        promoCodeId = promo.id;
+
+        if (promo.discount_type === 'percentage') {
+          discountCents = Math.round(finalAmountCents * (promo.discount_value / 100));
+        } else if (promo.discount_type === 'fixed') {
+          discountCents = Math.min(promo.discount_value * 100, finalAmountCents);
+        } else if (promo.discount_type === 'free') {
+          discountCents = finalAmountCents;
+        }
+
+        finalAmountCents = Math.max(finalAmountCents - discountCents, 0);
+      }
+    }
+
+    const amountCents = finalAmountCents;
     const feePercent = session.platform_fee_percent || PLATFORM_FEE_PERCENT;
     const { platformFeeCents, instructorPayoutCents } = calculateFees(amountCents, feePercent);
     const gateway = getPaymentGateway(currency as 'COP' | 'USD');
@@ -244,6 +270,8 @@ export async function POST(request: NextRequest) {
         currency,
         gateway,
         status: 'pending',
+        discount_cents: discountCents,
+        promo_code_id: promoCodeId,
       })
       .select('id')
       .single();
@@ -254,6 +282,13 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentId = paymentRecord.id;
+
+    // Redeem promo code if applied
+    if (promoCodeId) {
+      const { redeemPromoCode } = await import('@/lib/dal/promote');
+      await redeemPromoCode(serviceSupabase, promoCodeId, user.id, paymentId, discountCents);
+    }
+
     let redirectUrl: string | undefined;
 
     if (gateway === 'wompi') {

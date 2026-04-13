@@ -78,7 +78,7 @@ export default function StoryViewer({
   if (!group || !story || !portalTarget) return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-[#272D34] z-[70] flex items-center justify-center">
+    <div className="fixed inset-0 bg-tribe-dark z-[70] flex items-center justify-center">
       <div className="relative w-full h-full max-w-[430px] md:h-[100vh] md:max-h-[100vh] flex flex-col">
         {/* Progress bars */}
         <div className="absolute top-0 left-0 right-0 z-20 px-2 pt-2 safe-area-top">
@@ -99,7 +99,11 @@ export default function StoryViewer({
           <div className="flex items-center gap-3 mt-3 px-1">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-stone-600 flex items-center justify-center flex-shrink-0">
               {story.user_avatar ? (
-                <img src={story.user_avatar} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={story.user_avatar}
+                  alt={`${story.user_name}'s avatar`}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-sm font-bold text-white">{story.user_name[0]?.toUpperCase()}</span>
               )}
@@ -163,7 +167,7 @@ export default function StoryViewer({
             <img
               key={story.id}
               src={story.media_url}
-              alt=""
+              alt={`Story by ${story.user_name}`}
               className="w-full h-full object-cover md:object-contain select-none relative z-[1]"
               draggable={false}
               onError={(e) => {

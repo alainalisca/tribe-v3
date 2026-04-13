@@ -39,7 +39,7 @@ export default function ReportUserModal({
             <select
               value={reportReason}
               onChange={(e) => onReasonChange(e.target.value)}
-              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white bg-white dark:bg-[#52575D]"
+              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
             >
               <option value="">{t.selectReason}</option>
               <option value="harassment">{t.harassment}</option>
@@ -56,14 +56,14 @@ export default function ReportUserModal({
               value={reportDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={t.provideContext}
-              className="h-24 resize-none dark:text-white dark:bg-[#52575D] dark:border-[#52575D]"
+              className="h-24 resize-none dark:text-white dark:bg-tribe-mid dark:border-[#52575D]"
             />
           </div>
         </div>
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-[#52575D]"
+            className="flex-1 px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-tribe-mid"
             disabled={submitting}
           >
             {t.cancel}

@@ -51,7 +51,7 @@ function BulletinCard({ post, language }: { post: BulletinPost; language: 'en' |
   const catLabel = CATEGORIES.find((c) => c.key === post.category);
 
   return (
-    <div className="rounded-xl bg-white dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] overflow-hidden">
+    <div className="rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] overflow-hidden">
       {post.image_url && (
         <div className="h-44 w-full overflow-hidden">
           <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
@@ -94,7 +94,7 @@ function BulletinCard({ post, language }: { post: BulletinPost; language: 'en' |
             href={post.external_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[#A3E635] text-xs font-medium pt-1"
+            className="inline-flex items-center gap-1 text-tribe-green text-xs font-medium pt-1"
           >
             {language === 'es' ? 'Ver mas' : 'Learn more'}
             <ExternalLink className="w-3 h-3" />
@@ -194,7 +194,7 @@ export default function CommunityBulletinTab() {
   }
 
   const inputCls =
-    'w-full px-3 py-2 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm';
+    'w-full px-3 py-2 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm';
 
   return (
     <div className="space-y-4">
@@ -211,7 +211,7 @@ export default function CommunityBulletinTab() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-3 p-4 rounded-xl bg-white dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D]"
+          className="space-y-3 p-4 rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D]"
         >
           {!userId && <p className="text-xs text-red-400 text-center">{labels.loginRequired}</p>}
           <input
@@ -292,8 +292,8 @@ export default function CommunityBulletinTab() {
             onClick={() => setSelectedCategory(cat.key)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
               selectedCategory === cat.key
-                ? 'bg-[#A3E635] text-slate-900'
-                : 'bg-stone-200 dark:bg-[#52575D] text-theme-primary hover:bg-stone-300 dark:hover:bg-[#6B7178]'
+                ? 'bg-tribe-green-light text-slate-900'
+                : 'bg-stone-200 dark:bg-tribe-mid text-theme-primary hover:bg-stone-300 dark:hover:bg-tribe-card'
             }`}
           >
             {language === 'es' ? cat.es : cat.en}

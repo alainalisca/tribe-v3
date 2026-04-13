@@ -22,33 +22,22 @@ export default function CommunityCard({ community, onClick }: CommunityCardProps
     : { background: 'linear-gradient(135deg, #A3E635, #9EE551)' };
 
   return (
-    <Link
-      href={`/communities/${community.id}`}
-      onClick={onClick}
-      className="block"
-    >
-      <div className="bg-white dark:bg-[#52575D] rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+    <Link href={`/communities/${community.id}`} onClick={onClick} className="block">
+      <div className="bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
         {/* Cover image */}
-        <div
-          className="w-full h-40 bg-cover bg-center"
-          style={coverStyle}
-        />
+        <div className="w-full h-40 bg-cover bg-center" style={coverStyle} />
 
         {/* Content */}
         <div className="p-4 space-y-3">
           {/* Name and sport */}
           <div>
             <h3 className="font-semibold text-theme-primary line-clamp-2">{community.name}</h3>
-            {sportName && (
-              <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{sportName}</p>
-            )}
+            {sportName && <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{sportName}</p>}
           </div>
 
           {/* Description */}
           {community.description && (
-            <p className="text-sm text-stone-600 dark:text-gray-300 line-clamp-2">
-              {community.description}
-            </p>
+            <p className="text-sm text-stone-600 dark:text-gray-300 line-clamp-2">{community.description}</p>
           )}
 
           {/* Member count */}

@@ -190,6 +190,14 @@ export function verifyWompiWebhookSignature(body: string, signature: string, tim
       return false;
     }
 
+    // Reject webhooks older than 5 minutes to prevent replay attacks
+    const webhookAgeMs = Date.now() - parseInt(timestamp) * 1000;
+    const MAX_AGE_MS = 5 * 60 * 1000;
+    if (webhookAgeMs > MAX_AGE_MS) {
+      logError(new Error(`Webhook too old: ${webhookAgeMs}ms`), { action: 'verifyWompiWebhookSignature' });
+      return false;
+    }
+
     // Build the concatenated string as per Wompi documentation
     // Format: id.reference.amount_in_cents.currency.status.timestamp.events_secret
     const toHash = `${transaction.id}.${transaction.reference}.${transaction.amount_in_cents}.${transaction.currency}.${transaction.status}.${timestamp}.${eventsSecret}`;

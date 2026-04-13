@@ -94,7 +94,7 @@ export default function CommunitiesPage() {
 
   const sportOptions = ['All', ...Object.keys(sportTranslations).filter((s) => s !== 'All')];
   return (
-    <div className="min-h-screen bg-white dark:bg-[#3D4349] pb-24">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
         <div className="max-w-2xl mx-auto px-4 pt-4">
@@ -112,12 +112,12 @@ export default function CommunitiesPage() {
           </div>
 
           {/* Tab switcher */}
-          <div className="flex gap-1 bg-stone-100 dark:bg-[#272D34] rounded-lg p-1">
+          <div className="flex gap-1 bg-stone-100 dark:bg-tribe-dark rounded-lg p-1">
             <button
               onClick={() => setActiveTab('communities')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
                 activeTab === 'communities'
-                  ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm'
+                  ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm'
                   : 'text-stone-500 dark:text-gray-400 hover:text-theme-primary'
               }`}
             >
@@ -127,7 +127,7 @@ export default function CommunitiesPage() {
               onClick={() => setActiveTab('news')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
                 activeTab === 'news'
-                  ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm'
+                  ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm'
                   : 'text-stone-500 dark:text-gray-400 hover:text-theme-primary'
               }`}
             >
@@ -137,7 +137,7 @@ export default function CommunitiesPage() {
               onClick={() => setActiveTab('bulletin')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
                 activeTab === 'bulletin'
-                  ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm'
+                  ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm'
                   : 'text-stone-500 dark:text-gray-400 hover:text-theme-primary'
               }`}
             >
@@ -155,7 +155,7 @@ export default function CommunitiesPage() {
                   placeholder={t.search}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                 />
               </div>
             </div>
@@ -267,7 +267,7 @@ function CommunitiesTabContent({
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                   selectedSport === sport
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-200 dark:bg-[#52575D] text-theme-primary hover:bg-stone-300 dark:hover:bg-[#6B7178]'
+                    : 'bg-stone-200 dark:bg-tribe-mid text-theme-primary hover:bg-stone-300 dark:hover:bg-tribe-card'
                 }`}
               >
                 {sportName}
@@ -277,7 +277,7 @@ function CommunitiesTabContent({
           {!showAllSports && sportOptions.length > 8 && (
             <button
               onClick={() => setShowAllSports(true)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-[#52575D] text-tribe-green hover:bg-stone-300 dark:hover:bg-[#6B7178]"
+              className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-tribe-mid text-tribe-green hover:bg-stone-300 dark:hover:bg-tribe-card"
             >
               {language === 'es' ? 'Mas' : 'More'}
             </button>
@@ -285,7 +285,7 @@ function CommunitiesTabContent({
           {showAllSports && (
             <button
               onClick={() => setShowAllSports(false)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-[#52575D] text-tribe-green hover:bg-stone-300 dark:hover:bg-[#6B7178]"
+              className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-tribe-mid text-tribe-green hover:bg-stone-300 dark:hover:bg-tribe-card"
             >
               {language === 'es' ? 'Menos' : 'Less'}
             </button>

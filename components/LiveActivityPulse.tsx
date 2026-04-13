@@ -46,14 +46,14 @@ export default function LiveActivityPulse() {
   // Loading skeleton
   if (!stats) {
     return (
-      <div className="mb-4 rounded-xl px-4 py-3 bg-stone-100 dark:bg-[#3D4349]">
-        <div className="h-5 w-3/4 mx-auto rounded bg-stone-200 dark:bg-[#52575D] animate-pulse" />
+      <div className="mb-4 rounded-xl px-4 py-3 bg-stone-100 dark:bg-tribe-surface">
+        <div className="h-5 w-3/4 mx-auto rounded bg-stone-200 dark:bg-tribe-mid animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="mb-4 rounded-xl px-4 py-3 bg-stone-100 dark:bg-[#3D4349] flex items-center justify-center gap-2 text-sm text-stone-600 dark:text-gray-300">
+    <div className="mb-4 rounded-xl px-4 py-3 bg-stone-100 dark:bg-tribe-surface flex items-center justify-center gap-2 text-sm text-stone-600 dark:text-gray-300">
       <span className="relative flex h-2.5 w-2.5">
         <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />

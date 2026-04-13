@@ -122,7 +122,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
 
   if (loading) {
     return (
-      <Card className="dark:bg-[#6B7178] shadow-lg">
+      <Card className="dark:bg-tribe-card shadow-lg">
         <CardContent className="p-6">
           <p className="text-stone-500 dark:text-gray-400">{t('loadingAttendance')}</p>
         </CardContent>
@@ -135,7 +135,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
   }
 
   return (
-    <Card className="dark:bg-[#6B7178] shadow-lg">
+    <Card className="dark:bg-tribe-card shadow-lg">
       <CardContent className="p-6">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t('markAttendance')}</h2>
         <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('markAttendanceDesc')}</p>
@@ -143,7 +143,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
           {participants.map((participant) => (
             <div
               key={participant.user_id}
-              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg"
             >
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
@@ -162,7 +162,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
                   className={`p-2 rounded-lg transition ${
                     participant.attended
                       ? 'bg-green-500 text-white'
-                      : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
+                      : 'bg-stone-200 dark:bg-tribe-card text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
                   }`}
                   title="Mark as attended"
                 >
@@ -178,7 +178,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
                   className={`p-2 rounded-lg transition ${
                     !participant.attended
                       ? 'bg-red-500 text-white'
-                      : 'bg-stone-200 dark:bg-[#6B7178] text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
+                      : 'bg-stone-200 dark:bg-tribe-card text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
                   }`}
                   title="Mark as not attended"
                 >

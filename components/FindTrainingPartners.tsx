@@ -122,13 +122,13 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
   };
 
   return (
-    <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+    <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">{t('findTrainingPartners')}</h2>
         <Link
           href="/training-partners"
-          className="flex items-center gap-1 text-[#A3E635] font-semibold text-sm hover:text-[#8fd61d]"
+          className="flex items-center gap-1 text-tribe-green font-semibold text-sm hover:text-[#8fd61d]"
         >
           {t('seeAll')} <ChevronRight className="w-4 h-4" />
         </Link>
@@ -141,8 +141,8 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
             onClick={() => setSelectedSport(null)}
             className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
               selectedSport === null
-                ? 'bg-[#A3E635] text-stone-900'
-                : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-gray-300'
+                ? 'bg-tribe-green-light text-stone-900'
+                : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-gray-300'
             }`}
           >
             {t('allSports')}
@@ -154,8 +154,8 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
               onClick={() => setSelectedSport(sport)}
               className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
                 selectedSport === sport
-                  ? 'bg-[#A3E635] text-stone-900'
-                  : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-gray-300'
+                  ? 'bg-tribe-green-light text-stone-900'
+                  : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-gray-300'
               }`}
             >
               {sportTranslations[sport]?.[language as 'en' | 'es'] || sport}
@@ -171,17 +171,17 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="flex-shrink-0 w-40 h-48 bg-stone-300 dark:bg-[#52575D] rounded-lg animate-pulse"
+                className="flex-shrink-0 w-40 h-48 bg-stone-300 dark:bg-tribe-mid rounded-lg animate-pulse"
               />
             ))}
           </div>
         </div>
       ) : partners.length === 0 ? (
-        <div className="mx-4 p-6 bg-stone-100 dark:bg-[#3D4349] rounded-lg text-center">
+        <div className="mx-4 p-6 bg-stone-100 dark:bg-tribe-surface rounded-lg text-center">
           <p className="text-sm text-stone-600 dark:text-gray-400 mb-2">{t('noPartnersFound')}</p>
           <Link
             href="/create"
-            className="inline-block mt-2 px-4 py-2 bg-[#A3E635] text-stone-900 text-sm font-semibold rounded-full hover:bg-[#8fd61d] transition"
+            className="inline-block mt-2 px-4 py-2 bg-tribe-green-light text-stone-900 text-sm font-semibold rounded-full hover:bg-[#8fd61d] transition"
           >
             {t('createSession')}
           </Link>

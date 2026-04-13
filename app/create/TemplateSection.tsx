@@ -120,7 +120,7 @@ export default function TemplateSection({
         <button
           type="button"
           onClick={() => setShowTemplates(!showTemplates)}
-          className="flex-1 py-3 px-3 bg-stone-200 dark:bg-[#52575D] text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-[#6B7178] transition text-sm"
+          className="flex-1 py-3 px-3 bg-stone-200 dark:bg-tribe-mid text-theme-primary font-medium rounded-lg hover:bg-stone-300 dark:hover:bg-tribe-card transition text-sm"
         >
           📋 {t('useTemplate')} ({templates.length})
         </button>
@@ -135,7 +135,7 @@ export default function TemplateSection({
       </div>
 
       {showNameInput && (
-        <Card className="dark:bg-[#6B7178] rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
           <CardContent className="p-3">
             <Label className="font-bold text-theme-primary mb-2">{t('nameForTemplate')}</Label>
             <Input
@@ -159,7 +159,7 @@ export default function TemplateSection({
                   setShowNameInput(false);
                   setTemplateName('');
                 }}
-                className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] text-sm font-medium"
+                className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid text-sm font-medium"
               >
                 {t('cancel')}
               </button>
@@ -177,14 +177,14 @@ export default function TemplateSection({
       )}
 
       {showTemplates && templates.length > 0 && (
-        <Card className="dark:bg-[#6B7178] rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
           <CardContent className="p-3">
             <h3 className="text-sm font-bold text-theme-primary mb-2">{t('yourTemplates')}</h3>
             <div className="space-y-2">
               {templates.map((template) => (
                 <div
                   key={template.id}
-                  className="flex items-center justify-between p-2 bg-stone-50 dark:bg-[#52575D] rounded"
+                  className="flex items-center justify-between p-2 bg-stone-50 dark:bg-tribe-mid rounded"
                 >
                   <div className="flex-1">
                     <p className="text-sm font-medium text-theme-primary">{template.name}</p>

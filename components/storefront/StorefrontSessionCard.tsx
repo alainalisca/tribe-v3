@@ -181,7 +181,7 @@ export default function StorefrontSessionCard({
       return (
         <button
           onClick={() => showError(t.loginRequired)}
-          className="bg-stone-200 dark:bg-[#52575D] text-theme-secondary px-3 py-1.5 rounded-xl font-semibold text-xs cursor-not-allowed"
+          className="bg-stone-200 dark:bg-tribe-mid text-theme-secondary px-3 py-1.5 rounded-xl font-semibold text-xs cursor-not-allowed"
         >
           {isFree ? t.joinFree : `${t.bookPay} · ${priceDisplay}`}
         </button>
@@ -206,7 +206,7 @@ export default function StorefrontSessionCard({
     return (
       <button
         onClick={handlePaidBooking}
-        className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs flex items-center gap-1.5"
+        className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-tribe-green transition-all text-xs flex items-center gap-1.5"
       >
         <CreditCard className="w-3.5 h-3.5" />
         {t.bookPay} &middot; {priceDisplay}

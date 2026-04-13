@@ -13,8 +13,8 @@ export default function PrivacyPage() {
   const t = getPrivacyContent(language);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid safe-area-top">
+      <div className="bg-stone-200 dark:bg-tribe-dark p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Link href="/settings">
             <Button variant="ghost" size="icon">
@@ -26,7 +26,7 @@ export default function PrivacyPage() {
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="dark:bg-[#272D34] shadow-none border-none">
+        <Card className="dark:bg-tribe-dark shadow-none border-none">
           <CardContent className="p-8">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{t.lastUpdated}</p>
 
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                     </div>
                   )}
                   {sec.contact && (
-                    <div className="bg-gray-100 dark:bg-[#52575D] p-4 rounded-lg">
+                    <div className="bg-gray-100 dark:bg-tribe-mid p-4 rounded-lg">
                       <p>{sec.contactLabel}</p>
                       <p className="font-semibold mt-2">
                         Email:{' '}

@@ -92,7 +92,7 @@ export default function AuthCallbackPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
       <div className="text-center">
         {error ? (
           <div className="space-y-4">

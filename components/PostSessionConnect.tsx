@@ -109,7 +109,10 @@ export default function PostSessionConnect({
           const primarySport = participant.sports[0] || 'Running';
 
           return (
-            <div key={participant.id} className="flex items-center gap-3 p-3 bg-stone-100 dark:bg-[#3D4349] rounded-lg">
+            <div
+              key={participant.id}
+              className="flex items-center gap-3 p-3 bg-stone-100 dark:bg-tribe-surface rounded-lg"
+            >
               {/* Avatar */}
               <div className="relative w-10 h-10 flex-shrink-0">
                 {participant.avatar_url ? (
@@ -120,7 +123,7 @@ export default function PostSessionConnect({
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
-                  <div className="w-full h-full bg-[#A3E635] rounded-full flex items-center justify-center text-xs font-bold text-stone-900">
+                  <div className="w-full h-full bg-tribe-green-light rounded-full flex items-center justify-center text-xs font-bold text-stone-900">
                     {participant.name
                       .split(' ')
                       .map((n) => n[0])
@@ -145,8 +148,8 @@ export default function PostSessionConnect({
                 disabled={isSending || hasSent}
                 className={`text-xs font-semibold px-3 py-1 h-auto flex-shrink-0 ${
                   hasSent
-                    ? 'bg-stone-300 dark:bg-[#52575D] text-stone-600 dark:text-gray-400'
-                    : 'bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d]'
+                    ? 'bg-stone-300 dark:bg-tribe-mid text-stone-600 dark:text-gray-400'
+                    : 'bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d]'
                 }`}
               >
                 {isSending ? '...' : hasSent ? t('requestSent') : t('connect')}

@@ -24,7 +24,7 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
     .slice(0, 2);
 
   return (
-    <div className="flex-shrink-0 w-40 bg-white dark:bg-[#52575D] rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex-shrink-0 w-40 bg-white dark:bg-tribe-mid rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/profile/${partner.id}`}>
         {/* Avatar section */}
         <div className="relative h-32 bg-gradient-to-br from-[#A3E635] to-[#8fd61d]">
@@ -44,7 +44,7 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
 
           {/* Sport tag */}
           <div className="flex flex-wrap gap-1">
-            <span className="inline-block bg-[#A3E635] text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
+            <span className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
               {sportName}
             </span>
           </div>
@@ -62,7 +62,7 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
               e.stopPropagation();
               onInvite();
             }}
-            className="w-full flex items-center justify-center gap-1 py-1.5 bg-[#A3E635] text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition"
+            className="w-full flex items-center justify-center gap-1 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition"
           >
             <UserPlus className="w-3 h-3" />
             {isEs ? 'Invitar' : 'Invite'}

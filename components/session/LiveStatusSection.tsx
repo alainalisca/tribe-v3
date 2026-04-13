@@ -113,11 +113,11 @@ export default function LiveStatusSection({
               const minsLive = Math.max(1, Math.round((Date.now() - startedAt.getTime()) / 60000));
               return (
                 <Link key={liveUser.user_id} href={`/profile/${liveUser.user_id}`}>
-                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-[#52575D] rounded-lg">
+                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-tribe-mid rounded-lg">
                     <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-br from-red-500 to-red-400 animate-pulse">
                       <Avatar className="w-full h-full">
                         <AvatarImage loading="lazy" src={liveUser.avatar_url || undefined} alt={liveUser.name || ''} />
-                        <AvatarFallback className="bg-white dark:bg-[#3D4349] text-lg font-bold text-stone-500">
+                        <AvatarFallback className="bg-white dark:bg-tribe-surface text-lg font-bold text-stone-500">
                           {liveUser.name[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

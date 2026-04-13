@@ -91,7 +91,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
       {/* Header / Toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-stone-50 dark:hover:bg-[#3D4349] transition"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-stone-50 dark:hover:bg-tribe-surface transition"
       >
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-tribe-green" />
@@ -148,13 +148,13 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
                 onKeyDown={handleKeyDown}
                 maxLength={500}
                 placeholder={isEs ? 'Escribe tu pregunta...' : 'Ask a question...'}
-                className="flex-1 bg-stone-50 dark:bg-[#3D4349] border border-stone-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-theme-primary placeholder-theme-secondary resize-none max-h-20"
+                className="flex-1 bg-stone-50 dark:bg-tribe-surface border border-stone-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-theme-primary placeholder-theme-secondary resize-none max-h-20"
                 rows={2}
               />
               <button
                 onClick={handleAdd}
                 disabled={!newComment.trim() || submitting}
-                className="flex items-center gap-2 bg-tribe-green text-slate-900 rounded-lg px-4 py-2 font-semibold hover:bg-[#8FD642] disabled:opacity-50 transition"
+                className="flex items-center gap-2 bg-tribe-green text-slate-900 rounded-lg px-4 py-2 font-semibold hover:bg-tribe-green disabled:opacity-50 transition"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -203,7 +203,7 @@ function CommentItem({ comment, currentUserId, isCreator, sessionCreatorId, lang
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="bg-stone-100 dark:bg-[#3D4349] rounded-lg px-3 py-2">
+        <div className="bg-stone-100 dark:bg-tribe-surface rounded-lg px-3 py-2">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-theme-primary">
               {comment.author?.name || (isEs ? 'Usuario' : 'User')}

@@ -77,7 +77,7 @@ export default function StorefrontPackageCard({
         <span className="text-lg font-bold text-tribe-green">{priceDisplay}</span>
         <button
           onClick={handleBookPackage}
-          className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-[#8FD642] transition-all text-xs flex items-center gap-1.5"
+          className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-tribe-green transition-all text-xs flex items-center gap-1.5"
         >
           <MessageCircle className="w-3.5 h-3.5" />
           {t.bookPackage}

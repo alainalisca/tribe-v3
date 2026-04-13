@@ -158,7 +158,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
           className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition ${
             active
               ? 'bg-tribe-green text-slate-900'
-              : 'bg-stone-100 dark:bg-[#3D4349] text-stone-600 dark:text-gray-400 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+              : 'bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-gray-400 hover:bg-stone-200 dark:hover:bg-tribe-mid'
           }`}
         >
           <span>{days[dayIndex]}</span>
@@ -173,7 +173,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
             <select
               value={slot.start}
               onChange={(e) => updateDayTime(day, 'start', e.target.value)}
-              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0 flex-1 min-w-0"
+              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-tribe-surface text-theme-primary border-0 flex-1 min-w-0"
             >
               {TIME_OPTIONS.map((t) => (
                 <option key={t} value={t}>
@@ -185,7 +185,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
             <select
               value={slot.end}
               onChange={(e) => updateDayTime(day, 'end', e.target.value)}
-              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-[#3D4349] text-theme-primary border-0 flex-1 min-w-0"
+              className="text-xs rounded-lg px-1.5 py-1 bg-stone-100 dark:bg-tribe-surface text-theme-primary border-0 flex-1 min-w-0"
             >
               {TIME_OPTIONS.map((t) => (
                 <option key={t} value={t}>
@@ -216,7 +216,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                   active
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
                 }`}
               >
                 {active && <Check className="w-3 h-3 inline mr-1" />}
@@ -253,7 +253,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
               className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
                 genderPref === opt.value
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {isEs ? opt.es : opt.en}
@@ -275,7 +275,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                 maxDistance === d
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {d} km

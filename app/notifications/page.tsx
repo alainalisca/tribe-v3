@@ -87,13 +87,12 @@ function getNotificationLink(notification: NotificationWithActor): string {
 }
 
 export default function NotificationsPage() {
-  const { t, notifications, loading, error, handleMarkRead, handleMarkAllRead, formatTime } =
-    useNotifications();
+  const { t, notifications, loading, error, handleMarkRead, handleMarkAllRead, formatTime } = useNotifications();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
           <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
             <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.notifications}</h1>
           </div>
@@ -101,13 +100,13 @@ export default function NotificationsPage() {
         <div className="pt-header max-w-2xl mx-auto p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="dark:bg-[#6B7178] shadow-none animate-pulse">
+              <Card key={i} className="dark:bg-tribe-card shadow-none animate-pulse">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-stone-200 dark:bg-[#52575D] rounded-full flex-shrink-0" />
+                    <div className="w-12 h-12 bg-stone-200 dark:bg-tribe-mid rounded-full flex-shrink-0" />
                     <div className="flex-1">
-                      <div className="h-4 bg-stone-200 dark:bg-[#52575D] rounded w-2/3 mb-2" />
-                      <div className="h-3 bg-stone-200 dark:bg-[#52575D] rounded w-1/2" />
+                      <div className="h-4 bg-stone-200 dark:bg-tribe-mid rounded w-2/3 mb-2" />
+                      <div className="h-3 bg-stone-200 dark:bg-tribe-mid rounded w-1/2" />
                     </div>
                   </div>
                 </CardContent>
@@ -122,7 +121,7 @@ export default function NotificationsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 dark:text-white text-lg mb-4">{t.somethingWentWrong}</p>
         <Button onClick={() => window.location.reload()} className="font-bold">
           {t.tryAgain}
@@ -134,9 +133,9 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.notifications}</h1>
           {unreadCount > 0 && (
@@ -155,7 +154,7 @@ export default function NotificationsPage() {
         {notifications.length === 0 ? (
           // Empty state
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="mb-4 p-4 bg-white dark:bg-[#3D4349] rounded-full">
+            <div className="mb-4 p-4 bg-white dark:bg-tribe-surface rounded-full">
               <Bell className="w-12 h-12 text-stone-400 dark:text-stone-500" />
             </div>
             <p className="text-stone-600 dark:text-stone-300 text-center">{t.noNotifications}</p>
@@ -166,10 +165,8 @@ export default function NotificationsPage() {
             {notifications.map((notification) => (
               <Link key={notification.id} href={getNotificationLink(notification)}>
                 <Card
-                  className={`dark:bg-[#52575D] shadow-none border-l-4 transition-colors cursor-pointer hover:bg-stone-100 dark:hover:bg-[#6B7178] ${
-                    notification.is_read
-                      ? 'border-l-stone-300 dark:border-l-stone-600'
-                      : 'border-l-[#A3E635]'
+                  className={`dark:bg-tribe-mid shadow-none border-l-4 transition-colors cursor-pointer hover:bg-stone-100 dark:hover:bg-tribe-card ${
+                    notification.is_read ? 'border-l-stone-300 dark:border-l-stone-600' : 'border-l-[#A3E635]'
                   }`}
                   onClick={(e) => {
                     // Mark as read when clicked
@@ -195,10 +192,8 @@ export default function NotificationsPage() {
                             className="w-10 h-10 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-white dark:bg-[#3D4349] flex items-center justify-center text-stone-600 dark:text-stone-300">
-                            {typeIconMap[notification.type] || (
-                              <Bell className="w-5 h-5" />
-                            )}
+                          <div className="w-10 h-10 rounded-full bg-white dark:bg-tribe-surface flex items-center justify-center text-stone-600 dark:text-stone-300">
+                            {typeIconMap[notification.type] || <Bell className="w-5 h-5" />}
                           </div>
                         )}
                       </div>
@@ -221,9 +216,7 @@ export default function NotificationsPage() {
 
                       {/* Unread indicator and chevron */}
                       <div className="flex-shrink-0 flex items-center gap-2">
-                        {!notification.is_read && (
-                          <div className="w-2 h-2 rounded-full bg-[#A3E635]" />
-                        )}
+                        {!notification.is_read && <div className="w-2 h-2 rounded-full bg-tribe-green-light" />}
                         <ChevronRight className="w-5 h-5 text-stone-400 dark:text-stone-500" />
                       </div>
                     </div>

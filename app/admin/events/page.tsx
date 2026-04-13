@@ -148,7 +148,7 @@ export default function AdminEventsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#272D34]">
+      <div className="min-h-screen bg-tribe-dark">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
@@ -156,11 +156,11 @@ export default function AdminEventsPage() {
   if (!authorized) return null;
 
   const inputClass =
-    'w-full bg-[#52575D] text-white text-sm rounded-lg px-3 py-2 border border-[#52575D] focus:border-tribe-green outline-none placeholder-[#808890]';
+    'w-full bg-tribe-mid text-white text-sm rounded-lg px-3 py-2 border border-[#52575D] focus:border-tribe-green outline-none placeholder-[#808890]';
   const labelClass = 'block text-xs text-[#B1B3B6] mb-1';
 
   return (
-    <div className="min-h-screen bg-[#272D34] pb-16 safe-area-top">
+    <div className="min-h-screen bg-tribe-dark pb-16 safe-area-top">
       <div className="w-full max-w-2xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
@@ -187,7 +187,10 @@ export default function AdminEventsPage() {
 
         {/* Inline add form */}
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-[#3D4349] rounded-2xl p-4 border border-[#52575D] mb-5 space-y-3">
+          <form
+            onSubmit={handleSubmit}
+            className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D] mb-5 space-y-3"
+          >
             <h2 className="text-white font-bold text-sm mb-2">{t('New Event', 'Nuevo Evento')}</h2>
 
             <div>
@@ -400,7 +403,7 @@ export default function AdminEventsPage() {
                   setShowForm(false);
                   setForm({ ...EMPTY_FORM });
                 }}
-                className="px-4 py-2.5 bg-[#52575D] text-[#B1B3B6] font-bold text-sm rounded-xl hover:bg-[#62676D] transition"
+                className="px-4 py-2.5 bg-tribe-mid text-[#B1B3B6] font-bold text-sm rounded-xl hover:bg-[#62676D] transition"
               >
                 {t('Cancel', 'Cancelar')}
               </button>
@@ -463,7 +466,7 @@ function EventCard({
   const isLoading = actionLoading === ev.id;
 
   return (
-    <div className="bg-[#3D4349] rounded-2xl p-4 border border-[#52575D]">
+    <div className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D]">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-white font-bold text-sm truncate">{ev.name}</h3>

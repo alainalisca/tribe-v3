@@ -1,73 +1,73 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { useLanguage } from '@/lib/LanguageContext'
-import { Trash2, Pin, Edit2, X, Check, Loader, Eye, Heart, ArrowLeft } from 'lucide-react'
-import Image from 'next/image'
-import BottomNav from '@/components/BottomNav'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/LanguageContext';
+import { Trash2, Pin, Edit2, X, Check, Loader, Eye, Heart, ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
+import BottomNav from '@/components/BottomNav';
 
 interface InstructorPost {
-  id: string
-  author_id: string
-  content: string
-  image_url?: string
-  video_url?: string
-  linked_session_id?: string
-  created_at: string
-  updated_at: string
-  is_pinned: boolean
+  id: string;
+  author_id: string;
+  content: string;
+  image_url?: string;
+  video_url?: string;
+  linked_session_id?: string;
+  created_at: string;
+  updated_at: string;
+  is_pinned: boolean;
 }
 
 interface SessionOption {
-  id: string
-  title: string
-  sport: string
-  date: string
-  price_cents: number
-  location: string
+  id: string;
+  title: string;
+  sport: string;
+  date: string;
+  price_cents: number;
+  location: string;
 }
 
 interface PostStats {
-  postId: string
-  likes: number
-  views: number
+  postId: string;
+  likes: number;
+  views: number;
 }
 
-const CHAR_LIMIT = 500
+const CHAR_LIMIT = 500;
 
 export default function PromotePostsPage() {
-  const router = useRouter()
-  const { language } = useLanguage()
-  const supabase = createClient()
+  const router = useRouter();
+  const { language } = useLanguage();
+  const supabase = createClient();
 
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [isInstructor, setIsInstructor] = useState(false)
-  const [posts, setPosts] = useState<InstructorPost[]>([])
-  const [sessions, setSessions] = useState<SessionOption[]>([])
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [posts, setPosts] = useState<InstructorPost[]>([]);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form state
-  const [formContent, setFormContent] = useState('')
-  const [formImageUrl, setFormImageUrl] = useState('')
-  const [formLinkedSession, setFormLinkedSession] = useState('')
-  const [formIsPinned, setFormIsPinned] = useState(false)
+  const [formContent, setFormContent] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [formLinkedSession, setFormLinkedSession] = useState('');
+  const [formIsPinned, setFormIsPinned] = useState(false);
 
   // Edit state
-  const [editingPostId, setEditingPostId] = useState<string | null>(null)
-  const [editContent, setEditContent] = useState('')
-  const [editImageUrl, setEditImageUrl] = useState('')
-  const [editLinkedSession, setEditLinkedSession] = useState('')
-  const [editIsPinned, setEditIsPinned] = useState(false)
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editLinkedSession, setEditLinkedSession] = useState('');
+  const [editIsPinned, setEditIsPinned] = useState(false);
 
   // Delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Stats
-  const [postStats, setPostStats] = useState<Record<string, PostStats>>({})
+  const [postStats, setPostStats] = useState<Record<string, PostStats>>({});
 
   const t = {
     en: {
@@ -140,9 +140,9 @@ export default function PromotePostsPage() {
       notInstructor: 'Solo los instructores pueden crear publicaciones',
       contentPlaceholder: 'Comparte tu anuncio, horario de clase o consejo de entrenamiento...',
     },
-  }
+  };
 
-  const strings = t[language as keyof typeof t] || t.en
+  const strings = t[language as keyof typeof t] || t.en;
 
   // Check auth and load data
   useEffect(() => {
@@ -150,28 +150,24 @@ export default function PromotePostsPage() {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser()
+        } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/auth/login')
-          return
+          router.push('/auth/login');
+          return;
         }
 
-        setCurrentUserId(user.id)
+        setCurrentUserId(user.id);
 
         // Check if user is instructor
-        const { data: userData } = await supabase
-          .from('users')
-          .select('is_instructor')
-          .eq('id', user.id)
-          .single()
+        const { data: userData } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
 
-        const isInst = userData?.is_instructor || false
-        setIsInstructor(isInst)
+        const isInst = userData?.is_instructor || false;
+        setIsInstructor(isInst);
 
         if (!isInst) {
-          router.push('/dashboard')
-          return
+          router.push('/dashboard');
+          return;
         }
 
         // Load user's posts
@@ -179,83 +175,77 @@ export default function PromotePostsPage() {
           .from('instructor_posts')
           .select('*')
           .eq('author_id', user.id)
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false });
 
-        if (postsError) throw postsError
-        setPosts(postsData || [])
+        if (postsError) throw postsError;
+        setPosts(postsData || []);
 
         // Load user's upcoming sessions
-        const now = new Date().toISOString()
+        const now = new Date().toISOString();
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('sessions')
           .select('id, title, sport, date, price_cents, location')
           .eq('instructor_id', user.id)
           .gte('date', now)
-          .order('date', { ascending: true })
+          .order('date', { ascending: true });
 
-        if (sessionsError) throw sessionsError
-        setSessions(sessionsData || [])
+        if (sessionsError) throw sessionsError;
+        setSessions(sessionsData || []);
 
         // Load stats for all posts
         if (postsData && postsData.length > 0) {
-          const postIds = postsData.map((p: InstructorPost) => p.id)
+          const postIds = postsData.map((p: InstructorPost) => p.id);
 
-          const { data: likesData } = await supabase
-            .from('post_likes')
-            .select('post_id')
-            .in('post_id', postIds)
+          const { data: likesData } = await supabase.from('post_likes').select('post_id').in('post_id', postIds);
 
-          const { data: viewsData } = await supabase
-            .from('post_views')
-            .select('post_id')
-            .in('post_id', postIds)
+          const { data: viewsData } = await supabase.from('post_views').select('post_id').in('post_id', postIds);
 
-          const likeCounts: Record<string, number> = {}
+          const likeCounts: Record<string, number> = {};
           likesData?.forEach((like: { post_id: string }) => {
-            likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1
-          })
+            likeCounts[like.post_id] = (likeCounts[like.post_id] || 0) + 1;
+          });
 
-          const viewCounts: Record<string, number> = {}
+          const viewCounts: Record<string, number> = {};
           viewsData?.forEach((view: { post_id: string }) => {
-            viewCounts[view.post_id] = (viewCounts[view.post_id] || 0) + 1
-          })
+            viewCounts[view.post_id] = (viewCounts[view.post_id] || 0) + 1;
+          });
 
-          const stats: Record<string, PostStats> = {}
+          const stats: Record<string, PostStats> = {};
           postIds.forEach((id) => {
             stats[id] = {
               postId: id,
               likes: likeCounts[id] || 0,
               views: viewCounts[id] || 0,
-            }
-          })
-          setPostStats(stats)
+            };
+          });
+          setPostStats(stats);
         }
       } catch (error) {
-        console.error('Error initializing:', error)
+        console.error('Error initializing:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    initialize()
-  }, [supabase, router])
+    initialize();
+  }, [supabase, router]);
 
   const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!currentUserId || !isInstructor) return
+    if (!currentUserId || !isInstructor) return;
 
     if (!formContent.trim()) {
-      alert(strings.contentRequired)
-      return
+      alert(strings.contentRequired);
+      return;
     }
 
     if (formContent.length > CHAR_LIMIT) {
-      alert(strings.contentTooLong)
-      return
+      alert(strings.contentTooLong);
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
       const { data: newPost, error } = await supabase
@@ -270,12 +260,12 @@ export default function PromotePostsPage() {
           updated_at: new Date().toISOString(),
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
+      if (error) throw error;
 
       // Add to posts list
-      setPosts([newPost, ...posts])
+      setPosts([newPost, ...posts]);
       setPostStats({
         ...postStats,
         [newPost.id]: {
@@ -283,66 +273,66 @@ export default function PromotePostsPage() {
           likes: 0,
           views: 0,
         },
-      })
+      });
 
       // Reset form
-      setFormContent('')
-      setFormImageUrl('')
-      setFormLinkedSession('')
-      setFormIsPinned(false)
+      setFormContent('');
+      setFormImageUrl('');
+      setFormLinkedSession('');
+      setFormIsPinned(false);
 
-      alert(strings.successCreated)
+      alert(strings.successCreated);
     } catch (error) {
-      console.error('Error creating post:', error)
-      alert(strings.errorCreating)
+      console.error('Error creating post:', error);
+      alert(strings.errorCreating);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleDeletePost = async (postId: string) => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
     try {
       const { error } = await supabase
         .from('instructor_posts')
         .delete()
         .eq('id', postId)
-        .eq('author_id', currentUserId)
+        .eq('author_id', currentUserId);
 
-      if (error) throw error
+      if (error) throw error;
 
-      setPosts(posts.filter((p) => p.id !== postId))
-      setDeleteConfirm(null)
-      alert(strings.successDeleted)
+      setPosts(posts.filter((p) => p.id !== postId));
+      setDeleteConfirm(null);
+      alert(strings.successDeleted);
     } catch (error) {
-      console.error('Error deleting post:', error)
-      alert(strings.errorDeleting)
+      console.error('Error deleting post:', error);
+      alert(strings.errorDeleting);
     }
-  }
+  };
 
   const handleStartEdit = (post: InstructorPost) => {
-    setEditingPostId(post.id)
-    setEditContent(post.content)
-    setEditImageUrl(post.image_url || '')
-    setEditLinkedSession(post.linked_session_id || '')
-    setEditIsPinned(post.is_pinned)
-  }
+    setEditingPostId(post.id);
+    setEditContent(post.content);
+    setEditImageUrl(post.image_url || '');
+    setEditLinkedSession(post.linked_session_id || '');
+    setEditIsPinned(post.is_pinned);
+  };
 
   const handleSaveEdit = async (postId: string) => {
-    if (!currentUserId) return
+    if (!currentUserId) return;
 
     if (!editContent.trim()) {
-      alert(strings.contentRequired)
-      return
+      alert(strings.contentRequired);
+      return;
     }
 
     if (editContent.length > CHAR_LIMIT) {
-      alert(strings.contentTooLong)
-      return
+      alert(strings.contentTooLong);
+      return;
     }
 
-    setSubmitting(true)
+    setSubmitting(true);
 
     try {
       const { error } = await supabase
@@ -355,9 +345,9 @@ export default function PromotePostsPage() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', postId)
-        .eq('author_id', currentUserId)
+        .eq('author_id', currentUserId);
 
-      if (error) throw error
+      if (error) throw error;
 
       // Update posts list
       setPosts(
@@ -373,32 +363,34 @@ export default function PromotePostsPage() {
               }
             : p
         )
-      )
+      );
 
-      setEditingPostId(null)
-      alert(strings.successUpdated)
+      setEditingPostId(null);
+      alert(strings.successUpdated);
     } catch (error) {
-      console.error('Error updating post:', error)
-      alert(strings.errorUpdating)
+      console.error('Error updating post:', error);
+      alert(strings.errorUpdating);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const handleTogglePin = async (post: InstructorPost) => {
-    await handleSaveEdit(post.id)
-  }
+    await handleSaveEdit(post.id);
+  };
 
   const timeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-    if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`
-    if (seconds < 3600) return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`
-    if (seconds < 86400) return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`
-    return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`
-  }
+    if (seconds < 60) return language === 'es' ? `hace ${seconds}s` : `${seconds}s ago`;
+    if (seconds < 3600)
+      return language === 'es' ? `hace ${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400)
+      return language === 'es' ? `hace ${Math.floor(seconds / 3600)}h` : `${Math.floor(seconds / 3600)}h ago`;
+    return language === 'es' ? `hace ${Math.floor(seconds / 86400)}d` : `${Math.floor(seconds / 86400)}d ago`;
+  };
 
   if (loading) {
     return (
@@ -408,7 +400,7 @@ export default function PromotePostsPage() {
           <p className="text-theme-secondary">{strings.errorLoading}</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!isInstructor) {
@@ -416,7 +408,7 @@ export default function PromotePostsPage() {
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
         <p className="text-theme-secondary">{strings.notInstructor}</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -424,7 +416,10 @@ export default function PromotePostsPage() {
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <Link href="/promote" className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition">
+          <Link
+            href="/promote"
+            className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex-1 ml-3">
@@ -437,7 +432,7 @@ export default function PromotePostsPage() {
       {/* Main Content */}
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
         {/* Create Post Form */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="mb-4 text-base font-semibold text-theme-primary">{strings.createPost}</h2>
 
           <form onSubmit={handleCreatePost} className="space-y-4">
@@ -450,7 +445,7 @@ export default function PromotePostsPage() {
                 placeholder={strings.contentPlaceholder}
                 maxLength={CHAR_LIMIT}
                 rows={4}
-                className="mt-2 w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
               />
               <div className="mt-1 flex justify-between">
                 <span></span>
@@ -468,7 +463,7 @@ export default function PromotePostsPage() {
                 value={formImageUrl}
                 onChange={(e) => setFormImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="mt-2 w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
               />
             </div>
 
@@ -478,7 +473,7 @@ export default function PromotePostsPage() {
               <select
                 value={formLinkedSession}
                 onChange={(e) => setFormLinkedSession(e.target.value)}
-                className="mt-2 w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
               >
                 <option value="">{strings.selectSession}</option>
                 {sessions.length === 0 ? (
@@ -500,7 +495,7 @@ export default function PromotePostsPage() {
                 id="pin-post"
                 checked={formIsPinned}
                 onChange={(e) => setFormIsPinned(e.target.checked)}
-                className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-[#3D4349] text-tribe-green focus:ring-tribe-green"
+                className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
               />
               <label htmlFor="pin-post" className="text-sm font-medium text-theme-primary">
                 {strings.pinPost}
@@ -512,7 +507,7 @@ export default function PromotePostsPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-xl py-3 transition disabled:opacity-50"
+                className="flex-1 bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-xl py-3 transition disabled:opacity-50"
               >
                 {submitting ? strings.errorLoading : strings.publish}
               </button>
@@ -522,13 +517,16 @@ export default function PromotePostsPage() {
 
         {/* Posts List */}
         {posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 py-12">
+          <div className="flex flex-col items-center justify-center gap-4 bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 py-12">
             <p className="text-center text-theme-secondary">{strings.noPostsYet}</p>
           </div>
         ) : (
           <div className="space-y-4">
             {posts.map((post) => (
-              <div key={post.id} className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+              <div
+                key={post.id}
+                className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+              >
                 {editingPostId === post.id ? (
                   // Edit Mode
                   <div className="space-y-4">
@@ -539,7 +537,7 @@ export default function PromotePostsPage() {
                         onChange={(e) => setEditContent(e.target.value)}
                         maxLength={CHAR_LIMIT}
                         rows={4}
-                        className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                        className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
                       />
                       <div className="mt-1 flex justify-between">
                         <span></span>
@@ -555,14 +553,14 @@ export default function PromotePostsPage() {
                       value={editImageUrl}
                       onChange={(e) => setEditImageUrl(e.target.value)}
                       placeholder={strings.imageUrl}
-                      className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
                     />
 
                     {/* Edit Linked Session */}
                     <select
                       value={editLinkedSession}
                       onChange={(e) => setEditLinkedSession(e.target.value)}
-                      className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
                     >
                       <option value="">{strings.selectSession}</option>
                       {sessions.map((session) => (
@@ -579,7 +577,7 @@ export default function PromotePostsPage() {
                         id={`pin-${post.id}`}
                         checked={editIsPinned}
                         onChange={(e) => setEditIsPinned(e.target.checked)}
-                        className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-[#3D4349] text-tribe-green focus:ring-tribe-green"
+                        className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
                       />
                       <label htmlFor={`pin-${post.id}`} className="text-sm font-medium text-theme-primary">
                         {strings.pinPost}
@@ -591,14 +589,14 @@ export default function PromotePostsPage() {
                       <button
                         onClick={() => handleSaveEdit(post.id)}
                         disabled={submitting}
-                        className="flex-1 flex items-center justify-center gap-2 bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-xl py-2 transition disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-xl py-2 transition disabled:opacity-50"
                       >
                         <Check className="h-4 w-4" />
                         {strings.save}
                       </button>
                       <button
                         onClick={() => setEditingPostId(null)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold transition"
+                        className="flex-1 flex items-center justify-center gap-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold transition"
                       >
                         <X className="h-4 w-4" />
                         {strings.cancel}
@@ -611,9 +609,7 @@ export default function PromotePostsPage() {
                     {/* Pin Badge */}
                     {post.is_pinned && (
                       <div className="mb-3 inline-block bg-tribe-green/20 text-tribe-green rounded-full px-3 py-1">
-                        <span className="text-xs font-semibold">
-                          {language === 'es' ? 'Fijado' : 'Pinned'}
-                        </span>
+                        <span className="text-xs font-semibold">{language === 'es' ? 'Fijado' : 'Pinned'}</span>
                       </div>
                     )}
 
@@ -622,7 +618,7 @@ export default function PromotePostsPage() {
 
                     {/* Image Preview */}
                     {post.image_url && (
-                      <div className="mb-3 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-[#3D4349]">
+                      <div className="mb-3 flex items-center justify-center rounded-lg bg-stone-100 dark:bg-tribe-surface">
                         <Image
                           src={post.image_url}
                           alt="Post media"
@@ -656,7 +652,7 @@ export default function PromotePostsPage() {
                     <div className="flex flex-wrap gap-2 border-t border-stone-200 dark:border-gray-700 pt-4">
                       <button
                         onClick={() => handleStartEdit(post)}
-                        className="flex items-center gap-2 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
+                        className="flex items-center gap-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
                       >
                         <Edit2 className="h-4 w-4" />
                         {strings.edit}
@@ -664,13 +660,13 @@ export default function PromotePostsPage() {
 
                       <button
                         onClick={() => {
-                          setEditingPostId(post.id)
-                          setEditIsPinned(!post.is_pinned)
-                          setEditContent(post.content)
-                          setEditImageUrl(post.image_url || '')
-                          setEditLinkedSession(post.linked_session_id || '')
+                          setEditingPostId(post.id);
+                          setEditIsPinned(!post.is_pinned);
+                          setEditContent(post.content);
+                          setEditImageUrl(post.image_url || '');
+                          setEditLinkedSession(post.linked_session_id || '');
                         }}
-                        className="flex items-center gap-2 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
+                        className="flex items-center gap-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
                       >
                         <Pin className="h-4 w-4" />
                         {post.is_pinned ? strings.unpin : strings.pin}
@@ -687,7 +683,7 @@ export default function PromotePostsPage() {
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(null)}
-                            className="flex items-center gap-2 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
+                            className="flex items-center gap-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm font-medium transition"
                           >
                             <X className="h-4 w-4" />
                             {strings.cancel}
@@ -718,5 +714,5 @@ export default function PromotePostsPage() {
 
       <BottomNav />
     </div>
-  )
+  );
 }

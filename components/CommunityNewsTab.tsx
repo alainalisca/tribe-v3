@@ -55,7 +55,7 @@ function getRelativeTime(dateStr: string, language: 'en' | 'es'): string {
 
 const SOURCE_COLORS: Record<string, string> = {
   INDER: 'bg-blue-500/20 text-blue-400',
-  Tribe: 'bg-[#A3E635]/20 text-[#A3E635]',
+  Tribe: 'bg-tribe-green-light/20 text-tribe-green',
   Community: 'bg-purple-500/20 text-purple-400',
 };
 
@@ -70,7 +70,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
       href={article.body_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-xl bg-white dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] overflow-hidden hover:border-[#A3E635]/50 transition group"
+      className="block rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] overflow-hidden hover:border-tribe-green/50 transition group"
     >
       {/* Image or gradient placeholder */}
       {article.image_url ? (
@@ -83,7 +83,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
         </div>
       ) : (
         <div className="h-24 w-full bg-gradient-to-br from-[#A3E635]/20 via-[#3D4349] to-[#272D34] flex items-center justify-center">
-          <Newspaper className="w-8 h-8 text-[#A3E635]/40" />
+          <Newspaper className="w-8 h-8 text-tribe-green/40" />
         </div>
       )}
 
@@ -103,7 +103,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
         <p className="text-xs text-stone-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{summary}</p>
 
         {/* Read more link */}
-        <div className="flex items-center gap-1 text-[#A3E635] text-xs font-medium pt-1">
+        <div className="flex items-center gap-1 text-tribe-green text-xs font-medium pt-1">
           <span>{t.readMore}</span>
           <ExternalLink className="w-3 h-3" />
         </div>
@@ -149,8 +149,8 @@ export default function CommunityNewsTab() {
             onClick={() => setSelectedCategory(cat.key)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition ${
               selectedCategory === cat.key
-                ? 'bg-[#A3E635] text-slate-900'
-                : 'bg-stone-200 dark:bg-[#52575D] text-theme-primary hover:bg-stone-300 dark:hover:bg-[#6B7178]'
+                ? 'bg-tribe-green-light text-slate-900'
+                : 'bg-stone-200 dark:bg-tribe-mid text-theme-primary hover:bg-stone-300 dark:hover:bg-tribe-card'
             }`}
           >
             {language === 'es' ? cat.es : cat.en}

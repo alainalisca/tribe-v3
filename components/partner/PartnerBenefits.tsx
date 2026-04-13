@@ -27,7 +27,7 @@ export default function PartnerBenefits({ language }: Props) {
         ];
 
   return (
-    <div className="mt-4 bg-white dark:bg-[#3D4349] rounded-2xl border border-stone-200 dark:border-[#52575D] p-5">
+    <div className="mt-4 bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-5">
       <h3 className="text-base font-bold text-stone-900 dark:text-white mb-3">
         {language === 'es' ? 'Lo Que Obtienes' : 'What You Get'}
       </h3>

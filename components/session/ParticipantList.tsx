@@ -47,13 +47,13 @@ export default function ParticipantList({
   if (!creator && participants.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+    <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
         {t('participants')} ({participants.length + 1})
       </h2>
       <div className="grid grid-cols-1 gap-3">
         {creator && (
-          <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg">
             <Link href={`/profile/${creator.id}`} className="flex items-center gap-3 flex-1">
               <Avatar className="w-12 h-12">
                 <AvatarImage loading="lazy" src={creator.avatar_url || undefined} alt={creator.name || ''} />
@@ -88,7 +88,7 @@ export default function ParticipantList({
           return (
             <div
               key={participant.user_id ?? `guest-${index}`}
-              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg"
+              className="flex items-center justify-between p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg"
             >
               {isGuest ? (
                 <div className="flex items-center gap-3 flex-1">

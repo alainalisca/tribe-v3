@@ -253,7 +253,7 @@ export default function SubscriptionsPage() {
               return (
                 <Card
                   key={subscription.session_id}
-                  className="dark:bg-[#6B7178] shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]"
+                  className="dark:bg-tribe-card shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]"
                 >
                   <CardContent className="p-5">
                     {/* Sport & Frequency Badge */}
@@ -262,7 +262,7 @@ export default function SubscriptionsPage() {
                         <span className="inline-block px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-sm font-bold">
                           {sportName}
                         </span>
-                        <Badge className="bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-white rounded-full border-transparent">
+                        <Badge className="bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-white rounded-full border-transparent">
                           {getFrequencyText(subscription.recurrence_pattern)}
                         </Badge>
                       </div>
@@ -313,7 +313,7 @@ export default function SubscriptionsPage() {
 
                     {/* Price Info */}
                     {price && (
-                      <div className="mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+                      <div className="mb-4 p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg">
                         <p className="text-xs font-semibold text-stone-700 dark:text-gray-300">
                           {language === 'es' ? 'Costo por sesión: ' : 'Cost per session: '}
                           <span className="text-tribe-green font-bold">{price}</span>
@@ -326,7 +326,7 @@ export default function SubscriptionsPage() {
                       <Link href={`/session/${subscription.session_id}`} className="flex-1">
                         <Button
                           variant="outline"
-                          className="w-full py-2 font-semibold text-sm border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
+                          className="w-full py-2 font-semibold text-sm border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
                         >
                           {language === 'es' ? 'Ver Detalles' : 'View Details'}
                         </Button>
@@ -359,7 +359,7 @@ export default function SubscriptionsPage() {
           if (!open) setUnsubscribeModal({ isOpen: false, sessionId: null });
         }}
       >
-        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 bg-white dark:bg-[#6B7178]">
+        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 bg-white dark:bg-tribe-card">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-red-600">
               {language === 'es' ? 'Cancelar Suscripción' : 'Cancel Subscription'}
@@ -375,7 +375,7 @@ export default function SubscriptionsPage() {
             <button
               onClick={() => setUnsubscribeModal({ isOpen: false, sessionId: null })}
               disabled={unsubscribing}
-              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </button>

@@ -39,7 +39,7 @@ export default function PartnerDashboardStats({ stats, language }: Props) {
       {cards.map((card, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-[#3D4349] rounded-2xl border border-stone-200 dark:border-[#52575D] p-4"
+          className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-4"
         >
           <div className="flex items-center gap-2 mb-2">{card.icon}</div>
           <div className="text-2xl font-extrabold text-stone-900 dark:text-white">{card.value}</div>

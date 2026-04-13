@@ -18,20 +18,14 @@ const getTranslations = (language: 'en' | 'es') => ({
   name: language === 'es' ? 'Nombre' : 'Name',
   namePlaceholder: language === 'es' ? 'Ej: Runners de Medellín' : 'E.g.: Medellin Runners',
   description: language === 'es' ? 'Descripción' : 'Description',
-  descriptionPlaceholder: language === 'es'
-    ? 'Cuéntanos sobre tu comunidad...'
-    : 'Tell us about your community...',
+  descriptionPlaceholder: language === 'es' ? 'Cuéntanos sobre tu comunidad...' : 'Tell us about your community...',
   sport: language === 'es' ? 'Deporte' : 'Sport',
   sportHint: language === 'es' ? 'Opcional - Selecciona un deporte' : 'Optional - Select a sport',
   coverImage: language === 'es' ? 'URL de Imagen de Portada' : 'Cover Image URL',
-  coverImageHint: language === 'es'
-    ? 'Opcional - Enlace a una imagen'
-    : 'Optional - Link to an image',
+  coverImageHint: language === 'es' ? 'Opcional - Enlace a una imagen' : 'Optional - Link to an image',
   location: language === 'es' ? 'Ubicación' : 'Location',
   isPrivate: language === 'es' ? 'Comunidad Privada' : 'Private Community',
-  isPrivateDesc: language === 'es'
-    ? 'Solo miembros invitados pueden unirse'
-    : 'Only invited members can join',
+  isPrivateDesc: language === 'es' ? 'Solo miembros invitados pueden unirse' : 'Only invited members can join',
   create: language === 'es' ? 'Crear' : 'Create',
   creating: language === 'es' ? 'Creando...' : 'Creating...',
   error: language === 'es' ? 'Error al crear comunidad' : 'Error creating community',
@@ -124,13 +118,13 @@ export default function CreateCommunityPage() {
     }));
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#3D4349]">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
+            className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
@@ -152,7 +146,7 @@ export default function CreateCommunityPage() {
                 setFormData({ ...formData, name: e.target.value });
                 setErrors({ ...errors, name: '' });
               }}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
             {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
@@ -165,7 +159,7 @@ export default function CreateCommunityPage() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
             />
           </div>
 
@@ -176,7 +170,7 @@ export default function CreateCommunityPage() {
             <select
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             >
               <option value="">-- {language === 'es' ? 'Ninguno' : 'None'} --</option>
               {sportOptions.map((sport) => (
@@ -196,7 +190,7 @@ export default function CreateCommunityPage() {
               placeholder="https://example.com/image.jpg"
               value={formData.cover_image_url}
               onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
           </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { logError } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -43,9 +44,8 @@ export default function SubscribeButton({
       : { weekly: 'weekly', biweekly: 'biweekly', monthly: 'monthly' }[freq] || 'weekly';
   };
 
-  const buttonText = language === 'es'
-    ? `Suscribirse a sesiones ${getFrequencyText()}`
-    : `Subscribe to ${getFrequencyText()} sessions`;
+  const buttonText =
+    language === 'es' ? `Suscribirse a sesiones ${getFrequencyText()}` : `Subscribe to ${getFrequencyText()} sessions`;
 
   const handleSubscribe = async () => {
     setSubscribing(true);
@@ -81,15 +81,13 @@ export default function SubscribeButton({
         subscription_status: 'active',
       };
 
-      const { error: subError } = await supabase
-        .from('session_participants')
-        .upsert(
-          {
-            ...subscriptionData,
-            status: 'subscribed',
-          },
-          { onConflict: 'user_id,session_id' }
-        );
+      const { error: subError } = await supabase.from('session_participants').upsert(
+        {
+          ...subscriptionData,
+          status: 'subscribed',
+        },
+        { onConflict: 'user_id,session_id' }
+      );
 
       if (subError && subError.code !== 'PGRST116') {
         throw subError;
@@ -97,15 +95,17 @@ export default function SubscribeButton({
 
       setSubscribed(true);
       setShowConfirm(false);
-      const successMsg = language === 'es'
-        ? 'Suscripción exitosa. Te añadiremos automáticamente a las próximas sesiones.'
-        : 'Subscription successful! You\'ll be automatically added to future sessions.';
+      const successMsg =
+        language === 'es'
+          ? 'Suscripción exitosa. Te añadiremos automáticamente a las próximas sesiones.'
+          : "Subscription successful! You'll be automatically added to future sessions.";
       showSuccess(successMsg);
     } catch (error: unknown) {
-      console.error('Subscription error:', error);
-      const errorMsg = language === 'es'
-        ? 'Error al suscribirse. Por favor intenta de nuevo.'
-        : 'Failed to subscribe. Please try again.';
+      logError(error, { action: 'subscribe' });
+      const errorMsg =
+        language === 'es'
+          ? 'Error al suscribirse. Por favor intenta de nuevo.'
+          : 'Failed to subscribe. Please try again.';
       showError(errorMsg);
     } finally {
       setSubscribing(false);
@@ -132,7 +132,7 @@ export default function SubscribeButton({
 
       {/* Subscription Confirmation Dialog */}
       <Dialog open={showConfirm} onOpenChange={(open) => !open && setShowConfirm(false)}>
-        <DialogContent data-modal="true" className="max-w-md rounded-xl p-6 bg-white dark:bg-[#6B7178]">
+        <DialogContent data-modal="true" className="max-w-md rounded-xl p-6 bg-white dark:bg-tribe-card">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-stone-900 dark:text-white">
               {language === 'es' ? 'Confirmar Suscripción' : 'Confirm Subscription'}
@@ -140,7 +140,7 @@ export default function SubscribeButton({
             <DialogDescription className="text-sm text-stone-600 dark:text-gray-300 mt-2">
               {language === 'es'
                 ? 'Aquí está lo que sucederá cuando te suscribas'
-                : 'Here\'s what happens when you subscribe'}
+                : "Here's what happens when you subscribe"}
             </DialogDescription>
           </DialogHeader>
 
@@ -155,7 +155,7 @@ export default function SubscribeButton({
                 <p className="text-xs text-stone-600 dark:text-gray-300 mt-1">
                   {language === 'es'
                     ? 'Serás añadido automáticamente a futuras sesiones de esta serie'
-                    : 'You\'ll automatically be added to future sessions in this series'}
+                    : "You'll automatically be added to future sessions in this series"}
                 </p>
               </div>
             </div>
@@ -199,18 +199,22 @@ export default function SubscribeButton({
               variant="outline"
               onClick={() => setShowConfirm(false)}
               disabled={subscribing}
-              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
+              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </Button>
             <Button
               onClick={handleSubscribe}
               disabled={subscribing}
-              className="flex-1 py-3 font-semibold rounded-lg bg-tribe-green text-slate-900 hover:bg-[#8FD642]"
+              className="flex-1 py-3 font-semibold rounded-lg bg-tribe-green text-slate-900 hover:bg-tribe-green"
             >
               {subscribing
-                ? (language === 'es' ? 'Suscribiendo...' : 'Subscribing...')
-                : (language === 'es' ? 'Confirmar' : 'Confirm')}
+                ? language === 'es'
+                  ? 'Suscribiendo...'
+                  : 'Subscribing...'
+                : language === 'es'
+                  ? 'Confirmar'
+                  : 'Confirm'}
             </Button>
           </div>
         </DialogContent>

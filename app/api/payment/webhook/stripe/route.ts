@@ -23,10 +23,54 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    const supabase = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Helper: add participant + notify after approved payment
+    async function addParticipantAfterPayment(paymentQuery: Record<string, string>) {
+      // Find payment record matching the query
+      let query = supabase.from('payments').select('id, session_id, user_id, status');
+      for (const [key, val] of Object.entries(paymentQuery)) {
+        query = query.eq(key, val);
+      }
+      const { data: paymentRecord } = await query.single();
+      if (!paymentRecord?.session_id || !paymentRecord?.user_id) return;
+
+      const { error: participantError } = await supabase.from('session_participants').upsert(
+        {
+          session_id: paymentRecord.session_id,
+          user_id: paymentRecord.user_id,
+          status: 'confirmed',
+          joined_at: new Date().toISOString(),
+        },
+        { onConflict: 'session_id,user_id' }
+      );
+
+      if (participantError) {
+        logError(participantError, {
+          action: 'stripe_webhook_add_participant',
+          sessionId: paymentRecord.session_id,
+        });
+      }
+
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            user_id: paymentRecord.user_id,
+            title: 'Booking Confirmed!',
+            body: 'Your session has been booked. See you there!',
+            type: 'payment_confirmed',
+            data: { session_id: paymentRecord.session_id },
+          }),
+        });
+      } catch (notifErr) {
+        logError(notifErr, { action: 'stripe_webhook_notification' });
+      }
+    }
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -42,7 +86,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         const paymentStatus = mapStripeStatus(paymentIntent.status);
 
-        // Update payment record — match by gateway_payment_id (the Stripe checkout session ID)
+        // Idempotency check
+        const { data: existingPayment } = await supabase
+          .from('payments')
+          .select('status')
+          .eq('gateway_payment_id', session.id as string)
+          .single();
+
+        if (existingPayment?.status === paymentStatus) {
+          return NextResponse.json({ received: true, message: 'Already processed' });
+        }
+
         await supabase
           .from('payments')
           .update({
@@ -52,6 +106,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           })
           .eq('gateway_payment_id', session.id as string);
 
+        if (paymentStatus === 'approved') {
+          await addParticipantAfterPayment({ gateway_payment_id: session.id as string });
+        }
+
         return NextResponse.json({ success: true });
       }
 
@@ -60,6 +118,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const piId = paymentIntent.id as string;
         const paymentStatus = mapStripeStatus(paymentIntent.status as string);
 
+        // Idempotency check
+        const { data: existingPI } = await supabase
+          .from('payments')
+          .select('status')
+          .eq('stripe_payment_intent_id', piId)
+          .single();
+
+        if (existingPI?.status === paymentStatus) {
+          return NextResponse.json({ received: true, message: 'Already processed' });
+        }
+
         await supabase
           .from('payments')
           .update({
@@ -67,6 +136,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             stripe_payment_intent_id: piId,
           })
           .eq('stripe_payment_intent_id', piId);
+
+        if (paymentStatus === 'approved') {
+          await addParticipantAfterPayment({ stripe_payment_intent_id: piId });
+        }
 
         return NextResponse.json({ success: true });
       }
@@ -82,7 +155,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           .update({
             status: paymentStatus,
             stripe_payment_intent_id: piId,
-            gateway_reference: lastError?.message as string || 'Payment failed',
+            gateway_reference: (lastError?.message as string) || 'Payment failed',
           })
           .eq('stripe_payment_intent_id', piId);
 

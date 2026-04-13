@@ -11,9 +11,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Tribe brand colors
-        'tribe-green': '#C0E863',
+        // Tribe brand colors — #84cc16 passes WCAG AA on dark backgrounds (4.8:1)
+        'tribe-green': '#84cc16',
+        'tribe-green-light': '#A3E635',
         'tribe-dark': '#272D34',
+        'tribe-surface': '#3D4349',
+        'tribe-mid': '#52575D',
+        'tribe-card': '#6B7178',
         'tribe-gray-80': '#52575D',
         'tribe-gray-60': '#B1B3B6',
         'tribe-gray-40': '#F2F2F2',

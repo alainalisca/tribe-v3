@@ -54,11 +54,7 @@ export default function PaymentConfirmPage() {
         setSessionId(payment.session_id);
 
         // Fetch session sport for display
-        const { data: session } = await supabase
-          .from('sessions')
-          .select('sport')
-          .eq('id', payment.session_id)
-          .single();
+        const { data: session } = await supabase.from('sessions').select('sport').eq('id', payment.session_id).single();
         if (session) setSessionSport(session.sport);
 
         if (payment.status === 'approved') {
@@ -82,7 +78,7 @@ export default function PaymentConfirmPage() {
   const t = (en: string, es: string) => (language === 'es' ? es : en);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       <div className="max-w-md mx-auto pt-20 px-6">
         {state === 'loading' && (
           <div className="text-center space-y-4">
@@ -131,7 +127,7 @@ export default function PaymentConfirmPage() {
             </h1>
             <p className="text-stone-600 dark:text-gray-300">
               {t(
-                'Your payment is being processed. This may take a few minutes. You\'ll receive a notification when it\'s confirmed.',
+                "Your payment is being processed. This may take a few minutes. You'll receive a notification when it's confirmed.",
                 'Tu pago está siendo procesado. Esto puede tomar unos minutos. Recibirás una notificación cuando se confirme.'
               )}
             </p>
@@ -151,9 +147,7 @@ export default function PaymentConfirmPage() {
             <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
               <XCircle className="w-12 h-12 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-stone-900 dark:text-white">
-              {t('Payment Failed', 'Pago Fallido')}
-            </h1>
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{t('Payment Failed', 'Pago Fallido')}</h1>
             <p className="text-stone-600 dark:text-gray-300">
               {t(
                 'Something went wrong with your payment. No charges were made. Please try again.',

@@ -76,7 +76,7 @@ export default function MatchingInstructorResults({ selectedSports }: Props) {
           <Link
             key={inst.id}
             href={`/profile/${inst.id}`}
-            className="block rounded-xl bg-stone-100 dark:bg-[#3D4349] p-3 hover:ring-2 hover:ring-tribe-green transition"
+            className="block rounded-xl bg-stone-100 dark:bg-tribe-surface p-3 hover:ring-2 hover:ring-tribe-green transition"
           >
             <div className="flex items-center gap-2 mb-2">
               {inst.avatar_url ? (
@@ -88,7 +88,7 @@ export default function MatchingInstructorResults({ selectedSports }: Props) {
                   className="rounded-full object-cover w-9 h-9"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-stone-300 dark:bg-[#52575D]" />
+                <div className="w-9 h-9 rounded-full bg-stone-300 dark:bg-tribe-mid" />
               )}
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-theme-primary truncate">

@@ -105,7 +105,7 @@ export default function PartnerApplyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#272D34] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark flex items-center justify-center">
         <Loader className="w-8 h-8 text-tribe-green animate-spin" />
       </div>
     );
@@ -114,7 +114,7 @@ export default function PartnerApplyPage() {
   const t = (en: string, es: string) => (language === 'es' ? es : en);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#272D34] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">

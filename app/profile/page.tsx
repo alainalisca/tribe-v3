@@ -119,11 +119,11 @@ export default function ProfilePage() {
 
           {/* Profile Completeness */}
           {pct !== null && (
-            <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4">
+            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-theme-primary">{txt.profileComplete(pct)}</span>
               </div>
-              <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
                 <div
                   className="h-full bg-tribe-green rounded-full transition-all duration-500"
                   style={{ width: `${pct}%` }}
@@ -134,15 +134,15 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.created}</p>
             </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.joined}</p>
             </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
               <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/dashboard/instructor"
-              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-[#A3E635] rounded-2xl shadow-md hover:bg-[#94D91E] transition"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-tribe-green-light rounded-2xl shadow-md hover:bg-[#94D91E] transition"
             >
               <Store className="w-6 h-6 text-slate-900 flex-shrink-0" />
               <span className="font-bold text-base text-slate-900 text-center">
@@ -172,7 +172,7 @@ export default function ProfilePage() {
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/partners"
-              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-[#3D4349] rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition text-center"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition text-center"
             >
               <HeartHandshake className="w-6 h-6 flex-shrink-0" />
               <span className="font-bold text-base text-center">
@@ -184,11 +184,11 @@ export default function ProfilePage() {
           {/* Bio */}
           <div className="mt-6">
             {profile?.bio ? (
-              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5">
+              <div className="bg-white dark:bg-tribe-surface rounded-2xl p-5">
                 <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
               </div>
             ) : (
-              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5 text-center">
+              <div className="bg-white dark:bg-tribe-surface rounded-2xl p-5 text-center">
                 <p className="text-theme-secondary text-sm italic">{txt.noBio}</p>
               </div>
             )}

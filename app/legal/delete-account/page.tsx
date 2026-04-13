@@ -123,8 +123,8 @@ export default function DeleteAccountPage() {
   const contactEmail = 'tribe@aplusfitnessllc.com';
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] safe-area-top">
-      <div className="bg-stone-200 dark:bg-[#272D34] p-4 border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid safe-area-top">
+      <div className="bg-stone-200 dark:bg-tribe-dark p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Link href="/settings">
             <Button variant="ghost" size="icon">
@@ -136,7 +136,7 @@ export default function DeleteAccountPage() {
       </div>
 
       <div className="max-w-4xl mx-auto p-6">
-        <Card className="dark:bg-[#272D34] shadow-none border-none">
+        <Card className="dark:bg-tribe-dark shadow-none border-none">
           <CardContent className="p-8">
             {language === 'es' && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
@@ -194,14 +194,14 @@ export default function DeleteAccountPage() {
                 </div>
 
                 {/* Option 2 */}
-                <div className="bg-gray-100 dark:bg-[#52575D] rounded-lg p-4">
+                <div className="bg-gray-100 dark:bg-tribe-mid rounded-lg p-4">
                   <h4 className="font-bold text-stone-900 dark:text-white mb-3">{t.option2Title}</h4>
                   <p className="mb-4">{t.option2Desc}</p>
 
                   <div className="space-y-3">
                     <div>
                       <span className="font-semibold">{t.emailSubject}:</span>
-                      <code className="ml-2 bg-gray-200 dark:bg-[#272D34] px-2 py-1 rounded text-sm">
+                      <code className="ml-2 bg-gray-200 dark:bg-tribe-dark px-2 py-1 rounded text-sm">
                         {t.emailSubjectText}
                       </code>
                     </div>

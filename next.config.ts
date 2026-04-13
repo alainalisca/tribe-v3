@@ -2,7 +2,13 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
-    unoptimized: true,
+    unoptimized: false,
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: '*.googleapis.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
   },
   trailingSlash: true,
   async headers() {
@@ -18,7 +24,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://us.i.posthog.com https://us-assets.i.posthog.com https://vercel.live https://unpkg.com https://maps.googleapis.com",
+              "script-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com https://vercel.live https://unpkg.com https://maps.googleapis.com",
               "style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
               "img-src 'self' https: data: blob:",
               "font-src 'self' data: https://fonts.gstatic.com https://vercel.live",

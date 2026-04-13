@@ -100,7 +100,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
         if (!v) onClose();
       }}
     >
-      <DialogContent className="bg-[#272D34] border-[#3D4349] text-white max-w-md mx-auto rounded-t-2xl sm:rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="bg-tribe-dark border-[#3D4349] text-white max-w-md mx-auto rounded-t-2xl sm:rounded-2xl p-0 overflow-hidden">
         <DialogTitle className="sr-only">{isEs ? 'Invitar a sesion' : 'Invite to session'}</DialogTitle>
 
         {/* Athlete header */}
@@ -128,7 +128,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
 
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-[#A3E635]" />
+              <Loader2 className="w-6 h-6 animate-spin text-tribe-green" />
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-6">
@@ -143,9 +143,9 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
               const isSending = sendingId === session.id;
 
               return (
-                <div key={session.id} className="flex items-center justify-between bg-[#3D4349] rounded-lg p-3">
+                <div key={session.id} className="flex items-center justify-between bg-tribe-surface rounded-lg p-3">
                   <div className="flex-1 min-w-0 space-y-1">
-                    <span className="inline-block bg-[#A3E635] text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <span className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
                       {sportLabel}
                     </span>
                     <div className="flex items-center gap-1 text-xs text-gray-300">
@@ -162,7 +162,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
                   <button
                     onClick={() => handleInvite(session.id)}
                     disabled={isSending}
-                    className="ml-3 px-3 py-1.5 bg-[#A3E635] text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition disabled:opacity-50 flex-shrink-0"
+                    className="ml-3 px-3 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition disabled:opacity-50 flex-shrink-0"
                   >
                     {isSending ? <Loader2 className="w-3 h-3 animate-spin" /> : isEs ? 'Invitar' : 'Invite'}
                   </button>
@@ -176,7 +176,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
         <div className="p-5 pt-0">
           <Link
             href="/create"
-            className="flex items-center justify-center gap-2 w-full py-3 border border-[#A3E635] text-[#A3E635] rounded-lg font-semibold text-sm hover:bg-[#A3E635]/10 transition"
+            className="flex items-center justify-center gap-2 w-full py-3 border border-tribe-green text-tribe-green rounded-lg font-semibold text-sm hover:bg-tribe-green-light/10 transition"
             onClick={onClose}
           >
             <Plus className="w-4 h-4" />

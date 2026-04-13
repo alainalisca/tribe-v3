@@ -600,7 +600,7 @@ export default function BoostsPage() {
         {/* Create Boost Button */}
         <button
           onClick={() => setShowNewBoostForm(true)}
-          className="w-full bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition"
+          className="w-full bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition"
         >
           <Plus size={20} />
           {i18n.newBoost}
@@ -614,11 +614,11 @@ export default function BoostsPage() {
           </h2>
 
           {activeCampaigns.length === 0 ? (
-            <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 border border-stone-200 dark:border-gray-700 text-center">
+            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 border border-stone-200 dark:border-gray-700 text-center">
               <p className="text-theme-secondary mb-4">{i18n.noCampaigns}</p>
               <button
                 onClick={() => setShowNewBoostForm(true)}
-                className="inline-flex items-center gap-2 bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-xl py-2 px-4 transition"
+                className="inline-flex items-center gap-2 bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-xl py-2 px-4 transition"
               >
                 <Plus size={16} />
                 {i18n.newBoost}
@@ -636,7 +636,7 @@ export default function BoostsPage() {
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                    className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
                   >
                     {/* Header with Status */}
                     <div className="flex items-start justify-between mb-3">
@@ -662,7 +662,7 @@ export default function BoostsPage() {
                         <span className="text-xs text-theme-secondary">{i18n.budgetProgress}</span>
                         <span className="text-xs text-theme-secondary">{progressPercent.toFixed(0)}%</span>
                       </div>
-                      <div className="w-full bg-stone-200 dark:bg-[#52575D] rounded-full h-2">
+                      <div className="w-full bg-stone-200 dark:bg-tribe-mid rounded-full h-2">
                         <div
                           className="h-2 rounded-full transition-all bg-tribe-green"
                           style={{ width: `${progressPercent}%` }}
@@ -679,7 +679,7 @@ export default function BoostsPage() {
                     </div>
 
                     {/* Metrics */}
-                    <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-stone-100 dark:bg-[#3D4349] rounded-lg">
+                    <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-stone-100 dark:bg-tribe-surface rounded-lg">
                       <div className="text-center">
                         <p className="text-xs text-theme-secondary mb-1">{i18n.impressions}</p>
                         <p className="font-bold text-sm text-theme-primary">{campaign.impressions.toLocaleString()}</p>
@@ -698,7 +698,7 @@ export default function BoostsPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handlePauseCampaign(campaign.id)}
-                        className="flex-1 flex items-center justify-center gap-2 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 transition text-sm font-medium"
+                        className="flex-1 flex items-center justify-center gap-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 transition text-sm font-medium"
                       >
                         <Pause size={14} />
                         {i18n.pause}
@@ -731,7 +731,7 @@ export default function BoostsPage() {
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75"
+                    className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -751,7 +751,7 @@ export default function BoostsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 p-3 bg-stone-100 dark:bg-[#3D4349] rounded-lg">
+                    <div className="grid grid-cols-3 gap-2 p-3 bg-stone-100 dark:bg-tribe-surface rounded-lg">
                       <div className="text-center">
                         <p className="text-xs text-theme-secondary mb-1">{i18n.impressions}</p>
                         <p className="font-bold text-sm text-theme-primary">{campaign.impressions.toLocaleString()}</p>
@@ -776,9 +776,9 @@ export default function BoostsPage() {
       {/* New Boost Modal */}
       {showNewBoostForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl border border-stone-200 dark:border-gray-700 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="border-b border-stone-200 dark:border-gray-700 p-5 flex items-center justify-between sticky top-0 bg-white dark:bg-[#272D34]">
+            <div className="border-b border-stone-200 dark:border-gray-700 p-5 flex items-center justify-between sticky top-0 bg-white dark:bg-tribe-dark">
               <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
                 <Zap size={20} className="text-tribe-green" />
                 {i18n.createNewBoost}
@@ -833,7 +833,7 @@ export default function BoostsPage() {
                   <select
                     value={selectedSession}
                     onChange={(e) => setSelectedSession(e.target.value)}
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
                     <option value="">{i18n.selectOption}</option>
@@ -857,7 +857,7 @@ export default function BoostsPage() {
                   <select
                     value={selectedPost}
                     onChange={(e) => setSelectedPost(e.target.value)}
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
                     <option value="">{i18n.selectOption}</option>
@@ -926,7 +926,7 @@ export default function BoostsPage() {
                   max="30"
                   value={duration}
                   onChange={(e) => setDuration(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -952,7 +952,7 @@ export default function BoostsPage() {
               </div>
 
               {/* Total Budget Display */}
-              <div className="bg-stone-100 dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg p-4">
+              <div className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg p-4">
                 <p className="text-xs text-theme-secondary mb-1">{i18n.totalBudget}</p>
                 <p className="text-2xl font-bold text-tribe-green">{formatPrice(getTotalBudget(), currency)}</p>
                 <p className="text-xs text-theme-secondary mt-2">
@@ -968,7 +968,7 @@ export default function BoostsPage() {
                 <button
                   type="button"
                   onClick={() => setShowNewBoostForm(false)}
-                  className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition"
+                  className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition"
                 >
                   {language === 'en' ? 'Cancel' : 'Cancelar'}
                 </button>
@@ -979,7 +979,7 @@ export default function BoostsPage() {
                     (boostType === 'session' && !selectedSession) ||
                     (boostType === 'post' && !selectedPost)
                   }
-                  className="flex-1 flex items-center justify-center gap-2 bg-tribe-green hover:bg-[#8FD642] text-slate-900 font-semibold rounded-xl py-3 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-2 bg-tribe-green hover:bg-tribe-green text-slate-900 font-semibold rounded-xl py-3 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isFeatureFree(instructorSince) ? (
                     <>

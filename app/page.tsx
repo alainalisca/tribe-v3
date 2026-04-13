@@ -38,7 +38,7 @@ export default function HomePage() {
   // Show minimal splash while auth is resolving
   if (!f.userChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#272D34]">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-dark">
         <img
           src="/tribe-wordmark.png"
           alt="Tribe"
@@ -61,7 +61,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
       {f.showOnboarding && f.user && (
         <OnboardingModal
           onComplete={() => {
@@ -160,7 +160,7 @@ export default function HomePage() {
               <SkeletonCard />
             </div>
           ) : f.fetchError ? (
-            <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
               <CardContent className="p-8 text-center">
                 <div className="text-4xl mb-4">⚠️</div>
                 <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
@@ -173,7 +173,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ) : f.filteredSessions.length === 0 ? (
-            <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
               <CardContent className="p-8 text-center">
                 {f.searchQuery || f.selectedSport || f.dateFilter !== 'all' || f.genderFilter !== 'all' ? (
                   <>
@@ -321,7 +321,7 @@ export default function HomePage() {
               {f.visibleCount < f.filteredSessions.length && (
                 <button
                   onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}
-                  className="w-full py-3 bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-[#52575D] hover:bg-stone-100 dark:hover:bg-[#7D8490] transition"
+                  className="w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-[#52575D] hover:bg-stone-100 dark:hover:bg-[#7D8490] transition"
                 >
                   {f.language === 'es'
                     ? `Mostrar más (${f.filteredSessions.length - f.visibleCount} restantes)`

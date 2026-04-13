@@ -66,7 +66,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
   const viewEventText = lang === 'es' ? 'Ver Evento' : 'View Event';
 
   return (
-    <div className="flex-shrink-0 w-72 bg-[#3D4349] border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+    <div className="flex-shrink-0 w-72 bg-tribe-surface border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
       {/* Event Image or Placeholder */}
       {event.image_url ? (
         <div className="relative w-full h-40 bg-gray-700 overflow-hidden">
@@ -92,14 +92,14 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
           <span className="text-xs bg-blue-600 text-white font-bold px-3 py-1 rounded-full">
             {lang === 'es' ? 'Externo' : 'External'}
           </span>
-          <span className="text-xs bg-[#52575D] text-white px-3 py-1 rounded-full">
+          <span className="text-xs bg-tribe-mid text-white px-3 py-1 rounded-full">
             {sportIcon} {sportLabel}
           </span>
         </div>
 
         {/* Title — clickable link to Eventbrite page */}
         <a href={event.event_url} target="_blank" rel="noopener noreferrer" className="block">
-          <h3 className="text-sm font-bold text-white line-clamp-2 hover:text-[#A3E635] transition-colors">
+          <h3 className="text-sm font-bold text-white line-clamp-2 hover:text-tribe-green transition-colors">
             {event.title}
           </h3>
         </a>
@@ -129,7 +129,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
         {/* Buttons */}
         <div className="flex gap-2 pt-2">
           <a href={event.event_url} target="_blank" rel="noopener noreferrer" className="flex-1">
-            <Button variant="outline" size="sm" className="w-full border-[#52575D] text-white hover:bg-[#52575D]">
+            <Button variant="outline" size="sm" className="w-full border-[#52575D] text-white hover:bg-tribe-mid">
               {viewEventText}
             </Button>
           </a>

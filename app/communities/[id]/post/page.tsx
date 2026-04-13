@@ -104,13 +104,13 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#3D4349]">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
+            className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
@@ -142,7 +142,7 @@ export default function NewPostPage() {
                 setError('');
               }}
               rows={6}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
               autoFocus
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -157,7 +157,7 @@ export default function NewPostPage() {
               placeholder="https://example.com/image.jpg"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
 
             {/* Image preview */}
@@ -173,7 +173,7 @@ export default function NewPostPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-[#6B7178] rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
+              className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-[#6B7178] rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </button>

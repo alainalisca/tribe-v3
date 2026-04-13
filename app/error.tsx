@@ -9,7 +9,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   const { t } = useLanguage();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 dark:bg-[#52575D] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-stone-50 dark:bg-tribe-mid p-4">
       <div className="text-center">
         <div className="text-5xl mb-4">😵</div>
         <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{t('somethingWentWrong')}</h2>

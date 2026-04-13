@@ -100,7 +100,7 @@ export default function UserManagement({
             <div key={u.id} className={`p-3 ${u.banned ? 'bg-red-50' : ''}`}>
               <div className="flex items-start gap-2 mb-2">
                 <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt="" />
+                  <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt={`${u.name || 'User'} avatar`} />
                   <AvatarFallback className="bg-[#C0E863] text-sm font-bold">
                     {u.name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>

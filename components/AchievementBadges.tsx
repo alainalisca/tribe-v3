@@ -206,7 +206,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
   }
 
   return (
-    <div className="bg-white dark:bg-[#52575D] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
+    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-stone-900 dark:text-white">
@@ -231,7 +231,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
                   className={`w-16 h-16 rounded-full flex items-center justify-center transition relative mx-auto ${
                     isEarned
                       ? 'bg-tribe-green text-slate-900 shadow-md hover:shadow-lg'
-                      : 'bg-gray-300 dark:bg-[#6B7178] text-gray-500 dark:text-gray-400'
+                      : 'bg-gray-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
                   }`}
                   title={badgeName}
                   disabled

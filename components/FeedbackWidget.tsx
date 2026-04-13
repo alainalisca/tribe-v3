@@ -360,7 +360,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
               className={`w-full h-24 rounded-lg text-sm p-2.5 resize-none outline-none transition-colors
                 ${
                   isDark
-                    ? 'bg-[#272D34] text-white placeholder:text-gray-500'
+                    ? 'bg-tribe-dark text-white placeholder:text-gray-500'
                     : 'bg-gray-50 text-gray-900 placeholder:text-gray-400'
                 }
                 ${

@@ -123,7 +123,7 @@ export default function StorefrontEditor({
           onChange={(e) => setTagline(e.target.value)}
           placeholder={txt.taglinePlaceholder}
           maxLength={120}
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
 
@@ -136,7 +136,7 @@ export default function StorefrontEditor({
           placeholder={txt.bioPlaceholder}
           rows={4}
           maxLength={1000}
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none resize-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none resize-none"
         />
       </div>
 
@@ -150,7 +150,7 @@ export default function StorefrontEditor({
           value={specialties}
           onChange={(e) => setSpecialties(e.target.value)}
           placeholder="Yoga, HIIT, Boxing"
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
 

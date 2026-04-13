@@ -20,7 +20,7 @@ export default function MatchesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <p className="text-stone-900 dark:text-gray-100"></p>
       </div>
     );
@@ -28,7 +28,7 @@ export default function MatchesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 dark:text-white text-lg mb-4">
           {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
         </p>
@@ -40,8 +40,8 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-[#272D34] dark:text-white">{t('matches')}</h1>
         </div>
@@ -55,7 +55,7 @@ export default function MatchesPage() {
               className={`flex-1 py-3 px-4 rounded-lg font-semibold transition ${
                 activeTab === 'requests'
                   ? 'bg-stone-300 dark:bg-[#404549] text-[#272D34] dark:text-white'
-                  : 'bg-white dark:bg-[#6B7178] text-stone-600 dark:text-gray-300'
+                  : 'bg-white dark:bg-tribe-card text-stone-600 dark:text-gray-300'
               }`}
             >
               {t('joinRequests')} {joinRequests.length > 0 && `(${joinRequests.length})`}
@@ -65,7 +65,7 @@ export default function MatchesPage() {
               className={`flex-1 py-3 px-4 rounded-lg font-semibold transition ${
                 activeTab === 'tribe'
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-white dark:bg-[#6B7178] text-stone-600 dark:text-gray-300'
+                  : 'bg-white dark:bg-tribe-card text-stone-600 dark:text-gray-300'
               }`}
             >
               {t('myTribe')}
@@ -83,7 +83,7 @@ export default function MatchesPage() {
               <div className="space-y-3">
                 {joinRequests.map((request) => (
                   <Link key={request.id} href={`/session/${request.session_id}`}>
-                    <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
+                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <Avatar className="w-10 h-10">
@@ -125,7 +125,7 @@ export default function MatchesPage() {
             <div className="space-y-3">
               {tribeSessions.map((session) => (
                 <Link key={session.id} href={`/session/${session.id}`}>
-                  <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-[#52575D] transition cursor-pointer">
+                  <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <Badge className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full border-transparent">

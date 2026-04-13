@@ -105,14 +105,67 @@ export async function updateUsersByIds(
   }
 }
 
+/** @deprecated Use softDeleteUser instead for GDPR-compliant account deletion */
 export async function deleteUser(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
+  return softDeleteUser(supabase, userId);
+}
+
+/**
+ * Soft-delete user: cancel future sessions, anonymize PII, deactivate connections.
+ * Preserves the record for audit trail while removing personal data.
+ */
+export async function softDeleteUser(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('users').delete().eq('id', userId);
-    if (error) return { success: false, error: error.message };
+    // 1. Cancel all future sessions this user created
+    const { data: futureSessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('creator_id', userId)
+      .gte('date', new Date().toISOString())
+      .in('status', ['active', 'upcoming']);
+
+    for (const session of futureSessions || []) {
+      await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', session.id);
+    }
+
+    // 2. Remove user from future session participations
+    await supabase
+      .from('session_participants')
+      .update({ status: 'cancelled' })
+      .eq('user_id', userId)
+      .eq('status', 'confirmed');
+
+    // 3. Anonymize user profile (keep record, remove PII)
+    await supabase
+      .from('users')
+      .update({
+        name: 'Deleted User',
+        email: `deleted-${userId}@deleted.tribe.app`,
+        avatar_url: null,
+        bio: null,
+        phone: null,
+        location_lat: null,
+        location_lng: null,
+        deleted_at: new Date().toISOString(),
+        is_active: false,
+      })
+      .eq('id', userId);
+
+    // 4. Deactivate connections
+    await supabase
+      .from('connections')
+      .update({ status: 'cancelled' })
+      .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`);
+
+    // 5. Remove auth user (signs them out permanently)
+    const { createClient: createAdmin } = await import('@supabase/supabase-js');
+    const adminClient = createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    await adminClient.auth.admin.deleteUser(userId);
+
     return { success: true };
   } catch (error) {
-    logError(error, { action: 'deleteUser' });
-    return { success: false, error: 'Failed to delete user' };
+    logError(error, { action: 'softDeleteUser', userId });
+    return { success: false, error: 'Failed to delete account' };
   }
 }
 

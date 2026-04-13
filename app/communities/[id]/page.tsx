@@ -21,15 +21,7 @@ import {
   type CommunityMemberWithUser,
 } from '@/lib/dal/communities';
 import { sportTranslations } from '@/lib/translations';
-import {
-  ChevronLeft,
-  Users,
-  MessageCircle,
-  Heart,
-  Trash2,
-  Loader2,
-  Plus,
-} from 'lucide-react';
+import { ChevronLeft, Users, MessageCircle, Heart, Trash2, Loader2, Plus } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
   members: language === 'es' ? 'Miembros' : 'Members',
@@ -45,9 +37,7 @@ const getTranslations = (language: 'en' | 'es') => ({
   delete: language === 'es' ? 'Eliminar' : 'Delete',
   deleteConfirm: language === 'es' ? '¿Eliminar publicación?' : 'Delete post?',
   noPosts2: language === 'es' ? 'Sin publicaciones aún' : 'No posts yet',
-  joinToContinue: language === 'es'
-    ? 'Únete a la comunidad para ver publicaciones'
-    : 'Join the community to see posts',
+  joinToContinue: language === 'es' ? 'Únete a la comunidad para ver publicaciones' : 'Join the community to see posts',
   noMembers: language === 'es' ? 'Sin miembros' : 'No members',
 });
 
@@ -158,7 +148,7 @@ export default function CommunityDetailPage() {
 
   if (loading || !community) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#3D4349] pb-24">
+      <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
         <div className="max-w-2xl mx-auto px-4 py-8">
           <div className="h-64">
             <SkeletonCard />
@@ -168,22 +158,20 @@ export default function CommunityDetailPage() {
     );
   }
 
-  const sportName = community.sport
-    ? sportTranslations[community.sport]?.[language] || community.sport
-    : null;
+  const sportName = community.sport ? sportTranslations[community.sport]?.[language] || community.sport : null;
 
   const coverStyle = community.cover_image_url
     ? { backgroundImage: `url(${community.cover_image_url})` }
     : { background: 'linear-gradient(135deg, #A3E635, #9EE551)' };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#3D4349] pb-24">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-stone-100 dark:hover:bg-[#52575D] rounded-lg transition"
+            className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
@@ -199,14 +187,10 @@ export default function CommunityDetailPage() {
         <div className="px-4 py-6 space-y-4 border-b border-gray-200 dark:border-[#52575D]">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-theme-primary">{community.name}</h2>
-            {sportName && (
-              <p className="text-sm text-tribe-green font-semibold">{sportName}</p>
-            )}
+            {sportName && <p className="text-sm text-tribe-green font-semibold">{sportName}</p>}
           </div>
 
-          {community.description && (
-            <p className="text-theme-primary">{community.description}</p>
-          )}
+          {community.description && <p className="text-theme-primary">{community.description}</p>}
 
           {community.location_name && (
             <p className="text-sm text-stone-600 dark:text-gray-400">📍 {community.location_name}</p>
@@ -240,7 +224,7 @@ export default function CommunityDetailPage() {
         {/* Tabs */}
         {isMember && (
           <>
-            <div className="flex border-b border-gray-200 dark:border-[#52575D] px-4 sticky top-16 bg-white dark:bg-[#3D4349] z-30">
+            <div className="flex border-b border-gray-200 dark:border-[#52575D] px-4 sticky top-16 bg-white dark:bg-tribe-surface z-30">
               <button
                 onClick={() => setActiveTab('posts')}
                 className={`px-4 py-3 font-medium border-b-2 transition ${
@@ -278,18 +262,12 @@ export default function CommunityDetailPage() {
                 {posts.length > 0 ? (
                   <div className="space-y-4">
                     {posts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="bg-white dark:bg-[#52575D] rounded-lg p-4 space-y-3"
-                      >
+                      <div key={post.id} className="bg-white dark:bg-tribe-mid rounded-lg p-4 space-y-3">
                         {/* Post author */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Avatar className="w-10 h-10">
-                              <AvatarImage
-                                src={post.author?.avatar_url || ''}
-                                alt={post.author?.name || 'User'}
-                              />
+                              <AvatarImage src={post.author?.avatar_url || ''} alt={post.author?.name || 'User'} />
                               <AvatarFallback>{post.author?.name?.[0] || 'U'}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -325,11 +303,7 @@ export default function CommunityDetailPage() {
 
                         {/* Post media */}
                         {post.media_url && post.media_type === 'image' && (
-                          <img
-                            src={post.media_url}
-                            alt="Post"
-                            className="w-full rounded-lg max-h-96 object-cover"
-                          />
+                          <img src={post.media_url} alt="Post" className="w-full rounded-lg max-h-96 object-cover" />
                         )}
 
                         {/* Post stats */}
@@ -365,26 +339,19 @@ export default function CommunityDetailPage() {
                     {members.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center justify-between bg-white dark:bg-[#52575D] rounded-lg p-3"
+                        className="flex items-center justify-between bg-white dark:bg-tribe-mid rounded-lg p-3"
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="w-10 h-10">
-                            <AvatarImage
-                              src={member.user?.avatar_url || ''}
-                              alt={member.user?.name || 'User'}
-                            />
+                            <AvatarImage src={member.user?.avatar_url || ''} alt={member.user?.name || 'User'} />
                             <AvatarFallback>{member.user?.name?.[0] || 'U'}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-semibold text-theme-primary text-sm">
-                              {member.user?.name || 'Unknown'}
-                            </p>
+                            <p className="font-semibold text-theme-primary text-sm">{member.user?.name || 'Unknown'}</p>
                             {member.role !== 'member' && (
                               <span
                                 className={`text-xs font-semibold ${
-                                  member.role === 'admin'
-                                    ? 'text-tribe-green'
-                                    : 'text-blue-500'
+                                  member.role === 'admin' ? 'text-tribe-green' : 'text-blue-500'
                                 }`}
                               >
                                 {member.role === 'admin' ? t.admin : t.moderator}

@@ -89,7 +89,7 @@ export default function PostSessionFlow({
             <div
               key={stepNum}
               className={`w-2 h-2 rounded-full transition-colors ${
-                isActive || isCompleted ? 'bg-[#A3E635]' : 'bg-stone-300 dark:bg-[#52575D]'
+                isActive || isCompleted ? 'bg-tribe-green-light' : 'bg-stone-300 dark:bg-tribe-mid'
               }`}
             />
           );
@@ -166,7 +166,7 @@ export default function PostSessionFlow({
               placeholder={t('Share your experience...', 'Comparte tu experiencia...')}
               maxLength={500}
               className="w-full h-20 p-3 rounded-xl text-sm resize-none outline-none transition-colors
-                border border-gray-200 dark:border-gray-600 focus:border-[#A3E635]
+                border border-gray-200 dark:border-gray-600 focus:border-tribe-green
                 bg-gray-50 dark:bg-[#1e2328]
                 text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500"
             />
@@ -181,8 +181,8 @@ export default function PostSessionFlow({
             className={`w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
               ${
                 isSubmittingReview || rating === 0
-                  ? 'bg-[#A3E635]/50 text-stone-900 cursor-not-allowed'
-                  : 'bg-[#A3E635] hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95'
+                  ? 'bg-tribe-green-light/50 text-stone-900 cursor-not-allowed'
+                  : 'bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95'
               }
               flex items-center justify-center gap-2`}
           >
@@ -303,7 +303,7 @@ export default function PostSessionFlow({
             onClick={() => fileInputRef.current?.click()}
             className="w-full h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl
               flex flex-col items-center justify-center gap-3
-              hover:border-[#A3E635] hover:bg-[#A3E635]/5 transition-colors cursor-pointer"
+              hover:border-tribe-green hover:bg-tribe-green-light/5 transition-colors cursor-pointer"
           >
             <Camera className="w-10 h-10 text-stone-400 dark:text-gray-500" />
             <span className="text-sm font-medium text-stone-500 dark:text-gray-400">
@@ -330,8 +330,8 @@ export default function PostSessionFlow({
                 flex items-center justify-center gap-2
                 ${
                   isUploadingPhoto
-                    ? 'bg-[#A3E635]/50 text-stone-900 cursor-not-allowed'
-                    : 'bg-[#A3E635] hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95'
+                    ? 'bg-tribe-green-light/50 text-stone-900 cursor-not-allowed'
+                    : 'bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95'
                 }`}
             >
               {isUploadingPhoto ? <Loader className="w-4 h-4 animate-spin" /> : t('Next', 'Siguiente')}
@@ -374,7 +374,7 @@ export default function PostSessionFlow({
         <button
           onClick={() => setStep(4)}
           className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
-            bg-[#A3E635] hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95"
+            bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95"
         >
           {t('Next', 'Siguiente')}
         </button>
@@ -391,11 +391,11 @@ export default function PostSessionFlow({
             <img
               src={creatorAvatar}
               alt={creatorName}
-              className="w-20 h-20 rounded-full object-cover border-3 border-[#A3E635]/50 mb-4"
+              className="w-20 h-20 rounded-full object-cover border-3 border-tribe-green/50 mb-4"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#A3E635]/30 to-[#A3E635]/10 flex items-center justify-center border-3 border-[#A3E635]/50 mb-4">
-              <span className="text-3xl font-bold text-[#A3E635]">{creatorName.charAt(0).toUpperCase()}</span>
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#A3E635]/30 to-[#A3E635]/10 flex items-center justify-center border-3 border-tribe-green/50 mb-4">
+              <span className="text-3xl font-bold text-tribe-green">{creatorName.charAt(0).toUpperCase()}</span>
             </div>
           )}
           <h3 className="text-lg font-bold text-stone-900 dark:text-white">
@@ -407,7 +407,7 @@ export default function PostSessionFlow({
           <a
             href={`/storefront/${creatorId}`}
             className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
-              bg-[#A3E635] hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
+              bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
           >
             {t(`Train with ${creatorName} again`, `Entrena con ${creatorName} de nuevo`)}
           </a>
@@ -456,7 +456,7 @@ export default function PostSessionFlow({
       }}
     >
       <DialogContent
-        className="max-w-md bg-white dark:bg-[#272D34] border-gray-200 dark:border-gray-700 rounded-2xl p-6"
+        className="max-w-md bg-white dark:bg-tribe-dark border-gray-200 dark:border-gray-700 rounded-2xl p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{t('Post-Session Flow', 'Flujo Post-Sesion')}</DialogTitle>

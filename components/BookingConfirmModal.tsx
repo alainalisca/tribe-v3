@@ -65,7 +65,7 @@ export default function BookingConfirmModal({
         if (!v) onClose();
       }}
     >
-      <DialogContent className="bg-white dark:bg-[#272D34] border-stone-200 dark:border-gray-700 max-w-sm mx-auto rounded-2xl">
+      <DialogContent className="bg-white dark:bg-tribe-dark border-stone-200 dark:border-gray-700 max-w-sm mx-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-theme-primary text-lg">
             {language === 'es' ? 'Confirmar Reserva' : 'Confirm Booking'}
@@ -77,7 +77,7 @@ export default function BookingConfirmModal({
 
         <div className="space-y-3 py-2">
           {/* Session info */}
-          <div className="bg-stone-50 dark:bg-[#3D4349] rounded-xl p-3 space-y-2">
+          <div className="bg-stone-50 dark:bg-tribe-surface rounded-xl p-3 space-y-2">
             <p className="font-bold text-theme-primary text-base">{session.sport}</p>
             <p className="text-theme-secondary text-sm">{session.title}</p>
 
@@ -97,7 +97,7 @@ export default function BookingConfirmModal({
           </div>
 
           {/* Price breakdown */}
-          <div className="bg-stone-50 dark:bg-[#3D4349] rounded-xl p-3 space-y-2">
+          <div className="bg-stone-50 dark:bg-tribe-surface rounded-xl p-3 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-theme-secondary">{language === 'es' ? 'Sesion' : 'Session'}</span>
               <span className="text-theme-primary font-semibold">
@@ -137,7 +137,7 @@ export default function BookingConfirmModal({
           <Button
             onClick={onConfirm}
             disabled={processing}
-            className="w-full py-3 font-bold bg-tribe-green text-slate-900 hover:bg-[#8FD642] rounded-xl"
+            className="w-full py-3 font-bold bg-tribe-green text-slate-900 hover:bg-tribe-green rounded-xl"
           >
             {processing ? (
               <>

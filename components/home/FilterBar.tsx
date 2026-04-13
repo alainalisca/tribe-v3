@@ -71,7 +71,7 @@ export default function FilterBar({
   }, [userLocation, loading, searchQuery, selectedSport, filteredCount, measureFixed]);
 
   return (
-    <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34]">
+    <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark">
       <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
         <Link href="/profile">
           <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">
@@ -95,7 +95,7 @@ export default function FilterBar({
               onChange={(e) => setSearchQuery(e.target.value)}
               autoComplete="off"
               enterKeyHint="search"
-              className="pl-10 pr-10 py-2.5 bg-white dark:bg-[#6B7178] dark:border-[#52575D] text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:ring-tribe-green text-sm"
+              className="pl-10 pr-10 py-2.5 bg-white dark:bg-tribe-card dark:border-[#52575D] text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:ring-tribe-green text-sm"
             />
             {searchQuery && (
               <button
@@ -111,7 +111,7 @@ export default function FilterBar({
             <select
               value={selectedSport}
               onChange={(e) => setSelectedSport(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="">{t('sport')}</option>
               {sports.map((sport) => (
@@ -124,7 +124,7 @@ export default function FilterBar({
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{t('date')}</option>
               <option value="today">{t('today')}</option>
@@ -135,7 +135,7 @@ export default function FilterBar({
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{t('all')}</option>
               <option value="women_only">{t('women')}</option>
@@ -145,7 +145,7 @@ export default function FilterBar({
             <select
               value={pricingFilter}
               onChange={(e) => setPricingFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
               <option value="free">{language === 'es' ? 'Gratis' : 'Free'}</option>
@@ -154,7 +154,7 @@ export default function FilterBar({
           </div>
 
           {userLocation && (
-            <div className="flex items-center gap-3 bg-white dark:bg-[#6B7178] border border-stone-300 dark:border-[#52575D] rounded-lg px-3 py-1.5">
+            <div className="flex items-center gap-3 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg px-3 py-1.5">
               <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
                 {t('dist')}
               </label>

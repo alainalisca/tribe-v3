@@ -54,7 +54,7 @@ export default function SessionManager({ language, upcoming, past }: SessionMana
     return (
       <div
         key={session.id}
-        className={`p-4 bg-white dark:bg-[#3D4349] rounded-xl border border-stone-200 dark:border-[#52575D] ${isCancelled ? 'opacity-60' : ''}`}
+        className={`p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D] ${isCancelled ? 'opacity-60' : ''}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -107,7 +107,7 @@ export default function SessionManager({ language, upcoming, past }: SessionMana
       </h3>
 
       {upcoming.length === 0 ? (
-        <div className="p-6 text-center bg-white dark:bg-[#3D4349] rounded-xl border border-stone-200 dark:border-[#52575D]">
+        <div className="p-6 text-center bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D]">
           <Calendar className="w-8 h-8 text-theme-secondary mx-auto mb-2" />
           <p className="text-sm text-theme-secondary">{txt.noUpcoming}</p>
         </div>

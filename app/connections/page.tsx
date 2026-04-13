@@ -188,8 +188,8 @@ export default function ConnectionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
           <div className="max-w-2xl mx-auto h-14 flex items-center px-4 gap-3">
             <button onClick={() => router.back()} className="flex-shrink-0">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
@@ -200,13 +200,13 @@ export default function ConnectionsPage() {
         <div className="pt-header max-w-2xl mx-auto p-4">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="dark:bg-[#6B7178] shadow-none animate-pulse">
+              <Card key={i} className="dark:bg-tribe-card shadow-none animate-pulse">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-stone-200 dark:bg-[#52575D] rounded-full" />
+                    <div className="w-12 h-12 bg-stone-200 dark:bg-tribe-mid rounded-full" />
                     <div className="flex-1">
-                      <div className="h-4 bg-stone-200 dark:bg-[#52575D] rounded w-1/3 mb-2" />
-                      <div className="h-3 bg-stone-200 dark:bg-[#52575D] rounded w-2/3" />
+                      <div className="h-4 bg-stone-200 dark:bg-tribe-mid rounded w-1/3 mb-2" />
+                      <div className="h-3 bg-stone-200 dark:bg-tribe-mid rounded w-2/3" />
                     </div>
                   </div>
                 </CardContent>
@@ -220,8 +220,8 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4 gap-3">
           <button onClick={() => router.back()} className="flex-shrink-0">
             <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
@@ -237,13 +237,13 @@ export default function ConnectionsPage() {
             onClick={() => setActiveTab('connections')}
             className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition ${
               activeTab === 'connections'
-                ? 'border-[#A3E635] text-stone-900 dark:text-white'
+                ? 'border-tribe-green text-stone-900 dark:text-white'
                 : 'border-transparent text-stone-600 dark:text-gray-400'
             }`}
           >
             {t('connections')}
             {connections.length > 0 && (
-              <span className="ml-2 text-xs bg-stone-300 dark:bg-[#52575D] px-2 py-1 rounded-full">
+              <span className="ml-2 text-xs bg-stone-300 dark:bg-tribe-mid px-2 py-1 rounded-full">
                 {connections.length}
               </span>
             )}
@@ -252,13 +252,13 @@ export default function ConnectionsPage() {
             onClick={() => setActiveTab('requests')}
             className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition ${
               activeTab === 'requests'
-                ? 'border-[#A3E635] text-stone-900 dark:text-white'
+                ? 'border-tribe-green text-stone-900 dark:text-white'
                 : 'border-transparent text-stone-600 dark:text-gray-400'
             }`}
           >
             {t('requests')}
             {pendingRequests.length > 0 && (
-              <span className="ml-2 text-xs bg-stone-300 dark:bg-[#52575D] px-2 py-1 rounded-full">
+              <span className="ml-2 text-xs bg-stone-300 dark:bg-tribe-mid px-2 py-1 rounded-full">
                 {pendingRequests.length}
               </span>
             )}
@@ -267,7 +267,7 @@ export default function ConnectionsPage() {
 
         <div className="p-4">
           {error && (
-            <Card className="dark:bg-[#6B7178] border-red-300 dark:border-red-600 shadow-none mb-4">
+            <Card className="dark:bg-tribe-card border-red-300 dark:border-red-600 shadow-none mb-4">
               <CardContent className="p-4 text-sm text-red-700 dark:text-red-100">{error}</CardContent>
             </Card>
           )}
@@ -275,9 +275,9 @@ export default function ConnectionsPage() {
           {activeTab === 'connections' ? (
             // Connections Tab
             connections.length === 0 ? (
-              <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+              <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageCircle className="w-8 h-8 text-stone-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConnections')}</h3>
@@ -290,12 +290,12 @@ export default function ConnectionsPage() {
             ) : (
               <div className="space-y-2">
                 {connections.map((conn) => (
-                  <Card key={conn.id} className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+                  <Card key={conn.id} className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         {/* Avatar */}
                         <Link href={`/profile/${conn.id}`} className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-stone-300 dark:bg-[#52575D] rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
+                          <div className="w-12 h-12 bg-stone-300 dark:bg-tribe-mid rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
                             {conn.avatar_url ? (
                               <Image
                                 src={conn.avatar_url}
@@ -358,9 +358,9 @@ export default function ConnectionsPage() {
             )
           ) : // Requests Tab
           pendingRequests.length === 0 ? (
-            <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
               <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-stone-100 dark:bg-[#52575D] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="w-8 h-8 text-stone-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noRequests')}</h3>
@@ -369,12 +369,12 @@ export default function ConnectionsPage() {
           ) : (
             <div className="space-y-2">
               {pendingRequests.map((req) => (
-                <Card key={req.id} className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none">
+                <Card key={req.id} className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
                       <Link href={`/profile/${req.requester.id}`} className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-stone-300 dark:bg-[#52575D] rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
+                        <div className="w-12 h-12 bg-stone-300 dark:bg-tribe-mid rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden">
                           {req.requester.avatar_url ? (
                             <Image
                               src={req.requester.avatar_url}
@@ -411,7 +411,7 @@ export default function ConnectionsPage() {
                           size="sm"
                           onClick={() => handleAccept(req.id)}
                           disabled={actionLoading === req.id}
-                          className="bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d]"
+                          className="bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d]"
                         >
                           {actionLoading === req.id ? '...' : t('accept')}
                         </Button>

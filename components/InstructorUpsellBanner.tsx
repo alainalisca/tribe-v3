@@ -62,7 +62,7 @@ export default function InstructorUpsellBanner({ userId, language }: InstructorU
   };
 
   return (
-    <div className="relative bg-gradient-to-r from-[#A3E635]/10 to-emerald-50 dark:from-[#A3E635]/5 dark:to-emerald-900/20 border-l-4 border-[#A3E635] rounded-xl p-4">
+    <div className="relative bg-gradient-to-r from-[#A3E635]/10 to-emerald-50 dark:from-[#A3E635]/5 dark:to-emerald-900/20 border-l-4 border-tribe-green rounded-xl p-4">
       <button
         onClick={handleDismiss}
         aria-label="Dismiss"
@@ -76,7 +76,7 @@ export default function InstructorUpsellBanner({ userId, language }: InstructorU
 
       <Link
         href="/profile/edit?wizard=1"
-        className="inline-block bg-[#A3E635] text-[#272D34] font-semibold rounded-lg px-4 py-2 text-sm hover:opacity-90 transition"
+        className="inline-block bg-tribe-green-light text-[#272D34] font-semibold rounded-lg px-4 py-2 text-sm hover:opacity-90 transition"
       >
         {t.cta}
       </Link>

@@ -112,7 +112,7 @@ export default function EditProfilePage() {
             placeholder={tr.namePlaceholder}
             autoComplete="name"
             enterKeyHint="next"
-            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+            className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
@@ -126,7 +126,7 @@ export default function EditProfilePage() {
             placeholder="@username"
             autoComplete="username"
             enterKeyHint="next"
-            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+            className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
@@ -140,7 +140,7 @@ export default function EditProfilePage() {
             placeholder={tr.locationPlaceholder}
             autoComplete="address-level2"
             enterKeyHint="next"
-            className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+            className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
           />
         </div>
 
@@ -152,7 +152,7 @@ export default function EditProfilePage() {
             onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
             placeholder={tr.bioPlaceholder}
             rows={4}
-            className="py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
+            className="py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
           />
         </div>
 
@@ -172,7 +172,7 @@ export default function EditProfilePage() {
                   value={formData.instagram_username}
                   onChange={(e) => setFormData({ ...formData, instagram_username: e.target.value.replace('@', '') })}
                   placeholder="username"
-                  className="flex-1 rounded-l-none rounded-r-xl dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                  className="flex-1 rounded-l-none rounded-r-xl dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                 />
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function EditProfilePage() {
                 value={formData.facebook_url}
                 onChange={(e) => setFormData({ ...formData, facebook_url: e.target.value })}
                 placeholder="https://facebook.com/yourprofile"
-                className="dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                className="dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function EditProfilePage() {
                           : 'E.g. NASM-CPT with 8 years of experience in...'
                       }
                       rows={3}
-                      className="py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
+                      className="py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green resize-none"
                     />
                     <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
                       {language === 'es'
@@ -300,7 +300,7 @@ export default function EditProfilePage() {
                         })
                       }
                       placeholder="E.g. CrossFit, HIIT, Yoga, Pilates"
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                      className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
                   </div>
 
@@ -321,7 +321,7 @@ export default function EditProfilePage() {
                         })
                       }
                       placeholder="E.g. NASM-CPT, Yoga RYT-200"
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                      className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
                   </div>
 
@@ -341,7 +341,7 @@ export default function EditProfilePage() {
                       min="0"
                       max="60"
                       placeholder="5"
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                      className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
                   </div>
 
@@ -354,7 +354,7 @@ export default function EditProfilePage() {
                       value={formData.website_url}
                       onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
                       placeholder="https://yourwebsite.com"
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                      className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
                   </div>
 
@@ -364,13 +364,13 @@ export default function EditProfilePage() {
                         setFormData({ ...formData, is_instructor: false });
                         setWizardStep(0);
                       }}
-                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
                     <button
                       onClick={() => setWizardStep(2)}
-                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-tribe-green transition"
                     >
                       {language === 'es' ? 'Siguiente' : 'Next'}
                     </button>
@@ -381,7 +381,7 @@ export default function EditProfilePage() {
               {/* Step 2: Your Storefront */}
               {wizardStep === 2 && (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D] mb-4">
+                  <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D] mb-4">
                     <h4 className="text-xs font-semibold text-theme-secondary mb-3">
                       {language === 'es' ? 'Vista previa de tu escaparate' : 'Storefront Preview'}
                     </h4>
@@ -425,7 +425,7 @@ export default function EditProfilePage() {
                         language === 'es' ? 'Ej: Entrenador de fitness certificado' : 'E.g. Certified fitness coach'
                       }
                       maxLength={100}
-                      className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                      className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
                     <p className="text-xs text-stone-600 dark:text-gray-400 mt-1">
                       {language === 'es'
@@ -505,7 +505,7 @@ export default function EditProfilePage() {
                           value={formData.storefront_banner_url}
                           onChange={(e) => setFormData({ ...formData, storefront_banner_url: e.target.value })}
                           placeholder="https://example.com/banner.jpg"
-                          className="h-auto py-2 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                          className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                         />
                         <button
                           type="button"
@@ -539,13 +539,13 @@ export default function EditProfilePage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={() => setWizardStep(1)}
-                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
                     <button
                       onClick={() => setWizardStep(3)}
-                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-tribe-green transition"
                     >
                       {language === 'es' ? 'Siguiente' : 'Next'}
                     </button>
@@ -557,7 +557,7 @@ export default function EditProfilePage() {
               {wizardStep === 3 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
                       <DollarSign className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Sesiones de Pago' : 'Paid Sessions'}
@@ -569,7 +569,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
                       <Tag className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Códigos Promo' : 'Promo Codes'}
@@ -581,7 +581,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
                       <Zap className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Campañas de Impulso' : 'Boost Campaigns'}
@@ -593,7 +593,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
                       <Bell className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Anuncios' : 'Announcements'}
@@ -613,7 +613,7 @@ export default function EditProfilePage() {
                     <select
                       value={formData.earnings_currency || 'COP'}
                       onChange={(e) => setFormData({ ...formData, earnings_currency: e.target.value })}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-theme-primary dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
+                      className="w-full px-3 py-2 bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-theme-primary dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
                     >
                       <option value="COP">
                         {language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}
@@ -633,13 +633,13 @@ export default function EditProfilePage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={() => setWizardStep(2)}
-                      className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
                     <button
                       onClick={() => setWizardStep(0)}
-                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-[#8FD642] transition"
+                      className="flex-1 bg-tribe-green text-slate-900 rounded-xl py-2 font-semibold hover:bg-tribe-green transition"
                     >
                       {language === 'es' ? 'Listo' : 'Done'}
                     </button>
@@ -665,7 +665,7 @@ export default function EditProfilePage() {
                 value={formData.emergency_contact_name}
                 onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
                 placeholder={tr.contactNamePlaceholder}
-                className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
+                className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
 
@@ -678,7 +678,7 @@ export default function EditProfilePage() {
                 placeholder={tr.contactPhonePlaceholder}
                 autoComplete="tel"
                 enterKeyHint="done"
-                className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
+                className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 text-theme-primary placeholder-gray-500 focus-visible:ring-tribe-green"
               />
             </div>
           </div>
@@ -728,7 +728,7 @@ export default function EditProfilePage() {
                 className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                   formData.sports.includes(sport)
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#52575D] text-theme-secondary border border-stone-300 dark:border-gray-600'
+                    : 'bg-white dark:bg-tribe-mid text-theme-secondary border border-stone-300 dark:border-gray-600'
                 }`}
               >
                 {getTranslatedSport(sport)}

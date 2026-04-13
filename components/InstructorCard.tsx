@@ -102,7 +102,7 @@ export default function InstructorCard({ instructor, language }: InstructorCardP
                 </span>
               ))}
               {instructor.specialties.length > 3 && (
-                <span className="px-2 py-0.5 bg-stone-100 dark:bg-[#3D4349] text-stone-600 dark:text-stone-400 text-xs font-medium rounded-full">
+                <span className="px-2 py-0.5 bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-stone-400 text-xs font-medium rounded-full">
                   +{instructor.specialties.length - 3}
                 </span>
               )}
@@ -146,7 +146,7 @@ export default function InstructorCard({ instructor, language }: InstructorCardP
 
         {/* CTA */}
         <Link href={`/storefront/${instructor.id}`} className="w-full">
-          <Button className="w-full bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-lg">
+          <Button className="w-full bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-lg">
             {labels.viewStorefront}
           </Button>
         </Link>

@@ -54,7 +54,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
 
   return (
     <Link href={`/create?${createParams}`}>
-      <div className="flex-shrink-0 w-72 bg-white dark:bg-[#52575D] rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+      <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer">
         {/* Venue image or fallback */}
         {venue.photo_url ? (
           <div
@@ -106,7 +106,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
               {venue.suggested_sports.slice(0, 2).map((sport) => (
                 <span
                   key={sport}
-                  className="inline-block px-2 py-1 bg-[#A3E635] dark:bg-[#A3E635] text-[#272D34] dark:text-[#272D34] text-xs font-medium rounded-full"
+                  className="inline-block px-2 py-1 bg-tribe-green-light dark:bg-tribe-green-light text-[#272D34] dark:text-[#272D34] text-xs font-medium rounded-full"
                 >
                   {sport}
                 </span>
@@ -123,7 +123,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
               link.href = `/create?${createParams}`;
               link.click();
             }}
-            className="w-full mt-2 bg-[#A3E635] hover:bg-[#94D91E] dark:bg-[#A3E635] dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+            className="w-full mt-2 bg-tribe-green-light hover:bg-[#94D91E] dark:bg-tribe-green-light dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
           >
             {lang === 'es' ? 'Alojar una sesión aquí' : 'Host a Session Here'} →
           </button>

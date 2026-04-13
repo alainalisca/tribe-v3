@@ -183,6 +183,8 @@ export async function GET(request: Request) {
       last_reengagement_sent: string | null;
     }>;
 
+    const pendingReEngagements: Array<{ userId: string; title: string; body: string }> = [];
+
     if (inactiveUsers.length > 0) {
       // Count available sessions in the system
       const sessionCountResult = await fetchActiveSessionCount(supabase, now.toISOString().split('T')[0]);
@@ -203,25 +205,30 @@ export async function GET(request: Request) {
           count: availableSessions,
         });
 
-        try {
+        pendingReEngagements.push({ userId: user.id, title: content.title, body: content.body });
+      }
+    }
+
+    // Send re-engagement notifications in parallel batches
+    const BATCH_SIZE = 25;
+    for (let i = 0; i < pendingReEngagements.length; i += BATCH_SIZE) {
+      const batch = pendingReEngagements.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map(async (item) => {
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: user.id,
-              title: content.title,
-              body: content.body,
+              userId: item.userId,
+              title: item.title,
+              body: item.body,
               url: '/',
             }),
           });
-
-          await updateUser(supabase, user.id, { last_reengagement_sent: new Date().toISOString() });
-
-          reEngagementsSent++;
-        } catch (err) {
-          logError(err, { route: '/api/cron/engagement', action: 'send_re_engagement', userId: user.id });
-        }
-      }
+          await updateUser(supabase, item.userId, { last_reengagement_sent: new Date().toISOString() });
+        })
+      );
+      reEngagementsSent += results.filter((r) => r.status === 'fulfilled').length;
     }
 
     return NextResponse.json({

@@ -556,7 +556,7 @@ export default function PromoCodesPage() {
         {/* Create Button */}
         <button
           onClick={() => setShowForm(!showForm)}
-          className="w-full bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition"
+          className="w-full bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold rounded-xl py-3 flex items-center justify-center gap-2 transition"
         >
           <Plus className="w-5 h-5" />
           {t.createButton}
@@ -564,7 +564,7 @@ export default function PromoCodesPage() {
 
         {/* Create Form */}
         {showForm && (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <h2 className="text-lg font-bold text-theme-primary mb-4">{t.formPanel}</h2>
             <div className="space-y-4">
               {/* Code Input */}
@@ -581,7 +581,7 @@ export default function PromoCodesPage() {
                     })
                   }
                   placeholder="SUMMER2024"
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -596,7 +596,7 @@ export default function PromoCodesPage() {
                       discountType: e.target.value as 'percentage' | 'fixed' | 'free_session',
                     })
                   }
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 >
                   <option value="percentage">{t.percentage}</option>
                   <option value="fixed">{t.fixed}</option>
@@ -620,7 +620,7 @@ export default function PromoCodesPage() {
                     min={formData.discountType === 'percentage' ? '1' : '0'}
                     max={formData.discountType === 'percentage' ? '100' : undefined}
                     placeholder={formData.discountType === 'percentage' ? '25' : '10000'}
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                   />
                 </div>
               )}
@@ -637,7 +637,7 @@ export default function PromoCodesPage() {
                         currency: e.target.value as 'COP' | 'USD',
                       })
                     }
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="COP">COP</option>
                     <option value="USD">USD</option>
@@ -677,7 +677,7 @@ export default function PromoCodesPage() {
                     }
                     min="1"
                     placeholder="50"
-                    className="w-full mt-2 bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                   />
                 )}
               </div>
@@ -695,7 +695,7 @@ export default function PromoCodesPage() {
                       packageId: '',
                     })
                   }
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 >
                   <option value="all">{t.allSessions}</option>
                   <option value="specific_session">{t.specificSession}</option>
@@ -715,7 +715,7 @@ export default function PromoCodesPage() {
                         sessionId: e.target.value,
                       })
                     }
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="">{t.selectSession}</option>
                     {sessions.map((session) => (
@@ -740,7 +740,7 @@ export default function PromoCodesPage() {
                         packageId: e.target.value,
                       })
                     }
-                    className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="">{t.selectPackage}</option>
                     {packages.map((pkg) => (
@@ -764,7 +764,7 @@ export default function PromoCodesPage() {
                       startDate: e.target.value,
                     })
                   }
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -798,7 +798,7 @@ export default function PromoCodesPage() {
                         expiryDate: e.target.value,
                       })
                     }
-                    className="w-full mt-2 bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   />
                 )}
               </div>
@@ -818,7 +818,7 @@ export default function PromoCodesPage() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className="w-full bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -827,13 +827,13 @@ export default function PromoCodesPage() {
                 <button
                   onClick={handleCreateCode}
                   disabled={submitting}
-                  className="flex-1 bg-tribe-green text-slate-900 hover:bg-[#8FD642] disabled:bg-tribe-green/50 font-semibold rounded-xl py-3 transition"
+                  className="flex-1 bg-tribe-green text-slate-900 hover:bg-tribe-green disabled:bg-tribe-green/50 font-semibold rounded-xl py-3 transition"
                 >
                   {submitting ? 'Creating...' : t.createCode}
                 </button>
                 <button
                   onClick={() => setShowForm(false)}
-                  className="flex-1 bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition"
+                  className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition"
                 >
                   {language === 'es' ? 'Cancelar' : 'Cancel'}
                 </button>
@@ -844,7 +844,7 @@ export default function PromoCodesPage() {
 
         {/* Promo Codes List */}
         {promoCodes.length === 0 ? (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-12 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-12 border border-stone-200 dark:border-gray-700 text-center">
             <Zap className="w-12 h-12 mx-auto mb-4 text-stone-400" />
             <h3 className="text-lg font-bold text-theme-primary mb-2">{t.emptyState}</h3>
             <p className="text-theme-secondary">{t.emptyDescription}</p>
@@ -856,12 +856,12 @@ export default function PromoCodesPage() {
               return (
                 <div
                   key={promo.id}
-                  className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                  className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
                 >
                   {/* Code and Badge */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <code className="bg-stone-100 dark:bg-[#3D4349] px-3 py-1 rounded font-mono text-tribe-green text-sm font-bold">
+                      <code className="bg-stone-100 dark:bg-tribe-surface px-3 py-1 rounded font-mono text-tribe-green text-sm font-bold">
                         {promo.code}
                       </code>
                       <button
@@ -881,7 +881,7 @@ export default function PromoCodesPage() {
                   <p className="text-lg font-bold text-tribe-green mb-3">{getDiscountDescription(promo)}</p>
 
                   {/* Usage Stats */}
-                  <div className="bg-stone-50 dark:bg-[#3D4349] rounded px-3 py-2 mb-3 text-sm">
+                  <div className="bg-stone-50 dark:bg-tribe-surface rounded px-3 py-2 mb-3 text-sm">
                     <p className="text-theme-primary">
                       {t.usage}:{' '}
                       <span className="font-semibold">

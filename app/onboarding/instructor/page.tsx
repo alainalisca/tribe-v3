@@ -365,7 +365,7 @@ export default function InstructorOnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <LoadingSpinner className="flex justify-center" />
       </div>
     );
@@ -378,7 +378,7 @@ export default function InstructorOnboardingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
       <div className="max-w-lg mx-auto p-4 pb-32">
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-1 py-6">
@@ -435,7 +435,7 @@ export default function InstructorOnboardingPage() {
                 <button
                   onClick={() => photoInputRef.current?.click()}
                   disabled={uploadingPhoto}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-tribe-green text-slate-900 rounded-full flex items-center justify-center shadow-md hover:bg-[#8FD642]"
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-tribe-green text-slate-900 rounded-full flex items-center justify-center shadow-md hover:bg-tribe-green"
                 >
                   {uploadingPhoto ? <LoadingSpinner className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
                 </button>
@@ -455,7 +455,7 @@ export default function InstructorOnboardingPage() {
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
             </div>
 
@@ -467,7 +467,7 @@ export default function InstructorOnboardingPage() {
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 placeholder={t.bioPlaceholder}
                 rows={2}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
               />
             </div>
 
@@ -479,7 +479,7 @@ export default function InstructorOnboardingPage() {
                 onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })}
                 placeholder={t.profBioPlaceholder}
                 rows={3}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
               />
             </div>
 
@@ -494,7 +494,7 @@ export default function InstructorOnboardingPage() {
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       form.specialties.includes(sport)
                         ? 'bg-tribe-green text-slate-900'
-                        : 'bg-stone-100 dark:bg-[#3D4349] text-stone-600 dark:text-gray-400 hover:bg-stone-200'
+                        : 'bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-gray-400 hover:bg-stone-200'
                     }`}
                   >
                     {sport}
@@ -526,7 +526,7 @@ export default function InstructorOnboardingPage() {
                 onKeyDown={handleCustomSpecialtyKeyDown}
                 onBlur={addCustomSpecialties}
                 placeholder={t.customSpecialtyPlaceholder}
-                className="mt-2 bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                className="mt-2 bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
             </div>
 
@@ -537,7 +537,7 @@ export default function InstructorOnboardingPage() {
                 value={form.certifications}
                 onChange={(e) => setForm({ ...form, certifications: e.target.value })}
                 placeholder={t.certPlaceholder}
-                className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
             </div>
 
@@ -550,7 +550,7 @@ export default function InstructorOnboardingPage() {
                   min="0"
                   value={form.years_experience}
                   onChange={(e) => setForm({ ...form, years_experience: e.target.value })}
-                  className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                  className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
                 />
               </div>
               <div>
@@ -560,7 +560,7 @@ export default function InstructorOnboardingPage() {
                   value={form.website_url}
                   onChange={(e) => setForm({ ...form, website_url: e.target.value })}
                   placeholder="https://..."
-                  className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                  className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
                 />
               </div>
             </div>
@@ -582,7 +582,7 @@ export default function InstructorOnboardingPage() {
                 value={form.storefront_tagline}
                 onChange={(e) => setForm({ ...form, storefront_tagline: e.target.value.slice(0, 100) })}
                 placeholder={t.taglinePlaceholder}
-                className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
               <p className="text-[10px] text-stone-400 dark:text-gray-500 mt-1">
                 {t.taglineHint} ({form.storefront_tagline.length}/100)
@@ -650,7 +650,7 @@ export default function InstructorOnboardingPage() {
                     value={form.storefront_banner_url}
                     onChange={(e) => setForm({ ...form, storefront_banner_url: e.target.value })}
                     placeholder="https://..."
-                    className="bg-white dark:bg-[#52575D] border-stone-300 dark:border-gray-600"
+                    className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
                   />
                   <button
                     type="button"
@@ -676,7 +676,7 @@ export default function InstructorOnboardingPage() {
             {/* Live Preview */}
             <div>
               <Label className="text-xs text-stone-600 dark:text-gray-400 mb-2 block">{t.storefrontPreview}</Label>
-              <div className="rounded-xl border border-stone-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-[#3D4349]">
+              <div className="rounded-xl border border-stone-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-tribe-surface">
                 {/* Banner area */}
                 <div
                   className="h-28 bg-gradient-to-br from-tribe-green/30 to-tribe-green/10 relative"
@@ -778,7 +778,7 @@ export default function InstructorOnboardingPage() {
               <select
                 value={form.earnings_currency}
                 onChange={(e) => setForm({ ...form, earnings_currency: e.target.value })}
-                className="w-full px-3 py-2.5 bg-white dark:bg-[#52575D] border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
+                className="w-full px-3 py-2.5 bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
               >
                 <option value="COP">{language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}</option>
                 <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
@@ -794,12 +794,12 @@ export default function InstructorOnboardingPage() {
         )}
 
         {/* Navigation Buttons */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#3D4349] border-t border-stone-200 dark:border-gray-700 p-4 safe-area-bottom">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-surface border-t border-stone-200 dark:border-gray-700 p-4 safe-area-bottom">
           <div className="max-w-lg mx-auto flex gap-3">
             {step > 1 && (
               <button
                 onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#6B7178] flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-card flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {t.back}
@@ -812,7 +812,7 @@ export default function InstructorOnboardingPage() {
                 className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
                   step === 1 && !form.name.trim()
                     ? 'bg-stone-200 dark:bg-gray-600 text-stone-400 cursor-not-allowed'
-                    : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
+                    : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
                 }`}
               >
                 {t.next}
@@ -822,7 +822,7 @@ export default function InstructorOnboardingPage() {
               <button
                 onClick={handleFinish}
                 disabled={saving}
-                className="flex-1 py-3 rounded-xl font-bold text-sm bg-tribe-green text-slate-900 hover:bg-[#8FD642] flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl font-bold text-sm bg-tribe-green text-slate-900 hover:bg-tribe-green flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <>

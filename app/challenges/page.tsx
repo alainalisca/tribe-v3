@@ -153,7 +153,7 @@ export default function ChallengesPage() {
           <h1 className="text-lg font-bold text-theme-primary">{strings.myChallenges}</h1>
           <button
             onClick={() => router.push('/challenges/create')}
-            className="flex items-center gap-2 bg-tribe-green text-slate-900 font-semibold rounded-lg px-4 py-2 hover:bg-[#8FD642] transition"
+            className="flex items-center gap-2 bg-tribe-green text-slate-900 font-semibold rounded-lg px-4 py-2 hover:bg-tribe-green transition"
           >
             <Plus className="h-4 w-4" />
             {strings.newChallenge}
@@ -174,7 +174,7 @@ export default function ChallengesPage() {
             <section>
               <h2 className="text-lg font-bold text-theme-primary mb-4">{strings.myChallenges}</h2>
               {userChallenges.length === 0 ? (
-                <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
                   <Zap className="h-12 w-12 text-theme-secondary mx-auto mb-3" />
                   <p className="text-theme-secondary">{strings.noChallenges}</p>
                 </div>
@@ -212,7 +212,7 @@ export default function ChallengesPage() {
                       setSearchQuery(e.target.value);
                       handleSearch(e.target.value, selectedSport);
                     }}
-                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#272D34] border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-dark border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
                   />
                 </div>
 
@@ -223,7 +223,7 @@ export default function ChallengesPage() {
                     className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition ${
                       !selectedSport
                         ? 'bg-tribe-green text-slate-900'
-                        : 'bg-stone-100 dark:bg-[#3D4349] text-theme-primary hover:bg-tribe-green/20'
+                        : 'bg-stone-100 dark:bg-tribe-surface text-theme-primary hover:bg-tribe-green/20'
                     }`}
                   >
                     {strings.filterSport}
@@ -235,7 +235,7 @@ export default function ChallengesPage() {
                       className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition ${
                         selectedSport === sport
                           ? 'bg-tribe-green text-slate-900'
-                          : 'bg-stone-100 dark:bg-[#3D4349] text-theme-primary hover:bg-tribe-green/20'
+                          : 'bg-stone-100 dark:bg-tribe-surface text-theme-primary hover:bg-tribe-green/20'
                       }`}
                     >
                       {sportTranslations[sport]?.[language] || sport}
@@ -244,7 +244,7 @@ export default function ChallengesPage() {
                   {!showAllSports && sports.length > 6 && (
                     <button
                       onClick={() => setShowAllSports(true)}
-                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-[#3D4349] text-tribe-green hover:bg-tribe-green/20"
+                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-tribe-surface text-tribe-green hover:bg-tribe-green/20"
                     >
                       {language === 'es' ? 'Mas' : 'More'}
                     </button>
@@ -252,7 +252,7 @@ export default function ChallengesPage() {
                   {showAllSports && (
                     <button
                       onClick={() => setShowAllSports(false)}
-                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-[#3D4349] text-tribe-green hover:bg-tribe-green/20"
+                      className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-tribe-surface text-tribe-green hover:bg-tribe-green/20"
                     >
                       {language === 'es' ? 'Menos' : 'Less'}
                     </button>
@@ -262,7 +262,7 @@ export default function ChallengesPage() {
 
               {/* Challenges Grid */}
               {filteredPublic.length === 0 ? (
-                <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
                   <Search className="h-12 w-12 text-theme-secondary mx-auto mb-3" />
                   <p className="text-theme-secondary">{strings.noDiscover}</p>
                 </div>
@@ -320,7 +320,7 @@ function ChallengeCard({
 
   return (
     <button onClick={onCardClick} className="text-left transition hover:shadow-lg">
-      <div className="bg-white dark:bg-[#272D34] rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-tribe-dark rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
         {/* Cover Image or Gradient */}
         <div className="h-40 bg-gradient-to-br from-tribe-green to-[#8FD642] relative overflow-hidden">
           {challenge.cover_image_url && (
@@ -353,7 +353,7 @@ function ChallengeCard({
                 </span>
                 <span className="text-tribe-green font-semibold">{Math.round(progressPercent)}%</span>
               </div>
-              <div className="w-full bg-stone-200 dark:bg-[#3D4349] rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-stone-200 dark:bg-tribe-surface rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full bg-tribe-green transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}

@@ -85,12 +85,12 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
 
   if (loading) {
     return (
-      <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+      <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
         </h2>
-        <div className="flex items-center justify-center h-32 bg-[#3D4349] dark:bg-[#3D4349] rounded-lg">
-          <Loader className="w-6 h-6 animate-spin text-[#A3E635]" />
+        <div className="flex items-center justify-center h-32 bg-tribe-surface dark:bg-tribe-surface rounded-lg">
+          <Loader className="w-6 h-6 animate-spin text-tribe-green" />
         </div>
       </section>
     );
@@ -98,11 +98,11 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
 
   if (error || venues.length === 0) {
     return (
-      <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+      <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
         </h2>
-        <div className="flex items-center justify-center h-32 bg-[#3D4349] dark:bg-[#3D4349] rounded-lg">
+        <div className="flex items-center justify-center h-32 bg-tribe-surface dark:bg-tribe-surface rounded-lg">
           <p className="text-stone-400 text-center px-4">
             {error || (lang === 'es' ? 'No hay lugares disponibles' : 'No venues available')}
           </p>
@@ -112,7 +112,7 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
   }
 
   return (
-    <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+    <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white">
         📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
       </h2>

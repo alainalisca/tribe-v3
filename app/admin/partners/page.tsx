@@ -40,7 +40,7 @@ export default function AdminPartnersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#272D34]">
+      <div className="min-h-screen bg-tribe-dark">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
@@ -50,7 +50,7 @@ export default function AdminPartnersPage() {
   const filters = ['all', 'pending', 'active', 'paused', 'expired'] as const;
 
   return (
-    <div className="min-h-screen bg-[#272D34] pb-16 safe-area-top">
+    <div className="min-h-screen bg-tribe-dark pb-16 safe-area-top">
       <div className="w-full max-w-2xl mx-auto px-4 py-4">
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
@@ -77,7 +77,7 @@ export default function AdminPartnersPage() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition ${
                 statusFilter === f
                   ? 'bg-tribe-green text-slate-900 border-tribe-green'
-                  : 'bg-[#3D4349] text-[#B1B3B6] border-[#52575D] hover:bg-[#52575D]'
+                  : 'bg-tribe-surface text-[#B1B3B6] border-[#52575D] hover:bg-tribe-mid'
               }`}
             >
               {f === 'all' ? t('All', 'Todos') : f.charAt(0).toUpperCase() + f.slice(1)} ({counts[f]})
@@ -129,7 +129,7 @@ function PartnerCard({
   const isLoading = actionLoading === p.id;
 
   return (
-    <div className="bg-[#3D4349] rounded-2xl p-4 border border-[#52575D]">
+    <div className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D]">
       {/* Top row: name + status */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
@@ -172,7 +172,7 @@ function PartnerCard({
           value={p.tier}
           onChange={(e) => onTierChange(p.id, e.target.value)}
           disabled={isLoading}
-          className="bg-[#52575D] text-white text-xs rounded-lg px-2 py-1 border border-[#52575D] focus:border-tribe-green outline-none"
+          className="bg-tribe-mid text-white text-xs rounded-lg px-2 py-1 border border-[#52575D] focus:border-tribe-green outline-none"
         >
           <option value="standard">Standard</option>
           <option value="premium">Premium</option>

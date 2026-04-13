@@ -313,7 +313,7 @@ export default function EarningsPage() {
                       : 'Complete your instructor profile on the edit page to start creating paid sessions.'}
                   </p>
                   <Link href="/profile/edit">
-                    <Button className="bg-tribe-green text-slate-900 hover:bg-[#8FD642]">
+                    <Button className="bg-tribe-green text-slate-900 hover:bg-tribe-green">
                       {language === 'es' ? 'Ir a Editar Perfil' : 'Go to Edit Profile'}
                     </Button>
                   </Link>
@@ -332,7 +332,7 @@ export default function EarningsPage() {
         <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 w-full max-w-2xl">
           <CardContent className="pt-6">
             <p className="text-theme-primary font-semibold mb-4">{error}</p>
-            <Button onClick={loadEarningsData} className="bg-tribe-green text-slate-900 hover:bg-[#8FD642]">
+            <Button onClick={loadEarningsData} className="bg-tribe-green text-slate-900 hover:bg-tribe-green">
               {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
             </Button>
           </CardContent>
@@ -403,7 +403,7 @@ export default function EarningsPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-theme-secondary">
-                  {language === 'es' ? 'Comisiones (10%)' : 'Platform Fees (10%)'}
+                  {language === 'es' ? 'Comisiones (15%)' : 'Platform Fees (15%)'}
                 </CardTitle>
                 <div className="bg-gray-200/30 p-2 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-gray-600" />
@@ -497,7 +497,7 @@ export default function EarningsPage() {
                     : 'Create paid sessions to see transactions here'}
                 </p>
                 <Link href="/create">
-                  <Button className="bg-tribe-green text-slate-900 hover:bg-[#8FD642]">
+                  <Button className="bg-tribe-green text-slate-900 hover:bg-tribe-green">
                     {language === 'es' ? 'Crear Sesión' : 'Create Session'}
                   </Button>
                 </Link>

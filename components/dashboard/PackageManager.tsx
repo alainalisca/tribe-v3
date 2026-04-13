@@ -103,20 +103,20 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
 
       {/* Edit/Create Form */}
       {editing && (
-        <div className="p-4 bg-white dark:bg-[#3D4349] rounded-xl border-2 border-tribe-green space-y-3">
+        <div className="p-4 bg-white dark:bg-tribe-surface rounded-xl border-2 border-tribe-green space-y-3">
           <input
             type="text"
             value={editing.name}
             onChange={(e) => setEditing({ ...editing, name: e.target.value })}
             placeholder={txt.name}
-            className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
+            className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
           />
           <textarea
             value={editing.description || ''}
             onChange={(e) => setEditing({ ...editing, description: e.target.value || null })}
             placeholder={txt.description}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green resize-none"
+            className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green resize-none"
           />
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -125,7 +125,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
                 type="number"
                 value={editing.price_cents}
                 onChange={(e) => setEditing({ ...editing, price_cents: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
               />
             </div>
             <div>
@@ -133,7 +133,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
               <select
                 value={editing.currency}
                 onChange={(e) => setEditing({ ...editing, currency: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
               >
                 <option value="COP">COP</option>
                 <option value="USD">USD</option>
@@ -146,7 +146,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
               <select
                 value={editing.package_type}
                 onChange={(e) => setEditing({ ...editing, package_type: e.target.value })}
-                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
               >
                 {packageTypeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -166,7 +166,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
                     session_count: e.target.value ? parseInt(e.target.value) : null,
                   })
                 }
-                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-[#272D34] border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full px-3 py-2 rounded-lg bg-stone-50 dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] text-theme-primary text-sm outline-none focus:ring-2 focus:ring-tribe-green"
               />
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
 
       {/* Package List */}
       {packages.length === 0 && !editing ? (
-        <div className="p-6 text-center bg-white dark:bg-[#3D4349] rounded-xl border border-stone-200 dark:border-[#52575D]">
+        <div className="p-6 text-center bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D]">
           <Package className="w-8 h-8 text-theme-secondary mx-auto mb-2" />
           <p className="text-sm text-theme-secondary">{txt.noPackages}</p>
         </div>
@@ -194,7 +194,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
           {packages.map((pkg) => (
             <div
               key={pkg.id}
-              className="p-4 bg-white dark:bg-[#3D4349] rounded-xl border border-stone-200 dark:border-[#52575D] flex items-center justify-between"
+              className="p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D] flex items-center justify-between"
             >
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-semibold text-theme-primary">{pkg.name}</h4>

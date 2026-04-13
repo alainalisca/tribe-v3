@@ -103,14 +103,14 @@ export default function TrainingPartnersPage() {
     : partners;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#3D4349] pb-8">
+    <div className="min-h-screen bg-white dark:bg-tribe-surface pb-8">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D]">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2 -ml-2 rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D] transition"
+              className="p-2 -ml-2 rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
               aria-label="Back"
             >
               <ArrowLeft className="w-5 h-5 text-stone-900 dark:text-white" />
@@ -126,7 +126,7 @@ export default function TrainingPartnersPage() {
               placeholder={t.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-stone-100 dark:bg-[#52575D] rounded-lg border border-stone-200 dark:border-[#6B7178] text-stone-900 dark:text-gray-100 placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-stone-900 dark:text-gray-100 placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
             />
             {searchQuery && (
               <button
@@ -145,8 +145,8 @@ export default function TrainingPartnersPage() {
                 onClick={() => setSelectedSport(null)}
                 className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
                   selectedSport === null
-                    ? 'bg-[#A3E635] text-stone-900'
-                    : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-gray-300'
+                    ? 'bg-tribe-green-light text-stone-900'
+                    : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-gray-300'
                 }`}
               >
                 {t.allSports}
@@ -157,8 +157,8 @@ export default function TrainingPartnersPage() {
                   onClick={() => setSelectedSport(sport)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${
                     selectedSport === sport
-                      ? 'bg-[#A3E635] text-stone-900'
-                      : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-gray-300'
+                      ? 'bg-tribe-green-light text-stone-900'
+                      : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-gray-300'
                   }`}
                 >
                   {sportTranslations[sport]?.[language as 'en' | 'es'] || sport}
@@ -174,7 +174,7 @@ export default function TrainingPartnersPage() {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-56 bg-stone-200 dark:bg-[#52575D] rounded-lg animate-pulse" />
+              <div key={i} className="h-56 bg-stone-200 dark:bg-tribe-mid rounded-lg animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (

@@ -46,7 +46,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
     <Dialog open={true} onOpenChange={() => {}}>
       <DialogContent
         data-modal="true"
-        className="max-w-md rounded-2xl p-6 dark:bg-[#6B7178] [&>button:last-child]:hidden"
+        className="max-w-md rounded-2xl p-6 dark:bg-tribe-card [&>button:last-child]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Welcome to Tribe</DialogTitle>
@@ -89,7 +89,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   ? 'w-8 bg-tribe-green'
                   : i + 1 < step
                     ? 'w-2 bg-tribe-green/50'
-                    : 'w-2 bg-stone-300 dark:bg-[#52575D]'
+                    : 'w-2 bg-stone-300 dark:bg-tribe-mid'
               }`}
             />
           ))}
@@ -100,7 +100,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             <Button
               variant="outline"
               onClick={() => setStep(step - 1)}
-              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
+              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
             >
               {language === 'es' ? 'Atrás' : 'Back'}
             </Button>

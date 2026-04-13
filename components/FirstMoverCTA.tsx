@@ -26,7 +26,7 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
   const buttonText = lang === 'es' ? 'Crear Primera Sesión' : 'Create First Session';
 
   return (
-    <div className="w-full bg-gradient-to-br from-[#A3E635]/20 to-[#9EE551]/10 border border-[#A3E635] rounded-xl p-6 md:p-8 text-center space-y-4">
+    <div className="w-full bg-gradient-to-br from-[#A3E635]/20 to-[#9EE551]/10 border border-tribe-green rounded-xl p-6 md:p-8 text-center space-y-4">
       {/* Mountain icon */}
       <div className="flex justify-center">
         <span className="text-5xl md:text-6xl animate-bounce">🏔️</span>
@@ -41,17 +41,17 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
       {/* Benefit list */}
       <div className="flex flex-col gap-2 text-sm text-stone-600 dark:text-gray-400 pt-2">
         <div className="flex items-center justify-center gap-2">
-          <Zap className="w-4 h-4 text-[#A3E635]" />
+          <Zap className="w-4 h-4 text-tribe-green" />
           <span>{lang === 'es' ? 'Reconocimiento especial en tu perfil' : 'Special recognition on your profile'}</span>
         </div>
         <div className="flex items-center justify-center gap-2">
-          <Zap className="w-4 h-4 text-[#A3E635]" />
+          <Zap className="w-4 h-4 text-tribe-green" />
           <span>
             {lang === 'es' ? 'Mayor visibilidad de sesiones en el área' : 'Higher session visibility in the area'}
           </span>
         </div>
         <div className="flex items-center justify-center gap-2">
-          <Zap className="w-4 h-4 text-[#A3E635]" />
+          <Zap className="w-4 h-4 text-tribe-green" />
           <span>
             {lang === 'es' ? 'Pionero de la comunidad de fitness local' : 'Pioneer of the local fitness community'}
           </span>
@@ -62,7 +62,7 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
       <Link
         href="/create"
         aria-label={buttonText}
-        className="inline-block pt-2 bg-[#A3E635] hover:bg-[#94D91E] dark:bg-[#A3E635] dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto"
+        className="inline-block pt-2 bg-tribe-green-light hover:bg-[#94D91E] dark:bg-tribe-green-light dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto"
       >
         {buttonText} <span aria-hidden="true">→</span>
       </Link>

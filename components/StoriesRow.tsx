@@ -70,9 +70,9 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
           {userId && (
             <button onClick={handleYourStoryClick} className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]">
               <div className="relative">
-                <div className="w-14 h-14 rounded-full border-2 border-stone-300 dark:border-gray-500 overflow-hidden bg-stone-200 dark:bg-[#3D4349] flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full border-2 border-stone-300 dark:border-gray-500 overflow-hidden bg-stone-200 dark:bg-tribe-surface flex items-center justify-center">
                   {userAvatar ? (
-                    <img src={userAvatar} alt="" className="w-full h-full object-cover" />
+                    <img src={userAvatar} alt="Your avatar" className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-xl font-bold text-stone-500">?</span>
                   )}
@@ -107,9 +107,13 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
                         : 'bg-stone-300 dark:bg-gray-500'
                   }`}
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-[#3D4349] flex items-center justify-center">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-tribe-surface flex items-center justify-center">
                     {firstStory.user_avatar ? (
-                      <img src={firstStory.user_avatar} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={firstStory.user_avatar}
+                        alt={`${firstStory.user_name}'s avatar`}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <span className="text-lg font-bold text-stone-500">{firstStory.user_name[0]?.toUpperCase()}</span>
                     )}

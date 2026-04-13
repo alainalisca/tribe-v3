@@ -22,9 +22,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
   const { language } = useLanguage();
   const isRecurring = value.is_recurring;
   const frequency = value.recurrence_pattern?.split('_')[0] || 'weekly';
-  const selectedDays = value.recurrence_pattern?.includes('_')
-    ? value.recurrence_pattern.split('_').slice(1)
-    : [];
+  const selectedDays = value.recurrence_pattern?.includes('_') ? value.recurrence_pattern.split('_').slice(1) : [];
 
   const handleToggle = () => {
     if (isRecurring) {
@@ -81,9 +79,10 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
   const getPreviewText = (): string => {
     if (!isRecurring) return '';
 
-    const frequencyText = language === 'es'
-      ? { weekly: 'cada semana', biweekly: 'cada dos semanas', monthly: 'cada mes' }
-      : { weekly: 'every week', biweekly: 'every two weeks', monthly: 'every month' };
+    const frequencyText =
+      language === 'es'
+        ? { weekly: 'cada semana', biweekly: 'cada dos semanas', monthly: 'cada mes' }
+        : { weekly: 'every week', biweekly: 'every two weeks', monthly: 'every month' };
 
     const freqLabel = frequencyText[frequency as keyof typeof frequencyText] || frequencyText.weekly;
 
@@ -121,7 +120,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
         <button
           onClick={handleToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            isRecurring ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-[#52575D]'
+            isRecurring ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-tribe-mid'
           }`}
         >
           <span
@@ -134,7 +133,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
 
       {/* Recurring Options */}
       {isRecurring && (
-        <Card className="bg-white dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] p-4 space-y-4">
+        <Card className="bg-white dark:bg-tribe-card border-stone-200 dark:border-[#52575D] p-4 space-y-4">
           {/* Frequency Selector */}
           <div>
             <label className="block text-xs font-semibold text-stone-700 dark:text-gray-300 mb-2">
@@ -148,7 +147,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
                     frequency === freq
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
                   }`}
                 >
                   {language === 'es'
@@ -176,7 +175,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                       className={`py-2 text-xs font-semibold rounded transition-colors ${
                         isSelected
                           ? 'bg-tribe-green text-slate-900'
-                          : 'bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
+                          : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
                       }`}
                     >
                       {dayLabel}
@@ -196,13 +195,13 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
               type="date"
               value={value.recurrence_end_date}
               onChange={(e) => handleEndDateChange(e.target.value)}
-              className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-stone-900 dark:text-white text-sm focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-tribe-mid text-stone-900 dark:text-white text-sm focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
           </div>
 
           {/* Preview Text */}
           {getPreviewText() && (
-            <div className="p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg border-l-4 border-tribe-green">
+            <div className="p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg border-l-4 border-tribe-green">
               <p className="text-sm text-stone-700 dark:text-gray-200 italic">{getPreviewText()}</p>
             </div>
           )}

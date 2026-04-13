@@ -54,7 +54,7 @@ export default function PartnerValueCards({ language }: Props) {
       {cards.map((card, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-[#3D4349] rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 flex gap-4 items-start"
+          className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 flex gap-4 items-start"
         >
           <div className="flex-shrink-0 w-12 h-12 bg-tribe-green/10 rounded-xl flex items-center justify-center">
             {card.icon}

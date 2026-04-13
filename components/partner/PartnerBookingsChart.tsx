@@ -18,7 +18,7 @@ export default function PartnerBookingsChart({ language, period }: Props) {
   const maxVal = Math.max(...data.map((d) => d.value), 1);
 
   return (
-    <div className="bg-white dark:bg-[#3D4349] rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 mb-5">
+    <div className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 mb-5">
       <h3 className="text-sm font-bold text-stone-900 dark:text-white mb-3">
         {t('Bookings by Day', 'Reservas por Día')}
       </h3>

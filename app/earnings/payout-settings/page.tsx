@@ -177,7 +177,9 @@ export default function PayoutSettingsPage() {
       // Fetch user profile to check instructor status and get payout settings
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('is_instructor, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number')
+        .select(
+          'is_instructor, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number'
+        )
         .eq('id', authUser.id)
         .single();
 
@@ -377,8 +379,11 @@ export default function PayoutSettingsPage() {
               {/* Bank Name */}
               <div>
                 <Label className="font-semibold text-theme-primary mb-2 block">{tr.bankName}</Label>
-                <Select value={formData.payout_bank_name} onValueChange={(value) => setFormData({ ...formData, payout_bank_name: value })}>
-                  <SelectTrigger className="dark:bg-[#52575D] dark:border-gray-600 dark:text-white focus-visible:ring-tribe-green">
+                <Select
+                  value={formData.payout_bank_name}
+                  onValueChange={(value) => setFormData({ ...formData, payout_bank_name: value })}
+                >
+                  <SelectTrigger className="dark:bg-tribe-mid dark:border-gray-600 dark:text-white focus-visible:ring-tribe-green">
                     <SelectValue placeholder={tr.selectBank} />
                   </SelectTrigger>
                   <SelectContent>
@@ -401,7 +406,9 @@ export default function PayoutSettingsPage() {
                       name="account_type"
                       value="savings"
                       checked={formData.payout_account_type === 'savings'}
-                      onChange={(e) => setFormData({ ...formData, payout_account_type: e.target.value as 'savings' | 'checking' })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, payout_account_type: e.target.value as 'savings' | 'checking' })
+                      }
                       className="w-4 h-4 cursor-pointer accent-tribe-green"
                     />
                     <span className="text-theme-primary">{tr.savings}</span>
@@ -412,7 +419,9 @@ export default function PayoutSettingsPage() {
                       name="account_type"
                       value="checking"
                       checked={formData.payout_account_type === 'checking'}
-                      onChange={(e) => setFormData({ ...formData, payout_account_type: e.target.value as 'savings' | 'checking' })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, payout_account_type: e.target.value as 'savings' | 'checking' })
+                      }
                       className="w-4 h-4 cursor-pointer accent-tribe-green"
                     />
                     <span className="text-theme-primary">{tr.checking}</span>
@@ -428,7 +437,7 @@ export default function PayoutSettingsPage() {
                   value={formData.payout_account_number}
                   onChange={(e) => setFormData({ ...formData, payout_account_number: e.target.value })}
                   placeholder={tr.accountNumberPlaceholder}
-                  className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                  className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                 />
                 <p className="text-xs text-stone-500 dark:text-gray-400 mt-2">{tr.maskedWarning}</p>
               </div>
@@ -436,8 +445,11 @@ export default function PayoutSettingsPage() {
               {/* Document Type */}
               <div>
                 <Label className="font-semibold text-theme-primary mb-2 block">{tr.documentType}</Label>
-                <Select value={formData.payout_document_type} onValueChange={(value) => setFormData({ ...formData, payout_document_type: value as any })}>
-                  <SelectTrigger className="dark:bg-[#52575D] dark:border-gray-600 dark:text-white focus-visible:ring-tribe-green">
+                <Select
+                  value={formData.payout_document_type}
+                  onValueChange={(value) => setFormData({ ...formData, payout_document_type: value as any })}
+                >
+                  <SelectTrigger className="dark:bg-tribe-mid dark:border-gray-600 dark:text-white focus-visible:ring-tribe-green">
                     <SelectValue placeholder={tr.selectDocType} />
                   </SelectTrigger>
                   <SelectContent>
@@ -458,7 +470,7 @@ export default function PayoutSettingsPage() {
                   value={formData.payout_document_number}
                   onChange={(e) => setFormData({ ...formData, payout_document_number: e.target.value })}
                   placeholder={tr.documentNumberPlaceholder}
-                  className="h-auto py-3 dark:bg-[#52575D] dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
+                  className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                 />
               </div>
             </CardContent>
@@ -477,7 +489,11 @@ export default function PayoutSettingsPage() {
         </Card>
 
         {/* Save Button */}
-        <Button onClick={handleSave} disabled={saving} className="w-full py-4 font-bold rounded-2xl text-lg bg-tribe-green hover:bg-[#8FD642] text-slate-900">
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-4 font-bold rounded-2xl text-lg bg-tribe-green hover:bg-tribe-green text-slate-900"
+        >
           {saving ? tr.savingChanges : tr.save}
         </Button>
       </div>

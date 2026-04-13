@@ -56,7 +56,7 @@ export default function AppStoreBanner() {
         <DialogTitle className="sr-only">{t('getTheTribeApp')}</DialogTitle>
 
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-[#272D34] rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-20 h-20 bg-tribe-dark rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl font-bold text-white">
               Tribe<span className="text-tribe-green">.</span>
             </span>

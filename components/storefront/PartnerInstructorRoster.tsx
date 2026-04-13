@@ -19,7 +19,7 @@ export default function PartnerInstructorRoster({ instructors, language }: Props
       <div className="flex gap-3 overflow-x-auto pb-2">
         {instructors.map((inst) => (
           <Link key={inst.id} href={`/storefront/${inst.instructor_id}`} className="flex-shrink-0 w-24 text-center">
-            <div className="w-14 h-14 rounded-full bg-[#52575D] border-2 border-tribe-green mx-auto mb-1.5 overflow-hidden flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-tribe-mid border-2 border-tribe-green mx-auto mb-1.5 overflow-hidden flex items-center justify-center">
               {inst.user?.avatar_url ? (
                 <img src={inst.user.avatar_url} alt={inst.user.name || ''} className="w-full h-full object-cover" />
               ) : (

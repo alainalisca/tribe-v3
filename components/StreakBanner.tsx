@@ -108,7 +108,7 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
   const showSparkle = streak >= 4;
 
   return (
-    <div className="bg-white dark:bg-[#52575D] rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
+    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
       {/* Streak header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -132,7 +132,7 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
                   hasAttendance
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-gray-300 dark:bg-[#6B7178] text-gray-500 dark:text-gray-400'
+                    : 'bg-gray-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
                 }`}
               >
                 <span className={`font-bold ${hasAttendance ? 'text-sm' : 'text-xs'}`}>

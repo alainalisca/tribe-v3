@@ -27,7 +27,7 @@ export default function DeleteConfirmModal({
             variant="secondary"
             onClick={onCancel}
             disabled={deleting}
-            className="flex-1 py-3 font-semibold rounded-xl bg-stone-200 dark:bg-[#3D4349] hover:bg-stone-300 dark:hover:bg-[#52575D]"
+            className="flex-1 py-3 font-semibold rounded-xl bg-stone-200 dark:bg-tribe-surface hover:bg-stone-300 dark:hover:bg-tribe-mid"
           >
             {t('cancel')}
           </Button>

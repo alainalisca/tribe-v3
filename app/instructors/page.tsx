@@ -249,7 +249,7 @@ export default function InstructorsPage() {
             placeholder={t.search}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 py-2 rounded-lg bg-white dark:bg-[#3D4349] border-stone-200 dark:border-[#52575D]"
+            className="pl-10 py-2 rounded-lg bg-white dark:bg-tribe-surface border-stone-200 dark:border-[#52575D]"
           />
         </div>
 
@@ -260,7 +260,7 @@ export default function InstructorsPage() {
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
               !selectedSport
                 ? 'bg-tribe-green text-slate-900 font-semibold'
-                : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
             }`}
           >
             {t.all}
@@ -272,7 +272,7 @@ export default function InstructorsPage() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
                 selectedSport === sport
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {sportTranslations[sport]?.[language] || sport}
@@ -282,10 +282,10 @@ export default function InstructorsPage() {
 
         {/* View Toggle + Near Me + Sort */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex bg-stone-100 dark:bg-[#3D4349] rounded-lg p-0.5 shrink-0">
+          <div className="flex bg-stone-100 dark:bg-tribe-surface rounded-lg p-0.5 shrink-0">
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'list' ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm' : 'text-stone-500'}`}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'list' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
             >
               <List className="w-3.5 h-3.5" />
               {t.listView}
@@ -295,7 +295,7 @@ export default function InstructorsPage() {
                 setViewMode('map');
                 setMapLoaded(false);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'map' ? 'bg-white dark:bg-[#52575D] text-theme-primary shadow-sm' : 'text-stone-500'}`}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${viewMode === 'map' ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm' : 'text-stone-500'}`}
             >
               <MapPin className="w-3.5 h-3.5" />
               {t.mapView}
@@ -330,7 +330,7 @@ export default function InstructorsPage() {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${
                   sortBy === opt
                     ? 'bg-tribe-green text-slate-900 font-semibold'
-                    : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
                 }`}
               >
                 {sortLabel[opt]}
@@ -345,7 +345,7 @@ export default function InstructorsPage() {
         {/* Map */}
         {viewMode === 'map' && (
           <div className="rounded-xl overflow-hidden border border-theme">
-            <div id="instructor-map" className="w-full h-[400px] bg-stone-200 dark:bg-[#3D4349]" />
+            <div id="instructor-map" className="w-full h-[400px] bg-stone-200 dark:bg-tribe-surface" />
           </div>
         )}
 
@@ -366,7 +366,7 @@ export default function InstructorsPage() {
                 setSearchQuery('');
                 setSelectedSport(null);
               }}
-              className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-[#8FD642]"
+              className="px-6 py-2 bg-tribe-green text-slate-900 font-semibold hover:bg-tribe-green"
             >
               {t.clearSearch}
             </Button>

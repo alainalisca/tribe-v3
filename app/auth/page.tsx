@@ -18,20 +18,20 @@ export default function AuthPage() {
 
   if (h.checkingAuth) {
     return (
-      <div className="h-screen bg-stone-50 dark:bg-[#52575D]">
+      <div className="h-screen bg-stone-50 dark:bg-tribe-mid">
         <LoadingSpinner className="flex items-center justify-center h-screen" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4 overflow-hidden">
+    <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden">
       <div className="absolute top-0 right-4 pt-4">
         <LanguageToggle />
       </div>
 
       <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
-        <Card className="rounded-2xl dark:bg-[#6B7178] shadow-xl border-none">
+        <Card className="rounded-2xl dark:bg-tribe-card shadow-xl border-none">
           <CardContent className="p-8">
             <div className="text-center mb-10">
               <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">

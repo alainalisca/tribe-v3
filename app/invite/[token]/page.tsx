@@ -135,7 +135,7 @@ export default function InvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <p className="text-theme-primary">{t('loading')}</p>
       </div>
     );
@@ -143,7 +143,7 @@ export default function InvitePage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-theme-primary mb-2">{t('inviteNotFound')}</h1>
           <Link href="/" className="text-tribe-green hover:underline">
@@ -155,7 +155,7 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-20 safe-area-top">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-20 safe-area-top">
       <div className="bg-tribe-green p-6 text-center">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('youreInvited')}</h1>
         {inviter && (
@@ -167,7 +167,7 @@ export default function InvitePage() {
 
       <div className="max-w-md mx-auto p-4">
         {/* Session Details */}
-        <Card className="dark:bg-[#6B7178] mb-4">
+        <Card className="dark:bg-tribe-card mb-4">
           <CardContent className="p-4">
             <h2 className="text-xl font-bold text-theme-primary mb-3">{session.sport}</h2>
 
@@ -206,7 +206,7 @@ export default function InvitePage() {
 
         {/* Join Form */}
         {isGuest ? (
-          <Card className="dark:bg-[#6B7178]">
+          <Card className="dark:bg-tribe-card">
             <CardContent className="p-4">
               <h3 className="text-lg font-bold text-theme-primary mb-3">{t('confirmYourSpot')}</h3>
 
@@ -218,7 +218,7 @@ export default function InvitePage() {
                     value={guestData.name}
                     onChange={(e) => setGuestData({ ...guestData, name: e.target.value })}
                     placeholder={language === 'es' ? 'Juan Pérez' : 'John Smith'}
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 
@@ -229,7 +229,7 @@ export default function InvitePage() {
                     value={guestData.phone}
                     onChange={(e) => setGuestData({ ...guestData, phone: e.target.value })}
                     placeholder="+57 300 123 4567"
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 
@@ -240,7 +240,7 @@ export default function InvitePage() {
                     value={guestData.email}
                     onChange={(e) => setGuestData({ ...guestData, email: e.target.value })}
                     placeholder="email@example.com"
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-[#52575D] text-theme-primary"
+                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 
@@ -255,7 +255,7 @@ export default function InvitePage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="dark:bg-[#6B7178]">
+          <Card className="dark:bg-tribe-card">
             <CardContent className="p-4 text-center">
               <p className="text-theme-primary mb-4">{t('haveAccountJoinFromApp')}</p>
               <Link

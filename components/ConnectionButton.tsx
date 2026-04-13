@@ -219,7 +219,7 @@ export default function ConnectionButton({
     const title = t('joinSessionTitle').replace('{name}', displayName);
 
     return (
-      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-4">
+      <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <Lock className="w-4 h-4 text-stone-500 dark:text-gray-400" aria-hidden="true" />
           <p className="text-sm font-semibold text-stone-800 dark:text-gray-200">{title}</p>
@@ -228,7 +228,7 @@ export default function ConnectionButton({
 
         {upcomingSessions.length > 0 ? (
           <Link href={`/profile/${profileUserId}#sessions`}>
-            <Button className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold">
+            <Button className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold">
               {t('viewSessions')}
             </Button>
           </Link>
@@ -246,7 +246,7 @@ export default function ConnectionButton({
         onClick={handleConnect}
         disabled={actionLoading}
         aria-label={t('connect')}
-        className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold"
+        className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold"
       >
         {actionLoading ? '...' : t('connect')}
       </Button>
@@ -274,7 +274,7 @@ export default function ConnectionButton({
           onClick={handleAccept}
           disabled={actionLoading}
           aria-label={t('accept')}
-          className="w-full bg-[#A3E635] text-stone-900 hover:bg-[#8fd61d] font-semibold"
+          className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold"
         >
           {actionLoading ? '...' : t('accept')}
         </Button>
@@ -297,7 +297,7 @@ export default function ConnectionButton({
       <div className="space-y-2">
         <Button
           disabled
-          className="w-full bg-stone-200 dark:bg-[#52575D] text-stone-700 dark:text-gray-300 font-semibold"
+          className="w-full bg-stone-200 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 font-semibold"
         >
           {t('connected')} ✓
         </Button>

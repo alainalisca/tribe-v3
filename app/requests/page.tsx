@@ -135,15 +135,15 @@ export default function RequestsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <p className="text-stone-900 dark:text-white"></p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">
             <Button variant="ghost" size="icon">
@@ -156,9 +156,9 @@ export default function RequestsPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         {requests.length === 0 ? (
-          <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+          <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
             <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-[#52575D] rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-tribe-mid rounded-full flex items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="w-8 h-8 text-stone-500 dark:text-gray-400"
@@ -184,7 +184,7 @@ export default function RequestsPage() {
         ) : (
           <div className="space-y-4">
             {requests.map((request) => (
-              <Card key={request.id} className="dark:bg-[#6B7178] shadow-sm">
+              <Card key={request.id} className="dark:bg-tribe-card shadow-sm">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -205,7 +205,7 @@ export default function RequestsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+                  <div className="flex items-center gap-3 mb-4 p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg">
                     <Avatar className="w-12 h-12">
                       <AvatarImage
                         loading="lazy"

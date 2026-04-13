@@ -67,9 +67,9 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
 
   if (loading) {
     return (
-      <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-[#3D4349]">
+      <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-tribe-surface">
         {header && (
-          <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+          <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
             {header}
           </div>
         )}
@@ -81,10 +81,10 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
   }
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-[#3D4349]">
+    <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-tribe-surface">
       {/* Chat Header */}
       {header && (
-        <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+        <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
           {header}
         </div>
       )}
@@ -104,7 +104,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
             if (msg.deleted) {
               return (
                 <div key={msg.id} className="flex gap-2">
-                  <div className="flex-1 p-3 bg-stone-100 dark:bg-[#52575D] rounded-lg opacity-50">
+                  <div className="flex-1 p-3 bg-stone-100 dark:bg-tribe-mid rounded-lg opacity-50">
                     <p className="text-xs text-stone-500 italic">Message deleted</p>
                   </div>
                 </div>
@@ -116,7 +116,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
                 <Link href={`/profile/${msg.user.id}`} className="flex-shrink-0">
                   <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80">
                     <AvatarImage src={msg.user?.avatar_url || undefined} alt={msg.user?.name || ''} />
-                    <AvatarFallback className="bg-[#A3E635] text-[#272D34] text-xs font-semibold">
+                    <AvatarFallback className="bg-tribe-green-light text-[#272D34] text-xs font-semibold">
                       {getInitials(msg.user?.name || 'U')}
                     </AvatarFallback>
                   </Avatar>
@@ -132,7 +132,9 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
 
                   <div
                     className={`rounded-2xl px-4 py-2 ${
-                      isOwnMessage ? 'bg-[#A3E635] text-[#272D34]' : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-white'
+                      isOwnMessage
+                        ? 'bg-tribe-green-light text-[#272D34]'
+                        : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-white'
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
@@ -146,7 +148,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
       </div>
 
       {/* Message Input */}
-      <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
+      <div className="p-4 bg-stone-50 dark:bg-tribe-mid border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
             type="text"
@@ -162,7 +164,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
             type="submit"
             disabled={!newMessage.trim() || sending}
             size="icon"
-            className="p-2 bg-[#A3E635] text-[#272D34] rounded-full hover:opacity-90 disabled:opacity-50"
+            className="p-2 bg-tribe-green-light text-[#272D34] rounded-full hover:opacity-90 disabled:opacity-50"
           >
             <Send className="w-5 h-5" />
           </Button>

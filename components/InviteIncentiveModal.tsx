@@ -4,6 +4,7 @@
 import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface InviteIncentiveModalProps {
@@ -46,9 +47,7 @@ export default function InviteIncentiveModal({
   const t = txt[language as keyof typeof txt] || txt.en;
 
   const inviteLink =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/session/${sessionId}?invite=true`
-      : `${sessionId}`;
+    typeof window !== 'undefined' ? `${window.location.origin}/session/${sessionId}?invite=true` : `${sessionId}`;
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(inviteLink);
@@ -70,14 +69,11 @@ export default function InviteIncentiveModal({
       try {
         await navigator.share({
           title: sessionTitle,
-          text:
-            language === 'es'
-              ? `Únete a mi sesión de ${sessionTitle}`
-              : `Join my ${sessionTitle} session`,
+          text: language === 'es' ? `Únete a mi sesión de ${sessionTitle}` : `Join my ${sessionTitle} session`,
           url: inviteLink,
         });
       } catch (err) {
-        console.error('Share failed:', err);
+        logError(err, { action: 'shareInvite' });
       }
     }
   };
@@ -85,9 +81,7 @@ export default function InviteIncentiveModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-[#404549]">
-        <DialogTitle className="text-lg font-bold text-stone-900 dark:text-white">
-          {t.inviteFriend}
-        </DialogTitle>
+        <DialogTitle className="text-lg font-bold text-stone-900 dark:text-white">{t.inviteFriend}</DialogTitle>
 
         <div className="mt-4 space-y-4">
           {/* Incentive Card */}
@@ -97,15 +91,13 @@ export default function InviteIncentiveModal({
 
           {/* Share Link Display */}
           <div>
-            <label className="text-sm font-semibold text-stone-700 dark:text-gray-300 block mb-2">
-              {t.shareLink}
-            </label>
+            <label className="text-sm font-semibold text-stone-700 dark:text-gray-300 block mb-2">{t.shareLink}</label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={inviteLink}
                 readOnly
-                className="flex-1 px-3 py-2 text-sm rounded-lg bg-stone-100 dark:bg-[#52575D] text-stone-900 dark:text-white border border-stone-200 dark:border-[#52575D]"
+                className="flex-1 px-3 py-2 text-sm rounded-lg bg-stone-100 dark:bg-tribe-mid text-stone-900 dark:text-white border border-stone-200 dark:border-[#52575D]"
               />
               <button
                 onClick={handleCopyLink}
@@ -120,7 +112,7 @@ export default function InviteIncentiveModal({
           <div className="space-y-2">
             <button
               onClick={handleCopyLink}
-              className="w-full py-3 rounded-lg bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
             >
               <Copy className="w-4 h-4" />
               {t.copyLink}
@@ -128,7 +120,7 @@ export default function InviteIncentiveModal({
 
             <button
               onClick={handleShareWhatsApp}
-              className="w-full py-3 rounded-lg bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
             >
               <span className="text-lg">💬</span>
               {t.shareWhatsApp}
@@ -137,7 +129,7 @@ export default function InviteIncentiveModal({
             {'share' in navigator && (
               <button
                 onClick={handleShare}
-                className="w-full py-3 rounded-lg bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-lg bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white font-semibold hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
               >
                 <span className="text-lg">↗️</span>
                 {t.share}
@@ -148,7 +140,7 @@ export default function InviteIncentiveModal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="w-full py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+            className="w-full py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
           >
             {language === 'es' ? 'Cerrar' : 'Close'}
           </button>

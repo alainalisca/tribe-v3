@@ -35,7 +35,7 @@ export default function SessionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
@@ -43,7 +43,7 @@ export default function SessionsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 dark:text-white text-lg mb-4">
           {language === 'es' ? 'Algo salió mal' : 'Something went wrong'}
         </p>
@@ -55,10 +55,10 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       <div
         ref={fixedAreaRef}
-        className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black"
+        className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black"
       >
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{txt.mySessions}</h1>
@@ -96,7 +96,7 @@ export default function SessionsPage() {
           {activeTab === 'upcoming' ? (
             <>
               {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
-                <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
                   <CardContent className="p-8 text-center">
                     <Calendar className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noUpcoming}</h2>
@@ -161,7 +161,7 @@ export default function SessionsPage() {
           ) : (
             <>
               {pastSessions.length === 0 ? (
-                <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D]">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
                   <CardContent className="p-8 text-center">
                     <Clock className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noPast}</h2>

@@ -232,7 +232,7 @@ export default function ActionButtons({
       {(hasJoined || isCreator) && !isPast && (
         <Link
           href={`/session/${session.id}/chat`}
-          className="w-full py-3 bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-[#5d6269] transition flex items-center justify-center gap-2"
+          className="w-full py-3 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-[#5d6269] transition flex items-center justify-center gap-2"
         >
           <MessageCircle className="w-5 h-5" />
           {t('groupChat')}

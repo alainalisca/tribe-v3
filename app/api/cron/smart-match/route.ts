@@ -63,11 +63,16 @@ export async function GET(request: Request) {
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-    // 1. Fetch all active preferences joined with user location/sports data
+    // Process in batches to prevent timeout on large user sets
+    const BATCH_SIZE = 50;
+
+    // 1. Fetch batch of active preferences (oldest updated first)
     const { data: prefsRows, error: prefsError } = await supabase
       .from('user_training_preferences')
       .select('user_id, preferred_sports, availability, gender_preference, max_distance_km')
-      .eq('active', true);
+      .eq('active', true)
+      .order('updated_at', { ascending: true })
+      .limit(BATCH_SIZE);
 
     if (prefsError) {
       logError(prefsError, { route: '/api/cron/smart-match', action: 'fetch_prefs' });
@@ -105,65 +110,71 @@ export async function GET(request: Request) {
       }
     }
 
-    // Merge prefs + user data
     const usersMap = new Map(usersData?.map((u) => [u.id, u]) || []);
-    const users: UserWithPrefs[] = [];
+    let matchesCreated = 0;
 
+    // 2. Per-user matching: query DB for candidates with sport overlap, then score locally
     for (const pref of prefsRows) {
-      const u = usersMap.get(pref.user_id);
-      if (!u) continue;
-      users.push({
-        id: u.id,
-        name: u.name,
-        location_lat: u.location_lat,
-        location_lng: u.location_lng,
-        sports: u.sports,
-        gender: u.gender,
+      const user = usersMap.get(pref.user_id);
+      if (!user?.location_lat || !user?.location_lng) continue;
+
+      const userPrefs = {
         preferred_sports: pref.preferred_sports || [],
         availability: (pref.availability as Array<{ day: string; start: string; end: string }>) || [],
         gender_preference: pref.gender_preference || 'any',
         max_distance_km: pref.max_distance_km || 10,
-      });
-    }
+      };
 
-    let matchesCreated = 0;
+      // Query candidates: active prefs, sport overlap, not self
+      const { data: candidatePrefs } = await supabase
+        .from('user_training_preferences')
+        .select('user_id, preferred_sports, availability, gender_preference')
+        .eq('active', true)
+        .neq('user_id', user.id)
+        .overlaps('preferred_sports', userPrefs.preferred_sports)
+        .limit(20);
 
-    // 2. For each user, find compatible matches
-    for (const user of users) {
-      if (!user.location_lat || !user.location_lng) continue;
+      if (!candidatePrefs?.length) continue;
 
-      const candidates: Array<{
+      const candidateIds = candidatePrefs.map((c) => c.user_id);
+      const { data: candidateUsers } = await supabase
+        .from('users')
+        .select('id, name, location_lat, location_lng, sports, gender')
+        .in('id', candidateIds)
+        .eq('banned', false);
+
+      if (!candidateUsers?.length) continue;
+
+      const candidateMap = new Map(candidateUsers.map((c) => [c.id, c]));
+
+      const scored: Array<{
         matched_user_id: string;
         score: number;
         shared_sports: string[];
         distance_km: number;
       }> = [];
 
-      for (const other of users) {
-        if (other.id === user.id) continue;
-        if (!other.location_lat || !other.location_lng) continue;
+      for (const cp of candidatePrefs) {
+        const other = candidateMap.get(cp.user_id);
+        if (!other?.location_lat || !other?.location_lng) continue;
         if (blockedSet.has(`${user.id}:${other.id}`)) continue;
+        if (userPrefs.gender_preference !== 'any' && other.gender !== userPrefs.gender_preference) continue;
 
-        // Gender preference filter
-        if (user.gender_preference !== 'any' && other.gender !== user.gender_preference) continue;
-
-        // Distance check
         const dist = haversineKm(user.location_lat, user.location_lng, other.location_lat, other.location_lng);
-        if (dist > user.max_distance_km) continue;
+        if (dist > userPrefs.max_distance_km) continue;
 
-        // Shared sports between user's preferred sports and other user's sports/preferred_sports
-        const otherSports = new Set([...(other.sports || []), ...other.preferred_sports]);
-        const sharedSports = user.preferred_sports.filter((s) => otherSports.has(s));
+        const otherSports = new Set([...(other.sports || []), ...(cp.preferred_sports || [])]);
+        const sharedSports = userPrefs.preferred_sports.filter((s: string) => otherSports.has(s));
         if (sharedSports.length === 0) continue;
 
-        // Score: shared_sports * 40 + proximity * 40 + availability * 20
-        const sportsScore = Math.min(sharedSports.length / Math.max(user.preferred_sports.length, 1), 1) * 40;
-        const proximityScore = Math.max(0, 1 - dist / user.max_distance_km) * 40;
-        const overlapCount = availabilityOverlap(user.availability, other.availability);
+        const sportsScore = Math.min(sharedSports.length / Math.max(userPrefs.preferred_sports.length, 1), 1) * 40;
+        const proximityScore = Math.max(0, 1 - dist / userPrefs.max_distance_km) * 40;
+        const otherAvail = (cp.availability as Array<{ day: string; start: string; end: string }>) || [];
+        const overlapCount = availabilityOverlap(userPrefs.availability, otherAvail);
         const availScore = Math.min(overlapCount / 3, 1) * 20;
         const totalScore = Math.round((sportsScore + proximityScore + availScore) * 100) / 100;
 
-        candidates.push({
+        scored.push({
           matched_user_id: other.id,
           score: totalScore,
           shared_sports: sharedSports,
@@ -171,9 +182,8 @@ export async function GET(request: Request) {
         });
       }
 
-      // Take top 5
-      candidates.sort((a, b) => b.score - a.score);
-      const topMatches = candidates.slice(0, 5);
+      scored.sort((a, b) => b.score - a.score);
+      const topMatches = scored.slice(0, 5);
 
       for (const match of topMatches) {
         const { data: upserted, error: upsertError } = await supabase
@@ -193,22 +203,16 @@ export async function GET(request: Request) {
           .single();
 
         if (upsertError) {
-          logError(upsertError, {
-            route: '/api/cron/smart-match',
-            action: 'upsert_match',
-            userId: user.id,
-          });
+          logError(upsertError, { route: '/api/cron/smart-match', action: 'upsert_match', userId: user.id });
           continue;
         }
 
         matchesCreated++;
 
-        // Find matched user name for the notification
-        const matchedUser = usersMap.get(match.matched_user_id);
+        const matchedUser = candidateMap.get(match.matched_user_id) || usersMap.get(match.matched_user_id);
         const matchedName = matchedUser?.name || 'Someone';
         const topSport = match.shared_sports[0] || 'fitness';
 
-        // Create notification for the user
         await supabase.from('notifications').insert({
           recipient_id: user.id,
           actor_id: match.matched_user_id,
@@ -222,7 +226,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      processed: users.length,
+      processed: prefsRows.length,
       matches_created: matchesCreated,
     });
   } catch (error: unknown) {

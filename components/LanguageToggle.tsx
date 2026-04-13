@@ -11,7 +11,7 @@ export default function LanguageToggle() {
         onClick={() => setLanguage('en')}
         className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
           language === 'en'
-            ? 'bg-[#9EE551] text-stone-900'
+            ? 'bg-tribe-green text-stone-900'
             : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'
         }`}
       >
@@ -21,7 +21,7 @@ export default function LanguageToggle() {
         onClick={() => setLanguage('es')}
         className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
           language === 'es'
-            ? 'bg-[#9EE551] text-stone-900'
+            ? 'bg-tribe-green text-stone-900'
             : 'text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'
         }`}
       >

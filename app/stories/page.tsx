@@ -32,7 +32,7 @@ export default function StoriesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
@@ -41,8 +41,8 @@ export default function StoriesPage() {
   const StoryViewer = StoryViewerComp;
 
   return (
-    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-[#52575D]">
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+    <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">
             <Button variant="ghost" size="icon">
@@ -57,7 +57,7 @@ export default function StoriesPage() {
         {loading ? (
           <LoadingSpinner />
         ) : allStories.length === 0 ? (
-          <Card className="dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] shadow-none mt-4">
+          <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none mt-4">
             <CardContent className="p-8 text-center">
               <div className="text-4xl mb-4">📸</div>
               <p className="text-lg font-semibold text-theme-primary mb-2">{t.noStories}</p>
@@ -75,7 +75,7 @@ export default function StoriesPage() {
                 <button
                   key={story.id}
                   onClick={() => openStoryViewer(story)}
-                  className="relative aspect-[3/4] rounded-xl overflow-hidden bg-stone-200 dark:bg-[#3D4349]"
+                  className="relative aspect-[3/4] rounded-xl overflow-hidden bg-stone-200 dark:bg-tribe-surface"
                 >
                   {thumbnail ? (
                     <img

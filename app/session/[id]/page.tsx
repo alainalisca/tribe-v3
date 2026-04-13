@@ -71,13 +71,13 @@ export default function SessionDetailPage() {
 
   if (d.loading)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   if (!d.session)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
             <Link href="/" className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -132,7 +132,7 @@ export default function SessionDetailPage() {
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
       )}

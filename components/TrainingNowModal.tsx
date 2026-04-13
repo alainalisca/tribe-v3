@@ -61,7 +61,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                     formData.sport === sport
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {getTranslatedSport(sport)}
@@ -109,7 +109,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
                     formData.startIn === option.value
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {option.label}
@@ -134,7 +134,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
                     formData.duration === option.value
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {option.label}

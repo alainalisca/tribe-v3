@@ -236,7 +236,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               />
             </div>
             <div className="relative w-full">
-              <div className="flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold">
+              <div className="flex items-center gap-3 p-4 bg-stone-100 dark:bg-tribe-surface text-theme-primary rounded-xl font-semibold">
                 <Video className="w-5 h-5" />
                 {t.chooseVideo}
               </div>
@@ -270,7 +270,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               onChange={(e) => setCaption(e.target.value)}
               placeholder={t.caption}
               maxLength={200}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#3D4349] border border-stone-200 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
             />
 
             <Button

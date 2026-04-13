@@ -5,6 +5,7 @@ import { Heart, Share2, Check, Loader } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import StarRating from '@/components/StarRating';
+import { logError } from '@/lib/logger';
 
 interface PostSessionPromptProps {
   sessionId: string;
@@ -46,39 +47,42 @@ export default function PostSessionPrompt({
   const [errorMessage, setErrorMessage] = useState('');
 
   // Translations
-  const translations = language === 'es' ? {
-    howWasSession: `¿Cómo fue tu sesión con ${instructorName}?`,
-    shareExperience: 'Comparte tu experiencia...',
-    follow: `Seguir a ${instructorName}`,
-    following: 'Siguiendo',
-    bookAgain: 'Reservar de nuevo',
-    share: 'Compartir',
-    submit: 'Enviar calificación',
-    dismiss: 'Descartar',
-    thankYou: '¡Gracias por tu calificación!',
-    thankYouSubtitle: 'Tu opinión nos ayuda a mejorar',
-    selectRating: 'Selecciona una calificación para continuar',
-    followSuccess: 'Ahora sigues a ' + instructorName,
-    followError: 'Error al seguir instructor',
-    submitSuccess: 'Calificación enviada',
-    submitError: 'Error al enviar calificación',
-  } : {
-    howWasSession: `How was your session with ${instructorName}?`,
-    shareExperience: 'Share your experience...',
-    follow: `Follow ${instructorName}`,
-    following: 'Following',
-    bookAgain: 'Book again',
-    share: 'Share',
-    submit: 'Submit rating',
-    dismiss: 'Dismiss',
-    thankYou: 'Thanks for rating!',
-    thankYouSubtitle: 'Your feedback helps us improve',
-    selectRating: 'Select a rating to continue',
-    followSuccess: 'You now follow ' + instructorName,
-    followError: 'Error following instructor',
-    submitSuccess: 'Rating submitted',
-    submitError: 'Error submitting rating',
-  };
+  const translations =
+    language === 'es'
+      ? {
+          howWasSession: `¿Cómo fue tu sesión con ${instructorName}?`,
+          shareExperience: 'Comparte tu experiencia...',
+          follow: `Seguir a ${instructorName}`,
+          following: 'Siguiendo',
+          bookAgain: 'Reservar de nuevo',
+          share: 'Compartir',
+          submit: 'Enviar calificación',
+          dismiss: 'Descartar',
+          thankYou: '¡Gracias por tu calificación!',
+          thankYouSubtitle: 'Tu opinión nos ayuda a mejorar',
+          selectRating: 'Selecciona una calificación para continuar',
+          followSuccess: 'Ahora sigues a ' + instructorName,
+          followError: 'Error al seguir instructor',
+          submitSuccess: 'Calificación enviada',
+          submitError: 'Error al enviar calificación',
+        }
+      : {
+          howWasSession: `How was your session with ${instructorName}?`,
+          shareExperience: 'Share your experience...',
+          follow: `Follow ${instructorName}`,
+          following: 'Following',
+          bookAgain: 'Book again',
+          share: 'Share',
+          submit: 'Submit rating',
+          dismiss: 'Dismiss',
+          thankYou: 'Thanks for rating!',
+          thankYouSubtitle: 'Your feedback helps us improve',
+          selectRating: 'Select a rating to continue',
+          followSuccess: 'You now follow ' + instructorName,
+          followError: 'Error following instructor',
+          submitSuccess: 'Rating submitted',
+          submitError: 'Error submitting rating',
+        };
 
   // Check follow status on mount
   useEffect(() => {
@@ -101,7 +105,7 @@ export default function PostSessionPrompt({
         }));
       }
     } catch (err) {
-      console.error('Error checking follow status:', err);
+      logError(err, { action: 'checkFollowStatus' });
     }
   };
 
@@ -115,11 +119,7 @@ export default function PostSessionPrompt({
     setFollowState((prev) => ({ ...prev, isLoading: true }));
     try {
       if (followState.isFollowing) {
-        await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', userId)
-          .eq('following_id', instructorId);
+        await supabase.from('user_follows').delete().eq('follower_id', userId).eq('following_id', instructorId);
 
         setFollowState((prev) => ({
           ...prev,
@@ -139,16 +139,17 @@ export default function PostSessionPrompt({
         }));
       }
     } catch (err) {
-      console.error('Error toggling follow:', err);
+      logError(err, { action: 'toggleFollow' });
       setFollowState((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleShare = async () => {
     const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${sessionId}`;
-    const shareText = language === 'es'
-      ? `Acabo de completar una sesión de ${sport} con ${instructorName}!`
-      : `I just completed a ${sport} session with ${instructorName}!`;
+    const shareText =
+      language === 'es'
+        ? `Acabo de completar una sesión de ${sport} con ${instructorName}!`
+        : `I just completed a ${sport} session with ${instructorName}!`;
 
     if (navigator.share) {
       try {
@@ -160,7 +161,7 @@ export default function PostSessionPrompt({
       } catch (err) {
         // User cancelled share
         if (!(err instanceof Error && err.message === 'Share cancelled')) {
-          console.error('Error sharing:', err);
+          logError(err, { action: 'shareSession' });
         }
       }
     } else {
@@ -170,7 +171,7 @@ export default function PostSessionPrompt({
         // Show toast notification (if available)
         alert(language === 'es' ? 'Enlace copiado al portapapeles' : 'Link copied to clipboard');
       } catch (err) {
-        console.error('Error copying to clipboard:', err);
+        logError(err, { action: 'copyToClipboard' });
       }
     }
   };
@@ -194,7 +195,7 @@ export default function PostSessionPrompt({
       });
 
       if (error) {
-        console.error('Error submitting review:', error);
+        logError(error, { action: 'submitReview' });
         setErrorMessage(translations.submitError);
         setSubmitState('error');
       } else {
@@ -205,7 +206,7 @@ export default function PostSessionPrompt({
         }, 2000);
       }
     } catch (err) {
-      console.error('Error submitting review:', err);
+      logError(err, { action: 'submitReview' });
       setErrorMessage(translations.submitError);
       setSubmitState('error');
     } finally {
@@ -218,14 +219,10 @@ export default function PostSessionPrompt({
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none pb-24">
         <div className="w-full max-w-sm mx-auto px-4 pointer-events-auto">
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
             <div className="text-5xl mb-4 animate-bounce">🎉</div>
-            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-              {translations.thankYou}
-            </h3>
-            <p className="text-sm text-stone-600 dark:text-gray-400">
-              {translations.thankYouSubtitle}
-            </p>
+            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">{translations.thankYou}</h3>
+            <p className="text-sm text-stone-600 dark:text-gray-400">{translations.thankYouSubtitle}</p>
           </div>
         </div>
       </div>
@@ -236,7 +233,7 @@ export default function PostSessionPrompt({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 pointer-events-none pb-24">
       <div className="w-full max-w-sm mx-auto px-4 pointer-events-auto">
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
           {/* Instructor Avatar */}
           <div className="flex justify-center mb-5">
             {instructorAvatar ? (
@@ -247,9 +244,7 @@ export default function PostSessionPrompt({
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-tribe-green/30 to-tribe-green/10 flex items-center justify-center border-3 border-tribe-green/50">
-                <span className="text-2xl font-bold text-tribe-green">
-                  {instructorName.charAt(0).toUpperCase()}
-                </span>
+                <span className="text-2xl font-bold text-tribe-green">{instructorName.charAt(0).toUpperCase()}</span>
               </div>
             )}
           </div>
@@ -261,11 +256,7 @@ export default function PostSessionPrompt({
 
           {/* Star Rating */}
           <div className="flex justify-center mb-6">
-            <StarRating
-              rating={rating}
-              onRatingChange={handleRatingSelect}
-              size="lg"
-            />
+            <StarRating rating={rating} onRatingChange={handleRatingSelect} size="lg" />
           </div>
 
           {/* Error message */}
@@ -289,16 +280,10 @@ export default function PostSessionPrompt({
                       ? 'border border-tribe-red'
                       : 'border border-gray-200 dark:border-gray-600 focus:border-tribe-green'
                   }
-                  ${
-                    submitState === 'error'
-                      ? 'bg-tribe-red/5'
-                      : 'bg-gray-50 dark:bg-[#1e2328]'
-                  }
+                  ${submitState === 'error' ? 'bg-tribe-red/5' : 'bg-gray-50 dark:bg-[#1e2328]'}
                   text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500`}
               />
-              <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">
-                {reviewText.length}/500
-              </p>
+              <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">{reviewText.length}/500</p>
             </div>
           )}
 

@@ -77,7 +77,7 @@ describe('BottomNav', () => {
 
     const createLink = screen.getByTestId('link-/create');
     // The create button has the elevated -mt-8 style
-    expect(createLink.innerHTML).toContain('bg-[#9EE551]');
+    expect(createLink.innerHTML).toContain('bg-tribe-green');
   });
 
   it('renders nav element with fixed positioning', () => {

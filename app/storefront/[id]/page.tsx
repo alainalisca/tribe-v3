@@ -383,7 +383,7 @@ export default function StorefrontPage() {
 
   if (!instructor) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
             <button
@@ -444,7 +444,7 @@ export default function StorefrontPage() {
 
         {/* Instructor Info Card */}
         <div className="absolute -bottom-20 left-4 right-4 mx-auto max-w-2xl">
-          <div className="flex gap-4 items-start bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="flex gap-4 items-start bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <img
@@ -499,7 +499,7 @@ export default function StorefrontPage() {
                 className={`w-full px-3 py-1.5 rounded-lg font-semibold transition-all text-xs ${
                   followState.isFollowing
                     ? 'bg-tribe-green/20 text-tribe-green border border-tribe-green'
-                    : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
+                    : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
                 }`}
               >
                 {followState.isFollowing ? translations.following : translations.follow}
@@ -511,7 +511,7 @@ export default function StorefrontPage() {
 
       {/* Stats Row */}
       <div className="pt-header max-w-2xl mx-auto px-4 mt-24 grid grid-cols-4 gap-2">
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
           <div className="flex items-center justify-center gap-0.5 mb-0.5">
             <Star className="w-4 h-4 text-tribe-green" />
             <span className="text-lg font-bold text-theme-primary">4.8</span>
@@ -519,17 +519,17 @@ export default function StorefrontPage() {
           <p className="text-xs text-theme-secondary">{translations.rating}</p>
         </div>
 
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
           <p className="text-lg font-bold text-tribe-green">{sessions.length}</p>
           <p className="text-xs text-theme-secondary">{translations.totalSessions}</p>
         </div>
 
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
           <p className="text-lg font-bold text-tribe-green">{followState.followerCount}</p>
           <p className="text-xs text-theme-secondary">{translations.followers}</p>
         </div>
 
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
           <p className="text-lg font-bold text-tribe-green">92%</p>
           <p className="text-xs text-theme-secondary">{translations.returnRate}</p>
         </div>
@@ -542,7 +542,7 @@ export default function StorefrontPage() {
 
         {/* Bio Section */}
         {instructor.bio && (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <p className="text-theme-secondary text-sm leading-relaxed">{instructor.bio}</p>
           </div>
         )}
@@ -566,7 +566,7 @@ export default function StorefrontPage() {
               className={`px-4 py-2 font-semibold transition-colors whitespace-nowrap rounded-xl text-sm ${
                 activeTab === tab.id
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300'
               }`}
             >
               {tab.label}
@@ -630,7 +630,7 @@ export default function StorefrontPage() {
                 {media.map((item) => (
                   <div
                     key={item.id}
-                    className="relative aspect-square rounded-2xl overflow-hidden bg-stone-200 dark:bg-[#3D4349] group cursor-pointer border border-stone-200 dark:border-gray-700"
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-stone-200 dark:bg-tribe-surface group cursor-pointer border border-stone-200 dark:border-gray-700"
                   >
                     <img
                       src={item.url}
@@ -663,14 +663,14 @@ export default function StorefrontPage() {
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-white dark:bg-[#272D34] rounded-2xl border border-stone-200 dark:border-gray-700 p-4"
+                    className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 p-4"
                   >
                     {/* Post Content */}
                     <p className="text-theme-primary mb-3 text-sm leading-relaxed">{post.content}</p>
 
                     {/* Post Media */}
                     {post.media_url && (
-                      <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-stone-200 dark:bg-[#3D4349] group border border-stone-200 dark:border-gray-700">
+                      <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-stone-200 dark:bg-tribe-surface group border border-stone-200 dark:border-gray-700">
                         <img
                           src={post.media_url}
                           alt="Post media"

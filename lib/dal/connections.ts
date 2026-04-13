@@ -51,7 +51,55 @@ export async function sendConnectionRequest(
   recipientId: string
 ): Promise<DalResult<string>> {
   try {
-    // First check if they've shared a session via RPC
+    // 1. Check if either user has blocked the other
+    // TODO: Create blocked_users table if it doesn't exist:
+    //   CREATE TABLE IF NOT EXISTS blocked_users (
+    //     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    //     user_id uuid NOT NULL REFERENCES users(id),
+    //     blocked_user_id uuid NOT NULL REFERENCES users(id),
+    //     created_at timestamptz DEFAULT now(),
+    //     UNIQUE(user_id, blocked_user_id)
+    //   );
+    const { data: blockExists } = await supabase
+      .from('blocked_users')
+      .select('id')
+      .or(
+        `and(user_id.eq.${requesterId},blocked_user_id.eq.${recipientId}),and(user_id.eq.${recipientId},blocked_user_id.eq.${requesterId})`
+      )
+      .maybeSingle();
+
+    if (blockExists) {
+      return { success: false, error: 'Cannot connect with this user' };
+    }
+
+    // 2. Check for existing connection in either direction
+    const { data: existingConnection } = await supabase
+      .from('connections')
+      .select('id, status, requester_id')
+      .or(
+        `and(requester_id.eq.${requesterId},recipient_id.eq.${recipientId}),and(requester_id.eq.${recipientId},recipient_id.eq.${requesterId})`
+      )
+      .maybeSingle();
+
+    if (existingConnection) {
+      if (existingConnection.status === 'accepted') {
+        return { success: false, error: 'Already connected' };
+      }
+      if (existingConnection.status === 'pending') {
+        // If the other person already sent a request, auto-accept it
+        if (existingConnection.requester_id === recipientId) {
+          const { error: acceptErr } = await supabase
+            .from('connections')
+            .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+            .eq('id', existingConnection.id);
+          if (acceptErr) return { success: false, error: acceptErr.message };
+          return { success: true, data: existingConnection.id };
+        }
+        return { success: false, error: 'Request already sent' };
+      }
+    }
+
+    // 3. Verify they've shared a session via RPC
     const { data: hasShared, error: rpcError } = await supabase.rpc('have_shared_session', {
       user_a: requesterId,
       user_b: recipientId,
@@ -72,7 +120,7 @@ export async function sendConnectionRequest(
       return { success: false, error: 'Failed to find shared session' };
     }
 
-    // Create connection
+    // 4. Create connection
     const { data, error } = await supabase
       .from('connections')
       .insert({
@@ -84,7 +132,6 @@ export async function sendConnectionRequest(
       .single();
 
     if (error) {
-      // Check if it's a duplicate request
       if (error.code === '23505') {
         return { success: false, error: 'Connection request already exists' };
       }

@@ -55,7 +55,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent
         data-modal="true"
-        className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-8 dark:bg-[#272D34] [&>button:last-child]:hidden"
+        className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-8 dark:bg-tribe-dark [&>button:last-child]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="text-2xl font-bold text-stone-900 dark:text-white">{tr.title}</DialogTitle>
@@ -148,7 +148,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
             data-modal-close="true"
             variant="outline"
             onClick={onCancel}
-            className="px-6 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-[#52575D]"
+            className="px-6 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
           >
             {tr.cancel}
           </Button>

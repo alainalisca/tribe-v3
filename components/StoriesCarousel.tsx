@@ -83,7 +83,7 @@ export default function StoriesCarousel({ language, userId }: StoriesCarouselPro
   // Empty state
   if (groups.length === 0) {
     return (
-      <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+      <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">
           {lang === 'es' ? '📹 Historias de la Comunidad' : '📹 Community Stories'}
         </h2>
@@ -93,7 +93,7 @@ export default function StoriesCarousel({ language, userId }: StoriesCarouselPro
           </p>
           <Link
             href="/create"
-            className="inline-block px-4 py-2 bg-[#A3E635] text-[#272D34] font-semibold text-sm rounded-lg hover:bg-[#94D91E] transition-colors"
+            className="inline-block px-4 py-2 bg-tribe-green-light text-[#272D34] font-semibold text-sm rounded-lg hover:bg-[#94D91E] transition-colors"
           >
             {lang === 'es' ? 'Crear Sesion' : 'Create Session'}
           </Link>
@@ -108,7 +108,7 @@ export default function StoriesCarousel({ language, userId }: StoriesCarouselPro
   }
 
   return (
-    <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+    <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white">
         {lang === 'es' ? '📹 Historias de la Comunidad' : '📹 Community Stories'}
       </h2>
@@ -164,7 +164,7 @@ function StoryCard({
       {firstStory.thumbnail_url || firstStory.media_type === 'image' ? (
         <img
           src={firstStory.thumbnail_url || firstStory.media_url}
-          alt=""
+          alt={`${firstStory.user_name}'s story`}
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
@@ -175,7 +175,9 @@ function StoryCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
       {/* Unseen ring */}
-      {unseen && <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-[#A3E635] border-2 border-white" />}
+      {unseen && (
+        <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-tribe-green-light border-2 border-white" />
+      )}
 
       {/* Sport tag */}
       <span className="absolute top-1.5 right-1.5 text-xs bg-black/40 text-white px-1.5 py-0.5 rounded-full">

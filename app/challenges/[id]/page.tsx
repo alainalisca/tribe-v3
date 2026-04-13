@@ -237,7 +237,7 @@ export default function ChallengePage() {
         </div>
 
         {/* Title and Info */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
           <div>
             <h1 className="text-2xl font-bold text-theme-primary mb-2">{challenge.title}</h1>
             {challenge.description && <p className="text-theme-secondary">{challenge.description}</p>}
@@ -282,7 +282,7 @@ export default function ChallengePage() {
             className={`w-full px-6 py-3 rounded-lg font-semibold transition ${
               isUserInChallenge
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200'
-                : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
+                : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
             } disabled:opacity-50`}
           >
             {actionLoading ? strings.loading : isUserInChallenge ? strings.leave : strings.join}
@@ -291,7 +291,7 @@ export default function ChallengePage() {
 
         {/* Your Progress (if joined) */}
         {isUserInChallenge && userProgress && (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
             <h2 className="text-lg font-bold text-theme-primary">{strings.yourProgress}</h2>
 
             <div className="space-y-3">
@@ -302,7 +302,7 @@ export default function ChallengePage() {
                 <span className="text-tribe-green font-bold">{Math.round(progressPercent)}%</span>
               </div>
 
-              <div className="w-full bg-stone-200 dark:bg-[#3D4349] rounded-full h-4 overflow-hidden">
+              <div className="w-full bg-stone-200 dark:bg-tribe-surface rounded-full h-4 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-tribe-green to-[#8FD642] transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
@@ -320,7 +320,7 @@ export default function ChallengePage() {
         )}
 
         {/* Leaderboard */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
           <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
             <Trophy className="h-5 w-5 text-tribe-green" />
             {strings.leaderboard}
@@ -335,7 +335,7 @@ export default function ChallengePage() {
               {leaderboard.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-[#3D4349] hover:bg-stone-100 dark:hover:bg-[#4A515A] transition"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-tribe-surface hover:bg-stone-100 dark:hover:bg-[#4A515A] transition"
                 >
                   {/* Rank Badge */}
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tribe-green text-slate-900 flex items-center justify-center font-bold text-sm">

@@ -49,7 +49,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
             className={`px-4 py-3 rounded-lg transition flex items-center gap-2 ${
               showMap
                 ? 'bg-tribe-green text-slate-900'
-                : 'bg-stone-200 dark:bg-[#52575D] text-theme-primary hover:bg-stone-300 dark:hover:bg-[#6B7178]'
+                : 'bg-stone-200 dark:bg-tribe-mid text-theme-primary hover:bg-stone-300 dark:hover:bg-tribe-card'
             }`}
             title={language === 'es' ? 'Seleccionar en mapa' : 'Select on map'}
           >
@@ -62,7 +62,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
 
       {/* Inline map */}
       {showMap && (
-        <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600 bg-stone-100 dark:bg-[#52575D]">
+        <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600 bg-stone-100 dark:bg-tribe-mid">
           {/* Map header */}
           <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-[#404549] border-b border-stone-200 dark:border-gray-600">
             <span className="text-xs text-stone-500 dark:text-gray-400">
@@ -147,7 +147,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
               setPosition(null);
               onChange('');
             }}
-            className="p-1 hover:bg-stone-200 dark:hover:bg-[#52575D] rounded"
+            className="p-1 hover:bg-stone-200 dark:hover:bg-tribe-mid rounded"
           >
             <X className="w-4 h-4 text-stone-400" />
           </button>

@@ -122,7 +122,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#272D34] border-t border-gray-200 dark:border-[#52575D] shadow-lg z-50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-dark border-t border-gray-200 dark:border-[#52575D] shadow-lg z-50 safe-area-bottom">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center h-16 px-4">
           {navItems.map((item) => {
@@ -133,12 +133,13 @@ export default function BottomNav() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-label={item.label}
                   className="flex flex-col items-center justify-center flex-1 -mt-8"
                 >
-                  <div className="bg-[#9EE551] rounded-full p-4 shadow-lg hover:bg-[#8FD642] transition-colors">
+                  <div className="bg-tribe-green rounded-full p-4 shadow-lg hover:bg-tribe-green transition-colors">
                     {item.icon}
                   </div>
-                  <span className="text-xs mt-1 font-medium text-[#9EE551]">{item.label}</span>
+                  <span className="text-xs mt-1 font-medium text-tribe-green">{item.label}</span>
                 </Link>
               );
             }
@@ -147,9 +148,10 @@ export default function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={item.label}
                 className={`flex flex-col items-center justify-center min-w-0 flex-1 transition-colors relative ${
                   isActive
-                    ? 'text-[#9EE551]'
+                    ? 'text-tribe-green'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
@@ -162,7 +164,7 @@ export default function BottomNav() {
                   )}
                 </div>
                 <span
-                  className={`text-xs mt-1 whitespace-nowrap truncate max-w-full text-center ${isActive ? 'font-semibold' : 'font-medium'}`}
+                  className={`text-[10px] mt-0.5 text-center leading-tight ${isActive ? 'font-semibold' : 'font-medium'}`}
                 >
                   {item.label}
                 </span>

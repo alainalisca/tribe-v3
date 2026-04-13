@@ -218,7 +218,7 @@ export default function EditSessionPage() {
               type="button"
               onClick={() => router.back()}
               variant="outline"
-              className="px-6 py-3 border-theme text-theme-primary hover:bg-stone-100 dark:hover:bg-[#52575D]"
+              className="px-6 py-3 border-theme text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid"
             >
               {txt.cancel}
             </Button>

@@ -6,6 +6,7 @@ import ExternalEventCard from './ExternalEventCard';
 import { ExternalEvent } from '@/lib/dal/externalEvents';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { logError } from '@/lib/logger';
 
 interface NearbyEventsProps {
   language: string;
@@ -194,7 +195,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
           );
         }
       } catch (err) {
-        console.error('Error fetching nearby events:', err);
+        logError(err, { action: 'fetchNearbyEvents' });
         setError(lang === 'es' ? 'Error al cargar eventos' : 'Error loading events');
       } finally {
         setLoading(false);
@@ -211,18 +212,18 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
   // --- Loading skeleton ---
   if (loading) {
     return (
-      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4">
+      <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {['all', ...SPORTS].map((sport) => (
-            <div key={sport} className="flex-shrink-0 h-10 bg-[#52575D] rounded-full w-24 animate-pulse" />
+            <div key={sport} className="flex-shrink-0 h-10 bg-tribe-mid rounded-full w-24 animate-pulse" />
           ))}
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex-shrink-0 w-72 h-80 bg-[#52575D] rounded-xl animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-72 h-80 bg-tribe-mid rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -232,7 +233,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
   // --- Empty state with CTA ---
   if (error && feedItems.length === 0) {
     return (
-      <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 border border-[#52575D]">
+      <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 border border-[#52575D]">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
@@ -241,7 +242,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
             {lang === 'es' ? 'No hay sesiones cercanas en este momento' : 'No upcoming sessions nearby'}
           </p>
           <Link href="/create">
-            <Button className="bg-[#A3E635] hover:bg-[#84cc16] text-slate-900 font-bold">
+            <Button className="bg-tribe-green-light hover:bg-[#84cc16] text-slate-900 font-bold">
               {lang === 'es' ? 'Crear la primera sesion' : 'Create the first session'}
             </Button>
           </Link>
@@ -255,7 +256,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
   }
 
   return (
-    <div className="bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4">
+    <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4">
       {/* Header */}
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
         🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
@@ -270,7 +271,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
           className={`flex-shrink-0 ${
             selectedSport === undefined
               ? 'bg-[#22C55E] hover:bg-[#16A34A] text-white'
-              : 'border-[#52575D] text-white hover:bg-[#52575D]'
+              : 'border-[#52575D] text-white hover:bg-tribe-mid'
           }`}
         >
           {SPORT_ICONS['all']} {SPORT_LABELS[lang]['all']}
@@ -285,7 +286,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
             className={`flex-shrink-0 ${
               selectedSport === sport
                 ? 'bg-[#22C55E] hover:bg-[#16A34A] text-white'
-                : 'border-[#52575D] text-white hover:bg-[#52575D]'
+                : 'border-[#52575D] text-white hover:bg-tribe-mid'
             }`}
           >
             {SPORT_ICONS[sport as keyof typeof SPORT_ICONS]}{' '}
@@ -350,7 +351,7 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
 
   return (
     <Link href={`/session/${session.id}`} className="flex-shrink-0 w-72 block">
-      <div className="bg-[#3D4349] border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
+      <div className="bg-tribe-surface border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
         {/* Sport hero area */}
         <div className="w-full h-40 bg-gradient-to-br from-[#A3E635]/20 to-[#3D4349] flex items-center justify-center">
           <span className="text-5xl">{sportIcon}</span>
@@ -360,8 +361,8 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
         <div className="p-4 space-y-3">
           {/* Badges */}
           <div className="flex items-center gap-2">
-            <span className="text-xs bg-[#A3E635] text-slate-900 font-bold px-3 py-1 rounded-full">Tribe</span>
-            <span className="text-xs bg-[#52575D] text-white px-3 py-1 rounded-full">
+            <span className="text-xs bg-tribe-green-light text-slate-900 font-bold px-3 py-1 rounded-full">Tribe</span>
+            <span className="text-xs bg-tribe-mid text-white px-3 py-1 rounded-full">
               {sportIcon} {sportLabel}
             </span>
           </div>
@@ -386,7 +387,7 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
           <div className="text-xs text-gray-400">
             👥 {confirmed}/{session.max_participants} {lang === 'es' ? 'atletas' : 'athletes'}
             {spotsLeft > 0 && (
-              <span className="ml-1 text-[#A3E635]">
+              <span className="ml-1 text-tribe-green">
                 ({spotsLeft} {lang === 'es' ? 'cupos' : 'spots left'})
               </span>
             )}

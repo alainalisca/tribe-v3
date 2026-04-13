@@ -15,7 +15,7 @@ export default function SessionStories({ stories, language: _language, onViewSto
   if (stories.length === 0) return null;
 
   return (
-    <Card className="dark:bg-[#6B7178] shadow-lg">
+    <Card className="dark:bg-tribe-card shadow-lg">
       <CardContent className="p-4">
         <h2 className="text-sm font-bold text-stone-900 dark:text-white mb-3">
           {t('stories')} ({stories.length})

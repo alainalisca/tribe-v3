@@ -153,13 +153,89 @@ export async function fetchConfirmedCount(supabase: SupabaseClient, sessionId: s
 // --- Write operations ---
 
 /**
- * Cancels (soft-deletes) a session by setting status to 'cancelled'.
+ * Cancels a session: marks payments for refund, cancels participants, notifies everyone.
  */
-export async function cancelSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<null>> {
+export async function cancelSession(
+  supabase: SupabaseClient,
+  sessionId: string,
+  reason?: string
+): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', sessionId);
+    // 1. Fetch session details
+    const { data: session, error: sessionErr } = await supabase
+      .from('sessions')
+      .select('id, title, creator_id, is_paid, price_cents, currency')
+      .eq('id', sessionId)
+      .single();
 
-    if (error) return { success: false, error: error.message };
+    if (sessionErr || !session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    // 2. Fetch all confirmed participants
+    const { data: participants } = await supabase
+      .from('session_participants')
+      .select('user_id')
+      .eq('session_id', sessionId)
+      .eq('status', 'confirmed');
+
+    // 3. If paid session, mark approved payments for refund
+    if (session.is_paid) {
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('id, user_id, amount_cents, currency, payment_gateway, stripe_payment_intent_id, wompi_transaction_id')
+        .eq('session_id', sessionId)
+        .eq('status', 'approved');
+
+      for (const payment of payments || []) {
+        await supabase
+          .from('payments')
+          .update({
+            status: 'refunded',
+            payout_status: 'cancelled',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payment.id);
+        // TODO: Call Stripe refund API (stripe.refunds.create) or Wompi refund endpoint
+      }
+    }
+
+    // 4. Update all participants to cancelled
+    await supabase.from('session_participants').update({ status: 'cancelled' }).eq('session_id', sessionId);
+
+    // 5. Update session status
+    const { error: updateErr } = await supabase
+      .from('sessions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    // 6. Notify all participants
+    for (const p of participants || []) {
+      try {
+        const refundNote = session.is_paid ? ' Your payment will be refunded.' : '';
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            user_id: p.user_id,
+            title: 'Session Cancelled',
+            body: `"${session.title}" was cancelled.${refundNote}`,
+            type: 'session_cancelled',
+            data: { session_id: sessionId },
+          }),
+        });
+      } catch (e) {
+        logError(e, { action: 'cancelSession_notify', userId: p.user_id, sessionId });
+      }
+    }
+
     return { success: true };
   } catch (error) {
     logError(error, { action: 'cancelSession', sessionId });
@@ -244,9 +320,22 @@ export async function fetchSessionCreatorIds(supabase: SupabaseClient): Promise<
   }
 }
 
-/** Insert a new session, returning the created row. */
+/** Insert a new session, returning the created row. Validates instructor status for paid sessions. */
 export async function insertSession(supabase: SupabaseClient, data: SessionInsert): Promise<DalResult<Session>> {
   try {
+    // Server-side validation: only instructors can create paid sessions
+    if ((data as Record<string, unknown>).is_paid) {
+      const { data: creator } = await supabase
+        .from('users')
+        .select('is_instructor')
+        .eq('id', (data as Record<string, unknown>).creator_id)
+        .single();
+
+      if (!creator?.is_instructor) {
+        return { success: false, error: 'Only instructors can create paid sessions' };
+      }
+    }
+
     const { data: session, error } = await supabase.from('sessions').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: session };

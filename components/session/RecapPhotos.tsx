@@ -45,7 +45,7 @@ export default function RecapPhotos({
 
       {/* Session Recap Section */}
       {isPast && (
-        <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+        <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-tribe-green" />

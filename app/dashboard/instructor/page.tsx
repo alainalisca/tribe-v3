@@ -105,7 +105,7 @@ export default function InstructorDashboardPage() {
         <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Link href="/profile">
-              <button className="p-1.5 hover:bg-stone-200 dark:hover:bg-[#3D4349] rounded-lg transition">
+              <button className="p-1.5 hover:bg-stone-200 dark:hover:bg-tribe-surface rounded-lg transition">
                 <ArrowLeft className="w-5 h-5 text-theme-primary" />
               </button>
             </Link>
@@ -116,7 +116,7 @@ export default function InstructorDashboardPage() {
 
       <div className="pt-header max-w-2xl mx-auto px-4">
         {/* Tab Bar */}
-        <div className="mt-4 flex gap-1 bg-white dark:bg-[#3D4349] rounded-xl p-1 border border-stone-200 dark:border-[#52575D]">
+        <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-[#52575D]">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (

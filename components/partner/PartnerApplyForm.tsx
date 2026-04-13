@@ -52,7 +52,7 @@ export interface PartnerApplyFormProps {
 export default function PartnerApplyForm(p: PartnerApplyFormProps) {
   const t = (en: string, es: string) => (p.language === 'es' ? es : en);
   const inputCls =
-    'w-full px-4 py-3 bg-white dark:bg-[#3D4349] border border-stone-200 dark:border-[#52575D] rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
+    'w-full px-4 py-3 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
 
   return (
     <form onSubmit={p.onSubmit} className="space-y-4 pb-8">
@@ -118,7 +118,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                 p.selectedSpecialties.includes(s)
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-[#E0E0E0]'
+                  : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-[#E0E0E0]'
               }`}
             >
               {s}

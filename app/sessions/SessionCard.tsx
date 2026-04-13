@@ -40,7 +40,7 @@ export default function SessionCard({
   return (
     <Link href={`/session/${session.id}`}>
       <Card
-        className={`dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
+        className={`dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
       >
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
@@ -49,7 +49,7 @@ export default function SessionCard({
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold ${
                     isPast
-                      ? 'bg-stone-200 dark:bg-[#52575D] text-stone-600 dark:text-gray-400'
+                      ? 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-400'
                       : 'bg-tribe-green text-slate-900'
                   }`}
                 >

@@ -76,7 +76,7 @@ export default function FeaturedPartnerBanner() {
         {/* Content */}
         <div className="flex gap-3 items-center">
           {/* Logo/Avatar */}
-          <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-[#52575D] border-2 border-tribe-green flex items-center justify-center overflow-hidden">
+          <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-tribe-mid border-2 border-tribe-green flex items-center justify-center overflow-hidden">
             {partner.logo_url ? (
               <img src={partner.logo_url} alt={partner.business_name} className="w-full h-full object-cover" />
             ) : (
@@ -138,7 +138,7 @@ export default function FeaturedPartnerBanner() {
                   setCurrentIndex(i);
                 }}
                 className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  i === currentIndex ? 'bg-tribe-green w-4' : 'bg-[#52575D]'
+                  i === currentIndex ? 'bg-tribe-green w-4' : 'bg-tribe-mid'
                 }`}
               />
             ))}
@@ -165,7 +165,7 @@ function BecomePartnerCTA({ language }: { language: string }) {
   return (
     <div
       onClick={() => router.push('/partners')}
-      className="relative cursor-pointer rounded-2xl border border-dashed border-tribe-green/40 overflow-hidden mb-4 bg-[#272D34] hover:border-tribe-green/60 transition"
+      className="relative cursor-pointer rounded-2xl border border-dashed border-tribe-green/40 overflow-hidden mb-4 bg-tribe-dark hover:border-tribe-green/60 transition"
     >
       <div className="p-4 text-center">
         <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-2">

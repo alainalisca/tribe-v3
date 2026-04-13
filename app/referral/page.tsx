@@ -39,8 +39,7 @@ export default function ReferralPage() {
       friendsInvited: 'Friends Invited',
       rewardsEarned: 'Rewards Earned',
       howItWorks: 'How It Works',
-      howItWorksDesc:
-        'For every friend who joins and completes their first session, you both earn a reward',
+      howItWorksDesc: 'For every friend who joins and completes their first session, you both earn a reward',
       rewardTiers: 'Reward Tiers',
       freePromo: 'Free promo code (10% off next session)',
       featuredProfile: 'Featured profile for 1 week',
@@ -60,8 +59,7 @@ export default function ReferralPage() {
       friendsInvited: 'Amigos Invitados',
       rewardsEarned: 'Recompensas Ganadas',
       howItWorks: 'Cómo Funciona',
-      howItWorksDesc:
-        'Por cada amigo que se una y complete su primera sesión, ambos ganan una recompensa',
+      howItWorksDesc: 'Por cada amigo que se una y complete su primera sesión, ambos ganan una recompensa',
       rewardTiers: 'Niveles de Recompensa',
       freePromo: 'Código de promoción gratis (10% de descuento en la próxima sesión)',
       featuredProfile: 'Perfil destacado por 1 semana',
@@ -144,16 +142,16 @@ export default function ReferralPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D]">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] pb-32">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#272D34] border-b border-stone-200 dark:border-gray-700">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-stone-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="mr-3">
@@ -166,10 +164,10 @@ export default function ReferralPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
         {/* Referral Code Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.referralCode}</h2>
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 bg-stone-100 dark:bg-[#3D4349] rounded-xl p-4 text-center">
+            <div className="flex-1 bg-stone-100 dark:bg-tribe-surface rounded-xl p-4 text-center">
               <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
             </div>
             <button
@@ -182,19 +180,19 @@ export default function ReferralPage() {
         </div>
 
         {/* Share Buttons Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.shareVia}</h2>
           <div className="space-y-3">
             <button
               onClick={handleCopyLink}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2"
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
             >
               <Copy className="w-5 h-5 text-tribe-green" />
               {t.copyLink}
             </button>
             <button
               onClick={handleShareWhatsApp}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2"
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
             >
               <span className="text-xl">💬</span>
               {t.shareWhatsApp}
@@ -202,7 +200,7 @@ export default function ReferralPage() {
             {'share' in navigator && (
               <button
                 onClick={handleShare}
-                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-[#3D4349] text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-[#52575D] transition flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
               >
                 <span className="text-xl">↗️</span>
                 {t.share}
@@ -213,11 +211,11 @@ export default function ReferralPage() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
             <p className="text-3xl font-bold text-tribe-green mb-2">{friendsInvited}</p>
             <p className="text-sm text-stone-600 dark:text-gray-400">{t.friendsInvited}</p>
           </div>
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
             <p className="text-3xl font-bold text-tribe-green mb-2">{rewardsEarned}</p>
             <p className="text-sm text-stone-600 dark:text-gray-400">{t.rewardsEarned}</p>
           </div>
@@ -230,7 +228,7 @@ export default function ReferralPage() {
         </div>
 
         {/* Reward Tiers Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.rewardTiers}</h3>
           <div className="space-y-3">
             {/* Tier 1 */}

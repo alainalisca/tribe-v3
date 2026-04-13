@@ -308,7 +308,7 @@ export default function FeedPage() {
           {isInstructor && (
             <button
               onClick={() => router.push('/promote/posts')}
-              className="bg-tribe-green text-slate-900 font-semibold rounded-lg px-4 py-2 hover:bg-[#8FD642] transition"
+              className="bg-tribe-green text-slate-900 font-semibold rounded-lg px-4 py-2 hover:bg-tribe-green transition"
             >
               {strings.compose}
             </button>
@@ -319,19 +319,19 @@ export default function FeedPage() {
       {/* Feed Content */}
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
         {loading && offset === 0 ? (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex items-center justify-center py-12">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-4">
               <Loader className="h-8 w-8 animate-spin text-tribe-green" />
               <p className="text-theme-secondary">{strings.loading}</p>
             </div>
           </div>
         ) : posts.length === 0 ? (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex flex-col items-center justify-center gap-4 py-12">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex flex-col items-center justify-center gap-4 py-12">
             <MessageSquare className="h-12 w-12 text-theme-secondary" />
             <p className="text-center text-theme-secondary">{strings.followInstructors}</p>
             <button
               onClick={() => router.push('/instructors')}
-              className="mt-2 bg-tribe-green text-slate-900 font-semibold rounded-xl px-6 py-2 hover:bg-[#8FD642] transition"
+              className="mt-2 bg-tribe-green text-slate-900 font-semibold rounded-xl px-6 py-2 hover:bg-tribe-green transition"
             >
               {language === 'es' ? 'Seguir instructores' : 'Follow Instructors'}
             </button>
@@ -354,7 +354,7 @@ export default function FeedPage() {
                   language={language}
                 />
                 {expandedCommentPost === post.id && currentUserId && (
-                  <div className="bg-white dark:bg-[#272D34] rounded-b-2xl p-5 border border-t-0 border-stone-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-tribe-dark rounded-b-2xl p-5 border border-t-0 border-stone-200 dark:border-gray-700">
                     <PostCommentSection
                       postId={post.id}
                       currentUserId={currentUserId}
@@ -372,7 +372,7 @@ export default function FeedPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={loading}
-                className="w-full bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition hover:bg-stone-200 dark:hover:bg-[#4A515A] disabled:opacity-50"
+                className="w-full bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition hover:bg-stone-200 dark:hover:bg-[#4A515A] disabled:opacity-50"
               >
                 {loading ? strings.loading : strings.loadMore}
               </button>
@@ -461,7 +461,7 @@ function PostCard({
   const strings = t[language as keyof typeof t] || t.en;
 
   return (
-    <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
       {/* Author Info */}
       <div className="mb-4 flex items-center gap-3">
         {post.author.avatar_url && (
@@ -499,13 +499,13 @@ function PostCard({
 
       {/* Media */}
       {post.media_url && post.media_type === 'image' && (
-        <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-[#3D4349]">
+        <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-tribe-surface">
           <Image src={post.media_url!} alt="Post media" width={500} height={400} className="max-h-96 w-auto" />
         </div>
       )}
 
       {post.media_url && post.media_type === 'video' && (
-        <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-[#3D4349]">
+        <div className="mb-4 flex items-center justify-center rounded-2xl overflow-hidden bg-stone-100 dark:bg-tribe-surface">
           <div className="relative w-full">
             <video src={post.media_url!} className="max-h-96 w-full" controls />
             <Play className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-tribe-green opacity-70" />
@@ -515,7 +515,7 @@ function PostCard({
 
       {/* Session Preview */}
       {session && (
-        <div className="mb-4 bg-stone-50 dark:bg-[#3D4349] rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+        <div className="mb-4 bg-stone-50 dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
           <h4 className="mb-3 font-semibold text-theme-primary">{strings.viewClass}</h4>
           <div className="space-y-2 text-sm text-theme-secondary">
             <div className="flex items-center gap-2">

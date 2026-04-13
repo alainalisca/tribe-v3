@@ -67,7 +67,7 @@ export default function TrainingNowPage() {
                 className={`px-4 py-2.5 rounded-full text-sm font-semibold transition ${
                   formData.sport === sport
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-[#7B8188]'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-[#7B8188]'
                 }`}
               >
                 {getTranslatedSport(sport)}
@@ -112,7 +112,7 @@ export default function TrainingNowPage() {
                 className={`py-3 rounded-xl font-semibold transition ${
                   formData.startIn === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}
@@ -132,7 +132,7 @@ export default function TrainingNowPage() {
                 className={`py-3 rounded-xl font-semibold transition text-sm ${
                   formData.duration === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}

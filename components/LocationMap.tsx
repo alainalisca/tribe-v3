@@ -72,7 +72,7 @@ export default function LocationMap({ latitude, longitude, location }: LocationM
 
   return (
     <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600 relative z-0 isolate">
-      <div className="h-40 bg-stone-100 dark:bg-[#52575D]">
+      <div className="h-40 bg-stone-100 dark:bg-tribe-mid">
         {mapReady && MapContainer && TileLayer && Marker ? (
           <MapContainer
             center={[latitude, longitude]}

@@ -178,7 +178,7 @@ export default function SearchPage() {
                 placeholder={strings.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#272D34] border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-dark border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
               />
             </div>
           </div>
@@ -326,7 +326,7 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
   };
 
   return (
-    <div className="bg-white dark:bg-[#272D34] rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
+    <div className="bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
       <div className="flex items-center gap-3 flex-1">
         {user.avatar_url && (
           <Image
@@ -349,8 +349,8 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
           disabled={actionLoading}
           className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
             isFollowing
-              ? 'bg-stone-100 dark:bg-[#3D4349] text-theme-primary hover:bg-red-100'
-              : 'bg-tribe-green text-slate-900 hover:bg-[#8FD642]'
+              ? 'bg-stone-100 dark:bg-tribe-surface text-theme-primary hover:bg-red-100'
+              : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
           } disabled:opacity-50`}
         >
           {language === 'es' ? (isFollowing ? 'Conectado' : 'Conectar') : isFollowing ? 'Connected' : 'Connect'}
@@ -370,7 +370,7 @@ function CommunityResult({ community, language, onSelect }: CommunityResultProps
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-[#272D34] rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -404,7 +404,7 @@ function ChallengeResult({ challenge, language, onSelect }: ChallengeResultProps
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-[#272D34] rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div>
         <p className="font-semibold text-theme-primary">{challenge.title}</p>
@@ -439,7 +439,7 @@ function SessionResult({ session, language, onSelect }: SessionResultProps) {
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-[#272D34] rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div>
         <p className="font-semibold text-theme-primary">

@@ -92,7 +92,7 @@ export default function LocalFitnessEventsSection({ language }: LocalFitnessEven
   }, [selectedSport]);
 
   return (
-    <section className="w-full bg-stone-100 dark:bg-[#3D4349] rounded-xl p-5 mb-4 space-y-3">
+    <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white">
         {lang === 'es' ? '🏅 Eventos Fitness Locales' : '🏅 Local Fitness Events'}
       </h2>
@@ -107,8 +107,8 @@ export default function LocalFitnessEventsSection({ language }: LocalFitnessEven
               onClick={() => setSelectedSport(sport)}
               className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 selectedSport === sport
-                  ? 'bg-[#A3E635] text-[#272D34]'
-                  : 'bg-stone-200 dark:bg-[#52575D] text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-[#5e6369]'
+                  ? 'bg-tribe-green-light text-[#272D34]'
+                  : 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-[#5e6369]'
               }`}
             >
               {label.icon} {lang === 'es' ? label.es : label.en}
@@ -121,7 +121,7 @@ export default function LocalFitnessEventsSection({ language }: LocalFitnessEven
       {loading ? (
         <div className="flex gap-4 overflow-x-auto pb-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex-shrink-0 w-72 h-56 bg-stone-200 dark:bg-[#52575D] rounded-xl animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-72 h-56 bg-stone-200 dark:bg-tribe-mid rounded-xl animate-pulse" />
           ))}
         </div>
       ) : events.length === 0 ? (
@@ -149,14 +149,14 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
   const description = lang === 'es' ? event.description_es : event.description_en;
 
   return (
-    <div className="flex-shrink-0 w-72 bg-white dark:bg-[#52575D] rounded-xl overflow-hidden shadow-md">
+    <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md">
       {/* Header bar */}
       <div className="bg-gradient-to-r from-[#A3E635] to-lime-400 px-4 py-3 flex items-center gap-2">
         <span className="text-2xl">{sportInfo.icon}</span>
         <div className="min-w-0">
           <p className="font-semibold text-[#272D34] text-sm line-clamp-1">{event.name}</p>
           {event.organizer && (
-            <span className="text-xs bg-[#272D34]/20 text-[#272D34] px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-tribe-dark/20 text-[#272D34] px-2 py-0.5 rounded-full font-medium">
               {event.organizer}
             </span>
           )}
@@ -198,7 +198,7 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
             href={event.website_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block text-xs text-[#A3E635] hover:underline font-medium mt-1"
+            className="inline-block text-xs text-tribe-green hover:underline font-medium mt-1"
           >
             {lang === 'es' ? 'Saber Mas →' : 'Learn More →'}
           </a>

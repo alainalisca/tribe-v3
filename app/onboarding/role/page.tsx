@@ -95,14 +95,14 @@ export default function OnboardingRolePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <LoadingSpinner className="flex justify-center" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4">
       <div className="w-full max-w-lg space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -118,7 +118,7 @@ export default function OnboardingRolePage() {
             className={`w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
               selectedRole === 'participant'
                 ? 'border-tribe-green bg-tribe-green/5 shadow-lg shadow-tribe-green/10'
-                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-[#6B7178] hover:border-stone-300 dark:hover:border-gray-500'
+                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-tribe-card hover:border-stone-300 dark:hover:border-gray-500'
             }`}
           >
             <div className="flex items-start gap-4">
@@ -126,7 +126,7 @@ export default function OnboardingRolePage() {
                 className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${
                   selectedRole === 'participant'
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-100 dark:bg-[#52575D] text-stone-500 dark:text-gray-400'
+                    : 'bg-stone-100 dark:bg-tribe-mid text-stone-500 dark:text-gray-400'
                 }`}
               >
                 <Dumbbell className="w-7 h-7" />
@@ -168,7 +168,7 @@ export default function OnboardingRolePage() {
             className={`w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
               selectedRole === 'instructor'
                 ? 'border-tribe-green bg-tribe-green/5 shadow-lg shadow-tribe-green/10'
-                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-[#6B7178] hover:border-stone-300 dark:hover:border-gray-500'
+                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-tribe-card hover:border-stone-300 dark:hover:border-gray-500'
             }`}
           >
             <div className="flex items-start gap-4">
@@ -176,7 +176,7 @@ export default function OnboardingRolePage() {
                 className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${
                   selectedRole === 'instructor'
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-100 dark:bg-[#52575D] text-stone-500 dark:text-gray-400'
+                    : 'bg-stone-100 dark:bg-tribe-mid text-stone-500 dark:text-gray-400'
                 }`}
               >
                 <GraduationCap className="w-7 h-7" />
@@ -219,7 +219,7 @@ export default function OnboardingRolePage() {
           disabled={!selectedRole || submitting}
           className={`w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-200 ${
             selectedRole
-              ? 'bg-tribe-green text-slate-900 hover:bg-[#8FD642] active:scale-[0.98]'
+              ? 'bg-tribe-green text-slate-900 hover:bg-tribe-green active:scale-[0.98]'
               : 'bg-stone-200 dark:bg-gray-600 text-stone-400 dark:text-gray-500 cursor-not-allowed'
           }`}
         >

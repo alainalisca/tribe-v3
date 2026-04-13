@@ -5,19 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
-import {
-  Megaphone,
-  Eye,
-  Users,
-  Zap,
-  Tag,
-  Store,
-  Bell,
-  Crown,
-  ArrowRight,
-  ArrowLeft,
-  AlertCircle,
-} from 'lucide-react';
+import { Megaphone, Eye, Users, Zap, Tag, Store, Bell, Crown, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
 interface UserStats {
   follower_count: number;
@@ -60,18 +48,19 @@ export default function PromotePage() {
     boostCampaigns: language === 'es' ? 'Campañas de Impulso' : 'Boost Campaigns',
     boostDesc: language === 'es' ? 'Impulsa tus sesiones' : 'Promote your sessions',
     upgradePro: language === 'es' ? 'Mejora a Pro' : 'Upgrade to Pro',
-    upgradeDesc: language === 'es'
-      ? 'Desbloquea características premium para tu escaparate'
-      : 'Unlock premium features for your storefront',
-    benefits: language === 'es'
-      ? 'Galería multimedia • Paquetes de servicios • Análisis • Ubicación prioritaria'
-      : 'Media gallery • Service packages • Analytics • Priority placement',
+    upgradeDesc:
+      language === 'es'
+        ? 'Desbloquea características premium para tu escaparate'
+        : 'Unlock premium features for your storefront',
+    benefits:
+      language === 'es'
+        ? 'Galería multimedia • Paquetes de servicios • Análisis • Ubicación prioritaria'
+        : 'Media gallery • Service packages • Analytics • Priority placement',
     price: language === 'es' ? 'COP 39,900/mes' : '$9.99/month',
     upgradeBtn: language === 'es' ? 'Mejorar' : 'Upgrade',
     accessDenied: language === 'es' ? 'Acceso denegado' : 'Access Denied',
-    instructorOnly: language === 'es'
-      ? 'Solo instructores pueden acceder a esta página'
-      : 'Only instructors can access this page',
+    instructorOnly:
+      language === 'es' ? 'Solo instructores pueden acceder a esta página' : 'Only instructors can access this page',
     posts: language === 'es' ? 'publicaciones' : 'posts',
     codes: language === 'es' ? 'códigos' : 'codes',
     campaigns: language === 'es' ? 'campañas' : 'campaigns',
@@ -162,13 +151,13 @@ export default function PromotePage() {
   if (!isInstructor) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center px-4">
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 max-w-md text-center border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 max-w-md text-center border border-stone-200 dark:border-gray-700">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2 text-theme-primary">{t.accessDenied}</h1>
           <p className="text-theme-secondary mb-6">{t.instructorOnly}</p>
           <Link
             href="/"
-            className="inline-block bg-tribe-green text-slate-900 font-semibold px-6 py-2 rounded-xl hover:bg-[#8FD642] transition-colors"
+            className="inline-block bg-tribe-green text-slate-900 font-semibold px-6 py-2 rounded-xl hover:bg-tribe-green transition-colors"
           >
             {language === 'es' ? 'Ir a Inicio' : 'Go Home'}
           </Link>
@@ -180,7 +169,7 @@ export default function PromotePage() {
   if (error || !stats) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center px-4">
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-8 max-w-md text-center border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 max-w-md text-center border border-stone-200 dark:border-gray-700">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2 text-theme-primary">{language === 'es' ? 'Error' : 'Error'}</h1>
           <p className="text-theme-secondary">{error || 'Failed to load data'}</p>
@@ -194,7 +183,10 @@ export default function PromotePage() {
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <Link href="/profile" className="flex items-center gap-2 text-tribe-green hover:text-[#8FD642] transition-colors">
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 text-tribe-green hover:text-[#8FD642] transition-colors"
+          >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm font-medium">{language === 'es' ? 'Perfil' : 'Profile'}</span>
           </Link>
@@ -215,7 +207,7 @@ export default function PromotePage() {
         {/* Quick Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Profile Views Card */}
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <p className="text-theme-secondary text-xs">{t.profileViews}</p>
               <Eye className="w-4 h-4 text-tribe-green" />
@@ -224,7 +216,7 @@ export default function PromotePage() {
           </div>
 
           {/* Followers Card */}
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <p className="text-theme-secondary text-xs">{t.followers}</p>
               <Users className="w-4 h-4 text-tribe-green" />
@@ -233,7 +225,7 @@ export default function PromotePage() {
           </div>
 
           {/* Active Boosts Card */}
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <p className="text-theme-secondary text-xs">{t.activeBoosts}</p>
               <Zap className="w-4 h-4 text-tribe-green" />
@@ -242,7 +234,7 @@ export default function PromotePage() {
           </div>
 
           {/* Active Promos Card */}
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <p className="text-theme-secondary text-xs">{t.activePromos}</p>
               <Tag className="w-4 h-4 text-tribe-green" />
@@ -255,7 +247,7 @@ export default function PromotePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Storefront Card */}
           <Link href={`/storefront/${stats.user_id}`}>
-            <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
+            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
               <div className="flex items-start gap-3 mb-3">
                 <Store className="w-6 h-6 text-tribe-green flex-shrink-0 mt-1" />
                 <div className="flex-1">
@@ -275,7 +267,7 @@ export default function PromotePage() {
 
           {/* Posts & Announcements Card */}
           <Link href="/promote/posts">
-            <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
+            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
               <div className="flex items-start gap-3 mb-3">
                 <Bell className="w-6 h-6 text-tribe-green flex-shrink-0 mt-1" />
                 <div className="flex-1">
@@ -295,7 +287,7 @@ export default function PromotePage() {
 
           {/* Promo Codes Card */}
           <Link href="/promote/promo-codes">
-            <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
+            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
               <div className="flex items-start gap-3 mb-3">
                 <Tag className="w-6 h-6 text-tribe-green flex-shrink-0 mt-1" />
                 <div className="flex-1">
@@ -316,7 +308,7 @@ export default function PromotePage() {
 
           {/* Boost Campaigns Card */}
           <Link href="/promote/boosts">
-            <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
+            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
               <div className="flex items-start gap-3 mb-3">
                 <Zap className="w-6 h-6 text-tribe-green flex-shrink-0 mt-1" />
                 <div className="flex-1">
@@ -353,12 +345,10 @@ export default function PromotePage() {
                 <button
                   onClick={() => {
                     alert(
-                      language === 'es'
-                        ? 'La función de mejora está en desarrollo'
-                        : 'Upgrade feature coming soon'
+                      language === 'es' ? 'La función de mejora está en desarrollo' : 'Upgrade feature coming soon'
                     );
                   }}
-                  className="bg-tribe-green text-slate-900 hover:bg-[#8FD642] font-semibold px-6 py-2 rounded-xl transition-colors whitespace-nowrap"
+                  className="bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold px-6 py-2 rounded-xl transition-colors whitespace-nowrap"
                 >
                   {t.upgradeBtn}
                 </button>
