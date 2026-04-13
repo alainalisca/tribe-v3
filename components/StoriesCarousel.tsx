@@ -93,7 +93,7 @@ export default function StoriesCarousel({ language, userId }: StoriesCarouselPro
           </p>
           <Link
             href="/create"
-            className="inline-block px-4 py-2 bg-tribe-green-light text-[#272D34] font-semibold text-sm rounded-lg hover:bg-[#94D91E] transition-colors"
+            className="inline-block px-4 py-2 bg-tribe-green-light text-tribe-dark font-semibold text-sm rounded-lg hover:bg-tribe-green-hover transition-colors"
           >
             {lang === 'es' ? 'Crear Sesion' : 'Create Session'}
           </Link>
@@ -168,7 +168,7 @@ function StoryCard({
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#A3E635]/30 to-[#3D4349]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-tribe-green-light/30 to-tribe-surface" />
       )}
 
       {/* Overlay */}

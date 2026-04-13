@@ -96,7 +96,7 @@ export default function SessionsPage() {
           {activeTab === 'upcoming' ? (
             <>
               {hostingSessions.length === 0 && joinedSessions.length === 0 ? (
-                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid">
                   <CardContent className="p-8 text-center">
                     <Calendar className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noUpcoming}</h2>
@@ -161,7 +161,7 @@ export default function SessionsPage() {
           ) : (
             <>
               {pastSessions.length === 0 ? (
-                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid">
                   <CardContent className="p-8 text-center">
                     <Clock className="w-16 h-16 text-stone-300 dark:text-gray-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-stone-900 dark:text-white mb-2">{txt.noPast}</h2>

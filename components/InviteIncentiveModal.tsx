@@ -80,7 +80,7 @@ export default function InviteIncentiveModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-[#404549]">
+      <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-tribe-surface">
         <DialogTitle className="text-lg font-bold text-stone-900 dark:text-white">{t.inviteFriend}</DialogTitle>
 
         <div className="mt-4 space-y-4">
@@ -97,11 +97,11 @@ export default function InviteIncentiveModal({
                 type="text"
                 value={inviteLink}
                 readOnly
-                className="flex-1 px-3 py-2 text-sm rounded-lg bg-stone-100 dark:bg-tribe-mid text-stone-900 dark:text-white border border-stone-200 dark:border-[#52575D]"
+                className="flex-1 px-3 py-2 text-sm rounded-lg bg-stone-100 dark:bg-tribe-mid text-stone-900 dark:text-white border border-stone-200 dark:border-tribe-mid"
               />
               <button
                 onClick={handleCopyLink}
-                className="p-2 bg-tribe-green hover:bg-[#b0d853] text-slate-900 rounded-lg transition font-semibold"
+                className="p-2 bg-tribe-green hover:bg-tribe-green-hover text-slate-900 rounded-lg transition font-semibold"
               >
                 {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </button>
@@ -140,7 +140,7 @@ export default function InviteIncentiveModal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="w-full py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
+            className="w-full py-2.5 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
           >
             {language === 'es' ? 'Cerrar' : 'Close'}
           </button>

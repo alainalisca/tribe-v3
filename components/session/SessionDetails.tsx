@@ -1,6 +1,7 @@
 'use client';
 
 import { formatTime12Hour } from '@/lib/utils';
+import Image from 'next/image';
 import { Calendar, Clock, MapPin, Users, Star, DollarSign } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
@@ -113,9 +114,9 @@ export default function SessionDetails({
               <button
                 key={idx}
                 onClick={() => onOpenLightbox(idx, 'location')}
-                className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
+                className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
               >
-                <img loading="lazy" src={photo} alt={`Location ${idx + 1}`} className="w-full h-full object-cover" />
+                <Image src={photo} alt={`Session location photo ${idx + 1}`} fill className="object-cover" unoptimized />
               </button>
             ))}
           </div>

@@ -58,7 +58,7 @@ export default function SmartMatchBanner({ userId }: Props) {
   // No preferences set — prompt to set them
   if (!hasPrefs) {
     return (
-      <div className="mx-4 mb-4 bg-gradient-to-r from-[#272D34] to-[#3D4349] rounded-2xl p-4 border border-[#52575D]">
+      <div className="mx-4 mb-4 bg-gradient-to-r from-tribe-dark to-tribe-surface rounded-2xl p-4 border border-tribe-mid">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Settings className="w-5 h-5 text-tribe-green flex-shrink-0" />
@@ -77,7 +77,7 @@ export default function SmartMatchBanner({ userId }: Props) {
           </div>
         </div>
         <Link href="/settings">
-          <button className="mt-3 w-full py-2 rounded-xl bg-tribe-green text-slate-900 font-semibold text-sm hover:bg-[#b0d853] transition">
+          <button className="mt-3 w-full py-2 rounded-xl bg-tribe-green text-slate-900 font-semibold text-sm hover:bg-tribe-green-hover transition">
             {isEs ? 'Configurar' : 'Set Up'}
           </button>
         </Link>
@@ -97,7 +97,7 @@ export default function SmartMatchBanner({ userId }: Props) {
   const sportsText = sportNames.join(isEs ? ' y ' : ' & ');
 
   return (
-    <div className="mx-4 mb-4 bg-gradient-to-r from-[#272D34] to-[#3D4349] rounded-2xl p-4 border border-[#52575D]">
+    <div className="mx-4 mb-4 bg-gradient-to-r from-tribe-dark to-tribe-surface rounded-2xl p-4 border border-tribe-mid">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-tribe-green flex-shrink-0 mt-0.5" />
@@ -127,7 +127,7 @@ export default function SmartMatchBanner({ userId }: Props) {
 
       <div className="flex gap-2 mt-3">
         <Link href="/smart-matches" className="flex-1">
-          <button className="w-full py-2 rounded-xl bg-tribe-green text-slate-900 font-semibold text-sm hover:bg-[#b0d853] transition">
+          <button className="w-full py-2 rounded-xl bg-tribe-green text-slate-900 font-semibold text-sm hover:bg-tribe-green-hover transition">
             {isEs ? 'Ver coincidencias' : 'View Matches'}
           </button>
         </Link>

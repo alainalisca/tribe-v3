@@ -72,7 +72,7 @@ export default function MessagesPage() {
 
       <div className="pt-header max-w-2xl mx-auto">
         {/* Tabs */}
-        <div className="flex border-b border-stone-300 dark:border-[#52575D] px-4 gap-0">
+        <div className="flex border-b border-stone-300 dark:border-tribe-mid px-4 gap-0">
           <button
             onClick={() => setActiveTab('sessions')}
             className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition flex items-center justify-center gap-2 ${
@@ -107,7 +107,7 @@ export default function MessagesPage() {
 
         <div className="p-4">
           {isEmpty ? (
-            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="w-8 h-8 text-stone-400" />
@@ -125,7 +125,7 @@ export default function MessagesPage() {
             // Sessions Tab
             <div className="space-y-2">
               {conversations.length === 0 ? (
-                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageCircle className="w-8 h-8 text-stone-400" />
@@ -142,7 +142,7 @@ export default function MessagesPage() {
               ) : (
                 conversations.map((conv) => (
                   <Link key={conv.session_id} href={`/session/${conv.session_id}/chat`}>
-                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:border-tribe-green transition cursor-pointer shadow-none">
+                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:border-tribe-green transition cursor-pointer shadow-none">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-tribe-green-light rounded-full flex items-center justify-center text-lg flex-shrink-0">
@@ -201,7 +201,7 @@ export default function MessagesPage() {
             // Direct Messages Tab
             <div className="space-y-2">
               {directConversations.length === 0 ? (
-                <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+                <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                   <CardContent className="p-8 text-center">
                     <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageSquare className="w-8 h-8 text-stone-400" />
@@ -215,7 +215,7 @@ export default function MessagesPage() {
               ) : (
                 directConversations.map((conv) => (
                   <Link key={conv.id} href={`/messages/${conv.id}`}>
-                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:border-tribe-green transition cursor-pointer shadow-none">
+                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:border-tribe-green transition cursor-pointer shadow-none">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 relative">
                           <div className="relative flex-shrink-0">

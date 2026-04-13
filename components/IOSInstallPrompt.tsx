@@ -52,7 +52,7 @@ export default function AppStoreBanner() {
 
   return (
     <Dialog open={show} onOpenChange={(open) => !open && handleDismiss()}>
-      <DialogContent data-modal="true" className="max-w-md rounded-2xl p-6 dark:bg-[#2C3137]">
+      <DialogContent data-modal="true" className="max-w-md rounded-2xl p-6 dark:bg-tribe-dark">
         <DialogTitle className="sr-only">{t('getTheTribeApp')}</DialogTitle>
 
         <div className="text-center mb-6">

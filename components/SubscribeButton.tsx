@@ -199,7 +199,7 @@ export default function SubscribeButton({
               variant="outline"
               onClick={() => setShowConfirm(false)}
               disabled={subscribing}
-              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
+              className="flex-1 py-3 border-stone-300 dark:border-tribe-mid text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </Button>

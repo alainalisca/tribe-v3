@@ -197,7 +197,7 @@ export default function InvitePage() {
             </div>
 
             {session.description && (
-              <p className="text-sm text-stone-600 dark:text-gray-300 mt-3 pt-3 border-t border-stone-200 dark:border-[#52575D]">
+              <p className="text-sm text-stone-600 dark:text-gray-300 mt-3 pt-3 border-t border-stone-200 dark:border-tribe-mid">
                 {session.description}
               </p>
             )}
@@ -218,7 +218,7 @@ export default function InvitePage() {
                     value={guestData.name}
                     onChange={(e) => setGuestData({ ...guestData, name: e.target.value })}
                     placeholder={language === 'es' ? 'Juan Pérez' : 'John Smith'}
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
+                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 
@@ -229,7 +229,7 @@ export default function InvitePage() {
                     value={guestData.phone}
                     onChange={(e) => setGuestData({ ...guestData, phone: e.target.value })}
                     placeholder="+57 300 123 4567"
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
+                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 
@@ -240,7 +240,7 @@ export default function InvitePage() {
                     value={guestData.email}
                     onChange={(e) => setGuestData({ ...guestData, email: e.target.value })}
                     placeholder="email@example.com"
-                    className="h-auto py-3 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-theme-primary"
+                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
                   />
                 </div>
 

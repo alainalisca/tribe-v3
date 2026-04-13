@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import StorefrontSessionCard from '@/components/storefront/StorefrontSessionCard';
 import StorefrontPackageCard from '@/components/storefront/StorefrontPackageCard';
+import Image from 'next/image';
 import {
   Heart,
   MessageCircle,
@@ -20,11 +21,11 @@ import {
   Clock,
   Zap,
   ChevronRight,
-  Loader,
   Search,
   Eye,
   ArrowLeft,
 } from 'lucide-react';
+import { SkeletonProfile, SkeletonCard } from '@/components/Skeleton';
 import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
 import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
@@ -193,12 +194,16 @@ export default function StorefrontPage() {
       try {
         const { data: instructorData, error } = await supabase
           .from('users')
-          .select('id, name, avatar_url, tagline, location, specialties, verified, storefront_banner_url, bio')
+          .select('id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio')
           .eq('id', instructorId)
           .single();
 
         if (error) throw error;
-        setInstructor(instructorData);
+        setInstructor({
+          ...instructorData,
+          tagline: instructorData.storefront_tagline,
+          verified: instructorData.is_verified_instructor,
+        } as unknown as Instructor);
 
         // Check if this instructor is a featured partner
         const pResult = await fetchPartnerByUserId(supabase, instructorId);
@@ -372,10 +377,14 @@ export default function StorefrontPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-tribe-green animate-spin mx-auto mb-4" />
-          <p className="text-theme-primary">Loading storefront...</p>
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark">
+        <div className="max-w-2xl mx-auto p-4 pt-20 space-y-4">
+          <SkeletonProfile />
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -384,7 +393,7 @@ export default function StorefrontPage() {
   if (!instructor) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
             <button
               onClick={() => window.history.back()}
@@ -437,7 +446,7 @@ export default function StorefrontPage() {
       {/* Hero Section */}
       <div className="relative h-56 bg-gradient-to-br from-tribe-green to-lime-500 overflow-hidden pt-14">
         {instructor.storefront_banner_url ? (
-          <img src={instructor.storefront_banner_url} alt="Banner" className="w-full h-full object-cover opacity-60" />
+          <Image src={instructor.storefront_banner_url} alt="Instructor storefront banner" fill className="object-cover opacity-60" unoptimized />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-tribe-green to-lime-500"></div>
         )}
@@ -447,10 +456,13 @@ export default function StorefrontPage() {
           <div className="flex gap-4 items-start bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
-              <img
+              <Image
                 src={instructor.avatar_url || 'https://via.placeholder.com/80'}
                 alt={instructor.name}
+                width={80}
+                height={80}
                 className="w-20 h-20 rounded-full border-2 border-tribe-green object-cover"
+                unoptimized
               />
               {instructor.verified && (
                 <div className="absolute bottom-0 right-0 bg-tribe-green rounded-full p-1">
@@ -632,10 +644,12 @@ export default function StorefrontPage() {
                     key={item.id}
                     className="relative aspect-square rounded-2xl overflow-hidden bg-stone-200 dark:bg-tribe-surface group cursor-pointer border border-stone-200 dark:border-gray-700"
                   >
-                    <img
+                    <Image
                       src={item.url}
-                      alt="Media"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      alt="Storefront media content"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      unoptimized
                     />
 
                     {/* Video Play Icon */}
@@ -671,10 +685,12 @@ export default function StorefrontPage() {
                     {/* Post Media */}
                     {post.media_url && (
                       <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-stone-200 dark:bg-tribe-surface group border border-stone-200 dark:border-gray-700">
-                        <img
+                        <Image
                           src={post.media_url}
-                          alt="Post media"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          alt="Instructor post media"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          unoptimized
                         />
                         {post.media_type === 'video' && (
                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-all">

@@ -156,7 +156,7 @@ export default function RequestsPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         {requests.length === 0 ? (
-          <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D]">
+          <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid">
             <CardContent className="p-8 text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-stone-200 dark:bg-tribe-mid rounded-full flex items-center justify-center">
                 <svg
@@ -212,7 +212,7 @@ export default function RequestsPage() {
                         src={request.users?.avatar_url || undefined}
                         alt={request.users?.name ?? ''}
                       />
-                      <AvatarFallback className="bg-stone-300 dark:bg-[#404549]">
+                      <AvatarFallback className="bg-stone-300 dark:bg-tribe-surface">
                         <User className="w-6 h-6 text-stone-600 dark:text-gray-400" />
                       </AvatarFallback>
                     </Avatar>

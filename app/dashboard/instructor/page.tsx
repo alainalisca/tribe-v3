@@ -116,7 +116,7 @@ export default function InstructorDashboardPage() {
 
       <div className="pt-header max-w-2xl mx-auto px-4">
         {/* Tab Bar */}
-        <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-[#52575D]">
+        <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key;
             return (

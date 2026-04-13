@@ -149,7 +149,7 @@ export default function PostSessionConnect({
                 className={`text-xs font-semibold px-3 py-1 h-auto flex-shrink-0 ${
                   hasSent
                     ? 'bg-stone-300 dark:bg-tribe-mid text-stone-600 dark:text-gray-400'
-                    : 'bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d]'
+                    : 'bg-tribe-green-light text-stone-900 hover:bg-tribe-green-hover'
                 }`}
               >
                 {isSending ? '...' : hasSent ? t('requestSent') : t('connect')}

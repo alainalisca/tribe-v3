@@ -121,8 +121,8 @@ export default function PopularRoutesSection({ language }: PopularRoutesSectionP
             onClick={() => setSelectedSport(sport)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedSport === sport
-                ? 'bg-tribe-green-light text-[#272D34]'
-                : 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-[#5e6369]'
+                ? 'bg-tribe-green-light text-tribe-dark'
+                : 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-tribe-mid'
             }`}
           >
             {sportLabels[sport].icon} {lang === 'es' ? sportLabels[sport].es : sportLabels[sport].en}
@@ -200,11 +200,11 @@ function RouteCard({ route, language }: { route: PopularRoute; language: string 
     <Link href={`/create?${createParams}`}>
       <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#A3E635] to-[#9EE551] px-4 py-3">
+        <div className="bg-gradient-to-r from-tribe-green-light to-lime-400 px-4 py-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{sport.icon}</span>
             <div>
-              <p className="font-semibold text-[#272D34]">{lang === 'es' ? sport.es : sport.en}</p>
+              <p className="font-semibold text-tribe-dark">{lang === 'es' ? sport.es : sport.en}</p>
               <p className={`text-xs font-medium ${diffColor}`}>{lang === 'es' ? difficulty.es : difficulty.en}</p>
             </div>
           </div>
@@ -236,7 +236,7 @@ function RouteCard({ route, language }: { route: PopularRoute; language: string 
               e.preventDefault();
               window.location.href = `/create?${createParams}`;
             }}
-            className="w-full mt-2 bg-tribe-green-light hover:bg-[#94D91E] text-[#272D34] font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            className="w-full mt-2 bg-tribe-green-light hover:bg-tribe-green-hover text-tribe-dark font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
           >
             {lang === 'es' ? 'Crear Sesión en Esta Ruta' : 'Create Session on This Route'}
           </button>

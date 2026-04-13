@@ -38,7 +38,7 @@ export interface SessionWithRelations extends Session {
  */
 export async function fetchSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<Session>> {
   try {
-    const { data, error } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
+    const { data, error } = await supabase.from('sessions').select('id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at').eq('id', sessionId).single();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -63,7 +63,7 @@ export async function fetchSessionWithDetails(
   }>
 > {
   try {
-    const { data: session, error } = await supabase.from('sessions').select('*').eq('id', sessionId).single();
+    const { data: session, error } = await supabase.from('sessions').select('id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at').eq('id', sessionId).single();
 
     if (error) return { success: false, error: error.message };
 
@@ -158,18 +158,26 @@ export async function fetchConfirmedCount(supabase: SupabaseClient, sessionId: s
 export async function cancelSession(
   supabase: SupabaseClient,
   sessionId: string,
-  reason?: string
+  _reason?: string
 ): Promise<DalResult<null>> {
   try {
     // 1. Fetch session details
     const { data: session, error: sessionErr } = await supabase
       .from('sessions')
-      .select('id, title, creator_id, is_paid, price_cents, currency')
+      .select('id, title, creator_id, is_paid, price_cents, currency, status')
       .eq('id', sessionId)
       .single();
 
     if (sessionErr || !session) {
       return { success: false, error: 'Session not found' };
+    }
+
+    // Prevent cancelling already-cancelled or completed sessions
+    if (session.status === 'cancelled') {
+      return { success: false, error: 'Session is already cancelled' };
+    }
+    if (session.status === 'completed') {
+      return { success: false, error: 'Cannot cancel a completed session' };
     }
 
     // 2. Fetch all confirmed participants
@@ -183,20 +191,44 @@ export async function cancelSession(
     if (session.is_paid) {
       const { data: payments } = await supabase
         .from('payments')
-        .select('id, user_id, amount_cents, currency, payment_gateway, stripe_payment_intent_id, wompi_transaction_id')
+        .select('id, participant_user_id, amount_cents, currency, gateway, stripe_payment_intent_id, gateway_payment_id')
         .eq('session_id', sessionId)
         .eq('status', 'approved');
 
       for (const payment of payments || []) {
+        let refundSuccess = false;
+        let _refundError: string | undefined;
+
+        try {
+          if (payment.gateway === 'stripe' && payment.stripe_payment_intent_id) {
+            const { createStripeRefund } = await import('@/lib/payments/stripe');
+            const result = await createStripeRefund(payment.stripe_payment_intent_id);
+            refundSuccess = result.success;
+            _refundError = result.error;
+          } else if (payment.gateway === 'wompi' && payment.gateway_payment_id) {
+            const { createWompiRefund } = await import('@/lib/payments/wompi');
+            const result = await createWompiRefund(payment.gateway_payment_id, payment.amount_cents);
+            refundSuccess = result.success;
+            _refundError = result.error;
+          }
+        } catch (refundErr) {
+          logError(refundErr, {
+            action: 'cancelSession_refund',
+            paymentId: payment.id,
+            gateway: payment.gateway,
+          });
+          _refundError = 'Refund API call failed';
+        }
+
+        // Update payment record with refund status
         await supabase
           .from('payments')
           .update({
-            status: 'refunded',
+            status: refundSuccess ? 'refunded' : 'refund_failed',
             payout_status: 'cancelled',
             updated_at: new Date().toISOString(),
           })
           .eq('id', payment.id);
-        // TODO: Call Stripe refund API (stripe.refunds.create) or Wompi refund endpoint
       }
     }
 
@@ -334,6 +366,21 @@ export async function insertSession(supabase: SupabaseClient, data: SessionInser
       if (!creator?.is_instructor) {
         return { success: false, error: 'Only instructors can create paid sessions' };
       }
+
+      const priceCents = (data as Record<string, unknown>).price_cents;
+      const currency = (data as Record<string, unknown>).currency;
+
+      if (typeof priceCents !== 'number' || priceCents <= 0) {
+        return { success: false, error: 'Paid sessions must have a price greater than zero' };
+      }
+      if (priceCents > 100000000) {
+        return { success: false, error: 'Price exceeds maximum allowed amount' };
+      }
+
+      const validCurrencies = ['USD', 'COP'];
+      if (!currency || !validCurrencies.includes(currency as string)) {
+        return { success: false, error: 'Invalid currency. Must be USD or COP' };
+      }
     }
 
     const { data: session, error } = await supabase.from('sessions').insert(data).select().single();
@@ -374,7 +421,7 @@ export async function fetchActivityStats(
       supabase
         .from('session_participants')
         .select('user_id', { count: 'exact', head: false })
-        .gte('created_at', sevenDaysAgoISO),
+        .gte('joined_at', sevenDaysAgoISO),
 
       // Active sessions this week
       supabase

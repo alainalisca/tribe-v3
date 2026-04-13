@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Camera, MapPin, X, Settings, Store, HeartHandshake } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
@@ -64,9 +65,9 @@ export default function ProfilePage() {
       <div className="pt-header max-w-2xl mx-auto">
         {/* Banner */}
         <div className="relative h-48 overflow-hidden">
-          <div className="w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
+          <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
             {profile?.banner_url && (
-              <img loading="lazy" src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+              <Image src={profile.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />
             )}
           </div>
           <div className="absolute bottom-4 right-4 z-30">
@@ -86,7 +87,7 @@ export default function ProfilePage() {
         <div className="px-4 -mt-16 relative z-10">
           {/* Avatar */}
           <div className="relative inline-block">
-            <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+            <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
               <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
               <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
                 {getInitials(profile?.name || 'User')}
@@ -134,15 +135,15 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.created}</p>
             </div>
-            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.joined}</p>
             </div>
-            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
@@ -159,7 +160,7 @@ export default function ProfilePage() {
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/dashboard/instructor"
-              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-tribe-green-light rounded-2xl shadow-md hover:bg-[#94D91E] transition"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-tribe-green-light rounded-2xl shadow-md hover:bg-tribe-green-hover transition"
             >
               <Store className="w-6 h-6 text-slate-900 flex-shrink-0" />
               <span className="font-bold text-base text-slate-900 text-center">
@@ -172,7 +173,7 @@ export default function ProfilePage() {
           {profile?.is_instructor && profile?.id && (
             <Link
               href="/partners"
-              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-[#52575D] text-[#B1B3B6] hover:border-tribe-green hover:text-tribe-green transition text-center"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
             >
               <HeartHandshake className="w-6 h-6 flex-shrink-0" />
               <span className="font-bold text-base text-center">
@@ -234,9 +235,9 @@ export default function ProfilePage() {
                   <div
                     key={index}
                     onClick={() => openPhoto(photo)}
-                    className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
+                    className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
                   >
-                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <Image src={photo} alt={`Profile photo ${index + 1}`} fill className="object-cover" unoptimized />
                   </div>
                 ))}
               </div>
@@ -289,11 +290,14 @@ export default function ProfilePage() {
           >
             <X className="w-6 h-6 text-white" />
           </button>
-          <img
+          <Image
             src={selectedPhoto}
-            alt="Full size"
+            alt="Full size profile photo"
+            width={800}
+            height={800}
             className="max-w-[90vw] max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
+            unoptimized
           />
         </div>
       )}

@@ -20,7 +20,7 @@ export default function DeleteConfirmModal({
   const { t } = useLanguage();
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-[#2C3137] rounded-2xl p-6 mx-6 max-w-sm w-full">
+      <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 mx-6 max-w-sm w-full">
         <p className="text-lg font-bold text-theme-primary text-center mb-4">{t('deleteThisStory')}</p>
         <div className="flex gap-3">
           <Button

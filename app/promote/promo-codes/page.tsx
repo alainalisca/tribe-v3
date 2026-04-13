@@ -581,7 +581,7 @@ export default function PromoCodesPage() {
                     })
                   }
                   placeholder="SUMMER2024"
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -596,7 +596,7 @@ export default function PromoCodesPage() {
                       discountType: e.target.value as 'percentage' | 'fixed' | 'free_session',
                     })
                   }
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 >
                   <option value="percentage">{t.percentage}</option>
                   <option value="fixed">{t.fixed}</option>
@@ -620,7 +620,7 @@ export default function PromoCodesPage() {
                     min={formData.discountType === 'percentage' ? '1' : '0'}
                     max={formData.discountType === 'percentage' ? '100' : undefined}
                     placeholder={formData.discountType === 'percentage' ? '25' : '10000'}
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                   />
                 </div>
               )}
@@ -637,7 +637,7 @@ export default function PromoCodesPage() {
                         currency: e.target.value as 'COP' | 'USD',
                       })
                     }
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="COP">COP</option>
                     <option value="USD">USD</option>
@@ -677,7 +677,7 @@ export default function PromoCodesPage() {
                     }
                     min="1"
                     placeholder="50"
-                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                   />
                 )}
               </div>
@@ -695,7 +695,7 @@ export default function PromoCodesPage() {
                       packageId: '',
                     })
                   }
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 >
                   <option value="all">{t.allSessions}</option>
                   <option value="specific_session">{t.specificSession}</option>
@@ -715,7 +715,7 @@ export default function PromoCodesPage() {
                         sessionId: e.target.value,
                       })
                     }
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="">{t.selectSession}</option>
                     {sessions.map((session) => (
@@ -740,7 +740,7 @@ export default function PromoCodesPage() {
                         packageId: e.target.value,
                       })
                     }
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   >
                     <option value="">{t.selectPackage}</option>
                     {packages.map((pkg) => (
@@ -764,7 +764,7 @@ export default function PromoCodesPage() {
                       startDate: e.target.value,
                     })
                   }
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -798,7 +798,7 @@ export default function PromoCodesPage() {
                         expiryDate: e.target.value,
                       })
                     }
-                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full mt-2 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                   />
                 )}
               </div>
@@ -818,7 +818,7 @@ export default function PromoCodesPage() {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 

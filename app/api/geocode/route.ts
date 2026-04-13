@@ -51,6 +51,8 @@ export async function GET(request: Request) {
       display_name: result?.formatted_address || null,
       lat,
       lon,
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=86400' }
     });
   } catch (error) {
     logError(error, { route: '/api/geocode', action: 'reverse_geocode' });

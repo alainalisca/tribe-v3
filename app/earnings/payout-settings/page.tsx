@@ -316,7 +316,7 @@ export default function PayoutSettingsPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
         {/* Payout Method Selection */}
-        <Card className="bg-white dark:bg-[#3c424c] border border-stone-200 dark:border-gray-600">
+        <Card className="bg-white dark:bg-tribe-surface border border-stone-200 dark:border-gray-600">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-theme-primary">
               <CreditCard className="w-5 h-5 text-tribe-green" />
@@ -327,7 +327,7 @@ export default function PayoutSettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-3">
               {/* Wompi Method */}
-              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-[#474d54] transition">
+              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
                 <input
                   type="radio"
                   name="payout_method"
@@ -347,7 +347,7 @@ export default function PayoutSettingsPage() {
               </label>
 
               {/* Manual Method */}
-              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-[#474d54] transition">
+              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
                 <input
                   type="radio"
                   name="payout_method"
@@ -400,7 +400,7 @@ export default function PayoutSettingsPage() {
               <div>
                 <Label className="font-semibold text-theme-primary mb-2 block">{tr.accountType}</Label>
                 <div className="flex gap-3">
-                  <label className="flex items-center gap-2 flex-1 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-[#474d54] transition">
+                  <label className="flex items-center gap-2 flex-1 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
                     <input
                       type="radio"
                       name="account_type"
@@ -413,7 +413,7 @@ export default function PayoutSettingsPage() {
                     />
                     <span className="text-theme-primary">{tr.savings}</span>
                   </label>
-                  <label className="flex items-center gap-2 flex-1 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-[#474d54] transition">
+                  <label className="flex items-center gap-2 flex-1 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
                     <input
                       type="radio"
                       name="account_type"

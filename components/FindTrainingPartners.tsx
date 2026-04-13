@@ -128,7 +128,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">{t('findTrainingPartners')}</h2>
         <Link
           href="/training-partners"
-          className="flex items-center gap-1 text-tribe-green font-semibold text-sm hover:text-[#8fd61d]"
+          className="flex items-center gap-1 text-tribe-green font-semibold text-sm hover:text-tribe-green-hover"
         >
           {t('seeAll')} <ChevronRight className="w-4 h-4" />
         </Link>
@@ -181,7 +181,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
           <p className="text-sm text-stone-600 dark:text-gray-400 mb-2">{t('noPartnersFound')}</p>
           <Link
             href="/create"
-            className="inline-block mt-2 px-4 py-2 bg-tribe-green-light text-stone-900 text-sm font-semibold rounded-full hover:bg-[#8fd61d] transition"
+            className="inline-block mt-2 px-4 py-2 bg-tribe-green-light text-stone-900 text-sm font-semibold rounded-full hover:bg-tribe-green-hover transition"
           >
             {t('createSession')}
           </Link>

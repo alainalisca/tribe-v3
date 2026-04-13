@@ -59,11 +59,11 @@ export default function LocalFitnessEventsSection({ language }: LocalFitnessEven
           .from('local_fitness_events')
           .select('*')
           .eq('is_active', true)
-          .order('is_recurring', { ascending: false })
+          .order('event_type', { ascending: false })
           .order('start_date', { ascending: true });
 
         if (selectedSport !== 'all') {
-          query = query.eq('sport', selectedSport);
+          query = query.eq('sport_type', selectedSport);
         }
 
         const { data, error } = await query;
@@ -107,8 +107,8 @@ export default function LocalFitnessEventsSection({ language }: LocalFitnessEven
               onClick={() => setSelectedSport(sport)}
               className={`flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                 selectedSport === sport
-                  ? 'bg-tribe-green-light text-[#272D34]'
-                  : 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-[#5e6369]'
+                  ? 'bg-tribe-green-light text-tribe-dark'
+                  : 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-300 dark:hover:bg-tribe-mid'
               }`}
             >
               {label.icon} {lang === 'es' ? label.es : label.en}
@@ -151,12 +151,12 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
   return (
     <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md">
       {/* Header bar */}
-      <div className="bg-gradient-to-r from-[#A3E635] to-lime-400 px-4 py-3 flex items-center gap-2">
+      <div className="bg-gradient-to-r from-tribe-green-light to-lime-400 px-4 py-3 flex items-center gap-2">
         <span className="text-2xl">{sportInfo.icon}</span>
         <div className="min-w-0">
-          <p className="font-semibold text-[#272D34] text-sm line-clamp-1">{event.name}</p>
+          <p className="font-semibold text-tribe-dark text-sm line-clamp-1">{event.name}</p>
           {event.organizer && (
-            <span className="text-xs bg-tribe-dark/20 text-[#272D34] px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-tribe-dark/20 text-tribe-dark px-2 py-0.5 rounded-full font-medium">
               {event.organizer}
             </span>
           )}

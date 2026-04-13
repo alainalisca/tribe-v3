@@ -201,6 +201,23 @@ export function mapStripeStatus(paymentIntentStatus: string): PaymentStatus {
 }
 
 /**
+ * Creates a refund for a Stripe payment intent.
+ */
+export async function createStripeRefund(
+  paymentIntentId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const stripe = getStripeInstance();
+    await stripe.refunds.create({ payment_intent: paymentIntentId });
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown Stripe refund error';
+    logError(error, { action: 'createStripeRefund', paymentIntentId });
+    return { success: false, error: message };
+  }
+}
+
+/**
  * Get payment intent details
  */
 export async function getStripePaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent | null> {

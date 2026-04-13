@@ -20,6 +20,7 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -164,7 +165,7 @@ export default function EditProfilePage() {
             <div>
               <Label className="text-xs text-theme-secondary mb-1">📷 Instagram {tr.instagramLabel}</Label>
               <div className="flex items-center">
-                <span className="px-3 py-2 bg-stone-200 dark:bg-[#404549] border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">
+                <span className="px-3 py-2 bg-stone-200 dark:bg-tribe-surface border border-r-0 border-stone-300 dark:border-gray-600 rounded-l-xl text-sm text-stone-500">
                   @
                 </span>
                 <Input
@@ -364,7 +365,7 @@ export default function EditProfilePage() {
                         setFormData({ ...formData, is_instructor: false });
                         setWizardStep(0);
                       }}
-                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-tribe-surface-hover transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
@@ -381,7 +382,7 @@ export default function EditProfilePage() {
               {/* Step 2: Your Storefront */}
               {wizardStep === 2 && (
                 <div className="space-y-4">
-                  <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D] mb-4">
+                  <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid mb-4">
                     <h4 className="text-xs font-semibold text-theme-secondary mb-3">
                       {language === 'es' ? 'Vista previa de tu escaparate' : 'Storefront Preview'}
                     </h4>
@@ -539,7 +540,7 @@ export default function EditProfilePage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={() => setWizardStep(1)}
-                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-tribe-surface-hover transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
@@ -557,7 +558,7 @@ export default function EditProfilePage() {
               {wizardStep === 3 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
                       <DollarSign className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Sesiones de Pago' : 'Paid Sessions'}
@@ -569,7 +570,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
                       <Tag className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Códigos Promo' : 'Promo Codes'}
@@ -581,7 +582,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
                       <Zap className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Campañas de Impulso' : 'Boost Campaigns'}
@@ -593,7 +594,7 @@ export default function EditProfilePage() {
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
                       <Bell className="w-6 h-6 text-tribe-green mb-2" />
                       <h4 className="text-xs font-semibold text-theme-primary mb-1">
                         {language === 'es' ? 'Anuncios' : 'Announcements'}
@@ -633,7 +634,7 @@ export default function EditProfilePage() {
                   <div className="flex gap-3 pt-4">
                     <button
                       onClick={() => setWizardStep(2)}
-                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-[#4A5157] transition"
+                      className="flex-1 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-2 font-semibold hover:bg-stone-200 dark:hover:bg-tribe-surface-hover transition"
                     >
                       {language === 'es' ? 'Atrás' : 'Back'}
                     </button>
@@ -692,7 +693,7 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             {formData.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
-                <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
+                <Image src={photo} alt={`Profile photo ${index + 1}`} fill className="object-cover rounded-lg" unoptimized />
                 <button
                   onClick={() => removePhoto(index)}
                   className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition"

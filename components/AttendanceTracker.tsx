@@ -165,6 +165,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
                       : 'bg-stone-200 dark:bg-tribe-card text-stone-600 dark:text-gray-400 hover:bg-green-500 hover:text-white'
                   }`}
                   title="Mark as attended"
+                  aria-label={`Mark ${participant.user?.name || 'athlete'} as attended`}
                 >
                   {sendingEmail === participant.user_id ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -181,6 +182,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
                       : 'bg-stone-200 dark:bg-tribe-card text-stone-600 dark:text-gray-400 hover:bg-red-500 hover:text-white'
                   }`}
                   title="Mark as not attended"
+                  aria-label={`Mark ${participant.user?.name || 'athlete'} as not attended`}
                 >
                   <X className="w-5 h-5" />
                 </button>

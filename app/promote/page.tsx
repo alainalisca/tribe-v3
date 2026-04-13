@@ -185,7 +185,7 @@ export default function PromotePage() {
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
           <Link
             href="/profile"
-            className="flex items-center gap-2 text-tribe-green hover:text-[#8FD642] transition-colors"
+            className="flex items-center gap-2 text-tribe-green hover:text-tribe-green transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm font-medium">{language === 'es' ? 'Perfil' : 'Profile'}</span>

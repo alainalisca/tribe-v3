@@ -90,7 +90,7 @@ export default function FeedbackPage() {
                   <select
                     value={feedbackType}
                     onChange={(e) => setFeedbackType(e.target.value)}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="w-full p-3 border border-stone-300 dark:border-tribe-mid rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   >
                     <option value="feature_request">{t.featureRequest}</option>
                     <option value="general">{t.general}</option>
@@ -104,7 +104,7 @@ export default function FeedbackPage() {
                     value={feedbackTitle}
                     onChange={(e) => setFeedbackTitle(e.target.value)}
                     placeholder={t.titlePlaceholder}
-                    className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   />
                 </div>
 
@@ -114,7 +114,7 @@ export default function FeedbackPage() {
                     value={feedbackDescription}
                     onChange={(e) => setFeedbackDescription(e.target.value)}
                     placeholder={t.descriptionPlaceholder}
-                    className="h-32 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="h-32 resize-none dark:border-tribe-mid focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   />
                 </div>
 
@@ -146,7 +146,7 @@ export default function FeedbackPage() {
                     value={bugTitle}
                     onChange={(e) => setBugTitle(e.target.value)}
                     placeholder={t.bugTitlePlaceholder}
-                    className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   />
                 </div>
 
@@ -156,7 +156,7 @@ export default function FeedbackPage() {
                     value={bugDescription}
                     onChange={(e) => setBugDescription(e.target.value)}
                     placeholder={t.whatHappenedPlaceholder}
-                    className="h-24 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="h-24 resize-none dark:border-tribe-mid focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   />
                 </div>
 
@@ -166,7 +166,7 @@ export default function FeedbackPage() {
                     value={bugSteps}
                     onChange={(e) => setBugSteps(e.target.value)}
                     placeholder={t.stepsPlaceholder}
-                    className="h-24 resize-none dark:border-[#52575D] focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="h-24 resize-none dark:border-tribe-mid focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   />
                 </div>
 
@@ -175,7 +175,7 @@ export default function FeedbackPage() {
                   <select
                     value={bugSeverity}
                     onChange={(e) => setBugSeverity(e.target.value)}
-                    className="w-full p-3 border border-stone-300 dark:border-[#52575D] rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
+                    className="w-full p-3 border border-stone-300 dark:border-tribe-mid rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-stone-900 dark:text-white bg-white dark:bg-tribe-mid"
                   >
                     <option value="low">{t.low}</option>
                     <option value="medium">{t.medium}</option>

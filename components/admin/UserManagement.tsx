@@ -55,7 +55,7 @@ export default function UserManagement({
   });
 
   return (
-    <div className="bg-white rounded shadow">
+    <div className="bg-white dark:bg-tribe-surface rounded shadow">
       <div className="p-3 border-b">
         <div className="relative">
           <Search className="absolute left-2 top-2 text-gray-400 w-4 h-4" />
@@ -64,7 +64,7 @@ export default function UserManagement({
             placeholder={language === 'es' ? 'Buscar por nombre o correo...' : 'Search by name or email...'}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#C0E863]"
+            className="w-full pl-8 pr-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-tribe-green-light"
           />
         </div>
         <div className="flex items-center justify-between mt-1">
@@ -101,13 +101,13 @@ export default function UserManagement({
               <div className="flex items-start gap-2 mb-2">
                 <Avatar className="w-10 h-10 flex-shrink-0">
                   <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt={`${u.name || 'User'} avatar`} />
-                  <AvatarFallback className="bg-[#C0E863] text-sm font-bold">
+                  <AvatarFallback className="bg-tribe-green-light text-sm font-bold">
                     {u.name?.[0]?.toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <p className="text-sm font-bold text-[#272D34] truncate">
+                    <p className="text-sm font-bold text-tribe-dark truncate">
                       {u.name || (language === 'es' ? 'Sin nombre' : 'No name')}
                     </p>
                     {u.banned && (

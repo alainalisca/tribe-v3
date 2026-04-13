@@ -54,7 +54,7 @@ export default function PartnerValueCards({ language }: Props) {
       {cards.map((card, i) => (
         <div
           key={i}
-          className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 flex gap-4 items-start"
+          className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-tribe-mid p-4 flex gap-4 items-start"
         >
           <div className="flex-shrink-0 w-12 h-12 bg-tribe-green/10 rounded-xl flex items-center justify-center">
             {card.icon}
@@ -64,7 +64,7 @@ export default function PartnerValueCards({ language }: Props) {
               <h3 className="text-sm font-bold text-stone-900 dark:text-white">{card.title}</h3>
               <span className="text-lg font-extrabold text-tribe-green flex-shrink-0">{card.stat}</span>
             </div>
-            <p className="text-xs text-stone-500 dark:text-[#B1B3B6] mt-0.5">{card.desc}</p>
+            <p className="text-xs text-stone-500 dark:text-tribe-gray-60 mt-0.5">{card.desc}</p>
           </div>
         </div>
       ))}

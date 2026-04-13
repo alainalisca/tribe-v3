@@ -10,6 +10,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -602,7 +603,7 @@ export default function InstructorOnboardingPage() {
 
               {form.storefront_banner_url && !bannerUseUrl ? (
                 <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
-                  <img src={form.storefront_banner_url} alt="Banner preview" className="w-full h-28 object-cover" />
+                  <Image src={form.storefront_banner_url} alt="Storefront banner preview" width={600} height={112} className="w-full h-28 object-cover" unoptimized />
                   <div className="absolute bottom-2 right-2 flex gap-1">
                     <button
                       type="button"
@@ -692,7 +693,7 @@ export default function InstructorOnboardingPage() {
                 />
                 {/* Profile section */}
                 <div className="px-4 pb-4 -mt-10">
-                  <Avatar className="w-20 h-20 border-4 border-white dark:border-[#3D4349]">
+                  <Avatar className="w-20 h-20 border-4 border-white dark:border-tribe-surface">
                     <AvatarImage src={avatarUrl || undefined} />
                     <AvatarFallback className="bg-tribe-green text-xl font-bold text-slate-900">
                       {form.name ? form.name[0]?.toUpperCase() : '?'}

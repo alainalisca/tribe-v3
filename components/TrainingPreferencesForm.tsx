@@ -288,7 +288,7 @@ export default function TrainingPreferencesForm({ userId }: Props) {
       <Button
         onClick={handleSave}
         disabled={saving || selectedSports.length === 0}
-        className="w-full bg-tribe-green text-slate-900 hover:bg-[#b0d853] font-semibold py-3 rounded-xl disabled:opacity-50"
+        className="w-full bg-tribe-green text-slate-900 hover:bg-tribe-green-hover font-semibold py-3 rounded-xl disabled:opacity-50"
       >
         {saving ? (isEs ? 'Guardando...' : 'Saving...') : isEs ? 'Guardar preferencias' : 'Save preferences'}
       </Button>

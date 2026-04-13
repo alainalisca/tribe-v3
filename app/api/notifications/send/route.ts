@@ -1,10 +1,27 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
+
+const sendNotificationSchema = z.object({
+  userId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(1000),
+  url: z.string().url().optional(),
+  data: z.record(z.string(), z.string()).optional(),
+});
+
+const batchNotificationSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1),
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(1000),
+  url: z.string().url().optional(),
+  data: z.record(z.string(), z.string()).optional(),
+});
 
 /**
  * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
@@ -31,11 +48,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-    const { userId, title, body, url, data } = await request.json();
+    const raw = await request.json();
+    const parsed = sendNotificationSchema.safeParse(raw);
 
-    if (!userId || !title || !body) {
-      return NextResponse.json({ error: 'Missing required fields: userId, title, body' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues.map((i) => i.message).join(', ') },
+        { status: 400 }
+      );
     }
+
+    const { userId, title, body, url, data } = parsed.data;
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -153,15 +176,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
-    const { userIds, title, body, url, data } = await request.json();
+    const raw = await request.json();
+    const parsed = batchNotificationSchema.safeParse(raw);
 
-    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
-      return NextResponse.json({ error: 'Missing or invalid userIds array' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues.map((i) => i.message).join(', ') },
+        { status: 400 }
+      );
     }
 
-    if (!title || !body) {
-      return NextResponse.json({ error: 'Missing required fields: title, body' }, { status: 400 });
-    }
+    const { userIds, title, body, url, data } = parsed.data;
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 

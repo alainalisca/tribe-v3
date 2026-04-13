@@ -135,7 +135,7 @@ export default function TemplateSection({
       </div>
 
       {showNameInput && (
-        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-tribe-mid mb-4">
           <CardContent className="p-3">
             <Label className="font-bold text-theme-primary mb-2">{t('nameForTemplate')}</Label>
             <Input
@@ -150,7 +150,7 @@ export default function TemplateSection({
                 }
               }}
               autoFocus
-              className="dark:border-[#52575D] bg-white dark:bg-[#404549] text-theme-primary text-sm mb-2"
+              className="dark:border-tribe-mid bg-white dark:bg-tribe-surface text-theme-primary text-sm mb-2"
             />
             <div className="flex gap-2">
               <button
@@ -159,7 +159,7 @@ export default function TemplateSection({
                   setShowNameInput(false);
                   setTemplateName('');
                 }}
-                className="flex-1 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid text-sm font-medium"
+                className="flex-1 py-2 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid text-sm font-medium"
               >
                 {t('cancel')}
               </button>
@@ -177,7 +177,7 @@ export default function TemplateSection({
       )}
 
       {showTemplates && templates.length > 0 && (
-        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-[#52575D] mb-4">
+        <Card className="dark:bg-tribe-card rounded-lg border-stone-200 dark:border-tribe-mid mb-4">
           <CardContent className="p-3">
             <h3 className="text-sm font-bold text-theme-primary mb-2">{t('yourTemplates')}</h3>
             <div className="space-y-2">

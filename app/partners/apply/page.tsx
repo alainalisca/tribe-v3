@@ -116,7 +116,7 @@ export default function PartnerApplyPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
           <button
             onClick={() => router.back()}
@@ -138,7 +138,7 @@ export default function PartnerApplyPage() {
             <p className="text-lg font-bold text-stone-900 dark:text-white mb-2">
               {t('Instructor Account Required', 'Cuenta de Instructor Requerida')}
             </p>
-            <p className="text-sm text-stone-500 dark:text-[#B1B3B6] mb-4">
+            <p className="text-sm text-stone-500 dark:text-tribe-gray-60 mb-4">
               {t('You need an instructor account to apply.', 'Necesitas una cuenta de instructor para aplicar.')}
             </p>
           </div>
@@ -151,7 +151,7 @@ export default function PartnerApplyPage() {
             <p className="text-lg font-bold text-stone-900 dark:text-white mb-2">
               {t('Application Already Submitted', 'Solicitud Ya Enviada')}
             </p>
-            <p className="text-sm text-stone-500 dark:text-[#B1B3B6]">
+            <p className="text-sm text-stone-500 dark:text-tribe-gray-60">
               {t('Your application is being reviewed.', 'Tu solicitud está siendo revisada.')}
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function PartnerApplyPage() {
             <p className="text-lg font-bold text-stone-900 dark:text-white mb-2">
               {t('Application Submitted!', 'Solicitud Enviada!')}
             </p>
-            <p className="text-sm text-stone-500 dark:text-[#B1B3B6]">
+            <p className="text-sm text-stone-500 dark:text-tribe-gray-60">
               {t("We'll review within 48 hours.", 'La revisaremos dentro de 48 horas.')}
             </p>
           </div>

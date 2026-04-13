@@ -69,6 +69,8 @@ export async function GET(request: NextRequest) {
         source: 'cache',
         cacheAge: 'fresh',
         count: allEvents.length,
+      }, {
+        headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
       });
     }
 
@@ -117,6 +119,8 @@ export async function GET(request: NextRequest) {
       source: 'live',
       cacheAge: 'refreshed',
       count: allEvents.length,
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
     });
   } catch (error) {
     logError(error, { action: 'syncRoute' });

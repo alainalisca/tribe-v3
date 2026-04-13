@@ -139,6 +139,7 @@ export default function ParticipantList({
                 {canKick && participant.user_id && (
                   <button
                     onClick={() => onKickUser(participant.user_id!, participant.user?.name || t('unknown'))}
+                    aria-label="Remove from session"
                     className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
                     title="Remove from session"
                   >

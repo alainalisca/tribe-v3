@@ -65,7 +65,7 @@ export default function EmailAuthForm({
               required
               autoComplete="name"
               enterKeyHint="next"
-              className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
+              className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
             />
           </div>
 
@@ -77,7 +77,7 @@ export default function EmailAuthForm({
               onChange={(e) => onBirthDateChange(e.target.value)}
               required
               max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-              className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
+              className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
             />
             <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{t.mustBe18Note}</p>
 
@@ -114,7 +114,7 @@ export default function EmailAuthForm({
           required
           autoComplete="email"
           enterKeyHint="next"
-          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
         />
       </div>
 
@@ -129,7 +129,7 @@ export default function EmailAuthForm({
           minLength={6}
           autoComplete={isLogin ? 'current-password' : 'new-password'}
           enterKeyHint={isLogin ? 'go' : 'next'}
-          className="h-auto py-3 dark:border-[#52575D] focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
+          className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
         />
         {!isLogin && password && (
           <div className="mt-2">

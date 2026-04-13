@@ -108,7 +108,7 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
   const showSparkle = streak >= 4;
 
   return (
-    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
+    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-tribe-card">
       {/* Streak header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

@@ -27,7 +27,7 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
     <div className="flex-shrink-0 w-40 bg-white dark:bg-tribe-mid rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <Link href={`/profile/${partner.id}`}>
         {/* Avatar section */}
-        <div className="relative h-32 bg-gradient-to-br from-[#A3E635] to-[#8fd61d]">
+        <div className="relative h-32 bg-gradient-to-br from-tribe-green-light to-tribe-green-hover">
           {partner.avatar_url ? (
             <Image src={partner.avatar_url} alt={partner.name} fill className="w-full h-full object-cover" />
           ) : (
@@ -62,7 +62,7 @@ export default function TrainingPartnerCard({ partner, language, onInvite }: Tra
               e.stopPropagation();
               onInvite();
             }}
-            className="w-full flex items-center justify-center gap-1 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition"
+            className="w-full flex items-center justify-center gap-1 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-tribe-green-hover transition"
           >
             <UserPlus className="w-3 h-3" />
             {isEs ? 'Invitar' : 'Invite'}

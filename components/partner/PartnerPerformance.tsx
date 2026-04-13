@@ -36,7 +36,7 @@ export default function PartnerPerformance({ partner, language }: Props) {
   ];
 
   return (
-    <div className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-4 mb-5">
+    <div className="bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-tribe-mid p-4 mb-5">
       <h3 className="text-sm font-bold text-stone-900 dark:text-white mb-3">
         {t('Performance Metrics', 'Métricas de Rendimiento')}
       </h3>
@@ -46,7 +46,7 @@ export default function PartnerPerformance({ partner, language }: Props) {
             <div className="flex-shrink-0">{m.icon}</div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">{m.label}</span>
+                <span className="text-sm text-stone-700 dark:text-gray-200">{m.label}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-stone-900 dark:text-white">{m.value}</span>
                   <span

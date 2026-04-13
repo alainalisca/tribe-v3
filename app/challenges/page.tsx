@@ -322,7 +322,7 @@ function ChallengeCard({
     <button onClick={onCardClick} className="text-left transition hover:shadow-lg">
       <div className="bg-white dark:bg-tribe-dark rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
         {/* Cover Image or Gradient */}
-        <div className="h-40 bg-gradient-to-br from-tribe-green to-[#8FD642] relative overflow-hidden">
+        <div className="h-40 bg-gradient-to-br from-tribe-green to-tribe-green relative overflow-hidden">
           {challenge.cover_image_url && (
             <Image src={challenge.cover_image_url} alt={challenge.title} fill className="object-cover" />
           )}

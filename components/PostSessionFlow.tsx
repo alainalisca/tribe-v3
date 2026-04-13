@@ -167,7 +167,7 @@ export default function PostSessionFlow({
               maxLength={500}
               className="w-full h-20 p-3 rounded-xl text-sm resize-none outline-none transition-colors
                 border border-gray-200 dark:border-gray-600 focus:border-tribe-green
-                bg-gray-50 dark:bg-[#1e2328]
+                bg-gray-50 dark:bg-tribe-dark
                 text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500"
             />
             <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">{reviewText.length}/500</p>
@@ -394,7 +394,7 @@ export default function PostSessionFlow({
               className="w-20 h-20 rounded-full object-cover border-3 border-tribe-green/50 mb-4"
             />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#A3E635]/30 to-[#A3E635]/10 flex items-center justify-center border-3 border-tribe-green/50 mb-4">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-tribe-green-light/30 to-tribe-green-light/10 flex items-center justify-center border-3 border-tribe-green/50 mb-4">
               <span className="text-3xl font-bold text-tribe-green">{creatorName.charAt(0).toUpperCase()}</span>
             </div>
           )}

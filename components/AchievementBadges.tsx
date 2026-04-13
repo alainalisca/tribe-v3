@@ -116,7 +116,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
       const { count: createdCount, error: createdError } = await supabase
         .from('sessions')
         .select('id', { count: 'exact' })
-        .eq('created_by', userId);
+        .eq('creator_id', userId);
 
       if (createdError) {
         logError(createdError, { action: 'fetchCreatedSessions', userId });
@@ -206,7 +206,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
   }
 
   return (
-    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 shadow-sm border border-gray-200 dark:border-[#6B7178]">
+    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 shadow-sm border border-gray-200 dark:border-tribe-card">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-stone-900 dark:text-white">
@@ -256,7 +256,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
       </div>
 
       {/* Stats footer */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#6B7178] text-sm text-gray-600 dark:text-gray-400 space-y-1">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-tribe-card text-sm text-gray-600 dark:text-gray-400 space-y-1">
         <div>
           <span className="font-medium">{sessionsAttended}</span>{' '}
           {language === 'es' ? 'sesiones asistidas' : 'sessions attended'}

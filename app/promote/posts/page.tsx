@@ -445,7 +445,7 @@ export default function PromotePostsPage() {
                 placeholder={strings.contentPlaceholder}
                 maxLength={CHAR_LIMIT}
                 rows={4}
-                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
               />
               <div className="mt-1 flex justify-between">
                 <span></span>
@@ -463,7 +463,7 @@ export default function PromotePostsPage() {
                 value={formImageUrl}
                 onChange={(e) => setFormImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
               />
             </div>
 
@@ -473,7 +473,7 @@ export default function PromotePostsPage() {
               <select
                 value={formLinkedSession}
                 onChange={(e) => setFormLinkedSession(e.target.value)}
-                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                className="mt-2 w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
               >
                 <option value="">{strings.selectSession}</option>
                 {sessions.length === 0 ? (
@@ -495,7 +495,7 @@ export default function PromotePostsPage() {
                 id="pin-post"
                 checked={formIsPinned}
                 onChange={(e) => setFormIsPinned(e.target.checked)}
-                className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
+                className="h-4 w-4 rounded border-stone-200 dark:border-tribe-mid bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
               />
               <label htmlFor="pin-post" className="text-sm font-medium text-theme-primary">
                 {strings.pinPost}
@@ -537,7 +537,7 @@ export default function PromotePostsPage() {
                         onChange={(e) => setEditContent(e.target.value)}
                         maxLength={CHAR_LIMIT}
                         rows={4}
-                        className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                        className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
                       />
                       <div className="mt-1 flex justify-between">
                         <span></span>
@@ -553,14 +553,14 @@ export default function PromotePostsPage() {
                       value={editImageUrl}
                       onChange={(e) => setEditImageUrl(e.target.value)}
                       placeholder={strings.imageUrl}
-                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
+                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary placeholder-theme-secondary focus:border-tribe-green focus:outline-none"
                     />
 
                     {/* Edit Linked Session */}
                     <select
                       value={editLinkedSession}
                       onChange={(e) => setEditLinkedSession(e.target.value)}
-                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
+                      className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:border-tribe-green focus:outline-none"
                     >
                       <option value="">{strings.selectSession}</option>
                       {sessions.map((session) => (
@@ -577,7 +577,7 @@ export default function PromotePostsPage() {
                         id={`pin-${post.id}`}
                         checked={editIsPinned}
                         onChange={(e) => setEditIsPinned(e.target.checked)}
-                        className="h-4 w-4 rounded border-stone-200 dark:border-[#52575D] bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
+                        className="h-4 w-4 rounded border-stone-200 dark:border-tribe-mid bg-white dark:bg-tribe-surface text-tribe-green focus:ring-tribe-green"
                       />
                       <label htmlFor={`pin-${post.id}`} className="text-sm font-medium text-theme-primary">
                         {strings.pinPost}

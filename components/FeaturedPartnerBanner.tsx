@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchActivePartners, incrementPartnerMetric } from '@/lib/dal/featuredPartners';
 import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
+import Image from 'next/image';
 import { Star, ChevronRight, Users, Calendar } from 'lucide-react';
 
 export default function FeaturedPartnerBanner() {
@@ -76,9 +77,9 @@ export default function FeaturedPartnerBanner() {
         {/* Content */}
         <div className="flex gap-3 items-center">
           {/* Logo/Avatar */}
-          <div className="flex-shrink-0 w-16 h-16 rounded-2xl bg-tribe-mid border-2 border-tribe-green flex items-center justify-center overflow-hidden">
+          <div className="relative flex-shrink-0 w-16 h-16 rounded-2xl bg-tribe-mid border-2 border-tribe-green flex items-center justify-center overflow-hidden">
             {partner.logo_url ? (
-              <img src={partner.logo_url} alt={partner.business_name} className="w-full h-full object-cover" />
+              <Image src={partner.logo_url} alt={partner.business_name} fill className="object-cover" unoptimized />
             ) : (
               <span className="text-2xl">{partner.business_type === 'gym' ? '🏋️' : '🏢'}</span>
             )}
@@ -87,7 +88,7 @@ export default function FeaturedPartnerBanner() {
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-bold text-base leading-tight truncate">{partner.business_name}</h3>
-            {desc && <p className="text-[#B1B3B6] text-xs leading-snug line-clamp-2 mt-0.5">{desc}</p>}
+            {desc && <p className="text-tribe-gray-60 text-xs leading-snug line-clamp-2 mt-0.5">{desc}</p>}
           </div>
         </div>
 
@@ -153,7 +154,7 @@ function PartnerStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="text-center">
       <div className="text-lg font-extrabold text-tribe-green">{value}</div>
-      <div className="text-[10px] text-[#B1B3B6]">{label}</div>
+      <div className="text-[10px] text-tribe-gray-60">{label}</div>
     </div>
   );
 }
@@ -175,7 +176,7 @@ function BecomePartnerCTA({ language }: { language: string }) {
         <p className="text-white font-bold text-sm mb-1">
           {language === 'es' ? '¿Tienes un estudio o gimnasio?' : 'Own a studio or gym?'}
         </p>
-        <p className="text-[#B1B3B6] text-xs mb-3">
+        <p className="text-tribe-gray-60 text-xs mb-3">
           {language === 'es'
             ? 'Destaca tu negocio y conecta con atletas locales'
             : 'Get featured and connect with local athletes'}

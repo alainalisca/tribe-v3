@@ -21,6 +21,7 @@ import {
   type CommunityMemberWithUser,
 } from '@/lib/dal/communities';
 import { sportTranslations } from '@/lib/translations';
+import Image from 'next/image';
 import { ChevronLeft, Users, MessageCircle, Heart, Trash2, Loader2, Plus } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
@@ -167,7 +168,7 @@ export default function CommunityDetailPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
+      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -184,7 +185,7 @@ export default function CommunityDetailPage() {
         <div className="w-full h-48 bg-cover bg-center" style={coverStyle} />
 
         {/* Community info */}
-        <div className="px-4 py-6 space-y-4 border-b border-gray-200 dark:border-[#52575D]">
+        <div className="px-4 py-6 space-y-4 border-b border-gray-200 dark:border-tribe-mid">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-theme-primary">{community.name}</h2>
             {sportName && <p className="text-sm text-tribe-green font-semibold">{sportName}</p>}
@@ -213,7 +214,7 @@ export default function CommunityDetailPage() {
             className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${
               isMember
                 ? 'border-2 border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'
-                : 'bg-tribe-green hover:bg-[#92d31f] text-slate-900'
+                : 'bg-tribe-green hover:bg-tribe-green text-slate-900'
             }`}
           >
             {joining ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
@@ -224,7 +225,7 @@ export default function CommunityDetailPage() {
         {/* Tabs */}
         {isMember && (
           <>
-            <div className="flex border-b border-gray-200 dark:border-[#52575D] px-4 sticky top-16 bg-white dark:bg-tribe-surface z-30">
+            <div className="flex border-b border-gray-200 dark:border-tribe-mid px-4 sticky top-16 bg-white dark:bg-tribe-surface z-30">
               <button
                 onClick={() => setActiveTab('posts')}
                 className={`px-4 py-3 font-medium border-b-2 transition ${
@@ -253,7 +254,7 @@ export default function CommunityDetailPage() {
                 {/* New post FAB */}
                 <Link
                   href={`/communities/${communityId}/post`}
-                  className="flex items-center gap-2 px-4 py-3 bg-tribe-green text-slate-900 rounded-lg hover:bg-[#92d31f] font-medium transition"
+                  className="flex items-center gap-2 px-4 py-3 bg-tribe-green text-slate-900 rounded-lg hover:bg-tribe-green font-medium transition"
                 >
                   <Plus className="w-5 h-5" />
                   {t.newPost}
@@ -303,11 +304,11 @@ export default function CommunityDetailPage() {
 
                         {/* Post media */}
                         {post.media_url && post.media_type === 'image' && (
-                          <img src={post.media_url} alt="Post" className="w-full rounded-lg max-h-96 object-cover" />
+                          <Image src={post.media_url} alt="Community post image" width={600} height={384} className="w-full rounded-lg max-h-96 object-cover" unoptimized />
                         )}
 
                         {/* Post stats */}
-                        <div className="flex gap-4 text-sm text-stone-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-[#6B7178]">
+                        <div className="flex gap-4 text-sm text-stone-600 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-tribe-card">
                           <button className="flex items-center gap-1 hover:text-red-500 transition">
                             <Heart className="w-4 h-4" />
                             {post.likes_count}

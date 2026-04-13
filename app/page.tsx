@@ -160,7 +160,7 @@ export default function HomePage() {
               <SkeletonCard />
             </div>
           ) : f.fetchError ? (
-            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
               <CardContent className="p-8 text-center">
                 <div className="text-4xl mb-4">⚠️</div>
                 <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
@@ -173,7 +173,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ) : f.filteredSessions.length === 0 ? (
-            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
               <CardContent className="p-8 text-center">
                 {f.searchQuery || f.selectedSport || f.dateFilter !== 'all' || f.genderFilter !== 'all' ? (
                   <>
@@ -321,7 +321,7 @@ export default function HomePage() {
               {f.visibleCount < f.filteredSessions.length && (
                 <button
                   onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}
-                  className="w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-[#52575D] hover:bg-stone-100 dark:hover:bg-[#7D8490] transition"
+                  className="w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-tribe-mid hover:bg-stone-100 dark:hover:bg-tribe-card transition"
                 >
                   {f.language === 'es'
                     ? `Mostrar más (${f.filteredSessions.length - f.visibleCount} restantes)`

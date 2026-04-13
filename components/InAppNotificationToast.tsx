@@ -75,7 +75,7 @@ export default function InAppNotificationToast() {
     >
       <div className="in-app-toast">
         <div className="in-app-toast-icon">
-          <Bell className="w-5 h-5 text-[#C0E863]" />
+          <Bell className="w-5 h-5 text-tribe-green-light" />
         </div>
         <div className="in-app-toast-content">
           <p className="in-app-toast-title">{notification.title}</p>

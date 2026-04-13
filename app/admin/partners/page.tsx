@@ -62,7 +62,7 @@ export default function AdminPartnersPage() {
               <Store className="w-5 h-5 text-tribe-green" />
               {t('Manage Affiliates', 'Gestionar Afiliados')}
             </h1>
-            <p className="text-xs text-[#B1B3B6]">
+            <p className="text-xs text-tribe-gray-60">
               {t(`${counts.all} total, ${counts.pending} pending`, `${counts.all} total, ${counts.pending} pendientes`)}
             </p>
           </div>
@@ -77,7 +77,7 @@ export default function AdminPartnersPage() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition ${
                 statusFilter === f
                   ? 'bg-tribe-green text-slate-900 border-tribe-green'
-                  : 'bg-tribe-surface text-[#B1B3B6] border-[#52575D] hover:bg-tribe-mid'
+                  : 'bg-tribe-surface text-tribe-gray-60 border-tribe-mid hover:bg-tribe-mid'
               }`}
             >
               {f === 'all' ? t('All', 'Todos') : f.charAt(0).toUpperCase() + f.slice(1)} ({counts[f]})
@@ -88,8 +88,8 @@ export default function AdminPartnersPage() {
         {/* Partner list */}
         {partners.length === 0 ? (
           <div className="text-center py-12">
-            <Store className="w-12 h-12 text-[#52575D] mx-auto mb-3" />
-            <p className="text-[#B1B3B6] text-sm">{t('No affiliates found', 'No se encontraron afiliados')}</p>
+            <Store className="w-12 h-12 text-tribe-mid mx-auto mb-3" />
+            <p className="text-tribe-gray-60 text-sm">{t('No affiliates found', 'No se encontraron afiliados')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -129,12 +129,12 @@ function PartnerCard({
   const isLoading = actionLoading === p.id;
 
   return (
-    <div className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D]">
+    <div className="bg-tribe-surface rounded-2xl p-4 border border-tribe-mid">
       {/* Top row: name + status */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-white font-bold text-sm truncate">{p.business_name}</h3>
-          <p className="text-xs text-[#B1B3B6]">{p.business_type}</p>
+          <p className="text-xs text-tribe-gray-60">{p.business_type}</p>
         </div>
         <span
           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_COLORS[p.status] ?? ''}`}
@@ -145,34 +145,34 @@ function PartnerCard({
       </div>
 
       {/* Details */}
-      <div className="grid grid-cols-2 gap-2 text-xs text-[#B1B3B6] mb-3">
+      <div className="grid grid-cols-2 gap-2 text-xs text-tribe-gray-60 mb-3">
         <div>
-          <span className="text-[#808890]">{t('Specialties', 'Especialidades')}:</span>{' '}
+          <span className="text-tribe-gray-60">{t('Specialties', 'Especialidades')}:</span>{' '}
           {p.specialties?.length ? p.specialties.slice(0, 3).join(', ') : '—'}
         </div>
         <div>
-          <span className="text-[#808890]">{t('Created', 'Creado')}:</span>{' '}
+          <span className="text-tribe-gray-60">{t('Created', 'Creado')}:</span>{' '}
           {new Date(p.created_at).toLocaleDateString()}
         </div>
         {p.expires_at && (
           <div>
-            <span className="text-[#808890]">{t('Expires', 'Expira')}:</span>{' '}
+            <span className="text-tribe-gray-60">{t('Expires', 'Expira')}:</span>{' '}
             {new Date(p.expires_at).toLocaleDateString()}
           </div>
         )}
         <div>
-          <span className="text-[#808890]">{t('Impressions', 'Impresiones')}:</span> {p.total_impressions}
+          <span className="text-tribe-gray-60">{t('Impressions', 'Impresiones')}:</span> {p.total_impressions}
         </div>
       </div>
 
       {/* Tier selector */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs text-[#808890]">{t('Tier', 'Nivel')}:</span>
+        <span className="text-xs text-tribe-gray-60">{t('Tier', 'Nivel')}:</span>
         <select
           value={p.tier}
           onChange={(e) => onTierChange(p.id, e.target.value)}
           disabled={isLoading}
-          className="bg-tribe-mid text-white text-xs rounded-lg px-2 py-1 border border-[#52575D] focus:border-tribe-green outline-none"
+          className="bg-tribe-mid text-white text-xs rounded-lg px-2 py-1 border border-tribe-mid focus:border-tribe-green outline-none"
         >
           <option value="standard">Standard</option>
           <option value="premium">Premium</option>
@@ -186,7 +186,7 @@ function PartnerCard({
           <button
             onClick={() => onApprove(p.id)}
             disabled={isLoading}
-            className="flex-1 py-2 bg-tribe-green text-slate-900 font-bold text-xs rounded-xl hover:bg-[#b0d853] transition disabled:opacity-50"
+            className="flex-1 py-2 bg-tribe-green text-slate-900 font-bold text-xs rounded-xl hover:bg-tribe-green-hover transition disabled:opacity-50"
           >
             {isLoading ? '...' : t('Approve', 'Aprobar')}
           </button>

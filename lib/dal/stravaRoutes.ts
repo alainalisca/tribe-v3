@@ -32,7 +32,7 @@ export async function fetchPopularRoutes(
   try {
     let query = supabase
       .from('popular_routes')
-      .select('*')
+      .select('id, name, sport_type, distance_km, elevation_gain_m, difficulty, start_lat, start_lng, description_en, description_es, image_url, is_active, submitted_by, created_at')
       .eq('is_active', true)
       .order('name', { ascending: true })
       .limit(limit);

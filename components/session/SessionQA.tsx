@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logError } from '@/lib/logger';
 import {
   fetchSessionComments,
   insertSessionComment,
@@ -41,7 +42,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
           setComments(result.data);
         }
       } catch (error) {
-        console.error('Error loading session comments:', error);
+        logError(error, { action: 'loadSessionComments', sessionId });
       } finally {
         setLoading(false);
       }
@@ -62,7 +63,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
         setNewComment('');
       }
     } catch (error) {
-      console.error('Error adding session comment:', error);
+      logError(error, { action: 'addSessionComment', sessionId });
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +76,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
         setComments((prev) => prev.filter((c) => c.id !== commentId));
       }
     } catch (error) {
-      console.error('Error deleting session comment:', error);
+      logError(error, { action: 'deleteSessionComment', sessionId });
     }
   };
 
@@ -87,7 +88,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
   };
 
   return (
-    <div className="bg-white dark:bg-[#2C3137] rounded-2xl border border-stone-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 overflow-hidden">
       {/* Header / Toggle */}
       <button
         onClick={() => setExpanded(!expanded)}

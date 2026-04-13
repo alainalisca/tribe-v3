@@ -122,7 +122,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-dark border-t border-gray-200 dark:border-[#52575D] shadow-lg z-50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-dark border-t border-gray-200 dark:border-tribe-mid shadow-lg z-50 safe-area-bottom">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center h-16 px-4">
           {navItems.map((item) => {

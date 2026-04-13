@@ -128,7 +128,7 @@ export default function PhotoUploadSection({
           </div>
         ))}
         {photos.length < 3 && (
-          <label className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-stone-300 rounded-lg cursor-pointer hover:border-tribe-green hover:bg-stone-50 transition flex items-center justify-center">
+          <label className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-stone-300 rounded-lg cursor-pointer hover:border-tribe-green hover:bg-stone-50 dark:hover:bg-tribe-surface transition flex items-center justify-center">
             {uploading ? (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-tribe-green"></div>
             ) : (

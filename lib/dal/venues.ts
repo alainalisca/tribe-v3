@@ -32,7 +32,7 @@ export async function fetchNearbyVenues(
   try {
     let query = supabase
       .from('popular_venues')
-      .select('*')
+      .select('id, place_id, name, category, location_lat, location_lng, address, rating, photo_url, suggested_sports, cached_at, expires_at')
       .gt('expires_at', new Date().toISOString())
       .order('rating', { ascending: false })
       .limit(limit);

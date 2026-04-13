@@ -28,17 +28,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Helper: add participant + notify after approved payment
     async function addParticipantAfterPayment(paymentQuery: Record<string, string>) {
       // Find payment record matching the query
-      let query = supabase.from('payments').select('id, session_id, user_id, status');
+      let query = supabase.from('payments').select('id, session_id, participant_user_id, status');
       for (const [key, val] of Object.entries(paymentQuery)) {
         query = query.eq(key, val);
       }
       const { data: paymentRecord } = await query.single();
-      if (!paymentRecord?.session_id || !paymentRecord?.user_id) return;
+      if (!paymentRecord?.session_id || !paymentRecord?.participant_user_id) return;
 
       const { error: participantError } = await supabase.from('session_participants').upsert(
         {
           session_id: paymentRecord.session_id,
-          user_id: paymentRecord.user_id,
+          user_id: paymentRecord.participant_user_id,
           status: 'confirmed',
           joined_at: new Date().toISOString(),
         },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             Authorization: `Bearer ${process.env.CRON_SECRET}`,
           },
           body: JSON.stringify({
-            user_id: paymentRecord.user_id,
+            user_id: paymentRecord.participant_user_id,
             title: 'Booking Confirmed!',
             body: 'Your session has been booked. See you there!',
             type: 'payment_confirmed',

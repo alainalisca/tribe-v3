@@ -8,6 +8,7 @@ import { logError } from '@/lib/logger';
 import { insertCommunityPost } from '@/lib/dal/communities';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
@@ -106,7 +107,7 @@ export default function NewPostPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
+      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -122,7 +123,7 @@ export default function NewPostPage() {
       <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* User info */}
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-[#52575D]">
+          <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-tribe-mid">
             <Avatar className="w-12 h-12">
               <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.name || 'User'} />
               <AvatarFallback>{userProfile?.name?.[0] || 'U'}</AvatarFallback>
@@ -142,7 +143,7 @@ export default function NewPostPage() {
                 setError('');
               }}
               rows={6}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
               autoFocus
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -157,13 +158,13 @@ export default function NewPostPage() {
               placeholder="https://example.com/image.jpg"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
 
             {/* Image preview */}
             {imageUrl && (
               <div className="mt-3 rounded-lg overflow-hidden">
-                <img src={imageUrl} alt="Preview" className="w-full max-h-64 object-cover" />
+                <Image src={imageUrl} alt="Post image preview" width={600} height={256} className="w-full max-h-64 object-cover" unoptimized />
               </div>
             )}
           </div>
@@ -173,14 +174,14 @@ export default function NewPostPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-[#6B7178] rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
+              className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-tribe-card rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </button>
             <Button
               type="submit"
               disabled={loading || !content.trim()}
-              className="flex-1 bg-tribe-green hover:bg-[#92d31f] text-slate-900 font-semibold h-12 rounded-lg transition"
+              className="flex-1 bg-tribe-green hover:bg-tribe-green text-slate-900 font-semibold h-12 rounded-lg transition"
             >
               {loading ? (
                 <>

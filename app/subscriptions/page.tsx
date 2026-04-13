@@ -253,7 +253,7 @@ export default function SubscriptionsPage() {
               return (
                 <Card
                   key={subscription.session_id}
-                  className="dark:bg-tribe-card shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-[#52575D]"
+                  className="dark:bg-tribe-card shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden border-stone-200 dark:border-tribe-mid"
                 >
                   <CardContent className="p-5">
                     {/* Sport & Frequency Badge */}
@@ -279,7 +279,7 @@ export default function SubscriptionsPage() {
                           {subscription.session.creator.name?.[0]?.toUpperCase() || 'I'}
                         </AvatarFallback>
                       </Avatar>
-                      <p className="text-xs text-stone-600 dark:text-[#B1B3B6]">
+                      <p className="text-xs text-stone-600 dark:text-tribe-gray-60">
                         {language === 'es' ? 'Instructor: ' : 'Instructor: '}
                         <span className="font-semibold text-stone-900 dark:text-white">
                           {subscription.session.creator.name}
@@ -326,7 +326,7 @@ export default function SubscriptionsPage() {
                       <Link href={`/session/${subscription.session_id}`} className="flex-1">
                         <Button
                           variant="outline"
-                          className="w-full py-2 font-semibold text-sm border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
+                          className="w-full py-2 font-semibold text-sm border-stone-300 dark:border-tribe-mid text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
                         >
                           {language === 'es' ? 'Ver Detalles' : 'View Details'}
                         </Button>
@@ -375,7 +375,7 @@ export default function SubscriptionsPage() {
             <button
               onClick={() => setUnsubscribeModal({ isOpen: false, sessionId: null })}
               disabled={unsubscribing}
-              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
+              className="flex-1 py-2.5 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
             >
               {language === 'es' ? 'Cancelar' : 'Cancel'}
             </button>

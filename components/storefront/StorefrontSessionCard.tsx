@@ -217,7 +217,7 @@ export default function StorefrontSessionCard({
 
   return (
     <>
-      <div className="bg-white dark:bg-[#404549] rounded-xl border border-stone-200 dark:border-[#52575D] p-4 overflow-hidden hover:border-tribe-green/50 transition-all">
+      <div className="bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid p-4 overflow-hidden hover:border-tribe-green/50 transition-all">
         {/* Boosted Badge */}
         {session.is_boosted && (
           <div className="flex items-center gap-1 mb-3 w-fit">

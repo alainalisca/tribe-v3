@@ -172,7 +172,7 @@ export default function ReferralPage() {
             </div>
             <button
               onClick={handleCopyCode}
-              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-[#b0d853] transition font-semibold flex items-center gap-2"
+              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-tribe-green-hover transition font-semibold flex items-center gap-2"
             >
               {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>

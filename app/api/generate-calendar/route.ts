@@ -95,6 +95,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'text/calendar',
         'Content-Disposition': `attachment; filename="tribe-${session.sport.toLowerCase()}-${session.date}.ics"`,
+        'Cache-Control': 'public, max-age=3600',
       },
     });
   } catch (error) {

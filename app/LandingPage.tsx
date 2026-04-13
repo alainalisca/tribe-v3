@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useLanguage } from '@/lib/LanguageContext';
 
 const t = {
@@ -123,7 +124,9 @@ export default function LandingPage(): JSX.Element {
         <div className="tl-container tl-hero-grid">
           <div className="tl-hero-text">
             <div className="tl-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img tl-logo-white" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/tribe-wordmark-dark.png" alt="Tribe" className="tl-logo-img tl-logo-dark" />
             </div>
             <h1 className="tl-headline">
@@ -141,20 +144,20 @@ export default function LandingPage(): JSX.Element {
           </div>
           <div className="tl-hero-visual">
             <div className="tl-photo-grid">
-              <div className="tl-photo tl-photo-main">
-                <img src={PHOTOS.hero} alt="Barbell training" style={{ objectPosition: 'center 35%' }} />
+              <div className="tl-photo tl-photo-main relative">
+                <Image src={PHOTOS.hero} alt="Barbell training" fill style={{ objectPosition: 'center 35%' }} priority />
               </div>
-              <div className="tl-photo tl-photo-sm tl-photo-1">
-                <img src={PHOTOS.rowers} alt="CrossFit community handshake" style={{ objectPosition: 'top' }} />
+              <div className="tl-photo tl-photo-sm tl-photo-1 relative">
+                <Image src={PHOTOS.rowers} alt="CrossFit community handshake" fill style={{ objectPosition: 'top' }} />
               </div>
-              <div className="tl-photo tl-photo-sm tl-photo-2">
-                <img src={PHOTOS.deadlift} alt="Deadlift training" style={{ objectPosition: 'center 30%' }} />
+              <div className="tl-photo tl-photo-sm tl-photo-2 relative">
+                <Image src={PHOTOS.deadlift} alt="Deadlift training" fill style={{ objectPosition: 'center 30%' }} />
               </div>
-              <div className="tl-photo tl-photo-sm tl-photo-3">
-                <img src={PHOTOS.cycling} alt="Cycling" style={{ objectPosition: 'center' }} />
+              <div className="tl-photo tl-photo-sm tl-photo-3 relative">
+                <Image src={PHOTOS.cycling} alt="Cycling" fill style={{ objectPosition: 'center' }} />
               </div>
-              <div className="tl-photo tl-photo-sm tl-photo-4">
-                <img src={PHOTOS.running} alt="Running" style={{ objectPosition: 'center' }} />
+              <div className="tl-photo tl-photo-sm tl-photo-4 relative">
+                <Image src={PHOTOS.running} alt="Running" fill style={{ objectPosition: 'center' }} />
               </div>
             </div>
           </div>
@@ -200,6 +203,7 @@ export default function LandingPage(): JSX.Element {
       <footer className="tl-footer">
         <div className="tl-container tl-footer-inner">
           <div className="tl-footer-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/tribe-wordmark.png" alt="Tribe" className="tl-logo-img tl-footer-logo" />
           </div>
           <div className="tl-footer-links">
@@ -232,7 +236,8 @@ const landingStyles = `
   padding: 0;
 }
 .tribe-landing a { color: inherit; text-decoration: none; }
-.tribe-landing img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tribe-landing img { display: block; }
+.tribe-landing .tl-photo img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ─── Layout ─── */
 .tribe-landing .tl-container {

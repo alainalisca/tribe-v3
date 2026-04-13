@@ -156,8 +156,8 @@ export default function AdminEventsPage() {
   if (!authorized) return null;
 
   const inputClass =
-    'w-full bg-tribe-mid text-white text-sm rounded-lg px-3 py-2 border border-[#52575D] focus:border-tribe-green outline-none placeholder-[#808890]';
-  const labelClass = 'block text-xs text-[#B1B3B6] mb-1';
+    'w-full bg-tribe-mid text-white text-sm rounded-lg px-3 py-2 border border-tribe-mid focus:border-tribe-green outline-none placeholder-[#808890]';
+  const labelClass = 'block text-xs text-tribe-gray-60 mb-1';
 
   return (
     <div className="min-h-screen bg-tribe-dark pb-16 safe-area-top">
@@ -172,13 +172,13 @@ export default function AdminEventsPage() {
               <Calendar className="w-5 h-5 text-tribe-green" />
               {t('Manage Events', 'Gestionar Eventos')}
             </h1>
-            <p className="text-xs text-[#B1B3B6]">
+            <p className="text-xs text-tribe-gray-60">
               {t(`${events.length} total events`, `${events.length} eventos en total`)}
             </p>
           </div>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-tribe-green text-slate-900 font-bold text-xs rounded-xl hover:bg-[#b0d853] transition"
+            className="flex items-center gap-1.5 px-3 py-2 bg-tribe-green text-slate-900 font-bold text-xs rounded-xl hover:bg-tribe-green-hover transition"
           >
             <Plus className="w-4 h-4" />
             {t('Add Event', 'Agregar Evento')}
@@ -189,7 +189,7 @@ export default function AdminEventsPage() {
         {showForm && (
           <form
             onSubmit={handleSubmit}
-            className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D] mb-5 space-y-3"
+            className="bg-tribe-surface rounded-2xl p-4 border border-tribe-mid mb-5 space-y-3"
           >
             <h2 className="text-white font-bold text-sm mb-2">{t('New Event', 'Nuevo Evento')}</h2>
 
@@ -393,7 +393,7 @@ export default function AdminEventsPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 py-2.5 bg-tribe-green text-slate-900 font-bold text-sm rounded-xl hover:bg-[#b0d853] transition disabled:opacity-50"
+                className="flex-1 py-2.5 bg-tribe-green text-slate-900 font-bold text-sm rounded-xl hover:bg-tribe-green-hover transition disabled:opacity-50"
               >
                 {submitting ? '...' : t('Create Event', 'Crear Evento')}
               </button>
@@ -403,7 +403,7 @@ export default function AdminEventsPage() {
                   setShowForm(false);
                   setForm({ ...EMPTY_FORM });
                 }}
-                className="px-4 py-2.5 bg-tribe-mid text-[#B1B3B6] font-bold text-sm rounded-xl hover:bg-[#62676D] transition"
+                className="px-4 py-2.5 bg-tribe-mid text-tribe-gray-60 font-bold text-sm rounded-xl hover:bg-tribe-card transition"
               >
                 {t('Cancel', 'Cancelar')}
               </button>
@@ -414,8 +414,8 @@ export default function AdminEventsPage() {
         {/* Event list */}
         {events.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="w-12 h-12 text-[#52575D] mx-auto mb-3" />
-            <p className="text-[#B1B3B6] text-sm">{t('No events yet', 'Sin eventos aun')}</p>
+            <Calendar className="w-12 h-12 text-tribe-mid mx-auto mb-3" />
+            <p className="text-tribe-gray-60 text-sm">{t('No events yet', 'Sin eventos aun')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -466,11 +466,11 @@ function EventCard({
   const isLoading = actionLoading === ev.id;
 
   return (
-    <div className="bg-tribe-surface rounded-2xl p-4 border border-[#52575D]">
+    <div className="bg-tribe-surface rounded-2xl p-4 border border-tribe-mid">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-white font-bold text-sm truncate">{ev.name}</h3>
-          <p className="text-xs text-[#B1B3B6]">
+          <p className="text-xs text-tribe-gray-60">
             {ev.sport_type} &middot; {ev.event_type}
           </p>
         </div>
@@ -486,34 +486,34 @@ function EventCard({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs text-[#B1B3B6] mb-3">
+      <div className="grid grid-cols-2 gap-2 text-xs text-tribe-gray-60 mb-3">
         {ev.location_name && (
           <div>
-            <span className="text-[#808890]">{t('Location', 'Lugar')}:</span> {ev.location_name}
+            <span className="text-tribe-gray-60">{t('Location', 'Lugar')}:</span> {ev.location_name}
           </div>
         )}
         {ev.organizer && (
           <div>
-            <span className="text-[#808890]">{t('Organizer', 'Organizador')}:</span> {ev.organizer}
+            <span className="text-tribe-gray-60">{t('Organizer', 'Organizador')}:</span> {ev.organizer}
           </div>
         )}
         {ev.start_time && (
           <div>
-            <span className="text-[#808890]">{t('Time', 'Hora')}:</span> {ev.start_time}
+            <span className="text-tribe-gray-60">{t('Time', 'Hora')}:</span> {ev.start_time}
             {ev.end_time ? ` - ${ev.end_time}` : ''}
           </div>
         )}
         {ev.event_type === 'recurring' && ev.recurrence_day && (
           <div>
-            <span className="text-[#808890]">{t('Schedule', 'Horario')}:</span> {ev.recurrence_pattern} /{' '}
+            <span className="text-tribe-gray-60">{t('Schedule', 'Horario')}:</span> {ev.recurrence_pattern} /{' '}
             {ev.recurrence_day}
           </div>
         )}
         <div>
-          <span className="text-[#808890]">{t('Difficulty', 'Dificultad')}:</span> {ev.difficulty}
+          <span className="text-tribe-gray-60">{t('Difficulty', 'Dificultad')}:</span> {ev.difficulty}
         </div>
         <div>
-          <span className="text-[#808890]">{t('Price', 'Precio')}:</span>{' '}
+          <span className="text-tribe-gray-60">{t('Price', 'Precio')}:</span>{' '}
           {ev.is_free ? t('Free', 'Gratis') : (ev.price_info ?? '—')}
         </div>
       </div>

@@ -182,9 +182,10 @@ export async function fetchStorefrontMedia(
   try {
     const { data, error } = await supabase
       .from('storefront_media')
-      .select('*')
+      .select('id, user_id, media_url, media_type, thumbnail_url, caption, display_order, created_at')
       .eq('user_id', userId)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .limit(50);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {
@@ -289,10 +290,11 @@ export async function fetchServicePackages(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('*')
+      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
       .eq('instructor_id', instructorId)
       .eq('is_active', true)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .limit(50);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {
@@ -311,7 +313,7 @@ export async function fetchServicePackageById(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('*')
+      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
       .eq('id', packageId)
       .single();
     if (error) return { success: false, error: error.message };
@@ -398,7 +400,7 @@ export async function fetchInstructorPosts(
   try {
     const { data, error } = await supabase
       .from('instructor_posts')
-      .select('*')
+      .select('id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at')
       .eq('author_id', authorId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -439,7 +441,7 @@ export async function fetchFeedPosts(
     // Now query posts using the extracted array
     const { data, error } = await supabase
       .from('instructor_posts')
-      .select('*')
+      .select('id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at')
       .in('author_id', followingIds)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -612,9 +614,10 @@ export async function fetchPromoCodes(
   try {
     const { data, error } = await supabase
       .from('promo_codes')
-      .select('*')
+      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
       .eq('instructor_id', instructorId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {
@@ -633,7 +636,7 @@ export async function fetchPromoCodeByCode(
   try {
     const { data, error } = await supabase
       .from('promo_codes')
-      .select('*')
+      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
       .eq('code', code)
       .single();
     if (error) return { success: false, error: error.message };
@@ -743,7 +746,7 @@ export async function validatePromoCode(
   try {
     let query = supabase
       .from('promo_codes')
-      .select('*')
+      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
       .eq('code', code)
       .eq('is_active', true);
 
@@ -784,9 +787,10 @@ export async function fetchBoostCampaigns(
   try {
     const { data, error } = await supabase
       .from('boost_campaigns')
-      .select('*')
+      .select('id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at')
       .eq('instructor_id', instructorId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {
@@ -805,11 +809,12 @@ export async function fetchActiveBoosts(
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('boost_campaigns')
-      .select('*')
+      .select('id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at')
       .eq('status', 'active')
       .lte('starts_at', now)
       .gte('ends_at', now)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {

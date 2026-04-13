@@ -271,7 +271,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
       {/* ── Bottom Sheet ── */}
       <div
         className={`fixed left-0 right-0 z-[1002] rounded-t-2xl transition-all duration-300 ease-out
-          ${isDark ? 'bg-[#1e2328]' : 'bg-white'}
+          ${isDark ? 'bg-tribe-dark' : 'bg-white'}
           ${isOpen ? 'bottom-0 opacity-100' : '-bottom-full opacity-0 pointer-events-none'}`}
         style={{ maxHeight: '85vh', overflowY: 'auto', padding: '0 16px 24px' }}
       >
@@ -319,7 +319,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                         isActive
                           ? 'border border-tribe-green bg-tribe-green/15 text-tribe-green'
                           : isDark
-                            ? 'border border-transparent bg-[#333a42] text-gray-400 hover:text-gray-300'
+                            ? 'border border-transparent bg-tribe-dark text-gray-400 hover:text-gray-300'
                             : 'border border-transparent bg-gray-100 text-gray-500 hover:text-gray-700'
                       }`}
                   >
@@ -367,7 +367,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                   errorMessage
                     ? 'border border-tribe-red'
                     : isDark
-                      ? 'border border-[#3a4048] focus:border-tribe-green'
+                      ? 'border border-tribe-surface focus:border-tribe-green'
                       : 'border border-gray-200 focus:border-tribe-green'
                 }`}
             />

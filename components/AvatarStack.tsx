@@ -33,7 +33,7 @@ export default function AvatarStack({ participants, max = 4, size = 'md', linkTo
           const avatar = (
             <Avatar
               key={p.user_id}
-              className={`${avatarSize} border-2 border-white dark:border-[#6B7178] hover:z-10 transition-transform hover:scale-110`}
+              className={`${avatarSize} border-2 border-white dark:border-tribe-card hover:z-10 transition-transform hover:scale-110`}
               style={{ zIndex: visible.length - idx }}
               title={p.name}
             >
@@ -56,7 +56,7 @@ export default function AvatarStack({ participants, max = 4, size = 'md', linkTo
         })}
       </div>
 
-      {overflow > 0 && <span className="text-xs text-stone-600 dark:text-[#B1B3B6]">+{overflow}</span>}
+      {overflow > 0 && <span className="text-xs text-stone-600 dark:text-tribe-gray-60">+{overflow}</span>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft, MapPin, Shield, Flag, UserPlus } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
@@ -201,7 +202,7 @@ export default function PublicProfilePage() {
   if (!profile)
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
             <Button
               variant="ghost"
@@ -248,7 +249,7 @@ export default function PublicProfilePage() {
             <div className="flex gap-2">
               <button
                 onClick={handleBlock}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${isBlocked ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-100 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#5D6269]'}`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${isBlocked ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-100 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'}`}
               >
                 <Shield className="w-4 h-4 inline mr-1" />
                 {isBlocked ? t.unblock : t.block}
@@ -316,14 +317,14 @@ export default function PublicProfilePage() {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]"
+                className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid"
               >
                 <p className="text-4xl font-bold text-theme-primary">{stat.value}</p>
                 <p className="text-sm text-theme-secondary mt-1">{stat.label}</p>
               </div>
             ))}
             <div
-              className={`bg-white rounded-2xl p-4 text-center border ${hasLowAttendance ? 'border-orange-300 bg-orange-50' : 'border-stone-200'}`}
+              className={`bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border ${hasLowAttendance ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20' : 'border-stone-200 dark:border-tribe-mid'}`}
             >
               <p className={`text-4xl font-bold ${hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'}`}>
                 {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
@@ -359,7 +360,7 @@ export default function PublicProfilePage() {
           )}
 
           {profile?.bio && (
-            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-5 border border-stone-200 dark:border-[#52575D]">
+            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-5 border border-stone-200 dark:border-tribe-mid">
               <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
             </div>
           )}
@@ -435,7 +436,7 @@ export default function PublicProfilePage() {
           )}
 
           {(profile?.instagram_username || profile?.facebook_url) && (
-            <div className="mt-6 bg-white rounded-2xl p-5 border border-stone-200">
+            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-5 border border-stone-200 dark:border-tribe-mid">
               <h3 className="text-sm font-bold text-theme-primary mb-3 flex items-center gap-2">🔗 {t.socialMedia}</h3>
               <div className="space-y-2">
                 {profile?.instagram_username && (
@@ -469,14 +470,14 @@ export default function PublicProfilePage() {
                 {profile.photos.map((photo: string, index: number) => (
                   <div
                     key={index}
-                    className="aspect-square rounded-lg overflow-hidden bg-stone-200 cursor-pointer hover:opacity-90 transition"
+                    className="relative aspect-square rounded-lg overflow-hidden bg-stone-200 cursor-pointer hover:opacity-90 transition"
                     onClick={() => {
                       setLightboxPhoto(photo);
                       setLightboxIndex(index);
                       history.pushState({ lightbox: true }, '');
                     }}
                   >
-                    <img loading="lazy" src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <Image src={photo} alt={`User photo ${index + 1}`} fill className="object-cover" unoptimized />
                   </div>
                 ))}
               </div>

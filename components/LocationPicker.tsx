@@ -51,6 +51,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
                 ? 'bg-tribe-green text-slate-900'
                 : 'bg-stone-200 dark:bg-tribe-mid text-theme-primary hover:bg-stone-300 dark:hover:bg-tribe-card'
             }`}
+            aria-label="Select location on map"
             title={language === 'es' ? 'Seleccionar en mapa' : 'Select on map'}
           >
             <MapPin className="w-5 h-5" />
@@ -64,7 +65,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
       {showMap && (
         <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600 bg-stone-100 dark:bg-tribe-mid">
           {/* Map header */}
-          <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-[#404549] border-b border-stone-200 dark:border-gray-600">
+          <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-tribe-surface border-b border-stone-200 dark:border-gray-600">
             <span className="text-xs text-stone-500 dark:text-gray-400">
               {language === 'es' ? 'Toca el mapa o arrastra el marcador' : 'Tap map or drag marker'}
             </span>
@@ -110,7 +111,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
 
             {/* Loading overlay for reverse geocoding */}
             {reverseGeocoding && (
-              <div className="absolute bottom-2 left-2 right-2 bg-white dark:bg-[#404549] rounded-lg px-3 py-2 shadow-lg flex items-center gap-2">
+              <div className="absolute bottom-2 left-2 right-2 bg-white dark:bg-tribe-surface rounded-lg px-3 py-2 shadow-lg flex items-center gap-2">
                 <Loader2 className="w-4 h-4 text-tribe-green animate-spin" />
                 <span className="text-xs text-theme-primary">
                   {language === 'es' ? 'Obteniendo dirección...' : 'Getting address...'}
@@ -147,6 +148,7 @@ export default function LocationPicker({ value, onChange, placeholder, error }: 
               setPosition(null);
               onChange('');
             }}
+            aria-label="Clear location"
             className="p-1 hover:bg-stone-200 dark:hover:bg-tribe-mid rounded"
           >
             <X className="w-4 h-4 text-stone-400" />

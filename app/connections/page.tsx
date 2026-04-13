@@ -232,7 +232,7 @@ export default function ConnectionsPage() {
 
       <div className="pt-header max-w-2xl mx-auto">
         {/* Tabs */}
-        <div className="flex border-b border-stone-300 dark:border-[#52575D] px-4 gap-0">
+        <div className="flex border-b border-stone-300 dark:border-tribe-mid px-4 gap-0">
           <button
             onClick={() => setActiveTab('connections')}
             className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition ${
@@ -275,7 +275,7 @@ export default function ConnectionsPage() {
           {activeTab === 'connections' ? (
             // Connections Tab
             connections.length === 0 ? (
-              <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+              <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageCircle className="w-8 h-8 text-stone-400" />
@@ -290,7 +290,7 @@ export default function ConnectionsPage() {
             ) : (
               <div className="space-y-2">
                 {connections.map((conn) => (
-                  <Card key={conn.id} className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+                  <Card key={conn.id} className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         {/* Avatar */}
@@ -358,7 +358,7 @@ export default function ConnectionsPage() {
             )
           ) : // Requests Tab
           pendingRequests.length === 0 ? (
-            <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="w-8 h-8 text-stone-400" />
@@ -369,7 +369,7 @@ export default function ConnectionsPage() {
           ) : (
             <div className="space-y-2">
               {pendingRequests.map((req) => (
-                <Card key={req.id} className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] shadow-none">
+                <Card key={req.id} className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
@@ -411,7 +411,7 @@ export default function ConnectionsPage() {
                           size="sm"
                           onClick={() => handleAccept(req.id)}
                           disabled={actionLoading === req.id}
-                          className="bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d]"
+                          className="bg-tribe-green-light text-stone-900 hover:bg-tribe-green-hover"
                         >
                           {actionLoading === req.id ? '...' : t('accept')}
                         </Button>

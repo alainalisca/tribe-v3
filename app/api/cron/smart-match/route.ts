@@ -113,7 +113,32 @@ export async function GET(request: Request) {
     const usersMap = new Map(usersData?.map((u) => [u.id, u]) || []);
     let matchesCreated = 0;
 
-    // 2. Per-user matching: query DB for candidates with sport overlap, then score locally
+    // 2. Pre-fetch ALL candidate data in batch (avoid per-user DB queries)
+    const allSports = [...new Set(prefsRows.flatMap((p) => p.preferred_sports || []))];
+
+    const { data: allCandidatePrefs } = await supabase
+      .from('user_training_preferences')
+      .select('user_id, preferred_sports, availability, gender_preference')
+      .eq('active', true)
+      .overlaps('preferred_sports', allSports);
+
+    const allCandidateIds = [...new Set((allCandidatePrefs || []).map((c) => c.user_id))];
+
+    const { data: allCandidateUsers } = await supabase
+      .from('users')
+      .select('id, name, location_lat, location_lng, sports, gender')
+      .in('id', allCandidateIds)
+      .eq('banned', false);
+
+    // Build lookup maps for in-memory scoring
+    const allCandidatePrefsMap = new Map<string, Array<(typeof allCandidatePrefs extends (infer T)[] | null ? T : never)>>();
+    for (const cp of allCandidatePrefs || []) {
+      if (!allCandidatePrefsMap.has(cp.user_id)) allCandidatePrefsMap.set(cp.user_id, []);
+      allCandidatePrefsMap.get(cp.user_id)!.push(cp);
+    }
+    const allCandidateUsersMap = new Map((allCandidateUsers || []).map((u) => [u.id, u]));
+
+    // 3. Per-user scoring from in-memory data (no DB calls inside loop)
     for (const pref of prefsRows) {
       const user = usersMap.get(pref.user_id);
       if (!user?.location_lat || !user?.location_lng) continue;
@@ -125,27 +150,16 @@ export async function GET(request: Request) {
         max_distance_km: pref.max_distance_km || 10,
       };
 
-      // Query candidates: active prefs, sport overlap, not self
-      const { data: candidatePrefs } = await supabase
-        .from('user_training_preferences')
-        .select('user_id, preferred_sports, availability, gender_preference')
-        .eq('active', true)
-        .neq('user_id', user.id)
-        .overlaps('preferred_sports', userPrefs.preferred_sports)
-        .limit(20);
+      // Filter candidates from pre-fetched data: sport overlap + not self
+      const candidatePrefs = (allCandidatePrefs || []).filter(
+        (cp) =>
+          cp.user_id !== user.id &&
+          (cp.preferred_sports || []).some((s: string) => userPrefs.preferred_sports.includes(s))
+      );
 
-      if (!candidatePrefs?.length) continue;
+      if (!candidatePrefs.length) continue;
 
-      const candidateIds = candidatePrefs.map((c) => c.user_id);
-      const { data: candidateUsers } = await supabase
-        .from('users')
-        .select('id, name, location_lat, location_lng, sports, gender')
-        .in('id', candidateIds)
-        .eq('banned', false);
-
-      if (!candidateUsers?.length) continue;
-
-      const candidateMap = new Map(candidateUsers.map((c) => [c.id, c]));
+      const candidateMap = allCandidateUsersMap;
 
       const scored: Array<{
         matched_user_id: string;

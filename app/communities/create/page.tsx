@@ -120,7 +120,7 @@ export default function CreateCommunityPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
+      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
@@ -146,7 +146,7 @@ export default function CreateCommunityPage() {
                 setFormData({ ...formData, name: e.target.value });
                 setErrors({ ...errors, name: '' });
               }}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
             {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
@@ -159,7 +159,7 @@ export default function CreateCommunityPage() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
             />
           </div>
 
@@ -170,7 +170,7 @@ export default function CreateCommunityPage() {
             <select
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             >
               <option value="">-- {language === 'es' ? 'Ninguno' : 'None'} --</option>
               {sportOptions.map((sport) => (
@@ -190,7 +190,7 @@ export default function CreateCommunityPage() {
               placeholder="https://example.com/image.jpg"
               value={formData.cover_image_url}
               onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function CreateCommunityPage() {
           </div>
 
           {/* Private toggle */}
-          <div className="space-y-3 bg-stone-50 dark:bg-[#404549] p-4 rounded-lg">
+          <div className="space-y-3 bg-stone-50 dark:bg-tribe-surface p-4 rounded-lg">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -225,7 +225,7 @@ export default function CreateCommunityPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-tribe-green hover:bg-[#92d31f] text-slate-900 font-semibold h-12 rounded-lg transition"
+            className="w-full bg-tribe-green hover:bg-tribe-green text-slate-900 font-semibold h-12 rounded-lg transition"
           >
             {loading ? (
               <>

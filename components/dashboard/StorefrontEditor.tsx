@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Camera, Eye, Save, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
@@ -100,7 +101,7 @@ export default function StorefrontEditor({
     <div className="space-y-6">
       {/* Banner Preview */}
       <div className="relative h-40 rounded-xl overflow-hidden bg-gradient-to-br from-tribe-green to-lime-500">
-        {bannerUrl && <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />}
+        {bannerUrl && <Image src={bannerUrl} alt="Storefront banner" fill className="object-cover" unoptimized />}
         <label className="absolute bottom-3 right-3 flex items-center gap-2 bg-black/60 text-white px-3 py-2 rounded-lg cursor-pointer hover:bg-black/80 transition text-sm">
           {uploading ? <Loader className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
           {txt.changeBanner}
@@ -123,7 +124,7 @@ export default function StorefrontEditor({
           onChange={(e) => setTagline(e.target.value)}
           placeholder={txt.taglinePlaceholder}
           maxLength={120}
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
 
@@ -136,7 +137,7 @@ export default function StorefrontEditor({
           placeholder={txt.bioPlaceholder}
           rows={4}
           maxLength={1000}
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none resize-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none resize-none"
         />
       </div>
 
@@ -150,7 +151,7 @@ export default function StorefrontEditor({
           value={specialties}
           onChange={(e) => setSpecialties(e.target.value)}
           placeholder="Yoga, HIIT, Boxing"
-          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
+          className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
 

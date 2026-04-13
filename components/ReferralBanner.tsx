@@ -49,13 +49,14 @@ export default function ReferralBanner({ userId }: ReferralBannerProps) {
             setDismissed(true);
             localStorage.setItem(`referralBannerDismissed_${userId}`, 'true');
           }}
+          aria-label="Dismiss referral banner"
           className="text-stone-500 hover:text-stone-700 dark:text-gray-400 dark:hover:text-gray-300 flex-shrink-0 ml-2"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
       <Link href="/referral">
-        <button className="mt-3 w-full py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-[#b0d853] transition">
+        <button className="mt-3 w-full py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold hover:bg-tribe-green-hover transition">
           {t.shareCode}
         </button>
       </Link>

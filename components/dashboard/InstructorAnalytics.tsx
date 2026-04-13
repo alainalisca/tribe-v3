@@ -61,7 +61,7 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
         {cards.map((card) => (
           <div
             key={card.label}
-            className="p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D]"
+            className="p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid"
           >
             <div className="flex items-center gap-2 mb-2">
               <card.icon className={`w-4 h-4 ${card.color}`} />
@@ -73,7 +73,7 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
       </div>
 
       {/* Monthly Trend */}
-      <div className="p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-[#52575D]">
+      <div className="p-4 bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid">
         <h4 className="text-sm font-semibold text-theme-primary mb-3">{txt.monthlyTrend}</h4>
         <div className="flex items-center justify-between">
           <div>

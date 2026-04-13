@@ -36,6 +36,7 @@ export default function SessionHeader({
           <button
             onClick={onAddStory}
             className="relative p-2 hover:bg-stone-300 dark:hover:bg-tribe-mid rounded-lg transition"
+            aria-label="Add session story"
             title={language === 'es' ? 'Agregar Historia' : 'Add Story'}
           >
             <Camera className="w-6 h-6 text-tribe-green" />

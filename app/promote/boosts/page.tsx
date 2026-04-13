@@ -833,7 +833,7 @@ export default function BoostsPage() {
                   <select
                     value={selectedSession}
                     onChange={(e) => setSelectedSession(e.target.value)}
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
                     <option value="">{i18n.selectOption}</option>
@@ -857,7 +857,7 @@ export default function BoostsPage() {
                   <select
                     value={selectedPost}
                     onChange={(e) => setSelectedPost(e.target.value)}
-                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                    className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                     required
                   >
                     <option value="">{i18n.selectOption}</option>
@@ -926,7 +926,7 @@ export default function BoostsPage() {
                   max="30"
                   value={duration}
                   onChange={(e) => setDuration(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
-                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
+                  className="w-full bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg px-4 py-3 text-theme-primary focus:outline-none focus:border-tribe-green"
                 />
               </div>
 
@@ -952,7 +952,7 @@ export default function BoostsPage() {
               </div>
 
               {/* Total Budget Display */}
-              <div className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-lg p-4">
+              <div className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-lg p-4">
                 <p className="text-xs text-theme-secondary mb-1">{i18n.totalBudget}</p>
                 <p className="text-2xl font-bold text-tribe-green">{formatPrice(getTotalBudget(), currency)}</p>
                 <p className="text-xs text-theme-secondary mt-2">

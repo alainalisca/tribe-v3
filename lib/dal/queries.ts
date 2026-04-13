@@ -88,9 +88,10 @@ export async function fetchAllRecapPhotosForSession(
   try {
     const { data, error } = await supabase
       .from('session_recap_photos')
-      .select('*')
+      .select('id, session_id, user_id, photo_url, uploaded_at, created_at, reported, reported_by, reported_reason')
       .eq('session_id', sessionId)
-      .order('uploaded_at', { ascending: true });
+      .order('uploaded_at', { ascending: true })
+      .limit(100);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {

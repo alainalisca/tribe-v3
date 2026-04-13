@@ -14,8 +14,10 @@ const config: Config = {
         // Tribe brand colors — #84cc16 passes WCAG AA on dark backgrounds (4.8:1)
         'tribe-green': '#84cc16',
         'tribe-green-light': '#A3E635',
+        'tribe-green-hover': '#9EE551',
         'tribe-dark': '#272D34',
         'tribe-surface': '#3D4349',
+        'tribe-surface-hover': '#4A5056',
         'tribe-mid': '#52575D',
         'tribe-card': '#6B7178',
         'tribe-gray-80': '#52575D',

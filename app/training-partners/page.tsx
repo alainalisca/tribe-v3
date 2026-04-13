@@ -105,7 +105,7 @@ export default function TrainingPartnersPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D]">
+      <div className="sticky top-0 z-40 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid">
         <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-3">
           <div className="flex items-center gap-3">
             <button
@@ -126,7 +126,7 @@ export default function TrainingPartnersPage() {
               placeholder={t.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-stone-900 dark:text-gray-100 placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-stone-900 dark:text-gray-100 placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
             />
             {searchQuery && (
               <button

@@ -66,7 +66,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
   const viewEventText = lang === 'es' ? 'Ver Evento' : 'View Event';
 
   return (
-    <div className="flex-shrink-0 w-72 bg-tribe-surface border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+    <div className="flex-shrink-0 w-72 bg-tribe-surface border border-tribe-mid rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
       {/* Event Image or Placeholder */}
       {event.image_url ? (
         <div className="relative w-full h-40 bg-gray-700 overflow-hidden">
@@ -80,7 +80,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
           />
         </div>
       ) : (
-        <div className="w-full h-40 bg-gradient-to-br from-[#52575D] to-[#3D4349] flex items-center justify-center">
+        <div className="w-full h-40 bg-gradient-to-br from-tribe-mid to-tribe-surface flex items-center justify-center">
           <span className="text-5xl">{sportIcon}</span>
         </div>
       )}
@@ -129,7 +129,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
         {/* Buttons */}
         <div className="flex gap-2 pt-2">
           <a href={event.event_url} target="_blank" rel="noopener noreferrer" className="flex-1">
-            <Button variant="outline" size="sm" className="w-full border-[#52575D] text-white hover:bg-tribe-mid">
+            <Button variant="outline" size="sm" className="w-full border-tribe-mid text-white hover:bg-tribe-mid">
               {viewEventText}
             </Button>
           </a>
@@ -141,7 +141,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
             )}&lat=${event.location_lat}&lng=${event.location_lng}`}
             className="flex-1"
           >
-            <Button size="sm" className="w-full bg-[#22C55E] hover:bg-[#16A34A] text-white">
+            <Button size="sm" className="w-full bg-green-500 hover:bg-green-600 text-white">
               {createSessionText}
             </Button>
           </Link>

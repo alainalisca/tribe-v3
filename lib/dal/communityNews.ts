@@ -32,7 +32,7 @@ export async function fetchCommunityNews(
   try {
     let query = supabase
       .from('community_news')
-      .select('*')
+      .select('id, title, title_es, summary, summary_es, body_url, image_url, source, category, published_at, is_active, created_at')
       .eq('is_active', true)
       .order('published_at', { ascending: false })
       .limit(limit);

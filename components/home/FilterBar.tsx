@@ -95,11 +95,12 @@ export default function FilterBar({
               onChange={(e) => setSearchQuery(e.target.value)}
               autoComplete="off"
               enterKeyHint="search"
-              className="pl-10 pr-10 py-2.5 bg-white dark:bg-tribe-card dark:border-[#52575D] text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:ring-tribe-green text-sm"
+              className="pl-10 pr-10 py-2.5 bg-white dark:bg-tribe-card dark:border-tribe-mid text-stone-900 dark:text-gray-100 placeholder-gray-500 focus:ring-tribe-green text-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-stone-900 dark:hover:text-gray-100"
               >
                 <X className="w-5 h-5" />
@@ -111,7 +112,7 @@ export default function FilterBar({
             <select
               value={selectedSport}
               onChange={(e) => setSelectedSport(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="">{t('sport')}</option>
               {sports.map((sport) => (
@@ -124,7 +125,7 @@ export default function FilterBar({
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{t('date')}</option>
               <option value="today">{t('today')}</option>
@@ -135,7 +136,7 @@ export default function FilterBar({
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{t('all')}</option>
               <option value="women_only">{t('women')}</option>
@@ -145,7 +146,7 @@ export default function FilterBar({
             <select
               value={pricingFilter}
               onChange={(e) => setPricingFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
               <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
               <option value="free">{language === 'es' ? 'Gratis' : 'Free'}</option>
@@ -154,7 +155,7 @@ export default function FilterBar({
           </div>
 
           {userLocation && (
-            <div className="flex items-center gap-3 bg-white dark:bg-tribe-card border border-stone-300 dark:border-[#52575D] rounded-lg px-3 py-1.5">
+            <div className="flex items-center gap-3 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg px-3 py-1.5">
               <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
                 {t('dist')}
               </label>

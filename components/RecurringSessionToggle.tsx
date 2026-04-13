@@ -133,7 +133,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
 
       {/* Recurring Options */}
       {isRecurring && (
-        <Card className="bg-white dark:bg-tribe-card border-stone-200 dark:border-[#52575D] p-4 space-y-4">
+        <Card className="bg-white dark:bg-tribe-card border-stone-200 dark:border-tribe-mid p-4 space-y-4">
           {/* Frequency Selector */}
           <div>
             <label className="block text-xs font-semibold text-stone-700 dark:text-gray-300 mb-2">
@@ -147,7 +147,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
                     frequency === freq
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-surface'
                   }`}
                 >
                   {language === 'es'
@@ -175,7 +175,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                       className={`py-2 text-xs font-semibold rounded transition-colors ${
                         isSelected
                           ? 'bg-tribe-green text-slate-900'
-                          : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#404549]'
+                          : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-surface'
                       }`}
                     >
                       {dayLabel}
@@ -195,7 +195,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
               type="date"
               value={value.recurrence_end_date}
               onChange={(e) => handleEndDateChange(e.target.value)}
-              className="w-full px-3 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-tribe-mid text-stone-900 dark:text-white text-sm focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-3 py-2 border border-stone-300 dark:border-tribe-mid rounded-lg bg-white dark:bg-tribe-mid text-stone-900 dark:text-white text-sm focus:ring-2 focus:ring-tribe-green focus:border-transparent"
             />
           </div>
 

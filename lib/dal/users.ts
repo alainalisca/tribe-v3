@@ -6,7 +6,7 @@ import type { User as UserRow, UserUpdate } from '@/lib/database.types';
 
 export async function fetchUserProfile(supabase: SupabaseClient, userId: string): Promise<DalResult<UserRow>> {
   try {
-    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+    const { data, error } = await supabase.from('users').select('id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, date_of_birth, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, emergency_contact_name, emergency_contact_phone, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, created_at, updated_at').eq('id', userId).single();
     if (error) return { success: false, error: error.message };
     return { success: true, data };
   } catch (error) {
@@ -184,7 +184,7 @@ export async function fetchUsersForAdmin(supabase: SupabaseClient): Promise<DalR
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, date_of_birth, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, emergency_contact_name, emergency_contact_phone, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, created_at, updated_at')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) return { success: false, error: error.message };
@@ -275,7 +275,7 @@ export async function fetchUserForNotification(
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, push_subscription, preferred_language, fcm_token, native_push_token')
+      .select('id, push_subscription, preferred_language, fcm_token, fcm_platform')
       .eq('id', userId)
       .single();
     if (error) return { success: false, error: error.message };

@@ -26,7 +26,7 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
   const buttonText = lang === 'es' ? 'Crear Primera Sesión' : 'Create First Session';
 
   return (
-    <div className="w-full bg-gradient-to-br from-[#A3E635]/20 to-[#9EE551]/10 border border-tribe-green rounded-xl p-6 md:p-8 text-center space-y-4">
+    <div className="w-full bg-gradient-to-br from-tribe-green-light/20 to-lime-400/10 border border-tribe-green rounded-xl p-6 md:p-8 text-center space-y-4">
       {/* Mountain icon */}
       <div className="flex justify-center">
         <span className="text-5xl md:text-6xl animate-bounce">🏔️</span>
@@ -62,7 +62,7 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
       <Link
         href="/create"
         aria-label={buttonText}
-        className="inline-block pt-2 bg-tribe-green-light hover:bg-[#94D91E] dark:bg-tribe-green-light dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto"
+        className="inline-block pt-2 bg-tribe-green-light hover:bg-tribe-green-hover dark:bg-tribe-green-light dark:hover:bg-tribe-green-hover text-tribe-dark dark:text-tribe-dark font-bold py-3 px-8 rounded-lg transition-colors text-base flex items-center justify-center gap-2 mx-auto"
       >
         {buttonText} <span aria-hidden="true">→</span>
       </Link>

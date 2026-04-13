@@ -42,7 +42,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         data-modal="true"
-        className="max-w-md rounded-2xl p-0 max-h-[80vh] flex flex-col dark:bg-[#404549] gap-0"
+        className="max-w-md rounded-2xl p-0 max-h-[80vh] flex flex-col dark:bg-tribe-surface gap-0"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
@@ -145,7 +145,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         </div>
 
         {/* Sticky Submit Button */}
-        <div className="p-4 border-t border-stone-200 dark:border-gray-600 flex-shrink-0 bg-white dark:bg-[#404549]">
+        <div className="p-4 border-t border-stone-200 dark:border-gray-600 flex-shrink-0 bg-white dark:bg-tribe-surface">
           {/* Submit Button */}
           <button
             onClick={handleSubmit}

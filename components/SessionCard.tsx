@@ -41,7 +41,7 @@ export default function SessionCard({
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
       <Card
-        className={`dark:bg-tribe-card shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden ${featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id) ? 'border-tribe-green/40' : 'border-stone-200 dark:border-[#52575D]'}`}
+        className={`dark:bg-tribe-card shadow-none hover:shadow-sm transition-shadow duration-200 overflow-hidden ${featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id) ? 'border-tribe-green/40' : 'border-stone-200 dark:border-tribe-mid'}`}
       >
         <CardContent className="p-5">
           {/* Header */}
@@ -124,12 +124,12 @@ export default function SessionCard({
               onClick={handleShare}
               className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition-colors"
             >
-              <Share2 className="w-5 h-5 text-stone-600 dark:text-[#E0E0E0]" />
+              <Share2 className="w-5 h-5 text-stone-600 dark:text-gray-200" />
             </button>
           </div>
 
           {/* Athlete Info */}
-          <div className="flex items-center justify-between text-stone-700 dark:text-[#E0E0E0] mb-3">
+          <div className="flex items-center justify-between text-stone-700 dark:text-gray-200 mb-3">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-2 text-tribe-green" />
               <span className="font-semibold">
@@ -144,7 +144,7 @@ export default function SessionCard({
                 />
               </div>
             </div>
-            <span className="text-sm text-stone-600 dark:text-[#B1B3B6]">
+            <span className="text-sm text-stone-600 dark:text-tribe-gray-60">
               {session.max_participants - confirmedParticipants.length} {t('spotsLeft')}
             </span>
           </div>
@@ -211,7 +211,7 @@ export default function SessionCard({
                       {session.creator.name?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <p className="text-xs text-stone-500 dark:text-[#B1B3B6]">
+                  <p className="text-xs text-stone-500 dark:text-tribe-gray-60">
                     {t('hostedBy')} {session.creator.name}
                   </p>
                 </div>
@@ -281,9 +281,9 @@ export default function SessionCard({
                 <Link
                   href={`/session/${session.id}/chat`}
                   onClick={(e) => e.stopPropagation()}
-                  className="px-4 py-2 bg-stone-100 dark:bg-tribe-mid rounded-lg hover:bg-stone-200 dark:hover:bg-[#404549] transition-colors flex items-center justify-center"
+                  className="px-4 py-2 bg-stone-100 dark:bg-tribe-mid rounded-lg hover:bg-stone-200 dark:hover:bg-tribe-surface transition-colors flex items-center justify-center"
                 >
-                  <MessageCircle className="w-5 h-5 text-stone-700 dark:text-[#E0E0E0]" />
+                  <MessageCircle className="w-5 h-5 text-stone-700 dark:text-gray-200" />
                 </Link>
               )}
           </div>

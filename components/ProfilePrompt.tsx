@@ -15,7 +15,7 @@ export default function ProfilePrompt({ onDismiss }: ProfilePromptProps) {
 
   return (
     <div className="bg-tribe-green/10 border border-tribe-green rounded-xl p-4 mb-4 relative">
-      <button onClick={onDismiss} className="absolute top-2 right-2 p-1 hover:bg-white/50 rounded-lg transition">
+      <button onClick={onDismiss} aria-label="Dismiss profile prompt" className="absolute top-2 right-2 p-1 hover:bg-white/50 rounded-lg transition">
         <X className="w-4 h-4 text-stone-600" />
       </button>
 

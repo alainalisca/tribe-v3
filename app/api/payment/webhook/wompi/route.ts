@@ -78,7 +78,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Idempotency check — skip if already processed with same status
     const { data: existingPayment } = await supabase
       .from('payments')
-      .select('status, wompi_transaction_id')
+      .select('status, gateway_payment_id')
       .eq('id', paymentId)
       .single();
 
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .from('payments')
       .update({
         status: paymentStatus,
-        wompi_transaction_id: transactionId,
-        wompi_status: wompiStatus,
+        gateway_payment_id: transactionId,
+        gateway_reference: wompiStatus,
         updated_at: new Date().toISOString(),
       })
       .eq('id', paymentId);
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (paymentStatus === 'approved') {
       const { data: paymentRecord } = await supabase
         .from('payments')
-        .select('session_id, user_id')
+        .select('session_id, participant_user_id')
         .eq('id', paymentId)
         .single();
 
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const { error: participantError } = await supabase.from('session_participants').upsert(
           {
             session_id: paymentRecord.session_id,
-            user_id: paymentRecord.user_id,
+            user_id: paymentRecord.participant_user_id,
             status: 'confirmed',
             joined_at: new Date().toISOString(),
           },
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               Authorization: `Bearer ${process.env.CRON_SECRET}`,
             },
             body: JSON.stringify({
-              user_id: paymentRecord.user_id,
+              user_id: paymentRecord.participant_user_id,
               title: 'Booking Confirmed!',
               body: 'Your session has been booked. See you there!',
               type: 'payment_confirmed',

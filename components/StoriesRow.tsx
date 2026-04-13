@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
+import Image from 'next/image';
 import { Plus } from 'lucide-react';
 import { showInfo } from '@/lib/toast';
 import StoryViewer from './StoryViewer';
@@ -68,16 +69,16 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
 
           {/* Current user's "+" circle */}
           {userId && (
-            <button onClick={handleYourStoryClick} className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]">
+            <button onClick={handleYourStoryClick} aria-label="Add your story" className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]">
               <div className="relative">
                 <div className="w-14 h-14 rounded-full border-2 border-stone-300 dark:border-gray-500 overflow-hidden bg-stone-200 dark:bg-tribe-surface flex items-center justify-center">
                   {userAvatar ? (
-                    <img src={userAvatar} alt="Your avatar" className="w-full h-full object-cover" />
+                    <Image src={userAvatar} alt="Your profile photo" className="w-full h-full object-cover" width={40} height={40} unoptimized />
                   ) : (
                     <span className="text-xl font-bold text-stone-500">?</span>
                   )}
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-tribe-green rounded-full flex items-center justify-center border-2 border-white dark:border-[#52575D]">
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-tribe-green rounded-full flex items-center justify-center border-2 border-white dark:border-tribe-mid">
                   <Plus className="w-3 h-3 text-slate-900" strokeWidth={3} />
                 </div>
               </div>
@@ -96,6 +97,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
               <button
                 key={group.sessionId}
                 onClick={() => openViewer(i)}
+                aria-label={`View ${firstStory.user_name || 'user'}'s story`}
                 className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]"
               >
                 <div

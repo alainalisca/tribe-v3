@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -114,7 +115,7 @@ export default function AdminBulletinPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-stone-50">
+      <div className="flex items-center justify-center min-h-screen bg-stone-50 dark:bg-tribe-dark">
         <div className="text-lg">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
       </div>
     );
@@ -124,17 +125,17 @@ export default function AdminBulletinPage() {
   function PostRow({ post, showActions }: { post: BulletinPost; showActions: boolean }) {
     const isLoading = actionLoading === post.id;
     return (
-      <div className="p-4 bg-white border border-stone-200 rounded-xl space-y-2">
+      <div className="p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-bold text-[#272D34] truncate">{post.title}</h3>
+            <h3 className="text-sm font-bold text-tribe-dark truncate">{post.title}</h3>
             <p className="text-xs text-stone-500">
               {t.by} {post.author?.name || 'Unknown'} &middot; {post.category}
               {post.event_date && ` &middot; ${post.event_date}`}
             </p>
             {post.description_en && <p className="text-xs text-stone-600 mt-1 line-clamp-2">{post.description_en}</p>}
           </div>
-          {post.image_url && <img src={post.image_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0" />}
+          {post.image_url && <Image src={post.image_url} alt={post.title || 'Bulletin image'} className="w-16 h-16 rounded-lg object-cover shrink-0" width={64} height={64} unoptimized />}
         </div>
         <div className="flex gap-2">
           {showActions && (
@@ -168,12 +169,12 @@ export default function AdminBulletinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20 safe-area-top">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-20 safe-area-top">
       <div className="w-full max-w-md mx-auto px-3 py-4">
         <Link href="/admin" className="inline-flex items-center gap-1 text-stone-600 mb-3 text-sm">
           <ArrowLeft className="w-4 h-4" /> {t.back}
         </Link>
-        <h1 className="text-lg font-bold text-[#272D34] mb-4">{t.title}</h1>
+        <h1 className="text-lg font-bold text-tribe-dark mb-4">{t.title}</h1>
 
         {/* Pending */}
         <section className="mb-6">

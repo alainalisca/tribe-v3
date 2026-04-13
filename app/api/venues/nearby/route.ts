@@ -1,7 +1,16 @@
 import { createClient } from '@/lib/supabase/server';
 import { upsertVenues, fetchNearbyVenues } from '@/lib/dal/venues';
 import { NextResponse, NextRequest } from 'next/server';
+import { z } from 'zod';
 import { logError } from '@/lib/logger';
+
+const nearbyVenuesSchema = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  category: z.string().optional(),
+  radius: z.coerce.number().min(100).max(10000).optional(),
+  limit: z.coerce.number().min(1).max(20).optional(),
+});
 
 /**
  * @description Fetches nearby venues (gyms, parks, studios, etc.) with Google Places integration.
@@ -28,15 +37,24 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const lat = parseFloat(searchParams.get('lat') || '');
-    const lng = parseFloat(searchParams.get('lng') || '');
-    const category = searchParams.get('category') || undefined;
-    const radius = Math.min(parseInt(searchParams.get('radius') || '5000'), 10000);
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20);
+    const parsed = nearbyVenuesSchema.safeParse({
+      lat: searchParams.get('lat'),
+      lng: searchParams.get('lng'),
+      category: searchParams.get('category') || undefined,
+      radius: searchParams.get('radius') || undefined,
+      limit: searchParams.get('limit') || undefined,
+    });
 
-    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-      return NextResponse.json({ error: 'Missing or invalid lat/lng' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues.map((i) => i.message).join(', ') },
+        { status: 400 }
+      );
     }
+
+    const { lat, lng, category } = parsed.data;
+    const radius = parsed.data.radius ?? 5000;
+    const limit = parsed.data.limit ?? 10;
 
     // Check cache first
     const cachedResult = await fetchNearbyVenues(supabase, lat, lng, category, limit);
@@ -46,7 +64,9 @@ export async function GET(request: NextRequest) {
         ...venue,
         distance_km: calculateDistance(lat, lng, venue.location_lat, venue.location_lng),
       }));
-      return NextResponse.json({ venues: withDistance, fromCache: true });
+      return NextResponse.json({ venues: withDistance, fromCache: true }, {
+        headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+      });
     }
 
     // Cache miss or stale — fetch from Google Places API
@@ -163,7 +183,9 @@ export async function GET(request: NextRequest) {
       distance_km: calculateDistance(lat, lng, venue.location_lat, venue.location_lng),
     }));
 
-    return NextResponse.json({ venues: withDistance, fromCache: false });
+    return NextResponse.json({ venues: withDistance, fromCache: false }, {
+      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+    });
   } catch (error) {
     logError(error, { route: '/api/venues/nearby', action: 'fetch_nearby_venues' });
     return NextResponse.json({ error: 'Failed to fetch venues' }, { status: 500 });

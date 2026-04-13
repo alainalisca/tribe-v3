@@ -43,7 +43,7 @@ export default function MatchesPage() {
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
         <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
-          <h1 className="text-2xl font-bold text-[#272D34] dark:text-white">{t('matches')}</h1>
+          <h1 className="text-2xl font-bold text-tribe-dark dark:text-white">{t('matches')}</h1>
         </div>
       </div>
 
@@ -54,7 +54,7 @@ export default function MatchesPage() {
               onClick={() => setActiveTab('requests')}
               className={`flex-1 py-3 px-4 rounded-lg font-semibold transition ${
                 activeTab === 'requests'
-                  ? 'bg-stone-300 dark:bg-[#404549] text-[#272D34] dark:text-white'
+                  ? 'bg-stone-300 dark:bg-tribe-surface text-tribe-dark dark:text-white'
                   : 'bg-white dark:bg-tribe-card text-stone-600 dark:text-gray-300'
               }`}
             >
@@ -83,7 +83,7 @@ export default function MatchesPage() {
               <div className="space-y-3">
                 {joinRequests.map((request) => (
                   <Link key={request.id} href={`/session/${request.session_id}`}>
-                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
+                    <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3 mb-3">
                           <Avatar className="w-10 h-10">
@@ -97,14 +97,14 @@ export default function MatchesPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-[#272D34] dark:text-white font-semibold">
+                            <p className="text-tribe-dark dark:text-white font-semibold">
                               {request.user?.name || t('newJoinRequest')}
                             </p>
                             <p className="text-sm text-stone-600 dark:text-gray-300">{t('userWantsToJoin')}</p>
                           </div>
                         </div>
                         {request.session && (
-                          <div className="mt-2 pt-2 border-t border-stone-200 dark:border-[#52575D] text-sm text-stone-600 dark:text-gray-300">
+                          <div className="mt-2 pt-2 border-t border-stone-200 dark:border-tribe-mid text-sm text-stone-600 dark:text-gray-300">
                             <span className="font-medium">
                               {language === 'es'
                                 ? sportTranslations[request.session.sport]?.es || request.session.sport
@@ -125,7 +125,7 @@ export default function MatchesPage() {
             <div className="space-y-3">
               {tribeSessions.map((session) => (
                 <Link key={session.id} href={`/session/${session.id}`}>
-                  <Card className="dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
+                  <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:bg-stone-50 dark:hover:bg-tribe-mid transition cursor-pointer">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <Badge className="px-3 py-1 bg-tribe-green text-slate-900 rounded-full border-transparent">

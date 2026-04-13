@@ -70,7 +70,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
       href={article.body_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] overflow-hidden hover:border-tribe-green/50 transition group"
+      className="block rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid overflow-hidden hover:border-tribe-green/50 transition group"
     >
       {/* Image or gradient placeholder */}
       {article.image_url ? (
@@ -82,7 +82,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
           />
         </div>
       ) : (
-        <div className="h-24 w-full bg-gradient-to-br from-[#A3E635]/20 via-[#3D4349] to-[#272D34] flex items-center justify-center">
+        <div className="h-24 w-full bg-gradient-to-br from-tribe-green-light/20 via-[#3D4349] to-tribe-dark flex items-center justify-center">
           <Newspaper className="w-8 h-8 text-tribe-green/40" />
         </div>
       )}

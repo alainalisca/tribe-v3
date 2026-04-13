@@ -62,7 +62,7 @@ export async function fetchTrainingPreferences(
   try {
     const { data, error } = await supabase
       .from('user_training_preferences')
-      .select('*')
+      .select('id, user_id, preferred_sports, availability, gender_preference, max_distance_km, active, created_at, updated_at')
       .eq('user_id', userId)
       .maybeSingle();
 

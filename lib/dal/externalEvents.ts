@@ -42,7 +42,7 @@ export async function fetchNearbyExternalEvents(
   try {
     let query = supabase
       .from('external_events')
-      .select('*')
+      .select('id, source, external_id, title, description, sport, location_lat, location_lng, location_name, event_url, image_url, start_time, end_time, participant_count, organizer_name, cached_at, expires_at')
       .lte('expires_at', new Date().toISOString())
       .order('start_time', { ascending: true });
 

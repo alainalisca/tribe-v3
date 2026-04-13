@@ -42,7 +42,7 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-32">
+    <div className="min-h-screen bg-stone-100 dark:bg-tribe-surface pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
@@ -67,7 +67,7 @@ export default function TrainingNowPage() {
                 className={`px-4 py-2.5 rounded-full text-sm font-semibold transition ${
                   formData.sport === sport
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-[#7B8188]'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-tribe-card'
                 }`}
               >
                 {getTranslatedSport(sport)}

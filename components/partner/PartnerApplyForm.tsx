@@ -52,12 +52,12 @@ export interface PartnerApplyFormProps {
 export default function PartnerApplyForm(p: PartnerApplyFormProps) {
   const t = (en: string, es: string) => (p.language === 'es' ? es : en);
   const inputCls =
-    'w-full px-4 py-3 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-[#52575D] rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
+    'w-full px-4 py-3 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
 
   return (
     <form onSubmit={p.onSubmit} className="space-y-4 pb-8">
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
           {t('Business Name', 'Nombre del Negocio')} *
         </label>
         <input
@@ -69,7 +69,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
           {t('Business Type', 'Tipo de Negocio')}
         </label>
         <select className={inputCls} value={p.businessType} onChange={(e) => p.setBusinessType(e.target.value)}>
@@ -82,7 +82,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
           {t('Description (English)', 'Descripción (Inglés)')}
         </label>
         <textarea
@@ -94,7 +94,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
           {t('Description (Spanish)', 'Descripción (Español)')}
         </label>
         <textarea
@@ -106,7 +106,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-2">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-2">
           {t('Specialties', 'Especialidades')}
         </label>
         <div className="flex flex-wrap gap-2">
@@ -118,7 +118,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                 p.selectedSpecialties.includes(s)
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-[#E0E0E0]'
+                  : 'bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-200'
               }`}
             >
               {s}
@@ -128,7 +128,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+        <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
           {t('Address', 'Dirección')}
         </label>
         <input className={inputCls} value={p.address} onChange={(e) => p.setAddress(e.target.value)} />
@@ -136,7 +136,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+          <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
             {t('Website', 'Sitio Web')}
           </label>
           <input
@@ -147,7 +147,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-stone-700 dark:text-[#E0E0E0] mb-1">
+          <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
             {t('Phone', 'Teléfono')}
           </label>
           <input className={inputCls} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} />

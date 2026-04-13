@@ -166,6 +166,8 @@ export async function GET(request: NextRequest) {
         events: cached.data || [],
         source: 'cache',
         note: 'EVENTBRITE_API_KEY not configured. Returning cached events only.',
+      }, {
+        headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
       });
     }
 
@@ -254,6 +256,8 @@ export async function GET(request: NextRequest) {
       events: externalEvents,
       source: 'eventbrite',
       count: externalEvents.length,
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
     });
   } catch (error) {
     logError(error, { action: 'eventbriteRoute' });

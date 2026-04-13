@@ -27,7 +27,7 @@ export default function PartnerBenefits({ language }: Props) {
         ];
 
   return (
-    <div className="mt-4 bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-5">
+    <div className="mt-4 bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-tribe-mid p-5">
       <h3 className="text-base font-bold text-stone-900 dark:text-white mb-3">
         {language === 'es' ? 'Lo Que Obtienes' : 'What You Get'}
       </h3>
@@ -35,7 +35,7 @@ export default function PartnerBenefits({ language }: Props) {
         {benefits.map((b, i) => (
           <div key={i} className="flex items-center gap-2.5 text-tribe-green">
             {b.icon}
-            <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">{b.text}</span>
+            <span className="text-sm text-stone-700 dark:text-gray-200">{b.text}</span>
           </div>
         ))}
       </div>

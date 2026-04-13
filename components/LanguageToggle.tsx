@@ -9,6 +9,7 @@ export default function LanguageToggle() {
     <div className="flex flex-shrink-0 bg-stone-200 dark:bg-stone-700 rounded-full p-1">
       <button
         onClick={() => setLanguage('en')}
+        aria-label={language === 'es' ? 'Switch to English' : 'English selected'}
         className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
           language === 'en'
             ? 'bg-tribe-green text-stone-900'
@@ -19,6 +20,7 @@ export default function LanguageToggle() {
       </button>
       <button
         onClick={() => setLanguage('es')}
+        aria-label={language === 'en' ? 'Cambiar a Español' : 'Español seleccionado'}
         className={`px-3 py-1 rounded-full text-sm font-semibold transition-all ${
           language === 'es'
             ? 'bg-tribe-green text-stone-900'

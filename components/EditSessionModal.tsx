@@ -66,7 +66,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="text"
               value={formData.sport}
               onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-              className="px-4 py-3 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white focus:ring-tribe-green"
+              className="px-4 py-3 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white focus:ring-tribe-green"
               required
             />
           </div>
@@ -77,7 +77,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="px-4 py-3 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white focus:ring-tribe-green"
+              className="px-4 py-3 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white focus:ring-tribe-green"
               required
             />
           </div>
@@ -88,7 +88,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="time"
               value={formData.start_time}
               onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -99,7 +99,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="number"
               value={formData.duration}
               onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -110,7 +110,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -121,7 +121,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="number"
               value={formData.max_participants}
               onChange={(e) => setFormData({ ...formData, max_participants: parseInt(e.target.value) })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
               required
             />
           </div>
@@ -131,7 +131,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
             <Textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-[#52575D] text-stone-900 dark:text-white"
+              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
               rows={3}
             />
           </div>
@@ -141,7 +141,7 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
+              className="flex-1 py-3 border-stone-300 dark:border-tribe-mid text-stone-900 dark:text-white font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
             >
               {t('cancel')}
             </Button>

@@ -63,7 +63,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
             aria-label={`${venue.name} photo`}
           />
         ) : (
-          <div className="w-full h-40 bg-gradient-to-br from-[#A3E635] to-[#9EE551] flex items-center justify-center">
+          <div className="w-full h-40 bg-gradient-to-br from-tribe-green-light to-lime-400 flex items-center justify-center">
             <span className="text-6xl">{categoryIcon}</span>
           </div>
         )}
@@ -106,7 +106,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
               {venue.suggested_sports.slice(0, 2).map((sport) => (
                 <span
                   key={sport}
-                  className="inline-block px-2 py-1 bg-tribe-green-light dark:bg-tribe-green-light text-[#272D34] dark:text-[#272D34] text-xs font-medium rounded-full"
+                  className="inline-block px-2 py-1 bg-tribe-green-light dark:bg-tribe-green-light text-tribe-dark dark:text-tribe-dark text-xs font-medium rounded-full"
                 >
                   {sport}
                 </span>
@@ -123,7 +123,7 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
               link.href = `/create?${createParams}`;
               link.click();
             }}
-            className="w-full mt-2 bg-tribe-green-light hover:bg-[#94D91E] dark:bg-tribe-green-light dark:hover:bg-[#94D91E] text-[#272D34] dark:text-[#272D34] font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+            className="w-full mt-2 bg-tribe-green-light hover:bg-tribe-green-hover dark:bg-tribe-green-light dark:hover:bg-tribe-green-hover text-tribe-dark dark:text-tribe-dark font-semibold py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
           >
             {lang === 'es' ? 'Alojar una sesión aquí' : 'Host a Session Here'} →
           </button>

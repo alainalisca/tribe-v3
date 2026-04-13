@@ -23,7 +23,7 @@ export default function PartnerRequirements({ language }: Props) {
         ];
 
   return (
-    <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-[#52575D] p-5">
+    <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl border border-stone-200 dark:border-tribe-mid p-5">
       <h3 className="text-base font-bold text-stone-900 dark:text-white mb-3">
         {language === 'es' ? 'Requisitos' : 'Requirements'}
       </h3>
@@ -31,7 +31,7 @@ export default function PartnerRequirements({ language }: Props) {
         {requirements.map((req, i) => (
           <li key={i} className="flex items-start gap-2.5">
             <CheckCircle className="w-4 h-4 text-tribe-green flex-shrink-0 mt-0.5" />
-            <span className="text-sm text-stone-700 dark:text-[#E0E0E0]">{req}</span>
+            <span className="text-sm text-stone-700 dark:text-gray-200">{req}</span>
           </li>
         ))}
       </ul>

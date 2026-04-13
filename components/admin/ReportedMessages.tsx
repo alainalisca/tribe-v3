@@ -37,7 +37,7 @@ export default function ReportedMessages({
 
   if (reports.length === 0) {
     return (
-      <div className="bg-white rounded p-6 text-center shadow">
+      <div className="bg-white dark:bg-tribe-surface rounded p-6 text-center shadow">
         <Flag className="w-12 h-12 text-gray-300 mx-auto mb-2" />
         <p className="text-sm text-gray-500">{language === 'es' ? 'Sin reportes aun' : 'No reports yet'}</p>
       </div>
@@ -48,22 +48,22 @@ export default function ReportedMessages({
     <div className="space-y-3">
       {pendingReports.length > 0 && (
         <>
-          <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+          <h3 className="text-sm font-bold text-tribe-dark flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-orange-500" />
             {language === 'es' ? 'Pendiente' : 'Pending'} ({pendingReports.length})
           </h3>
           {pendingReports.map((report) => (
-            <div key={report.id} className="bg-white rounded shadow p-3">
+            <div key={report.id} className="bg-white dark:bg-tribe-surface rounded shadow p-3">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-[#272D34]">{report.reported?.name}</p>
+                  <p className="text-sm font-bold text-tribe-dark">{report.reported?.name}</p>
                   <p className="text-xs text-stone-600">{report.reported?.email}</p>
                 </div>
-                <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">{report.reason}</span>
+                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs rounded">{report.reason}</span>
               </div>
 
               {report.description && (
-                <p className="text-xs text-stone-700 mb-2 p-2 bg-stone-50 rounded">{report.description}</p>
+                <p className="text-xs text-stone-700 dark:text-gray-300 mb-2 p-2 bg-stone-50 dark:bg-tribe-dark rounded">{report.description}</p>
               )}
 
               <div className="flex items-center justify-between text-xs text-stone-500 mb-3">
@@ -78,7 +78,7 @@ export default function ReportedMessages({
               <div className="flex gap-2">
                 <button
                   onClick={() => router.push(`/profile/${report.reported_user_id}`)}
-                  className="flex-1 py-1.5 border border-stone-300 text-stone-700 text-xs rounded hover:bg-stone-50"
+                  className="flex-1 py-1.5 border border-stone-300 dark:border-tribe-mid text-stone-700 dark:text-gray-300 text-xs rounded hover:bg-stone-50 dark:hover:bg-tribe-surface"
                 >
                   {language === 'es' ? 'Ver Perfil' : 'View Profile'}
                 </button>
@@ -102,11 +102,11 @@ export default function ReportedMessages({
 
       {resolvedReports.length > 0 && (
         <>
-          <h3 className="text-sm font-bold text-[#272D34] mt-4">
+          <h3 className="text-sm font-bold text-tribe-dark mt-4">
             {language === 'es' ? 'Resuelto' : 'Resolved'} ({resolvedReports.length})
           </h3>
           {resolvedReports.slice(0, 5).map((report) => (
-            <div key={report.id} className="bg-stone-50 rounded p-3 opacity-60">
+            <div key={report.id} className="bg-stone-50 dark:bg-tribe-dark rounded p-3 opacity-60">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">{report.reported?.name}</p>

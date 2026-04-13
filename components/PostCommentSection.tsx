@@ -175,6 +175,7 @@ export default function PostCommentSection({
         <button
           onClick={handleAddComment}
           disabled={!newComment.trim() || submitting}
+          aria-label="Send comment"
           className="flex items-center gap-2 bg-tribe-green text-slate-900 rounded-lg px-4 py-2 font-semibold hover:bg-tribe-green disabled:opacity-50 transition"
         >
           <Send className="h-4 w-4" />

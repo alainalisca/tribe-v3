@@ -23,7 +23,7 @@ export default function SessionPickerSheet({
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         data-modal="true"
-        className="max-w-md rounded-xl p-0 max-h-[70vh] overflow-y-auto dark:bg-[#2C3137] gap-0"
+        className="max-w-md rounded-xl p-0 max-h-[70vh] overflow-y-auto dark:bg-tribe-dark gap-0"
       >
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700">
           <DialogTitle className="text-lg font-bold text-theme-primary">

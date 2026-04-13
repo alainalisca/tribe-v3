@@ -29,6 +29,12 @@ export async function requestNotificationPermission(userId: string) {
   }
 
   try {
+    // Unsubscribe any existing subscription with a different key before resubscribing
+    const existingSub = await registration.pushManager.getSubscription();
+    if (existingSub) {
+      await existingSub.unsubscribe();
+    }
+
     // Subscribe to push notifications
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,

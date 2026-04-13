@@ -10,18 +10,19 @@ import type { DalResult } from './types';
 export interface Payment {
   id: string;
   session_id: string;
-  user_id: string;
+  participant_user_id: string;
   amount_cents: number;
   currency: 'COP' | 'USD';
   gateway: 'wompi' | 'stripe';
   status: 'pending' | 'processing' | 'approved' | 'declined' | 'voided' | 'error';
   platform_fee_cents: number;
   instructor_payout_cents: number;
-  wompi_transaction_id?: string;
-  wompi_status?: string;
+  gateway_payment_id?: string;
+  gateway_reference?: string;
+  wompi_payment_method?: string;
   stripe_payment_intent_id?: string;
-  stripe_session_id?: string;
-  stripe_last_error?: string;
+  stripe_customer_id?: string;
+  payout_status: string;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +58,7 @@ export async function fetchPayment(supabase: SupabaseClient, paymentId: string):
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('*')
+      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
       .eq('id', paymentId)
       .single();
 
@@ -108,9 +109,10 @@ export async function fetchSessionPayments(
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('*')
+      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
       .eq('session_id', sessionId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
@@ -127,9 +129,10 @@ export async function fetchUserPayments(supabase: SupabaseClient, userId: string
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
+      .eq('participant_user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(200);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };

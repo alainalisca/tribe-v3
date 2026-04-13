@@ -231,6 +231,44 @@ export function mapWompiStatus(wompiStatus: string): PaymentStatus {
 }
 
 /**
+ * Creates a void/refund for a Wompi transaction.
+ * Wompi uses void for pending transactions, refund for completed ones.
+ */
+export async function createWompiRefund(
+  transactionId: string,
+  amountCents: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const baseUrl = getBaseUrl();
+
+    const response = await fetch(`${baseUrl}/transactions/${transactionId}/void`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.WOMPI_PRIVATE_KEY}`,
+      },
+      body: JSON.stringify({ amount_in_cents: amountCents }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      logError(new Error(`Wompi refund failed: ${response.status}`), {
+        action: 'createWompiRefund',
+        transactionId,
+        responseBody: errorBody,
+      });
+      return { success: false, error: `Wompi refund failed: ${response.status}` };
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown Wompi refund error';
+    logError(error, { action: 'createWompiRefund', transactionId });
+    return { success: false, error: message };
+  }
+}
+
+/**
  * Extract transaction data from Wompi webhook
  */
 export function extractWompiTransactionData(body: string): Omit<WompiTransaction, 'created_at' | 'updated_at'> | null {

@@ -372,7 +372,7 @@ export default function FeedPage() {
               <button
                 onClick={handleLoadMore}
                 disabled={loading}
-                className="w-full bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition hover:bg-stone-200 dark:hover:bg-[#4A515A] disabled:opacity-50"
+                className="w-full bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 rounded-xl py-3 font-semibold transition hover:bg-stone-200 dark:hover:bg-tribe-surface-hover disabled:opacity-50"
               >
                 {loading ? strings.loading : strings.loadMore}
               </button>
@@ -515,7 +515,7 @@ function PostCard({
 
       {/* Session Preview */}
       {session && (
-        <div className="mb-4 bg-stone-50 dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-[#52575D]">
+        <div className="mb-4 bg-stone-50 dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
           <h4 className="mb-3 font-semibold text-theme-primary">{strings.viewClass}</h4>
           <div className="space-y-2 text-sm text-theme-secondary">
             <div className="flex items-center gap-2">

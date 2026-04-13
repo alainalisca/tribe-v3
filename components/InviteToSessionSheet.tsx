@@ -100,12 +100,12 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
         if (!v) onClose();
       }}
     >
-      <DialogContent className="bg-tribe-dark border-[#3D4349] text-white max-w-md mx-auto rounded-t-2xl sm:rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="bg-tribe-dark border-tribe-surface text-white max-w-md mx-auto rounded-t-2xl sm:rounded-2xl p-0 overflow-hidden">
         <DialogTitle className="sr-only">{isEs ? 'Invitar a sesion' : 'Invite to session'}</DialogTitle>
 
         {/* Athlete header */}
-        <div className="flex items-center gap-3 p-5 border-b border-[#3D4349]">
-          <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-[#A3E635] to-[#8fd61d] flex-shrink-0">
+        <div className="flex items-center gap-3 p-5 border-b border-tribe-surface">
+          <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-tribe-green-light to-tribe-green-hover flex-shrink-0">
             {athlete.avatar_url ? (
               <Image src={athlete.avatar_url} alt={athlete.name} fill className="object-cover" />
             ) : (
@@ -162,7 +162,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
                   <button
                     onClick={() => handleInvite(session.id)}
                     disabled={isSending}
-                    className="ml-3 px-3 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-[#8fd61d] transition disabled:opacity-50 flex-shrink-0"
+                    className="ml-3 px-3 py-1.5 bg-tribe-green-light text-stone-900 text-xs font-semibold rounded-full hover:bg-tribe-green-hover transition disabled:opacity-50 flex-shrink-0"
                   >
                     {isSending ? <Loader2 className="w-3 h-3 animate-spin" /> : isEs ? 'Invitar' : 'Invite'}
                   </button>

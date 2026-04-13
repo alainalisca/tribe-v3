@@ -148,7 +148,7 @@ export default function SafetyWaiverModal({ onAccept, onCancel }: SafetyWaiverMo
             data-modal-close="true"
             variant="outline"
             onClick={onCancel}
-            className="px-6 py-3 border-stone-300 dark:border-[#52575D] text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
+            className="px-6 py-3 border-stone-300 dark:border-tribe-mid text-stone-900 dark:text-white rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid"
           >
             {tr.cancel}
           </Button>

@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { fetchApprovedBulletinPosts, createBulletinPost, type BulletinPost } from '@/lib/dal/communityBulletin';
 import { SkeletonCard } from '@/components/Skeleton';
+import Image from 'next/image';
 import { Plus, MapPin, Calendar, Clock, ExternalLink, ChevronDown, ChevronUp, Send } from 'lucide-react';
 
 const CATEGORIES: { key: string; en: string; es: string }[] = [
@@ -51,10 +52,10 @@ function BulletinCard({ post, language }: { post: BulletinPost; language: 'en' |
   const catLabel = CATEGORIES.find((c) => c.key === post.category);
 
   return (
-    <div className="rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D] overflow-hidden">
+    <div className="rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid overflow-hidden">
       {post.image_url && (
-        <div className="h-44 w-full overflow-hidden">
-          <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+        <div className="relative h-44 w-full overflow-hidden">
+          <Image src={post.image_url} alt={post.title} fill className="object-cover" unoptimized />
         </div>
       )}
       <div className="p-4 space-y-2">
@@ -194,14 +195,14 @@ export default function CommunityBulletinTab() {
   }
 
   const inputCls =
-    'w-full px-3 py-2 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm';
+    'w-full px-3 py-2 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm';
 
   return (
     <div className="space-y-4">
       {/* Submit CTA */}
       <button
         onClick={() => setShowForm(!showForm)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-tribe-green text-slate-900 rounded-xl font-semibold text-sm hover:bg-[#92d31f] transition"
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-tribe-green text-slate-900 rounded-xl font-semibold text-sm hover:bg-tribe-green transition"
       >
         {showForm ? <ChevronUp className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
         {labels.submitPost}
@@ -211,7 +212,7 @@ export default function CommunityBulletinTab() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-3 p-4 rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-[#52575D]"
+          className="space-y-3 p-4 rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid"
         >
           {!userId && <p className="text-xs text-red-400 text-center">{labels.loginRequired}</p>}
           <input
@@ -276,7 +277,7 @@ export default function CommunityBulletinTab() {
           <button
             type="submit"
             disabled={submitting || !userId || !form.title}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-tribe-green text-slate-900 rounded-lg font-semibold text-sm hover:bg-[#92d31f] transition disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-tribe-green text-slate-900 rounded-lg font-semibold text-sm hover:bg-tribe-green transition disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
             {submitting ? labels.submitting : labels.submit}

@@ -69,7 +69,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
     return (
       <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-tribe-surface">
         {header && (
-          <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+          <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-tribe-mid flex-shrink-0">
             {header}
           </div>
         )}
@@ -84,7 +84,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
     <div className="flex flex-col h-[calc(100dvh-6rem)] bg-stone-50 dark:bg-tribe-surface">
       {/* Chat Header */}
       {header && (
-        <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+        <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-tribe-mid flex-shrink-0">
           {header}
         </div>
       )}
@@ -116,7 +116,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
                 <Link href={`/profile/${msg.user.id}`} className="flex-shrink-0">
                   <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80">
                     <AvatarImage src={msg.user?.avatar_url || undefined} alt={msg.user?.name || ''} />
-                    <AvatarFallback className="bg-tribe-green-light text-[#272D34] text-xs font-semibold">
+                    <AvatarFallback className="bg-tribe-green-light text-tribe-dark text-xs font-semibold">
                       {getInitials(msg.user?.name || 'U')}
                     </AvatarFallback>
                   </Avatar>
@@ -133,7 +133,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
                   <div
                     className={`rounded-2xl px-4 py-2 ${
                       isOwnMessage
-                        ? 'bg-tribe-green-light text-[#272D34]'
+                        ? 'bg-tribe-green-light text-tribe-dark'
                         : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-white'
                     }`}
                   >
@@ -148,7 +148,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
       </div>
 
       {/* Message Input */}
-      <div className="p-4 bg-stone-50 dark:bg-tribe-mid border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
+      <div className="p-4 bg-stone-50 dark:bg-tribe-mid border-t border-stone-300 dark:border-tribe-mid flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
             type="text"
@@ -158,13 +158,13 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
             disabled={sending}
             autoComplete="off"
             enterKeyHint="send"
-            className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:ring-[#A3E635] disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-white dark:bg-tribe-surface dark:border-tribe-mid rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:ring-tribe-green-light disabled:opacity-50"
           />
           <Button
             type="submit"
             disabled={!newMessage.trim() || sending}
             size="icon"
-            className="p-2 bg-tribe-green-light text-[#272D34] rounded-full hover:opacity-90 disabled:opacity-50"
+            className="p-2 bg-tribe-green-light text-tribe-dark rounded-full hover:opacity-90 disabled:opacity-50"
           >
             <Send className="w-5 h-5" />
           </Button>

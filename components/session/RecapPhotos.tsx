@@ -64,6 +64,7 @@ export default function RecapPhotos({
                 <div key={photo.id} className="relative aspect-square group">
                   <button
                     onClick={() => onOpenLightbox(idx, 'recap')}
+                    aria-label="View recap photo"
                     className="w-full h-full rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
                     <img
@@ -82,6 +83,7 @@ export default function RecapPhotos({
                     {(photo.user_id === user?.id || canModerate) && (
                       <button
                         onClick={() => setConfirmDeletePhotoId(photo.id)}
+                        aria-label="Delete photo"
                         className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
                         title={language === 'es' ? 'Eliminar' : 'Delete'}
                       >
@@ -91,6 +93,7 @@ export default function RecapPhotos({
                     {canModerate && photo.user_id !== user?.id && (
                       <button
                         onClick={() => reportRecapPhoto(photo.id, user, language, onPhotosChanged)}
+                        aria-label="Report photo"
                         className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600"
                         title="Report"
                       >

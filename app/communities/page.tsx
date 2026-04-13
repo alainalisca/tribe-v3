@@ -96,14 +96,14 @@ export default function CommunitiesPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-[#404549] border-b border-gray-200 dark:border-[#52575D] z-40">
+      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h1 className="text-2xl font-bold text-theme-primary">{t.title}</h1>
             {activeTab === 'communities' && (
               <Link
                 href="/communities/create"
-                className="flex items-center gap-2 px-4 py-2 bg-tribe-green text-slate-900 rounded-lg hover:bg-[#92d31f] transition font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-tribe-green text-slate-900 rounded-lg hover:bg-tribe-green transition font-medium"
               >
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline text-sm">{t.create}</span>
@@ -155,7 +155,7 @@ export default function CommunitiesPage() {
                   placeholder={t.search}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-[#6B7178] text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2.5 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
                 />
               </div>
             </div>

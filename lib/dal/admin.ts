@@ -82,7 +82,7 @@ export async function fetchAdminUsersWithCounts(supabase: SupabaseClient): Promi
 > {
   try {
     const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-      supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('users').select('id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count').order('created_at', { ascending: false }).limit(100),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
     ]);

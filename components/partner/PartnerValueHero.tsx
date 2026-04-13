@@ -18,7 +18,7 @@ export default function PartnerValueHero({ language }: Props) {
           ? 'Haz Crecer Tu Negocio con el Estatus de Afiliado Destacado'
           : 'Grow Your Business with Featured Affiliate Status'}
       </h2>
-      <p className="text-sm text-stone-600 dark:text-[#B1B3B6] leading-relaxed max-w-md mx-auto">
+      <p className="text-sm text-stone-600 dark:text-tribe-gray-60 leading-relaxed max-w-md mx-auto">
         {language === 'es'
           ? 'Conecta con atletas activos, llena tus sesiones y construye tu marca en la plataforma de fitness de mayor crecimiento en Medellín.'
           : 'Connect with active athletes, fill your sessions, and build your brand on the fastest-growing fitness platform in Medellín.'}

@@ -22,9 +22,9 @@ export default function SessionManagement({
   onUnverify,
 }: SessionManagementProps) {
   return (
-    <div className="bg-white rounded shadow">
+    <div className="bg-white dark:bg-tribe-surface rounded shadow">
       <div className="p-3 border-b">
-        <h3 className="text-sm font-bold text-[#272D34]">
+        <h3 className="text-sm font-bold text-tribe-dark">
           {language === 'es' ? 'Gestion de Sesiones' : 'Sessions Management'} ({sessions.length})
         </h3>
         <p className="text-xs text-stone-600 mt-1">
@@ -48,11 +48,11 @@ export default function SessionManagement({
           {sessions
             .filter((s) => s.photos && s.photos.length > 0)
             .map((session) => (
-              <div key={session.id} className="p-3 hover:bg-stone-50">
+              <div key={session.id} className="p-3 hover:bg-stone-50 dark:hover:bg-tribe-surface">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-[#272D34]">
+                      <p className="text-sm font-medium text-tribe-dark">
                         {session.sport} @ {session.location}
                       </p>
                       {session.photo_verified && (

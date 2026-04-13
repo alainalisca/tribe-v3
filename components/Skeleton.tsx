@@ -25,7 +25,7 @@ export function SkeletonProfile() {
       <div className="h-32 bg-stone-200 dark:bg-tribe-mid rounded-t-xl"></div>
       <div className="px-4 pb-4">
         <div className="flex items-end gap-4 -mt-12 mb-4">
-          <div className="w-24 h-24 bg-stone-200 dark:bg-tribe-mid rounded-full border-4 border-white dark:border-[#6B7178]"></div>
+          <div className="w-24 h-24 bg-stone-200 dark:bg-tribe-mid rounded-full border-4 border-white dark:border-tribe-card"></div>
           <div className="flex-1">
             <div className="h-6 bg-stone-200 dark:bg-tribe-mid rounded w-1/3 mb-2"></div>
             <div className="h-4 bg-stone-200 dark:bg-tribe-mid rounded w-1/4"></div>

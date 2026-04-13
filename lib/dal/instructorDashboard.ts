@@ -212,10 +212,11 @@ export async function fetchDashboardPackages(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('*')
+      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
       .eq('instructor_id', userId)
       .eq('is_active', true)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .limit(50);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };

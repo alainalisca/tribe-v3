@@ -233,7 +233,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
   // --- Empty state with CTA ---
   if (error && feedItems.length === 0) {
     return (
-      <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 border border-[#52575D]">
+      <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 border border-tribe-mid">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
           🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
         </h2>
@@ -242,7 +242,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
             {lang === 'es' ? 'No hay sesiones cercanas en este momento' : 'No upcoming sessions nearby'}
           </p>
           <Link href="/create">
-            <Button className="bg-tribe-green-light hover:bg-[#84cc16] text-slate-900 font-bold">
+            <Button className="bg-tribe-green-light hover:bg-tribe-green text-slate-900 font-bold">
               {lang === 'es' ? 'Crear la primera sesion' : 'Create the first session'}
             </Button>
           </Link>
@@ -270,8 +270,8 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
           onClick={() => scrollToSport('all')}
           className={`flex-shrink-0 ${
             selectedSport === undefined
-              ? 'bg-[#22C55E] hover:bg-[#16A34A] text-white'
-              : 'border-[#52575D] text-white hover:bg-tribe-mid'
+              ? 'bg-green-500 hover:bg-green-600 text-white'
+              : 'border-tribe-mid text-white hover:bg-tribe-mid'
           }`}
         >
           {SPORT_ICONS['all']} {SPORT_LABELS[lang]['all']}
@@ -285,8 +285,8 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
             onClick={() => scrollToSport(sport)}
             className={`flex-shrink-0 ${
               selectedSport === sport
-                ? 'bg-[#22C55E] hover:bg-[#16A34A] text-white'
-                : 'border-[#52575D] text-white hover:bg-tribe-mid'
+                ? 'bg-green-500 hover:bg-green-600 text-white'
+                : 'border-tribe-mid text-white hover:bg-tribe-mid'
             }`}
           >
             {SPORT_ICONS[sport as keyof typeof SPORT_ICONS]}{' '}
@@ -351,9 +351,9 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
 
   return (
     <Link href={`/session/${session.id}`} className="flex-shrink-0 w-72 block">
-      <div className="bg-tribe-surface border border-[#52575D] rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
+      <div className="bg-tribe-surface border border-tribe-mid rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow h-full">
         {/* Sport hero area */}
-        <div className="w-full h-40 bg-gradient-to-br from-[#A3E635]/20 to-[#3D4349] flex items-center justify-center">
+        <div className="w-full h-40 bg-gradient-to-br from-tribe-green-light/20 to-tribe-surface flex items-center justify-center">
           <span className="text-5xl">{sportIcon}</span>
         </div>
 
@@ -402,7 +402,7 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
 
           {/* Action */}
           <div className="pt-2">
-            <Button size="sm" className="w-full bg-[#22C55E] hover:bg-[#16A34A] text-white">
+            <Button size="sm" className="w-full bg-green-500 hover:bg-green-600 text-white">
               {lang === 'es' ? 'Ver Sesion' : 'View Session'}
             </Button>
           </div>

@@ -26,7 +26,7 @@ export default function ReportModal({
 }: ReportModalProps) {
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent data-modal="true" className="bg-white dark:bg-[#404549] rounded-lg p-6 max-w-md w-full">
+      <DialogContent data-modal="true" className="bg-white dark:bg-tribe-surface rounded-lg p-6 max-w-md w-full">
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-stone-900 dark:text-white">{tr.reportMessage}</DialogTitle>
           <DialogDescription className="sr-only">{tr.reportMessage}</DialogDescription>
@@ -38,7 +38,7 @@ export default function ReportModal({
             <select
               value={reportReason}
               onChange={(e) => onReasonChange(e.target.value)}
-              className="w-full p-2 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
+              className="w-full p-2 border border-stone-300 dark:border-tribe-mid rounded-lg bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
             >
               <option value="">{tr.selectReason}</option>
               <option value="spam">{tr.spam}</option>
@@ -55,7 +55,7 @@ export default function ReportModal({
               value={reportDescription}
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={tr.moreContext}
-              className="p-2 dark:border-[#52575D] bg-white dark:bg-tribe-mid text-stone-900 dark:text-white h-20 resize-none"
+              className="p-2 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-stone-900 dark:text-white h-20 resize-none"
             />
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function ReportModal({
         <div className="flex gap-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-tribe-mid"
+            className="flex-1 px-4 py-2 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-tribe-mid"
           >
             {tr.cancel}
           </button>

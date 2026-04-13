@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
+import { createPaymentSchema } from '@/lib/validations/payment';
 import { getPaymentGateway, isSupportedCurrency, calculateFees, PLATFORM_FEE_PERCENT } from '@/lib/payments/config';
 import { createWompiTransaction } from '@/lib/payments/wompi';
 import { createStripeCheckoutSession } from '@/lib/payments/stripe';
@@ -42,6 +43,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Validate input with Zod
+    const parsed = createPaymentSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
+
     const paymentType = body.payment_type || 'session_participation';
 
     // ──── BOOST CAMPAIGN / PRO STOREFRONT PAYMENTS ────

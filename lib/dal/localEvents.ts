@@ -75,7 +75,7 @@ export async function fetchLocalEvents(
   try {
     let query = supabase
       .from('local_fitness_events')
-      .select('*')
+      .select('id, name, description_en, description_es, sport_type, event_type, location_name, location_lat, location_lng, address, start_date, end_date, recurrence_pattern, recurrence_day, start_time, end_time, organizer, website_url, is_free, price_info, difficulty, image_url, is_active, created_by, created_at, updated_at')
       .eq('is_active', true)
       .order('start_time', { ascending: true });
 
@@ -104,7 +104,7 @@ export async function fetchLocalEventById(
   id: string
 ): Promise<DalResult<LocalFitnessEvent | null>> {
   try {
-    const { data, error } = await supabase.from('local_fitness_events').select('*').eq('id', id).maybeSingle();
+    const { data, error } = await supabase.from('local_fitness_events').select('id, name, description_en, description_es, sport_type, event_type, location_name, location_lat, location_lng, address, start_date, end_date, recurrence_pattern, recurrence_day, start_time, end_time, organizer, website_url, is_free, price_info, difficulty, image_url, is_active, created_by, created_at, updated_at').eq('id', id).maybeSingle();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };

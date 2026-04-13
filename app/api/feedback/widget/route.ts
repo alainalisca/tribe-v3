@@ -8,8 +8,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import type { FeedbackCategory, FeedbackSubmitPayload } from '@/types/feedback';
+
+const feedbackSchema = z.object({
+  category: z.enum(['bug', 'feature_request', 'general']),
+  message: z.string().min(10).max(2000),
+  deviceInfo: z.object({ platform: z.string().optional() }).optional(),
+  appVersion: z.string().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Service-role client (bypasses RLS for admin insert + user lookup)
@@ -76,22 +84,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // 2. Parse and validate the payload
-    const body = (await request.json()) as FeedbackSubmitPayload;
+    const raw = await request.json();
+    const parsed = feedbackSchema.safeParse(raw);
 
-    if (!body.category || !VALID_CATEGORIES.includes(body.category)) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid category. Must be: bug, feature_request, or general.' },
+        { success: false, error: parsed.error.issues.map((i) => i.message).join(', ') },
         { status: 400 }
       );
     }
 
-    if (!body.message || body.message.trim().length < 10) {
-      return NextResponse.json({ success: false, error: 'Message must be at least 10 characters.' }, { status: 400 });
-    }
-
-    if (body.message.trim().length > 2000) {
-      return NextResponse.json({ success: false, error: 'Message must be under 2000 characters.' }, { status: 400 });
-    }
+    const body = parsed.data;
 
     // 3. Build a title from the category + first chunk of the message
     const trimmedMessage = body.message.trim();

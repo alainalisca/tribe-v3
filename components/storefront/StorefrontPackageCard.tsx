@@ -48,7 +48,7 @@ export default function StorefrontPackageCard({
   }
 
   return (
-    <div className="bg-white dark:bg-[#404549] rounded-xl border border-stone-200 dark:border-[#52575D] p-4 hover:border-tribe-green/50 transition-all">
+    <div className="bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid p-4 hover:border-tribe-green/50 transition-all">
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-base font-bold text-theme-primary flex-1">{pkg.name}</h3>
         {pkg.tag && (

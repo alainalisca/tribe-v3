@@ -76,7 +76,7 @@ export async function fetchActivePartners(supabase: SupabaseClient, limit = 5): 
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select('*')
+      .select('id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at')
       .eq('status', 'active')
       .order('tier', { ascending: false })
       .order('total_impressions', { ascending: true })
@@ -96,7 +96,7 @@ export async function fetchPartnerByUserId(
   userId: string
 ): Promise<DalResult<FeaturedPartner | null>> {
   try {
-    const { data, error } = await supabase.from('featured_partners').select('*').eq('user_id', userId).maybeSingle();
+    const { data, error } = await supabase.from('featured_partners').select('id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at').eq('user_id', userId).maybeSingle();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -112,7 +112,7 @@ export async function fetchPartnerById(
   partnerId: string
 ): Promise<DalResult<FeaturedPartner | null>> {
   try {
-    const { data, error } = await supabase.from('featured_partners').select('*').eq('id', partnerId).maybeSingle();
+    const { data, error } = await supabase.from('featured_partners').select('id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at').eq('id', partnerId).maybeSingle();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -164,7 +164,7 @@ export async function fetchPartnerSessions(supabase: SupabaseClient, partnerId: 
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase
       .from('sessions')
-      .select('*')
+      .select('id, creator_id, sport, location, date, start_time, duration, max_participants, current_participants, status, title, description, latitude, longitude, photos, skill_level, is_paid, price_cents, currency')
       .in('creator_id', instructorIds)
       .eq('status', 'open')
       .gte('date', today)
@@ -212,8 +212,9 @@ export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalRes
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at')
+      .order('created_at', { ascending: false })
+      .limit(200);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: data ?? [] };

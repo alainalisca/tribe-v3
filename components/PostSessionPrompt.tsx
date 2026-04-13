@@ -280,7 +280,7 @@ export default function PostSessionPrompt({
                       ? 'border border-tribe-red'
                       : 'border border-gray-200 dark:border-gray-600 focus:border-tribe-green'
                   }
-                  ${submitState === 'error' ? 'bg-tribe-red/5' : 'bg-gray-50 dark:bg-[#1e2328]'}
+                  ${submitState === 'error' ? 'bg-tribe-red/5' : 'bg-gray-50 dark:bg-tribe-dark'}
                   text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500`}
               />
               <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">{reviewText.length}/500</p>

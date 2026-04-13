@@ -40,7 +40,7 @@ export default function SessionCard({
   return (
     <Link href={`/session/${session.id}`}>
       <Card
-        className={`dark:bg-tribe-card border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
+        className={`dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
       >
         <CardContent className="p-4">
           <div className="flex items-start justify-between">

@@ -228,7 +228,7 @@ export default function ConnectionButton({
 
         {upcomingSessions.length > 0 ? (
           <Link href={`/profile/${profileUserId}#sessions`}>
-            <Button className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold">
+            <Button className="w-full bg-tribe-green-light text-stone-900 hover:bg-tribe-green-hover font-semibold">
               {t('viewSessions')}
             </Button>
           </Link>
@@ -246,7 +246,7 @@ export default function ConnectionButton({
         onClick={handleConnect}
         disabled={actionLoading}
         aria-label={t('connect')}
-        className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold"
+        className="w-full bg-tribe-green-light text-stone-900 hover:bg-tribe-green-hover font-semibold"
       >
         {actionLoading ? '...' : t('connect')}
       </Button>
@@ -274,7 +274,7 @@ export default function ConnectionButton({
           onClick={handleAccept}
           disabled={actionLoading}
           aria-label={t('accept')}
-          className="w-full bg-tribe-green-light text-stone-900 hover:bg-[#8fd61d] font-semibold"
+          className="w-full bg-tribe-green-light text-stone-900 hover:bg-tribe-green-hover font-semibold"
         >
           {actionLoading ? '...' : t('accept')}
         </Button>

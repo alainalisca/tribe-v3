@@ -58,7 +58,7 @@ export default function SettingsPage() {
               <h2 className="text-lg font-bold text-theme-primary">{txt.admin}</h2>
             </div>
             <Link href="/admin">
-              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
+              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-tribe-green-hover transition font-semibold">
                 {txt.adminPanel}
               </button>
             </Link>
@@ -182,7 +182,7 @@ export default function SettingsPage() {
 
         {/* Notification Debug Section — admin only */}
         {userIsAdmin && (
-          <div className="bg-[#1a1a2e] rounded-2xl p-5 border border-gray-700">
+          <div className="bg-tribe-dark rounded-2xl p-5 border border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <Bug className="w-5 h-5 text-yellow-400" />
               <h2 className="text-lg font-bold text-yellow-400">Notification Debug</h2>
@@ -190,7 +190,7 @@ export default function SettingsPage() {
             <button
               onClick={runNotificationDiagnostic}
               disabled={debugRunning}
-              className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black hover:bg-yellow-400 disabled:opacity-50 mb-3"
+              className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black dark:text-white hover:bg-yellow-400 disabled:opacity-50 mb-3"
             >
               {debugRunning ? 'Running...' : 'Run Diagnostic'}
             </button>
@@ -290,7 +290,7 @@ export default function SettingsPage() {
 
       {/* Delete Account Confirmation Modal */}
       <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && closeDeleteConfirm()}>
-        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-[#404549]">
+        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-tribe-surface">
           <DialogTitle className="text-lg font-bold text-red-600">{txt.deleteModalTitle}</DialogTitle>
           <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{txt.deleteModalDesc}</p>
           <Input
@@ -298,13 +298,13 @@ export default function SettingsPage() {
             value={deleteInput}
             onChange={(e) => setDeleteInput(e.target.value)}
             placeholder={txt.deleteConfirmWord}
-            className="mb-4 dark:bg-tribe-mid dark:border-[#52575D] dark:text-white"
+            className="mb-4 dark:bg-tribe-mid dark:border-tribe-mid dark:text-white"
             autoComplete="off"
           />
           <div className="flex gap-3">
             <button
               onClick={closeDeleteConfirm}
-              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
+              className="flex-1 py-2.5 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
             >
               {txt.cancel}
             </button>

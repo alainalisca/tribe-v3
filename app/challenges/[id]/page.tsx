@@ -225,7 +225,7 @@ export default function ChallengePage() {
       {/* Content */}
       <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
         {/* Cover Banner */}
-        <div className="h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-tribe-green to-[#8FD642] relative">
+        <div className="h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-tribe-green to-tribe-green relative">
           {challenge.cover_image_url && (
             <Image src={challenge.cover_image_url} alt={challenge.title} fill className="object-cover" />
           )}
@@ -304,7 +304,7 @@ export default function ChallengePage() {
 
               <div className="w-full bg-stone-200 dark:bg-tribe-surface rounded-full h-4 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-tribe-green to-[#8FD642] transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-tribe-green to-tribe-green transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -335,7 +335,7 @@ export default function ChallengePage() {
               {leaderboard.map((participant, index) => (
                 <div
                   key={participant.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-tribe-surface hover:bg-stone-100 dark:hover:bg-[#4A515A] transition"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-stone-50 dark:bg-tribe-surface hover:bg-stone-100 dark:hover:bg-tribe-surface-hover transition"
                 >
                   {/* Rank Badge */}
                   <div className="flex-shrink-0 w-8 h-8 rounded-full bg-tribe-green text-slate-900 flex items-center justify-center font-bold text-sm">

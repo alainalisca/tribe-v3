@@ -16,7 +16,7 @@ export default function PartnersPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-[#2C3137] border-b border-gray-200 dark:border-gray-700">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
           <button
             onClick={() => router.back()}
@@ -42,7 +42,7 @@ export default function PartnersPage() {
           <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
             {language === 'es' ? 'Gratis por 6 meses' : 'Free for 6 months'}
           </h3>
-          <p className="text-sm text-stone-600 dark:text-[#B1B3B6] mb-4">
+          <p className="text-sm text-stone-600 dark:text-tribe-gray-60 mb-4">
             {language === 'es'
               ? 'Oferta introductoria para los primeros afiliados. Sin costo, sin compromiso.'
               : 'Introductory offer for early affiliates. No cost, no commitment.'}
