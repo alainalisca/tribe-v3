@@ -235,12 +235,12 @@ export default function InstructorsPage() {
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-xl font-bold text-theme-primary">{t.title}</h1>
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-3 w-5 h-5 text-stone-400" />
@@ -254,7 +254,7 @@ export default function InstructorsPage() {
         </div>
 
         {/* Sport Filter Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide md:justify-center md:overflow-visible md:flex-wrap md:mx-0 md:px-0">
           <button
             onClick={() => setSelectedSport(null)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition shrink-0 ${

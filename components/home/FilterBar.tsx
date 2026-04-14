@@ -1,12 +1,14 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
+import { trackEvent } from '@/lib/analytics';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
+import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
 
 interface FilterBarProps {
   searchQuery: string;
@@ -27,6 +29,8 @@ interface FilterBarProps {
   language: 'en' | 'es';
   t: (key: TranslationKey) => string;
   onFixedHeightChange: (height: number) => void;
+  selectedNeighborhood?: string | null;
+  onNeighborhoodChange?: (id: string | null) => void;
 }
 
 export default function FilterBar({
@@ -48,6 +52,8 @@ export default function FilterBar({
   language,
   t,
   onFixedHeightChange,
+  selectedNeighborhood,
+  onNeighborhoodChange,
 }: FilterBarProps) {
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const sports = Object.keys(sportTranslations);
@@ -68,7 +74,30 @@ export default function FilterBar({
   useEffect(() => {
     measureFixed();
     requestAnimationFrame(() => measureFixed());
-  }, [userLocation, loading, searchQuery, selectedSport, filteredCount, measureFixed]);
+  }, [userLocation, loading, searchQuery, selectedSport, filteredCount, selectedNeighborhood, measureFixed]);
+
+  // Track search execution (debounced — only fires after user stops typing)
+  useEffect(() => {
+    if (!searchQuery) return;
+    const timer = setTimeout(() => {
+      trackEvent('search_executed', {
+        query: searchQuery,
+        result_count: filteredCount,
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filteredCount]);
+
+  // Auto-detect neighborhood on mount when location first appears
+  useEffect(() => {
+    if (userLocation && onNeighborhoodChange) {
+      const detected = detectNeighborhood(userLocation.latitude, userLocation.longitude);
+      if (detected) {
+        onNeighborhoodChange(detected.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only auto-detect once when location first appears
+  }, [userLocation]);
 
   return (
     <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark">
@@ -174,6 +203,33 @@ export default function FilterBar({
             </div>
           )}
 
+          {/* Neighborhood pills */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+            <div className="w-px h-6 bg-stone-300 dark:bg-tribe-mid self-center mx-1 flex-shrink-0" />
+            {getPopularNeighborhoods().map((hood) => (
+              <button
+                key={hood.id}
+                onClick={() => {
+                  const newValue = selectedNeighborhood === hood.id ? null : hood.id;
+                  if (newValue) {
+                    trackEvent('neighborhood_selected', {
+                      neighborhood: hood.name,
+                      source: 'filter_pill',
+                    });
+                  }
+                  onNeighborhoodChange?.(newValue);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all flex-shrink-0 ${
+                  selectedNeighborhood === hood.id
+                    ? 'bg-blue-500 text-white border-blue-500'
+                    : 'bg-blue-500/10 text-blue-400 border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30'
+                }`}
+              >
+                {hood.name}
+              </button>
+            ))}
+          </div>
+
           {(!loading || searchQuery || selectedSport) && (
             <div className="flex items-center justify-between">
               {!loading && (
@@ -185,7 +241,8 @@ export default function FilterBar({
                 selectedSport ||
                 dateFilter !== 'all' ||
                 genderFilter !== 'all' ||
-                pricingFilter !== 'all') && (
+                pricingFilter !== 'all' ||
+                selectedNeighborhood) && (
                 <button
                   onClick={() => {
                     setSearchQuery('');
@@ -193,6 +250,7 @@ export default function FilterBar({
                     setDateFilter('all');
                     setGenderFilter('all');
                     setPricingFilter('all');
+                    onNeighborhoodChange?.(null);
                   }}
                   className="text-xs text-tribe-green hover:underline"
                 >

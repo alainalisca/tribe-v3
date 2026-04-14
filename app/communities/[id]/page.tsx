@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { trackEvent } from '@/lib/analytics';
 import BottomNav from '@/components/BottomNav';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -136,6 +137,7 @@ export default function CommunityDetailPage() {
       } else {
         const result = await joinCommunity(supabase, communityId, userId);
         if (result.success) {
+          trackEvent('community_joined', { community_id: communityId });
           setIsMember(true);
           await fetchCommunityData();
         }
@@ -150,7 +152,7 @@ export default function CommunityDetailPage() {
   if (loading || !community) {
     return (
       <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-8">
           <div className="h-64">
             <SkeletonCard />
           </div>
@@ -169,7 +171,7 @@ export default function CommunityDetailPage() {
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
@@ -180,7 +182,7 @@ export default function CommunityDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl md:max-w-4xl mx-auto">
         {/* Cover image */}
         <div className="w-full h-48 bg-cover bg-center" style={coverStyle} />
 
@@ -304,7 +306,14 @@ export default function CommunityDetailPage() {
 
                         {/* Post media */}
                         {post.media_url && post.media_type === 'image' && (
-                          <Image src={post.media_url} alt="Community post image" width={600} height={384} className="w-full rounded-lg max-h-96 object-cover" unoptimized />
+                          <Image
+                            src={post.media_url}
+                            alt="Community post image"
+                            width={600}
+                            height={384}
+                            className="w-full rounded-lg max-h-96 object-cover"
+                            unoptimized
+                          />
                         )}
 
                         {/* Post stats */}

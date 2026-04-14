@@ -7,6 +7,7 @@ import { ExternalEvent } from '@/lib/dal/externalEvents';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
+import { ACTIVE_CITY } from '@/lib/city-config';
 
 interface NearbyEventsProps {
   language: string;
@@ -214,7 +215,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
     return (
       <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
-          🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
+          🎯 {lang === 'es' ? `Sucediendo en ${ACTIVE_CITY.name}` : `Happening in ${ACTIVE_CITY.name}`}
         </h2>
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {['all', ...SPORTS].map((sport) => (
@@ -235,7 +236,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
     return (
       <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 border border-tribe-mid">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
-          🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
+          🎯 {lang === 'es' ? `Sucediendo en ${ACTIVE_CITY.name}` : `Happening in ${ACTIVE_CITY.name}`}
         </h2>
         <div className="text-center py-8">
           <p className="text-gray-400 mb-4">
@@ -259,7 +260,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
     <div className="bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4">
       {/* Header */}
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-3">
-        🎯 {lang === 'es' ? 'Sucediendo Cerca' : 'Happening Near You'}
+        🎯 {lang === 'es' ? `Sucediendo en ${ACTIVE_CITY.name}` : `Happening in ${ACTIVE_CITY.name}`}
       </h2>
 
       {/* Sport Filter Pills */}

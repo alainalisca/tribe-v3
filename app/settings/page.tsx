@@ -1,8 +1,21 @@
 /** Page: /settings — App settings: notifications, theme, language, account */
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug, Dumbbell, HeartHandshake } from 'lucide-react';
+import {
+  ArrowLeft,
+  Globe,
+  LogOut,
+  Shield,
+  Trash2,
+  MessageSquare,
+  Bug,
+  Dumbbell,
+  HeartHandshake,
+  ShoppingBag,
+} from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -15,6 +28,10 @@ import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
   const router = useRouter();
+
+  useEffect(() => {
+    trackEvent('settings_opened');
+  }, []);
   const {
     txt,
     user,
@@ -39,7 +56,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -49,10 +66,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Admin Section - Only for admin */}
         {userIsAdmin && (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-tribe-green" />
               <h2 className="text-lg font-bold text-theme-primary">{txt.admin}</h2>
@@ -65,8 +82,25 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* My Orders Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <ShoppingBag className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{language === 'es' ? 'Mis Compras' : 'My Orders'}</h2>
+          </div>
+          <Link href="/my-orders">
+            <Button
+              variant="ghost"
+              className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid flex items-center gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {language === 'es' ? 'Ver historial de compras' : 'View purchase history'}
+            </Button>
+          </Link>
+        </div>
+
         {/* Help & Feedback Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <MessageSquare className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.help}</h2>
@@ -98,7 +132,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Featured Partners */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <HeartHandshake className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">
@@ -114,7 +148,7 @@ export default function SettingsPage() {
 
         {/* Training Preferences Section */}
         {user && (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-2">
               <Dumbbell className="w-5 h-5 text-tribe-green" />
               <h2 className="text-lg font-bold text-theme-primary">{txt.trainingPreferences}</h2>
@@ -125,7 +159,7 @@ export default function SettingsPage() {
         )}
 
         {/* Notifications Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <svg className="w-5 h-5 text-tribe-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -205,7 +239,7 @@ export default function SettingsPage() {
         )}
 
         {/* Language Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.language}</h2>
@@ -236,7 +270,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Legal Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
             <Link href="/legal/terms">
@@ -267,7 +301,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Account Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
           <Button
             variant="destructive"

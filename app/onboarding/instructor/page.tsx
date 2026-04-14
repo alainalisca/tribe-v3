@@ -9,6 +9,7 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
+import { haptic } from '@/lib/haptics';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -352,6 +353,7 @@ export default function InstructorOnboardingPage() {
       const result = await updateUser(supabase, userId, updatePayload);
       if (!result.success) throw new Error(result.error);
 
+      await haptic('success');
       showSuccess(t.profileComplete);
 
       // Instructors land on their storefront so they see the result
@@ -392,7 +394,7 @@ export default function InstructorOnboardingPage() {
                       ? 'bg-tribe-green text-slate-900'
                       : step === s.num
                         ? 'bg-tribe-green text-slate-900 ring-4 ring-tribe-green/30'
-                        : 'bg-stone-200 dark:bg-gray-600 text-stone-500 dark:text-gray-400'
+                        : 'bg-stone-200 dark:bg-stone-600 text-stone-500 dark:text-gray-400'
                   }`}
                 >
                   {step > s.num ? <Check className="w-5 h-5" /> : s.num}
@@ -408,7 +410,7 @@ export default function InstructorOnboardingPage() {
               {idx < steps.length - 1 && (
                 <div
                   className={`w-16 h-0.5 mx-2 mb-4 transition ${
-                    step > s.num ? 'bg-tribe-green' : 'bg-stone-200 dark:bg-gray-600'
+                    step > s.num ? 'bg-tribe-green' : 'bg-stone-200 dark:bg-stone-600'
                   }`}
                 />
               )}
@@ -603,7 +605,14 @@ export default function InstructorOnboardingPage() {
 
               {form.storefront_banner_url && !bannerUseUrl ? (
                 <div className="relative rounded-lg overflow-hidden border border-stone-200 dark:border-gray-600">
-                  <Image src={form.storefront_banner_url} alt="Storefront banner preview" width={600} height={112} className="w-full h-28 object-cover" unoptimized />
+                  <Image
+                    src={form.storefront_banner_url}
+                    alt="Storefront banner preview"
+                    width={600}
+                    height={112}
+                    className="w-full h-28 object-cover"
+                    unoptimized
+                  />
                   <div className="absolute bottom-2 right-2 flex gap-1">
                     <button
                       type="button"
@@ -808,11 +817,14 @@ export default function InstructorOnboardingPage() {
             )}
             {step < 3 ? (
               <button
-                onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                onClick={() => {
+                  void haptic('light');
+                  setStep((s) => (s + 1) as 1 | 2 | 3);
+                }}
                 disabled={step === 1 && !form.name.trim()}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
                   step === 1 && !form.name.trim()
-                    ? 'bg-stone-200 dark:bg-gray-600 text-stone-400 cursor-not-allowed'
+                    ? 'bg-stone-200 dark:bg-stone-600 text-stone-400 cursor-not-allowed'
                     : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
                 }`}
               >

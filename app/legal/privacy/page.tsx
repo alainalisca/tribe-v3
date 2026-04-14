@@ -28,7 +28,7 @@ export default function PrivacyPage() {
       <div className="max-w-4xl mx-auto p-6">
         <Card className="dark:bg-tribe-dark shadow-none border-none">
           <CardContent className="p-8">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{t.lastUpdated}</p>
+            <p className="text-sm text-stone-600 dark:text-gray-400 mb-6">{t.lastUpdated}</p>
 
             <div className="space-y-6 text-stone-700 dark:text-gray-300">
               {t.sections.map((sec, i) => (
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                     </div>
                   )}
                   {sec.contact && (
-                    <div className="bg-gray-100 dark:bg-tribe-mid p-4 rounded-lg">
+                    <div className="bg-stone-100 dark:bg-tribe-mid p-4 rounded-lg">
                       <p>{sec.contactLabel}</p>
                       <p className="font-semibold mt-2">
                         Email:{' '}

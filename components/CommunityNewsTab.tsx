@@ -70,7 +70,7 @@ function NewsCard({ article, language }: { article: CommunityNewsArticle; langua
       href={article.body_url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid overflow-hidden hover:border-tribe-green/50 transition group"
+      className="block rounded-xl bg-white dark:bg-tribe-card border border-stone-200 dark:border-tribe-mid overflow-hidden hover:border-tribe-green/50 transition group"
     >
       {/* Image or gradient placeholder */}
       {article.image_url ? (

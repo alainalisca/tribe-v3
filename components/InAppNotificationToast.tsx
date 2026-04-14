@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface NotificationPayload {
   title?: string;
@@ -45,6 +46,9 @@ export default function InAppNotificationToast() {
   }, [dismiss]);
 
   function handleTap() {
+    trackEvent('notification_tapped', {
+      notification_type: notification?.data?.type || 'in_app',
+    });
     const url = notification?.url || notification?.data?.url;
     dismiss();
     if (url) window.location.href = url;

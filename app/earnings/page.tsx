@@ -56,7 +56,7 @@ const getPaymentStatusColor = (status: string) => {
     case 'error':
       return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      return 'bg-stone-100 text-gray-800 dark:bg-stone-800 dark:text-gray-300';
   }
 };
 
@@ -69,7 +69,7 @@ const getPayoutStatusColor = (status?: string | null) => {
     case 'processing':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      return 'bg-stone-100 text-gray-800 dark:bg-stone-800 dark:text-gray-300';
   }
 };
 
@@ -288,7 +288,7 @@ export default function EarningsPage() {
     return (
       <div className="min-h-screen bg-theme-page pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-          <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
             <Link href="/profile">
               <Button variant="ghost" size="icon" className="mr-3">
                 <ChevronLeft className="w-6 h-6 text-theme-primary" />
@@ -298,7 +298,7 @@ export default function EarningsPage() {
           </div>
         </div>
 
-        <div className="pt-header max-w-2xl mx-auto p-4">
+        <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20">
             <CardContent className="pt-6">
               <div className="flex gap-3">
@@ -345,7 +345,7 @@ export default function EarningsPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="mr-3">
               <ChevronLeft className="w-6 h-6 text-theme-primary" />
@@ -355,7 +355,7 @@ export default function EarningsPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Revenue Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Total Earned */}
@@ -405,7 +405,7 @@ export default function EarningsPage() {
                 <CardTitle className="text-sm font-semibold text-theme-secondary">
                   {language === 'es' ? 'Comisiones (15%)' : 'Platform Fees (15%)'}
                 </CardTitle>
-                <div className="bg-gray-200/30 p-2 rounded-lg">
+                <div className="bg-stone-200/30 p-2 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-gray-600" />
                 </div>
               </div>
@@ -454,7 +454,7 @@ export default function EarningsPage() {
               <div className="flex-1 flex flex-col items-center">
                 <div className="w-full bg-theme-secondary/10 rounded-lg relative flex-1 flex items-end justify-center mb-3 min-h-32">
                   <div
-                    className="w-4/5 bg-gray-400 rounded-t-lg flex items-center justify-center transition-all"
+                    className="w-4/5 bg-stone-400 rounded-t-lg flex items-center justify-center transition-all"
                     style={{
                       height:
                         Math.max(20, (lastMonthEarnings / Math.max(thisMonthEarnings, lastMonthEarnings, 1)) * 100) +
@@ -473,6 +473,28 @@ export default function EarningsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Product Sales Link */}
+        <Link href="/orders">
+          <Card className="border-tribe-green/30 hover:border-tribe-green transition-colors cursor-pointer">
+            <CardContent className="py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-tribe-green/20 p-2 rounded-lg">
+                  <ArrowUpRight className="w-5 h-5 text-tribe-green" />
+                </div>
+                <div>
+                  <p className="font-semibold text-theme-primary text-sm">
+                    {language === 'es' ? 'Ventas de Productos' : 'Product Sales'}
+                  </p>
+                  <p className="text-xs text-theme-secondary">
+                    {language === 'es' ? 'Ver pedidos y gestionar entregas' : 'View orders and manage fulfillment'}
+                  </p>
+                </div>
+              </div>
+              <ChevronLeft className="w-5 h-5 text-theme-secondary rotate-180" />
+            </CardContent>
+          </Card>
+        </Link>
 
         {/* Transaction History */}
         <Card>

@@ -2,14 +2,16 @@
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 import { celebrateSessionCreated } from '@/lib/confetti';
+import { trackEvent } from '@/lib/analytics';
 
 import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
-import { ArrowLeft, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronDown, ChevronUp, Share2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
@@ -26,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
+import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 type FormErrors = Partial<
@@ -176,6 +179,24 @@ function CreateSessionPageInner() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+
+    // Photo nudge: warn the instructor once if they're about to create a session with no photos.
+    // Sessions with photos book significantly better — this gets them to pause and reconsider.
+    // Uses sessionStorage so we only nudge once per session creation attempt (re-submit bypasses).
+    if (photos.length === 0 && !sessionStorage.getItem('tribe_photo_nudge_dismissed')) {
+      const msg =
+        language === 'es'
+          ? 'Las sesiones con fotos reciben más reservas. ¿Continuar sin agregar una foto?'
+          : 'Sessions with photos get more bookings. Continue without adding one?';
+      const proceed = window.confirm(msg);
+      if (!proceed) {
+        // Scroll the photo section into view to make the upload button obvious
+        document.querySelector('[data-photo-section]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      sessionStorage.setItem('tribe_photo_nudge_dismissed', '1');
+    }
+
     setLoading(true);
     try {
       // Build the session payload — strip UI-only fields and add paid fields
@@ -210,9 +231,22 @@ function CreateSessionPageInner() {
         photos: photos.length > 0 ? photos : null,
       });
       if (!result.success) throw new Error(result.error);
+      trackEvent('session_created', {
+        session_id: result.data?.id,
+        is_paid: formData.is_paid,
+        price_cents: formData.is_paid ? Math.round(parseFloat(formData.price_display) * 100) : 0,
+        currency: formData.currency,
+        sport: formData.sport,
+        max_participants: formData.max_participants,
+      });
       showSuccess(t('sessionCreated'));
-      router.push('/');
       celebrateSessionCreated();
+      haptic('success');
+      if (result.data?.id) {
+        setCreatedSessionId(result.data.id);
+      } else {
+        router.push('/');
+      }
     } catch (error: unknown) {
       const err = error as Record<string, unknown> | null;
       logError(error, {
@@ -230,12 +264,106 @@ function CreateSessionPageInner() {
 
   if (!user) return <div className="min-h-screen bg-theme-page flex items-center justify-center"></div>;
 
+  // --- Success state: share after creation ---
+  if (createdSessionId) {
+    const shareUrl = getSessionShareUrl(createdSessionId);
+    return (
+      <div className="min-h-screen bg-theme-page pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="mr-3">
+                <ArrowLeft className="w-6 h-6 text-theme-primary" />
+              </Button>
+            </Link>
+            <h1 className="text-xl font-bold text-theme-primary">{t('createSession')}</h1>
+          </div>
+        </div>
+
+        <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
+          <div className="bg-theme-card rounded-2xl p-6 border border-theme text-center space-y-4">
+            <div className="text-5xl mb-2">🎉</div>
+            <h2 className="text-xl font-bold text-theme-primary">
+              {language === 'es' ? 'Sesion Creada!' : 'Session Created!'}
+            </h2>
+            <p className="text-sm text-theme-secondary">
+              {language === 'es'
+                ? 'Comparte con tu comunidad para llenar cupos'
+                : 'Share with your community to fill spots'}
+            </p>
+
+            <div className="space-y-3 pt-2">
+              {/* WhatsApp share */}
+              <button
+                onClick={() => {
+                  shareSession(
+                    {
+                      id: createdSessionId,
+                      title: formData.sport,
+                      sport: formData.sport,
+                      date: formData.date,
+                      time: formData.start_time,
+                      neighborhood: formData.location,
+                    },
+                    language
+                  );
+                }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white
+                  hover:opacity-90 hover:scale-[1.02] active:scale-95 transition-all duration-200
+                  flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#25D366' }}
+              >
+                <Share2 className="w-4 h-4" />
+                {language === 'es' ? 'Compartir por WhatsApp' : 'Share via WhatsApp'}
+              </button>
+
+              {/* Copy link for Instagram */}
+              <button
+                onClick={async () => {
+                  const copied = await copyToClipboard(shareUrl);
+                  if (copied) {
+                    showSuccess(language === 'es' ? 'Enlace copiado para Instagram!' : 'Link copied for Instagram!');
+                  }
+                }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
+                  bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-gray-300
+                  hover:bg-stone-200 dark:hover:bg-stone-700
+                  flex items-center justify-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                {language === 'es' ? 'Copiar Enlace para Instagram' : 'Copy Link for Instagram'}
+              </button>
+
+              {/* Go to session */}
+              <Link
+                href={`/session/${createdSessionId}`}
+                className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
+                  bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
+              >
+                {language === 'es' ? 'Ver Sesion' : 'View Session'}
+              </Link>
+
+              {/* Go home */}
+              <Link
+                href="/"
+                className="block w-full py-2.5 text-sm font-medium text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-gray-300 transition-colors text-center"
+              >
+                {language === 'es' ? 'Ir al inicio' : 'Go Home'}
+              </Link>
+            </div>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/">
             <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -245,7 +373,7 @@ function CreateSessionPageInner() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto px-4 py-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
         <TemplateSection
           supabase={supabase}
           userId={user.id}
@@ -254,7 +382,7 @@ function CreateSessionPageInner() {
           onLoadTemplate={handleLoadTemplate}
         />
 
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Sport */}
             <div>
@@ -457,7 +585,7 @@ function CreateSessionPageInner() {
                     role="switch"
                     aria-checked={formData.is_paid}
                     onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
-                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-gray-400'}`}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-stone-400'}`}
                   >
                     <span
                       className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white dark:bg-tribe-green shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
@@ -586,13 +714,25 @@ function CreateSessionPageInner() {
             </div>
 
             {/* Photos */}
-            <PhotoUploadSection
-              supabase={supabase}
-              userId={user.id}
-              language={language}
-              photos={photos}
-              onPhotosChange={setPhotos}
-            />
+            <div data-photo-section>
+              <PhotoUploadSection
+                supabase={supabase}
+                userId={user.id}
+                language={language}
+                photos={photos}
+                onPhotosChange={setPhotos}
+              />
+              {photos.length === 0 && (
+                <p className="text-xs text-tribe-amber mt-2 flex items-center gap-1.5">
+                  <span>💡</span>
+                  <span>
+                    {language === 'es'
+                      ? 'Las sesiones con fotos reciben muchas más reservas'
+                      : 'Sessions with photos get significantly more bookings'}
+                  </span>
+                </p>
+              )}
+            </div>
 
             <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
               {loading ? t('creating') : t('createSession')}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
+import { haptic } from '@/lib/haptics';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -122,7 +123,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-dark border-t border-gray-200 dark:border-tribe-mid shadow-lg z-50 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-card border-t border-gray-200 dark:border-tribe-mid shadow-lg z-50 safe-area-bottom">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center h-16 px-4">
           {navItems.map((item) => {
@@ -134,6 +135,7 @@ export default function BottomNav() {
                   key={item.href}
                   href={item.href}
                   aria-label={item.label}
+                  onClick={() => haptic('light')}
                   className="flex flex-col items-center justify-center flex-1 -mt-8"
                 >
                   <div className="bg-tribe-green rounded-full p-4 shadow-lg hover:bg-tribe-green transition-colors">
@@ -149,6 +151,7 @@ export default function BottomNav() {
                 key={item.href}
                 href={item.href}
                 aria-label={item.label}
+                onClick={() => haptic('light')}
                 className={`flex flex-col items-center justify-center min-w-0 flex-1 transition-colors relative ${
                   isActive
                     ? 'text-tribe-green'

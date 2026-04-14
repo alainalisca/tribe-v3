@@ -1,6 +1,7 @@
 'use client';
 
 import { showSuccess } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -8,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 interface InviteModalProps {
   language: 'en' | 'es';
   inviteLink: string;
-  session: { sport: string; location: string };
+  session: { id: string; sport: string; location: string };
   onClose: () => void;
 }
 
@@ -20,6 +21,7 @@ export default function InviteModal({ language, inviteLink, session, onClose }: 
   }
 
   function shareInviteLink() {
+    trackEvent('session_shared', { session_id: session.id, method: 'native' });
     if (navigator.share) {
       navigator
         .share({

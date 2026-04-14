@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
+import { applyReferralCode } from '@/lib/dal/referrals';
+import { trackEvent } from '@/lib/analytics';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AuthCallbackPage() {
@@ -77,6 +79,13 @@ export default function AuthCallbackPage() {
       if (data?.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         if (isNewUser) {
+          // Apply referral code if stored during auth page visit
+          const refCode = localStorage.getItem('tribe_referral_code');
+          if (refCode) {
+            await applyReferralCode(supabase, refCode, data.user.id);
+            localStorage.removeItem('tribe_referral_code');
+            trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
+          }
           window.location.href = '/onboarding/role';
           return;
         }

@@ -7,10 +7,13 @@ import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import StarRating from '@/components/StarRating';
 import PostSessionConnect from '@/components/PostSessionConnect';
+import PostSessionShareStep from '@/components/PostSessionShareStep';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { insertRecapPhoto } from '@/lib/dal';
+import { progressReferralOnSessionComplete } from '@/lib/dal/referrals-progression';
 import { showSuccess, showError } from '@/lib/toast';
 import { log } from '@/lib/logger';
+import { haptic } from '@/lib/haptics';
 
 interface PostSessionFlowProps {
   open: boolean;
@@ -29,9 +32,15 @@ interface PostSessionFlowProps {
   }>;
   language: string;
   hasReviewed?: boolean;
+  sessionTitle?: string;
+  sessionDate?: string;
+  sessionTime?: string;
+  locationName?: string;
+  neighborhood?: string;
+  price?: string;
 }
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export default function PostSessionFlow({
   open,
@@ -45,6 +54,12 @@ export default function PostSessionFlow({
   participants,
   language,
   hasReviewed = false,
+  sessionTitle,
+  sessionDate,
+  sessionTime,
+  locationName,
+  neighborhood,
+  price,
 }: PostSessionFlowProps) {
   const supabase = createClient();
 
@@ -122,6 +137,9 @@ export default function PostSessionFlow({
         setReviewError(t('Error submitting rating', 'Error al enviar calificacion'));
       } else {
         showSuccess(t('Rating submitted', 'Calificacion enviada'));
+        haptic('success');
+        // Fire-and-forget: progress referral status on first session complete
+        progressReferralOnSessionComplete(supabase, userId).catch(() => {});
         setStep(2);
       }
     } catch (err) {
@@ -167,7 +185,7 @@ export default function PostSessionFlow({
               maxLength={500}
               className="w-full h-20 p-3 rounded-xl text-sm resize-none outline-none transition-colors
                 border border-gray-200 dark:border-gray-600 focus:border-tribe-green
-                bg-gray-50 dark:bg-tribe-dark
+                bg-stone-50 dark:bg-tribe-dark
                 text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500"
             />
             <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">{reviewText.length}/500</p>
@@ -382,7 +400,26 @@ export default function PostSessionFlow({
     );
   }
 
-  // --- Step 4: Train Again ---
+  // --- Step 4: Share Your Session (extracted to PostSessionShareStep) ---
+  function renderShareStep() {
+    return (
+      <PostSessionShareStep
+        sessionId={sessionId}
+        sport={_sport}
+        creatorName={creatorName}
+        language={language as 'en' | 'es'}
+        sessionTitle={sessionTitle}
+        sessionDate={sessionDate}
+        sessionTime={sessionTime}
+        locationName={locationName}
+        neighborhood={neighborhood}
+        price={price}
+        onNext={() => setStep(5)}
+      />
+    );
+  }
+
+  // --- Step 5: Train Again ---
   function renderTrainAgainStep() {
     return (
       <div className="space-y-6">
@@ -442,6 +479,8 @@ export default function PostSessionFlow({
       case 3:
         return renderConnectStep();
       case 4:
+        return renderShareStep();
+      case 5:
         return renderTrainAgainStep();
       default:
         return null;
@@ -456,7 +495,7 @@ export default function PostSessionFlow({
       }}
     >
       <DialogContent
-        className="max-w-md bg-white dark:bg-tribe-dark border-gray-200 dark:border-gray-700 rounded-2xl p-6"
+        className="max-w-md bg-white dark:bg-tribe-card border-gray-200 dark:border-gray-700 rounded-2xl p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{t('Post-Session Flow', 'Flujo Post-Sesion')}</DialogTitle>

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import StarRating from '@/components/StarRating';
 import { logError } from '@/lib/logger';
+import { showSuccess } from '@/lib/toast';
+import { shareSession, type SessionShareData } from '@/lib/share';
 
 interface PostSessionPromptProps {
   sessionId: string;
@@ -145,34 +147,16 @@ export default function PostSessionPrompt({
   };
 
   const handleShare = async () => {
-    const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${sessionId}`;
-    const shareText =
-      language === 'es'
-        ? `Acabo de completar una sesión de ${sport} con ${instructorName}!`
-        : `I just completed a ${sport} session with ${instructorName}!`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Tribe',
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (err) {
-        // User cancelled share
-        if (!(err instanceof Error && err.message === 'Share cancelled')) {
-          logError(err, { action: 'shareSession' });
-        }
-      }
-    } else {
-      // Fallback: copy to clipboard
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        // Show toast notification (if available)
-        alert(language === 'es' ? 'Enlace copiado al portapapeles' : 'Link copied to clipboard');
-      } catch (err) {
-        logError(err, { action: 'copyToClipboard' });
-      }
+    const shareData: SessionShareData = {
+      id: sessionId,
+      title: sport,
+      sport,
+      date: new Date().toISOString().split('T')[0],
+      instructorName,
+    };
+    const method = await shareSession(shareData, language);
+    if (method === 'clipboard') {
+      showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
     }
   };
 
@@ -219,7 +203,7 @@ export default function PostSessionPrompt({
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center pointer-events-none pb-24">
         <div className="w-full max-w-sm mx-auto px-4 pointer-events-auto">
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-8 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
             <div className="text-5xl mb-4 animate-bounce">🎉</div>
             <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-2">{translations.thankYou}</h3>
             <p className="text-sm text-stone-600 dark:text-gray-400">{translations.thankYouSubtitle}</p>
@@ -233,7 +217,7 @@ export default function PostSessionPrompt({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 pointer-events-none pb-24">
       <div className="w-full max-w-sm mx-auto px-4 pointer-events-auto">
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
           {/* Instructor Avatar */}
           <div className="flex justify-center mb-5">
             {instructorAvatar ? (
@@ -280,7 +264,7 @@ export default function PostSessionPrompt({
                       ? 'border border-tribe-red'
                       : 'border border-gray-200 dark:border-gray-600 focus:border-tribe-green'
                   }
-                  ${submitState === 'error' ? 'bg-tribe-red/5' : 'bg-gray-50 dark:bg-tribe-dark'}
+                  ${submitState === 'error' ? 'bg-tribe-red/5' : 'bg-stone-50 dark:bg-tribe-dark'}
                   text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-gray-500`}
               />
               <p className="text-xs text-stone-400 dark:text-gray-500 mt-1">{reviewText.length}/500</p>

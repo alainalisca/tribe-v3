@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import ShareButton from '@/components/ShareButton';
+import { shareAchievement } from '@/lib/share';
 
 interface StreakBannerProps {
   userId: string;
@@ -115,11 +117,19 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
           <span className="text-2xl">🔥</span>
           <div className="flex items-baseline gap-1">
             <span className="text-gray-600 dark:text-gray-300 text-sm">{streakLabel}</span>
-            <span className="text-tribe-green font-bold text-lg">{streak}</span>
+            <span className="text-tribe-amber font-bold text-lg">{streak}</span>
             <span className="text-gray-600 dark:text-gray-300 text-sm">{weeksLabel}</span>
           </div>
           {showSparkle && <span className="text-lg">✨</span>}
         </div>
+        <ShareButton
+          size="sm"
+          variant="icon"
+          onShare={async () => {
+            await shareAchievement({ type: 'streak', title: 'Training Streak', count: streak }, language);
+            return null;
+          }}
+        />
       </div>
 
       {/* Week days indicator */}
@@ -132,7 +142,7 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
                   hasAttendance
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-gray-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
+                    : 'bg-stone-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
                 }`}
               >
                 <span className={`font-bold ${hasAttendance ? 'text-sm' : 'text-xs'}`}>

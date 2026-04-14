@@ -220,7 +220,7 @@ export default function OnboardingRolePage() {
           className={`w-full py-3.5 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-200 ${
             selectedRole
               ? 'bg-tribe-green text-slate-900 hover:bg-tribe-green active:scale-[0.98]'
-              : 'bg-stone-200 dark:bg-gray-600 text-stone-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-stone-200 dark:bg-stone-600 text-stone-400 dark:text-gray-500 cursor-not-allowed'
           }`}
         >
           {submitting ? (

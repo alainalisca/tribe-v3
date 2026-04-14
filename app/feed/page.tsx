@@ -303,7 +303,7 @@ export default function FeedPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <h1 className="text-lg font-bold text-theme-primary">{strings.yourFeed}</h1>
           {isInstructor && (
             <button
@@ -317,16 +317,16 @@ export default function FeedPage() {
       </div>
 
       {/* Feed Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {loading && offset === 0 ? (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex items-center justify-center py-12">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-4">
               <Loader className="h-8 w-8 animate-spin text-tribe-green" />
               <p className="text-theme-secondary">{strings.loading}</p>
             </div>
           </div>
         ) : posts.length === 0 ? (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex flex-col items-center justify-center gap-4 py-12">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700 flex flex-col items-center justify-center gap-4 py-12">
             <MessageSquare className="h-12 w-12 text-theme-secondary" />
             <p className="text-center text-theme-secondary">{strings.followInstructors}</p>
             <button
@@ -354,7 +354,7 @@ export default function FeedPage() {
                   language={language}
                 />
                 {expandedCommentPost === post.id && currentUserId && (
-                  <div className="bg-white dark:bg-tribe-dark rounded-b-2xl p-5 border border-t-0 border-stone-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-tribe-card rounded-b-2xl p-5 border border-t-0 border-stone-200 dark:border-gray-700">
                     <PostCommentSection
                       postId={post.id}
                       currentUserId={currentUserId}
@@ -461,7 +461,7 @@ function PostCard({
   const strings = t[language as keyof typeof t] || t.en;
 
   return (
-    <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
       {/* Author Info */}
       <div className="mb-4 flex items-center gap-3">
         {post.author.avatar_url && (

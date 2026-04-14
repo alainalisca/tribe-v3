@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Users, MapPin, Calendar, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
+import { haptic } from '@/lib/haptics';
 
 interface OnboardingModalProps {
   onComplete: () => void;
@@ -61,38 +63,57 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           <span className="w-5 h-5 text-stone-600 dark:text-gray-400">✕</span>
         </Button>
 
-        <div className="text-center mb-6">
-          {step === 1 ? (
-            <div className="mb-4 flex justify-center">
-              <h1 className="text-4xl font-bold text-stone-900 dark:text-white">
-                Tribe<span className="text-tribe-green">.</span>
-              </h1>
-            </div>
-          ) : (
-            <div className="mb-4 flex justify-center">
-              <div className="w-16 h-16 bg-tribe-green/20 rounded-full flex items-center justify-center">
-                <Icon className="w-8 h-8 text-tribe-green" />
-              </div>
-            </div>
-          )}
+        <div className="text-center mb-6 min-h-[180px]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              {step === 1 ? (
+                <div className="mb-4 flex justify-center">
+                  <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white">
+                    Tribe<span className="text-tribe-green">.</span>
+                  </h1>
+                </div>
+              ) : (
+                <motion.div
+                  className="mb-4 flex justify-center"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                >
+                  <div className="w-16 h-16 bg-tribe-green/20 rounded-full flex items-center justify-center">
+                    <Icon className="w-8 h-8 text-tribe-green" />
+                  </div>
+                </motion.div>
+              )}
 
-          <h2 className="text-2xl font-bold text-stone-900 dark:text-white mb-2">{currentStep.title}</h2>
-          <p className="text-stone-600 dark:text-gray-300">{currentStep.description}</p>
+              <h2 className="text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
+                {currentStep.title}
+              </h2>
+              <p className="text-stone-600 dark:text-gray-300">{currentStep.description}</p>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className="flex gap-2 justify-center mb-6">
-          {steps.map((_, i) => (
-            <div
-              key={i}
-              className={`h-2 rounded-full transition-all ${
-                i + 1 === step
-                  ? 'w-8 bg-tribe-green'
-                  : i + 1 < step
-                    ? 'w-2 bg-tribe-green/50'
-                    : 'w-2 bg-stone-300 dark:bg-tribe-mid'
-              }`}
-            />
-          ))}
+          {steps.map((_, i) => {
+            const isActive = i + 1 === step;
+            const isPast = i + 1 < step;
+            return (
+              <motion.div
+                key={i}
+                animate={{ width: isActive ? 24 : 8 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className={`h-2 rounded-full ${
+                  isActive ? 'bg-tribe-green' : isPast ? 'bg-tribe-green/50' : 'bg-stone-300 dark:bg-tribe-mid'
+                }`}
+              />
+            );
+          })}
         </div>
 
         <div className="flex gap-3">
@@ -108,13 +129,15 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           <Button
             onClick={() => {
               if (step === steps.length) {
+                void haptic('success');
                 onComplete();
                 router.push('/profile/edit');
               } else {
+                void haptic('light');
                 setStep(step + 1);
               }
             }}
-            className="flex-1 py-3 font-semibold rounded-lg"
+            className="flex-1 py-3 font-bold rounded-lg bg-tribe-green text-slate-900 hover:bg-tribe-green"
           >
             {step === steps.length
               ? language === 'es'

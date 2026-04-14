@@ -277,7 +277,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-2.5 pb-1.5">
-          <div className={`w-9 h-1 rounded-full ${isDark ? 'bg-gray-600' : 'bg-gray-300'}`} />
+          <div className={`w-9 h-1 rounded-full ${isDark ? 'bg-stone-600' : 'bg-stone-300'}`} />
         </div>
 
         {/* Header */}
@@ -287,7 +287,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
             onClick={handleClose}
             aria-label="Close"
             className={`p-1 rounded-full transition-colors cursor-pointer
-              ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-white/10' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+              ${isDark ? 'text-gray-400 hover:text-gray-200 hover:bg-white/10' : 'text-gray-500 hover:text-gray-700 hover:bg-stone-100'}`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -320,7 +320,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                           ? 'border border-tribe-green bg-tribe-green/15 text-tribe-green'
                           : isDark
                             ? 'border border-transparent bg-tribe-dark text-gray-400 hover:text-gray-300'
-                            : 'border border-transparent bg-gray-100 text-gray-500 hover:text-gray-700'
+                            : 'border border-transparent bg-stone-100 text-gray-500 hover:text-gray-700'
                       }`}
                   >
                     {t[cat.labelKey]}
@@ -361,7 +361,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                 ${
                   isDark
                     ? 'bg-tribe-dark text-white placeholder:text-gray-500'
-                    : 'bg-gray-50 text-gray-900 placeholder:text-gray-400'
+                    : 'bg-stone-50 text-gray-900 placeholder:text-gray-400'
                 }
                 ${
                   errorMessage

@@ -102,7 +102,7 @@ export default function InstructorDashboardPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <Link href="/profile">
               <button className="p-1.5 hover:bg-stone-200 dark:hover:bg-tribe-surface rounded-lg transition">
@@ -114,7 +114,7 @@ export default function InstructorDashboardPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto px-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4">
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
           {tabs.map((tab) => {

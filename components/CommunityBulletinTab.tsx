@@ -52,7 +52,7 @@ function BulletinCard({ post, language }: { post: BulletinPost; language: 'en' |
   const catLabel = CATEGORIES.find((c) => c.key === post.category);
 
   return (
-    <div className="rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid overflow-hidden">
+    <div className="rounded-xl bg-white dark:bg-tribe-card border border-stone-200 dark:border-tribe-mid overflow-hidden">
       {post.image_url && (
         <div className="relative h-44 w-full overflow-hidden">
           <Image src={post.image_url} alt={post.title} fill className="object-cover" unoptimized />
@@ -212,7 +212,7 @@ export default function CommunityBulletinTab() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="space-y-3 p-4 rounded-xl bg-white dark:bg-tribe-dark border border-stone-200 dark:border-tribe-mid"
+          className="space-y-3 p-4 rounded-xl bg-white dark:bg-tribe-card border border-stone-200 dark:border-tribe-mid"
         >
           {!userId && <p className="text-xs text-red-400 text-center">{labels.loginRequired}</p>}
           <input

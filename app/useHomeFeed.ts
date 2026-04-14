@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -21,6 +21,9 @@ import { fetchUpcomingSessions, fetchUserProfileMaybe } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
+
+import { identifyUser, setSessionContext, trackEvent } from '@/lib/analytics';
+import { detectNeighborhood } from '@/lib/city-config';
 
 import { useSessionFiltering } from './hooks/useSessionFiltering';
 import { useLiveStatus } from './hooks/useLiveStatus';
@@ -52,6 +55,7 @@ export function useHomeFeed() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [fixedHeight, setFixedHeight] = useState(0);
   const [fetchError, setFetchError] = useState(false);
+  const identifiedRef = useRef(false);
 
   // --- Composed hooks ---
   const filtering = useSessionFiltering({ sessions, userLocation });
@@ -126,6 +130,35 @@ export function useHomeFeed() {
     if (!localStorage.getItem(`hasSeenOnboarding_${user.id}`)) setShowOnboarding(true);
   }, [user, userProfile]);
 
+  // --- Analytics: identify user + session context + app_opened ---
+  useEffect(() => {
+    if (!user || !userProfile || identifiedRef.current) return;
+    identifiedRef.current = true;
+
+    identifyUser({
+      id: user.id,
+      email: user.email,
+      name: userProfile.name || undefined,
+      is_instructor: userProfile.is_instructor || false,
+      language: language,
+      city: 'Medellín',
+      neighborhood: userLocation ? detectNeighborhood(userLocation.latitude, userLocation.longitude)?.name : undefined,
+      created_at: user.created_at,
+    });
+
+    setSessionContext({
+      user_role: userProfile.is_instructor ? 'instructor' : 'athlete',
+      user_city: 'Medellín',
+      user_language: language || 'en',
+      platform: typeof window !== 'undefined' && 'Capacitor' in window ? 'mobile' : 'web',
+    });
+
+    trackEvent('app_opened', {
+      is_returning: true,
+      entry_page: typeof window !== 'undefined' ? window.location.pathname : '/',
+    });
+  }, [user, userProfile, language, userLocation]);
+
   // --- Internal helpers ---
   async function tryRegisterPushNotifications(userId: string) {
     try {
@@ -191,6 +224,8 @@ export function useHomeFeed() {
     setGenderFilter: filtering.setGenderFilter,
     pricingFilter: filtering.pricingFilter,
     setPricingFilter: filtering.setPricingFilter,
+    selectedNeighborhood: filtering.selectedNeighborhood,
+    setSelectedNeighborhood: filtering.setSelectedNeighborhood,
     showSafetyWaiver: actions.showSafetyWaiver,
     setShowSafetyWaiver: actions.setShowSafetyWaiver,
     setPendingSessionId: actions.setPendingSessionId,

@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
 import ChatView, { ChatMessage } from '@/components/ChatView';
 import {
   fetchConversationMessages,
@@ -202,6 +203,7 @@ export default function ConversationPage({ params }: PageProps) {
         showError(result.error || 'Failed to send message');
         return false;
       }
+      trackEvent('message_sent', { conversation_id: conversationId });
       return true;
     } catch (error) {
       logError(error, { action: 'handleSendMessage' });

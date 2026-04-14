@@ -44,7 +44,7 @@ export default function FeedbackPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </Button>
@@ -54,7 +54,7 @@ export default function FeedbackPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-theme">
           <button

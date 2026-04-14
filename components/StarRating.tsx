@@ -3,6 +3,7 @@
 import { Star } from 'lucide-react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { haptic } from '@/lib/haptics';
 
 interface StarRatingProps {
   rating: number;
@@ -46,7 +47,12 @@ export default function StarRating({
             key={star}
             type="button"
             disabled={readonly}
-            onClick={() => !readonly && onRatingChange?.(star)}
+            onClick={() => {
+              if (!readonly) {
+                haptic('light');
+                onRatingChange?.(star);
+              }
+            }}
             onMouseEnter={() => !readonly && setHoverRating(star)}
             onMouseLeave={() => !readonly && setHoverRating(0)}
             className={`${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110 active:scale-95'} ${

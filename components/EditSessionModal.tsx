@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { updateSession } from '@/lib/dal';
+import LocationPicker from '@/components/LocationPicker';
+import PhotoUploadSection from '@/app/create/PhotoUploadSection';
+import { haptic } from '@/lib/haptics';
 import type { Session } from '@/lib/database.types';
 
 interface EditSessionModalProps {
@@ -23,28 +26,64 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     sport: session.sport,
     date: session.date,
     start_time: session.start_time,
     duration: session.duration,
     location: session.location,
+    location_lat: session.location_lat ?? null,
+    location_lng: session.location_lng ?? null,
     max_participants: session.max_participants,
     description: session.description || '',
+    photos: (session.photos ?? []) as string[],
   });
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+    });
+  }, [supabase]);
+
+  function handleLocationChange(location: string, coords?: { lat: number; lng: number }) {
+    setFormData((prev) => ({
+      ...prev,
+      location,
+      location_lat: coords?.lat ?? prev.location_lat,
+      location_lng: coords?.lng ?? prev.location_lng,
+    }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const result = await updateSession(supabase, session.id, formData);
+      // Only send photos array if it changed — avoid clobbering on no-op edits
+      const updatePayload = {
+        sport: formData.sport,
+        date: formData.date,
+        start_time: formData.start_time,
+        duration: formData.duration,
+        location: formData.location,
+        location_lat: formData.location_lat,
+        location_lng: formData.location_lng,
+        max_participants: formData.max_participants,
+        description: formData.description,
+        photos: formData.photos.length > 0 ? formData.photos : null,
+      };
+
+      const result = await updateSession(supabase, session.id, updatePayload);
       if (!result.success) throw new Error(result.error);
 
+      haptic('success');
       showSuccess(language === 'es' ? 'Sesión actualizada exitosamente' : 'Session updated successfully!');
       onSave();
       onClose();
     } catch (error: unknown) {
+      haptic('error');
       showError(getErrorMessage(error, 'update_session', language));
     } finally {
       setLoading(false);
@@ -104,14 +143,13 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
             />
           </div>
 
+          {/* Full LocationPicker — autocomplete, map pin drop, reverse-geocode */}
           <div>
             <Label className="text-stone-700 dark:text-gray-300 mb-2">{t('location')}</Label>
-            <Input
-              type="text"
+            <LocationPicker
               value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="px-4 py-2 bg-white dark:bg-tribe-mid dark:border-tribe-mid text-stone-900 dark:text-white"
-              required
+              onChange={handleLocationChange}
+              placeholder={language === 'es' ? 'Buscar lugar o dirección' : 'Search place or address'}
             />
           </div>
 
@@ -135,6 +173,17 @@ export default function EditSessionModal({ session, onClose, onSave }: EditSessi
               rows={3}
             />
           </div>
+
+          {/* Photo upload — same component used in create flow */}
+          {userId && (
+            <PhotoUploadSection
+              supabase={supabase}
+              userId={userId}
+              language={language as 'en' | 'es'}
+              photos={formData.photos}
+              onPhotosChange={(photos) => setFormData((prev) => ({ ...prev, photos }))}
+            />
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button

@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Share2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -34,6 +34,9 @@ import { showSuccess, showError } from '@/lib/toast';
 import PostSessionConnect from '@/components/PostSessionConnect';
 import PostSessionFlow from '@/components/PostSessionFlow';
 import SessionQA from '@/components/session/SessionQA';
+import { trackEvent } from '@/lib/analytics';
+import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 export default function SessionDetailPage() {
   const params = useParams();
@@ -42,6 +45,34 @@ export default function SessionDetailPage() {
   const supabase = createClient();
   const d = useSessionDetail(params.id as string, language, (path) => router.push(path));
   const [showPostSessionFlow, setShowPostSessionFlow] = useState(false);
+
+  async function shareSession() {
+    if (!d.session) return;
+    const shareUrl = `${window.location.origin}/s/${d.session.id}`;
+    const shareText = language === 'es' ? `${d.session.title} — Únete en Tribe` : `${d.session.title} — Join on Tribe`;
+    if (navigator.share) {
+      await navigator.share({ title: shareText, url: shareUrl });
+      trackEvent('session_shared', { session_id: d.session.id, method: 'native' });
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      trackEvent('session_shared', { session_id: d.session.id, method: 'clipboard' });
+      showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
+    }
+  }
+
+  // Track session view once on mount
+  useEffect(() => {
+    if (!d.session) return;
+    trackEvent('session_viewed', {
+      session_id: d.session.id,
+      session_type: d.session.is_paid ? 'paid' : 'free',
+      sport: d.session.sport,
+      price_cents: d.session.price_cents,
+      currency: d.session.currency,
+      instructor_id: d.session.creator_id,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- track once when session loads
+  }, [d.session?.id]);
 
   // Auto-show post-session flow for past sessions the user attended
   useEffect(() => {
@@ -78,8 +109,8 @@ export default function SessionDetailPage() {
   if (!d.session)
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <Link href="/" className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
             </Link>
@@ -146,7 +177,7 @@ export default function SessionDetailPage() {
         onAddStory={() => d.setShowStoryUpload(true)}
       />
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         <SessionDetails
           session={d.session}
           creator={d.creator}
@@ -156,6 +187,17 @@ export default function SessionDetailPage() {
           isCreator={isCreator}
           onOpenLightbox={d.openLightbox}
         />
+
+        {/* Share button */}
+        <div className="flex justify-end">
+          <button
+            onClick={shareSession}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tribe-surface dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition text-sm font-medium"
+          >
+            <Share2 className="w-4 h-4" />
+            {language === 'es' ? 'Compartir' : 'Share'}
+          </button>
+        </div>
 
         <LiveStatusSection
           canGoLive={canGoLive}
@@ -192,6 +234,56 @@ export default function SessionDetailPage() {
           onInvite={d.generateInviteLink}
           creatingInvite={d.creatingInvite}
         />
+
+        {/* Calendar Integration — shown when user has joined and session is upcoming */}
+        {d.hasJoined && !isPast && d.session && (
+          <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
+            <p className="text-sm font-semibold text-stone-900 dark:text-white">
+              {language === 'es' ? '¡Estás inscrito!' : "You're in!"}
+            </p>
+            <p className="text-xs text-stone-500 dark:text-gray-400">
+              {language === 'es'
+                ? 'Agrega a tu calendario para no olvidar'
+                : "Add to your calendar so you don't forget"}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const sessionDate = new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`);
+                  downloadCalendarEvent({
+                    title: `${d.session!.sport} — ${d.session!.title || 'Tribe Session'}`,
+                    description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.\n${window.location.origin}/session/${d.session!.id}`,
+                    startDate: sessionDate,
+                    durationMinutes: d.session!.duration || 60,
+                    location: d.session!.location || undefined,
+                    url: `${window.location.origin}/session/${d.session!.id}`,
+                  });
+                  trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'ics' });
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                Apple Calendar
+              </button>
+              <a
+                href={getGoogleCalendarUrl({
+                  title: `${d.session!.sport} — ${d.session!.title || 'Tribe Session'}`,
+                  description: `Session with ${d.session!.creator?.name || 'Instructor'} on Tribe.`,
+                  startDate: new Date(`${d.session!.date}T${d.session!.start_time || '00:00'}`),
+                  durationMinutes: d.session!.duration || 60,
+                  location: d.session!.location || undefined,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'google' })}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                Google
+              </a>
+            </div>
+          </div>
+        )}
 
         <RecapPhotos
           session={d.session}
@@ -315,6 +407,11 @@ export default function SessionDetailPage() {
             }))}
           language={language}
           hasReviewed={d.hasReviewed}
+          sessionTitle={d.session.title || d.session.sport}
+          sessionDate={d.session.date}
+          sessionTime={d.session.start_time}
+          locationName={d.session.location}
+          price={d.session.price_cents ? String(d.session.price_cents / 100) : undefined}
         />
       )}
 

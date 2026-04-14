@@ -42,13 +42,13 @@ export default function MatchesPage() {
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-tribe-dark dark:text-white">{t('matches')}</h1>
         </div>
       </div>
 
       <div className="pt-header">
-        <div className="max-w-2xl mx-auto px-4 pt-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 pt-4">
           <div className="flex gap-3 mb-4">
             <button
               onClick={() => setActiveTab('requests')}
@@ -73,7 +73,7 @@ export default function MatchesPage() {
           </div>
         </div>
 
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           {loading ? (
             <p className="text-center text-stone-600 dark:text-gray-300"></p>
           ) : activeTab === 'requests' ? (

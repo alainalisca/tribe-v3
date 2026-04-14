@@ -415,7 +415,7 @@ export default function PromotePostsPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link
             href="/promote"
             className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
@@ -430,9 +430,9 @@ export default function PromotePostsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Create Post Form */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="mb-4 text-base font-semibold text-theme-primary">{strings.createPost}</h2>
 
           <form onSubmit={handleCreatePost} className="space-y-4">
@@ -517,7 +517,7 @@ export default function PromotePostsPage() {
 
         {/* Posts List */}
         {posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 py-12">
+          <div className="flex flex-col items-center justify-center gap-4 bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700 py-12">
             <p className="text-center text-theme-secondary">{strings.noPostsYet}</p>
           </div>
         ) : (
@@ -525,7 +525,7 @@ export default function PromotePostsPage() {
             {posts.map((post) => (
               <div
                 key={post.id}
-                className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
               >
                 {editingPostId === post.id ? (
                   // Edit Mode

@@ -69,7 +69,7 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
     <div className="flex-shrink-0 w-72 bg-tribe-surface border border-tribe-mid rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
       {/* Event Image or Placeholder */}
       {event.image_url ? (
-        <div className="relative w-full h-40 bg-gray-700 overflow-hidden">
+        <div className="relative w-full h-40 bg-stone-700 overflow-hidden">
           <img
             src={event.image_url}
             alt={event.title}

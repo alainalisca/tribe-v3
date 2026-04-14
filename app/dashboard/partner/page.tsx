@@ -72,8 +72,8 @@ export default function PartnerDashboardPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
           <button
             onClick={() => router.back()}
             className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -86,7 +86,7 @@ export default function PartnerDashboardPage() {
         </div>
       </div>
 
-      <div className="pt-[72px] max-w-2xl mx-auto px-4">
+      <div className="pt-[72px] max-w-2xl md:max-w-4xl mx-auto px-4">
         {/* Partner name + badge */}
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-xl font-extrabold text-stone-900 dark:text-white">{partner.business_name}</h2>

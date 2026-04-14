@@ -75,10 +75,10 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
   if (!show || hideWhenOnboarding) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
       <button
         onClick={handleDismiss}
-        className="absolute top-1 right-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+        className="absolute top-1 right-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-700 rounded"
       >
         <X className="w-5 h-5" />
       </button>
@@ -99,7 +99,7 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
             <Button
               variant="ghost"
               onClick={handleDismiss}
-              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-stone-700 rounded-lg"
             >
               {t('later')}
             </Button>

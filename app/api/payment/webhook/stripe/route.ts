@@ -72,6 +72,96 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // Helper: handle product order fulfillment after approved payment
+    async function handleProductOrderFulfillment(paymentQuery: Record<string, string>) {
+      let query = supabase.from('payments').select('id');
+      for (const [key, val] of Object.entries(paymentQuery)) {
+        query = query.eq(key, val);
+      }
+      const { data: paymentRec } = await query.single();
+      if (!paymentRec) return;
+
+      const { data: productOrder } = await supabase
+        .from('product_orders')
+        .select('id, buyer_id, instructor_id, product_id, fulfillment_status')
+        .eq('payment_id', paymentRec.id)
+        .maybeSingle();
+
+      if (!productOrder) return;
+
+      await supabase
+        .from('product_orders')
+        .update({ payment_status: 'approved', updated_at: new Date().toISOString() })
+        .eq('id', productOrder.id);
+
+      const { data: product } = await supabase
+        .from('products')
+        .select('product_type, fulfillment_method, session_credits, package_valid_days')
+        .eq('id', productOrder.product_id)
+        .single();
+
+      if (product?.fulfillment_method === 'digital') {
+        await supabase
+          .from('product_orders')
+          .update({ fulfillment_status: 'completed', fulfilled_at: new Date().toISOString() })
+          .eq('id', productOrder.id);
+      }
+
+      if (product?.fulfillment_method === 'session_credit' && product?.session_credits) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + (product.package_valid_days || 90));
+        await supabase
+          .from('product_orders')
+          .update({
+            fulfillment_status: 'completed',
+            fulfilled_at: new Date().toISOString(),
+            credits_remaining: product.session_credits,
+            credits_expire_at: expiresAt.toISOString(),
+          })
+          .eq('id', productOrder.id);
+      }
+
+      // Notify buyer
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            user_id: productOrder.buyer_id,
+            title: 'Purchase Confirmed!',
+            body: 'Your product order has been confirmed.',
+            type: 'product_order_confirmed',
+            data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
+          }),
+        });
+      } catch (notifErr) {
+        logError(notifErr, { action: 'stripe_webhook_product_notification_buyer' });
+      }
+
+      // Notify instructor
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CRON_SECRET}`,
+          },
+          body: JSON.stringify({
+            user_id: productOrder.instructor_id,
+            title: 'New Sale!',
+            body: 'You have a new product order.',
+            type: 'product_order_received',
+            data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
+          }),
+        });
+      } catch (notifErr) {
+        logError(notifErr, { action: 'stripe_webhook_product_notification_instructor' });
+      }
+    }
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as unknown as Record<string, unknown>;
@@ -108,6 +198,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         if (paymentStatus === 'approved') {
           await addParticipantAfterPayment({ gateway_payment_id: session.id as string });
+          await handleProductOrderFulfillment({ gateway_payment_id: session.id as string });
         }
 
         return NextResponse.json({ success: true });
@@ -139,6 +230,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         if (paymentStatus === 'approved') {
           await addParticipantAfterPayment({ stripe_payment_intent_id: piId });
+          await handleProductOrderFulfillment({ stripe_payment_intent_id: piId });
         }
 
         return NextResponse.json({ success: true });

@@ -144,7 +144,7 @@ export default function RequestsPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
-        <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-4 px-4">
           <Link href="/">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
@@ -154,7 +154,7 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         {requests.length === 0 ? (
           <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid">
             <CardContent className="p-8 text-center">

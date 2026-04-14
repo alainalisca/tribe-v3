@@ -48,7 +48,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/">
             <h1 className="text-xl font-bold text-theme-primary cursor-pointer">
               Tribe<span className="text-tribe-green">.</span>
@@ -62,7 +62,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
         {/* Banner */}
         <div className="relative h-48 overflow-hidden">
           <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
@@ -230,7 +230,7 @@ export default function ProfilePage() {
           {photos.length > 0 && (
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{txt.photos}</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {photos.map((photo: string, index: number) => (
                   <div
                     key={index}

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import ShareButton from '@/components/ShareButton';
+import { shareAchievement } from '@/lib/share';
 
 interface AchievementBadgesProps {
   userId: string;
@@ -225,13 +227,13 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
             const badgeName = language === 'es' ? badge.nameEs : badge.name;
 
             return (
-              <div key={badge.id} className="flex flex-col items-center gap-2 w-16">
+              <div key={badge.id} className="flex flex-col items-center gap-2 w-16 relative">
                 {/* Badge circle */}
                 <button
                   className={`w-16 h-16 rounded-full flex items-center justify-center transition relative mx-auto ${
                     isEarned
                       ? 'bg-tribe-green text-slate-900 shadow-md hover:shadow-lg'
-                      : 'bg-gray-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
+                      : 'bg-stone-300 dark:bg-tribe-card text-gray-500 dark:text-gray-400'
                   }`}
                   title={badgeName}
                   disabled
@@ -249,6 +251,18 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
                 >
                   {badgeName}
                 </span>
+
+                {/* Share button for earned badges */}
+                {isEarned && (
+                  <ShareButton
+                    size="sm"
+                    variant="icon"
+                    onShare={async () => {
+                      await shareAchievement({ type: 'badge', title: badgeName }, language);
+                      return null;
+                    }}
+                  />
+                )}
               </div>
             );
           })}
@@ -256,7 +270,7 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
       </div>
 
       {/* Stats footer */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-tribe-card text-sm text-gray-600 dark:text-gray-400 space-y-1">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-tribe-card text-sm text-stone-600 dark:text-gray-400 space-y-1">
         <div>
           <span className="font-medium">{sessionsAttended}</span>{' '}
           {language === 'es' ? 'sesiones asistidas' : 'sessions attended'}

@@ -29,3 +29,6 @@ export * from './communityNews';
 export * from './instructorDashboard';
 export * from './featuredPartners';
 export * from './localEvents';
+export * from './referrals';
+export * from './referrals-progression';
+export * from './products';

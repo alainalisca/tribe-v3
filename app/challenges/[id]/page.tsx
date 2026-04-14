@@ -194,7 +194,7 @@ export default function ChallengePage() {
   if (!challenge) {
     return (
       <div className="min-h-screen bg-theme-page pb-12">
-        <div className="max-w-2xl mx-auto p-4 text-center pt-20">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 text-center pt-20">
           <p className="text-theme-secondary">{strings.error}</p>
           <button onClick={() => router.back()} className="mt-4 text-tribe-green font-semibold hover:underline">
             {strings.back}
@@ -211,7 +211,7 @@ export default function ChallengePage() {
     <div className="min-h-screen bg-theme-page pb-20">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-tribe-green hover:opacity-75 transition"
@@ -223,7 +223,7 @@ export default function ChallengePage() {
       </div>
 
       {/* Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Cover Banner */}
         <div className="h-48 rounded-2xl overflow-hidden bg-gradient-to-br from-tribe-green to-tribe-green relative">
           {challenge.cover_image_url && (
@@ -237,7 +237,7 @@ export default function ChallengePage() {
         </div>
 
         {/* Title and Info */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
           <div>
             <h1 className="text-2xl font-bold text-theme-primary mb-2">{challenge.title}</h1>
             {challenge.description && <p className="text-theme-secondary">{challenge.description}</p>}
@@ -291,7 +291,7 @@ export default function ChallengePage() {
 
         {/* Your Progress (if joined) */}
         {isUserInChallenge && userProgress && (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
             <h2 className="text-lg font-bold text-theme-primary">{strings.yourProgress}</h2>
 
             <div className="space-y-3">
@@ -320,7 +320,7 @@ export default function ChallengePage() {
         )}
 
         {/* Leaderboard */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-4">
           <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
             <Trophy className="h-5 w-5 text-tribe-green" />
             {strings.leaderboard}

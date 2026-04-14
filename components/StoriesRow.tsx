@@ -69,11 +69,22 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
 
           {/* Current user's "+" circle */}
           {userId && (
-            <button onClick={handleYourStoryClick} aria-label="Add your story" className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]">
+            <button
+              onClick={handleYourStoryClick}
+              aria-label="Add your story"
+              className="flex-shrink-0 flex flex-col items-center gap-1 w-[68px]"
+            >
               <div className="relative">
                 <div className="w-14 h-14 rounded-full border-2 border-stone-300 dark:border-gray-500 overflow-hidden bg-stone-200 dark:bg-tribe-surface flex items-center justify-center">
                   {userAvatar ? (
-                    <Image src={userAvatar} alt="Your profile photo" className="w-full h-full object-cover" width={40} height={40} unoptimized />
+                    <Image
+                      src={userAvatar}
+                      alt="Your profile photo"
+                      className="w-full h-full object-cover"
+                      width={40}
+                      height={40}
+                      unoptimized
+                    />
                   ) : (
                     <span className="text-xl font-bold text-stone-500">?</span>
                   )}
@@ -106,7 +117,7 @@ export default function StoriesRow({ userId, userAvatar, liveUserIds }: StoriesR
                       ? 'bg-gradient-to-br from-red-500 to-red-400 animate-pulse'
                       : unseen
                         ? 'bg-gradient-to-br from-tribe-green to-lime-400'
-                        : 'bg-stone-300 dark:bg-gray-500'
+                        : 'bg-stone-300 dark:bg-stone-500'
                   }`}
                 >
                   <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-tribe-surface flex items-center justify-center">

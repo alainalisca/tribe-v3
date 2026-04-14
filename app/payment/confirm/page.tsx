@@ -1,13 +1,14 @@
 /** Page: /payment/confirm — Post-payment landing page */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import BottomNav from '@/components/BottomNav';
+import { haptic } from '@/lib/haptics';
 
 type PaymentState = 'loading' | 'approved' | 'pending' | 'failed';
 
@@ -18,9 +19,23 @@ export default function PaymentConfirmPage() {
   const [state, setState] = useState<PaymentState>('loading');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionSport, setSessionSport] = useState<string>('');
+  // Prevents firing haptic more than once per mount (poll loop can transition state multiple times)
+  const hapticFiredRef = useRef(false);
 
   const paymentId = searchParams.get('payment_id');
   const gateway = searchParams.get('gateway');
+
+  // Fire haptic once when terminal state is reached
+  useEffect(() => {
+    if (hapticFiredRef.current) return;
+    if (state === 'approved') {
+      haptic('success');
+      hapticFiredRef.current = true;
+    } else if (state === 'failed') {
+      haptic('error');
+      hapticFiredRef.current = true;
+    }
+  }, [state]);
 
   useEffect(() => {
     if (!paymentId) {

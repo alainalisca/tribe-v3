@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Loader } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import VenueSessionTemplate from './VenueSessionTemplate';
 import type { PopularVenue } from '@/lib/dal/venues';
+import { ACTIVE_CITY } from '@/lib/city-config';
 
 interface PopularVenuesSectionProps {
   language: string;
@@ -87,7 +88,7 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
     return (
       <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-          📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
+          📍 {lang === 'es' ? `Lugares Populares en ${ACTIVE_CITY.name}` : `Popular Spots in ${ACTIVE_CITY.name}`}
         </h2>
         <div className="flex items-center justify-center h-32 bg-tribe-surface dark:bg-tribe-surface rounded-lg">
           <Loader className="w-6 h-6 animate-spin text-tribe-green" />
@@ -100,7 +101,7 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
     return (
       <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
         <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-          📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
+          📍 {lang === 'es' ? `Lugares Populares en ${ACTIVE_CITY.name}` : `Popular Spots in ${ACTIVE_CITY.name}`}
         </h2>
         <div className="flex items-center justify-center h-32 bg-tribe-surface dark:bg-tribe-surface rounded-lg">
           <p className="text-stone-400 text-center px-4">
@@ -114,7 +115,7 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
   return (
     <section className="w-full bg-stone-100 dark:bg-tribe-surface rounded-xl p-5 mb-4 space-y-3">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-        📍 {lang === 'es' ? 'Lugares Populares Cerca' : 'Popular Spots Near You'}
+        📍 {lang === 'es' ? `Lugares Populares en ${ACTIVE_CITY.name}` : `Popular Spots in ${ACTIVE_CITY.name}`}
       </h2>
 
       {/* Horizontal scrollable container */}

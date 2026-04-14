@@ -88,7 +88,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
   };
 
   return (
-    <div className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-tribe-card rounded-2xl border border-stone-200 dark:border-gray-700 overflow-hidden">
       {/* Header / Toggle */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -197,7 +197,7 @@ function CommentItem({ comment, currentUserId, isCreator, sessionCreatorId, lang
           className="h-8 w-8 rounded-full object-cover flex-shrink-0"
         />
       ) : (
-        <div className="h-8 w-8 rounded-full bg-stone-200 dark:bg-gray-600 flex-shrink-0 flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full bg-stone-200 dark:bg-stone-600 flex-shrink-0 flex items-center justify-center">
           <span className="text-xs font-bold text-theme-secondary">
             {(comment.author?.name || '?')[0].toUpperCase()}
           </span>

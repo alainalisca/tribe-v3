@@ -181,7 +181,7 @@ export default function CreateChallengePage() {
     <div className="min-h-screen bg-theme-page pb-12">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-tribe-green hover:opacity-75 transition"
@@ -195,10 +195,10 @@ export default function CreateChallengePage() {
       </div>
 
       {/* Form */}
-      <div className="pt-header max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         <form
           onSubmit={handleSubmit}
-          className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-5"
+          className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700 space-y-5"
         >
           {/* Title */}
           <div>

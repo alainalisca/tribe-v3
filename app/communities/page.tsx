@@ -97,7 +97,7 @@ export default function CommunitiesPage() {
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
-        <div className="max-w-2xl mx-auto px-4 pt-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 pt-4">
           <div className="flex items-center justify-between gap-3 mb-3">
             <h1 className="text-2xl font-bold text-theme-primary">{t.title}</h1>
             {activeTab === 'communities' && (
@@ -123,16 +123,8 @@ export default function CommunitiesPage() {
             >
               {t.tabCommunities}
             </button>
-            <button
-              onClick={() => setActiveTab('news')}
-              className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
-                activeTab === 'news'
-                  ? 'bg-white dark:bg-tribe-mid text-theme-primary shadow-sm'
-                  : 'text-stone-500 dark:text-gray-400 hover:text-theme-primary'
-              }`}
-            >
-              {t.tabNews}
-            </button>
+            {/* News tab hidden — seed data was fake articles with broken links.
+                Re-enable once a real news integration or editorial process exists. */}
             <button
               onClick={() => setActiveTab('bulletin')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition ${
@@ -165,7 +157,7 @@ export default function CommunitiesPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
         {activeTab === 'bulletin' ? (
           <CommunityBulletinTab />
         ) : activeTab === 'news' ? (

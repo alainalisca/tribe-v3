@@ -59,14 +59,16 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
                         ? 'bg-orange-100 text-orange-800'
                         : bug.severity === 'medium'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : 'bg-stone-100 text-gray-800'
                   }`}
                 >
                   {bug.severity}
                 </span>
               </div>
 
-              <p className="text-xs text-stone-700 dark:text-gray-300 mb-1 p-2 bg-stone-50 dark:bg-tribe-dark rounded">{bug.description}</p>
+              <p className="text-xs text-stone-700 dark:text-gray-300 mb-1 p-2 bg-stone-50 dark:bg-tribe-dark rounded">
+                {bug.description}
+              </p>
 
               {bug.steps_to_reproduce && (
                 <p className="text-xs text-stone-600 mb-2 p-2 bg-blue-50 rounded whitespace-pre-wrap">

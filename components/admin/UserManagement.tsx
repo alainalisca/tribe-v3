@@ -121,7 +121,7 @@ export default function UserManagement({
                       </span>
                     )}
                     {isAppleRelay(u.email) && (
-                      <span className="px-1.5 py-0.5 bg-gray-500 text-white text-[10px] rounded flex-shrink-0">
+                      <span className="px-1.5 py-0.5 bg-stone-500 text-white text-[10px] rounded flex-shrink-0">
                         Apple Relay
                       </span>
                     )}

@@ -149,7 +149,7 @@ export default function ChallengesPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <h1 className="text-lg font-bold text-theme-primary">{strings.myChallenges}</h1>
           <button
             onClick={() => router.push('/challenges/create')}
@@ -162,7 +162,7 @@ export default function ChallengesPage() {
       </div>
 
       {/* Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
             <Loader className="h-8 w-8 animate-spin text-tribe-green" />
@@ -174,7 +174,7 @@ export default function ChallengesPage() {
             <section>
               <h2 className="text-lg font-bold text-theme-primary mb-4">{strings.myChallenges}</h2>
               {userChallenges.length === 0 ? (
-                <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-tribe-card rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
                   <Zap className="h-12 w-12 text-theme-secondary mx-auto mb-3" />
                   <p className="text-theme-secondary">{strings.noChallenges}</p>
                 </div>
@@ -212,12 +212,12 @@ export default function ChallengesPage() {
                       setSearchQuery(e.target.value);
                       handleSearch(e.target.value, selectedSport);
                     }}
-                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-dark border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                    className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-card border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
                   />
                 </div>
 
                 {/* Sport Filter */}
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2 md:justify-center md:overflow-visible md:flex-wrap">
                   <button
                     onClick={() => handleSportFilter('')}
                     className={`px-4 py-2 rounded-full whitespace-nowrap font-semibold transition ${
@@ -262,7 +262,7 @@ export default function ChallengesPage() {
 
               {/* Challenges Grid */}
               {filteredPublic.length === 0 ? (
-                <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-tribe-card rounded-2xl p-8 text-center border border-stone-200 dark:border-gray-700">
                   <Search className="h-12 w-12 text-theme-secondary mx-auto mb-3" />
                   <p className="text-theme-secondary">{strings.noDiscover}</p>
                 </div>
@@ -320,7 +320,7 @@ function ChallengeCard({
 
   return (
     <button onClick={onCardClick} className="text-left transition hover:shadow-lg">
-      <div className="bg-white dark:bg-tribe-dark rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-tribe-card rounded-2xl overflow-hidden border border-stone-200 dark:border-gray-700">
         {/* Cover Image or Gradient */}
         <div className="h-40 bg-gradient-to-br from-tribe-green to-tribe-green relative overflow-hidden">
           {challenge.cover_image_url && (

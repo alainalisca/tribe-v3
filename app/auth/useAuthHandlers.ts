@@ -8,6 +8,9 @@ import { upsertUserProfile } from '@/lib/auth-helpers';
 import { showError, showSuccess } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { logError } from '@/lib/logger';
+import { trackEvent } from '@/lib/analytics';
+import { applyReferralCode } from '@/lib/dal/referrals';
+import { haptic } from '@/lib/haptics';
 import { getAuthTranslations } from './translations';
 
 export function useAuthHandlers(language: 'en' | 'es') {
@@ -78,6 +81,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
     setMessage('');
+    trackEvent('signup_started', { method: 'google' });
     try {
       const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform()) {
@@ -90,7 +94,16 @@ export function useAuthHandlers(language: 'en' | 'es') {
         });
         if (error) throw error;
         if (data.user) {
+          trackEvent('signup_completed', { method: 'google' });
           const { isNewUser } = await upsertUserProfile(data.user);
+          if (isNewUser) {
+            const refCode = localStorage.getItem('tribe_referral_code');
+            if (refCode) {
+              await applyReferralCode(supabase, refCode, data.user.id);
+              localStorage.removeItem('tribe_referral_code');
+              trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
+            }
+          }
           window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
         }
       } else {
@@ -129,6 +142,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
   async function handleAppleSignIn() {
     setAppleLoading(true);
     setMessage('');
+    trackEvent('signup_started', { method: 'apple' });
     try {
       // Use web OAuth flow for all platforms (native plugin removed until Capacitor 8 support)
       const { error } = await supabase.auth.signInWithOAuth({
@@ -179,6 +193,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
           await supabase.auth.signOut();
           return;
         }
+        await haptic('success');
         window.location.href = getSafeReturnTo();
       } else {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -197,6 +212,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
           setMessage(t.mustBe18);
           return;
         }
+        trackEvent('signup_started', { method: 'email' });
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -204,6 +220,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
+        trackEvent('signup_completed', { method: 'email' });
         setMessage(t.checkEmail);
         setEmail('');
         setPassword('');
@@ -214,6 +231,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
       logError(error, { action: 'handleEmailAuth' });
       const context = isLogin ? 'login' : 'signup';
       setMessage('❌ ' + getErrorMessage(error, context, language));
+      await haptic('error');
     } finally {
       setLoading(false);
     }
@@ -265,10 +283,12 @@ export function useAuthHandlers(language: 'en' | 'es') {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       setMessage(t.passwordUpdated);
+      await haptic('success');
       setTimeout(() => router.push('/'), 2000);
     } catch (error: unknown) {
       logError(error, { action: 'handleResetPassword' });
       setMessage('❌ ' + getErrorMessage(error, 'reset_password', language));
+      await haptic('error');
     } finally {
       setLoading(false);
     }

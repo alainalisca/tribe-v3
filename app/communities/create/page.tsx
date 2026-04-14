@@ -121,7 +121,7 @@ export default function CreateCommunityPage() {
     <div className="min-h-screen bg-white dark:bg-tribe-surface">
       {/* Header */}
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
@@ -133,7 +133,7 @@ export default function CreateCommunityPage() {
       </div>
 
       {/* Form */}
-      <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
+      <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-8 pb-24">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name */}
           <div className="space-y-2">

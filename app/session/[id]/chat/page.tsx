@@ -74,7 +74,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-surface pb-32">
       {/* Header always renders so user can navigate back */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
           <Link
             href={`/session/${sessionId}`}

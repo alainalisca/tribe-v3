@@ -152,6 +152,89 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           logError(notifErr, { action: 'wompi_webhook_notification', paymentId });
         }
       }
+
+      // ──── PRODUCT ORDER FULFILLMENT ────
+      const { data: productOrder } = await supabase
+        .from('product_orders')
+        .select('id, buyer_id, instructor_id, product_id, fulfillment_status')
+        .eq('payment_id', paymentId)
+        .maybeSingle();
+
+      if (productOrder) {
+        await supabase
+          .from('product_orders')
+          .update({ payment_status: 'approved', updated_at: new Date().toISOString() })
+          .eq('id', productOrder.id);
+
+        const { data: product } = await supabase
+          .from('products')
+          .select('product_type, fulfillment_method, session_credits, package_valid_days')
+          .eq('id', productOrder.product_id)
+          .single();
+
+        // Auto-fulfill digital products
+        if (product?.fulfillment_method === 'digital') {
+          await supabase
+            .from('product_orders')
+            .update({ fulfillment_status: 'completed', fulfilled_at: new Date().toISOString() })
+            .eq('id', productOrder.id);
+        }
+
+        // Auto-fulfill session credit packages
+        if (product?.fulfillment_method === 'session_credit' && product?.session_credits) {
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + (product.package_valid_days || 90));
+          await supabase
+            .from('product_orders')
+            .update({
+              fulfillment_status: 'completed',
+              fulfilled_at: new Date().toISOString(),
+              credits_remaining: product.session_credits,
+              credits_expire_at: expiresAt.toISOString(),
+            })
+            .eq('id', productOrder.id);
+        }
+
+        // Notify buyer of product purchase confirmation
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.CRON_SECRET}`,
+            },
+            body: JSON.stringify({
+              user_id: productOrder.buyer_id,
+              title: 'Purchase Confirmed!',
+              body: 'Your product order has been confirmed.',
+              type: 'product_order_confirmed',
+              data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
+            }),
+          });
+        } catch (notifErr) {
+          logError(notifErr, { action: 'wompi_webhook_product_notification_buyer', paymentId });
+        }
+
+        // Notify instructor of new sale
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.CRON_SECRET}`,
+            },
+            body: JSON.stringify({
+              user_id: productOrder.instructor_id,
+              title: 'New Sale!',
+              body: 'You have a new product order.',
+              type: 'product_order_received',
+              data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
+            }),
+          });
+        } catch (notifErr) {
+          logError(notifErr, { action: 'wompi_webhook_product_notification_instructor', paymentId });
+        }
+      }
     }
 
     // Always return 200 to acknowledge receipt

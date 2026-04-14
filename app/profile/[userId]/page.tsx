@@ -2,12 +2,13 @@
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, MapPin, Shield, Flag, UserPlus } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag, UserPlus, Share2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -75,6 +76,16 @@ export default function PublicProfilePage() {
     checkCurrentUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, [userId]);
+
+  // Track instructor profile views (only when viewing someone else's profile)
+  useEffect(() => {
+    if (currentUser && profile && currentUser.id !== userId) {
+      trackEvent('instructor_profile_viewed', {
+        instructor_id: userId,
+        source: 'direct',
+      });
+    }
+  }, [currentUser, profile, userId]);
 
   useEffect(() => {
     function handlePopState() {
@@ -193,6 +204,20 @@ export default function PublicProfilePage() {
     }
   }
 
+  async function shareInstructor() {
+    const shareUrl = `${window.location.origin}/i/${userId}`;
+    const shareText =
+      language === 'es' ? `${profile?.name} — Instructor en Tribe` : `${profile?.name} — Instructor on Tribe`;
+    if (navigator.share) {
+      await navigator.share({ title: shareText, url: shareUrl });
+      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      trackEvent('share_link_created', { type: 'instructor', instructor_id: userId });
+      showSuccess(language === 'es' ? '¡Enlace copiado!' : 'Link copied!');
+    }
+  }
+
   if (loading)
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
@@ -202,8 +227,8 @@ export default function PublicProfilePage() {
   if (!profile)
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <Button
               variant="ghost"
               size="icon"
@@ -238,7 +263,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -266,7 +291,7 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
           <div className="flex justify-center mb-4">
             <Avatar
@@ -295,7 +320,7 @@ export default function PublicProfilePage() {
 
           <div className="mt-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold text-theme-primary">{profile?.name}</h2>
+              <h2 className="text-3xl font-extrabold tracking-tight text-theme-primary">{profile?.name}</h2>
               {(profile as any)?.is_trailblazer && <TrailblazerBadge language={language} />}
             </div>
             <div className="flex items-center gap-3 mt-2">
@@ -344,6 +369,19 @@ export default function PublicProfilePage() {
                 <UserPlus className="w-5 h-5 mr-2" />
                 {language === 'es' ? 'Invitar a Sesion' : 'Invite to Session'}
               </Button>
+            </div>
+          )}
+
+          {/* Share Instructor Profile */}
+          {profile?.is_instructor && (
+            <div className="mt-4">
+              <button
+                onClick={shareInstructor}
+                className="w-full flex items-center justify-center gap-2 py-3 border-2 border-stone-300 dark:border-tribe-mid text-theme-primary rounded-lg font-semibold hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
+              >
+                <Share2 className="w-5 h-5" />
+                {language === 'es' ? 'Compartir Perfil' : 'Share Profile'}
+              </button>
             </div>
           )}
 
@@ -466,7 +504,7 @@ export default function PublicProfilePage() {
           {profile?.photos && profile.photos.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold text-theme-primary mb-3">{t.photos}</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {profile.photos.map((photo: string, index: number) => (
                   <div
                     key={index}

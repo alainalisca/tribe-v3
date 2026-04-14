@@ -194,14 +194,14 @@ export default function DeleteAccountPage() {
                 </div>
 
                 {/* Option 2 */}
-                <div className="bg-gray-100 dark:bg-tribe-mid rounded-lg p-4">
+                <div className="bg-stone-100 dark:bg-tribe-mid rounded-lg p-4">
                   <h4 className="font-bold text-stone-900 dark:text-white mb-3">{t.option2Title}</h4>
                   <p className="mb-4">{t.option2Desc}</p>
 
                   <div className="space-y-3">
                     <div>
                       <span className="font-semibold">{t.emailSubject}:</span>
-                      <code className="ml-2 bg-gray-200 dark:bg-tribe-dark px-2 py-1 rounded text-sm">
+                      <code className="ml-2 bg-stone-200 dark:bg-tribe-dark px-2 py-1 rounded text-sm">
                         {t.emailSubjectText}
                       </code>
                     </div>

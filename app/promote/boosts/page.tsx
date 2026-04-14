@@ -543,7 +543,7 @@ export default function BoostsPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link
             href="/promote"
             className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
@@ -561,7 +561,7 @@ export default function BoostsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Trial Banner */}
         <TrialBanner instructorSince={instructorSince} />
 
@@ -614,7 +614,7 @@ export default function BoostsPage() {
           </h2>
 
           {activeCampaigns.length === 0 ? (
-            <div className="bg-white dark:bg-tribe-dark rounded-2xl p-8 border border-stone-200 dark:border-gray-700 text-center">
+            <div className="bg-white dark:bg-tribe-card rounded-2xl p-8 border border-stone-200 dark:border-gray-700 text-center">
               <p className="text-theme-secondary mb-4">{i18n.noCampaigns}</p>
               <button
                 onClick={() => setShowNewBoostForm(true)}
@@ -636,7 +636,7 @@ export default function BoostsPage() {
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                    className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
                   >
                     {/* Header with Status */}
                     <div className="flex items-start justify-between mb-3">
@@ -731,7 +731,7 @@ export default function BoostsPage() {
                 return (
                   <div
                     key={campaign.id}
-                    className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75"
+                    className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700 opacity-75"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -776,9 +776,9 @@ export default function BoostsPage() {
       {/* New Boost Modal */}
       {showNewBoostForm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl border border-stone-200 dark:border-gray-700 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="border-b border-stone-200 dark:border-gray-700 p-5 flex items-center justify-between sticky top-0 bg-white dark:bg-tribe-dark">
+            <div className="border-b border-stone-200 dark:border-gray-700 p-5 flex items-center justify-between sticky top-0 bg-white dark:bg-tribe-card">
               <h2 className="text-lg font-bold text-theme-primary flex items-center gap-2">
                 <Zap size={20} className="text-tribe-green" />
                 {i18n.createNewBoost}

@@ -59,7 +59,7 @@ export default function RecapPhotos({
           </div>
 
           {recapPhotos.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
               {recapPhotos.map((photo, idx) => (
                 <div key={photo.id} className="relative aspect-square group">
                   <button

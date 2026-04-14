@@ -443,9 +443,9 @@ export default function PromoCodesPage() {
 
   const getPromoStatus = (promo: PromoCode) => {
     if (!promo.is_active)
-      return { status: 'inactive', label: 'Inactive', color: 'bg-stone-200 dark:bg-gray-700 text-stone-500' };
+      return { status: 'inactive', label: 'Inactive', color: 'bg-stone-200 dark:bg-stone-700 text-stone-500' };
     if (promo.expiry_date && new Date(promo.expiry_date) < new Date()) {
-      return { status: 'expired', label: t.expired, color: 'bg-stone-200 dark:bg-gray-700 text-stone-500' };
+      return { status: 'expired', label: t.expired, color: 'bg-stone-200 dark:bg-stone-700 text-stone-500' };
     }
     if (promo.max_uses !== null && promo.current_uses >= promo.max_uses) {
       return {
@@ -505,7 +505,7 @@ export default function PromoCodesPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link
             href="/promote"
             className="flex items-center gap-2 text-tribe-green hover:text-tribe-green/80 transition"
@@ -522,7 +522,7 @@ export default function PromoCodesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Error / Success Messages */}
         {error && (
           <div className="bg-red-100 dark:bg-red-900/30 border border-red-600 dark:border-red-400 text-red-600 dark:text-red-400 p-4 rounded-lg">
@@ -564,7 +564,7 @@ export default function PromoCodesPage() {
 
         {/* Create Form */}
         {showForm && (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <h2 className="text-lg font-bold text-theme-primary mb-4">{t.formPanel}</h2>
             <div className="space-y-4">
               {/* Code Input */}
@@ -844,7 +844,7 @@ export default function PromoCodesPage() {
 
         {/* Promo Codes List */}
         {promoCodes.length === 0 ? (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-12 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-12 border border-stone-200 dark:border-gray-700 text-center">
             <Zap className="w-12 h-12 mx-auto mb-4 text-stone-400" />
             <h3 className="text-lg font-bold text-theme-primary mb-2">{t.emptyState}</h3>
             <p className="text-theme-secondary">{t.emptyDescription}</p>
@@ -856,7 +856,7 @@ export default function PromoCodesPage() {
               return (
                 <div
                   key={promo.id}
-                  className="bg-white dark:bg-tribe-dark rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
+                  className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700"
                 >
                   {/* Code and Badge */}
                   <div className="flex items-center justify-between mb-3">

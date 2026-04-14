@@ -78,7 +78,7 @@ export default function EditProfilePage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <div className="flex items-center">
             <Link href="/profile">
               <Button variant="ghost" size="icon" className="mr-3">
@@ -94,7 +94,7 @@ export default function EditProfilePage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Welcome Banner - shown for incomplete profiles */}
         {!formData.bio && formData.sports.length === 0 && formData.photos.length === 0 && (
           <div className="bg-tribe-green rounded-xl p-4 flex items-start gap-3">
@@ -217,7 +217,7 @@ export default function EditProfilePage() {
                       setFormData({ ...formData, is_instructor: false });
                     }
                   }}
-                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_instructor ? 'bg-tribe-green' : 'bg-gray-400'}`}
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_instructor ? 'bg-tribe-green' : 'bg-stone-400'}`}
                 >
                   <span
                     className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform ${formData.is_instructor ? 'translate-x-5' : 'translate-x-0'}`}
@@ -244,7 +244,7 @@ export default function EditProfilePage() {
                     </div>
                     {step < 3 && (
                       <div
-                        className={`flex-1 h-0.5 mx-2 transition ${wizardStep > step ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-gray-600'}`}
+                        className={`flex-1 h-0.5 mx-2 transition ${wizardStep > step ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-stone-600'}`}
                       />
                     )}
                   </div>
@@ -693,7 +693,13 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-3 gap-3">
             {formData.photos.map((photo, index) => (
               <div key={index} className="relative aspect-square">
-                <Image src={photo} alt={`Profile photo ${index + 1}`} fill className="object-cover rounded-lg" unoptimized />
+                <Image
+                  src={photo}
+                  alt={`Profile photo ${index + 1}`}
+                  fill
+                  className="object-cover rounded-lg"
+                  unoptimized
+                />
                 <button
                   onClick={() => removePhoto(index)}
                   className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition"

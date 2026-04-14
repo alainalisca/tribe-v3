@@ -65,7 +65,7 @@ export default function BookingConfirmModal({
         if (!v) onClose();
       }}
     >
-      <DialogContent className="bg-white dark:bg-tribe-dark border-stone-200 dark:border-gray-700 max-w-sm mx-auto rounded-2xl">
+      <DialogContent className="bg-white dark:bg-tribe-card border-stone-200 dark:border-gray-700 max-w-sm mx-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-theme-primary text-lg">
             {language === 'es' ? 'Confirmar Reserva' : 'Confirm Booking'}

@@ -30,6 +30,9 @@ import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/feature
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
 import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
 import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
+import StorefrontProductsSection from '@/components/products/StorefrontProductsSection';
+import { getInstructorShareUrl, copyToClipboard } from '@/lib/share';
+import { showSuccess } from '@/lib/toast';
 
 // Type definitions
 interface Instructor {
@@ -144,6 +147,7 @@ export default function StorefrontPage() {
     returnRate: language === 'es' ? 'Tasa Retorno' : 'Return Rate',
     boosted: language === 'es' ? 'IMPULSADO' : 'BOOSTED',
     noSessions: language === 'es' ? 'No hay sesiones disponibles' : 'No sessions available',
+    products: language === 'es' ? 'Productos' : 'Products',
     noPackages: language === 'es' ? 'Sin paquetes' : 'No packages',
     noMedia: language === 'es' ? 'Sin media' : 'No media',
     noPosts: language === 'es' ? 'Sin publicaciones' : 'No posts',
@@ -194,7 +198,9 @@ export default function StorefrontPage() {
       try {
         const { data: instructorData, error } = await supabase
           .from('users')
-          .select('id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio')
+          .select(
+            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio'
+          )
           .eq('id', instructorId)
           .single();
 
@@ -378,7 +384,7 @@ export default function StorefrontPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark">
-        <div className="max-w-2xl mx-auto p-4 pt-20 space-y-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 pt-20 space-y-4">
           <SkeletonProfile />
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -393,8 +399,8 @@ export default function StorefrontPage() {
   if (!instructor) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <button
               onClick={() => window.history.back()}
               className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -434,7 +440,7 @@ export default function StorefrontPage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <button className="text-theme-primary hover:text-tribe-green transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -444,16 +450,22 @@ export default function StorefrontPage() {
       </div>
 
       {/* Hero Section */}
-      <div className="relative h-56 bg-gradient-to-br from-tribe-green to-lime-500 overflow-hidden pt-14">
+      <div className="relative h-56 md:h-72 bg-gradient-to-br from-tribe-green to-lime-500 overflow-hidden pt-14">
         {instructor.storefront_banner_url ? (
-          <Image src={instructor.storefront_banner_url} alt="Instructor storefront banner" fill className="object-cover opacity-60" unoptimized />
+          <Image
+            src={instructor.storefront_banner_url}
+            alt="Instructor storefront banner"
+            fill
+            className="object-cover opacity-60"
+            unoptimized
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-tribe-green to-lime-500"></div>
         )}
 
         {/* Instructor Info Card */}
-        <div className="absolute -bottom-20 left-4 right-4 mx-auto max-w-2xl">
-          <div className="flex gap-4 items-start bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+        <div className="absolute -bottom-20 left-4 right-4 mx-auto max-w-2xl md:max-w-4xl">
+          <div className="flex gap-4 items-start bg-white dark:bg-tribe-card rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <Image
@@ -475,7 +487,7 @@ export default function StorefrontPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-1">
                 <div className="flex-1">
-                  <h1 className="text-xl font-bold text-theme-primary">{instructor.name}</h1>
+                  <h1 className="text-2xl font-extrabold tracking-tight text-theme-primary">{instructor.name}</h1>
                   {instructor.verified && (
                     <p className="text-tribe-green text-xs font-semibold">✓ {translations.verified}</p>
                   )}
@@ -522,40 +534,61 @@ export default function StorefrontPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="pt-header max-w-2xl mx-auto px-4 mt-24 grid grid-cols-4 gap-2">
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 mt-24 grid grid-cols-4 gap-2 md:gap-4">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
           <div className="flex items-center justify-center gap-0.5 mb-0.5">
             <Star className="w-4 h-4 text-tribe-green" />
-            <span className="text-lg font-bold text-theme-primary">4.8</span>
+            <span className="text-lg md:text-2xl font-bold text-theme-primary">4.8</span>
           </div>
-          <p className="text-xs text-theme-secondary">{translations.rating}</p>
+          <p className="text-xs md:text-sm text-theme-secondary">{translations.rating}</p>
         </div>
 
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg font-bold text-tribe-green">{sessions.length}</p>
-          <p className="text-xs text-theme-secondary">{translations.totalSessions}</p>
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <p className="text-lg md:text-2xl font-bold text-tribe-green">{sessions.length}</p>
+          <p className="text-xs md:text-sm text-theme-secondary">{translations.totalSessions}</p>
         </div>
 
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg font-bold text-tribe-green">{followState.followerCount}</p>
-          <p className="text-xs text-theme-secondary">{translations.followers}</p>
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <p className="text-lg md:text-2xl font-bold text-tribe-green">{followState.followerCount}</p>
+          <p className="text-xs md:text-sm text-theme-secondary">{translations.followers}</p>
         </div>
 
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-3 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg font-bold text-tribe-green">92%</p>
-          <p className="text-xs text-theme-secondary">{translations.returnRate}</p>
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <p className="text-lg md:text-2xl font-bold text-tribe-green">92%</p>
+          <p className="text-xs md:text-sm text-theme-secondary">{translations.returnRate}</p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         {/* Featured Partner Badge */}
         {partnerData && <PartnerStorefrontBadge partner={partnerData} language={language} />}
 
         {/* Bio Section */}
         {instructor.bio && (
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
             <p className="text-theme-secondary text-sm leading-relaxed">{instructor.bio}</p>
+          </div>
+        )}
+
+        {/* Share Profile (own storefront only) — centered with sensible max-width on wide screens */}
+        {currentUserId === instructorId && (
+          <div className="flex justify-center">
+            <button
+              onClick={async () => {
+                const url = getInstructorShareUrl(instructorId);
+                const copied = await copyToClipboard(url);
+                if (copied) {
+                  showSuccess(language === 'es' ? 'Enlace de perfil copiado!' : 'Profile link copied!');
+                }
+              }}
+              className="w-full md:w-auto md:min-w-[280px] flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold text-sm transition-all duration-200
+                bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300
+                hover:bg-stone-200 dark:hover:bg-tribe-mid border border-stone-200 dark:border-gray-700"
+            >
+              <Share2 className="w-4 h-4" />
+              {language === 'es' ? 'Compartir Perfil' : 'Share Profile'}
+            </button>
           </div>
         )}
 
@@ -564,10 +597,11 @@ export default function StorefrontPage() {
           <PartnerInstructorRoster instructors={partnerInstructors} language={language} />
         )}
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        {/* Tab Navigation — left-aligned scroll on mobile, centered on wider screens */}
+        <div className="flex gap-2 overflow-x-auto pb-2 md:justify-center md:overflow-visible md:flex-wrap">
           {[
             { id: 'sessions', label: translations.sessions },
+            { id: 'products', label: translations.products },
             { id: 'packages', label: translations.packages },
             { id: 'media', label: translations.media },
             { id: 'posts', label: translations.posts },
@@ -612,6 +646,11 @@ export default function StorefrontPage() {
           </div>
         )}
 
+        {/* Products Tab */}
+        {activeTab === 'products' && (
+          <StorefrontProductsSection instructorId={instructorId} isOwnProfile={currentUserId === instructorId} />
+        )}
+
         {/* Packages Tab */}
         {activeTab === 'packages' && (
           <div>
@@ -638,7 +677,7 @@ export default function StorefrontPage() {
         {activeTab === 'media' && (
           <div>
             {media.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {media.map((item) => (
                   <div
                     key={item.id}
@@ -677,7 +716,7 @@ export default function StorefrontPage() {
                 {posts.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-white dark:bg-tribe-dark rounded-2xl border border-stone-200 dark:border-gray-700 p-4"
+                    className="bg-white dark:bg-tribe-card rounded-2xl border border-stone-200 dark:border-gray-700 p-4"
                   >
                     {/* Post Content */}
                     <p className="text-theme-primary mb-3 text-sm leading-relaxed">{post.content}</p>

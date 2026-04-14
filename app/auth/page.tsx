@@ -1,11 +1,16 @@
 /** Page: /auth — Sign in, sign up, password reset with Google/Apple OAuth */
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/lib/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LanguageToggle from '@/components/LanguageToggle';
 import { Card, CardContent } from '@/components/ui/card';
+import { createClient } from '@/lib/supabase/client';
+import { lookupReferralCode } from '@/lib/dal/referrals';
 
 import OAuthButtons from './OAuthButtons';
 import ResetPasswordForm from './ResetPasswordForm';
@@ -15,6 +20,23 @@ import { useAuthHandlers } from './useAuthHandlers';
 export default function AuthPage() {
   const { language } = useLanguage();
   const h = useAuthHandlers(language);
+  const searchParams = useSearchParams();
+  const [referrerName, setReferrerName] = useState<string | null>(null);
+
+  // Capture referral code from URL and store in localStorage
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (!refCode) return;
+
+    localStorage.setItem('tribe_referral_code', refCode);
+
+    const supabase = createClient();
+    lookupReferralCode(supabase, refCode).then((result) => {
+      if (result.success && result.data) {
+        setReferrerName(result.data.referrerName);
+      }
+    });
+  }, [searchParams]);
 
   if (h.checkingAuth) {
     return (
@@ -24,24 +46,61 @@ export default function AuthPage() {
     );
   }
 
+  const isError = !!h.message && h.message.includes('❌');
+
   return (
-    <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden">
-      <div className="absolute top-0 right-4 pt-4">
+    <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Subtle animated gradient background */}
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-60 dark:opacity-40"
+        initial={{ backgroundPosition: '0% 50%' }}
+        animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+        transition={{ duration: 18, ease: 'linear', repeat: Infinity }}
+        style={{
+          background:
+            'linear-gradient(120deg, rgba(192,232,99,0.10) 0%, rgba(192,232,99,0) 30%, rgba(59,130,246,0.05) 60%, rgba(192,232,99,0.08) 100%)',
+          backgroundSize: '200% 200%',
+        }}
+      />
+
+      <div className="absolute top-0 right-4 pt-4 z-10">
         <LanguageToggle />
       </div>
 
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
+      <motion.div
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl relative z-10"
+        animate={isError ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
+        transition={{ duration: 0.45 }}
+      >
         <Card className="rounded-2xl dark:bg-tribe-card shadow-xl border-none">
           <CardContent className="p-8">
             <div className="text-center mb-10">
-              <h1 className="text-4xl font-bold text-stone-900 dark:text-white mb-2">
+              <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
                 Tribe<span className="text-tribe-green">.</span>
               </h1>
               <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
-              <p className="text-muted-foreground">
+              <h2 className="text-muted-foreground font-extrabold tracking-tight text-lg">
                 {h.isResetPassword ? h.t.resetPassword : h.isLogin ? h.t.welcomeBack : h.t.joinCommunity}
-              </p>
+              </h2>
             </div>
+
+            <AnimatePresence>
+              {referrerName && (
+                <motion.div
+                  key="referral-banner"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                  className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-3 text-center mb-4"
+                >
+                  <p className="text-sm text-stone-900 dark:text-white">
+                    {language === 'es' ? `🎉 Invitado por ${referrerName}` : `🎉 Invited by ${referrerName}`}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {!h.isResetPassword && (
               <OAuthButtons
@@ -111,7 +170,7 @@ export default function AuthPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }

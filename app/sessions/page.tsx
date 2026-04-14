@@ -60,13 +60,13 @@ export default function SessionsPage() {
         ref={fixedAreaRef}
         className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black"
       >
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-2xl font-bold text-stone-900 dark:text-white">{txt.mySessions}</h1>
         </div>
 
         {/* Tabs */}
         <div className="border-t border-stone-300 dark:border-black">
-          <div className="max-w-2xl mx-auto flex">
+          <div className="max-w-2xl md:max-w-4xl mx-auto flex">
             <button
               onClick={() => setActiveTab('upcoming')}
               className={`flex-1 py-3 text-sm font-semibold transition ${
@@ -92,7 +92,7 @@ export default function SessionsPage() {
       </div>
 
       <div style={{ paddingTop: fixedHeight || undefined }} className={fixedHeight ? '' : 'pt-[200px]'}>
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           {activeTab === 'upcoming' ? (
             <>
               {hostingSessions.length === 0 && joinedSessions.length === 0 ? (

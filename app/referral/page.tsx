@@ -8,13 +8,9 @@ import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getOrCreateReferralCode, getReferralStats } from '@/lib/dal/referrals';
+import { shareViaWhatsApp } from '@/lib/share';
 import LoadingSpinner from '@/components/LoadingSpinner';
-
-const generateReferralCode = (userId: string): string => {
-  const userPrefix = userId.substring(0, 4);
-  const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${userPrefix}${randomChars}`;
-};
 
 export default function ReferralPage() {
   const { language } = useLanguage();
@@ -85,13 +81,19 @@ export default function ReferralPage() {
 
       if (authUser) {
         setUserId(authUser.id);
-        const code = generateReferralCode(authUser.id);
-        setReferralCode(code);
 
-        // TODO: Query referrals table when it exists
-        // For now show placeholder 0s
-        setFriendsInvited(0);
-        setRewardsEarned(0);
+        // Get or create referral code via DAL
+        const codeResult = await getOrCreateReferralCode(supabase, authUser.id);
+        if (codeResult.success && codeResult.data) {
+          setReferralCode(codeResult.data);
+        }
+
+        // Fetch real referral stats via DAL
+        const statsResult = await getReferralStats(supabase, authUser.id);
+        if (statsResult.success && statsResult.data) {
+          setFriendsInvited(statsResult.data.total);
+          setRewardsEarned(statsResult.data.rewarded);
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -115,27 +117,29 @@ export default function ReferralPage() {
   };
 
   const handleShareWhatsApp = () => {
-    const message = encodeURIComponent(
+    const url = referralLink;
+    const message =
       language === 'es'
-        ? `¡Únete a Tribe! Usa mi código de referencia: ${referralCode} para obtener una recompensa. ${referralLink}`
-        : `Join Tribe! Use my referral code: ${referralCode} to get a reward. ${referralLink}`
-    );
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+        ? `Estoy entrenando con Tribe en Medellín — sesiones de running, yoga, fuerza y más. Usa mi código ${referralCode} cuando te registres y ambos ganamos una recompensa.`
+        : `I've been training with Tribe in Medellín — running, yoga, strength sessions and more. Use my code ${referralCode} when you sign up and we both earn a reward.`;
+    shareViaWhatsApp(message, url);
   };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: language === 'es' ? 'Únete a Tribe' : 'Join Tribe',
+          title: 'Tribe',
           text:
             language === 'es'
-              ? `Únete a Tribe con mi código: ${referralCode}`
-              : `Join Tribe with my code: ${referralCode}`,
+              ? `Entrena conmigo en Medellín con Tribe — running, yoga, fuerza y más. Usa mi código ${referralCode} al registrarte y ambos ganamos una recompensa.`
+              : `Train with me in Medellín on Tribe — running, yoga, strength and more. Use my code ${referralCode} when you sign up and we both earn a reward.`,
           url: referralLink,
         });
       } catch (err) {
-        console.error('Share failed:', err);
+        if (!(err instanceof Error && err.name === 'AbortError')) {
+          console.error('Share failed:', err);
+        }
       }
     }
   };
@@ -151,8 +155,8 @@ export default function ReferralPage() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-dark border-b border-stone-200 dark:border-gray-700">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+      <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-stone-200 dark:border-gray-700">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-tribe-green" />
@@ -162,9 +166,9 @@ export default function ReferralPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Referral Code Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.referralCode}</h2>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 bg-stone-100 dark:bg-tribe-surface rounded-xl p-4 text-center">
@@ -180,7 +184,7 @@ export default function ReferralPage() {
         </div>
 
         {/* Share Buttons Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.shareVia}</h2>
           <div className="space-y-3">
             <button
@@ -211,11 +215,11 @@ export default function ReferralPage() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
             <p className="text-3xl font-bold text-tribe-green mb-2">{friendsInvited}</p>
             <p className="text-sm text-stone-600 dark:text-gray-400">{t.friendsInvited}</p>
           </div>
-          <div className="bg-white dark:bg-tribe-dark rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-4 border border-stone-200 dark:border-gray-700 text-center">
             <p className="text-3xl font-bold text-tribe-green mb-2">{rewardsEarned}</p>
             <p className="text-sm text-stone-600 dark:text-gray-400">{t.rewardsEarned}</p>
           </div>
@@ -228,7 +232,7 @@ export default function ReferralPage() {
         </div>
 
         {/* Reward Tiers Section */}
-        <div className="bg-white dark:bg-tribe-dark rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-6 border border-stone-200 dark:border-gray-700">
           <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.rewardTiers}</h3>
           <div className="space-y-3">
             {/* Tier 1 */}

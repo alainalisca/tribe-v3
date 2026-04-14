@@ -152,9 +152,9 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
       </div>
 
       <div className="flex items-center gap-3 pt-1">
-        <div className="flex-1 h-px bg-stone-200 dark:bg-gray-700" />
+        <div className="flex-1 h-px bg-stone-200 dark:bg-stone-700" />
         <span className="text-xs font-semibold text-theme-secondary">{t.allInstructors}</span>
-        <div className="flex-1 h-px bg-stone-200 dark:bg-gray-700" />
+        <div className="flex-1 h-px bg-stone-200 dark:bg-stone-700" />
       </div>
     </div>
   );

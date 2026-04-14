@@ -210,12 +210,12 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
 
       <div
-        className="bg-white dark:bg-tribe-dark w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
+        className="bg-white dark:bg-tribe-card w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-tribe-dark">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-tribe-card">
           <h3 className="text-lg font-bold text-theme-primary">{t.addStory}</h3>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5 text-theme-primary" />

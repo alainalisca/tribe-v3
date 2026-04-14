@@ -106,7 +106,7 @@ export default function TrainingPartnersPage() {
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-8">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid">
-        <div className="max-w-2xl mx-auto px-4 pt-4 pb-3 space-y-3">
+        <div className="max-w-2xl md:max-w-4xl mx-auto px-4 pt-4 pb-3 space-y-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
@@ -170,7 +170,7 @@ export default function TrainingPartnersPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (

@@ -1,7 +1,11 @@
 /**
  * Client-side ICS calendar file generation.
- * Replaces the /api/generate-calendar route which doesn't work with static export.
+ * Supports both raw ICS generation and the `ics` library, plus Google Calendar URLs.
  */
+
+import { createEvent, EventAttributes } from 'ics';
+
+// ── Legacy interface (used by ActionButtons) ──
 
 interface CalendarEvent {
   sport: string;
@@ -75,4 +79,70 @@ export function downloadICS(event: CalendarEvent): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+// ── New: ics-library-based download + Google Calendar URL ──
+
+export interface CalendarEventData {
+  title: string;
+  description: string;
+  startDate: Date;
+  durationMinutes: number;
+  location?: string;
+  url?: string;
+}
+
+export function downloadCalendarEvent(data: CalendarEventData): void {
+  const start = data.startDate;
+
+  const event: EventAttributes = {
+    start: [start.getFullYear(), start.getMonth() + 1, start.getDate(), start.getHours(), start.getMinutes()],
+    duration: {
+      hours: Math.floor(data.durationMinutes / 60),
+      minutes: data.durationMinutes % 60,
+    },
+    title: data.title,
+    description: data.description,
+    location: data.location,
+    url: data.url,
+    organizer: { name: 'Tribe', email: 'sessions@tribesocial.co' },
+    status: 'CONFIRMED' as const,
+    busyStatus: 'BUSY' as const,
+    productId: 'tribe/sessions',
+  };
+
+  createEvent(event, (error, value) => {
+    if (error || !value) return;
+    const blob = new Blob([value], { type: 'text/calendar;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = 'tribe-session.ics';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
+  });
+}
+
+export function getGoogleCalendarUrl(data: CalendarEventData): string {
+  const start = data.startDate;
+  const end = new Date(start.getTime() + data.durationMinutes * 60000);
+
+  const formatDate = (d: Date) =>
+    d
+      .toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\.\d{3}/, '');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: data.title,
+    dates: `${formatDate(start)}/${formatDate(end)}`,
+    details: data.description,
+    location: data.location || '',
+    sf: 'true',
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

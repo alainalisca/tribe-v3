@@ -163,13 +163,13 @@ export default function SearchPage() {
       {/* Fixed Header + Search + Tabs */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card">
         {/* Title Bar */}
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <h1 className="text-lg font-bold text-theme-primary">{strings.search}</h1>
         </div>
 
         {/* Search Input */}
         <div className="bg-theme-page border-t border-theme">
-          <div className="max-w-2xl mx-auto px-4 py-3">
+          <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-3">
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-theme-secondary" />
               <input
@@ -178,7 +178,7 @@ export default function SearchPage() {
                 placeholder={strings.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-dark border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
+                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-tribe-card border border-stone-200 dark:border-gray-700 rounded-lg text-theme-primary placeholder-theme-secondary focus:outline-none focus:ring-2 focus:ring-tribe-green"
               />
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function SearchPage() {
 
         {/* Tab Bar */}
         <div className="bg-theme-card border-t border-b border-theme overflow-x-auto">
-          <div className="max-w-2xl mx-auto flex gap-6 px-4">
+          <div className="max-w-2xl md:max-w-4xl mx-auto flex gap-6 px-4">
             {TAB_KEYS.map((tab) => (
               <button
                 key={tab}
@@ -205,7 +205,10 @@ export default function SearchPage() {
       </div>
 
       {/* Results — offset for fixed header + search + tabs */}
-      <div className="max-w-2xl mx-auto p-4" style={{ paddingTop: 'calc(3.5rem + 62px + 52px + 1rem)' }}>
+      <div
+        className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6"
+        style={{ paddingTop: 'calc(3.5rem + 62px + 52px + 1rem)' }}
+      >
         {loading && searchQuery ? (
           <div className="flex flex-col items-center justify-center py-12 gap-4">
             <Loader className="h-8 w-8 animate-spin text-tribe-green" />
@@ -326,7 +329,7 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
   };
 
   return (
-    <div className="bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
+    <div className="bg-white dark:bg-tribe-card rounded-xl p-4 border border-stone-200 dark:border-gray-700 flex items-center justify-between">
       <div className="flex items-center gap-3 flex-1">
         {user.avatar_url && (
           <Image
@@ -370,7 +373,7 @@ function CommunityResult({ community, language, onSelect }: CommunityResultProps
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-card rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -404,7 +407,7 @@ function ChallengeResult({ challenge, language, onSelect }: ChallengeResultProps
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-card rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div>
         <p className="font-semibold text-theme-primary">{challenge.title}</p>
@@ -439,7 +442,7 @@ function SessionResult({ session, language, onSelect }: SessionResultProps) {
   return (
     <button
       onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-tribe-dark rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
+      className="w-full text-left bg-white dark:bg-tribe-card rounded-xl p-4 border border-stone-200 dark:border-gray-700 hover:shadow-lg transition"
     >
       <div>
         <p className="font-semibold text-theme-primary">
