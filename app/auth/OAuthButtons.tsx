@@ -9,6 +9,7 @@ interface OAuthButtonsProps {
   appleLoading: boolean;
   googleLoading: boolean;
   loading: boolean;
+  language: 'en' | 'es';
   onAppleSignIn: () => void;
   onGoogleSignIn: () => void;
 }
@@ -18,6 +19,7 @@ export default function OAuthButtons({
   appleLoading,
   googleLoading,
   loading,
+  language,
   onAppleSignIn,
   onGoogleSignIn,
 }: OAuthButtonsProps) {
@@ -74,10 +76,12 @@ export default function OAuthButtons({
         {googleLoading ? t.loading : t.continueWithGoogle}
       </Button>
 
-      <div className="flex items-center gap-4 my-3">
-        <div className="flex-1 h-px bg-stone-300 dark:bg-stone-500"></div>
-        <span className="text-xs text-muted-foreground">{t.or}</span>
-        <div className="flex-1 h-px bg-stone-300 dark:bg-stone-500"></div>
+      <div className="relative flex items-center my-6">
+        <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
+        <span className="px-4 text-xs uppercase tracking-wider text-stone-400 dark:text-gray-500">
+          {language === 'es' ? 'o' : 'or'}
+        </span>
+        <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
       </div>
     </>
   );

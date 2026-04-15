@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { Activity, Flame, Ticket, type LucideIcon } from 'lucide-react';
 
 /**
  * High-quality Unsplash photos showing real fitness scenes.
@@ -58,34 +59,38 @@ const blocks = {
   ],
 } as const;
 
-const extras = {
+const extras: Record<'en' | 'es', { Icon: LucideIcon; title: string; desc: string }[]> = {
   en: [
     {
-      emoji: '🏃',
+      Icon: Activity,
       title: 'Every Sport, One App',
       desc: 'CrossFit, running, yoga, cycling, calisthenics, HIIT, and more.',
     },
     {
-      emoji: '🔥',
+      Icon: Flame,
       title: 'Streaks & Challenges',
       desc: 'Stay consistent with training streaks and community challenges.',
     },
-    { emoji: '🎟️', title: 'Promo Codes', desc: 'Instructors drop promos. First session is often free.' },
+    { Icon: Ticket, title: 'Promo Codes', desc: 'Instructors drop promos. First session is often free.' },
   ],
   es: [
-    { emoji: '🏃', title: 'Cada Deporte, Una App', desc: 'CrossFit, running, yoga, ciclismo, calistenia, HIIT y más.' },
     {
-      emoji: '🔥',
+      Icon: Activity,
+      title: 'Cada Deporte, Una App',
+      desc: 'CrossFit, running, yoga, ciclismo, calistenia, HIIT y más.',
+    },
+    {
+      Icon: Flame,
       title: 'Rachas y Retos',
       desc: 'Mantén la consistencia con rachas de entrenamiento y retos comunitarios.',
     },
     {
-      emoji: '🎟️',
+      Icon: Ticket,
       title: 'Códigos Promo',
       desc: 'Los instructores comparten promos. La primera sesión suele ser gratis.',
     },
   ],
-} as const;
+};
 
 const t = {
   en: { heading: 'Built for Athletes Who Show Up', cta: 'Start Training' },
@@ -151,15 +156,20 @@ export default function ForAthletesSection() {
 
         {/* Small feature pills */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-          {extras[language].map((item, i) => (
-            <div key={i} className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.06] rounded-xl p-5">
-              <span className="text-2xl">{item.emoji}</span>
-              <div>
-                <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
-                <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+          {extras[language].map((item, i) => {
+            const { Icon } = item;
+            return (
+              <div key={i} className="flex items-start gap-3 bg-white/[0.04] border border-white/[0.06] rounded-xl p-5">
+                <div className="w-10 h-10 rounded-xl bg-tribe-green/10 flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-tribe-green" strokeWidth={2} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
+                  <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="text-center">

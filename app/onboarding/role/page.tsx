@@ -102,8 +102,18 @@ export default function OnboardingRolePage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-6">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle atmospheric background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30 dark:opacity-25"
+        style={{ backgroundImage: 'url(/marketing/onboarding-bg.jpg)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-50/95 via-stone-50/90 to-stone-50/95 dark:from-tribe-mid/95 dark:via-tribe-mid/90 dark:to-tribe-mid/95"
+      />
+      <div className="w-full max-w-lg space-y-6 relative z-10">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-stone-900 dark:text-white">{t.welcome}</h1>

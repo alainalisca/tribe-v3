@@ -49,10 +49,15 @@ export default function ForInstructorsPreview() {
   const { ref, visible } = useScrollReveal(0.1);
 
   return (
-    <section id="instructors-preview" className="bg-tribe-surface py-20 px-4 overflow-hidden">
+    <section id="instructors-preview" className="relative py-24 px-4 overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/marketing/instructors-bg.jpg)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#272D34]/95 via-[#272D34]/80 to-[#272D34]/95" />
       <div
         ref={ref}
-        className={`max-w-6xl mx-auto transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        className={`relative z-10 max-w-6xl mx-auto transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Photo */}

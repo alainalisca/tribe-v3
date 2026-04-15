@@ -1,22 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Sun, Cloud, CloudRain, CloudDrizzle, CloudLightning } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { ACTIVE_CITY, type Neighborhood } from '@/lib/city-config';
 
 interface WeatherData {
   temp: number;
-  icon: string;
+  icon: React.ReactNode;
 }
 
-const FALLBACK_WEATHER: WeatherData = { temp: 24, icon: '⛅' };
-
-const WEATHER_ICONS: Record<string, string> = {
-  clear: '☀️',
-  clouds: '⛅',
-  rain: '🌧️',
-  drizzle: '🌦️',
-  thunderstorm: '⛈️',
+const WEATHER_ICONS: Record<string, React.ReactNode> = {
+  clear: <Sun className="w-3.5 h-3.5" />,
+  clouds: <Cloud className="w-3.5 h-3.5" />,
+  rain: <CloudRain className="w-3.5 h-3.5" />,
+  drizzle: <CloudDrizzle className="w-3.5 h-3.5" />,
+  thunderstorm: <CloudLightning className="w-3.5 h-3.5" />,
 };
 
 interface CityGreetingProps {
@@ -32,7 +31,10 @@ export default function CityGreeting({ activeHood }: CityGreetingProps) {
     fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=${encodeURIComponent(ACTIVE_CITY.timezone)}`
     )
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Weather API responded ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (data?.current) {
           const temp = Math.round(data.current.temperature_2m);
@@ -43,13 +45,14 @@ export default function CityGreeting({ activeHood }: CityGreetingProps) {
           else if (code >= 51 && code <= 55) condition = 'drizzle';
           else if (code >= 61 && code <= 65) condition = 'rain';
           else if (code >= 95) condition = 'thunderstorm';
-          setWeather({ temp, icon: WEATHER_ICONS[condition] || '⛅' });
+          setWeather({ temp, icon: WEATHER_ICONS[condition] ?? <Cloud className="w-3.5 h-3.5" /> });
         } else {
-          setWeather(FALLBACK_WEATHER);
+          setWeather(null);
         }
       })
-      .catch(() => {
-        setWeather(FALLBACK_WEATHER);
+      .catch((err) => {
+        console.warn('Weather fetch failed', err);
+        setWeather(null);
       });
   }, []);
 

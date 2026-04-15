@@ -50,6 +50,16 @@ export default function AuthPage() {
 
   return (
     <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Atmospheric background image — sits behind the animated gradient */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-30 dark:opacity-25"
+        style={{ backgroundImage: 'url(/marketing/auth-bg.jpg)' }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-50/90 via-stone-50/85 to-stone-50/90 dark:from-tribe-mid/90 dark:via-tribe-mid/85 dark:to-tribe-mid/90"
+      />
       {/* Subtle animated gradient background */}
       <motion.div
         aria-hidden
@@ -108,6 +118,7 @@ export default function AuthPage() {
                 appleLoading={h.appleLoading}
                 googleLoading={h.googleLoading}
                 loading={h.loading}
+                language={language}
                 onAppleSignIn={h.handleAppleSignIn}
                 onGoogleSignIn={h.handleGoogleSignIn}
               />

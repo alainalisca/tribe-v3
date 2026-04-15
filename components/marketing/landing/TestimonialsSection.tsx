@@ -69,8 +69,13 @@ export default function TestimonialsSection() {
   const { ref, visible } = useScrollReveal(0.1);
 
   return (
-    <section ref={ref} className="bg-[#1a1f25] py-20 px-4">
-      <div className="max-w-5xl mx-auto">
+    <section ref={ref} className="relative py-24 px-4 overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/marketing/testimonials-bg.jpg)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#272D34]/95 via-[#272D34]/80 to-[#272D34]/95" />
+      <div className="relative z-10 max-w-5xl mx-auto">
         <h2
           className={`text-3xl sm:text-4xl font-black text-white text-center mb-14 tracking-tight transition-all duration-700 ${
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'

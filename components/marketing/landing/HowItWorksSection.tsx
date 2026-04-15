@@ -2,28 +2,29 @@
 
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { Search, CreditCard, Dumbbell, Store, ClipboardList, Wallet, type LucideIcon } from 'lucide-react';
 
 const tracks = {
   en: {
-    heading: 'How Tribe Works',
+    heading: 'What is Tribe',
     athlete: {
       label: 'For Athletes',
       steps: [
         {
           num: '01',
-          icon: '🔍',
+          Icon: Search,
           title: 'Browse sessions near you',
           desc: 'Filter by sport, neighborhood, price, and time.',
         },
         {
           num: '02',
-          icon: '💳',
+          Icon: CreditCard,
           title: 'Book and pay in the app',
           desc: 'Secure payment via Wompi or Stripe. Free sessions too.',
         },
         {
           num: '03',
-          icon: '💪',
+          Icon: Dumbbell,
           title: 'Train with your new tribe',
           desc: 'Show up, sweat, connect with people who show up too.',
         },
@@ -34,19 +35,19 @@ const tracks = {
       steps: [
         {
           num: '01',
-          icon: '🏪',
+          Icon: Store,
           title: 'Create your storefront',
           desc: 'Set up your profile, list your specialties, show your ratings.',
         },
         {
           num: '02',
-          icon: '📋',
+          Icon: ClipboardList,
           title: 'List sessions and products',
           desc: 'Set prices, schedules, and sell merch or training plans.',
         },
         {
           num: '03',
-          icon: '💰',
+          Icon: Wallet,
           title: 'Get paid directly',
           desc: '85% goes to you. Track earnings in your dashboard.',
         },
@@ -54,25 +55,25 @@ const tracks = {
     },
   },
   es: {
-    heading: 'Cómo Funciona Tribe',
+    heading: 'Qué es Tribe',
     athlete: {
       label: 'Para Atletas',
       steps: [
         {
           num: '01',
-          icon: '🔍',
+          Icon: Search,
           title: 'Busca sesiones cerca de ti',
           desc: 'Filtra por deporte, barrio, precio y horario.',
         },
         {
           num: '02',
-          icon: '💳',
+          Icon: CreditCard,
           title: 'Reserva y paga en la app',
           desc: 'Pago seguro por Wompi o Stripe. También sesiones gratis.',
         },
         {
           num: '03',
-          icon: '💪',
+          Icon: Dumbbell,
           title: 'Entrena con tu nuevo tribe',
           desc: 'Aparece, suda, conecta con gente que también se presenta.',
         },
@@ -83,19 +84,19 @@ const tracks = {
       steps: [
         {
           num: '01',
-          icon: '🏪',
+          Icon: Store,
           title: 'Crea tu perfil profesional',
           desc: 'Configura tu perfil, lista tus especialidades y muestra tus calificaciones.',
         },
         {
           num: '02',
-          icon: '📋',
+          Icon: ClipboardList,
           title: 'Publica sesiones y productos',
           desc: 'Fija precios, horarios y vende mercancía o planes de entrenamiento.',
         },
         {
           num: '03',
-          icon: '💰',
+          Icon: Wallet,
           title: 'Recibe pagos directos',
           desc: 'El 85% es para ti. Rastrea tus ingresos en tu dashboard.',
         },
@@ -108,10 +109,11 @@ function StepCard({
   step,
   delay,
 }: {
-  step: { num: string; icon: string; title: string; desc: string };
+  step: { num: string; Icon: LucideIcon; title: string; desc: string };
   delay: number;
 }) {
   const { ref, visible } = useScrollReveal(0.2);
+  const { Icon } = step;
   return (
     <div
       ref={ref}
@@ -123,7 +125,9 @@ function StepCard({
       <div className="absolute -top-2.5 right-4 font-black text-[100px] leading-none text-white/[0.04] pointer-events-none select-none">
         {step.num}
       </div>
-      <div className="text-4xl mb-5">{step.icon}</div>
+      <div className="w-14 h-14 rounded-2xl bg-tribe-green/10 flex items-center justify-center mb-4 mx-auto">
+        <Icon className="w-7 h-7 text-tribe-green" strokeWidth={2} />
+      </div>
       <h3 className="font-black text-lg text-white mb-3 tracking-tight">{step.title}</h3>
       <p className="text-sm text-gray-500 leading-relaxed">{step.desc}</p>
     </div>
@@ -136,8 +140,13 @@ export default function HowItWorksSection() {
   const { ref, visible } = useScrollReveal();
 
   return (
-    <section id="how-it-works" className="bg-[#1a1f25] py-20 px-4 overflow-hidden">
-      <div className="max-w-6xl mx-auto">
+    <section id="how-it-works" className="relative py-24 px-4 overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/marketing/howitworks-bg.jpg)' }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#272D34]/95 via-[#272D34]/80 to-[#272D34]/95" />
+      <div className="relative z-10 max-w-6xl mx-auto">
         <div
           ref={ref}
           className={`text-center mb-14 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}

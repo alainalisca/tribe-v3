@@ -54,19 +54,21 @@ export default function HeroSection() {
           {/* Text column */}
           <div className="text-center lg:text-left animate-[slideUp_0.8s_ease-out_both]">
             {/* Logo */}
-            <div className="mb-10">
+            <div className="mb-10 flex items-center gap-4 justify-center lg:justify-start">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/app-logo.png"
+                alt="Tribe"
+                className="h-16 w-16 lg:h-[72px] lg:w-[72px] rounded-full shadow-lg shrink-0"
+              />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/tribe-wordmark.png"
                 alt="Tribe"
-                className="h-16 lg:h-[72px] object-contain hidden dark:block mx-auto lg:mx-0"
+                className="h-16 lg:h-[72px] object-contain hidden dark:block"
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/tribe-wordmark-dark.png"
-                alt="Tribe"
-                className="h-16 lg:h-[72px] object-contain dark:hidden mx-auto lg:mx-0"
-              />
+              <img src="/tribe-wordmark-dark.png" alt="Tribe" className="h-16 lg:h-[72px] object-contain dark:hidden" />
             </div>
 
             <h1 className="font-black text-[clamp(40px,5vw,64px)] leading-[1.05] tracking-tight mb-5">

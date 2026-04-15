@@ -21,6 +21,12 @@ export interface CommunityWithCreator {
   creator?: { id: string; name: string; avatar_url: string | null } | null;
 }
 
+// Extended post type that includes pin metadata (added in migration 027).
+export interface CommunityPostWithPin extends CommunityPostWithAuthor {
+  is_pinned?: boolean | null;
+  pinned_at?: string | null;
+}
+
 export interface CommunityMemberWithUser {
   id: string;
   community_id: string;
@@ -96,10 +102,7 @@ export async function fetchUserCommunities(
   userId: string
 ): Promise<DalResult<CommunityWithCreator[]>> {
   try {
-    const { data, error } = await supabase
-      .from('community_members')
-      .select('community_id')
-      .eq('user_id', userId);
+    const { data, error } = await supabase.from('community_members').select('community_id').eq('user_id', userId);
 
     if (error) return { success: false, error: error.message };
 
@@ -325,6 +328,7 @@ export async function fetchCommunityPosts(
       .from('community_posts')
       .select('*, author:author_id(id, name, avatar_url)')
       .eq('community_id', communityId)
+      .order('is_pinned', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(limit)
       .range(offset, offset + limit - 1);
@@ -368,10 +372,7 @@ export async function insertCommunityPost(
   }
 }
 
-export async function deleteCommunityPost(
-  supabase: SupabaseClient,
-  postId: string
-): Promise<DalResult<null>> {
+export async function deleteCommunityPost(supabase: SupabaseClient, postId: string): Promise<DalResult<null>> {
   try {
     const { error } = await supabase.from('community_posts').delete().eq('id', postId);
 
@@ -520,5 +521,73 @@ export async function fetchCommunityPostComments(
   } catch (error) {
     logError(error, { action: 'fetchCommunityPostComments' });
     return { success: false, error: 'Failed to fetch comments' };
+  }
+}
+
+// ─── Banner / cover image management ───
+
+export async function updateCommunityCoverImage(
+  supabase: SupabaseClient,
+  communityId: string,
+  coverImageUrl: string
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('communities')
+      .update({ cover_image_url: coverImageUrl })
+      .eq('id', communityId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'updateCommunityCoverImage' });
+    return { success: false, error: 'Failed to update community banner' };
+  }
+}
+
+// ─── Post moderation ───
+
+export async function setCommunityPostPinned(
+  supabase: SupabaseClient,
+  postId: string,
+  pinned: boolean
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('community_posts')
+      .update({
+        is_pinned: pinned,
+        pinned_at: pinned ? new Date().toISOString() : null,
+      })
+      .eq('id', postId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'setCommunityPostPinned' });
+    return { success: false, error: 'Failed to update pin state' };
+  }
+}
+
+export async function reportCommunityPost(
+  supabase: SupabaseClient,
+  data: { post_id: string; reporter_id: string; reason?: string }
+): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase.from('community_post_reports').insert({
+      post_id: data.post_id,
+      reporter_id: data.reporter_id,
+      reason: data.reason ?? null,
+    });
+
+    if (error) {
+      // Treat duplicate (unique constraint) as success — already reported.
+      if (error.code === '23505') return { success: true };
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'reportCommunityPost' });
+    return { success: false, error: 'Failed to report post' };
   }
 }

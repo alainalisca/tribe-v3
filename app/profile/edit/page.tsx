@@ -16,9 +16,11 @@ import {
   Bell,
   Check,
   Store,
+  Camera,
   Image as ImageIcon,
   Link as LinkIcon,
 } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useRef } from 'react';
@@ -43,6 +45,7 @@ export default function EditProfilePage() {
     uploadingBanner,
     formData,
     setFormData,
+    handleAvatarUpload,
     handlePhotoUpload,
     handleBannerUpload,
     removePhoto,
@@ -51,7 +54,10 @@ export default function EditProfilePage() {
   } = useEditProfile(language);
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [bannerUseUrl, setBannerUseUrl] = useState(false);
+
+  const triggerAvatarUpload = () => avatarInputRef.current?.click();
 
   if (loading) {
     return (
@@ -102,6 +108,36 @@ export default function EditProfilePage() {
             <p className="text-slate-900 font-medium text-sm">{tr.welcomeBanner}</p>
           </div>
         )}
+
+        {/* Avatar / Headshot — primary profile photo */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative">
+            <Avatar className="w-28 h-28 border-4 border-tribe-green/30">
+              <AvatarImage src={formData.avatar_url || undefined} className="object-cover" />
+              <AvatarFallback className="bg-tribe-green text-slate-900 text-3xl font-bold">
+                {formData.name?.[0]?.toUpperCase() || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={triggerAvatarUpload}
+              disabled={uploadingPhoto}
+              className="absolute bottom-0 right-0 w-9 h-9 bg-tribe-green rounded-full flex items-center justify-center text-slate-900 shadow-lg border-2 border-white dark:border-tribe-card hover:bg-tribe-green-light transition-colors disabled:opacity-50"
+              aria-label={tr.changePhoto}
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploadingPhoto}
+            />
+          </div>
+          <p className="text-xs text-stone-500 dark:text-gray-400 mt-2 text-center">{tr.primaryPhoto}</p>
+        </div>
 
         {/* Name */}
         <div>
@@ -688,7 +724,7 @@ export default function EditProfilePage() {
         {/* Photos */}
         <div>
           <Label className="font-semibold text-theme-primary mb-3">
-            {tr.photos} ({formData.photos.length}/6)
+            {tr.photos} ({formData.photos.length}/8)
           </Label>
           <div className="grid grid-cols-3 gap-3">
             {formData.photos.map((photo, index) => (
@@ -708,7 +744,7 @@ export default function EditProfilePage() {
                 </button>
               </div>
             ))}
-            {formData.photos.length < 6 && (
+            {formData.photos.length < 8 && (
               <label className="aspect-square border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-tribe-green transition">
                 <Upload className="w-8 h-8 text-stone-400 mb-2" />
                 <span className="text-xs text-stone-500">{tr.addPhoto}</span>

@@ -28,10 +28,10 @@ const difficultyLabels: Record<string, { en: string; es: string }> = {
   hard: { en: 'Hard', es: 'Difícil' },
 };
 
-const difficultyColors: Record<string, string> = {
-  easy: 'text-green-400',
-  moderate: 'text-yellow-400',
-  hard: 'text-red-400',
+const difficultyBadgeClasses: Record<string, string> = {
+  easy: 'bg-green-500/20 text-green-500',
+  moderate: 'bg-amber-500/20 text-amber-500',
+  hard: 'bg-red-500/20 text-red-500',
 };
 
 export default function PopularRoutesSection({ language }: PopularRoutesSectionProps) {
@@ -185,7 +185,7 @@ function RouteCard({ route, language }: { route: PopularRoute; language: string 
   const lang = language;
   const sport = sportLabels[route.sport_type] || sportLabels.running;
   const difficulty = difficultyLabels[route.difficulty] || difficultyLabels.easy;
-  const diffColor = difficultyColors[route.difficulty] || 'text-gray-400';
+  const difficultyBadgeClass = difficultyBadgeClasses[route.difficulty] || 'bg-stone-500/20 text-stone-500';
   const description = lang === 'es' ? route.description_es : route.description_en;
 
   const createParams = new URLSearchParams({
@@ -204,14 +204,18 @@ function RouteCard({ route, language }: { route: PopularRoute; language: string 
           <div className="flex items-center gap-2">
             <span className="text-2xl">{sport.icon}</span>
             <div>
-              <p className="font-semibold text-tribe-dark">{lang === 'es' ? sport.es : sport.en}</p>
-              <p className={`text-xs font-medium ${diffColor}`}>{lang === 'es' ? difficulty.es : difficulty.en}</p>
+              <p className="font-semibold text-slate-900">{lang === 'es' ? sport.es : sport.en}</p>
             </div>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${difficultyBadgeClass}`}>
+              {lang === 'es' ? difficulty.es : difficulty.en}
+            </span>
+          </div>
           <h3 className="font-semibold text-theme-primary line-clamp-2">{route.name}</h3>
 
           {description && <p className="text-xs text-stone-500 dark:text-gray-300 line-clamp-2">{description}</p>}

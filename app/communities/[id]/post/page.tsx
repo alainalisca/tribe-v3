@@ -1,26 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { showSuccess, showError } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 import { insertCommunityPost } from '@/lib/dal/communities';
+import { compressImage } from '@/components/session/recapPhotosHelpers';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronLeft, Loader2, ImagePlus, X } from 'lucide-react';
+
+const MAX_CHARS = 500;
 
 const getTranslations = (language: 'en' | 'es') => ({
   title: language === 'es' ? 'Nueva Publicación' : 'New Post',
-  backButton: language === 'es' ? 'Volver' : 'Back',
   what: language === 'es' ? '¿Qué deseas compartir?' : "What's on your mind?",
-  imageUrl: language === 'es' ? 'URL de Imagen (Opcional)' : 'Image URL (Optional)',
-  imageUrlHint: language === 'es' ? 'Enlace a una imagen' : 'Link to an image',
+  addImage: language === 'es' ? 'Agregar imagen' : 'Add image',
+  removeImage: language === 'es' ? 'Quitar imagen' : 'Remove image',
   post: language === 'es' ? 'Publicar' : 'Post',
   posting: language === 'es' ? 'Publicando...' : 'Posting...',
   required: language === 'es' ? 'Por favor escribe algo' : 'Please write something',
   error: language === 'es' ? 'Error al publicar' : 'Error posting',
+  success: language === 'es' ? 'Publicación creada' : 'Post created',
+  cancel: language === 'es' ? 'Cancelar' : 'Cancel',
+  charsLeft: (n: number) => (language === 'es' ? `${n} caracteres restantes` : `${n} characters left`),
+  uploadFailed: language === 'es' ? 'No se pudo subir la imagen' : 'Failed to upload image',
 });
 
 export default function NewPostPage() {
@@ -29,11 +37,13 @@ export default function NewPostPage() {
   const supabase = createClient();
   const { language } = useLanguage();
   const t = getTranslations(language);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const communityId = params?.id as string;
 
   const [content, setContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
@@ -50,7 +60,6 @@ export default function NewPostPage() {
       }
       setUserId(user.id);
 
-      // Fetch user profile
       const { data, error: profileError } = await supabase
         .from('users')
         .select('name, avatar_url')
@@ -64,16 +73,42 @@ export default function NewPostPage() {
     getUser();
   }, []);
 
+  function handleFilePicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    setImagePreview('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function uploadImage(file: File): Promise<string> {
+    const compressed = await compressImage(file);
+    const path = `community-posts/${communityId}/${userId}/post-${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('media')
+      .upload(path, compressed, { contentType: 'image/jpeg', upsert: false });
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from('media').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     if (!content.trim()) {
       setError(t.required);
       return;
     }
-
     if (!userId) {
       setError('User not found');
+      return;
+    }
+    if (content.length > MAX_CHARS) {
+      setError(t.error);
       return;
     }
 
@@ -81,28 +116,51 @@ export default function NewPostPage() {
     setError('');
 
     try {
+      let mediaUrl: string | undefined;
+      let mediaType: string | undefined;
+      if (imageFile) {
+        try {
+          mediaUrl = await uploadImage(imageFile);
+          mediaType = 'image';
+        } catch (uploadErr) {
+          logError(uploadErr, { action: 'uploadCommunityPostImage' });
+          await haptic('error');
+          showError(t.uploadFailed);
+          setLoading(false);
+          return;
+        }
+      }
+
       const result = await insertCommunityPost(supabase, {
         community_id: communityId,
         author_id: userId,
         content: content.trim(),
-        media_url: imageUrl || undefined,
-        media_type: imageUrl ? 'image' : undefined,
+        media_url: mediaUrl,
+        media_type: mediaType,
       });
 
       if (!result.success) {
+        await haptic('error');
+        showError(result.error || t.error);
         setError(result.error || t.error);
         setLoading(false);
         return;
       }
 
-      // Redirect back to community
+      await haptic('success');
+      showSuccess(t.success);
       router.push(`/communities/${communityId}`);
     } catch (err) {
       logError(err, { action: 'insertCommunityPost' });
+      await haptic('error');
+      showError(t.error);
       setError(t.error);
       setLoading(false);
     }
   }
+
+  const charsLeft = MAX_CHARS - content.length;
+  const overLimit = charsLeft < 0;
 
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface">
@@ -112,6 +170,7 @@ export default function NewPostPage() {
           <button
             onClick={() => router.back()}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
+            aria-label={t.cancel}
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
@@ -133,7 +192,7 @@ export default function NewPostPage() {
             </div>
           </div>
 
-          {/* Content textarea */}
+          {/* Content textarea + char counter */}
           <div className="space-y-2">
             <textarea
               placeholder={t.what}
@@ -143,28 +202,48 @@ export default function NewPostPage() {
                 setError('');
               }}
               rows={6}
+              maxLength={MAX_CHARS}
               className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent resize-none"
               autoFocus
             />
-            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <div className="flex justify-between items-center">
+              {error ? <p className="text-red-500 text-sm">{error}</p> : <span />}
+              <p className={`text-xs ${overLimit ? 'text-red-500' : 'text-stone-500 dark:text-gray-400'}`}>
+                {t.charsLeft(charsLeft)}
+              </p>
+            </div>
           </div>
 
-          {/* Image URL */}
+          {/* Image upload */}
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-theme-primary">{t.imageUrl}</label>
-            <p className="text-xs text-stone-500 dark:text-gray-400">{t.imageUrlHint}</p>
-            <input
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
-            />
-
-            {/* Image preview */}
-            {imageUrl && (
-              <div className="mt-3 rounded-lg overflow-hidden">
-                <Image src={imageUrl} alt="Post image preview" width={600} height={256} className="w-full max-h-64 object-cover" unoptimized />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFilePicked} className="hidden" />
+            {!imagePreview ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 border border-stone-300 dark:border-tribe-card rounded-lg text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition text-sm"
+              >
+                <ImagePlus className="w-4 h-4" />
+                {t.addImage}
+              </button>
+            ) : (
+              <div className="relative rounded-lg overflow-hidden">
+                <Image
+                  src={imagePreview}
+                  alt="Selected image preview"
+                  width={600}
+                  height={256}
+                  className="w-full max-h-64 object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 hover:bg-black/90 transition"
+                  aria-label={t.removeImage}
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
@@ -176,11 +255,11 @@ export default function NewPostPage() {
               onClick={() => router.back()}
               className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-tribe-card rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
             >
-              {language === 'es' ? 'Cancelar' : 'Cancel'}
+              {t.cancel}
             </button>
             <Button
               type="submit"
-              disabled={loading || !content.trim()}
+              disabled={loading || !content.trim() || overLimit}
               className="flex-1 bg-tribe-green hover:bg-tribe-green text-slate-900 font-semibold h-12 rounded-lg transition"
             >
               {loading ? (

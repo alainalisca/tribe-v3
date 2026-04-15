@@ -23,8 +23,7 @@ function MarketingHeader() {
   const toggleLang = () => setLanguage(language === 'en' ? 'es' : 'en');
 
   const navLinks = [
-    { href: '/#how-it-works', label: language === 'es' ? 'Cómo Funciona' : 'How It Works' },
-    { href: '/#athletes', label: language === 'es' ? 'Para Atletas' : 'For Athletes' },
+    { href: '/', label: language === 'es' ? 'Para Atletas' : 'For Athletes' },
     { href: '/for-instructors', label: language === 'es' ? 'Para Instructores' : 'For Instructors' },
     { href: '/about', label: language === 'es' ? 'Sobre Nosotros' : 'About' },
     { href: '/faq', label: 'FAQ' },
@@ -39,8 +38,12 @@ function MarketingHeader() {
       >
         <nav className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-black text-white">
-            Tribe<span className="text-tribe-green">.</span>
+          <Link href="/" className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/app-logo.png" alt="Tribe" className="h-10 w-10 rounded-full" />
+            <span className="text-xl font-extrabold text-white tracking-tight hidden sm:inline">
+              Tribe<span className="text-tribe-green">.</span>
+            </span>
           </Link>
 
           {/* Desktop nav links */}
@@ -158,12 +161,7 @@ function MarketingFooter() {
           <h3 className="text-sm font-bold text-white mb-3">{t('Product', 'Producto')}</h3>
           <ul className="space-y-2 text-sm text-gray-500">
             <li>
-              <Link href="/#how-it-works" className="hover:text-white transition-colors">
-                {t('How It Works', 'Cómo Funciona')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/#athletes" className="hover:text-white transition-colors">
+              <Link href="/" className="hover:text-white transition-colors">
                 {t('For Athletes', 'Para Atletas')}
               </Link>
             </li>

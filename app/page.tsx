@@ -52,16 +52,10 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-card">
         <img
-          src="/tribe-wordmark.png"
+          src="/app-logo.png"
           alt="Tribe"
-          className="hidden dark:block"
-          style={{ height: 64, objectFit: 'contain' }}
-        />
-        <img
-          src="/tribe-wordmark-dark.png"
-          alt="Tribe"
-          className="block dark:hidden"
-          style={{ height: 64, objectFit: 'contain' }}
+          className="rounded-full"
+          style={{ height: 80, width: 80, objectFit: 'cover' }}
         />
       </div>
     );

@@ -45,6 +45,8 @@ interface Instructor {
   verified: boolean;
   storefront_banner_url: string;
   bio: string;
+  average_rating?: number | null;
+  total_reviews?: number | null;
 }
 
 interface Session {
@@ -144,7 +146,6 @@ export default function StorefrontPage() {
     payJoin: language === 'es' ? 'Pagar y Unirse' : 'Pay & Join',
     rating: language === 'es' ? 'Calificación' : 'Rating',
     totalSessions: language === 'es' ? 'Total Sesiones' : 'Total Sessions',
-    returnRate: language === 'es' ? 'Tasa Retorno' : 'Return Rate',
     boosted: language === 'es' ? 'IMPULSADO' : 'BOOSTED',
     noSessions: language === 'es' ? 'No hay sesiones disponibles' : 'No sessions available',
     products: language === 'es' ? 'Productos' : 'Products',
@@ -199,7 +200,7 @@ export default function StorefrontPage() {
         const { data: instructorData, error } = await supabase
           .from('users')
           .select(
-            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio'
+            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews'
           )
           .eq('id', instructorId)
           .single();
@@ -534,11 +535,15 @@ export default function StorefrontPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 mt-24 grid grid-cols-4 gap-2 md:gap-4">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 mt-24 grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
           <div className="flex items-center justify-center gap-0.5 mb-0.5">
             <Star className="w-4 h-4 text-tribe-green" />
-            <span className="text-lg md:text-2xl font-bold text-theme-primary">4.8</span>
+            <span className="text-lg md:text-2xl font-bold text-theme-primary">
+              {instructor.average_rating && instructor.total_reviews && instructor.total_reviews > 0
+                ? Number(instructor.average_rating).toFixed(1)
+                : '—'}
+            </span>
           </div>
           <p className="text-xs md:text-sm text-theme-secondary">{translations.rating}</p>
         </div>
@@ -551,11 +556,6 @@ export default function StorefrontPage() {
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
           <p className="text-lg md:text-2xl font-bold text-tribe-green">{followState.followerCount}</p>
           <p className="text-xs md:text-sm text-theme-secondary">{translations.followers}</p>
-        </div>
-
-        <div className="bg-white dark:bg-tribe-card rounded-2xl p-3 md:p-4 border border-stone-200 dark:border-gray-700 text-center">
-          <p className="text-lg md:text-2xl font-bold text-tribe-green">92%</p>
-          <p className="text-xs md:text-sm text-theme-secondary">{translations.returnRate}</p>
         </div>
       </div>
 

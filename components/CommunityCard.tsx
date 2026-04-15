@@ -16,16 +16,28 @@ export default function CommunityCard({ community, onClick }: CommunityCardProps
 
   const sportName = community.sport ? sportTranslations[community.sport]?.[language] || community.sport : null;
 
-  // Gradient fallback if no cover image
-  const coverStyle = community.cover_image_url
-    ? { backgroundImage: `url(${community.cover_image_url})` }
-    : { background: 'linear-gradient(135deg, #A3E635, #9EE551)' };
-
   return (
     <Link href={`/communities/${community.id}`} onClick={onClick} className="block">
       <div className="bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-        {/* Cover image */}
-        <div className="w-full h-40 bg-cover bg-center" style={coverStyle} />
+        {/* Cover image — name-centered fallback when no cover_image_url */}
+        {community.cover_image_url ? (
+          <div
+            className="w-full h-40 bg-cover bg-center"
+            style={{ backgroundImage: `url(${community.cover_image_url})` }}
+          />
+        ) : (
+          <div className="h-40 w-full bg-gradient-to-br from-tribe-green via-lime-500 to-emerald-600 relative overflow-hidden flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-transparent" />
+            <div className="relative z-10 text-center">
+              <p className="text-2xl font-extrabold text-white tracking-tight leading-tight line-clamp-2">
+                {community.name}
+              </p>
+              {sportName && (
+                <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mt-1">{sportName}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 space-y-3">

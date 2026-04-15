@@ -88,10 +88,12 @@ export default function FAQPreviewSection() {
   const { ref, visible } = useScrollReveal();
 
   return (
-    <section id="faq-preview" className="bg-tribe-dark py-20 px-4">
+    <section id="faq-preview" className="relative py-24 px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url(/marketing/faq-bg.jpg)' }} />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#272D34]/95 via-[#272D34]/95 to-[#272D34]/95" />
       <div
         ref={ref}
-        className={`max-w-3xl mx-auto transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        className={`relative z-10 max-w-3xl mx-auto transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
       >
         <h2 className="text-3xl sm:text-4xl font-black text-white text-center mb-12 tracking-tight">{s.heading}</h2>
         <div className="mb-8">

@@ -12,6 +12,50 @@ import { fetchUserProfile, updateUser } from '@/lib/dal';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import type { User } from '@supabase/supabase-js';
 
+/** Compress headshot to max 600px dimension at 85% JPEG quality */
+async function compressAvatar(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onerror = () => resolve(file);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const MAX = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            if (w > MAX) {
+              h *= MAX / w;
+              w = MAX;
+            }
+          } else {
+            if (h > MAX) {
+              w *= MAX / h;
+              h = MAX;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.85);
+        } catch {
+          resolve(file);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export interface EditProfileFormData {
   name: string;
   username: string;
@@ -19,6 +63,7 @@ export interface EditProfileFormData {
   location: string;
   sports: string[];
   photos: string[];
+  avatar_url: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
   instagram_username: string;
@@ -56,6 +101,7 @@ export function useEditProfile(language: 'en' | 'es') {
     location: '',
     sports: [],
     photos: [],
+    avatar_url: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
     instagram_username: '',
@@ -99,6 +145,7 @@ export function useEditProfile(language: 'en' | 'es') {
           location: profileData.location || '',
           sports: profileData.sports || [],
           photos: profileData.photos || [],
+          avatar_url: profileData.avatar_url || '',
           emergency_contact_name: profileData.emergency_contact_name || '',
           emergency_contact_phone: profileData.emergency_contact_phone || '',
           instagram_username: profileData.instagram_username || '',
@@ -122,6 +169,41 @@ export function useEditProfile(language: 'en' | 'es') {
     }
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedImageTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      // Compress to max 600px, quality 85 for headshot (smaller than gallery photos)
+      const compressed = await compressAvatar(file);
+      const path = `avatars/${user.id}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(path, compressed, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(path);
+
+      // Cache-bust the URL so the new image shows immediately
+      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
+      setFormData((prev) => ({ ...prev, avatar_url: bustedUrl }));
+    } catch (error) {
+      logError(error, { action: 'handleAvatarUpload' });
+      showError(getErrorMessage(error, 'upload_photo', language));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -132,7 +214,7 @@ export function useEditProfile(language: 'en' | 'es') {
       return;
     }
 
-    if (formData.photos.length >= 6) {
+    if (formData.photos.length >= 8) {
       showInfo(tr.maxPhotos);
       return;
     }
@@ -209,6 +291,9 @@ export function useEditProfile(language: 'en' | 'es') {
     try {
       setSaving(true);
 
+      // Strip cache-busting query string from avatar_url before persisting
+      const cleanAvatarUrl = formData.avatar_url ? formData.avatar_url.split('?')[0] : null;
+
       const updateResult = await updateUser(supabase, user.id, {
         name: formData.name,
         username: formData.username,
@@ -216,6 +301,7 @@ export function useEditProfile(language: 'en' | 'es') {
         location: formData.location,
         sports: formData.sports,
         photos: formData.photos,
+        avatar_url: cleanAvatarUrl,
         emergency_contact_name: formData.emergency_contact_name,
         emergency_contact_phone: formData.emergency_contact_phone,
         instagram_username: formData.instagram_username,
@@ -267,6 +353,7 @@ export function useEditProfile(language: 'en' | 'es') {
     uploadingBanner,
     formData,
     setFormData,
+    handleAvatarUpload,
     handlePhotoUpload,
     handleBannerUpload,
     removePhoto,
