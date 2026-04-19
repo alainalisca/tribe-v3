@@ -27,21 +27,14 @@ export interface Payment {
   updated_at: string;
 }
 
-export interface PaymentInsert extends Omit<Payment, 'id' | 'created_at' | 'updated_at'> {}
+export type PaymentInsert = Omit<Payment, 'id' | 'created_at' | 'updated_at'>;
 
 /**
  * Create a new payment record
  */
-export async function createPayment(
-  supabase: SupabaseClient,
-  payment: PaymentInsert
-): Promise<DalResult<Payment>> {
+export async function createPayment(supabase: SupabaseClient, payment: PaymentInsert): Promise<DalResult<Payment>> {
   try {
-    const { data, error } = await supabase
-      .from('payments')
-      .insert([payment])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('payments').insert([payment]).select().single();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -58,7 +51,9 @@ export async function fetchPayment(supabase: SupabaseClient, paymentId: string):
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
+      .select(
+        'id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at'
+      )
       .eq('id', paymentId)
       .single();
 
@@ -102,14 +97,13 @@ export async function updatePaymentStatus(
 /**
  * Fetch payments for a session
  */
-export async function fetchSessionPayments(
-  supabase: SupabaseClient,
-  sessionId: string
-): Promise<DalResult<Payment[]>> {
+export async function fetchSessionPayments(supabase: SupabaseClient, sessionId: string): Promise<DalResult<Payment[]>> {
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
+      .select(
+        'id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at'
+      )
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -129,7 +123,9 @@ export async function fetchUserPayments(supabase: SupabaseClient, userId: string
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select('id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at')
+      .select(
+        'id, session_id, participant_user_id, amount_cents, currency, gateway, status, platform_fee_cents, instructor_payout_cents, gateway_payment_id, gateway_reference, wompi_payment_method, stripe_payment_intent_id, stripe_customer_id, payout_status, created_at, updated_at'
+      )
       .eq('participant_user_id', userId)
       .order('created_at', { ascending: false })
       .limit(200);
@@ -152,10 +148,12 @@ export async function fetchInstructorPayouts(
   try {
     const { data, error } = await supabase
       .from('payments')
-      .select(`
+      .select(
+        `
         *,
         session:sessions(creator_id)
-      `)
+      `
+      )
       .eq('session.creator_id', instructorUserId)
       .eq('status', 'approved')
       .order('created_at', { ascending: false });
