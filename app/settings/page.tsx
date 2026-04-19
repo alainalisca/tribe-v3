@@ -1,8 +1,21 @@
 /** Page: /settings — App settings: notifications, theme, language, account */
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Globe, LogOut, Shield, Trash2, MessageSquare, Bug } from 'lucide-react';
+import {
+  ArrowLeft,
+  Globe,
+  LogOut,
+  Shield,
+  Trash2,
+  MessageSquare,
+  Bug,
+  Dumbbell,
+  HeartHandshake,
+  ShoppingBag,
+} from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
@@ -10,12 +23,18 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useSettings } from './useSettings';
 import { useRouter } from 'next/navigation';
+import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
   const router = useRouter();
+
+  useEffect(() => {
+    trackEvent('settings_opened');
+  }, []);
   const {
     txt,
+    user,
     userIsAdmin,
     showDeleteConfirm,
     deleteInput,
@@ -37,7 +56,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -47,24 +66,41 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Admin Section - Only for admin */}
         {userIsAdmin && (
-          <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-5 h-5 text-tribe-green" />
               <h2 className="text-lg font-bold text-theme-primary">{txt.admin}</h2>
             </div>
             <Link href="/admin">
-              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-[#b0d853] transition font-semibold">
+              <button className="w-full p-4 rounded-xl text-left bg-tribe-green text-slate-900 hover:bg-tribe-green-hover transition font-semibold">
                 {txt.adminPanel}
               </button>
             </Link>
           </div>
         )}
 
+        {/* My Orders Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <ShoppingBag className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{language === 'es' ? 'Mis Compras' : 'My Orders'}</h2>
+          </div>
+          <Link href="/my-orders">
+            <Button
+              variant="ghost"
+              className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid flex items-center gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {language === 'es' ? 'Ver historial de compras' : 'View purchase history'}
+            </Button>
+          </Link>
+        </div>
+
         {/* Help & Feedback Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <MessageSquare className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.help}</h2>
@@ -73,7 +109,7 @@ export default function SettingsPage() {
             <Link href="/feedback">
               <Button
                 variant="ghost"
-                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D] flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid flex items-center gap-2"
               >
                 <MessageSquare className="w-4 h-4" />
                 {txt.feedback}
@@ -86,7 +122,7 @@ export default function SettingsPage() {
                   e.preventDefault();
                   router.push('/feedback?tab=bug');
                 }}
-                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D] flex items-center gap-2"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid flex items-center gap-2"
               >
                 <Bug className="w-4 h-4" />
                 {txt.bugReport}
@@ -95,8 +131,35 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Featured Partners */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-4">
+            <HeartHandshake className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">
+              {language === 'es' ? 'Afiliados Destacados' : 'Featured Affiliates'}
+            </h2>
+          </div>
+          <Link href="/partners">
+            <button className="w-full p-4 rounded-xl text-left bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid transition font-semibold text-sm">
+              {language === 'es' ? 'Explorar afiliados y aplicar' : 'Explore affiliates & apply'}
+            </button>
+          </Link>
+        </div>
+
+        {/* Training Preferences Section */}
+        {user && (
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-2">
+              <Dumbbell className="w-5 h-5 text-tribe-green" />
+              <h2 className="text-lg font-bold text-theme-primary">{txt.trainingPreferences}</h2>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.trainingPreferencesDesc}</p>
+            <TrainingPreferencesForm userId={user.id} />
+          </div>
+        )}
+
         {/* Notifications Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <svg className="w-5 h-5 text-tribe-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -114,7 +177,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition font-semibold ${
                 notificationsEnabled
                   ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {notificationsEnabled ? txt.notificationsEnabledLabel : txt.enableNotifications}
@@ -126,10 +189,10 @@ export default function SettingsPage() {
               disabled={loadingReminders || !notificationsEnabled}
               className={`w-full p-4 rounded-xl text-left transition font-semibold ${
                 !notificationsEnabled
-                  ? 'bg-stone-50 dark:bg-[#272D34] text-stone-400 dark:text-gray-500 cursor-not-allowed'
+                  ? 'bg-stone-50 dark:bg-tribe-dark text-stone-400 dark:text-gray-500 cursor-not-allowed'
                   : sessionRemindersEnabled
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -153,7 +216,7 @@ export default function SettingsPage() {
 
         {/* Notification Debug Section — admin only */}
         {userIsAdmin && (
-          <div className="bg-[#1a1a2e] rounded-2xl p-5 border border-gray-700">
+          <div className="bg-tribe-dark rounded-2xl p-5 border border-gray-700">
             <div className="flex items-center gap-3 mb-4">
               <Bug className="w-5 h-5 text-yellow-400" />
               <h2 className="text-lg font-bold text-yellow-400">Notification Debug</h2>
@@ -161,7 +224,7 @@ export default function SettingsPage() {
             <button
               onClick={runNotificationDiagnostic}
               disabled={debugRunning}
-              className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black hover:bg-yellow-400 disabled:opacity-50 mb-3"
+              className="w-full p-3 rounded-xl text-left transition font-semibold bg-yellow-500 text-black dark:text-white hover:bg-yellow-400 disabled:opacity-50 mb-3"
             >
               {debugRunning ? 'Running...' : 'Run Diagnostic'}
             </button>
@@ -176,7 +239,7 @@ export default function SettingsPage() {
         )}
 
         {/* Language Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-5 h-5 text-tribe-green" />
             <h2 className="text-lg font-bold text-theme-primary">{txt.language}</h2>
@@ -188,7 +251,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'en'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {txt.english}
@@ -198,7 +261,7 @@ export default function SettingsPage() {
               className={`w-full p-4 rounded-xl text-left transition ${
                 language === 'es'
                   ? 'bg-tribe-green text-slate-900 font-semibold'
-                  : 'bg-stone-100 dark:bg-[#3D4349] text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-[#52575D]'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
               {txt.spanish}
@@ -207,13 +270,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Legal Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.legal}</h2>
           <div className="space-y-2">
             <Link href="/legal/terms">
               <Button
                 variant="ghost"
-                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
               >
                 {txt.terms}
               </Button>
@@ -221,7 +284,7 @@ export default function SettingsPage() {
             <Link href="/legal/privacy">
               <Button
                 variant="ghost"
-                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
               >
                 {txt.privacy}
               </Button>
@@ -229,7 +292,7 @@ export default function SettingsPage() {
             <Link href="/legal/safety">
               <Button
                 variant="ghost"
-                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-[#3D4349] hover:bg-stone-200 dark:hover:bg-[#52575D]"
+                className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
               >
                 {txt.safety}
               </Button>
@@ -238,7 +301,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Account Section */}
-        <div className="bg-white dark:bg-[#272D34] rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
           <Button
             variant="destructive"
@@ -251,7 +314,7 @@ export default function SettingsPage() {
           <Button
             variant="ghost"
             onClick={openDeleteConfirm}
-            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-[#3D4349] text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-[#52575D]"
+            className="w-full flex items-center justify-center gap-2 py-3 mt-3 bg-stone-200 dark:bg-tribe-surface text-red-600 font-semibold rounded-xl hover:bg-stone-300 dark:hover:bg-tribe-mid"
           >
             <Trash2 className="w-5 h-5" />
             {txt.deleteAccount}
@@ -261,7 +324,7 @@ export default function SettingsPage() {
 
       {/* Delete Account Confirmation Modal */}
       <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && closeDeleteConfirm()}>
-        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-[#404549]">
+        <DialogContent data-modal="true" className="max-w-sm rounded-xl p-6 dark:bg-tribe-surface">
           <DialogTitle className="text-lg font-bold text-red-600">{txt.deleteModalTitle}</DialogTitle>
           <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{txt.deleteModalDesc}</p>
           <Input
@@ -269,13 +332,13 @@ export default function SettingsPage() {
             value={deleteInput}
             onChange={(e) => setDeleteInput(e.target.value)}
             placeholder={txt.deleteConfirmWord}
-            className="mb-4 dark:bg-[#52575D] dark:border-[#52575D] dark:text-white"
+            className="mb-4 dark:bg-tribe-mid dark:border-tribe-mid dark:text-white"
             autoComplete="off"
           />
           <div className="flex gap-3">
             <button
               onClick={closeDeleteConfirm}
-              className="flex-1 py-2.5 border border-stone-300 dark:border-[#52575D] rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium"
+              className="flex-1 py-2.5 border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium"
             >
               {txt.cancel}
             </button>

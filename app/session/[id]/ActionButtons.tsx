@@ -1,10 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
-import { downloadICS } from '@/lib/calendar';
+import { LogOut, Trash2, MessageCircle, Lock, CreditCard, Loader2 } from 'lucide-react';
+import { downloadICS, downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { showError } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
+import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -45,6 +51,48 @@ export default function ActionButtons({
   creatingInvite,
 }: ActionButtonsProps) {
   const { t } = useLanguage();
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  const isPaidSession = !!session.is_paid && session.price_cents > 0;
+  const calendarData = {
+    title: `${session.sport} — ${session.title || 'Tribe Session'}`,
+    description: `Session with ${session.creator?.name || 'Instructor'} on Tribe.`,
+    startDate: new Date(`${session.date}T${session.start_time || '00:00'}`),
+    durationMinutes: session.duration || 60,
+    location: session.location || undefined,
+  };
+
+  // formatPrice imported from @/lib/formatCurrency
+
+  // Handle paid session checkout — calls /api/payment/create and redirects to gateway
+  async function handlePaidJoin() {
+    if (!user || !session) return;
+    setProcessingPayment(true);
+    trackEvent('payment_initiated', {
+      session_id: session.id,
+      amount_cents: session.price_cents,
+      currency: session.currency,
+      gateway: session.currency === 'COP' ? 'wompi' : 'stripe',
+    });
+    try {
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: session.id }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.redirect_url) {
+        window.location.href = data.data.redirect_url;
+      } else {
+        showError(data.error || (_language === 'es' ? 'Error al procesar pago' : 'Payment processing failed'));
+        setProcessingPayment(false);
+      }
+    } catch {
+      showError(_language === 'es' ? 'Error de conexión' : 'Connection error');
+      setProcessingPayment(false);
+    }
+  }
+
   return (
     <div className="space-y-2">
       {!user ? (
@@ -145,6 +193,51 @@ export default function ActionButtons({
           <Lock className="w-5 h-5" />
           {t('inviteOnlyLabel')}
         </div>
+      ) : isPaidSession ? (
+        /* ── Paid session: show price + Pay button ── */
+        <div className="space-y-2">
+          <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                  {_language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+                </p>
+                <p className="text-lg font-bold text-green-800 dark:text-green-200">
+                  {session.currency || 'COP'}{' '}
+                  {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}
+                </p>
+              </div>
+              <div className="text-xs text-green-600 dark:text-green-400 text-right">
+                {session.currency === 'USD' ? '💳 Stripe' : '🇨🇴 Wompi'}
+                <br />
+                {session.currency === 'USD'
+                  ? _language === 'es'
+                    ? 'Tarjeta de crédito/débito'
+                    : 'Credit/debit card'
+                  : _language === 'es'
+                    ? 'Nequi, PSE, tarjeta'
+                    : 'Nequi, PSE, card'}
+              </div>
+            </div>
+          </div>
+          <Button
+            onClick={handlePaidJoin}
+            disabled={processingPayment || sessionActions.joining}
+            className="w-full py-3 font-bold bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+          >
+            {processingPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {_language === 'es' ? 'Procesando...' : 'Processing...'}
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-5 h-5" />
+                {_language === 'es' ? 'Pagar y unirse' : 'Pay & Join'}
+              </>
+            )}
+          </Button>
+        </div>
       ) : (
         <Button onClick={sessionActions.handleJoin} disabled={sessionActions.joining} className="w-full py-3 font-bold">
           {sessionActions.joining ? t('joining') : t('joinSession')}
@@ -154,7 +247,7 @@ export default function ActionButtons({
       {(hasJoined || isCreator) && !isPast && (
         <Link
           href={`/session/${session.id}/chat`}
-          className="w-full py-3 bg-stone-100 dark:bg-[#52575D] text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-[#5d6269] transition flex items-center justify-center gap-2"
+          className="w-full py-3 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
         >
           <MessageCircle className="w-5 h-5" />
           {t('groupChat')}
@@ -165,7 +258,8 @@ export default function ActionButtons({
           {creatingInvite ? t('generating') : t('inviteFriend')}
         </Button>
       )}
-      {(hasJoined || isCreator) && (
+      {/* Calendar integration: legacy ICS for creators, enhanced dual-button for joined users */}
+      {isCreator && !hasJoined && (
         <Button
           onClick={() =>
             downloadICS({
@@ -182,16 +276,39 @@ export default function ActionButtons({
           variant="outline"
           className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-medium flex items-center justify-center gap-2"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
+          <CalendarIcon className="w-5 h-5" />
           {t('addToCalendar')}
         </Button>
+      )}
+      {hasJoined && (
+        <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
+          <p className="text-sm font-semibold text-stone-900 dark:text-white">
+            {_language === 'es' ? '¡Estás inscrito!' : "You're in!"}
+          </p>
+          <p className="text-xs text-stone-500 dark:text-gray-400">
+            {_language === 'es' ? 'Agrega a tu calendario para no olvidar' : "Add to your calendar so you don't forget"}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() =>
+                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` })
+              }
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+            >
+              <CalendarIcon className="w-4 h-4" />
+              Apple Calendar
+            </button>
+            <a
+              href={getGoogleCalendarUrl(calendarData)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+            >
+              <CalendarIcon className="w-4 h-4" />
+              Google
+            </a>
+          </div>
+        </div>
       )}
     </div>
   );

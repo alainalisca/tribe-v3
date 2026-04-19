@@ -42,10 +42,10 @@ export default function TrainingNowPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#404549] pb-32">
+    <div className="min-h-screen bg-stone-100 dark:bg-tribe-surface pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-tribe-green border-b border-lime-600">
-        <div className="max-w-2xl mx-auto h-14 flex items-center gap-3 px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
           <Link href="/">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="w-6 h-6 text-slate-900" />
@@ -55,7 +55,7 @@ export default function TrainingNowPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto p-4 space-y-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         {/* Sport Selection */}
         <div>
           <label className="block text-sm font-bold text-stone-800 dark:text-white mb-3">{txt.whatTraining}</label>
@@ -67,7 +67,7 @@ export default function TrainingNowPage() {
                 className={`px-4 py-2.5 rounded-full text-sm font-semibold transition ${
                   formData.sport === sport
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-[#7B8188]'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent hover:bg-stone-100 dark:hover:bg-tribe-card'
                 }`}
               >
                 {getTranslatedSport(sport)}
@@ -112,7 +112,7 @@ export default function TrainingNowPage() {
                 className={`py-3 rounded-xl font-semibold transition ${
                   formData.startIn === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}
@@ -132,7 +132,7 @@ export default function TrainingNowPage() {
                 className={`py-3 rounded-xl font-semibold transition text-sm ${
                   formData.duration === option.value
                     ? 'bg-tribe-green text-slate-900'
-                    : 'bg-white dark:bg-[#6B7178] text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
+                    : 'bg-white dark:bg-tribe-card text-stone-700 dark:text-white border border-stone-300 dark:border-transparent'
                 }`}
               >
                 {option.label}

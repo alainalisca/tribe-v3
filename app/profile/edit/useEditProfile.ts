@@ -9,7 +9,52 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getEditProfileTranslations } from './translations';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
+import { compressImage } from '@/components/stories/storyUploadHelpers';
 import type { User } from '@supabase/supabase-js';
+
+/** Compress headshot to max 600px dimension at 85% JPEG quality */
+async function compressAvatar(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onerror = () => resolve(file);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const MAX = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            if (w > MAX) {
+              h *= MAX / w;
+              w = MAX;
+            }
+          } else {
+            if (h > MAX) {
+              w *= MAX / h;
+              h = MAX;
+            }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.85);
+        } catch {
+          resolve(file);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export interface EditProfileFormData {
   name: string;
@@ -18,10 +63,23 @@ export interface EditProfileFormData {
   location: string;
   sports: string[];
   photos: string[];
+  avatar_url: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
   instagram_username: string;
   facebook_url: string;
+  // Instructor profile fields
+  is_instructor: boolean;
+  instructor_bio: string;
+  specialties: string[];
+  certifications: string[];
+  years_experience: number | null;
+  website_url: string;
+  // Storefront fields (wizard step 2)
+  storefront_tagline: string;
+  storefront_banner_url: string;
+  // Monetization fields (wizard step 3)
+  earnings_currency: string;
 }
 
 export function useEditProfile(language: 'en' | 'es') {
@@ -34,6 +92,7 @@ export function useEditProfile(language: 'en' | 'es') {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const [formData, setFormData] = useState<EditProfileFormData>({
     name: '',
@@ -42,10 +101,20 @@ export function useEditProfile(language: 'en' | 'es') {
     location: '',
     sports: [],
     photos: [],
+    avatar_url: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
     instagram_username: '',
     facebook_url: '',
+    is_instructor: false,
+    instructor_bio: '',
+    specialties: [],
+    certifications: [],
+    years_experience: null,
+    website_url: '',
+    storefront_tagline: '',
+    storefront_banner_url: '',
+    earnings_currency: 'COP',
   });
 
   useEffect(() => {
@@ -76,10 +145,20 @@ export function useEditProfile(language: 'en' | 'es') {
           location: profileData.location || '',
           sports: profileData.sports || [],
           photos: profileData.photos || [],
+          avatar_url: profileData.avatar_url || '',
           emergency_contact_name: profileData.emergency_contact_name || '',
           emergency_contact_phone: profileData.emergency_contact_phone || '',
           instagram_username: profileData.instagram_username || '',
           facebook_url: profileData.facebook_url || '',
+          is_instructor: profileData.is_instructor || false,
+          instructor_bio: profileData.instructor_bio || '',
+          specialties: profileData.specialties || [],
+          certifications: profileData.certifications || [],
+          years_experience: profileData.years_experience ?? null,
+          website_url: profileData.website_url || '',
+          storefront_tagline: profileData.storefront_tagline || '',
+          storefront_banner_url: profileData.storefront_banner_url || '',
+          earnings_currency: profileData.earnings_currency || 'COP',
         });
       }
     } catch (err) {
@@ -87,6 +166,41 @@ export function useEditProfile(language: 'en' | 'es') {
       setError('load_failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedImageTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      // Compress to max 600px, quality 85 for headshot (smaller than gallery photos)
+      const compressed = await compressAvatar(file);
+      const path = `avatars/${user.id}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(path, compressed, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(path);
+
+      // Cache-bust the URL so the new image shows immediately
+      const bustedUrl = `${publicUrl}?t=${Date.now()}`;
+      setFormData((prev) => ({ ...prev, avatar_url: bustedUrl }));
+    } catch (error) {
+      logError(error, { action: 'handleAvatarUpload' });
+      showError(getErrorMessage(error, 'upload_photo', language));
+    } finally {
+      setUploadingPhoto(false);
     }
   }
 
@@ -100,7 +214,7 @@ export function useEditProfile(language: 'en' | 'es') {
       return;
     }
 
-    if (formData.photos.length >= 6) {
+    if (formData.photos.length >= 8) {
       showInfo(tr.maxPhotos);
       return;
     }
@@ -139,11 +253,46 @@ export function useEditProfile(language: 'en' | 'es') {
     });
   }
 
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showError(language === 'es' ? 'Tipo de archivo no válido' : 'Invalid file type');
+      return;
+    }
+
+    try {
+      setUploadingBanner(true);
+      const compressed = await compressImage(file);
+      const path = `banners/banner-${user.id}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from('profile-images').upload(path, compressed, {
+        contentType: 'image/jpeg',
+      });
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('profile-images').getPublicUrl(path);
+
+      setFormData({ ...formData, storefront_banner_url: publicUrl });
+    } catch (error) {
+      logError(error, { action: 'handleBannerUpload' });
+      showError(getErrorMessage(error, 'upload_photo', language));
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
   async function handleSave() {
     if (!user) return;
 
     try {
       setSaving(true);
+
+      // Strip cache-busting query string from avatar_url before persisting
+      const cleanAvatarUrl = formData.avatar_url ? formData.avatar_url.split('?')[0] : null;
 
       const updateResult = await updateUser(supabase, user.id, {
         name: formData.name,
@@ -152,10 +301,20 @@ export function useEditProfile(language: 'en' | 'es') {
         location: formData.location,
         sports: formData.sports,
         photos: formData.photos,
+        avatar_url: cleanAvatarUrl,
         emergency_contact_name: formData.emergency_contact_name,
         emergency_contact_phone: formData.emergency_contact_phone,
         instagram_username: formData.instagram_username,
         facebook_url: formData.facebook_url,
+        is_instructor: formData.is_instructor,
+        instructor_bio: formData.instructor_bio || null,
+        specialties: formData.specialties,
+        certifications: formData.certifications,
+        years_experience: formData.years_experience,
+        website_url: formData.website_url || null,
+        storefront_tagline: formData.storefront_tagline || null,
+        storefront_banner_url: formData.storefront_banner_url || null,
+        earnings_currency: formData.earnings_currency || 'COP',
       });
 
       if (!updateResult.success) throw new Error(updateResult.error);
@@ -191,9 +350,12 @@ export function useEditProfile(language: 'en' | 'es') {
     error,
     saving,
     uploadingPhoto,
+    uploadingBanner,
     formData,
     setFormData,
+    handleAvatarUpload,
     handlePhotoUpload,
+    handleBannerUpload,
     removePhoto,
     handleSave,
     toggleSport,

@@ -52,6 +52,7 @@ export async function fetchChatMessagesWithUsers(
       .from('chat_messages')
       .select(`id, user_id, message, created_at, deleted, user:users!chat_messages_user_id_fkey (name, avatar_url)`)
       .eq('session_id', sessionId)
+      .eq('deleted', false)
       .order('created_at', { ascending: true })
       .limit(200);
     if (error) return { success: false, error: error.message };

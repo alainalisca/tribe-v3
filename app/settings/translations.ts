@@ -35,6 +35,11 @@ export function getSettingsTranslations(language: 'en' | 'es') {
     deleteConfirmWord: language === 'es' ? 'ELIMINAR' : 'DELETE',
     cancel: language === 'es' ? 'Cancelar' : 'Cancel',
     delete: language === 'es' ? 'Eliminar' : 'Delete',
+    trainingPreferences: language === 'es' ? 'Preferencias de Entrenamiento' : 'Training Preferences',
+    trainingPreferencesDesc:
+      language === 'es'
+        ? 'Configura tus deportes, horarios y preferencias para encontrar compañeros de entrenamiento'
+        : 'Set your sports, schedule and preferences to find training partners',
   };
 }
 

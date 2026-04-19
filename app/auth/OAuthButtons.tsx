@@ -9,6 +9,7 @@ interface OAuthButtonsProps {
   appleLoading: boolean;
   googleLoading: boolean;
   loading: boolean;
+  language: 'en' | 'es';
   onAppleSignIn: () => void;
   onGoogleSignIn: () => void;
 }
@@ -18,6 +19,7 @@ export default function OAuthButtons({
   appleLoading,
   googleLoading,
   loading,
+  language,
   onAppleSignIn,
   onGoogleSignIn,
 }: OAuthButtonsProps) {
@@ -38,7 +40,7 @@ export default function OAuthButtons({
         <Button
           onClick={onAppleSignIn}
           disabled={appleLoading || googleLoading || loading}
-          className="w-full py-3 bg-black text-white hover:bg-gray-900 font-semibold"
+          className="w-full py-3 bg-black text-white hover:bg-stone-900 font-semibold"
         >
           <svg className="w-5 h-5" viewBox="0 0 17 20" fill="currentColor">
             <path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.494-1.31-1.494-1.31-.997-1.27-2.551-1.443-3.104-1.463-.059-.006-.117-.009-.175-.009-1.17 0-2.285.694-2.882.694-.628 0-1.594-.676-2.619-.658C3.767 4.16 2.485 4.905 1.77 6.104.303 8.544 1.398 12.134 2.807 14.11c.685.966 1.502 2.05 2.576 2.012 1.033-.041 1.423-.669 2.672-.669 1.217 0 1.577.669 2.654.648 1.112-.019 1.812-.984 2.489-1.955.551-.789.952-1.604 1.163-2.052-.025-.011-2.818-1.082-2.816-4.29v-.565zM11.028 2.869C11.612 2.163 12.008 1.19 11.898.2c-.836.034-1.85.558-2.45 1.262-.538.624-.959 1.62-.839 2.576.933.073 1.884-.474 2.419-1.169z" />
@@ -51,7 +53,7 @@ export default function OAuthButtons({
         variant="outline"
         onClick={onGoogleSignIn}
         disabled={googleLoading || appleLoading || loading}
-        className="w-full py-3 bg-white dark:bg-gray-100 text-stone-700 font-semibold border-stone-300 hover:bg-stone-50 dark:hover:bg-gray-200 mt-3"
+        className="w-full py-3 bg-white dark:bg-stone-100 text-stone-700 font-semibold border-stone-300 hover:bg-stone-50 dark:hover:bg-stone-200 mt-3"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">
           <path
@@ -74,10 +76,12 @@ export default function OAuthButtons({
         {googleLoading ? t.loading : t.continueWithGoogle}
       </Button>
 
-      <div className="flex items-center gap-4 my-3">
-        <div className="flex-1 h-px bg-stone-300 dark:bg-gray-500"></div>
-        <span className="text-xs text-muted-foreground">{t.or}</span>
-        <div className="flex-1 h-px bg-stone-300 dark:bg-gray-500"></div>
+      <div className="relative flex items-center my-6">
+        <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
+        <span className="px-4 text-xs uppercase tracking-wider text-stone-400 dark:text-gray-500">
+          {language === 'es' ? 'o' : 'or'}
+        </span>
+        <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
       </div>
     </>
   );

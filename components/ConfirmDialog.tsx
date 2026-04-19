@@ -46,7 +46,7 @@ export default function ConfirmDialog({
       <AlertDialogContent
         data-confirm-dialog="true"
         data-modal="true"
-        className="bg-white dark:bg-[#404549] rounded-xl p-6 max-w-sm w-full shadow-xl"
+        className="bg-white dark:bg-tribe-surface rounded-xl p-6 max-w-sm w-full shadow-xl"
       >
         <AlertDialogHeader>
           <AlertDialogTitle className="text-lg font-bold text-stone-900 dark:text-white">{title}</AlertDialogTitle>
@@ -58,7 +58,7 @@ export default function ConfirmDialog({
           <AlertDialogCancel
             data-confirm-cancel="true"
             onClick={onCancel}
-            className="flex-1 py-2.5 border-stone-300 dark:border-[#52575D] text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-[#52575D] font-medium rounded-lg"
+            className="flex-1 py-2.5 border-stone-300 dark:border-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-100 dark:hover:bg-tribe-mid font-medium rounded-lg"
           >
             {cancelLabel}
           </AlertDialogCancel>

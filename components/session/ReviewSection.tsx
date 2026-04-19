@@ -81,7 +81,7 @@ export default function ReviewSection({
           </div>
           <button
             onClick={() => setShowRatingModal(true)}
-            className="px-4 py-2 bg-white text-slate-900 font-bold rounded-lg hover:bg-stone-100 transition"
+            className="px-4 py-2 bg-white dark:bg-tribe-surface text-slate-900 dark:text-white font-bold rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
           >
             {t('rate')}
           </button>
@@ -90,7 +90,7 @@ export default function ReviewSection({
 
       {/* Rating Modal */}
       <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
-        <DialogContent data-modal="true" className="bg-white dark:bg-[#6B7178] rounded-xl max-w-md w-full p-6">
+        <DialogContent data-modal="true" className="bg-white dark:bg-tribe-card rounded-xl max-w-md w-full p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-theme-primary">{t('rateThisSession')}</DialogTitle>
             <DialogDescription className="text-sm text-stone-600 dark:text-gray-300">
@@ -109,7 +109,7 @@ export default function ReviewSection({
               onChange={(e) => setReviewComment(e.target.value)}
               placeholder={t('shareExperiencePlaceholder')}
               rows={3}
-              className="w-full px-4 py-3 border border-stone-300 dark:border-[#52575D] rounded-lg bg-white dark:bg-[#52575D] text-theme-primary resize-none"
+              className="w-full px-4 py-3 border border-stone-300 dark:border-tribe-mid rounded-lg bg-white dark:bg-tribe-mid text-theme-primary resize-none"
             />
           </div>
 

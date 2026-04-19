@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { celebrateJoin } from '@/lib/confetti';
+import { trackEvent } from '@/lib/analytics';
 import { joinSession } from '@/lib/sessions';
+import { haptic } from '@/lib/haptics';
 import { cancelSession, updateParticipantCount, deleteParticipantBySessionAndUser } from '@/lib/dal';
 import type { UseSessionActionsParams, ConfirmAction, GuestData } from './sessionActionTypes';
 import { getJoinErrorMessages } from './sessionActionTypes';
@@ -54,6 +56,7 @@ export function useSessionActions({
         userName: user.user_metadata?.name || user.email || 'Someone',
       });
       if (!result.success) {
+        haptic('warning');
         const errorMessages = getJoinErrorMessages(language);
         showInfo(
           errorMessages[result.error!] ||
@@ -63,12 +66,19 @@ export function useSessionActions({
         return;
       }
       if (result.status === 'pending') {
+        haptic('light');
         showSuccess(
           language === 'es'
             ? '¡Solicitud enviada! El organizador revisará tu perfil.'
             : 'Request sent! The host will review your profile and decide.'
         );
       } else {
+        haptic('success');
+        trackEvent('session_joined', {
+          session_id: session.id,
+          session_type: 'free',
+          sport: session.sport,
+        });
         celebrateJoin();
         showSuccess(
           language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone."
@@ -76,6 +86,7 @@ export function useSessionActions({
       }
       await onSessionUpdated();
     } catch (error) {
+      haptic('error');
       showError(getErrorMessage(error, 'join_session', language));
     } finally {
       setJoining(false);
@@ -95,11 +106,13 @@ export function useSessionActions({
       setGuestParticipantId(data.id);
       notifyHostOfGuestJoin(session, guestData.name);
       sendGuestConfirmationEmail(session, guestData, language);
+      haptic('success');
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
       setShowGuestModal(false);
       celebrateJoin();
       onSessionUpdated();
     } catch (error) {
+      haptic('error');
       if (error instanceof Error && error.message === 'SESSION_FULL') {
         showError(language === 'es' ? 'Esta sesión está llena' : 'This session is full');
       } else {
@@ -159,8 +172,8 @@ export function useSessionActions({
       title: language === 'es' ? 'Cancelar sesión' : 'Cancel session',
       message:
         language === 'es'
-          ? '¿Cancelar esta sesión? Todos los participantes serán notificados. Esto no se puede deshacer.'
-          : 'Cancel this session? All participants will be notified. This cannot be undone.',
+          ? '¿Cancelar esta sesión? Todos los atletas serán notificados. Esto no se puede deshacer.'
+          : 'Cancel this session? All athletes will be notified. This cannot be undone.',
       onConfirm: () => doCancel(),
     });
   }
@@ -178,7 +191,7 @@ export function useSessionActions({
 
   function handleKickUser(userId: string, userName: string) {
     setConfirmAction({
-      title: language === 'es' ? 'Eliminar participante' : 'Remove participant',
+      title: language === 'es' ? 'Eliminar atleta' : 'Remove athlete',
       message: language === 'es' ? `¿Eliminar a ${userName} de esta sesión?` : `Remove ${userName} from this session?`,
       onConfirm: () => doKickUser(userId),
     });

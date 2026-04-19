@@ -45,7 +45,7 @@ export default function RecapPhotos({
 
       {/* Session Recap Section */}
       {isPast && (
-        <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+        <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Camera className="w-5 h-5 text-tribe-green" />
@@ -59,11 +59,12 @@ export default function RecapPhotos({
           </div>
 
           {recapPhotos.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
               {recapPhotos.map((photo, idx) => (
                 <div key={photo.id} className="relative aspect-square group">
                   <button
                     onClick={() => onOpenLightbox(idx, 'recap')}
+                    aria-label="View recap photo"
                     className="w-full h-full rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
                   >
                     <img
@@ -82,6 +83,7 @@ export default function RecapPhotos({
                     {(photo.user_id === user?.id || canModerate) && (
                       <button
                         onClick={() => setConfirmDeletePhotoId(photo.id)}
+                        aria-label="Delete photo"
                         className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
                         title={language === 'es' ? 'Eliminar' : 'Delete'}
                       >
@@ -91,6 +93,7 @@ export default function RecapPhotos({
                     {canModerate && photo.user_id !== user?.id && (
                       <button
                         onClick={() => reportRecapPhoto(photo.id, user, language, onPhotosChanged)}
+                        aria-label="Report photo"
                         className="p-1 bg-orange-500 text-white rounded hover:bg-orange-600"
                         title="Report"
                       >

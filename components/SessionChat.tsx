@@ -124,7 +124,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
 
   if (chat.loading) {
     return (
-      <Card className="dark:bg-[#6B7178] border-stone-300 dark:border-[#52575D] shadow-none">
+      <Card className="dark:bg-tribe-card border-stone-300 dark:border-tribe-mid shadow-none">
         <CardContent className="p-4">
           <p className="text-center text-stone-600 dark:text-gray-300">{tr.loadingChat}</p>
         </CardContent>
@@ -133,9 +133,9 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
   }
 
   return (
-    <Card className="dark:bg-[#6B7178] border-stone-300 dark:border-[#52575D] overflow-hidden flex flex-col h-[calc(100dvh-6rem)] shadow-none">
+    <Card className="dark:bg-tribe-card border-stone-300 dark:border-tribe-mid overflow-hidden flex flex-col h-[calc(100dvh-6rem)] shadow-none">
       {/* Chat Header */}
-      <div className="bg-stone-100 dark:bg-[#52575D] px-4 py-3 border-b border-stone-300 dark:border-[#52575D] flex-shrink-0">
+      <div className="bg-stone-100 dark:bg-tribe-mid px-4 py-3 border-b border-stone-300 dark:border-tribe-mid flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-stone-900 dark:text-white">{tr.groupChat}</h3>
@@ -166,7 +166,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             if (msg.deleted) {
               return (
                 <div key={msg.id} className="flex gap-2">
-                  <div className="flex-1 p-3 bg-stone-100 dark:bg-[#52575D] rounded-lg opacity-50">
+                  <div className="flex-1 p-3 bg-stone-100 dark:bg-tribe-mid rounded-lg opacity-50">
                     <p className="text-xs text-stone-500 italic">{tr.messageDeleted}</p>
                   </div>
                 </div>
@@ -183,7 +183,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                 <Link href={`/profile/${msg.user_id}`} className="flex-shrink-0">
                   <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80">
                     <AvatarImage src={msg.user?.avatar_url || undefined} alt={msg.user?.name || ''} />
-                    <AvatarFallback className="bg-[#C0E863] text-[#272D34] text-xs font-semibold">
+                    <AvatarFallback className="bg-tribe-green-light text-tribe-dark text-xs font-semibold">
                       {getInitials(msg.user?.name || 'U')}
                     </AvatarFallback>
                   </Avatar>
@@ -197,7 +197,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                   </div>
                   <div className="flex items-start gap-1">
                     <div
-                      className={`rounded-2xl px-4 py-2 ${isOwnMessage ? 'bg-[#C0E863] text-[#272D34]' : 'bg-stone-200 dark:bg-[#52575D] text-stone-900 dark:text-white'}`}
+                      className={`rounded-2xl px-4 py-2 ${isOwnMessage ? 'bg-tribe-green-light text-tribe-dark' : 'bg-stone-200 dark:bg-tribe-mid text-stone-900 dark:text-white'}`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     </div>
@@ -208,7 +208,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                           if (selectedMessage === msg.id) dismissMenu();
                           else openMessageMenu(msg.id, row);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-[#52575D] rounded transition"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-tribe-mid rounded transition"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
@@ -227,7 +227,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
         <>
           <div className="fixed inset-0 z-40" onClick={dismissMenu} />
           <div
-            className="fixed z-50 bg-white dark:bg-[#404549] border border-stone-300 dark:border-[#52575D] rounded-xl shadow-lg min-w-[160px] py-1"
+            className="fixed z-50 bg-white dark:bg-tribe-surface border border-stone-300 dark:border-tribe-mid rounded-xl shadow-lg min-w-[160px] py-1"
             style={{
               ...(menuPosition.showAbove
                 ? { bottom: `${window.innerHeight - menuPosition.top}px` }
@@ -241,7 +241,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                   chat.setConfirmDeleteId(selectedMessage);
                   dismissMenu();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-red-600"
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-tribe-mid flex items-center gap-2 text-red-600"
               >
                 <Trash2 className="w-4 h-4" />
                 {tr.delete}
@@ -253,7 +253,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                   chat.openReportModal(selectedMessage);
                   dismissMenu();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-[#52575D] flex items-center gap-2 text-orange-600"
+                className="w-full px-4 py-2.5 text-left text-sm hover:bg-stone-100 dark:hover:bg-tribe-mid flex items-center gap-2 text-orange-600"
               >
                 <Flag className="w-4 h-4" />
                 {tr.report}
@@ -264,7 +264,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
       )}
 
       {/* Message Input */}
-      <div className="p-4 bg-stone-50 dark:bg-[#52575D] border-t border-stone-300 dark:border-[#52575D] flex-shrink-0">
+      <div className="p-4 bg-stone-50 dark:bg-tribe-mid border-t border-stone-300 dark:border-tribe-mid flex-shrink-0">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
             type="text"
@@ -274,13 +274,13 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
             disabled={chat.sending}
             autoComplete="off"
             enterKeyHint="send"
-            className="flex-1 px-4 py-2 bg-white dark:bg-[#404549] dark:border-[#52575D] rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:ring-[#C0E863] disabled:opacity-50"
+            className="flex-1 px-4 py-2 bg-white dark:bg-tribe-surface dark:border-tribe-mid rounded-full text-stone-900 dark:text-white placeholder-gray-500 focus:ring-tribe-green-light disabled:opacity-50"
           />
           <Button
             type="submit"
             disabled={!newMessage.trim() || chat.sending}
             size="icon"
-            className="p-2 bg-[#C0E863] text-[#272D34] rounded-full hover:opacity-90"
+            className="p-2 bg-tribe-green-light text-tribe-dark rounded-full hover:opacity-90"
           >
             <Send className="w-5 h-5" />
           </Button>

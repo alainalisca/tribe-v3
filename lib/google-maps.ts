@@ -1,5 +1,11 @@
 let loadPromise: Promise<void> | null = null;
 
+/**
+ * Loads the Google Maps JavaScript SDK for Places Autocomplete.
+ * The NEXT_PUBLIC_GOOGLE_PLACES_KEY must have HTTP referrer restrictions
+ * configured in Google Cloud Console to limit it to your domain(s) only,
+ * and should be scoped to the Maps JavaScript API and Places API only.
+ */
 export function loadGoogleMaps(): Promise<void> {
   if (typeof window === 'undefined') return Promise.reject(new Error('Not in browser'));
   if (window.google?.maps?.places) return Promise.resolve();
@@ -27,18 +33,22 @@ export function loadGoogleMaps(): Promise<void> {
   return loadPromise;
 }
 
+/**
+ * Reverse geocodes coordinates via the server-side /api/geocode proxy.
+ * This keeps the Google API key server-side for geocoding operations,
+ * reducing client-side key exposure to only what the Places Autocomplete
+ * widget requires.
+ */
 export async function reverseGeocodeGoogle(
   lat: number,
   lng: number
 ): Promise<string | null> {
-  await loadGoogleMaps();
-  const geocoder = new google.maps.Geocoder();
-  const { results } = await geocoder.geocode({ location: { lat, lng } });
-  if (results?.[0]) {
-    const parts = results[0].formatted_address.split(',').map(p => p.trim());
-    return parts.length <= 2
-      ? results[0].formatted_address
-      : parts.slice(0, 3).join(', ');
+  try {
+    const response = await fetch(`/api/geocode?lat=${lat}&lon=${lng}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.display_name || null;
+  } catch {
+    return null;
   }
-  return null;
 }

@@ -25,12 +25,12 @@ interface AdminStatsProps {
 
 function StatCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <div className="bg-white rounded p-3 shadow">
+    <div className="bg-white dark:bg-tribe-surface rounded p-3 shadow">
       <div className="flex items-center justify-between mb-1">
         <p className="text-xs text-stone-600">{label}</p>
         {icon}
       </div>
-      <p className="text-lg font-bold text-[#272D34]">{value}</p>
+      <p className="text-lg font-bold text-tribe-dark">{value}</p>
     </div>
   );
 }
@@ -66,7 +66,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 2: Activity */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+        <h3 className="text-xs font-bold text-stone-700 dark:text-gray-300 mb-2 uppercase">
           {language === 'es' ? 'Actividad' : 'Activity'}
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -95,7 +95,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 3: Session Analytics */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+        <h3 className="text-xs font-bold text-stone-700 dark:text-gray-300 mb-2 uppercase">
           {language === 'es' ? 'Analisis de Sesiones' : 'Session Analytics'}
         </h3>
         <div className="grid grid-cols-2 gap-2">
@@ -115,7 +115,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
             icon={<span className="text-red-500 text-sm">&#10007;</span>}
           />
           <StatCard
-            label={language === 'es' ? 'Prom Participantes' : 'Avg Participants'}
+            label={language === 'es' ? 'Prom Atletas' : 'Avg Athletes'}
             value={stats.averageParticipants}
             icon={<Users className="w-4 h-4 text-blue-500" />}
           />
@@ -124,7 +124,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
 
       {/* Row 4: Engagement */}
       <div>
-        <h3 className="text-xs font-bold text-stone-700 mb-2 uppercase">
+        <h3 className="text-xs font-bold text-stone-700 dark:text-gray-300 mb-2 uppercase">
           {language === 'es' ? 'Compromiso' : 'Engagement'}
         </h3>
         <div className="grid grid-cols-2 gap-2">

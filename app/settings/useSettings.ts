@@ -9,6 +9,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getSettingsTranslations } from './translations';
 import { fetchUserField, fetchUserIsAdmin, deleteUser, updateUser } from '@/lib/dal';
+import { resetUser } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
 
 export function useSettings(language: 'en' | 'es') {
@@ -106,6 +107,7 @@ export function useSettings(language: 'en' | 'es') {
         logError(error, { action: 'handleSignOut', userId: user.id });
       }
     }
+    resetUser();
     await supabase.auth.signOut();
     router.push('/auth');
   }

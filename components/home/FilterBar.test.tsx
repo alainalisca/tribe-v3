@@ -2,12 +2,31 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FilterBar from './FilterBar';
 
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+    }),
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+    }),
+    removeChannel: vi.fn(),
+  }),
+}));
+
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
 vi.mock('@/components/LanguageToggle', () => ({
   default: () => <div data-testid="lang-toggle" />,
+}));
+
+vi.mock('@/components/NotificationBell', () => ({
+  default: () => <div data-testid="notification-bell" />,
 }));
 
 vi.mock('@/lib/translations', () => ({
@@ -29,6 +48,8 @@ function createDefaultProps(overrides = {}) {
     setDateFilter: vi.fn(),
     genderFilter: 'all',
     setGenderFilter: vi.fn(),
+    pricingFilter: 'all',
+    setPricingFilter: vi.fn(),
     maxDistance: 50,
     setMaxDistance: vi.fn(),
     userLocation: null,
@@ -85,7 +106,7 @@ describe('FilterBar', () => {
 
   it('renders gender filter options', () => {
     render(<FilterBar {...createDefaultProps()} />);
-    expect(screen.getByText(/All/)).toBeInTheDocument();
+    expect(screen.getAllByText(/All/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Women/)).toBeInTheDocument();
     expect(screen.getByText(/Men/)).toBeInTheDocument();
   });

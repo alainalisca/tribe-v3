@@ -73,9 +73,7 @@ export async function fetchAdminStatsRaw(supabase: SupabaseClient): Promise<DalR
 /**
  * Fetches all users with session created/joined counts for the admin user management tab.
  */
-export async function fetchAdminUsersWithCounts(
-  supabase: SupabaseClient
-): Promise<
+export async function fetchAdminUsersWithCounts(supabase: SupabaseClient): Promise<
   DalResult<{
     users: unknown[];
     sessionCounts: Array<{ creator_id: string }>;
@@ -84,7 +82,7 @@ export async function fetchAdminUsersWithCounts(
 > {
   try {
     const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-      supabase.from('users').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('users').select('id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count').order('created_at', { ascending: false }).limit(100),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
     ]);
@@ -189,5 +187,76 @@ export async function fetchAdminSessions(supabase: SupabaseClient): Promise<DalR
   } catch (error) {
     logError(error, { action: 'fetchAdminSessions' });
     return { success: false, error: 'Failed to fetch sessions' };
+  }
+}
+
+// --- Revenue metrics ---
+
+export interface RevenueMetrics {
+  totalRevenueCentsUSD: number;
+  totalRevenueCentsCOP: number;
+  totalPlatformFeesCentsUSD: number;
+  totalPlatformFeesCentsCOP: number;
+  totalPaymentsCount: number;
+  failedPaymentsCount: number;
+  thisMonthRevenueCentsUSD: number;
+  thisMonthRevenueCentsCOP: number;
+}
+
+export async function fetchRevenueMetrics(supabase: SupabaseClient): Promise<DalResult<RevenueMetrics>> {
+  try {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { data: allPayments } = await supabase
+      .from('payments')
+      .select('amount_cents, platform_fee_cents, currency, status')
+      .eq('status', 'approved');
+
+    const { count: failedCount } = await supabase
+      .from('payments')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['declined', 'error', 'voided']);
+
+    const { data: monthPayments } = await supabase
+      .from('payments')
+      .select('amount_cents, platform_fee_cents, currency')
+      .eq('status', 'approved')
+      .gte('created_at', startOfMonth.toISOString());
+
+    const metrics: RevenueMetrics = {
+      totalRevenueCentsUSD: 0,
+      totalRevenueCentsCOP: 0,
+      totalPlatformFeesCentsUSD: 0,
+      totalPlatformFeesCentsCOP: 0,
+      totalPaymentsCount: allPayments?.length || 0,
+      failedPaymentsCount: failedCount || 0,
+      thisMonthRevenueCentsUSD: 0,
+      thisMonthRevenueCentsCOP: 0,
+    };
+
+    for (const p of allPayments || []) {
+      if (p.currency === 'USD') {
+        metrics.totalRevenueCentsUSD += p.amount_cents || 0;
+        metrics.totalPlatformFeesCentsUSD += p.platform_fee_cents || 0;
+      } else {
+        metrics.totalRevenueCentsCOP += p.amount_cents || 0;
+        metrics.totalPlatformFeesCentsCOP += p.platform_fee_cents || 0;
+      }
+    }
+
+    for (const p of monthPayments || []) {
+      if (p.currency === 'USD') {
+        metrics.thisMonthRevenueCentsUSD += p.amount_cents || 0;
+      } else {
+        metrics.thisMonthRevenueCentsCOP += p.amount_cents || 0;
+      }
+    }
+
+    return { success: true, data: metrics };
+  } catch (error) {
+    logError(error, { action: 'fetchRevenueMetrics' });
+    return { success: false, error: 'Failed to fetch revenue metrics' };
   }
 }

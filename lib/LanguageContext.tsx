@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from './translations';
+import { trackEvent } from '@/lib/analytics';
 
 interface LanguageContextType {
   language: Language;
@@ -24,9 +25,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLanguage = (lang: Language) => {
+    const previousLang = language;
     setLanguageState(lang);
     if (typeof window !== 'undefined') {
       localStorage.setItem('language', lang);
+    }
+    if (previousLang !== lang) {
+      trackEvent('language_changed', { from: previousLang, to: lang });
     }
   };
 

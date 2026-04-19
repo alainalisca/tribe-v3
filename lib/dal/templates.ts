@@ -21,9 +21,10 @@ export async function fetchTemplatesByUser(supabase: SupabaseClient, userId: str
   try {
     const { data, error } = await supabase
       .from('session_templates')
-      .select('*')
+      .select('id, user_id, name, sport, location, duration, max_participants, description, created_at, updated_at')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
     if (error) return { success: false, error: error.message };
     return { success: true, data: data || [] };
   } catch (error) {

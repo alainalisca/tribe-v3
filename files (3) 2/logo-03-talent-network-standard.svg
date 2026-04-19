@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240">
+  <!-- Blue Chip Staffing LLC — Logo 03: Talent Network — Standard -->
+
+  <!-- Outer ring connections -->
+  <line x1="200" y1="20" x2="259" y2="54" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+  <line x1="259" y1="54" x2="259" y2="122" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+  <line x1="259" y1="122" x2="200" y2="156" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+  <line x1="200" y1="156" x2="141" y2="122" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+  <line x1="141" y1="122" x2="141" y2="54" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+  <line x1="141" y1="54" x2="200" y2="20" stroke="#1A56C8" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Center spokes -->
+  <line x1="200" y1="88" x2="200" y2="20" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+  <line x1="200" y1="88" x2="259" y2="54" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+  <line x1="200" y1="88" x2="259" y2="122" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+  <line x1="200" y1="88" x2="200" y2="156" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+  <line x1="200" y1="88" x2="141" y2="122" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+  <line x1="200" y1="88" x2="141" y2="54" stroke="#0D1B35" stroke-width="1.2" opacity="0.5"/>
+
+  <!-- Outer nodes -->
+  <circle cx="200" cy="20" r="8" fill="#0D1B35"/>
+  <circle cx="259" cy="54" r="8" fill="#0D1B35"/>
+  <circle cx="259" cy="122" r="8" fill="#0D1B35"/>
+  <circle cx="200" cy="156" r="8" fill="#0D1B35"/>
+  <circle cx="141" cy="122" r="8" fill="#0D1B35"/>
+  <circle cx="141" cy="54" r="8" fill="#0D1B35"/>
+
+  <!-- Center node -->
+  <circle cx="200" cy="88" r="23" fill="#1A56C8"/>
+  <circle cx="200" cy="88" r="11" fill="#ffffff"/>
+
+  <!-- Wordmark -->
+  <text x="200" y="196" text-anchor="middle" font-family="'Arial Black', 'Arial Bold', Arial, sans-serif" font-size="21" font-weight="900" fill="#0D1B35" letter-spacing="4">BLUE CHIP</text>
+  <line x1="96" y1="204" x2="152" y2="204" stroke="#64748B" stroke-width="0.8" opacity="0.5"/>
+  <line x1="248" y1="204" x2="304" y2="204" stroke="#64748B" stroke-width="0.8" opacity="0.5"/>
+  <text x="200" y="220" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="9" fill="#64748B" letter-spacing="5.5">STAFFING LLC</text>
+</svg>

@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { calculateDistance } from '@/lib/distance';
+import { ACTIVE_CITY } from '@/lib/city-config';
 import type { SessionWithRelations } from '@/lib/dal';
 
 const PAGE_SIZE = 20;
@@ -13,6 +14,8 @@ interface FilterState {
   maxDistance: number;
   dateFilter: string;
   genderFilter: string;
+  pricingFilter: string; // 'all' | 'free' | 'paid'
+  selectedNeighborhood: string | null;
 }
 
 interface UseSessionFilteringArgs {
@@ -27,6 +30,8 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
     maxDistance: 100,
     dateFilter: 'all',
     genderFilter: 'all',
+    pricingFilter: 'all',
+    selectedNeighborhood: null,
   });
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -86,6 +91,23 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
         (s) => s.gender_preference === filters.genderFilter || s.gender_preference === 'all' || !s.gender_preference
       );
     }
+    if (filters.pricingFilter !== 'all') {
+      filtered = filtered.filter((s) => (filters.pricingFilter === 'paid' ? s.is_paid === true : !s.is_paid));
+    }
+    if (filters.selectedNeighborhood) {
+      const hood = ACTIVE_CITY.neighborhoods.find((n) => n.id === filters.selectedNeighborhood);
+      if (hood) {
+        filtered = filtered.filter(
+          (s) =>
+            s.latitude != null &&
+            s.longitude != null &&
+            s.latitude >= hood.bounds.sw.lat &&
+            s.latitude <= hood.bounds.ne.lat &&
+            s.longitude >= hood.bounds.sw.lng &&
+            s.longitude <= hood.bounds.ne.lng
+        );
+      }
+    }
     return filtered;
   }, [sessions, filters, userLocation]);
 
@@ -94,6 +116,11 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
   const setMaxDistance = useCallback((v: number) => setFilters((f) => ({ ...f, maxDistance: v })), []);
   const setDateFilter = useCallback((v: string) => setFilters((f) => ({ ...f, dateFilter: v })), []);
   const setGenderFilter = useCallback((v: string) => setFilters((f) => ({ ...f, genderFilter: v })), []);
+  const setPricingFilter = useCallback((v: string) => setFilters((f) => ({ ...f, pricingFilter: v })), []);
+  const setSelectedNeighborhood = useCallback(
+    (v: string | null) => setFilters((f) => ({ ...f, selectedNeighborhood: v })),
+    []
+  );
 
   return {
     filteredSessions,
@@ -108,6 +135,10 @@ export function useSessionFiltering({ sessions, userLocation }: UseSessionFilter
     setDateFilter,
     genderFilter: filters.genderFilter,
     setGenderFilter,
+    pricingFilter: filters.pricingFilter,
+    setPricingFilter,
+    selectedNeighborhood: filters.selectedNeighborhood,
+    setSelectedNeighborhood,
     visibleCount,
     setVisibleCount,
     PAGE_SIZE,

@@ -24,10 +24,10 @@ export default function SessionHeader({
 }: SessionHeaderProps) {
   const { t } = useLanguage();
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-[#272D34] border-b border-stone-300 dark:border-black">
+    <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark border-b border-stone-300 dark:border-black">
       <div className="max-w-2xl mx-auto h-14 flex items-center gap-4 px-4">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="rounded-lg hover:bg-stone-300 dark:hover:bg-[#52575D]">
+          <Button variant="ghost" size="icon" className="rounded-lg hover:bg-stone-300 dark:hover:bg-tribe-mid">
             <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
           </Button>
         </Link>
@@ -35,7 +35,8 @@ export default function SessionHeader({
         {user && (hasJoined || isCreator) && (
           <button
             onClick={onAddStory}
-            className="relative p-2 hover:bg-stone-300 dark:hover:bg-[#52575D] rounded-lg transition"
+            className="relative p-2 hover:bg-stone-300 dark:hover:bg-tribe-mid rounded-lg transition"
+            aria-label="Add session story"
             title={language === 'es' ? 'Agregar Historia' : 'Add Story'}
           >
             <Camera className="w-6 h-6 text-tribe-green" />

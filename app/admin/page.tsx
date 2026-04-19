@@ -18,6 +18,8 @@ import {
   MessageList,
   SessionManagement,
 } from '@/components/admin';
+import { SkeletonCard } from '@/components/Skeleton';
+import { AdminRevenueTab } from '@/components/admin/AdminRevenueTab';
 import type { User as AuthUser } from '@supabase/supabase-js';
 
 import { useAdminData } from './useAdminData';
@@ -82,8 +84,15 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-stone-50">
-        <div className="text-lg">{t('loading')}</div>
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark p-4">
+        <div className="max-w-4xl mx-auto pt-20 space-y-4">
+          <div className="h-8 w-48 bg-stone-200 dark:bg-tribe-mid rounded animate-pulse" />
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -91,7 +100,7 @@ export default function AdminPage() {
 
   if (data.error) {
     return (
-      <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark flex flex-col items-center justify-center p-4">
         <p className="text-stone-900 text-lg mb-4">{language === 'es' ? 'Algo salió mal' : 'Something went wrong'}</p>
         <Button onClick={data.loadStats} className="font-bold">
           {language === 'es' ? 'Intentar de nuevo' : 'Try Again'}
@@ -108,10 +117,11 @@ export default function AdminPage() {
     { id: 'bugs', label: t('bugsLabel'), badge: pendingBugs.length, badgeColor: 'bg-orange-500' },
     { id: 'messages', label: t('messages') },
     { id: 'sessions', label: t('sessionsLabel') },
+    { id: 'revenue', label: language === 'es' ? 'Ingresos' : 'Revenue' },
   ];
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-32 safe-area-top">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32 safe-area-top">
       <div className="w-full max-w-md mx-auto px-3 py-4">
         <Link href="/settings" className="inline-flex items-center gap-1 text-stone-600 mb-3 text-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +130,7 @@ export default function AdminPage() {
           {t('back')}
         </Link>
 
-        <h1 className="text-lg font-bold text-[#272D34] mb-1">{t('adminPanel')}</h1>
+        <h1 className="text-lg font-bold text-tribe-dark mb-1">{t('adminPanel')}</h1>
         <p className="text-xs text-stone-600 mb-4 truncate">{user?.email}</p>
 
         <div
@@ -132,7 +142,7 @@ export default function AdminPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-2 py-1.5 text-xs font-medium whitespace-nowrap relative ${
-                activeTab === tab.id ? 'border-b-2 border-[#C0E863] text-[#272D34]' : 'text-stone-600'
+                activeTab === tab.id ? 'border-b-2 border-tribe-green-light text-tribe-dark' : 'text-stone-600'
               }`}
             >
               {tab.label}
@@ -147,7 +157,74 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {activeTab === 'dashboard' && <AdminStats stats={data.stats} />}
+        {activeTab === 'dashboard' && (
+          <>
+            <AdminStats stats={data.stats} />
+            {/* Quick-access cards */}
+            <div className="mt-4 space-y-3">
+              <Link
+                href="/admin/partners"
+                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl hover:bg-stone-50 dark:hover:bg-tribe-surface transition"
+              >
+                <span className="text-2xl">🤝</span>
+                <div>
+                  <p className="text-sm font-bold text-tribe-dark">
+                    {language === 'es' ? 'Gestionar Afiliados' : 'Manage Affiliates'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Aprobar, pausar y administrar afiliados destacados'
+                      : 'Approve, pause, and manage featured affiliates'}
+                  </p>
+                </div>
+              </Link>
+              <Link
+                href="/admin/bulletin"
+                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl hover:bg-stone-50 dark:hover:bg-tribe-surface transition"
+              >
+                <svg className="w-6 h-6 text-tribe-green-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-tribe-dark">
+                    {language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Revisar y aprobar publicaciones del tablon comunitario'
+                      : 'Review and approve community bulletin posts'}
+                  </p>
+                </div>
+              </Link>
+              <Link
+                href="/admin/events"
+                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl hover:bg-stone-50 dark:hover:bg-tribe-surface transition"
+              >
+                <svg className="w-6 h-6 text-tribe-green-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold text-tribe-dark">
+                    {language === 'es' ? 'Gestionar Eventos' : 'Manage Events'}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {language === 'es'
+                      ? 'Agregar y gestionar eventos fitness locales'
+                      : 'Add and manage local fitness events'}
+                  </p>
+                </div>
+              </Link>
+            </div>
+          </>
+        )}
         {activeTab === 'users' && (
           <UserManagement
             users={data.users}
@@ -202,6 +279,7 @@ export default function AdminPage() {
             onUnverify={actions.unverifySessionPhotos}
           />
         )}
+        {activeTab === 'revenue' && <AdminRevenueTab language={language} />}
       </div>
 
       <ConfirmDialog

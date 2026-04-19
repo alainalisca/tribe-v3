@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { X, Camera, Video, Send } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
@@ -209,12 +210,12 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
       <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
 
       <div
-        className="bg-white dark:bg-[#2C3137] w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
+        className="bg-white dark:bg-tribe-card w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-[#2C3137]">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700 bg-white dark:bg-tribe-card">
           <h3 className="text-lg font-bold text-theme-primary">{t.addStory}</h3>
           <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
             <X className="w-5 h-5 text-theme-primary" />
@@ -236,7 +237,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               />
             </div>
             <div className="relative w-full">
-              <div className="flex items-center gap-3 p-4 bg-stone-100 dark:bg-[#3D4349] text-theme-primary rounded-xl font-semibold">
+              <div className="flex items-center gap-3 p-4 bg-stone-100 dark:bg-tribe-surface text-theme-primary rounded-xl font-semibold">
                 <Video className="w-5 h-5" />
                 {t.chooseVideo}
               </div>
@@ -252,7 +253,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
           <div className="p-4 space-y-4">
             <div className="relative rounded-xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
               {mediaType === 'image' ? (
-                <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                <Image src={preview} alt="Story upload preview" fill className="object-contain" unoptimized />
               ) : (
                 <video src={preview} controls playsInline className="w-full h-full object-contain" />
               )}
@@ -270,7 +271,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
               onChange={(e) => setCaption(e.target.value)}
               placeholder={t.caption}
               maxLength={200}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-[#3D4349] border border-stone-200 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-gray-600 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-tribe-green"
             />
 
             <Button

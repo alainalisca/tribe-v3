@@ -42,7 +42,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         data-modal="true"
-        className="max-w-md rounded-2xl p-0 max-h-[80vh] flex flex-col dark:bg-[#404549] gap-0"
+        className="max-w-md rounded-2xl p-0 max-h-[80vh] flex flex-col dark:bg-tribe-surface gap-0"
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-600 flex-shrink-0">
@@ -61,7 +61,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                     formData.sport === sport
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {getTranslatedSport(sport)}
@@ -109,7 +109,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
                     formData.startIn === option.value
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {option.label}
@@ -134,7 +134,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
                   className={`flex-1 py-3 rounded-xl text-sm font-medium transition ${
                     formData.duration === option.value
                       ? 'bg-tribe-green text-slate-900'
-                      : 'bg-stone-100 dark:bg-[#52575D] text-theme-secondary hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-tribe-mid text-theme-secondary hover:bg-stone-200'
                   }`}
                 >
                   {option.label}
@@ -145,7 +145,7 @@ export default function TrainingNowModal({ isOpen, onClose, onSessionCreated, us
         </div>
 
         {/* Sticky Submit Button */}
-        <div className="p-4 border-t border-stone-200 dark:border-gray-600 flex-shrink-0 bg-white dark:bg-[#404549]">
+        <div className="p-4 border-t border-stone-200 dark:border-gray-600 flex-shrink-0 bg-white dark:bg-tribe-surface">
           {/* Submit Button */}
           <button
             onClick={handleSubmit}

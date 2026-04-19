@@ -2,7 +2,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Camera, MapPin, X, Settings } from 'lucide-react';
+import Image from 'next/image';
+import { Camera, MapPin, X, Settings, Store, HeartHandshake, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -10,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
+import AchievementBadges from '@/components/AchievementBadges';
 
 export default function ProfilePage() {
   const { language, t } = useLanguage();
@@ -46,7 +48,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-theme-page pb-32">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/">
             <h1 className="text-xl font-bold text-theme-primary cursor-pointer">
               Tribe<span className="text-tribe-green">.</span>
@@ -60,12 +62,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
         {/* Banner */}
         <div className="relative h-48 overflow-hidden">
-          <div className="w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
+          <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
             {profile?.banner_url && (
-              <img loading="lazy" src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+              <Image src={profile.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />
             )}
           </div>
           <div className="absolute bottom-4 right-4 z-30">
@@ -85,7 +87,7 @@ export default function ProfilePage() {
         <div className="px-4 -mt-16 relative z-10">
           {/* Avatar */}
           <div className="relative inline-block">
-            <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+            <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
               <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
               <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
                 {getInitials(profile?.name || 'User')}
@@ -118,11 +120,11 @@ export default function ProfilePage() {
 
           {/* Profile Completeness */}
           {pct !== null && (
-            <div className="mt-6 bg-white dark:bg-[#3D4349] rounded-2xl p-4">
+            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-theme-primary">{txt.profileComplete(pct)}</span>
               </div>
-              <div className="w-full h-1.5 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
                 <div
                   className="h-full bg-tribe-green rounded-full transition-all duration-500"
                   style={{ width: `${pct}%` }}
@@ -133,28 +135,74 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsCreated}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.created}</p>
             </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.sessionsJoined}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.joined}</p>
             </div>
-            <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-4 text-center border border-stone-200 dark:border-[#52575D]">
+            <div className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid">
               <p className="text-3xl font-bold text-theme-primary">{stats.totalSessions}</p>
               <p className="text-xs text-muted-foreground mt-1">{txt.total}</p>
             </div>
           </div>
 
+          {/* Achievement Badges */}
+          {profile?.id && (
+            <div className="mt-6">
+              <AchievementBadges userId={profile.id} isOwnProfile={true} />
+            </div>
+          )}
+
+          {/* My Training — personal dashboard for every athlete */}
+          {profile?.id && (
+            <Link
+              href="/my-training"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
+            >
+              <BarChart3 className="w-6 h-6 flex-shrink-0" />
+              <span className="font-bold text-base text-center">
+                {language === 'es' ? 'Mi Entrenamiento' : 'My Training'}
+              </span>
+            </Link>
+          )}
+
+          {/* Instructor Dashboard (instructors only) */}
+          {profile?.is_instructor && profile?.id && (
+            <Link
+              href="/dashboard/instructor"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-tribe-green-light rounded-2xl shadow-md hover:bg-tribe-green-hover transition"
+            >
+              <Store className="w-6 h-6 text-slate-900 flex-shrink-0" />
+              <span className="font-bold text-base text-slate-900 text-center">
+                {language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard'}
+              </span>
+            </Link>
+          )}
+
+          {/* Become a Featured Affiliate (instructors who are NOT already affiliates) */}
+          {profile?.is_instructor && profile?.id && (
+            <Link
+              href="/partners"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
+            >
+              <HeartHandshake className="w-6 h-6 flex-shrink-0" />
+              <span className="font-bold text-base text-center">
+                {language === 'es' ? 'Ser Afiliado Destacado' : 'Become a Featured Affiliate'}
+              </span>
+            </Link>
+          )}
+
           {/* Bio */}
           <div className="mt-6">
             {profile?.bio ? (
-              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5">
+              <div className="bg-white dark:bg-tribe-surface rounded-2xl p-5">
                 <p className="text-theme-primary whitespace-pre-wrap leading-relaxed">{profile.bio}</p>
               </div>
             ) : (
-              <div className="bg-white dark:bg-[#3D4349] rounded-2xl p-5 text-center">
+              <div className="bg-white dark:bg-tribe-surface rounded-2xl p-5 text-center">
                 <p className="text-theme-secondary text-sm italic">{txt.noBio}</p>
               </div>
             )}
@@ -195,14 +243,14 @@ export default function ProfilePage() {
           {photos.length > 0 && (
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{txt.photos}</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {photos.map((photo: string, index: number) => (
                   <div
                     key={index}
                     onClick={() => openPhoto(photo)}
-                    className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
+                    className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition"
                   >
-                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <Image src={photo} alt={`Profile photo ${index + 1}`} fill className="object-cover" unoptimized />
                   </div>
                 ))}
               </div>
@@ -255,11 +303,14 @@ export default function ProfilePage() {
           >
             <X className="w-6 h-6 text-white" />
           </button>
-          <img
+          <Image
             src={selectedPhoto}
-            alt="Full size"
+            alt="Full size profile photo"
+            width={800}
+            height={800}
             className="max-w-[90vw] max-h-[90vh] object-contain"
             onClick={(e) => e.stopPropagation()}
+            unoptimized
           />
         </div>
       )}

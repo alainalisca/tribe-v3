@@ -11,7 +11,7 @@ export function getSessionsTranslations(language: 'en' | 'es') {
         browseHome: 'Explora sesiones para unirte',
         createSession: 'Crear Sesi\u00f3n',
         browseSessions: 'Ver Sesiones',
-        spots: 'lugares',
+        spots: 'cupos',
         ended: 'Terminada',
       }
     : {

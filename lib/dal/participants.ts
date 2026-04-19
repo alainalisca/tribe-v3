@@ -79,7 +79,7 @@ export async function fetchConfirmedParticipantsWithUsers(
   try {
     const { data, error } = await supabase
       .from('session_participants')
-      .select('user_id, status, is_guest, guest_name, user:users(id, name, avatar_url)')
+      .select('user_id, status, is_guest, guest_name, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
     if (error) return { success: false, error: error.message };
@@ -316,7 +316,7 @@ export async function fetchPendingParticipantsForSessions(
   try {
     const { data, error } = await supabase
       .from('session_participants')
-      .select('*, user:users(id, name, avatar_url)')
+      .select('*, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
       .in('session_id', sessionIds)
       .eq('status', 'pending');
     if (error) return { success: false, error: error.message };

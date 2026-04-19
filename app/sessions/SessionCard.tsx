@@ -6,6 +6,8 @@ import { formatTime12Hour } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { SessionsTranslations } from './translations';
+import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface SessionCardProps {
   session: {
@@ -16,6 +18,9 @@ interface SessionCardProps {
     location: string;
     current_participants: number | null;
     max_participants: number;
+    is_paid?: boolean | null;
+    price_cents?: number | null;
+    currency?: string | null;
   };
   getSportName: (sport: string) => string;
   txt: SessionsTranslations;
@@ -35,7 +40,7 @@ export default function SessionCard({
   return (
     <Link href={`/session/${session.id}`}>
       <Card
-        className={`dark:bg-[#6B7178] border-stone-200 dark:border-[#52575D] hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
+        className={`dark:bg-tribe-card border-stone-200 dark:border-tribe-mid hover:shadow-md transition cursor-pointer shadow-none ${isPast ? 'opacity-75' : ''}`}
       >
         <CardContent className="p-4">
           <div className="flex items-start justify-between">
@@ -44,12 +49,18 @@ export default function SessionCard({
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-bold ${
                     isPast
-                      ? 'bg-stone-200 dark:bg-[#52575D] text-stone-600 dark:text-gray-400'
+                      ? 'bg-stone-200 dark:bg-tribe-mid text-stone-600 dark:text-gray-400'
                       : 'bg-tribe-green text-slate-900'
                   }`}
                 >
                   {getSportName(session.sport)}
                 </span>
+                {session.is_paid && session.price_cents && (
+                  <Badge className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full border-transparent font-bold">
+                    {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}{' '}
+                    {session.currency || 'COP'}
+                  </Badge>
+                )}
                 {isHost && (
                   <Badge className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full border-transparent">
                     {txt.hosting}

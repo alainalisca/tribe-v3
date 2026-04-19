@@ -18,9 +18,9 @@ interface MessageListProps {
 export default function MessageList({ messages, loading, actionLoading, onDelete }: MessageListProps) {
   const { language } = useLanguage();
   return (
-    <div className="bg-white rounded shadow">
+    <div className="bg-white dark:bg-tribe-surface rounded shadow">
       <div className="p-3 border-b">
-        <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+        <h3 className="text-sm font-bold text-tribe-dark flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-purple-500" />
           {language === 'es' ? 'Mensajes Recientes' : 'Recent Messages'} ({messages.length})
         </h3>
@@ -41,11 +41,11 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
       ) : (
         <div className="divide-y max-h-[600px] overflow-y-auto">
           {messages.map((msg) => (
-            <div key={msg.id} className="p-3 hover:bg-stone-50">
+            <div key={msg.id} className="p-3 hover:bg-stone-50 dark:hover:bg-tribe-surface">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs font-medium text-[#272D34]">
+                    <p className="text-xs font-medium text-tribe-dark">
                       {msg.user?.name || (language === 'es' ? 'Usuario Desconocido' : 'Unknown User')}
                     </p>
                     <span className="text-xs text-stone-500">{msg.user?.email}</span>

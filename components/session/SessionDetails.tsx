@@ -1,11 +1,14 @@
 'use client';
 
 import { formatTime12Hour } from '@/lib/utils';
-import { Calendar, Clock, MapPin, Users, Star } from 'lucide-react';
+import Image from 'next/image';
+import { Calendar, Clock, MapPin, Users, Star, DollarSign } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 interface CreatorInfo {
   id: string;
@@ -27,6 +30,7 @@ interface SessionDetailsProps {
   participants: ParticipantInfo[];
   isFull: boolean;
   language: 'en' | 'es';
+  isCreator?: boolean;
   onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
 }
 
@@ -36,11 +40,12 @@ export default function SessionDetails({
   participants,
   isFull,
   language,
+  isCreator = false,
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
   return (
-    <div className="bg-white dark:bg-[#6B7178] rounded-xl p-6 shadow-lg">
+    <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
@@ -89,7 +94,7 @@ export default function SessionDetails({
           <div className="text-stone-600 dark:text-gray-300 text-sm mb-1">
             {participants.length}/{session.max_participants} {t('joined')}
           </div>
-          <div className="w-24 h-2 bg-stone-200 dark:bg-[#52575D] rounded-full overflow-hidden">
+          <div className="w-24 h-2 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
             <div
               className={`h-full ${isFull ? 'bg-red-500' : 'bg-tribe-green'}`}
               style={{ width: `${(participants.length / session.max_participants) * 100}%` }}
@@ -109,9 +114,9 @@ export default function SessionDetails({
               <button
                 key={idx}
                 onClick={() => onOpenLightbox(idx, 'location')}
-                className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
+                className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
               >
-                <img loading="lazy" src={photo} alt={`Location ${idx + 1}`} className="w-full h-full object-cover" />
+                <Image src={photo} alt={`Session location photo ${idx + 1}`} fill className="object-cover" unoptimized />
               </button>
             ))}
           </div>
@@ -153,6 +158,84 @@ export default function SessionDetails({
           </div>
         )}
 
+        {session.is_paid && session.price_cents != null && (
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
+                {formatPrice(session.price_cents, (session.currency || 'USD') as Currency)} {session.currency || 'USD'}
+              </span>
+              <Badge className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-xs border-transparent">
+                {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+              </Badge>
+            </div>
+            {session.payment_instructions && (
+              <div className="mt-2">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                  {language === 'es' ? 'Instrucciones de pago:' : 'Payment Instructions:'}
+                </p>
+                <p className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">
+                  {session.payment_instructions}
+                </p>
+              </div>
+            )}
+            {isCreator && (
+              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                  {language === 'es' ? 'Tu desglose de pago' : 'Your Earnings Breakdown'}
+                </p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      {language === 'es' ? 'Precio por persona' : 'Price per person'}
+                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-stone-500 dark:text-gray-400">
+                      {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                    </span>
+                    <span className="text-stone-500 dark:text-gray-400">
+                      -{formatPrice(Math.round(session.price_cents! * 0.15), (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
+                    <span className="text-emerald-800 dark:text-emerald-300">
+                      {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
+                    </span>
+                    <span className="text-emerald-800 dark:text-emerald-300">
+                      {formatPrice(Math.round(session.price_cents! * 0.85), (session.currency || 'USD') as Currency)}{' '}
+                      {session.currency || 'USD'}
+                    </span>
+                  </div>
+                  {participants.filter((p) => p.status === 'confirmed').length > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 pt-1">
+                      <span>
+                        {language === 'es'
+                          ? `Total estimado (${participants.filter((p) => p.status === 'confirmed').length} confirmados)`
+                          : `Est. total (${participants.filter((p) => p.status === 'confirmed').length} confirmed)`}
+                      </span>
+                      <span>
+                        {formatPrice(
+                          Math.round(
+                            session.price_cents! * 0.85 * participants.filter((p) => p.status === 'confirmed').length
+                          ),
+                          (session.currency || 'USD') as Currency
+                        )}{' '}
+                        {session.currency || 'USD'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-4">
           <LocationMap latitude={session.latitude} longitude={session.longitude} location={session.location} />
         </div>
@@ -179,7 +262,7 @@ export default function SessionDetails({
       </div>
 
       {session.description && (
-        <div className="mb-6 p-4 bg-stone-50 dark:bg-[#52575D] rounded-lg">
+        <div className="mb-6 p-4 bg-stone-50 dark:bg-tribe-mid rounded-lg">
           <p className="text-stone-700 dark:text-gray-300">{session.description}</p>
         </div>
       )}

@@ -6,14 +6,34 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { loadGoogleMaps, reverseGeocodeGoogle } from '@/lib/google-maps';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
+import { detectNeighborhood, getNearestNeighborhood, ACTIVE_CITY } from '@/lib/city-config';
 import type { LeafletMapComponents } from './locationPickerTypes';
+
+/**
+ * Human-readable fallback when Google reverse geocoding fails.
+ * Prefers the exact neighborhood the coords are inside, then the nearest
+ * neighborhood, then the city name. Never returns raw lat/lng — showing
+ * "6.220661, -75.573718" to users looks like a developer tool, not a fitness app.
+ */
+function buildFallbackLocationName(lat: number, lng: number, language: string): string {
+  const inside = detectNeighborhood(lat, lng);
+  if (inside) return inside.name;
+
+  const nearest = getNearestNeighborhood(lat, lng);
+  if (nearest) {
+    return language === 'es' ? `Cerca de ${nearest.name}` : `Near ${nearest.name}`;
+  }
+
+  // Last resort: city name. Still better than raw coordinates.
+  return ACTIVE_CITY.name;
+}
 
 interface UseLocationPickerMapParams {
   onChange: (location: string, coords?: { lat: number; lng: number }) => void;
 }
 
 export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [showMap, setShowMap] = useState(false);
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -97,7 +117,8 @@ export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
     });
   }, []);
 
-  // Reverse geocode coordinates to address via Google
+  // Reverse geocode coordinates to address via Google.
+  // On failure, falls back to nearest neighborhood name rather than raw lat/lng.
   async function reverseGeocode(lat: number, lng: number) {
     setReverseGeocoding(true);
     try {
@@ -105,11 +126,11 @@ export function useLocationPickerMap({ onChange }: UseLocationPickerMapParams) {
       if (name) {
         onChange(name, { lat, lng });
       } else {
-        onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
+        onChange(buildFallbackLocationName(lat, lng, language), { lat, lng });
       }
     } catch (err) {
       logError(err, { action: 'reverseGeocode' });
-      onChange(`${lat.toFixed(6)}, ${lng.toFixed(6)}`, { lat, lng });
+      onChange(buildFallbackLocationName(lat, lng, language), { lat, lng });
     } finally {
       setReverseGeocoding(false);
     }

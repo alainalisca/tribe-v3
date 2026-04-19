@@ -27,7 +27,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
 
   if (bugs.length === 0) {
     return (
-      <div className="bg-white rounded p-6 text-center shadow">
+      <div className="bg-white dark:bg-tribe-surface rounded p-6 text-center shadow">
         <Bug className="w-12 h-12 text-gray-300 mx-auto mb-2" />
         <p className="text-sm text-gray-500">
           {language === 'es' ? 'Sin reportes de errores aun' : 'No bug reports yet'}
@@ -40,15 +40,15 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
     <div className="space-y-3">
       {pendingBugs.length > 0 && (
         <>
-          <h3 className="text-sm font-bold text-[#272D34] flex items-center gap-2">
+          <h3 className="text-sm font-bold text-tribe-dark flex items-center gap-2">
             <Bug className="w-4 h-4 text-orange-500" />
             {language === 'es' ? 'Errores Abiertos' : 'Open Bugs'} ({pendingBugs.length})
           </h3>
           {pendingBugs.map((bug) => (
-            <div key={bug.id} className="bg-white rounded shadow p-3">
+            <div key={bug.id} className="bg-white dark:bg-tribe-surface rounded shadow p-3">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-[#272D34]">{bug.title}</p>
+                  <p className="text-sm font-bold text-tribe-dark">{bug.title}</p>
                   <p className="text-xs text-stone-600">{bug.user?.email}</p>
                 </div>
                 <span
@@ -59,14 +59,16 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
                         ? 'bg-orange-100 text-orange-800'
                         : bug.severity === 'medium'
                           ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          : 'bg-stone-100 text-gray-800'
                   }`}
                 >
                   {bug.severity}
                 </span>
               </div>
 
-              <p className="text-xs text-stone-700 mb-1 p-2 bg-stone-50 rounded">{bug.description}</p>
+              <p className="text-xs text-stone-700 dark:text-gray-300 mb-1 p-2 bg-stone-50 dark:bg-tribe-dark rounded">
+                {bug.description}
+              </p>
 
               {bug.steps_to_reproduce && (
                 <p className="text-xs text-stone-600 mb-2 p-2 bg-blue-50 rounded whitespace-pre-wrap">
@@ -98,7 +100,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
       )}
 
       {resolvedBugs.slice(0, 5).map((bug) => (
-        <div key={bug.id} className="bg-stone-50 rounded p-3 opacity-60">
+        <div key={bug.id} className="bg-stone-50 dark:bg-tribe-dark rounded p-3 opacity-60">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{bug.title}</p>

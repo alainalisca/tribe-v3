@@ -11,6 +11,8 @@ import {
   fetchSessionsByCreator,
   fetchSessionsByIds,
   fetchChatMessagesForSessions,
+  fetchUserConversations,
+  ConversationWithOtherUser,
 } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
@@ -43,6 +45,7 @@ export function useMessages() {
   const { t, language } = useLanguage();
   const [, setUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [directConversations, setDirectConversations] = useState<ConversationWithOtherUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +71,22 @@ export function useMessages() {
       setLoading(true);
       setError(null);
 
-      // Get all sessions where user is a participant (including as creator)
+      // Load session conversations
+      await loadSessionConversations(userId);
+
+      // Load direct message conversations
+      await loadDirectConversations(userId);
+    } catch (err) {
+      logError(err, { action: 'loadConversations' });
+      setError('load_failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadSessionConversations(userId: string) {
+    try {
+      // Get all sessions where user is an athlete (including as creator)
       const participantResult = await fetchParticipantSessionIds(supabase, userId);
       if (!participantResult.success) throw new Error(participantResult.error);
 
@@ -83,7 +101,6 @@ export function useMessages() {
 
       if (sessionIds.length === 0) {
         setConversations([]);
-        setLoading(false);
         return;
       }
 
@@ -106,7 +123,6 @@ export function useMessages() {
 
       if (!sessions || sessions.length === 0) {
         setConversations([]);
-        setLoading(false);
         return;
       }
 
@@ -172,10 +188,17 @@ export function useMessages() {
 
       setConversations(conversationsData);
     } catch (err) {
-      logError(err, { action: 'loadConversations' });
-      setError('load_failed');
-    } finally {
-      setLoading(false);
+      logError(err, { action: 'loadSessionConversations' });
+    }
+  }
+
+  async function loadDirectConversations(userId: string) {
+    try {
+      const result = await fetchUserConversations(supabase, userId);
+      if (!result.success) throw new Error(result.error);
+      setDirectConversations(result.data || []);
+    } catch (err) {
+      logError(err, { action: 'loadDirectConversations' });
     }
   }
 
@@ -209,6 +232,7 @@ export function useMessages() {
     t,
     language,
     conversations,
+    directConversations,
     loading,
     error,
     formatTime,

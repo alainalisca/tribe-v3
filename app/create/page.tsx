@@ -2,18 +2,22 @@
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
+import { haptic } from '@/lib/haptics';
 import { celebrateSessionCreated } from '@/lib/confetti';
+import { trackEvent } from '@/lib/analytics';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Zap, ChevronDown, ChevronUp, Share2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
-import { insertSession } from '@/lib/dal';
+import { insertSession, fetchUserProfile } from '@/lib/dal';
+import { formatDisplayAmount } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -23,18 +27,44 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
+import RecurringSessionToggle from '@/components/RecurringSessionToggle';
+import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
-type FormErrors = Partial<Record<'sport' | 'date' | 'start_time' | 'location', string>>;
+type FormErrors = Partial<
+  Record<'sport' | 'date' | 'start_time' | 'location' | 'price_cents' | 'payment_instructions', string>
+>;
+
+type PromoCode = {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  currency: string | null;
+};
 
 export default function CreateSessionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-theme-page" />}>
+      <CreateSessionPageInner />
+    </Suspense>
+  );
+}
+
+function CreateSessionPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [photos, setPhotos] = useState<string[]>([]);
+  const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
+  const [showBoostPrompt, setShowBoostPrompt] = useState(false);
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null);
+  const [expandPromoSection, setExpandPromoSection] = useState(false);
   const [formData, setFormData] = useState({
     sport: '',
     date: '',
@@ -49,15 +79,51 @@ export default function CreateSessionPage() {
     skill_level: 'all_levels',
     gender_preference: 'all',
     equipment: '',
+    is_paid: false,
+    price_display: '', // human-readable price (e.g. "15000") — converted to price_cents on submit
+    currency: 'COP' as 'COP' | 'USD',
+    payment_instructions: '',
+    attached_promo_id: null as string | null,
+  });
+
+  // Recurring session state (managed separately because RecurringSessionToggle uses its own shape)
+  const [recurringValue, setRecurringValue] = useState({
+    is_recurring: false,
+    recurrence_pattern: '',
+    recurrence_end_date: '',
   });
 
   const sports = Object.keys(sportTranslations).filter((s) => s !== 'All');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push('/auth');
-      else setUser(user);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        router.push('/auth');
+        return;
+      }
+      setUser(user);
+      const profileResult = await fetchUserProfile(supabase, user.id);
+      if (profileResult.data?.is_instructor) {
+        setIsInstructor(true);
+      }
     });
+
+    // Pre-fill from URL query params (e.g. from Popular Routes)
+    const qSport = searchParams.get('sport');
+    const qTitle = searchParams.get('title');
+    const qLocation = searchParams.get('location');
+    const qLat = searchParams.get('lat');
+    const qLng = searchParams.get('lng');
+
+    if (qSport || qTitle || qLocation || qLat || qLng) {
+      setFormData((prev) => ({
+        ...prev,
+        ...(qSport ? { sport: qSport.charAt(0).toUpperCase() + qSport.slice(1) } : {}),
+        ...(qTitle || qLocation ? { location: qTitle || qLocation || '' } : {}),
+        ...(qLat ? { latitude: parseFloat(qLat) } : {}),
+        ...(qLng ? { longitude: parseFloat(qLng) } : {}),
+      }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
@@ -86,6 +152,19 @@ export default function CreateSessionPage() {
     if (!formData.date) newErrors.date = t('dateRequired');
     if (!formData.start_time) newErrors.start_time = t('startTimeRequired');
     if (!formData.location) newErrors.location = t('locationRequired');
+    if (formData.is_paid) {
+      const price = parseFloat(formData.price_display);
+      if (!formData.price_display || isNaN(price) || price <= 0) {
+        newErrors.price_cents =
+          language === 'es' ? 'El precio es obligatorio para sesiones de pago' : 'Price is required for paid sessions';
+      }
+      if (!formData.payment_instructions.trim()) {
+        newErrors.payment_instructions =
+          language === 'es'
+            ? 'Las instrucciones de pago son obligatorias'
+            : 'Payment instructions are required for paid sessions';
+      }
+    }
     setErrors(newErrors);
     const errorFields = Object.keys(newErrors);
     if (errorFields.length > 0) {
@@ -100,19 +179,74 @@ export default function CreateSessionPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
+
+    // Photo nudge: warn the instructor once if they're about to create a session with no photos.
+    // Sessions with photos book significantly better — this gets them to pause and reconsider.
+    // Uses sessionStorage so we only nudge once per session creation attempt (re-submit bypasses).
+    if (photos.length === 0 && !sessionStorage.getItem('tribe_photo_nudge_dismissed')) {
+      const msg =
+        language === 'es'
+          ? 'Las sesiones con fotos reciben más reservas. ¿Continuar sin agregar una foto?'
+          : 'Sessions with photos get more bookings. Continue without adding one?';
+      const proceed = window.confirm(msg);
+      if (!proceed) {
+        // Scroll the photo section into view to make the upload button obvious
+        document.querySelector('[data-photo-section]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      sessionStorage.setItem('tribe_photo_nudge_dismissed', '1');
+    }
+
     setLoading(true);
     try {
+      // Build the session payload — strip UI-only fields and add paid fields
+      const { price_display, is_paid, currency, payment_instructions, attached_promo_id, ...rest } = formData;
+      const paidFields = is_paid
+        ? {
+            is_paid: true as const,
+            price_cents: Math.round(parseFloat(price_display) * 100),
+            currency,
+            payment_instructions,
+          }
+        : { is_paid: false as const };
+
+      // Build recurring fields if enabled
+      const recurringFields = recurringValue.is_recurring
+        ? {
+            is_recurring: true,
+            recurrence_pattern: recurringValue.recurrence_pattern || null,
+            recurrence_end_date: recurringValue.recurrence_end_date
+              ? new Date(recurringValue.recurrence_end_date + 'T00:00:00').toISOString()
+              : null,
+          }
+        : { is_recurring: false };
+
       const result = await insertSession(supabase, {
-        ...formData,
+        ...rest,
+        ...paidFields,
+        ...recurringFields,
         creator_id: user!.id,
         current_participants: 0,
         status: 'active',
         photos: photos.length > 0 ? photos : null,
       });
       if (!result.success) throw new Error(result.error);
+      trackEvent('session_created', {
+        session_id: result.data?.id,
+        is_paid: formData.is_paid,
+        price_cents: formData.is_paid ? Math.round(parseFloat(formData.price_display) * 100) : 0,
+        currency: formData.currency,
+        sport: formData.sport,
+        max_participants: formData.max_participants,
+      });
       showSuccess(t('sessionCreated'));
-      router.push('/');
       celebrateSessionCreated();
+      haptic('success');
+      if (result.data?.id) {
+        setCreatedSessionId(result.data.id);
+      } else {
+        router.push('/');
+      }
     } catch (error: unknown) {
       const err = error as Record<string, unknown> | null;
       logError(error, {
@@ -130,12 +264,106 @@ export default function CreateSessionPage() {
 
   if (!user) return <div className="min-h-screen bg-theme-page flex items-center justify-center"></div>;
 
+  // --- Success state: share after creation ---
+  if (createdSessionId) {
+    const shareUrl = getSessionShareUrl(createdSessionId);
+    return (
+      <div className="min-h-screen bg-theme-page pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
+          <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="mr-3">
+                <ArrowLeft className="w-6 h-6 text-theme-primary" />
+              </Button>
+            </Link>
+            <h1 className="text-xl font-bold text-theme-primary">{t('createSession')}</h1>
+          </div>
+        </div>
+
+        <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
+          <div className="bg-theme-card rounded-2xl p-6 border border-theme text-center space-y-4">
+            <div className="text-5xl mb-2">🎉</div>
+            <h2 className="text-xl font-bold text-theme-primary">
+              {language === 'es' ? 'Sesion Creada!' : 'Session Created!'}
+            </h2>
+            <p className="text-sm text-theme-secondary">
+              {language === 'es'
+                ? 'Comparte con tu comunidad para llenar cupos'
+                : 'Share with your community to fill spots'}
+            </p>
+
+            <div className="space-y-3 pt-2">
+              {/* WhatsApp share */}
+              <button
+                onClick={() => {
+                  shareSession(
+                    {
+                      id: createdSessionId,
+                      title: formData.sport,
+                      sport: formData.sport,
+                      date: formData.date,
+                      time: formData.start_time,
+                      neighborhood: formData.location,
+                    },
+                    language
+                  );
+                }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm text-white
+                  hover:opacity-90 hover:scale-[1.02] active:scale-95 transition-all duration-200
+                  flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#25D366' }}
+              >
+                <Share2 className="w-4 h-4" />
+                {language === 'es' ? 'Compartir por WhatsApp' : 'Share via WhatsApp'}
+              </button>
+
+              {/* Copy link for Instagram */}
+              <button
+                onClick={async () => {
+                  const copied = await copyToClipboard(shareUrl);
+                  if (copied) {
+                    showSuccess(language === 'es' ? 'Enlace copiado para Instagram!' : 'Link copied for Instagram!');
+                  }
+                }}
+                className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
+                  bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-gray-300
+                  hover:bg-stone-200 dark:hover:bg-stone-700
+                  flex items-center justify-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                {language === 'es' ? 'Copiar Enlace para Instagram' : 'Copy Link for Instagram'}
+              </button>
+
+              {/* Go to session */}
+              <Link
+                href={`/session/${createdSessionId}`}
+                className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
+                  bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
+              >
+                {language === 'es' ? 'Ver Sesion' : 'View Session'}
+              </Link>
+
+              {/* Go home */}
+              <Link
+                href="/"
+                className="block w-full py-2.5 text-sm font-medium text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-gray-300 transition-colors text-center"
+              >
+                {language === 'es' ? 'Ir al inicio' : 'Go Home'}
+              </Link>
+            </div>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
   const today = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
-        <div className="max-w-2xl mx-auto h-14 flex items-center px-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center px-4">
           <Link href="/">
             <Button variant="ghost" size="icon" className="mr-3">
               <ArrowLeft className="w-6 h-6 text-theme-primary" />
@@ -145,7 +373,7 @@ export default function CreateSessionPage() {
         </div>
       </div>
 
-      <div className="pt-header max-w-2xl mx-auto px-4 py-6">
+      <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4 py-6">
         <TemplateSection
           supabase={supabase}
           userId={user.id}
@@ -154,7 +382,7 @@ export default function CreateSessionPage() {
           onLoadTemplate={handleLoadTemplate}
         />
 
-        <div className="max-w-2xl mx-auto p-4">
+        <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Sport */}
             <div>
@@ -340,14 +568,171 @@ export default function CreateSessionPage() {
               />
             </div>
 
+            {/* ─── Paid Session Toggle (instructors only) ─── */}
+            {isInstructor && (
+              <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-theme-primary font-semibold text-base">
+                      {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
+                    </Label>
+                    <p className="text-xs text-theme-secondary mt-0.5">
+                      {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={formData.is_paid}
+                    onClick={() => setFormData((prev) => ({ ...prev, is_paid: !prev.is_paid }))}
+                    className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tribe-green ${formData.is_paid ? 'bg-tribe-green' : 'bg-stone-400'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-6 w-6 rounded-full bg-white dark:bg-tribe-green shadow-lg transform transition-transform ${formData.is_paid ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                </div>
+
+                {formData.is_paid && (
+                  <div className="space-y-3 pt-2 border-t border-theme">
+                    {/* Currency selector */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['COP', 'USD'] as const).map((cur) => (
+                          <button
+                            key={cur}
+                            type="button"
+                            onClick={() => setFormData((prev) => ({ ...prev, currency: cur }))}
+                            className={`p-3 rounded-lg font-medium transition-all text-center ${formData.currency === cur ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green' : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'}`}
+                          >
+                            {cur === 'COP' ? '🇨🇴 COP' : '🇺🇸 USD'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Price input */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">
+                        {language === 'es' ? 'Precio' : 'Price'} ({formData.currency}) *
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-secondary font-medium">
+                          {formData.currency === 'COP' ? '$' : '$'}
+                        </span>
+                        <Input
+                          type="number"
+                          name="price_display"
+                          value={formData.price_display}
+                          onChange={handleChange}
+                          min="0"
+                          step={formData.currency === 'COP' ? '1000' : '0.01'}
+                          placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
+                          className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
+                        />
+                      </div>
+                      {errors.price_cents && <p className="text-red-500 text-sm mt-1">{errors.price_cents}</p>}
+                      {formData.price_display &&
+                        !isNaN(parseFloat(formData.price_display)) &&
+                        parseFloat(formData.price_display) > 0 && (
+                          <div className="mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                              {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
+                            </p>
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-emerald-800 dark:text-emerald-300">
+                                  {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
+                                </span>
+                                <span className="font-medium text-emerald-800 dark:text-emerald-300">
+                                  {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}{' '}
+                                  {formData.currency}
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-stone-500 dark:text-gray-400">
+                                  {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                                </span>
+                                <span className="text-stone-500 dark:text-gray-400">
+                                  -
+                                  {formatDisplayAmount(
+                                    Math.round(Number(formData.price_display) * 0.15),
+                                    formData.currency as Currency
+                                  )}{' '}
+                                  {formData.currency}
+                                </span>
+                              </div>
+                              <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
+                                <div className="flex justify-between text-sm font-bold">
+                                  <span className="text-emerald-800 dark:text-emerald-300">
+                                    {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
+                                  </span>
+                                  <span className="text-emerald-800 dark:text-emerald-300">
+                                    {formatDisplayAmount(
+                                      Math.round(Number(formData.price_display) * 0.85),
+                                      formData.currency as Currency
+                                    )}{' '}
+                                    {formData.currency}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Payment instructions */}
+                    <div>
+                      <Label className="text-theme-primary mb-2">
+                        {language === 'es' ? 'Instrucciones de pago' : 'Payment Instructions'} *
+                      </Label>
+                      <Textarea
+                        name="payment_instructions"
+                        value={formData.payment_instructions}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder={
+                          language === 'es'
+                            ? 'Ej: Nequi: 300-123-4567 o efectivo en el lugar'
+                            : 'E.g. Nequi: 300-123-4567, Venmo: @coach-maria, or cash at venue'
+                        }
+                        className={`py-3 bg-theme-card text-theme-primary resize-none ${errors.payment_instructions ? 'border-red-500' : 'border-theme'}`}
+                      />
+                      {errors.payment_instructions && (
+                        <p className="text-red-500 text-sm mt-1">{errors.payment_instructions}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ─── Recurring Session Toggle ─── */}
+            <div className="border border-theme rounded-lg p-4 bg-theme-card">
+              <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
+            </div>
+
             {/* Photos */}
-            <PhotoUploadSection
-              supabase={supabase}
-              userId={user.id}
-              language={language}
-              photos={photos}
-              onPhotosChange={setPhotos}
-            />
+            <div data-photo-section>
+              <PhotoUploadSection
+                supabase={supabase}
+                userId={user.id}
+                language={language}
+                photos={photos}
+                onPhotosChange={setPhotos}
+              />
+              {photos.length === 0 && (
+                <p className="text-xs text-tribe-amber mt-2 flex items-center gap-1.5">
+                  <span>💡</span>
+                  <span>
+                    {language === 'es'
+                      ? 'Las sesiones con fotos reciben muchas más reservas'
+                      : 'Sessions with photos get significantly more bookings'}
+                  </span>
+                </p>
+              )}
+            </div>
 
             <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
               {loading ? t('creating') : t('createSession')}

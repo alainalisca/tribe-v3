@@ -23,7 +23,7 @@ export default function SessionPickerSheet({
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         data-modal="true"
-        className="max-w-md rounded-xl p-0 max-h-[70vh] overflow-y-auto dark:bg-[#2C3137] gap-0"
+        className="max-w-md rounded-xl p-0 max-h-[70vh] overflow-y-auto dark:bg-tribe-dark gap-0"
       >
         <div className="flex items-center justify-between p-4 border-b border-stone-200 dark:border-gray-700">
           <DialogTitle className="text-lg font-bold text-theme-primary">
@@ -35,9 +35,9 @@ export default function SessionPickerSheet({
             <button
               key={s.id}
               onClick={() => onSelectSession(s.id)}
-              className="w-full flex items-center gap-3 p-3 hover:bg-stone-100 dark:hover:bg-[#3D4349] rounded-xl transition"
+              className="w-full flex items-center gap-3 p-3 hover:bg-stone-100 dark:hover:bg-tribe-surface rounded-xl transition"
             >
-              <div className="w-10 h-10 bg-stone-100 dark:bg-[#3D4349] rounded-full flex items-center justify-center text-lg">
+              <div className="w-10 h-10 bg-stone-100 dark:bg-tribe-surface rounded-full flex items-center justify-center text-lg">
                 {getSportEmoji(s.sport)}
               </div>
               <div className="flex-1 text-left min-w-0">

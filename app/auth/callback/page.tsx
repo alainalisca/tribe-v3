@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
+import { applyReferralCode } from '@/lib/dal/referrals';
+import { trackEvent } from '@/lib/analytics';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AuthCallbackPage() {
@@ -77,7 +79,14 @@ export default function AuthCallbackPage() {
       if (data?.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
         if (isNewUser) {
-          window.location.href = '/profile/edit';
+          // Apply referral code if stored during auth page visit
+          const refCode = localStorage.getItem('tribe_referral_code');
+          if (refCode) {
+            await applyReferralCode(supabase, refCode, data.user.id);
+            localStorage.removeItem('tribe_referral_code');
+            trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
+          }
+          window.location.href = '/onboarding/role';
           return;
         }
       }
@@ -92,7 +101,7 @@ export default function AuthCallbackPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-[#52575D] flex items-center justify-center">
+    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
       <div className="text-center">
         {error ? (
           <div className="space-y-4">

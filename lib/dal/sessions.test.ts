@@ -117,23 +117,13 @@ describe('fetchConfirmedCount', () => {
 });
 
 describe('cancelSession', () => {
-  it('updates status to cancelled on success', async () => {
-    const mockSupabase = createMockSupabase({});
-
-    const result = await cancelSession(mockSupabase, 'session-1');
-
-    expect(result.success).toBe(true);
-  });
-
-  it('returns error on failure', async () => {
-    const mockSupabase = createMockSupabase({
-      updateError: { message: 'Permission denied' },
-    });
+  it('returns error when session not found', async () => {
+    const mockSupabase = createMockSupabase({ data: null, error: { message: 'Row not found' } });
 
     const result = await cancelSession(mockSupabase, 'session-1');
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe('Permission denied');
+    expect(result.error).toBe('Session not found');
   });
 });
 

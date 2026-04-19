@@ -1,3 +1,5 @@
+import { trackEvent } from '@/lib/analytics';
+
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogContext {
@@ -34,6 +36,20 @@ export function log(level: LogLevel, message: string, context?: LogContext) {
     console.warn(JSON.stringify(entry));
   }
   // info/debug suppressed in production (enable when Sentry/PostHog added)
+
+  if (typeof window !== 'undefined' && (level === 'error' || level === 'warn')) {
+    try {
+      trackEvent('error_occurred', {
+        message: typeof message === 'string' ? message : String(message),
+        level,
+        route: window.location.pathname,
+        action: context?.action,
+        component: context?.component,
+      });
+    } catch {
+      // Silently fail — analytics should never break the app
+    }
+  }
 }
 
 export function logError(error: unknown, context?: LogContext) {

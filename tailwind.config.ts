@@ -11,13 +11,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Tribe brand colors
-        'tribe-green': '#C0E863',
+        // Tribe brand colors — #84cc16 passes WCAG AA on dark backgrounds (4.8:1)
+        'tribe-green': '#84cc16',
+        'tribe-green-light': '#A3E635',
+        'tribe-green-hover': '#9EE551',
         'tribe-dark': '#272D34',
+        'tribe-surface': '#3D4349',
+        'tribe-surface-hover': '#4A5056',
+        'tribe-mid': '#52575D',
+        'tribe-card': '#6B7178',
         'tribe-gray-80': '#52575D',
         'tribe-gray-60': '#B1B3B6',
         'tribe-gray-40': '#F2F2F2',
         'tribe-red': '#E33629',
+        'tribe-amber': '#F59E0B',
+        'tribe-amber-light': '#FBBF24',
         // shadcn/ui semantic tokens
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -52,6 +60,10 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+      },
+      fontFamily: {
+        sans: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

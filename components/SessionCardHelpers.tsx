@@ -11,6 +11,8 @@ export interface SessionCardProps {
   currentUserId?: string;
   distance?: string;
   liveData?: { count: number; users: Array<{ name: string; avatar_url: string | null }> };
+  /** Set of user IDs that are active featured partners (or their instructors) */
+  featuredPartnerUserIds?: Set<string>;
 }
 
 export function getSkillLevelDisplay(level: string, t: (key: TranslationKey) => string) {

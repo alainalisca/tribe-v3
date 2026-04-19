@@ -1,16 +1,36 @@
 {
   "crons": [
     {
-      "path": "/api/cron/daily-motivation",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/weekly",
-      "schedule": "0 14 * * 1"
-    },
-    {
       "path": "/api/cron/engagement",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/recurring-sessions",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/smart-match",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/spotlight-rotation",
+      "schedule": "0 5 * * 1"
+    },
+    {
+      "path": "/api/cron/waitlist-expiry",
+      "schedule": "7 * * * *"
+    },
+    {
+      "path": "/api/cron/subscription-expiry",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/lead-credits-reset",
+      "schedule": "0 4 1 * *"
+    },
+    {
+      "path": "/api/cron/behavioral-nudges",
+      "schedule": "23 */3 * * *"
     }
   ]
 }
