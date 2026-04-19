@@ -62,7 +62,8 @@ export async function createPost(supabase: SupabaseClient, post: CreatePostInput
     const { data, error } = await supabase
       .from('instructor_posts')
       .insert({
-        instructor_id: post.instructorId,
+        // live schema uses author_id
+        author_id: post.instructorId,
         post_type: post.postType,
         title: post.title ?? null,
         title_es: post.titleEs ?? null,
@@ -90,11 +91,7 @@ export async function deletePost(
   instructorId: string
 ): Promise<DalResult<void>> {
   try {
-    const { error } = await supabase
-      .from('instructor_posts')
-      .delete()
-      .eq('id', postId)
-      .eq('instructor_id', instructorId);
+    const { error } = await supabase.from('instructor_posts').delete().eq('id', postId).eq('author_id', instructorId);
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (error) {
@@ -120,7 +117,7 @@ export async function fetchFeedPosts(
     const { limit = 10, offset = 0, instructorId, viewerId } = options;
 
     let countQuery = supabase.from('instructor_posts').select('id', { count: 'exact', head: true });
-    if (instructorId) countQuery = countQuery.eq('instructor_id', instructorId);
+    if (instructorId) countQuery = countQuery.eq('author_id', instructorId);
     const { count, error: countError } = await countQuery;
     if (countError) return { success: false, error: countError.message };
 
@@ -131,7 +128,7 @@ export async function fetchFeedPosts(
         id, post_type, title, title_es, body, body_es,
         media_urls, thumbnail_url, linked_session_id,
         like_count, comment_count, is_pinned, created_at,
-        author:instructor_id(id, name, avatar_url, is_verified_instructor),
+        author:author_id(id, name, avatar_url, is_verified_instructor),
         linked_session:linked_session_id(id, title, date, sport)
       `
       )
@@ -139,7 +136,7 @@ export async function fetchFeedPosts(
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (instructorId) query = query.eq('instructor_id', instructorId);
+    if (instructorId) query = query.eq('author_id', instructorId);
 
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
@@ -250,9 +247,10 @@ export async function addPostComment(
 ): Promise<DalResult<{ id: string }>> {
   try {
     if (!body.trim()) return { success: false, error: 'Comment body is required' };
+    // post_comments live schema uses author_id + content (not user_id + body).
     const { data, error } = await supabase
       .from('post_comments')
-      .insert({ post_id: postId, user_id: userId, body: body.trim() })
+      .insert({ post_id: postId, author_id: userId, content: body.trim() })
       .select('id')
       .single();
     if (error) return { success: false, error: error.message };
@@ -270,12 +268,14 @@ export async function fetchPostComments(
   offset: number = 0
 ): Promise<DalResult<CommentWithUser[]>> {
   try {
+    // Live schema: content (not body), author_id (not user_id). Normalize
+    // to the DAL's canonical shape so callers keep working.
     const { data, error } = await supabase
       .from('post_comments')
       .select(
         `
-        id, body, created_at,
-        user:user_id(id, name, avatar_url)
+        id, content, created_at,
+        user:author_id(id, name, avatar_url)
       `
       )
       .eq('post_id', postId)
@@ -286,9 +286,10 @@ export async function fetchPostComments(
 
     const comments: CommentWithUser[] = (data || []).map((row: Record<string, unknown>) => {
       const u = row.user as { id: string; name: string; avatar_url: string | null } | null;
+      // DB returns `content`; DAL exposes it as `body` for callers.
       return {
         id: row.id as string,
-        body: row.body as string,
+        body: (row.content as string) ?? '',
         created_at: row.created_at as string,
         user: u,
       };

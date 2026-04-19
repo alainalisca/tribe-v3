@@ -1,6 +1,9 @@
 -- 031_instructor_content_feed.sql
--- Fill out the existing instructor_posts table and add post_comments.
+-- Extend the existing instructor_posts table with content feed features.
+-- IMPORTANT: The live table uses author_id (not instructor_id) and content (not body).
+-- We only ADD columns that don't already exist.
 
+-- New columns
 ALTER TABLE instructor_posts
   ADD COLUMN IF NOT EXISTS post_type TEXT DEFAULT 'text'
     CHECK (post_type IN ('text', 'photo', 'video', 'tip', 'workout', 'session_preview'));
@@ -11,37 +14,19 @@ ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS body TEXT;
 ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS body_es TEXT;
 ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS media_urls TEXT[] DEFAULT '{}';
 ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;
-ALTER TABLE instructor_posts
-  ADD COLUMN IF NOT EXISTS linked_session_id UUID REFERENCES sessions(id) ON DELETE SET NULL;
-ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS like_count INTEGER DEFAULT 0;
 ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS comment_count INTEGER DEFAULT 0;
-ALTER TABLE instructor_posts ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT false;
 
--- post_likes may already exist; guard creation.
-CREATE TABLE IF NOT EXISTS post_likes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES instructor_posts(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (post_id, user_id)
-);
+-- linked_session_id, like_count, is_pinned already exist — skip
 
-CREATE TABLE IF NOT EXISTS post_comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES instructor_posts(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  body TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
+-- Indexes using correct column name (author_id)
 CREATE INDEX IF NOT EXISTS idx_instructor_posts_author
-  ON instructor_posts (instructor_id, created_at DESC);
+  ON instructor_posts (author_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_instructor_posts_feed
   ON instructor_posts (created_at DESC)
   WHERE post_type != 'session_preview';
-CREATE INDEX IF NOT EXISTS idx_post_comments_post
-  ON post_comments (post_id, created_at ASC);
 
+-- post_comments already exists (migration 011) with author_id column.
+-- Ensure RLS policies use author_id (not user_id).
 ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "anyone_can_read_comments" ON post_comments;
@@ -50,11 +35,11 @@ CREATE POLICY "anyone_can_read_comments" ON post_comments
 
 DROP POLICY IF EXISTS "auth_users_can_comment" ON post_comments;
 CREATE POLICY "auth_users_can_comment" ON post_comments
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (auth.uid() = author_id);
 
 DROP POLICY IF EXISTS "own_comments" ON post_comments;
 CREATE POLICY "own_comments" ON post_comments
-  FOR DELETE USING (auth.uid() = user_id);
+  FOR DELETE USING (auth.uid() = author_id);
 
 -- Maintain like_count
 CREATE OR REPLACE FUNCTION update_post_like_count()
