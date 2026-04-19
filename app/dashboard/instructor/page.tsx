@@ -13,6 +13,7 @@ import SessionManager from '@/components/dashboard/SessionManager';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
 import LeadsTab from '@/components/dashboard/LeadsTab';
+import PostComposer from '@/components/dashboard/PostComposer';
 import { fetchInterestForInstructor } from '@/lib/dal/trainingInterest';
 import {
   fetchInstructorSessions,
@@ -39,6 +40,7 @@ export default function InstructorDashboardPage() {
   const [stats, setStats] = useState<InstructorStats | null>(null);
   const [packages, setPackages] = useState<ServicePackageRow[]>([]);
   const [activeLeadCount, setActiveLeadCount] = useState(0);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const txt = {
     title: language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard',
@@ -153,14 +155,25 @@ export default function InstructorDashboardPage() {
         {/* Tab Content */}
         <div className="mt-6">
           {activeTab === 'storefront' && profile && (
-            <StorefrontEditor
-              userId={profile.id}
-              language={language as 'en' | 'es'}
-              initialBio={profile.instructor_bio || profile.bio || ''}
-              initialTagline={profile.storefront_tagline || ''}
-              initialSpecialties={(profile.specialties as string[]) || []}
-              initialBannerUrl={profile.storefront_banner_url || ''}
-            />
+            <>
+              {/* Share-an-update entry point; opens the PostComposer modal. */}
+              <button
+                type="button"
+                onClick={() => setComposerOpen(true)}
+                className="w-full mb-4 py-3 px-4 rounded-xl bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold"
+              >
+                {language === 'es' ? '✍️ Compartir una actualización' : '✍️ Share an update'}
+              </button>
+
+              <StorefrontEditor
+                userId={profile.id}
+                language={language as 'en' | 'es'}
+                initialBio={profile.instructor_bio || profile.bio || ''}
+                initialTagline={profile.storefront_tagline || ''}
+                initialSpecialties={(profile.specialties as string[]) || []}
+                initialBannerUrl={profile.storefront_banner_url || ''}
+              />
+            </>
           )}
 
           {activeTab === 'sessions' && (
@@ -188,6 +201,15 @@ export default function InstructorDashboardPage() {
           )}
         </div>
       </div>
+
+      {profile && (
+        <PostComposer
+          open={composerOpen}
+          onClose={() => setComposerOpen(false)}
+          instructorId={profile.id}
+          language={language as 'en' | 'es'}
+        />
+      )}
 
       <BottomNav />
     </div>

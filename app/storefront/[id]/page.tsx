@@ -658,13 +658,15 @@ export default function StorefrontPage() {
           />
         )}
 
-        {/* Tip the instructor — athletes only */}
+        {/* Tip the instructor — athletes only. Currency follows app language
+            (es → COP via Wompi, en → USD via Stripe); this matches the
+            Colombia-first default and works for the diaspora/USD users. */}
         {currentUserId && currentUserId !== instructorId && (
           <TipButton
             tipperId={currentUserId}
             instructorId={instructorId}
             instructorName={instructor.name}
-            currency="COP"
+            currency={language === 'en' ? 'USD' : 'COP'}
             language={language as 'en' | 'es'}
           />
         )}

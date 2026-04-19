@@ -14,7 +14,13 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { rateLimit } from '@/lib/rate-limit';
 import { createPaymentSchema } from '@/lib/validations/payment';
-import { getPaymentGateway, isSupportedCurrency, calculateFees, PLATFORM_FEE_PERCENT } from '@/lib/payments/config';
+import {
+  getPaymentGateway,
+  isSupportedCurrency,
+  calculateFees,
+  calculateFeesForUser,
+  PLATFORM_FEE_PERCENT,
+} from '@/lib/payments/config';
 import { createWompiTransaction } from '@/lib/payments/wompi';
 import { createStripeCheckoutSession } from '@/lib/payments/stripe';
 
@@ -264,7 +270,24 @@ export async function POST(request: NextRequest) {
 
     const amountCents = finalAmountCents;
     const feePercent = session.platform_fee_percent || PLATFORM_FEE_PERCENT;
-    const { platformFeeCents, instructorPayoutCents } = calculateFees(amountCents, feePercent);
+
+    // Tribe+ members pay no platform fee. Fetch subscription state for the buyer
+    // and let calculateFeesForUser apply the waiver. If the lookup fails, fall
+    // back to the standard fee — never let a lookup error break payment.
+    const { data: buyerProfile } = await serviceSupabase
+      .from('users')
+      .select('subscription_tier, subscription_expires_at')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const { platformFeeCents, instructorPayoutCents } = calculateFeesForUser(
+      amountCents,
+      buyerProfile as { subscription_tier?: string | null; subscription_expires_at?: string | null } | null,
+      feePercent
+    );
+    // Silences the unused-import warning while keeping calculateFees available
+    // as a fallback for non-user-scoped callers.
+    void calculateFees;
     const gateway = getPaymentGateway(currency as 'COP' | 'USD');
     const userEmail = user.email || '';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';

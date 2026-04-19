@@ -3,7 +3,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { calculateFees } from '@/lib/payments/config';
+import { calculateFees, calculateFeesForUser } from '@/lib/payments/config';
 
 import type { DalResult } from './types';
 import type { Product, ProductWithVariants, ProductOrderWithProduct, CreateOrderData } from './product-types';
@@ -110,11 +110,26 @@ export async function createProductOrder(
       }
     }
 
-    // 4. Calculate totals and fees
+    // 4. Calculate totals and fees — Tribe+ members pay no platform fee
     const quantity = orderData.quantity || 1;
     const discount = orderData.discount_cents || 0;
     const totalPriceCents = unitPriceCents * quantity - discount;
-    const { platformFeeCents, instructorPayoutCents } = calculateFees(totalPriceCents);
+
+    const { data: buyerProfile } = await supabase
+      .from('users')
+      .select('subscription_tier, subscription_expires_at')
+      .eq('id', orderData.buyer_id)
+      .maybeSingle();
+
+    const { platformFeeCents, instructorPayoutCents } = calculateFeesForUser(
+      totalPriceCents,
+      buyerProfile as {
+        subscription_tier?: string | null;
+        subscription_expires_at?: string | null;
+      } | null
+    );
+    // keep calculateFees in imports for non-user-scoped callers
+    void calculateFees;
 
     // 5. Build credits fields for packages
     let creditsRemaining: number | null = null;

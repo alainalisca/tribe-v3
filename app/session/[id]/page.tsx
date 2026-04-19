@@ -19,6 +19,7 @@ import ParticipantList from '@/components/session/ParticipantList';
 import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
 import ReviewsList from '@/components/instructor/ReviewsList';
+import WaitlistPanel from '@/components/session/WaitlistPanel';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -234,6 +235,18 @@ export default function SessionDetailPage() {
           onEdit={() => router.push(`/session/${params.id}/edit`)}
           onInvite={d.generateInviteLink}
           creatingInvite={d.creatingInvite}
+        />
+
+        {/* Waitlist — visible when session full or when the viewer has an active offer */}
+        <WaitlistPanel
+          sessionId={d.session.id}
+          userId={d.user?.id ?? null}
+          isFull={isFull}
+          hasJoined={d.hasJoined}
+          isPast={isPast}
+          isCreator={isCreator}
+          language={language}
+          onAccepted={() => d.loadSession()}
         />
 
         {/* Calendar Integration — shown when user has joined and session is upcoming */}
