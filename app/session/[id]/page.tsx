@@ -18,6 +18,7 @@ import SessionDetails from '@/components/session/SessionDetails';
 import ParticipantList from '@/components/session/ParticipantList';
 import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
+import ReviewsList from '@/components/instructor/ReviewsList';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -298,6 +299,24 @@ export default function SessionDetailPage() {
           onOpenLightbox={d.openLightbox}
           onPhotosChanged={d.loadRecapPhotos}
         />
+
+        {/* Instructor reviews preview — builds trust before booking another session */}
+        {!isCreator && d.creator?.id && (
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-theme-primary mb-2">
+              {language === 'es'
+                ? `Lo que dicen los atletas sobre ${d.creator.name || ''}`
+                : `What athletes say about ${d.creator.name || ''}`}
+            </h3>
+            <ReviewsList
+              hostId={d.creator.id}
+              limit={3}
+              showAll={false}
+              language={language}
+              seeAllHref={`/storefront/${d.creator.id}`}
+            />
+          </div>
+        )}
 
         <ReviewSection
           session={d.session}

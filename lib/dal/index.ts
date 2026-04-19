@@ -32,3 +32,14 @@ export * from './localEvents';
 export * from './referrals';
 export * from './referrals-progression';
 export * from './products';
+export * from './reviews';
+export * from './athleteStats';
+export * from './trainingInterest';
+export * from './tips';
+export * from './spotlight';
+export * from './waitlist';
+export * from './subscriptions';
+export * from './leadDiscovery';
+export * from './notificationPreferences';
+// Note: instructorPosts is NOT re-exported from here because its symbol names
+// collide with comments.ts / promote.ts. Import directly from './instructorPosts'.

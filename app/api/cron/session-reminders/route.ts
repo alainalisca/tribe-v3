@@ -7,6 +7,7 @@ import {
   fetchUserProfileMaybe,
   fetchParticipantsWithUserDetails,
 } from '@/lib/dal';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 
 // Reminder messages in both languages
 const reminderMessages = {
@@ -124,10 +125,16 @@ export async function GET(request: Request) {
           }
         }
 
+        // Respect per-category preferences (push channel, session_reminders category)
+        const prefsChecks = await Promise.all(
+          usersToNotify.map((u) => shouldSendNotification(supabase, u.id, 'session_reminder', 'push'))
+        );
+        const filteredUsersToNotify = usersToNotify.filter((_, idx) => prefsChecks[idx]);
+
         // Send notifications in parallel batches
         const BATCH_SIZE = 10;
-        for (let i = 0; i < usersToNotify.length; i += BATCH_SIZE) {
-          const batch = usersToNotify.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < filteredUsersToNotify.length; i += BATCH_SIZE) {
+          const batch = filteredUsersToNotify.slice(i, i + BATCH_SIZE);
           const results = await Promise.allSettled(
             batch.map((userInfo) => {
               const lang = userInfo.lang as 'en' | 'es';

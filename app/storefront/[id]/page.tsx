@@ -33,6 +33,12 @@ import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRo
 import StorefrontProductsSection from '@/components/products/StorefrontProductsSection';
 import { getInstructorShareUrl, copyToClipboard } from '@/lib/share';
 import { showSuccess } from '@/lib/toast';
+import ReviewsList from '@/components/instructor/ReviewsList';
+import CredentialsBadges from '@/components/instructor/CredentialsBadges';
+import VideoIntro from '@/components/instructor/VideoIntro';
+import AvailabilityPreview from '@/components/instructor/AvailabilityPreview';
+import InterestButton from '@/components/instructor/InterestButton';
+import TipButton from '@/components/TipButton';
 
 // Type definitions
 interface Instructor {
@@ -47,6 +53,11 @@ interface Instructor {
   bio: string;
   average_rating?: number | null;
   total_reviews?: number | null;
+  storefront_video_url?: string | null;
+  certifications?: string[] | null;
+  years_experience?: number | null;
+  total_participants_served?: number | null;
+  total_sessions_hosted?: number | null;
 }
 
 interface Session {
@@ -138,6 +149,8 @@ export default function StorefrontPage() {
     packages: language === 'es' ? 'Paquetes' : 'Packages',
     media: language === 'es' ? 'Medios' : 'Media',
     posts: language === 'es' ? 'Publicaciones' : 'Posts',
+    reviews: language === 'es' ? 'Reseñas' : 'Reviews',
+    reviewsCount: language === 'es' ? 'reseñas' : 'reviews',
     follow: language === 'es' ? 'Seguir' : 'Follow',
     following: language === 'es' ? 'Siguiendo' : 'Following',
     followers: language === 'es' ? 'seguidores' : 'followers',
@@ -200,7 +213,7 @@ export default function StorefrontPage() {
         const { data: instructorData, error } = await supabase
           .from('users')
           .select(
-            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews'
+            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted'
           )
           .eq('id', instructorId)
           .single();
@@ -492,6 +505,22 @@ export default function StorefrontPage() {
                   {instructor.verified && (
                     <p className="text-tribe-green text-xs font-semibold">✓ {translations.verified}</p>
                   )}
+                  {instructor.total_reviews != null && instructor.total_reviews > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('reviews')}
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-theme-secondary hover:text-tribe-green transition-colors"
+                      aria-label={`${instructor.average_rating?.toFixed(1) ?? '0.0'} ${translations.rating}, ${instructor.total_reviews} ${translations.reviewsCount}`}
+                    >
+                      <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
+                      <span className="font-semibold text-theme-primary">
+                        {(instructor.average_rating ?? 0).toFixed(1)}
+                      </span>
+                      <span>
+                        ({instructor.total_reviews} {translations.reviewsCount})
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -564,6 +593,82 @@ export default function StorefrontPage() {
         {/* Featured Partner Badge */}
         {partnerData && <PartnerStorefrontBadge partner={partnerData} language={language} />}
 
+        {/* Social Proof Bar */}
+        <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap text-xs text-theme-secondary pb-1">
+          {instructor.total_reviews != null && instructor.total_reviews > 0 && (
+            <span className="inline-flex items-center gap-1">
+              <Star className="w-3 h-3 fill-[#F59E0B] text-[#F59E0B]" />
+              <span className="font-semibold text-theme-primary">{(instructor.average_rating ?? 0).toFixed(1)}</span>(
+              {instructor.total_reviews} {translations.reviewsCount})
+            </span>
+          )}
+          {instructor.total_participants_served != null && instructor.total_participants_served > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {instructor.total_participants_served} {language === 'es' ? 'atletas entrenados' : 'athletes trained'}
+              </span>
+            </>
+          )}
+          {instructor.total_sessions_hosted != null && instructor.total_sessions_hosted > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {instructor.total_sessions_hosted} {language === 'es' ? 'sesiones' : 'sessions hosted'}
+              </span>
+            </>
+          )}
+          {instructor.years_experience != null && instructor.years_experience > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {instructor.years_experience} {language === 'es' ? 'años de experiencia' : 'years experience'}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Video Intro */}
+        <VideoIntro
+          videoUrl={instructor.storefront_video_url}
+          posterUrl={instructor.storefront_banner_url}
+          isOwnStorefront={currentUserId === instructorId}
+          language={language as 'en' | 'es'}
+        />
+
+        {/* Credentials & Experience */}
+        <CredentialsBadges
+          certifications={instructor.certifications || []}
+          isVerified={!!instructor.verified}
+          yearsExperience={instructor.years_experience || 0}
+          language={language as 'en' | 'es'}
+        />
+
+        {/* Availability Quick View */}
+        <AvailabilityPreview instructorId={instructorId} language={language as 'en' | 'es'} />
+
+        {/* Interested in Training — athletes only */}
+        {currentUserId && currentUserId !== instructorId && (
+          <InterestButton
+            athleteId={currentUserId}
+            instructorId={instructorId}
+            instructorName={instructor.name}
+            specialties={instructor.specialties || []}
+            language={language as 'en' | 'es'}
+          />
+        )}
+
+        {/* Tip the instructor — athletes only */}
+        {currentUserId && currentUserId !== instructorId && (
+          <TipButton
+            tipperId={currentUserId}
+            instructorId={instructorId}
+            instructorName={instructor.name}
+            currency="COP"
+            language={language as 'en' | 'es'}
+          />
+        )}
+
         {/* Bio Section */}
         {instructor.bio && (
           <div className="bg-white dark:bg-tribe-card rounded-2xl p-4 border border-stone-200 dark:border-gray-700">
@@ -605,6 +710,7 @@ export default function StorefrontPage() {
             { id: 'packages', label: translations.packages },
             { id: 'media', label: translations.media },
             { id: 'posts', label: translations.posts },
+            { id: 'reviews', label: translations.reviews },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -764,6 +870,13 @@ export default function StorefrontPage() {
                 <p className="text-theme-secondary text-sm">{translations.noPosts}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Reviews Tab */}
+        {activeTab === 'reviews' && instructor && (
+          <div>
+            <ReviewsList hostId={instructor.id} showAll={true} language={language as 'en' | 'es'} />
           </div>
         )}
       </div>

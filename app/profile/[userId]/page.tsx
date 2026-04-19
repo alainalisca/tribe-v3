@@ -12,6 +12,8 @@ import { ArrowLeft, MapPin, Shield, Flag, UserPlus, Share2 } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import ReviewsList from '@/components/instructor/ReviewsList';
+import TribePlusBadge from '@/components/TribePlusBadge';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getErrorMessage } from '@/lib/errorMessages';
@@ -322,6 +324,7 @@ export default function PublicProfilePage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-3xl font-extrabold tracking-tight text-theme-primary">{profile?.name}</h2>
               {(profile as any)?.is_trailblazer && <TrailblazerBadge language={language} />}
+              <TribePlusBadge user={profile as any} />
             </div>
             <div className="flex items-center gap-3 mt-2">
               {profile?.username && <span className="text-sm text-theme-secondary">@{profile.username}</span>}
@@ -357,6 +360,25 @@ export default function PublicProfilePage() {
               <p className="text-sm text-theme-secondary mt-1">{t.attendanceRate}</p>
             </div>
           </div>
+
+          {/* Reviews preview — instructors only */}
+          {profile?.is_instructor && (
+            <div className="mt-6 bg-white dark:bg-tribe-surface rounded-2xl p-5 border border-stone-200 dark:border-tribe-mid">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-theme-primary">{language === 'es' ? 'Reseñas' : 'Reviews'}</h3>
+                <a href={`/storefront/${userId}`} className="text-xs font-medium text-tribe-green hover:underline">
+                  {language === 'es' ? 'Ver en la tienda →' : 'See all on storefront →'}
+                </a>
+              </div>
+              <ReviewsList
+                hostId={userId}
+                limit={3}
+                showAll={false}
+                language={language}
+                seeAllHref={`/storefront/${userId}`}
+              />
+            </div>
+          )}
 
           {/* Invite to Session — always visible */}
           {currentUser && !isOwnProfile && (

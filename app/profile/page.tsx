@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Camera, MapPin, X, Settings, Store, HeartHandshake } from 'lucide-react';
+import { Camera, MapPin, X, Settings, Store, HeartHandshake, BarChart3 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -154,6 +154,19 @@ export default function ProfilePage() {
             <div className="mt-6">
               <AchievementBadges userId={profile.id} isOwnProfile={true} />
             </div>
+          )}
+
+          {/* My Training — personal dashboard for every athlete */}
+          {profile?.id && (
+            <Link
+              href="/my-training"
+              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
+            >
+              <BarChart3 className="w-6 h-6 flex-shrink-0" />
+              <span className="font-bold text-base text-center">
+                {language === 'es' ? 'Mi Entrenamiento' : 'My Training'}
+              </span>
+            </Link>
           )}
 
           {/* Instructor Dashboard (instructors only) */}

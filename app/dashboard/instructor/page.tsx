@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Store, Calendar, BarChart3, Package } from 'lucide-react';
+import { ArrowLeft, Store, Calendar, BarChart3, Package, UserCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -12,6 +12,8 @@ import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
+import LeadsTab from '@/components/dashboard/LeadsTab';
+import { fetchInterestForInstructor } from '@/lib/dal/trainingInterest';
 import {
   fetchInstructorSessions,
   fetchInstructorStats,
@@ -22,7 +24,7 @@ import {
 } from '@/lib/dal/instructorDashboard';
 import type { User } from '@/lib/database.types';
 
-type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages';
+type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages' | 'leads';
 
 export default function InstructorDashboardPage() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function InstructorDashboardPage() {
   const [past, setPast] = useState<InstructorSessionRow[]>([]);
   const [stats, setStats] = useState<InstructorStats | null>(null);
   const [packages, setPackages] = useState<ServicePackageRow[]>([]);
+  const [activeLeadCount, setActiveLeadCount] = useState(0);
 
   const txt = {
     title: language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard',
@@ -43,13 +46,15 @@ export default function InstructorDashboardPage() {
     sessions: language === 'es' ? 'Sesiones' : 'Sessions',
     analytics: language === 'es' ? 'Estadisticas' : 'Analytics',
     packages: language === 'es' ? 'Paquetes' : 'Packages',
+    leads: language === 'es' ? 'Interesados' : 'Leads',
   };
 
-  const tabs: { key: Tab; label: string; icon: typeof Store }[] = [
+  const tabs: { key: Tab; label: string; icon: typeof Store; badge?: number }[] = [
     { key: 'storefront', label: txt.storefront, icon: Store },
     { key: 'sessions', label: txt.sessions, icon: Calendar },
     { key: 'analytics', label: txt.analytics, icon: BarChart3 },
     { key: 'packages', label: txt.packages, icon: Package },
+    { key: 'leads', label: txt.leads, icon: UserCheck, badge: activeLeadCount },
   ];
 
   useEffect(() => {
@@ -71,10 +76,11 @@ export default function InstructorDashboardPage() {
       setProfile(userRow as User);
 
       // Load all data in parallel
-      const [sessResult, statsResult, pkgResult] = await Promise.all([
+      const [sessResult, statsResult, pkgResult, leadsResult] = await Promise.all([
         fetchInstructorSessions(supabase, authUser.id),
         fetchInstructorStats(supabase, authUser.id),
         fetchDashboardPackages(supabase, authUser.id),
+        fetchInterestForInstructor(supabase, authUser.id, 'active', 1, 0),
       ]);
 
       if (sessResult.success && sessResult.data) {
@@ -83,6 +89,7 @@ export default function InstructorDashboardPage() {
       }
       if (statsResult.success && statsResult.data) setStats(statsResult.data);
       if (pkgResult.success && pkgResult.data) setPackages(pkgResult.data);
+      if (leadsResult.success && leadsResult.data) setActiveLeadCount(leadsResult.data.total);
 
       setLoading(false);
     }
@@ -129,6 +136,15 @@ export default function InstructorDashboardPage() {
               >
                 <tab.icon className="w-4 h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
+                {tab.badge != null && tab.badge > 0 && (
+                  <span
+                    className={`ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 text-[10px] font-bold rounded-full ${
+                      isActive ? 'bg-slate-900/20 text-slate-900' : 'bg-[#84cc16] text-slate-900'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -157,6 +173,18 @@ export default function InstructorDashboardPage() {
 
           {activeTab === 'packages' && profile && (
             <PackageManager language={language as 'en' | 'es'} userId={profile.id} initialPackages={packages} />
+          )}
+
+          {activeTab === 'leads' && profile && (
+            <div className="space-y-4">
+              <LeadsTab instructorId={profile.id} language={language as 'en' | 'es'} />
+              <Link
+                href="/dashboard/instructor/discover"
+                className="block w-full py-3 px-4 rounded-xl bg-[#3D4349] hover:bg-[#404549] text-center text-sm font-semibold"
+              >
+                {language === 'es' ? 'Descubrir atletas disponibles →' : 'Discover available athletes →'}
+              </Link>
+            </div>
           )}
         </div>
       </div>

@@ -47,3 +47,22 @@ export function calculateFees(amountCents: number, feePercent: number = PLATFORM
 export function isSupportedCurrency(currency: string): currency is Currency {
   return currency === 'COP' || currency === 'USD';
 }
+
+/**
+ * Calculate fees for a specific user, applying Tribe+ discounts if active.
+ * Callers should prefer this over the bare calculateFees() at payment-creation
+ * time so fee waivers flow through automatically.
+ */
+export function calculateFeesForUser(
+  amountCents: number,
+  user: { subscription_tier?: string | null; subscription_expires_at?: string | null } | null | undefined,
+  feePercent: number = PLATFORM_FEE_PERCENT
+) {
+  // Inline check to avoid a circular import with lib/subscription/config.
+  const active =
+    !!user &&
+    (user.subscription_tier === 'plus' || user.subscription_tier === 'pro') &&
+    (!user.subscription_expires_at || new Date(user.subscription_expires_at) > new Date());
+  const effectivePercent = active ? 0 : feePercent;
+  return calculateFees(amountCents, effectivePercent);
+}

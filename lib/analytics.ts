@@ -125,6 +125,11 @@ type EventName =
   | 'share_link_created'
   | 'referral_sent'
   | 'session_calendar_added'
+  | 'stats_shared'
+  | 'tip_sent'
+  | 'post_session_rebook'
+  | 'spotlight_impression'
+  | 'spotlight_clicked'
 
   // Account
   | 'settings_opened'
