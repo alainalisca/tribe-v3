@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, Sparkles, Zap, BarChart3, Shield } from 'lucide-react';
+import { Sparkles, Zap, BarChart3, Shield } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscription/config';

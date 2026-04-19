@@ -37,7 +37,8 @@ export default function NotificationPreferencesPage() {
       const res = await getNotificationPreferences(supabase, user.id);
       if (cancelled) return;
       if (res.success && res.data) {
-        const { user_id: _drop, ...rest } = res.data;
+        const { user_id, ...rest } = res.data;
+        void user_id;
         setPrefs(rest);
       }
       setLoading(false);
