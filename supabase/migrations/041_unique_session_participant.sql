@@ -5,13 +5,23 @@
 -- RPC (migration 042).
 
 -- Dedupe any accidental duplicates before applying the constraint. Keep the
--- earliest row (lowest id — UUIDv7-ish order or creation order).
+-- earliest row by ctid.
 DELETE FROM session_participants a
 USING session_participants b
 WHERE a.ctid > b.ctid
   AND a.session_id = b.session_id
   AND a.user_id = b.user_id;
 
-ALTER TABLE session_participants
-  ADD CONSTRAINT session_participants_session_user_uniq
-  UNIQUE (session_id, user_id);
+-- Idempotent constraint add — Postgres doesn't support
+-- `ADD CONSTRAINT IF NOT EXISTS`, so we guard via pg_constraint.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'session_participants_session_user_uniq'
+  ) THEN
+    ALTER TABLE session_participants
+      ADD CONSTRAINT session_participants_session_user_uniq
+      UNIQUE (session_id, user_id);
+  END IF;
+END $$;
