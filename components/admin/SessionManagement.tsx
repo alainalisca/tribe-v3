@@ -64,7 +64,7 @@ export default function SessionManagement({
                       </p>
                       {session.photo_verified && (
                         <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded flex items-center gap-1">
-                          &#10003; {language === 'es' ? 'Verificado' : 'Verified'}
+                          ✓ {language === 'es' ? 'Verificado' : 'Verified'}
                         </span>
                       )}
                     </div>
@@ -104,7 +104,7 @@ export default function SessionManagement({
                         onClick={() => onVerify(session.id)}
                         className="px-3 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                       >
-                        &#10003; {language === 'es' ? 'Verificar' : 'Verify'}
+                        ✓ {language === 'es' ? 'Verificar' : 'Verify'}
                       </button>
                     ) : (
                       <button
