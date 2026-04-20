@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyWompiWebhookSignature, mapWompiStatus, extractWompiTransactionData } from '@/lib/payments/wompi';
+import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
 
 interface WebhookPayload {
   transaction?: {
@@ -115,160 +116,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ received: true, message: 'Already processed' });
     }
 
-    // Update payment status in database
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update({
-        status: paymentStatus,
-        gateway_payment_id: transactionId,
-        gateway_reference: wompiStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', paymentId);
-
-    if (updateError) {
-      logError(updateError, {
-        action: 'wompi_webhook_update',
-        paymentId,
-        transactionId,
-      });
+    // LOGIC-04: hand off atomic work (status update + participant upsert +
+    // product fulfillment) to finalize_payment RPC. On any RPC error we
+    // return 500 so Wompi retries.
+    const { data: rpcData, error: rpcError } = await supabase.rpc('finalize_payment', {
+      p_gateway_payment_id: transactionId,
+      p_expected_amount_cents: payload.transaction.amount_in_cents,
+      p_gateway: 'wompi',
+      p_new_status: paymentStatus,
+    });
+    if (rpcError) {
+      logError(rpcError, { action: 'wompi_webhook_finalize', paymentId, transactionId });
+      return NextResponse.json({ error: 'finalize_failed' }, { status: 500 });
+    }
+    const result = (rpcData ?? {}) as {
+      success?: boolean;
+      error?: string;
+      payment_id?: string;
+      was_duplicate?: boolean;
+    };
+    if (!result.success) {
+      logError(new Error(`wompi_webhook_${result.error}`), { paymentId, transactionId });
+      return NextResponse.json({ error: result.error || 'finalize_failed' }, { status: 400 });
     }
 
-    // On approved payment: add athlete as confirmed participant + notify
-    if (paymentStatus === 'approved') {
-      const { data: paymentRecord } = await supabase
-        .from('payments')
-        .select('session_id, participant_user_id')
-        .eq('id', paymentId)
-        .single();
-
-      if (paymentRecord) {
-        const { error: participantError } = await supabase.from('session_participants').upsert(
-          {
-            session_id: paymentRecord.session_id,
-            user_id: paymentRecord.participant_user_id,
-            status: 'confirmed',
-            joined_at: new Date().toISOString(),
-          },
-          { onConflict: 'session_id,user_id' }
-        );
-
-        if (participantError) {
-          logError(participantError, {
-            action: 'wompi_webhook_add_participant',
-            paymentId,
-            sessionId: paymentRecord.session_id,
-          });
-        }
-
-        // Send booking confirmation notification
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.CRON_SECRET}`,
-            },
-            body: JSON.stringify({
-              user_id: paymentRecord.participant_user_id,
-              title: 'Booking Confirmed!',
-              body: 'Your session has been booked. See you there!',
-              type: 'payment_confirmed',
-              data: { session_id: paymentRecord.session_id },
-            }),
-          });
-        } catch (notifErr) {
-          logError(notifErr, { action: 'wompi_webhook_notification', paymentId });
-        }
-      }
-
-      // ──── PRODUCT ORDER FULFILLMENT ────
-      const { data: productOrder } = await supabase
-        .from('product_orders')
-        .select('id, buyer_id, instructor_id, product_id, fulfillment_status')
-        .eq('payment_id', paymentId)
-        .maybeSingle();
-
-      if (productOrder) {
-        await supabase
-          .from('product_orders')
-          .update({ payment_status: 'approved', updated_at: new Date().toISOString() })
-          .eq('id', productOrder.id);
-
-        const { data: product } = await supabase
-          .from('products')
-          .select('product_type, fulfillment_method, session_credits, package_valid_days')
-          .eq('id', productOrder.product_id)
-          .single();
-
-        // Auto-fulfill digital products
-        if (product?.fulfillment_method === 'digital') {
-          await supabase
-            .from('product_orders')
-            .update({ fulfillment_status: 'completed', fulfilled_at: new Date().toISOString() })
-            .eq('id', productOrder.id);
-        }
-
-        // Auto-fulfill session credit packages
-        if (product?.fulfillment_method === 'session_credit' && product?.session_credits) {
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + (product.package_valid_days || 90));
-          await supabase
-            .from('product_orders')
-            .update({
-              fulfillment_status: 'completed',
-              fulfilled_at: new Date().toISOString(),
-              credits_remaining: product.session_credits,
-              credits_expire_at: expiresAt.toISOString(),
-            })
-            .eq('id', productOrder.id);
-        }
-
-        // Notify buyer of product purchase confirmation
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.CRON_SECRET}`,
-            },
-            body: JSON.stringify({
-              user_id: productOrder.buyer_id,
-              title: 'Purchase Confirmed!',
-              body: 'Your product order has been confirmed.',
-              type: 'product_order_confirmed',
-              data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
-            }),
-          });
-        } catch (notifErr) {
-          logError(notifErr, { action: 'wompi_webhook_product_notification_buyer', paymentId });
-        }
-
-        // Notify instructor of new sale
-        try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${process.env.CRON_SECRET}`,
-            },
-            body: JSON.stringify({
-              user_id: productOrder.instructor_id,
-              title: 'New Sale!',
-              body: 'You have a new product order.',
-              type: 'product_order_received',
-              data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
-            }),
-          });
-        } catch (notifErr) {
-          logError(notifErr, { action: 'wompi_webhook_product_notification_instructor', paymentId });
-        }
-      }
+    // Post-finalize notifications. Only fire on newly-approved payments so
+    // a Wompi replay doesn't re-notify. Fire-and-forget — failures must not
+    // force the gateway to retry.
+    if (paymentStatus === 'approved' && !result.was_duplicate && result.payment_id) {
+      notifyAfterFinalize(supabase, result.payment_id).catch(() => undefined);
     }
 
     // Always return 200 to acknowledge receipt
-    // Wompi will retry if we return errors
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, result });
   } catch (error: unknown) {
     logError(error, {
       route: '/api/payment/webhook/wompi',
