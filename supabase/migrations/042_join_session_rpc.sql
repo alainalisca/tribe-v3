@@ -1,12 +1,15 @@
 -- 042_join_session_rpc.sql
--- LOGIC-01: lib/sessions.ts:joinSession() already calls rpc('join_session', ...)
--- but the RPC itself has never existed in the DB. That's why the fallback
--- path runs — and that path is NOT atomic, which is the overbooking race.
---
--- This migration creates the RPC. The fallback path in lib/sessions.ts is
--- removed in the same PR so there's no silent regression to the racy code.
+-- LOGIC-01: lib/sessions.ts:joinSession() calls rpc('join_session', ...) as
+-- its only path after migration 042 landed. This RPC is the atomic
+-- capacity-check-and-insert that replaces the racy client-side fallback.
 --
 -- Depends on migration 041 (unique constraint) for the ON CONFLICT path.
+--
+-- NOTE: `CREATE OR REPLACE FUNCTION` in Postgres cannot change the return
+-- type of an existing function. Some deployments had a pre-existing
+-- `join_session` with a different signature — dropping first guarantees we
+-- land on the jsonb-returning version regardless of prior state.
+DROP FUNCTION IF EXISTS join_session(uuid, uuid, text);
 
 CREATE OR REPLACE FUNCTION join_session(
   p_session_id uuid,
