@@ -6,7 +6,7 @@ import { Search, CreditCard, Dumbbell, Store, ClipboardList, Wallet, type Lucide
 
 const tracks = {
   en: {
-    heading: 'What is Tribe',
+    heading: 'What is Tribe?',
     athlete: {
       label: 'For Athletes',
       steps: [
@@ -55,7 +55,7 @@ const tracks = {
     },
   },
   es: {
-    heading: 'Qué es Tribe',
+    heading: '¿Qué es Tribe?',
     athlete: {
       label: 'Para Atletas',
       steps: [

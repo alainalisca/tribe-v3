@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 
-const ADMIN_EMAILS = ['alainalisca@aplusfitness.co'];
+// NOTE (QA-09, @al): the second address (@aplusfitnessllc.com) was added to
+// cover the user's working email — originally the list only had @aplusfitness.co.
+// If one of these is obsolete, remove it.
+export const ADMIN_EMAILS = ['alainalisca@aplusfitness.co', 'alainalisca@aplusfitnessllc.com'];
 
 export async function isAdmin(): Promise<boolean> {
   const supabase = await createClient();

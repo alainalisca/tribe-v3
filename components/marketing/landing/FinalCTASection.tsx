@@ -9,7 +9,7 @@ const BG_PHOTO = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w
 
 const t = {
   en: {
-    heading: 'Ready to Join the Tribe?',
+    heading: 'Ready to Join Tribe?',
     sub: 'Download the app or sign up on web. Your next training partner is one tap away.',
     ctaApp: 'Get the App',
     ctaWeb: 'Sign Up on Web',

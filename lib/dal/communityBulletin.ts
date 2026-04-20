@@ -2,6 +2,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
+import { ADMIN_EMAILS } from '@/lib/admin';
+import { createNotification } from './notifications';
 
 export interface BulletinPost {
   id: string;
@@ -89,11 +91,46 @@ export async function createBulletinPost(
       .single();
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data as BulletinPost };
+    const row = data as BulletinPost;
+
+    // QA-09: notify admins that a new post is waiting for review. Fire-and-forget
+    // — we never want the submit flow to fail because the notification failed.
+    notifyAdminsOfPendingBulletin(supabase, row).catch((err) => {
+      logError(err, { action: 'notifyAdminsOfPendingBulletin', postId: row.id });
+    });
+
+    return { success: true, data: row };
   } catch (error) {
     logError(error, { action: 'createBulletinPost' });
     return { success: false, error: 'Failed to create bulletin post' };
   }
+}
+
+/**
+ * In-app notification to every admin when a user submits a bulletin post
+ * that needs review. Resolves admin user ids by looking up the admin email
+ * whitelist in the users table. Never throws (caller uses .catch).
+ */
+async function notifyAdminsOfPendingBulletin(supabase: SupabaseClient, post: BulletinPost): Promise<void> {
+  if (!ADMIN_EMAILS.length) return;
+
+  const { data: admins, error } = await supabase.from('users').select('id, email').in('email', ADMIN_EMAILS);
+
+  if (error || !admins) return;
+
+  const adminRows = admins as Array<{ id: string; email: string }>;
+  await Promise.all(
+    adminRows.map((admin) =>
+      createNotification(supabase, {
+        recipient_id: admin.id,
+        actor_id: post.author_id,
+        type: 'bulletin_pending',
+        entity_type: 'community_bulletin',
+        entity_id: post.id,
+        message: `New bulletin post awaiting review: "${post.title}"`,
+      })
+    )
+  );
 }
 
 /**
