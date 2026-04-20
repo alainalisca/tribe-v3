@@ -34,6 +34,9 @@ export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  // QA-14: surface pending-bulletin count so admin notices when submissions
+  // are waiting. Fetched alongside main admin bootstrap below.
+  const [pendingBulletinCount, setPendingBulletinCount] = useState(0);
 
   const data = useAdminData(supabase);
   const actions = useAdminActions(supabase, user?.id, language, t, {
@@ -63,6 +66,12 @@ export default function AdminPage() {
       setUser(user);
       setAuthorized(true);
       await data.loadStats();
+      // QA-14: surface pending bulletin count on the manage-bulletin card
+      const { count: pendingCount } = await supabase
+        .from('community_bulletin')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      setPendingBulletinCount(pendingCount ?? 0);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
@@ -180,7 +189,7 @@ export default function AdminPage() {
               </Link>
               <Link
                 href="/admin/bulletin"
-                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl hover:bg-stone-50 dark:hover:bg-tribe-surface transition"
+                className="flex items-center gap-3 w-full p-4 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl hover:bg-stone-50 dark:hover:bg-tribe-surface transition relative"
               >
                 <svg className="w-6 h-6 text-tribe-green-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -190,14 +199,25 @@ export default function AdminPage() {
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
                   />
                 </svg>
-                <div>
-                  <p className="text-sm font-bold text-tribe-dark">
-                    {language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin'}
-                  </p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-tribe-dark dark:text-white">
+                      {language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin'}
+                    </p>
+                    {pendingBulletinCount > 0 && (
+                      <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                        {pendingBulletinCount}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-stone-500">
-                    {language === 'es'
-                      ? 'Revisar y aprobar publicaciones del tablon comunitario'
-                      : 'Review and approve community bulletin posts'}
+                    {pendingBulletinCount > 0
+                      ? language === 'es'
+                        ? `${pendingBulletinCount} ${pendingBulletinCount === 1 ? 'publicación pendiente' : 'publicaciones pendientes'} de revisión`
+                        : `${pendingBulletinCount} post${pendingBulletinCount === 1 ? '' : 's'} awaiting review`
+                      : language === 'es'
+                        ? 'Revisar y aprobar publicaciones del tablon comunitario'
+                        : 'Review and approve community bulletin posts'}
                   </p>
                 </div>
               </Link>

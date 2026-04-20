@@ -15,7 +15,10 @@ export interface AdminStatsRaw {
     id: string;
     status: string;
     date: string;
-    participants_count: number;
+    // QA-13: was `participants_count` (wrong column). Real column on the
+    // sessions table is `current_participants`. Using the wrong name returned
+    // null for the whole row, which zeroed every downstream stat.
+    current_participants: number | null;
     sport: string;
     creator_id: string;
   }>;
@@ -47,7 +50,7 @@ export async function fetchAdminStatsRaw(supabase: SupabaseClient): Promise<DalR
       supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('status', 'active').gte('date', today),
       supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
       supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
-      supabase.from('sessions').select('id, status, date, participants_count, sport, creator_id'),
+      supabase.from('sessions').select('id, status, date, current_participants, sport, creator_id'),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
     ]);
@@ -82,7 +85,13 @@ export async function fetchAdminUsersWithCounts(supabase: SupabaseClient): Promi
 > {
   try {
     const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-      supabase.from('users').select('id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count').order('created_at', { ascending: false }).limit(100),
+      supabase
+        .from('users')
+        .select(
+          'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
+        )
+        .order('created_at', { ascending: false })
+        .limit(100),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
     ]);
@@ -174,14 +183,35 @@ export async function fetchAdminMessages(supabase: SupabaseClient): Promise<DalR
 
 /**
  * Fetches sessions with creator details for admin session management.
+ *
+ * QA-15: sessions are now auto-verified on creation (see migration 039).
+ * The admin list was drowning in already-trusted sessions and making Al
+ * verify each one manually. We now surface ONLY sessions that actually
+ * need attention:
+ *   - photo_verified = false (explicitly unverified, e.g. via report flow), OR
+ *   - status = 'cancelled' (admin may want to follow up)
+ * Everything else stays out of the admin queue.
+ *
+ * If the caller needs every session (e.g. for a future audit view), pass
+ * `includeAll = true`.
  */
-export async function fetchAdminSessions(supabase: SupabaseClient): Promise<DalResult<AdminSession[]>> {
+export async function fetchAdminSessions(
+  supabase: SupabaseClient,
+  includeAll = false
+): Promise<DalResult<AdminSession[]>> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('sessions')
       .select(`*, creator:users!sessions_creator_id_fkey(id, name, email)`)
       .order('date', { ascending: false })
       .limit(50);
+
+    if (!includeAll) {
+      // Needs-attention queue only.
+      query = query.or('photo_verified.eq.false,status.eq.cancelled');
+    }
+
+    const { data, error } = await query;
     if (error) return { success: false, error: error.message };
     return { success: true, data: (data || []) as AdminSession[] };
   } catch (error) {

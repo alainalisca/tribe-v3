@@ -25,12 +25,12 @@ export default function SessionManagement({
     <div className="bg-white dark:bg-tribe-surface rounded shadow">
       <div className="p-3 border-b">
         <h3 className="text-sm font-bold text-tribe-dark">
-          {language === 'es' ? 'Gestion de Sesiones' : 'Sessions Management'} ({sessions.length})
+          {language === 'es' ? 'Sesiones que requieren atención' : 'Sessions needing attention'} ({sessions.length})
         </h3>
         <p className="text-xs text-stone-600 mt-1">
           {language === 'es'
-            ? 'Verifica fotos de ubicacion para reducir sesiones falsas'
-            : 'Verify location photos to reduce fake sessions'}
+            ? 'Sesiones no verificadas o canceladas. Las sesiones normales se aprueban automáticamente.'
+            : 'Only unverified or cancelled sessions appear here — normal sessions are auto-approved.'}
         </p>
       </div>
 
@@ -41,7 +41,14 @@ export default function SessionManagement({
       ) : sessions.length === 0 ? (
         <div className="p-6 text-center">
           <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">{language === 'es' ? 'Aun no hay sesiones' : 'No sessions yet'}</p>
+          <p className="text-sm text-gray-500">
+            {language === 'es' ? 'Nada que revisar ahora mismo' : 'Nothing to review right now'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {language === 'es'
+              ? 'Las sesiones reportadas o canceladas aparecerán aquí.'
+              : 'Reported or cancelled sessions will show up here.'}
+          </p>
         </div>
       ) : (
         <div className="divide-y max-h-[600px] overflow-y-auto">
@@ -57,7 +64,7 @@ export default function SessionManagement({
                       </p>
                       {session.photo_verified && (
                         <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded flex items-center gap-1">
-                          &#10003; {language === 'es' ? 'Verificado' : 'Verified'}
+                          ✓ {language === 'es' ? 'Verificado' : 'Verified'}
                         </span>
                       )}
                     </div>
@@ -97,7 +104,7 @@ export default function SessionManagement({
                         onClick={() => onVerify(session.id)}
                         className="px-3 py-1.5 bg-green-500 text-white text-xs rounded hover:bg-green-600"
                       >
-                        &#10003; {language === 'es' ? 'Verificar' : 'Verify'}
+                        ✓ {language === 'es' ? 'Verificar' : 'Verify'}
                       </button>
                     ) : (
                       <button

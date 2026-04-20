@@ -6,10 +6,6 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
   deleteChatMessage,
-  deleteChatMessagesByUser,
-  deleteParticipantsByUser,
-  deleteSessionsByCreator,
-  deleteUser as dalDeleteUser,
   updateUser,
   updateSession,
   updateReportStatus as dalUpdateReportStatus,
@@ -173,11 +169,12 @@ export function useAdminActions(
         setConfirmAction(null);
         setActionLoading(targetUserId);
         try {
-          await deleteChatMessagesByUser(supabase, targetUserId);
-          await deleteParticipantsByUser(supabase, targetUserId);
-          await deleteSessionsByCreator(supabase, targetUserId);
-          const result = await dalDeleteUser(supabase, targetUserId);
-          if (!result.success) throw new Error(result.error);
+          // QA-18: cascade-delete via server route so RLS doesn't block us.
+          const res = await fetch(`/api/admin/users/${targetUserId}/delete`, { method: 'POST' });
+          const payload = (await res.json().catch(() => ({}))) as { error?: string };
+          if (!res.ok) {
+            throw new Error(payload.error || `HTTP ${res.status}`);
+          }
           setters.setUsers((prev) => prev.filter((u) => u.id !== targetUserId));
           showSuccess(language === 'es' ? 'Usuario eliminado' : 'User deleted');
         } catch (error: unknown) {
