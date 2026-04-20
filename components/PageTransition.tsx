@@ -1,12 +1,19 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 
-const pageVariants = {
+// UI-A05: users with prefers-reduced-motion get a no-movement variant.
+// The opacity fade stays because it's a subtle cue, not vestibular motion.
+const pageVariantsMotion = {
   initial: { opacity: 0, y: 12 },
   in: { opacity: 1, y: 0 },
   out: { opacity: 0, y: -8 },
+};
+const pageVariantsReduced = {
+  initial: { opacity: 0 },
+  in: { opacity: 1 },
+  out: { opacity: 0 },
 };
 
 const pageTransition = {
@@ -21,6 +28,8 @@ interface PageTransitionProps {
 
 export default function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
+  const variants = reduceMotion ? pageVariantsReduced : pageVariantsMotion;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -29,7 +38,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
         initial="initial"
         animate="in"
         exit="out"
-        variants={pageVariants}
+        variants={variants}
         transition={pageTransition}
       >
         {children}
