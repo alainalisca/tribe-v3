@@ -83,7 +83,7 @@ export default function TribePlusPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-[#272D34] text-white">
+    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
       <div className="max-w-xl mx-auto px-4 pt-8 space-y-8">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#84cc16] text-slate-900 text-xs font-bold tracking-widest">

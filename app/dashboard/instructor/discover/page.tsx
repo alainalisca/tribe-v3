@@ -157,7 +157,7 @@ export default function InstructorDiscoverPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-[#272D34] text-white">
+    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/instructor" className="p-2 rounded-lg hover:bg-[#3D4349]" aria-label="Back">

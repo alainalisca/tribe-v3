@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, MapPin, Shield, Flag, UserPlus, Share2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Flag, UserPlus, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -64,6 +64,8 @@ export default function PublicProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  // QA-06: inline avatar carousel — index into [avatar_url, ...photos]
+  const [avatarIndex, setAvatarIndex] = useState(0);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -295,22 +297,80 @@ export default function PublicProfilePage() {
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         <div className="bg-theme-card rounded-2xl p-6 border border-theme">
-          <div className="flex justify-center mb-4">
-            <Avatar
-              className="w-24 h-24 border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
-              onClick={() => {
-                if (profile.avatar_url) {
-                  setLightboxPhoto(profile.avatar_url);
-                  history.pushState({ lightbox: true }, '');
-                }
-              }}
-            >
-              <AvatarImage loading="lazy" src={profile.avatar_url || undefined} alt={profile.name ?? ''} />
-              <AvatarFallback className="bg-tribe-green text-3xl font-bold text-slate-900">
-                {profile.name?.[0]?.toUpperCase() || '?'}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+          {/* QA-06: avatar + inline photo carousel. Builds a combined list of
+              [avatar_url, ...profile.photos] so arrows let you flip through
+              every picture without opening the lightbox. */}
+          {(() => {
+            const allPhotos: string[] = [
+              ...(profile.avatar_url ? [profile.avatar_url] : []),
+              ...((profile as any)?.photos ?? []),
+            ];
+            const currentPhoto = allPhotos[avatarIndex] ?? profile.avatar_url ?? null;
+            const canNavigate = allPhotos.length > 1;
+
+            const goPrev = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              setAvatarIndex((i) => (i - 1 + allPhotos.length) % allPhotos.length);
+            };
+            const goNext = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              setAvatarIndex((i) => (i + 1) % allPhotos.length);
+            };
+            const openLightbox = () => {
+              if (!currentPhoto) return;
+              setLightboxPhoto(currentPhoto);
+              // If viewing one of the gallery photos (index >= 1 since avatar is 0),
+              // align lightboxIndex so the lightbox opens on the same picture.
+              setLightboxIndex(Math.max(0, avatarIndex - (profile.avatar_url ? 1 : 0)));
+              history.pushState({ lightbox: true }, '');
+            };
+
+            return (
+              <div className="flex justify-center mb-4">
+                <div className="relative">
+                  <Avatar
+                    className="w-24 h-24 border-4 border-tribe-green cursor-pointer hover:opacity-90 transition"
+                    onClick={openLightbox}
+                  >
+                    <AvatarImage loading="lazy" src={currentPhoto || undefined} alt={profile.name ?? ''} />
+                    <AvatarFallback className="bg-tribe-green text-3xl font-bold text-slate-900">
+                      {profile.name?.[0]?.toUpperCase() || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {canNavigate && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={goPrev}
+                        aria-label="Previous photo"
+                        className="absolute left-[-36px] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        aria-label="Next photo"
+                        className="absolute right-[-36px] top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                        {allPhotos.map((_, i) => (
+                          <span
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              i === avatarIndex ? 'bg-tribe-green' : 'bg-white/40'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {hasLowAttendance && !isOwnProfile && (
             <div className="mt-4 bg-orange-100 border border-orange-300 rounded-lg p-3">

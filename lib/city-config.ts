@@ -64,7 +64,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
     es: 'Únete a la comunidad fitness que está cambiando la ciudad',
   },
   joinCTA: {
-    en: 'Join the Tribe',
+    en: 'Join Tribe',
     es: 'Únete al Tribe',
   },
   weatherLocation: { lat: 6.2442, lng: -75.5812 },

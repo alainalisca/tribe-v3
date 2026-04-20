@@ -48,25 +48,34 @@ export default function WeatherBar() {
 
   useEffect(() => {
     const { lat, lng } = ACTIVE_CITY.weatherLocation;
-    fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=${encodeURIComponent(ACTIVE_CITY.timezone)}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.current) {
-          const temp = Math.round(data.current.temperature_2m);
-          const code = data.current.weather_code;
-          let condition = 'clouds';
-          if (code <= 1) condition = 'clear';
-          else if (code <= 3) condition = 'clouds';
-          else if (code >= 51 && code <= 55) condition = 'drizzle';
-          else if (code >= 61 && code <= 65) condition = 'rain';
-          else if (code >= 95) condition = 'thunderstorm';
-          setWeather({ temp, condition });
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&timezone=${encodeURIComponent(ACTIVE_CITY.timezone)}`;
+    // QA-10: logging was silent before — if Al sees the 24°C fallback it means
+    // this block logged a warning. Check the browser console (and the Capacitor
+    // webview console on mobile) for the exact failure mode.
+    fetch(url)
+      .then(async (res) => {
+        if (!res.ok) {
+          console.warn('[WeatherBar] fetch non-OK', res.status, url);
+          return null;
         }
+        const data = await res.json();
+        if (!data?.current) {
+          console.warn('[WeatherBar] unexpected response shape', data);
+          return null;
+        }
+        const temp = Math.round(data.current.temperature_2m);
+        const code = data.current.weather_code;
+        let condition = 'clouds';
+        if (code <= 1) condition = 'clear';
+        else if (code <= 3) condition = 'clouds';
+        else if (code >= 51 && code <= 55) condition = 'drizzle';
+        else if (code >= 61 && code <= 65) condition = 'rain';
+        else if (code >= 95) condition = 'thunderstorm';
+        setWeather({ temp, condition });
+        return null;
       })
-      .catch(() => {
-        // Silently fall back — weather is nice-to-have
+      .catch((err) => {
+        console.warn('[WeatherBar] fetch failed, using fallback', err);
       });
   }, []);
 

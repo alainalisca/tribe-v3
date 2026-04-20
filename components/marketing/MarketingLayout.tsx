@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Menu, X } from 'lucide-react';
 
@@ -11,6 +12,7 @@ import { Menu, X } from 'lucide-react';
 
 function MarketingHeader() {
   const { language, setLanguage } = useLanguage();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -19,6 +21,16 @@ function MarketingHeader() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  /*
+   * Logo variant logic:
+   *   - Scrolled header = bg-tribe-dark/95 → use light-on-dark wordmark.
+   *   - Not scrolled + on "/" (dark hero) → light wordmark.
+   *   - Not scrolled + other marketing pages (likely light hero) → dark wordmark.
+   * One rule covers every current marketing route.
+   */
+  const isDarkBg = scrolled || pathname === '/';
+  const wordmarkSrc = isDarkBg ? '/tribe-wordmark.png' : '/tribe-wordmark-dark.png';
 
   const toggleLang = () => setLanguage(language === 'en' ? 'es' : 'en');
 
@@ -37,13 +49,10 @@ function MarketingHeader() {
         }`}
       >
         <nav className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          {/* Logo — single wordmark image, variant adapts to bg (QA-01, QA-02) */}
+          <Link href="/" className="flex items-center" aria-label="Tribe">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/app-logo.png" alt="Tribe" className="h-10 w-10 rounded-full" />
-            <span className="text-xl font-extrabold text-white tracking-tight hidden sm:inline">
-              Tribe<span className="text-tribe-green">.</span>
-            </span>
+            <img src={wordmarkSrc} alt="Tribe" className="h-8 w-auto" />
           </Link>
 
           {/* Desktop nav links */}
@@ -67,7 +76,7 @@ function MarketingHeader() {
               href="/auth"
               className="px-4 py-2 bg-tribe-green text-tribe-dark text-sm font-bold rounded-lg hover:bg-tribe-green-hover transition-colors"
             >
-              {language === 'es' ? 'Únete al Tribe' : 'Join the Tribe'}
+              {language === 'es' ? 'Únete al Tribe' : 'Join Tribe'}
             </Link>
           </div>
 
@@ -110,7 +119,7 @@ function MarketingHeader() {
               className="inline-block text-center px-6 py-3 bg-tribe-green text-tribe-dark font-bold rounded-lg"
               onClick={() => setMenuOpen(false)}
             >
-              {language === 'es' ? 'Únete al Tribe' : 'Join the Tribe'}
+              {language === 'es' ? 'Únete al Tribe' : 'Join Tribe'}
             </Link>
           </div>
         </div>
@@ -133,9 +142,9 @@ function MarketingFooter() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div>
-          <div className="text-2xl font-black text-white mb-2">
-            Tribe<span className="text-tribe-green">.</span>
-          </div>
+          {/* Footer bg is tribe-dark, so use the light-on-dark wordmark variant */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tribe-wordmark.png" alt="Tribe" className="h-8 w-auto mb-2" />
           <p className="text-sm text-gray-500 mb-4">
             {t('Never Train Alone in Medellín', 'Nunca Entrenes Solo en Medellín')}
           </p>

@@ -1,6 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
+import { ADMIN_EMAILS } from '@/lib/admin-config';
 
-const ADMIN_EMAILS = ['alainalisca@aplusfitness.co'];
+// Re-export so existing `import { ADMIN_EMAILS } from '@/lib/admin'` call
+// sites keep working, but note: for client-callable DAL code import from
+// '@/lib/admin-config' directly — this file pulls in next/headers via
+// the Supabase server client.
+export { ADMIN_EMAILS };
 
 export async function isAdmin(): Promise<boolean> {
   const supabase = await createClient();

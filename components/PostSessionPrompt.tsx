@@ -170,16 +170,28 @@ export default function PostSessionPrompt({
     setErrorMessage('');
 
     try {
+      // QA-08b: the `reviews` table column is `host_id`, not `instructor_id`.
+      // Insert was silently failing before because the column name was wrong.
       const { error } = await supabase.from('reviews').insert({
         session_id: sessionId,
         reviewer_id: userId,
-        instructor_id: instructorId,
+        host_id: instructorId,
         rating,
         comment: reviewText.trim() || null,
       });
 
       if (error) {
-        logError(error, { action: 'submitReview' });
+        // Keep full error context for diagnosis (code + message + details).
+        logError(error, {
+          action: 'submitReview',
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          sessionId,
+          reviewerId: userId,
+          hostId: instructorId,
+        });
         setErrorMessage(translations.submitError);
         setSubmitState('error');
       } else {
@@ -190,7 +202,7 @@ export default function PostSessionPrompt({
         }, 2000);
       }
     } catch (err) {
-      logError(err, { action: 'submitReview' });
+      logError(err, { action: 'submitReview', sessionId });
       setErrorMessage(translations.submitError);
       setSubmitState('error');
     } finally {
@@ -282,7 +294,7 @@ export default function PostSessionPrompt({
                   ${
                     isSubmitting || rating === 0
                       ? 'bg-tribe-green/50 text-stone-900 cursor-not-allowed'
-                      : 'bg-tribe-green hover:bg-lime-500 text-tribe-dark hover:scale-[1.02] active:scale-95'
+                      : 'bg-tribe-green hover:bg-lime-500 text-slate-900 hover:scale-[1.02] active:scale-95'
                   }
                   flex items-center justify-center gap-2`}
               >
