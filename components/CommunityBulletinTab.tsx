@@ -117,6 +117,8 @@ export default function CommunityBulletinTab() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  // QA-19: direct file upload replaces "Flyer Image URL" paste field
+  const [uploadingFlyer, setUploadingFlyer] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -150,6 +152,40 @@ export default function CommunityBulletinTab() {
       logError(error, { action: 'loadBulletinPosts' });
     } finally {
       setLoading(false);
+    }
+  }
+
+  /**
+   * QA-19: Upload a flyer image to Supabase storage and store the returned
+   * public URL on the form. Bucket: community-bulletin-flyers.
+   * Bucket must exist (see migration) with public SELECT + authenticated
+   * INSERT policies.
+   */
+  async function handleFlyerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      showError(language === 'es' ? 'La imagen es muy grande (máx 5MB)' : 'Image too large (max 5MB)');
+      return;
+    }
+    setUploadingFlyer(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${userId}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('community-bulletin-flyers')
+        .upload(fileName, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('community-bulletin-flyers').getPublicUrl(fileName);
+      setForm((f) => ({ ...f, image_url: publicUrl }));
+    } catch (err) {
+      logError(err, { action: 'handleFlyerUpload' });
+      showError(language === 'es' ? 'No se pudo subir la imagen' : 'Could not upload image');
+    } finally {
+      setUploadingFlyer(false);
     }
   }
 
@@ -240,34 +276,78 @@ export default function CommunityBulletinTab() {
               </option>
             ))}
           </select>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="date"
-              placeholder={labels.eventDate}
-              value={form.event_date}
-              onChange={(e) => setForm({ ...form, event_date: e.target.value })}
-              className={inputCls}
-            />
-            <input
-              type="time"
-              placeholder={labels.eventTime}
-              value={form.event_time}
-              onChange={(e) => setForm({ ...form, event_time: e.target.value })}
-              className={inputCls}
-            />
-          </div>
+          {/* QA-22: date/time only make sense when the post is about a
+              scheduled meetup or event. Hide for 'announcement' / 'social' /
+              'other' so submitters aren't confused about what the date is for. */}
+          {(form.category === 'event' || form.category === 'meetup') && (
+            <div>
+              <p className="text-xs text-theme-secondary mb-1">
+                {language === 'es' ? 'Fecha y hora del evento' : 'Event date & time'}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="date"
+                  placeholder={labels.eventDate}
+                  value={form.event_date}
+                  onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                  className={inputCls}
+                />
+                <input
+                  type="time"
+                  placeholder={labels.eventTime}
+                  value={form.event_time}
+                  onChange={(e) => setForm({ ...form, event_time: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+          )}
           <input
             placeholder={labels.location}
             value={form.location_name}
             onChange={(e) => setForm({ ...form, location_name: e.target.value })}
             className={inputCls}
           />
-          <input
-            placeholder={labels.imageUrl}
-            value={form.image_url}
-            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-            className={inputCls}
-          />
+          {/* QA-19: direct file upload instead of a URL paste field */}
+          <div>
+            <label className="block text-xs text-theme-secondary mb-1">
+              {language === 'es' ? 'Flyer (opcional)' : 'Flyer (optional)'}
+            </label>
+            {form.image_url ? (
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.image_url}
+                  alt=""
+                  className="w-16 h-16 rounded-lg object-cover border border-stone-200 dark:border-tribe-mid"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, image_url: '' }))}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  {language === 'es' ? 'Quitar' : 'Remove'}
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed border-stone-300 dark:border-tribe-mid text-sm text-theme-secondary cursor-pointer hover:text-theme-primary">
+                {uploadingFlyer
+                  ? language === 'es'
+                    ? 'Subiendo…'
+                    : 'Uploading…'
+                  : language === 'es'
+                    ? 'Subir imagen'
+                    : 'Upload image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingFlyer || !userId}
+                  onChange={handleFlyerUpload}
+                />
+              </label>
+            )}
+          </div>
           <input
             placeholder={labels.externalUrl}
             value={form.external_url}

@@ -1,4 +1,4 @@
-import { Users, Calendar, MessageSquare, TrendingUp, Activity, Award, BarChart3 } from 'lucide-react';
+import { Users, Calendar, MessageSquare, TrendingUp, Activity, Award, BarChart3, Check, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 
 interface AdminStatsProps {
@@ -23,14 +23,28 @@ interface AdminStatsProps {
   };
 }
 
-function StatCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+/**
+ * QA-16: small polish pass — bigger numbers, subtle color accent via
+ * an optional accent class, consistent icon treatment. No full redesign.
+ */
+function StatCard({
+  label,
+  value,
+  icon,
+  accent = 'bg-stone-100 dark:bg-tribe-mid',
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  accent?: string;
+}) {
   return (
-    <div className="bg-white dark:bg-tribe-surface rounded p-3 shadow">
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-xs text-stone-600">{label}</p>
-        {icon}
+    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 shadow-sm border border-stone-200 dark:border-tribe-mid">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-stone-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${accent}`}>{icon}</div>
       </div>
-      <p className="text-lg font-bold text-tribe-dark">{value}</p>
+      <p className="text-2xl font-extrabold text-tribe-dark dark:text-white">{value}</p>
     </div>
   );
 }
@@ -107,12 +121,14 @@ export default function AdminStats({ stats }: AdminStatsProps) {
           <StatCard
             label={language === 'es' ? 'Completadas' : 'Completed'}
             value={stats.completedSessions}
-            icon={<span className="text-green-500 text-sm">&#10003;</span>}
+            icon={<Check className="w-4 h-4 text-green-500" />}
+            accent="bg-green-50 dark:bg-green-900/30"
           />
           <StatCard
             label={language === 'es' ? 'Canceladas' : 'Cancelled'}
             value={stats.cancelledSessions}
-            icon={<span className="text-red-500 text-sm">&#10007;</span>}
+            icon={<X className="w-4 h-4 text-red-500" />}
+            accent="bg-red-50 dark:bg-red-900/30"
           />
           <StatCard
             label={language === 'es' ? 'Prom Atletas' : 'Avg Athletes'}

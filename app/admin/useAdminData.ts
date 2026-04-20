@@ -85,7 +85,7 @@ export function useAdminData(supabase: SupabaseClient) {
       const pastSessions = allSessions.filter((s) => new Date(s.date + 'T00:00:00') < new Date());
       const avgParticipants =
         totalSessions > 0
-          ? Math.round(allSessions.reduce((sum, s) => sum + (s.participants_count || 0), 0) / totalSessions)
+          ? Math.round(allSessions.reduce((sum, s) => sum + (s.current_participants || 0), 0) / totalSessions)
           : 0;
       const sessionsThisWeek = allSessions.filter((s) => s.date >= weekStr).length;
       const sessionsThisMonth = allSessions.filter((s) => s.date >= monthStr).length;
@@ -121,8 +121,11 @@ export function useAdminData(supabase: SupabaseClient) {
         sessionsThisMonth,
         totalMessages: messageCount,
         newUsersToday,
-        completedSessions: pastSessions.filter((s) => s.status === 'completed').length,
-        cancelledSessions: pastSessions.filter((s) => s.status === 'cancelled').length,
+        // QA-13: sessions rarely get explicitly marked `completed` — they
+        // just run and pass. Count any past session whose status isn't
+        // 'cancelled' as completed so the dashboard reflects reality.
+        completedSessions: pastSessions.filter((s) => s.status !== 'cancelled').length,
+        cancelledSessions: allSessions.filter((s) => s.status === 'cancelled').length,
         averageParticipants: avgParticipants,
         topSport: topSportEntry?.[0] || '-',
         topSportCount: topSportEntry?.[1] || 0,

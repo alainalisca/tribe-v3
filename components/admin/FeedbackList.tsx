@@ -55,7 +55,9 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
                 </span>
               </div>
 
-              <p className="text-xs text-stone-700 dark:text-gray-300 mb-2 p-2 bg-stone-50 dark:bg-tribe-dark rounded">{item.description}</p>
+              <p className="text-xs text-stone-700 dark:text-gray-300 mb-2 p-2 bg-stone-50 dark:bg-tribe-dark rounded">
+                {item.description}
+              </p>
 
               <div className="text-xs text-stone-500 mb-3">
                 {new Date(item.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
@@ -92,11 +94,11 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
             <span className="text-xs text-green-600">
               {item.status === 'implemented'
                 ? language === 'es'
-                  ? '&#10003; Listo'
-                  : '&#10003; Done'
+                  ? '✓ Listo'
+                  : '✓ Done'
                 : language === 'es'
-                  ? '&#10003; Revisado'
-                  : '&#10003; Reviewed'}
+                  ? '✓ Revisado'
+                  : '✓ Reviewed'}
             </span>
           </div>
         </div>
