@@ -1,12 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import {
-  fetchSessionFields,
-  fetchConfirmedCount,
-  insertParticipant,
-  updateParticipantCount,
-  checkExistingParticipation,
-} from '@/lib/dal';
+import { fetchSessionFields, checkExistingParticipation } from '@/lib/dal';
 
 interface JoinSessionParams {
   supabase: SupabaseClient;
@@ -73,45 +67,31 @@ export async function joinSession({
     // 6. Determine status based on join policy
     const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
 
-    // 7. Try atomic join via RPC (handles capacity check + insert in one transaction)
-    // TODO: Create join_session RPC in Supabase for atomic capacity check (see lib/dal/rpc/joinSession.sql)
+    // 7. Atomic join via RPC.
+    // LOGIC-01: the RPC holds a row-level lock on the session, counts confirmed
+    // participants, and inserts in one transaction. The previous fallback
+    // read count then inserted in two round-trips, which allowed two
+    // concurrent joiners to both pass the capacity check.
+    // The RPC also keeps sessions.current_participants in sync, so the
+    // separate updateParticipantCount call afterwards is no longer needed.
     const { data: rpcResult, error: rpcError } = await supabase.rpc('join_session', {
       p_session_id: sessionId,
       p_user_id: userId,
       p_status: status,
     });
 
-    if (!rpcError && rpcResult) {
-      const result = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
-      if (!result.success) {
-        return { success: false, error: result.error === 'Session is full' ? 'capacity_full' : result.error };
-      }
-    } else {
-      // Fallback: RPC not available yet, use original check-then-insert
-      const countResult = await fetchConfirmedCount(supabase, sessionId);
-      const confirmedCount = countResult.success
-        ? (countResult.data ?? session.current_participants)
-        : session.current_participants;
-
-      if (confirmedCount >= session.max_participants) {
-        return { success: false, error: 'capacity_full' };
-      }
-
-      const insertResult = await insertParticipant(supabase, {
-        session_id: sessionId,
-        user_id: userId,
-        status,
-      });
-
-      if (!insertResult.success) {
-        return { success: false, error: insertResult.error };
-      }
+    if (rpcError) {
+      logError(rpcError, { action: 'joinSession.rpc', sessionId, userId });
+      return { success: false, error: rpcError.message };
     }
 
-    // 8. Update cached participant count
-    const countAfter = await fetchConfirmedCount(supabase, sessionId);
-    if (countAfter.success && countAfter.data !== undefined) {
-      await updateParticipantCount(supabase, sessionId, countAfter.data);
+    const rpcData = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+    if (!rpcData?.success) {
+      const err = rpcData?.error;
+      return {
+        success: false,
+        error: err === 'Session is full' ? 'capacity_full' : err || 'join_failed',
+      };
     }
 
     // 11. Notify host (fire-and-forget)

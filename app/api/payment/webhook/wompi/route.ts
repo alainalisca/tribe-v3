@@ -75,12 +75,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Initialize Supabase service client for database updates
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
+    // LOGIC-08: event-id based idempotency. Wompi transaction id is unique
+    // per event, so reject a duplicate before we change any state.
+    {
+      const { error: dedupErr } = await supabase
+        .from('processed_webhook_events')
+        .insert({ gateway: 'wompi', event_id: transactionId });
+      if (dedupErr && dedupErr.code === '23505') {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      if (dedupErr) {
+        logError(dedupErr, { action: 'wompi_webhook_dedup', transactionId });
+      }
+    }
+
     // Idempotency check — skip if already processed with same status
     const { data: existingPayment } = await supabase
       .from('payments')
-      .select('status, gateway_payment_id')
+      .select('status, gateway_payment_id, amount_cents')
       .eq('id', paymentId)
       .single();
+
+    // SEC-04: amount-tamper check. Compare Wompi-reported amount_in_cents to
+    // the amount we stored at intent creation. Mismatch → reject.
+    if (
+      existingPayment &&
+      existingPayment.amount_cents != null &&
+      payload.transaction.amount_in_cents !== existingPayment.amount_cents
+    ) {
+      logError(new Error('wompi_amount_tamper'), {
+        payment_id: paymentId,
+        expected: existingPayment.amount_cents,
+        received: payload.transaction.amount_in_cents,
+      });
+      return NextResponse.json({ error: 'amount_mismatch' }, { status: 400 });
+    }
 
     if (existingPayment?.status === paymentStatus) {
       return NextResponse.json({ received: true, message: 'Already processed' });

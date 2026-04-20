@@ -53,22 +53,13 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Text column */}
           <div className="text-center lg:text-left animate-[slideUp_0.8s_ease-out_both]">
-            {/* Logo */}
-            <div className="mb-10 flex items-center gap-4 justify-center lg:justify-start">
+            {/* Logo — single wordmark. Hero bg is always bg-tribe-dark, so the
+                light-on-dark variant is always correct here. The previous layout
+                rendered app-logo.png (a cropped wordmark) next to the wordmark,
+                producing a duplicate "Tribe. Tribe." (QA-01). */}
+            <div className="mb-10 flex items-center justify-center lg:justify-start">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/app-logo.png"
-                alt="Tribe"
-                className="h-16 w-16 lg:h-[72px] lg:w-[72px] rounded-full shadow-lg shrink-0"
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/tribe-wordmark.png"
-                alt="Tribe"
-                className="h-16 lg:h-[72px] object-contain hidden dark:block"
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/tribe-wordmark-dark.png" alt="Tribe" className="h-16 lg:h-[72px] object-contain dark:hidden" />
+              <img src="/tribe-wordmark.png" alt="Tribe" className="h-16 lg:h-[72px] w-auto object-contain" />
             </div>
 
             <h1 className="font-black text-[clamp(40px,5vw,64px)] leading-[1.05] tracking-tight mb-5">

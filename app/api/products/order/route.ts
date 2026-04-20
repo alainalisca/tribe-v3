@@ -30,6 +30,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { product_id, variant_id, quantity = 1, promo_code } = body;
 
+    // SEC-07: if the client supplies an Idempotency-Key, reuse any existing
+    // order we've already recorded for that key and return it verbatim. This
+    // prevents a retry on flaky network from double-charging the buyer.
+    const idempotencyKey = request.headers.get('idempotency-key');
+    if (idempotencyKey) {
+      const { data: existing } = await supabase
+        .from('product_orders')
+        .select('*')
+        .eq('idempotency_key', idempotencyKey)
+        .eq('buyer_id', user.id)
+        .maybeSingle();
+      if (existing) {
+        return NextResponse.json({ success: true, data: existing, replayed: true }, { status: 200 });
+      }
+    }
+
     if (!product_id) {
       return NextResponse.json({ success: false, error: 'Missing product_id' }, { status: 400 });
     }
@@ -126,6 +142,9 @@ export async function POST(request: NextRequest) {
       quantity,
       discount_cents: discountCents,
       promo_code_id: promoCodeId,
+      // SEC-07: pass the key through so the DAL persists it. Unique index on
+      // (idempotency_key) means any future retry lands on the existing row.
+      idempotency_key: idempotencyKey || undefined,
     });
 
     if (orderError) {

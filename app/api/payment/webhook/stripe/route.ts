@@ -25,6 +25,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
+    // LOGIC-08: event-id based idempotency. Status-equality checks below this
+    // point are still defensive, but this is the authoritative dedup: if we've
+    // ever processed this Stripe event id, return 200 without touching state.
+    const eventId = (event as { id?: string }).id;
+    if (eventId) {
+      const { error: dedupErr } = await supabase
+        .from('processed_webhook_events')
+        .insert({ gateway: 'stripe', event_id: eventId });
+      if (dedupErr && dedupErr.code === '23505') {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      if (dedupErr) {
+        // Non-conflict failure — log but fall through so we don't drop the event.
+        logError(dedupErr, { action: 'stripe_webhook_dedup', eventId });
+      }
+    }
+
     // Helper: add participant + notify after approved payment
     async function addParticipantAfterPayment(paymentQuery: Record<string, string>) {
       // Find payment record matching the query
@@ -176,12 +193,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         const paymentStatus = mapStripeStatus(paymentIntent.status);
 
-        // Idempotency check
+        // Idempotency + amount-tamper check.
         const { data: existingPayment } = await supabase
           .from('payments')
-          .select('status')
+          .select('status, amount_cents')
           .eq('gateway_payment_id', session.id as string)
           .single();
+
+        // SEC-04: if the webhook's amount doesn't match what we stored at
+        // intent creation, reject. A mismatch means either the intent was
+        // mutated upstream or something is spoofing. Fail loud.
+        const webhookAmount =
+          (paymentIntent as unknown as { amount_received?: number; amount?: number }).amount_received ??
+          (paymentIntent as unknown as { amount?: number }).amount;
+        if (
+          existingPayment &&
+          webhookAmount != null &&
+          existingPayment.amount_cents != null &&
+          webhookAmount !== existingPayment.amount_cents
+        ) {
+          logError(new Error('stripe_amount_tamper'), {
+            gateway_payment_id: session.id as string,
+            expected: existingPayment.amount_cents,
+            received: webhookAmount,
+          });
+          return NextResponse.json({ error: 'amount_mismatch' }, { status: 400 });
+        }
 
         if (existingPayment?.status === paymentStatus) {
           return NextResponse.json({ received: true, message: 'Already processed' });
