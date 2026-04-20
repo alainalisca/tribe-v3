@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyStripeWebhookSignature, mapStripeStatus, getStripePaymentIntent } from '@/lib/payments/stripe';
+import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -42,141 +43,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Helper: add participant + notify after approved payment
-    async function addParticipantAfterPayment(paymentQuery: Record<string, string>) {
-      // Find payment record matching the query
-      let query = supabase.from('payments').select('id, session_id, participant_user_id, status');
-      for (const [key, val] of Object.entries(paymentQuery)) {
-        query = query.eq(key, val);
+    // Notifications after finalize_payment — shared helper module.
+
+    // LOGIC-04: route every state-changing webhook branch through the
+    // `finalize_payment` RPC so the payment status update + participant
+    // upsert + product-order fulfillment run atomically. On any RPC
+    // failure we return a 5xx so the gateway retries.
+    async function finalize(gatewayPaymentId: string, amountCents: number | null, status: string) {
+      const { data, error } = await supabase.rpc('finalize_payment', {
+        p_gateway_payment_id: gatewayPaymentId,
+        p_expected_amount_cents: amountCents,
+        p_gateway: 'stripe',
+        p_new_status: status,
+      });
+      if (error) {
+        logError(error, { action: 'stripe_webhook_finalize', gatewayPaymentId, status });
+        return NextResponse.json({ error: 'finalize_failed' }, { status: 500 });
       }
-      const { data: paymentRecord } = await query.single();
-      if (!paymentRecord?.session_id || !paymentRecord?.participant_user_id) return;
-
-      const { error: participantError } = await supabase.from('session_participants').upsert(
-        {
-          session_id: paymentRecord.session_id,
-          user_id: paymentRecord.participant_user_id,
-          status: 'confirmed',
-          joined_at: new Date().toISOString(),
-        },
-        { onConflict: 'session_id,user_id' }
-      );
-
-      if (participantError) {
-        logError(participantError, {
-          action: 'stripe_webhook_add_participant',
-          sessionId: paymentRecord.session_id,
+      const result = (data ?? {}) as {
+        success?: boolean;
+        error?: string;
+        expected?: number;
+        received?: number;
+        payment_id?: string;
+        participant_added?: boolean;
+        fulfillment_applied?: boolean;
+        was_duplicate?: boolean;
+      };
+      if (!result.success) {
+        // Amount tamper / not_found — refuse, log, and don't make the gateway retry.
+        logError(new Error(`stripe_webhook_${result.error}`), {
+          gatewayPaymentId,
+          expected: result.expected,
+          received: result.received,
         });
+        return NextResponse.json({ error: result.error || 'finalize_failed' }, { status: 400 });
       }
 
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CRON_SECRET}`,
-          },
-          body: JSON.stringify({
-            user_id: paymentRecord.participant_user_id,
-            title: 'Booking Confirmed!',
-            body: 'Your session has been booked. See you there!',
-            type: 'payment_confirmed',
-            data: { session_id: paymentRecord.session_id },
-          }),
-        });
-      } catch (notifErr) {
-        logError(notifErr, { action: 'stripe_webhook_notification' });
-      }
-    }
-
-    // Helper: handle product order fulfillment after approved payment
-    async function handleProductOrderFulfillment(paymentQuery: Record<string, string>) {
-      let query = supabase.from('payments').select('id');
-      for (const [key, val] of Object.entries(paymentQuery)) {
-        query = query.eq(key, val);
-      }
-      const { data: paymentRec } = await query.single();
-      if (!paymentRec) return;
-
-      const { data: productOrder } = await supabase
-        .from('product_orders')
-        .select('id, buyer_id, instructor_id, product_id, fulfillment_status')
-        .eq('payment_id', paymentRec.id)
-        .maybeSingle();
-
-      if (!productOrder) return;
-
-      await supabase
-        .from('product_orders')
-        .update({ payment_status: 'approved', updated_at: new Date().toISOString() })
-        .eq('id', productOrder.id);
-
-      const { data: product } = await supabase
-        .from('products')
-        .select('product_type, fulfillment_method, session_credits, package_valid_days')
-        .eq('id', productOrder.product_id)
-        .single();
-
-      if (product?.fulfillment_method === 'digital') {
-        await supabase
-          .from('product_orders')
-          .update({ fulfillment_status: 'completed', fulfilled_at: new Date().toISOString() })
-          .eq('id', productOrder.id);
+      // Post-finalize notifications. Only fire for newly-approved payments
+      // (skip duplicates so a Stripe replay doesn't spam the user).
+      if (status === 'approved' && !result.was_duplicate && result.payment_id) {
+        notifyAfterFinalize(supabase, result.payment_id).catch(() => undefined);
       }
 
-      if (product?.fulfillment_method === 'session_credit' && product?.session_credits) {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + (product.package_valid_days || 90));
-        await supabase
-          .from('product_orders')
-          .update({
-            fulfillment_status: 'completed',
-            fulfilled_at: new Date().toISOString(),
-            credits_remaining: product.session_credits,
-            credits_expire_at: expiresAt.toISOString(),
-          })
-          .eq('id', productOrder.id);
-      }
-
-      // Notify buyer
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CRON_SECRET}`,
-          },
-          body: JSON.stringify({
-            user_id: productOrder.buyer_id,
-            title: 'Purchase Confirmed!',
-            body: 'Your product order has been confirmed.',
-            type: 'product_order_confirmed',
-            data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
-          }),
-        });
-      } catch (notifErr) {
-        logError(notifErr, { action: 'stripe_webhook_product_notification_buyer' });
-      }
-
-      // Notify instructor
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CRON_SECRET}`,
-          },
-          body: JSON.stringify({
-            user_id: productOrder.instructor_id,
-            title: 'New Sale!',
-            body: 'You have a new product order.',
-            type: 'product_order_received',
-            data: { product_order_id: productOrder.id, product_id: productOrder.product_id },
-          }),
-        });
-      } catch (notifErr) {
-        logError(notifErr, { action: 'stripe_webhook_product_notification_instructor' });
-      }
+      return NextResponse.json({ success: true, result });
     }
 
     switch (event.type) {
@@ -192,103 +102,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         const paymentStatus = mapStripeStatus(paymentIntent.status);
-
-        // Idempotency + amount-tamper check.
-        const { data: existingPayment } = await supabase
-          .from('payments')
-          .select('status, amount_cents')
-          .eq('gateway_payment_id', session.id as string)
-          .single();
-
-        // SEC-04: if the webhook's amount doesn't match what we stored at
-        // intent creation, reject. A mismatch means either the intent was
-        // mutated upstream or something is spoofing. Fail loud.
         const webhookAmount =
           (paymentIntent as unknown as { amount_received?: number; amount?: number }).amount_received ??
-          (paymentIntent as unknown as { amount?: number }).amount;
-        if (
-          existingPayment &&
-          webhookAmount != null &&
-          existingPayment.amount_cents != null &&
-          webhookAmount !== existingPayment.amount_cents
-        ) {
-          logError(new Error('stripe_amount_tamper'), {
-            gateway_payment_id: session.id as string,
-            expected: existingPayment.amount_cents,
-            received: webhookAmount,
-          });
-          return NextResponse.json({ error: 'amount_mismatch' }, { status: 400 });
-        }
+          (paymentIntent as unknown as { amount?: number }).amount ??
+          null;
 
-        if (existingPayment?.status === paymentStatus) {
-          return NextResponse.json({ received: true, message: 'Already processed' });
-        }
-
-        await supabase
-          .from('payments')
-          .update({
-            status: paymentStatus,
-            stripe_payment_intent_id: paymentIntentId,
-            gateway_reference: session.id as string,
-          })
-          .eq('gateway_payment_id', session.id as string);
-
-        if (paymentStatus === 'approved') {
-          await addParticipantAfterPayment({ gateway_payment_id: session.id as string });
-          await handleProductOrderFulfillment({ gateway_payment_id: session.id as string });
-        }
-
-        return NextResponse.json({ success: true });
+        return finalize(session.id as string, webhookAmount, paymentStatus);
       }
 
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as unknown as Record<string, unknown>;
         const piId = paymentIntent.id as string;
         const paymentStatus = mapStripeStatus(paymentIntent.status as string);
+        const webhookAmount =
+          (paymentIntent.amount_received as number | undefined) ?? (paymentIntent.amount as number | undefined) ?? null;
 
-        // Idempotency check
-        const { data: existingPI } = await supabase
-          .from('payments')
-          .select('status')
-          .eq('stripe_payment_intent_id', piId)
-          .single();
-
-        if (existingPI?.status === paymentStatus) {
-          return NextResponse.json({ received: true, message: 'Already processed' });
-        }
-
-        await supabase
-          .from('payments')
-          .update({
-            status: paymentStatus,
-            stripe_payment_intent_id: piId,
-          })
-          .eq('stripe_payment_intent_id', piId);
-
-        if (paymentStatus === 'approved') {
-          await addParticipantAfterPayment({ stripe_payment_intent_id: piId });
-          await handleProductOrderFulfillment({ stripe_payment_intent_id: piId });
-        }
-
-        return NextResponse.json({ success: true });
+        return finalize(piId, webhookAmount, paymentStatus);
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as unknown as Record<string, unknown>;
         const piId = paymentIntent.id as string;
         const paymentStatus = mapStripeStatus(paymentIntent.status as string);
-        const lastError = paymentIntent.last_payment_error as unknown as Record<string, unknown> | null;
-
-        await supabase
-          .from('payments')
-          .update({
-            status: paymentStatus,
-            stripe_payment_intent_id: piId,
-            gateway_reference: (lastError?.message as string) || 'Payment failed',
-          })
-          .eq('stripe_payment_intent_id', piId);
-
-        return NextResponse.json({ success: true });
+        // Failed events don't carry a reliable amount in every case; skip the
+        // tamper check by passing null and let the RPC just record the status.
+        return finalize(piId, null, paymentStatus);
       }
 
       default:
