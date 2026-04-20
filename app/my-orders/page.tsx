@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ShoppingBag } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import EmptyState from '@/components/EmptyState';
 import BottomNav from '@/components/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -122,22 +124,19 @@ export default function MyOrdersPage() {
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-3">
         {orders.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">{'\uD83D\uDED2'}</p>
-            <p className="text-theme-primary font-semibold mb-1">
-              {language === 'es' ? 'Sin compras a\u00FAn' : 'No purchases yet'}
-            </p>
-            <p className="text-theme-secondary text-sm mb-4">
-              {language === 'es'
+          <EmptyState
+            Icon={ShoppingBag}
+            title={language === 'es' ? 'Sin compras aún' : 'No purchases yet'}
+            subtitle={
+              language === 'es'
                 ? 'Explora los perfiles de instructores para encontrar productos.'
-                : 'Explore instructor profiles to find products.'}
-            </p>
-            <Link href="/">
-              <Button className="bg-tribe-green text-slate-900 hover:bg-tribe-green-hover font-bold">
-                {language === 'es' ? 'Explorar' : 'Explore'}
-              </Button>
-            </Link>
-          </div>
+                : 'Explore instructor profiles to find products.'
+            }
+            cta={{
+              label: language === 'es' ? 'Explorar' : 'Explore',
+              href: '/',
+            }}
+          />
         ) : (
           orders.map((order) => (
             <Card key={order.id} className="border-stone-200 dark:border-tribe-mid">
