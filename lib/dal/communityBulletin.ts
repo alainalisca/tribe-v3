@@ -2,7 +2,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
-import { ADMIN_EMAILS } from '@/lib/admin';
+// Pure constants module (no next/headers dependency) so this DAL stays
+// callable from both server and client. See lib/admin-config.ts.
+import { ADMIN_EMAILS } from '@/lib/admin-config';
 import { createNotification } from './notifications';
 
 export interface BulletinPost {

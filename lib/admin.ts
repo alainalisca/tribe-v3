@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
+import { ADMIN_EMAILS } from '@/lib/admin-config';
 
-// NOTE (QA-09, @al): the second address (@aplusfitnessllc.com) was added to
-// cover the user's working email — originally the list only had @aplusfitness.co.
-// If one of these is obsolete, remove it.
-export const ADMIN_EMAILS = ['alainalisca@aplusfitness.co', 'alainalisca@aplusfitnessllc.com'];
+// Re-export so existing `import { ADMIN_EMAILS } from '@/lib/admin'` call
+// sites keep working, but note: for client-callable DAL code import from
+// '@/lib/admin-config' directly — this file pulls in next/headers via
+// the Supabase server client.
+export { ADMIN_EMAILS };
 
 export async function isAdmin(): Promise<boolean> {
   const supabase = await createClient();
