@@ -202,4 +202,7 @@ export interface CreateOrderData {
   discount_cents?: number;
   payment_id?: string | null;
   buyer_note?: string | null;
+  /** SEC-07: caller-supplied idempotency key — a retry with the same key
+   *  returns the original order instead of double-charging. */
+  idempotency_key?: string;
 }

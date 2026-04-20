@@ -67,7 +67,15 @@ export async function updateReportStatus(
 export async function insertReview(supabase: SupabaseClient, data: ReviewInsert): Promise<DalResult<null>> {
   try {
     const { error } = await supabase.from('reviews').insert(data);
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      // LOGIC-02: the reviews table has UNIQUE(session_id, reviewer_id). Surface
+      // that specific failure as a typed error so the UI can say "you already
+      // reviewed this" instead of a generic toast.
+      if (error.code === '23505') {
+        return { success: false, error: 'already_reviewed' };
+      }
+      return { success: false, error: error.message };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'insertReview' });

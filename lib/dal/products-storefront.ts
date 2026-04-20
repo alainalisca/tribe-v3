@@ -165,6 +165,8 @@ export async function createProductOrder(
         buyer_note: orderData.buyer_note ?? null,
         credits_remaining: creditsRemaining,
         credits_expire_at: creditsExpireAt,
+        // SEC-07: persist idempotency key so retries dedupe against this row.
+        idempotency_key: orderData.idempotency_key ?? null,
       })
       .select('id')
       .single();
