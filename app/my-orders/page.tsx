@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { ShoppingBag } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import EmptyState from '@/components/EmptyState';
@@ -39,7 +40,11 @@ interface BuyerOrder {
 export default function MyOrdersPage() {
   const router = useRouter();
   const supabase = createClient();
+  // `language` is still needed for toLocaleDateString locale selection and to
+  // pick the localized product title from the DB row (title vs title_es).
   const { language } = useLanguage();
+  const t = useTranslations('orders');
+  const tc = useTranslations('common');
   const [orders, setOrders] = useState<BuyerOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,27 +81,27 @@ export default function MyOrdersPage() {
     if (status === 'fulfilled') {
       return (
         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-transparent text-xs">
-          {language === 'es' ? 'Completada' : 'Fulfilled'}
+          {t('statusFulfilled')}
         </Badge>
       );
     }
     if (status === 'cancelled') {
       return (
         <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-transparent text-xs">
-          {language === 'es' ? 'Cancelada' : 'Cancelled'}
+          {t('statusCancelled')}
         </Badge>
       );
     }
     return (
       <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-transparent text-xs">
-        {language === 'es' ? 'Pendiente' : 'Pending'}
+        {t('statusPending')}
       </Badge>
     );
   }
 
   const title = (order: BuyerOrder) => {
     const p = order.product;
-    if (!p) return language === 'es' ? 'Producto' : 'Product';
+    if (!p) return t('product');
     return language === 'es' && p.title_es ? p.title_es : p.title;
   };
 
@@ -105,7 +110,7 @@ export default function MyOrdersPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <p className="text-theme-primary">{language === 'es' ? 'Cargando...' : 'Loading...'}</p>
+        <p className="text-theme-primary">{tc('loading')}</p>
       </div>
     );
   }
@@ -118,7 +123,7 @@ export default function MyOrdersPage() {
           <button onClick={() => router.back()} className="mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </button>
-          <h1 className="text-xl font-bold text-theme-primary">{language === 'es' ? 'Mis Compras' : 'My Orders'}</h1>
+          <h1 className="text-xl font-bold text-theme-primary">{t('pageTitle')}</h1>
         </div>
       </div>
 
@@ -126,14 +131,10 @@ export default function MyOrdersPage() {
         {orders.length === 0 ? (
           <EmptyState
             Icon={ShoppingBag}
-            title={language === 'es' ? 'Sin compras aún' : 'No purchases yet'}
-            subtitle={
-              language === 'es'
-                ? 'Explora los perfiles de instructores para encontrar productos.'
-                : 'Explore instructor profiles to find products.'
-            }
+            title={t('empty')}
+            subtitle={t('emptySubtitle')}
             cta={{
-              label: language === 'es' ? 'Explorar' : 'Explore',
+              label: t('explore'),
               href: '/',
             }}
           />
@@ -184,7 +185,7 @@ export default function MyOrdersPage() {
                     className="flex items-center justify-center gap-2 mt-3 py-2 bg-tribe-green/10 text-tribe-green rounded-xl text-sm font-semibold hover:bg-tribe-green/20 transition"
                   >
                     <Download className="w-4 h-4" />
-                    {language === 'es' ? 'Descargar' : 'Download'}
+                    {t('download')}
                   </a>
                 )}
 
@@ -194,11 +195,11 @@ export default function MyOrdersPage() {
                     <Ticket className="w-4 h-4 text-tribe-green flex-shrink-0" />
                     <p className="text-xs text-theme-primary">
                       <span className="font-bold">{order.credits_remaining ?? order.product.session_credits ?? 0}</span>{' '}
-                      {language === 'es' ? 'cr\u00E9ditos restantes' : 'credits remaining'}
+                      {t('creditsRemaining')}
                       {order.credits_expire_at && (
                         <>
                           {' \u00B7 '}
-                          {language === 'es' ? 'Expira' : 'Expires'}{' '}
+                          {t('expires')}{' '}
                           {new Date(order.credits_expire_at).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
                             month: 'short',
                             day: 'numeric',

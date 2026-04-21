@@ -1,16 +1,23 @@
 {
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended", "prettier"],
   "parser": "@typescript-eslint/parser",
   "plugins": ["@typescript-eslint"],
   "rules": {
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-console": ["warn", { "allow": ["warn", "error"] }],
-    "prefer-const": "error"
+    "prefer-const": "error",
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "BinaryExpression[operator='==='][left.name='language'][right.value='es']",
+        "message": "Use `useTranslations('<namespace>')` from @/lib/i18n/useTranslations instead of `language === 'es' ? ... : ...` ternaries. See messages/en.json + messages/es.json. This pattern is being phased out (UI-I01/UI-I02)."
+      },
+      {
+        "selector": "BinaryExpression[operator='==='][left.name='language'][right.value='en']",
+        "message": "Use `useTranslations('<namespace>')` from @/lib/i18n/useTranslations instead of `language === 'en' ? ... : ...` ternaries."
+      }
+    ]
   },
   "ignorePatterns": [".next/", "node_modules/", "lib/database.types.ts"]
 }

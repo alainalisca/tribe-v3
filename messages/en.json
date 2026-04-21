@@ -5,7 +5,20 @@
     "mySessions": "My Sessions",
     "matches": "Matches",
     "profile": "Profile",
-    "teams": "Teams"
+    "teams": "Teams",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "close": "Close",
+    "retry": "Retry",
+    "done": "Done",
+    "continue": "Continue",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No"
   },
   "home": {
     "title": "Find Training Partners",
@@ -19,6 +32,13 @@
     "tomorrow": "Tomorrow",
     "noSessions": "No sessions available yet. Create the first one!"
   },
+  "weather": {
+    "clear": "Perfect day for outdoor training",
+    "clouds": "Great weather for a session outside",
+    "rain": "Rainy — perfect for indoor sessions",
+    "drizzle": "Light rain — train through it or go indoors",
+    "thunderstorm": "Storm alert — indoor sessions recommended"
+  },
   "sports": {
     "football": "Football",
     "basketball": "Basketball",
@@ -29,5 +49,72 @@
     "tennis": "Tennis",
     "volleyball": "Volleyball",
     "soccer": "Soccer"
+  },
+  "orders": {
+    "pageTitle": "My Orders",
+    "empty": "No purchases yet",
+    "emptySubtitle": "Explore instructor profiles to find products.",
+    "explore": "Explore",
+    "statusFulfilled": "Fulfilled",
+    "statusCancelled": "Cancelled",
+    "statusPending": "Pending",
+    "product": "Product",
+    "download": "Download",
+    "creditsRemaining": "credits remaining",
+    "expires": "Expires"
+  },
+  "settings": {
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "Choose what you want to hear about",
+      "pushEnabled": "Push notifications enabled",
+      "pushDisabled": "Push notifications disabled",
+      "enableInSystem": "Enable in device settings",
+      "testNotification": "Send test notification",
+      "testSent": "Test notification sent!",
+      "categoryBookings": "Bookings & Payments",
+      "categoryCommunity": "Community",
+      "categoryReminders": "Reminders",
+      "sessionBooked": "Session booked",
+      "sessionBookedDesc": "When someone joins your session",
+      "sessionCancelled": "Session cancelled",
+      "sessionCancelledDesc": "When a session you joined is cancelled",
+      "paymentReceived": "Payment received",
+      "paymentReceivedDesc": "When a payment completes successfully",
+      "newFollower": "New follower",
+      "newFollowerDesc": "When someone starts following you",
+      "newMessage": "New message",
+      "newMessageDesc": "When you receive a direct message",
+      "sessionReminder": "Session reminder",
+      "sessionReminderDesc": "1 hour before each session starts",
+      "weeklyDigest": "Weekly digest",
+      "weeklyDigestDesc": "Summary of your activity every Monday"
+    }
+  },
+  "postSession": {
+    "title": "How was your session?",
+    "rateTitle": "Rate your session",
+    "ratePrompt": "Would you train with these athletes again?",
+    "skip": "Maybe later",
+    "submit": "Submit",
+    "thanks": "Thanks for the feedback!"
+  },
+  "tribePlus": {
+    "title": "Tribe+",
+    "tagline": "Unlock the full Tribe experience",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save",
+    "startTrial": "Start 7-day free trial",
+    "subscribe": "Subscribe",
+    "benefits": "Benefits",
+    "benefit_unlimitedBookings": "Unlimited session bookings",
+    "benefit_priorityAccess": "Priority access to popular sessions",
+    "benefit_noFees": "No booking fees",
+    "benefit_premiumBadge": "Premium badge on your profile",
+    "benefit_earlyAccess": "Early access to new features",
+    "currentPlan": "Current plan",
+    "manageSubscription": "Manage subscription",
+    "cancelAnytime": "Cancel anytime"
   }
 }
