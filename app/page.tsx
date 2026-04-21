@@ -61,16 +61,16 @@ export default function HomePage() {
     threshold: 80,
   });
 
-  // Show minimal splash while auth is resolving
+  // Show minimal splash while auth is resolving. Text-rendered wordmark
+  // (no blue-square PNG) so it reads cleanly on both white and dark-mode
+  // backgrounds — same pattern as HeroSection + MarketingLayout.
   if (!f.userChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-card">
-        <img
-          src="/app-logo.png"
-          alt="Tribe"
-          className="rounded-full"
-          style={{ height: 80, width: 80, objectFit: 'cover' }}
-        />
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-tribe-card" aria-label="Tribe">
+        <div className="flex items-baseline leading-none font-black tracking-tight text-stone-900 dark:text-white text-5xl">
+          <span>Tribe</span>
+          <span className="text-tribe-green-light">.</span>
+        </div>
       </div>
     );
   }

@@ -5,31 +5,45 @@ import type { NextRequest } from 'next/server';
 /**
  * Tribe middleware does three things, in order:
  *
- *   1. CSP nonce generation + Content-Security-Policy header
+ *   1. Content-Security-Policy header (allowlist-based; see rationale below)
  *   2. Public-path short-circuit (marketing routes, webhooks, static assets)
  *   3. Auth gate (Supabase cookie → redirect to /auth if unauthenticated)
  *
- * CSP rationale
- * ─────────────
- * Previously the CSP lived in next.config.ts headers() and used
- * `'unsafe-inline'` on script-src to allow Next.js' hydration scripts. That's
- * the weakest form — any reflected-XSS turns into script execution.
+ * CSP rationale — WHY we're not using nonces
+ * ──────────────────────────────────────────
+ * An earlier version of this middleware generated a per-request nonce and
+ * used `'strict-dynamic' 'nonce-<base64>'` on script-src. That's the
+ * strongest practical CSP for a Next.js app, BUT it is fundamentally
+ * incompatible with our ISR strategy:
  *
- * This middleware now generates a per-request nonce and uses
- * `'strict-dynamic'` + `'nonce-<base64>'`, which is the strongest practical
- * CSP for a Next.js app: only scripts Next.js injects (with the nonce) run,
- * and any scripts they load inherit trust via strict-dynamic. External
- * allowlisted origins (PostHog, Vercel Live, Google Maps, unpkg for Leaflet)
- * are kept as explicit sources because they're loaded by framework scripts
- * that may not carry our nonce.
+ *   - /instructors and /profile/[userId] use `export const revalidate = 60`,
+ *     so Next.js renders once and serves the HTML from the Vercel edge
+ *     cache for up to 60 seconds.
+ *   - Nonces must be fresh per request (that's the whole security value).
+ *   - Cached HTML + per-request CSP header = the cached <script> tags
+ *     carry the old nonce (or no nonce), the response CSP requires the
+ *     new nonce, and every script gets blocked by the browser.
  *
- * style-src keeps `'unsafe-inline'` because:
- *   - React sets style={...} via CSSOM (already CSP-exempt, but some libs use
- *     <style> tags), and
- *   - Framer Motion injects <style> tags without nonces.
- * We can revisit once we audit every library.
+ * The symptom was catastrophic: the home page rendered its splash loader,
+ * but no JavaScript executed → auth never resolved → the splash sat there
+ * forever. Reported by Al on 2026-04-21 immediately after the first prod
+ * deploy with nonce CSP.
  *
- * Dev mode additionally allows `'unsafe-eval'` for Next.js HMR.
+ * So we're back to the allowlist form: `'self' 'unsafe-inline' <origins>`.
+ * This is the standard Next.js CSP. It's weaker than a nonce CSP (a
+ * reflected-XSS could execute an injected <script>), but:
+ *
+ *   - Next.js' own inline scripts are all framework-controlled, which
+ *     limits the real attack surface.
+ *   - The other security headers (HSTS, X-Frame-Options, frame-ancestors
+ *     'none', object-src 'none', base-uri 'self', form-action 'self')
+ *     still apply — those don't interact with caching.
+ *
+ * If we ever want nonce CSP back, the correct path is:
+ *   (a) migrate off ISR entirely (back to force-dynamic everywhere),
+ *   (b) set Cache-Control: no-store on every response, and
+ *   (c) accept the perf/cost regression that comes with it.
+ * Not a trade we're willing to make today.
  */
 
 const publicPaths = [
@@ -65,17 +79,13 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
-function buildCsp(nonce: string): string {
+function buildCsp(): string {
   const isDev = process.env.NODE_ENV !== 'production';
 
-  // In dev, Next.js uses eval for fast refresh; in prod we forbid eval entirely.
   const scriptSrc = [
     "'self'",
-    `'nonce-${nonce}'`,
-    "'strict-dynamic'",
-    isDev ? "'unsafe-eval'" : '',
-    // External origins that Next.js' framework scripts load but which don't
-    // inherit our nonce via strict-dynamic reliably across browsers.
+    "'unsafe-inline'", // Required: Next.js inject inline scripts for hydration + framework glue.
+    isDev ? "'unsafe-eval'" : '', // Dev-only: Next.js HMR uses eval; prod forbids it.
     'https://us.i.posthog.com',
     'https://us-assets.i.posthog.com',
     'https://vercel.live',
@@ -105,10 +115,8 @@ function buildCsp(nonce: string): string {
     .join('; ');
 }
 
-function applySecurityHeaders(response: NextResponse, csp: string): NextResponse {
-  response.headers.set('Content-Security-Policy', csp);
-  // These used to live in next.config.ts but we centralize them here so the
-  // nonce-bearing CSP and the rest of the security headers are colocated.
+function applySecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Content-Security-Policy', buildCsp());
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -120,30 +128,18 @@ function applySecurityHeaders(response: NextResponse, csp: string): NextResponse
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Per-request CSP nonce. Web Crypto's randomUUID is available on Edge.
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
-  const csp = buildCsp(nonce);
-
-  // Propagate the nonce to the app via a request header so Server Components
-  // can read it from `headers()` and spread it onto <Script nonce={...} />.
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-nonce', nonce);
-  requestHeaders.set('content-security-policy', csp);
-
-  // Static asset short-circuit (we still want CSP on the response).
+  // Static asset short-circuit.
   if (pathname.match(/\.\w+$/)) {
-    const res = NextResponse.next({ request: { headers: requestHeaders } });
-    return applySecurityHeaders(res, csp);
+    return applySecurityHeaders(NextResponse.next());
   }
 
-  // Public routes don't need auth but still need CSP.
+  // Public routes don't need auth but still need security headers.
   if (isPublicPath(pathname)) {
-    const res = NextResponse.next({ request: { headers: requestHeaders } });
-    return applySecurityHeaders(res, csp);
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Auth-gated routes: check Supabase session cookie.
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -170,15 +166,13 @@ export async function middleware(request: NextRequest) {
   if (!user) {
     const returnTo = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
     const redirectUrl = new URL(`/auth?returnTo=${returnTo}`, request.url);
-    return applySecurityHeaders(NextResponse.redirect(redirectUrl), csp);
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
-  return applySecurityHeaders(response, csp);
+  return applySecurityHeaders(response);
 }
 
 export const config = {
   // Apply to everything except Next.js internals and static image extensions.
-  // (Static JS/CSS still gets headers from the response, but we skip those
-  // paths here to avoid re-running auth logic unnecessarily.)
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
 };
