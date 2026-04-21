@@ -1,8 +1,7 @@
 /** Page: / — Landing page for visitors, home feed for logged-in users */
 'use client';
 
-import OnboardingModal from '@/components/OnboardingModal';
-import EditSessionModal from '@/components/EditSessionModal';
+import dynamic from 'next/dynamic';
 import SessionCard from '@/components/SessionCard';
 import BottomNav from '@/components/BottomNav';
 import NotificationPrompt from '@/components/NotificationPrompt';
@@ -10,7 +9,22 @@ import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import StreakBanner from '@/components/StreakBanner';
 import ReferralBanner from '@/components/ReferralBanner';
 import { SkeletonCard } from '@/components/Skeleton';
-import SafetyWaiverModal from '@/components/SafetyWaiverModal';
+
+/**
+ * Modal-only components are dynamic-imported so their dependency graphs
+ * (framer-motion, Leaflet via LocationPicker, PhotoUploadSection's image
+ * manipulation code) don't ship in the home-page initial bundle. Each
+ * modal is rendered conditionally; dynamic() defers the chunk load until
+ * the first render — which in practice means the first time the user
+ * opens the modal.
+ *
+ * ssr: false is safe because none of these modals have server-rendered
+ * content that matters for SEO or initial paint — they're interactive
+ * overlays that only mount after a user action or auth-state change.
+ */
+const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
+const EditSessionModal = dynamic(() => import('@/components/EditSessionModal'), { ssr: false });
+const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal'), { ssr: false });
 import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import CityGreeting from '@/components/home/CityGreeting';
