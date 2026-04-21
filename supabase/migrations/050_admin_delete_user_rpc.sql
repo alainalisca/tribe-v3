@@ -43,6 +43,15 @@ BEGIN
   --   chat_messages → session_participants → sessions → users (soft)
   -- Each delete is atomic within this function because plpgsql wraps the
   -- whole body in a single transaction.
+  --
+  -- Intentional asymmetry: the dependent rows are HARD-deleted while
+  -- `users` is SOFT-deleted (deleted_at = NOW()). Consequence: clearing
+  -- deleted_at to "undo" the delete cannot restore the user's chat
+  -- history or hosted sessions. That's by design — the purpose of admin
+  -- delete is permanent removal for compliance (GDPR delete requests,
+  -- abuse bans). The soft-delete on users exists only so foreign keys
+  -- from other rows (reviews, follows, etc.) can still resolve to a
+  -- tombstone row rather than dangling.
 
   DELETE FROM chat_messages WHERE user_id = p_target_user_id;
   DELETE FROM session_participants WHERE user_id = p_target_user_id;

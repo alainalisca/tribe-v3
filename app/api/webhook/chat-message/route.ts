@@ -192,6 +192,9 @@ export async function POST(request: NextRequest) {
     // Clean up invalid tokens (in parallel). The PostgrestFilterBuilder is
     // thenable rather than a true Promise, so we wrap with `Promise.resolve`
     // to get a real Promise<unknown> that satisfies Promise.all's signature.
+    // Cleanup failures are logged but don't fail the webhook — the webhook's
+    // job is to notify participants, not to maintain the token-invalidation
+    // side-table. A retry on the same chat message would still succeed.
     const cleanups: Promise<unknown>[] = [];
     if (invalidFcmUserIds.length > 0) {
       cleanups.push(
@@ -200,12 +203,18 @@ export async function POST(request: NextRequest) {
             .from('users')
             .update({ fcm_token: null, fcm_platform: null, fcm_updated_at: null })
             .in('id', invalidFcmUserIds)
-        )
+        ).then(({ error }) => {
+          if (error) logError(error, { action: 'chatWebhook.cleanupFcm', count: invalidFcmUserIds.length });
+        })
       );
     }
     if (invalidWebPushUserIds.length > 0) {
       cleanups.push(
-        Promise.resolve(supabase.from('users').update({ push_subscription: null }).in('id', invalidWebPushUserIds))
+        Promise.resolve(
+          supabase.from('users').update({ push_subscription: null }).in('id', invalidWebPushUserIds)
+        ).then(({ error }) => {
+          if (error) logError(error, { action: 'chatWebhook.cleanupWebPush', count: invalidWebPushUserIds.length });
+        })
       );
     }
     if (cleanups.length > 0) await Promise.all(cleanups);

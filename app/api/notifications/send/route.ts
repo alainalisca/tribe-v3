@@ -206,11 +206,18 @@ export async function PUT(request: Request) {
       ...(data || {}),
     };
 
+    // `notFound` counts requested ids that didn't resolve to a user row
+    // (soft-deleted, wrong id, etc.). Previously these were silently folded
+    // into total, making results.total > (sent + failed + noSubscription)
+    // whenever any id was stale. Breaking it out lets callers distinguish
+    // "no push credentials" from "user doesn't exist".
+    const notFound = userIds.length - users.length;
     const results = {
       total: userIds.length,
       fcm: { sent: 0, failed: 0 },
       webPush: { sent: 0, failed: 0 },
       noSubscription: 0,
+      notFound,
     };
 
     const invalidFcmTokenUserIds: string[] = [];

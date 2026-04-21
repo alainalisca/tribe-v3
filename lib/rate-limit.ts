@@ -63,9 +63,21 @@ export async function checkRateLimit(
       // Still allow — the count was under limit at read time.
     }
 
-    // Fire-and-forget cleanup of old entries. `void` to silence the
-    // no-floating-promises lint without awaiting.
-    void supabase.from('rate_limits').delete().eq('key', key).lt('created_at', windowStart);
+    // Fire-and-forget cleanup of old entries. We don't await so the
+    // caller isn't blocked, but errors still need to land in the log
+    // stream — an unlogged failing cleanup means unbounded row growth
+    // in rate_limits, which silently degrades checkRateLimit count
+    // performance over time.
+    void supabase
+      .from('rate_limits')
+      .delete()
+      .eq('key', key)
+      .lt('created_at', windowStart)
+      .then(({ error: cleanupError }) => {
+        if (cleanupError) {
+          logError(cleanupError, { action: 'checkRateLimit_cleanup', key });
+        }
+      });
 
     return { allowed: true, remaining: maxRequests - currentCount - 1, resetAt };
   } catch (error) {
