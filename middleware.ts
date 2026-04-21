@@ -60,7 +60,12 @@ const publicPaths = [
   '/manifest.json',
 ];
 
-const publicApiPaths = ['/api/auth/signup', '/api/generate-calendar', '/api/webhook/chat-message'];
+const publicApiPaths = [
+  '/api/auth/signup',
+  '/api/generate-calendar',
+  '/api/webhook/chat-message',
+  '/api/health', // LR-02: monitoring probes don't carry session cookies
+];
 
 function isPublicPath(pathname: string): boolean {
   if (
