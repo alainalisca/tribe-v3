@@ -53,17 +53,14 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Text column */}
           <div className="text-center lg:text-left animate-[slideUp_0.8s_ease-out_both]">
-            {/* Wordmark — rendered as text, not a PNG. The old
-                /tribe-wordmark.png had transparent letter fills and only drew
-                outlines, so on the hero's dark bg it rendered as ghost letters
-                (bug reported 2026-04-19). Text rendering is asset-free,
-                responsive, and selects/copies correctly for SEO. */}
-            <div
-              className="mb-10 flex items-center justify-center lg:justify-start leading-none font-black tracking-tight text-white"
-              aria-label="Tribe"
-            >
-              <span className="text-[64px] lg:text-[72px]">Tribe</span>
-              <span className="text-[64px] lg:text-[72px] text-tribe-green-light">.</span>
+            {/* Wordmark PNG. /tribe-wordmark.png is the official brand
+                asset — solid white text + circular green dot on a
+                transparent background, so it reads clean on any dark
+                surface. The hero bg is always bg-tribe-dark, so this
+                variant is always correct here. */}
+            <div className="mb-10 flex items-center justify-center lg:justify-start">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/tribe-wordmark.png" alt="Tribe" className="h-16 lg:h-[72px] w-auto object-contain" />
             </div>
 
             <h1 className="font-black text-[clamp(40px,5vw,64px)] leading-[1.05] tracking-tight mb-5">

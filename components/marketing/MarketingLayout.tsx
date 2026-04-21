@@ -23,11 +23,9 @@ function MarketingHeader() {
   /*
    * The MarketingLayout wrapper is bg-tribe-dark for every marketing route,
    * so the header sits on a dark background in both the transparent state
-   * (over the hero) and the scrolled state (bg-tribe-dark/95). We used to
-   * render /tribe-wordmark.png here, but that PNG had transparent letter
-   * fills and only drew outlines, so the wordmark rendered as faint ghosts
-   * on dark backgrounds. Switched to text-rendered wordmark for the same
-   * reason as HeroSection.
+   * (over the hero) and the scrolled state (bg-tribe-dark/95). Use the
+   * light variant of the wordmark PNG (white text + circular green dot on
+   * transparent bg) — designed for exactly this surface.
    */
 
   const toggleLang = () => setLanguage(language === 'en' ? 'es' : 'en');
@@ -47,14 +45,11 @@ function MarketingHeader() {
         }`}
       >
         <nav className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          {/* Wordmark — text, not a PNG. See note above on why. */}
-          <Link
-            href="/"
-            className="flex items-baseline leading-none font-black tracking-tight text-white text-2xl"
-            aria-label="Tribe"
-          >
-            <span>Tribe</span>
-            <span className="text-tribe-green-light">.</span>
+          {/* Wordmark — light-on-dark variant (white text + green dot on
+              transparent bg). See note above on the surface. */}
+          <Link href="/" className="flex items-center" aria-label="Tribe">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/tribe-wordmark.png" alt="Tribe" className="h-8 w-auto" />
           </Link>
 
           {/* Desktop nav links */}
@@ -144,14 +139,9 @@ function MarketingFooter() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div>
-          {/* Footer bg is tribe-dark. Text wordmark — see MarketingHeader note. */}
-          <div
-            className="flex items-baseline leading-none font-black tracking-tight text-white text-2xl mb-2"
-            aria-label="Tribe"
-          >
-            <span>Tribe</span>
-            <span className="text-tribe-green-light">.</span>
-          </div>
+          {/* Footer bg is tribe-dark — light-on-dark wordmark variant. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tribe-wordmark.png" alt="Tribe" className="h-8 w-auto mb-2" />
           <p className="text-sm text-gray-500 mb-4">
             {t('Never Train Alone in Medellín', 'Nunca Entrenes Solo en Medellín')}
           </p>
