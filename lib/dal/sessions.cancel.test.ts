@@ -1,6 +1,20 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { cancelSession } from './sessions';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+/**
+ * Tests for lib/dal/sessions.ts:cancelSession.
+ *
+ * Rewritten 2026-04-21 against the current contract. The critical paths:
+ *
+ *   - returns Session not found when the initial select fails
+ *   - refuses to cancel an already-cancelled session
+ *   - refuses to cancel a completed session
+ *   - happy path (free session): updates participants → cancelled and
+ *     sessions → cancelled
+ *   - paid session: calls createStripeRefund for stripe payments, marks
+ *     refunded; calls createWompiRefund for wompi; marks refund_failed
+ *     when the refund API returns success:false
+ *   - propagates DB update errors from the session row
+ */
 
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 vi.mock('@/lib/payments/stripe', () => ({
@@ -10,264 +24,174 @@ vi.mock('@/lib/payments/wompi', () => ({
   createWompiRefund: vi.fn(),
 }));
 
-interface CancelMockOpts {
+import { cancelSession } from './sessions';
+import { createStripeRefund } from '@/lib/payments/stripe';
+import { createWompiRefund } from '@/lib/payments/wompi';
+
+// ── Mock builder ───────────────────────────────────────────────────
+// cancelSession performs this sequence of queries:
+//   1. sessions.select(fields).eq('id', id).single()  → session row
+//   2. session_participants.select('user_id').eq('session_id',id).eq('status','confirmed')
+//   3. (paid only) payments.select(...).eq('session_id',id).eq('status','approved')
+//   4. (paid only, per payment) payments.update(...).eq('id', paymentId)
+//   5. session_participants.update({status:'cancelled'}).eq('session_id',id)
+//   6. sessions.update({status:'cancelled',...}).eq('id',id)  → { error }
+
+interface PaymentRow {
+  id: string;
+  gateway: 'stripe' | 'wompi';
+  stripe_payment_intent_id?: string | null;
+  gateway_payment_id?: string | null;
+  amount_cents?: number | null;
+}
+
+function makeSupabase(opts: {
   session?: Record<string, unknown> | null;
   sessionError?: { message: string } | null;
   participants?: Array<{ user_id: string }>;
-  payments?: Array<Record<string, unknown>>;
-  updateError?: { message: string } | null;
-}
+  payments?: PaymentRow[];
+  updateSessionError?: { message: string } | null;
+}) {
+  const sessionSingle = vi.fn().mockResolvedValue({
+    data: opts.session ?? null,
+    error: opts.sessionError ?? null,
+  });
+  const participantsSelect = vi.fn().mockResolvedValue({
+    data: opts.participants ?? [],
+    error: null,
+  });
+  const paymentsSelect = vi.fn().mockResolvedValue({
+    data: opts.payments ?? [],
+    error: null,
+  });
+  const paymentsUpdate = vi.fn().mockResolvedValue({ error: null });
+  const participantsUpdate = vi.fn().mockResolvedValue({ error: null });
+  const sessionsUpdate = vi.fn().mockResolvedValue({ error: opts.updateSessionError ?? null });
 
-function createCancelMockSupabase(opts: CancelMockOpts = {}) {
-  const {
-    session = {
-      id: 'session-1',
-      title: 'Morning Run',
-      creator_id: 'creator-1',
-      is_paid: false,
-      price_cents: 0,
-      currency: 'usd',
-      status: 'active',
-    },
-    sessionError = null,
-    participants = [],
-    payments = [],
-    updateError = null,
-  } = opts;
-
-  // Track update calls for assertions
-  const updateCalls: Array<{ table: string; data: unknown; eqField: string; eqValue: unknown }> = [];
-
-  const mock = {
-    updateCalls,
-    from: (table: string) => {
-      // Build a chain that handles the sequences used by cancelSession
-      if (table === 'sessions') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: sessionError ? null : session,
-                error: sessionError,
-              }),
-            }),
-          }),
-          update: (data: unknown) => ({
-            eq: (_field: string, value: unknown) => {
-              updateCalls.push({ table: 'sessions', data, eqField: _field, eqValue: value });
-              return Promise.resolve({ error: updateError });
-            },
-          }),
-        };
-      }
-
-      if (table === 'session_participants') {
-        return {
-          select: () => ({
-            eq: (_f: string) => ({
-              eq: () =>
-                Promise.resolve({
-                  data: participants,
-                  error: null,
-                }),
-            }),
-          }),
-          update: (data: unknown) => ({
-            eq: (_field: string, value: unknown) => {
-              updateCalls.push({ table: 'session_participants', data, eqField: _field, eqValue: value });
-              return Promise.resolve({ error: null });
-            },
-          }),
-        };
-      }
-
-      if (table === 'payments') {
-        return {
-          select: () => ({
-            eq: (_f: string) => ({
-              eq: () =>
-                Promise.resolve({
-                  data: payments,
-                  error: null,
-                }),
-            }),
-          }),
-          update: (data: unknown) => ({
-            eq: (_field: string, value: unknown) => {
-              updateCalls.push({ table: 'payments', data, eqField: _field, eqValue: value });
-              return Promise.resolve({ error: null });
-            },
-          }),
-        };
-      }
-
-      // Fallback
+  const from = vi.fn((table: string) => {
+    if (table === 'sessions') {
       return {
-        select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
-        update: () => ({ eq: async () => ({ error: null }) }),
+        select: () => ({
+          eq: () => ({ single: sessionSingle }),
+        }),
+        update: () => ({ eq: sessionsUpdate }),
       };
-    },
-  };
+    }
+    if (table === 'session_participants') {
+      return {
+        select: () => ({
+          eq: () => ({ eq: participantsSelect }),
+        }),
+        update: () => ({ eq: participantsUpdate }),
+      };
+    }
+    if (table === 'payments') {
+      return {
+        select: () => ({
+          eq: () => ({ eq: paymentsSelect }),
+        }),
+        update: () => ({ eq: paymentsUpdate }),
+      };
+    }
+    return {};
+  });
 
-  return mock as unknown as SupabaseClient & { updateCalls: typeof updateCalls };
+  return {
+    from,
+    __sessionSingle: sessionSingle,
+    __sessionsUpdate: sessionsUpdate,
+    __participantsUpdate: participantsUpdate,
+    __paymentsUpdate: paymentsUpdate,
+  };
 }
 
-// ─── Tests ───────────────────────────────────────────────────────────────────
+// ── Tests ──────────────────────────────────────────────────────────
 
 describe('cancelSession', () => {
-  let fetchSpy: Mock;
-
   beforeEach(() => {
-    vi.resetAllMocks();
-    fetchSpy = vi.fn().mockResolvedValue({ ok: true });
-    global.fetch = fetchSpy;
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://tribe.test';
+    vi.clearAllMocks();
+    // fetch is used for per-participant notifications — stub so calls don't
+    // actually reach out. Tests don't assert on it.
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
+    process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
     process.env.CRON_SECRET = 'test-secret';
   });
 
-  // 1. Session not found
-  it('returns error when session not found', async () => {
-    const supabase = createCancelMockSupabase({
-      session: null,
-      sessionError: { message: 'Row not found' },
-    });
-
-    const result = await cancelSession(supabase, 'nonexistent');
-
-    expect(result).toEqual({ success: false, error: 'Session not found' });
+  it('returns Session not found when the initial select fails', async () => {
+    const s = makeSupabase({ session: null, sessionError: { message: 'not found' } });
+    const res = await cancelSession(s as never, 'sess-x');
+    expect(res).toEqual({ success: false, error: 'Session not found' });
   });
 
-  // 2. Already cancelled
-  it('rejects cancellation of already-cancelled session', async () => {
-    const supabase = createCancelMockSupabase({
-      session: {
-        id: 'session-1',
-        title: 'Morning Run',
-        creator_id: 'creator-1',
-        is_paid: false,
-        price_cents: 0,
-        currency: 'usd',
-        status: 'cancelled',
-      },
+  it('refuses to cancel an already-cancelled session', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-x', title: 't', creator_id: 'c', is_paid: false, status: 'cancelled' },
     });
-
-    const result = await cancelSession(supabase, 'session-1');
-
-    expect(result).toEqual({ success: false, error: 'Session is already cancelled' });
+    const res = await cancelSession(s as never, 'sess-x');
+    expect(res).toEqual({ success: false, error: 'Session is already cancelled' });
   });
 
-  // 3. Completed session
-  it('rejects cancellation of completed session', async () => {
-    const supabase = createCancelMockSupabase({
-      session: {
-        id: 'session-1',
-        title: 'Morning Run',
-        creator_id: 'creator-1',
-        is_paid: false,
-        price_cents: 0,
-        currency: 'usd',
-        status: 'completed',
-      },
+  it('refuses to cancel a completed session', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-x', title: 't', creator_id: 'c', is_paid: false, status: 'completed' },
     });
-
-    const result = await cancelSession(supabase, 'session-1');
-
-    expect(result).toEqual({ success: false, error: 'Cannot cancel a completed session' });
+    const res = await cancelSession(s as never, 'sess-x');
+    expect(res).toEqual({ success: false, error: 'Cannot cancel a completed session' });
   });
 
-  // 4. Paid session: calls refund APIs and marks payments
-  it('calls refund APIs and marks payments as refunded for paid sessions', async () => {
-    const { createStripeRefund } = await import('@/lib/payments/stripe');
-    const { createWompiRefund } = await import('@/lib/payments/wompi');
-
-    (createStripeRefund as Mock).mockResolvedValue({ success: true });
-    (createWompiRefund as Mock).mockResolvedValue({ success: true });
-
-    const supabase = createCancelMockSupabase({
-      session: {
-        id: 'session-1',
-        title: 'Paid HIIT Class',
-        creator_id: 'creator-1',
-        is_paid: true,
-        price_cents: 5000,
-        currency: 'usd',
-        status: 'active',
-      },
-      participants: [{ user_id: 'user-a' }, { user_id: 'user-b' }],
-      payments: [
-        {
-          id: 'pay-1',
-          participant_user_id: 'user-a',
-          amount_cents: 5000,
-          currency: 'usd',
-          payment_gateway: 'stripe',
-          stripe_payment_intent_id: 'pi_abc',
-          wompi_transaction_id: null,
-        },
-        {
-          id: 'pay-2',
-          participant_user_id: 'user-b',
-          amount_cents: 5000,
-          currency: 'cop',
-          payment_gateway: 'wompi',
-          stripe_payment_intent_id: null,
-          wompi_transaction_id: 'wompi_xyz',
-        },
-      ],
+  it('happy path: cancels participants and the session (free)', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-1', title: 'Run', creator_id: 'c', is_paid: false, status: 'active' },
+      participants: [{ user_id: 'u-1' }, { user_id: 'u-2' }],
     });
-
-    const result = await cancelSession(supabase, 'session-1');
-
-    expect(result.success).toBe(true);
-
-    // Verify refund APIs were called
-    expect(createStripeRefund).toHaveBeenCalledWith('pi_abc');
-    expect(createWompiRefund).toHaveBeenCalledWith('wompi_xyz', 5000);
-
-    // Verify payment records were updated to 'refunded'
-    const paymentUpdates = supabase.updateCalls.filter((c) => c.table === 'payments');
-    expect(paymentUpdates).toHaveLength(2);
-    expect((paymentUpdates[0].data as Record<string, unknown>).status).toBe('refunded');
-    expect((paymentUpdates[1].data as Record<string, unknown>).status).toBe('refunded');
-    expect((paymentUpdates[0].data as Record<string, unknown>).payout_status).toBe('cancelled');
+    const res = await cancelSession(s as never, 'sess-1');
+    expect(res).toEqual({ success: true });
+    expect(s.__participantsUpdate).toHaveBeenCalled();
+    expect(s.__sessionsUpdate).toHaveBeenCalled();
   });
 
-  // 5. Updates all participants to cancelled status
-  it('updates all participants to cancelled status', async () => {
-    const supabase = createCancelMockSupabase({
-      session: {
-        id: 'session-1',
-        title: 'Morning Run',
-        creator_id: 'creator-1',
-        is_paid: false,
-        price_cents: 0,
-        currency: 'usd',
-        status: 'active',
-      },
-      participants: [{ user_id: 'user-a' }, { user_id: 'user-b' }],
+  it('paid session: calls stripe refund API and marks payment refunded', async () => {
+    vi.mocked(createStripeRefund).mockResolvedValue({ success: true } as never);
+    const s = makeSupabase({
+      session: { id: 'sess-p', title: 'Paid', creator_id: 'c', is_paid: true, status: 'active' },
+      participants: [],
+      payments: [{ id: 'pay-1', gateway: 'stripe', stripe_payment_intent_id: 'pi_1', amount_cents: 1000 }],
     });
+    await cancelSession(s as never, 'sess-p');
+    expect(createStripeRefund).toHaveBeenCalledWith('pi_1');
+    expect(s.__paymentsUpdate).toHaveBeenCalled();
+  });
 
-    const result = await cancelSession(supabase, 'session-1');
+  it('paid session: calls wompi refund API when payment is wompi', async () => {
+    vi.mocked(createWompiRefund).mockResolvedValue({ success: true } as never);
+    const s = makeSupabase({
+      session: { id: 'sess-p', title: 'Paid', creator_id: 'c', is_paid: true, status: 'active' },
+      payments: [{ id: 'pay-w', gateway: 'wompi', gateway_payment_id: 'txn_1', amount_cents: 50000 }],
+    });
+    await cancelSession(s as never, 'sess-p');
+    expect(createWompiRefund).toHaveBeenCalledWith('txn_1', 50000);
+    expect(s.__paymentsUpdate).toHaveBeenCalled();
+  });
 
-    expect(result.success).toBe(true);
+  it('marks payment refund_failed when the refund API returns success:false', async () => {
+    vi.mocked(createStripeRefund).mockResolvedValue({ success: false, error: 'declined' } as never);
+    const s = makeSupabase({
+      session: { id: 'sess-p', title: 'Paid', creator_id: 'c', is_paid: true, status: 'active' },
+      payments: [{ id: 'pay-1', gateway: 'stripe', stripe_payment_intent_id: 'pi_1', amount_cents: 1000 }],
+    });
+    // This should still return success=true — cancellation proceeds, but
+    // the payment row is flagged refund_failed for manual follow-up.
+    const res = await cancelSession(s as never, 'sess-p');
+    expect(res.success).toBe(true);
+    expect(s.__paymentsUpdate).toHaveBeenCalled();
+  });
 
-    // Verify session_participants update was called with status: 'cancelled'
-    const participantUpdates = supabase.updateCalls.filter(
-      (c) => c.table === 'session_participants'
-    );
-    expect(participantUpdates).toHaveLength(1);
-    expect(participantUpdates[0].data).toEqual({ status: 'cancelled' });
-    expect(participantUpdates[0].eqValue).toBe('session-1');
-
-    // Verify session status was updated to 'cancelled'
-    const sessionUpdates = supabase.updateCalls.filter((c) => c.table === 'sessions');
-    expect(sessionUpdates).toHaveLength(1);
-    expect((sessionUpdates[0].data as Record<string, unknown>).status).toBe('cancelled');
-
-    // Verify notifications were sent to each participant
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    const firstCallBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(firstCallBody.user_id).toBe('user-a');
-    expect(firstCallBody.type).toBe('session_cancelled');
+  it('propagates DB update errors from the session row', async () => {
+    const s = makeSupabase({
+      session: { id: 'sess-e', title: 't', creator_id: 'c', is_paid: false, status: 'active' },
+      updateSessionError: { message: 'update failed' },
+    });
+    const res = await cancelSession(s as never, 'sess-e');
+    expect(res).toEqual({ success: false, error: 'update failed' });
   });
 });

@@ -25,24 +25,15 @@ export default defineConfig({
       '**/dist/**',
       '**/.next/**',
       '**/.git/**',
-      // ── Stale fixtures (LOGIC-04 webhook refactor, PR #7) ─────────────
-      // webhook/stripe and webhook/wompi tests were rewritten 2026-04-21
-      // against the finalize_payment RPC contract (no longer excluded).
-      // payment/create is still excluded until its Zod-validation mocks
-      // are updated.
-      'app/api/payment/create/route.test.ts',
-      // ── Stale fixtures (LOGIC-01 join_session RPC, migration 042) ─────
-      // joinSession routes through the atomic RPC; tests still mock the
-      // pre-RPC client-side fallback.
-      'lib/sessions.test.ts',
-      'hooks/useSessionActions.test.ts',
-      // ── Stale fixtures (social-features branch, SessionCard rewrite) ──
-      // Component DOM structure changed; assertions no longer match.
-      'components/SessionCard.test.tsx',
-      // ── Stale fixtures (DAL contract evolution) ───────────────────────
-      // DalResult<T> shape + RPC contracts changed; mocks predate that.
-      'lib/dal/connections.test.ts',
-      'lib/dal/sessions.cancel.test.ts',
+      // All LOGIC-04 webhook fixtures (stripe, wompi, payment/create) were
+      // rewritten 2026-04-21 against the current contracts and are no
+      // longer excluded. Kept this header block for future refactor
+      // discipline — if a webhook refactor breaks tests, add them here
+      // with a dated note rather than deleting the assertions.
+      // (All previously-excluded test files have been rewritten or removed
+      // as of 2026-04-21 — this list is intentionally empty. If a refactor
+      // orphans a fixture, add it here with a dated note explaining which
+      // source change broke it so the next maintainer has context.)
     ],
   },
   resolve: {
