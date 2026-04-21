@@ -16,7 +16,7 @@ vi.mock('@supabase/supabase-js', () => ({
 }));
 
 vi.mock('@/lib/rate-limit', () => ({
-  rateLimit: vi.fn(),
+  checkRateLimit: vi.fn(),
 }));
 
 vi.mock('@/lib/validations/payment', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/lib/payments/stripe', () => ({
 import { POST } from './route';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient as createServiceClientImport } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { createPaymentSchema } from '@/lib/validations/payment';
 import { getPaymentGateway, isSupportedCurrency, calculateFees } from '@/lib/payments/config';
 import { createWompiTransaction } from '@/lib/payments/wompi';
@@ -118,7 +118,7 @@ describe('POST /api/payment/create', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
 
     // Default: rate-limiting allows the request
-    vi.mocked(rateLimit).mockReturnValue({ allowed: true } as never);
+    vi.mocked(checkRateLimit).mockReturnValue({ allowed: true } as never);
   });
 
   // -------------------------------------------------------------------------

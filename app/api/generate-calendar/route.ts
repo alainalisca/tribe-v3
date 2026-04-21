@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { createEvents, type EventAttributes } from 'ics';
 import { log, logError } from '@/lib/logger';
 import { fetchSessionFields } from '@/lib/dal';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   try {
     // Rate limit to prevent abuse on this public endpoint
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 30, windowMs: 60_000 });
+    const supabase = await createClient();
+    const { allowed } = await checkRateLimit(supabase, `calendar:${ip}`, 30, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -30,8 +31,6 @@ export async function GET(request: Request) {
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
-
-    const supabase = await createClient();
 
     const sessionResult = await fetchSessionFields(supabase, sessionId, '*, creator:users!creator_id(name)');
     const session = sessionResult.data as {

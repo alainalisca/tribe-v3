@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { fetchNearbyExternalEvents, upsertExternalEvents, type ExternalEventInsert } from '@/lib/dal/externalEvents';
 import { logError } from '@/lib/logger';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * Maps keywords in event title/description to Tribe sports
@@ -136,9 +136,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit
-    const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 20, windowMs: 60_000 });
+    // Rate limit — keyed by user id, not IP, since this endpoint requires auth.
+    const { allowed } = await checkRateLimit(authSupabase, `eventbrite:${user.id}`, 20, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -161,14 +160,17 @@ export async function GET(request: NextRequest) {
       // Return cached events only
       const cached = await fetchNearbyExternalEvents(supabase, lat, lng, radius, undefined, 50);
 
-      return NextResponse.json({
-        success: true,
-        events: cached.data || [],
-        source: 'cache',
-        note: 'EVENTBRITE_API_KEY not configured. Returning cached events only.',
-      }, {
-        headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          events: cached.data || [],
+          source: 'cache',
+          note: 'EVENTBRITE_API_KEY not configured. Returning cached events only.',
+        },
+        {
+          headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' },
+        }
+      );
     }
 
     // Query Eventbrite REST API for Sports & Fitness and Health & Wellness events
@@ -251,14 +253,17 @@ export async function GET(request: NextRequest) {
       await upsertExternalEvents(supabase, externalEvents);
     }
 
-    return NextResponse.json({
-      success: true,
-      events: externalEvents,
-      source: 'eventbrite',
-      count: externalEvents.length,
-    }, {
-      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' }
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        events: externalEvents,
+        source: 'eventbrite',
+        count: externalEvents.length,
+      },
+      {
+        headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=21600' },
+      }
+    );
   } catch (error) {
     logError(error, { action: 'eventbriteRoute' });
     return NextResponse.json({ error: 'Failed to fetch Eventbrite events' }, { status: 500 });

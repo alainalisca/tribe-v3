@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { createPaymentSchema } from '@/lib/validations/payment';
 import {
   getPaymentGateway,
@@ -29,16 +29,10 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit: max 10 payment creation attempts per minute
-    const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
-    if (!allowed) {
-      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
-    }
-
     const supabase = await createClient();
 
-    // Get authenticated user
+    // Get authenticated user first, then rate-limit by user id (falling back
+    // to IP if unauthenticated — though we still reject unauth below).
     const {
       data: { user },
       error: authError,
@@ -46,6 +40,12 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limit: max 10 payment creation attempts per minute per user.
+    const { allowed } = await checkRateLimit(supabase, `payment-create:${user.id}`, 10, 60_000);
+    if (!allowed) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
     }
 
     const body = await request.json();

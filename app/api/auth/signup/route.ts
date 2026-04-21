@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 function calculateAge(birthDate: string): number {
   const today = new Date();
@@ -24,7 +25,13 @@ function calculateAge(birthDate: string): number {
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 5, windowMs: 60_000 });
+    // Service-role client so the rate_limits table write doesn't require an
+    // authenticated session (this is a signup endpoint — there is no user yet).
+    const rateLimitClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { allowed } = await checkRateLimit(rateLimitClient, `signup:${ip}`, 5, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
     }
