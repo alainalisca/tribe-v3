@@ -5,7 +5,20 @@
     "mySessions": "Mis Sesiones",
     "matches": "Encuentros",
     "profile": "Perfil",
-    "teams": "Equipos"
+    "teams": "Equipos",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "back": "Atrás",
+    "close": "Cerrar",
+    "retry": "Reintentar",
+    "done": "Listo",
+    "continue": "Continuar",
+    "confirm": "Confirmar",
+    "yes": "Sí",
+    "no": "No"
   },
   "home": {
     "title": "Encuentra Compañeros de Entrenamiento",
@@ -19,6 +32,13 @@
     "tomorrow": "Mañana",
     "noSessions": "No hay sesiones disponibles aún. ¡Crea la primera!"
   },
+  "weather": {
+    "clear": "Día perfecto para entrenar al aire libre",
+    "clouds": "Buen clima para una sesión al aire libre",
+    "rain": "Lluvia — perfecto para sesiones en interior",
+    "drizzle": "Lluvia ligera — entrena igual o ve adentro",
+    "thunderstorm": "Alerta de tormenta — sesiones en interior recomendadas"
+  },
   "sports": {
     "football": "Fútbol Americano",
     "basketball": "Baloncesto",
@@ -29,5 +49,72 @@
     "tennis": "Tenis",
     "volleyball": "Voleibol",
     "soccer": "Fútbol"
+  },
+  "orders": {
+    "pageTitle": "Mis Compras",
+    "empty": "Sin compras aún",
+    "emptySubtitle": "Explora los perfiles de instructores para encontrar productos.",
+    "explore": "Explorar",
+    "statusFulfilled": "Completada",
+    "statusCancelled": "Cancelada",
+    "statusPending": "Pendiente",
+    "product": "Producto",
+    "download": "Descargar",
+    "creditsRemaining": "créditos restantes",
+    "expires": "Expira"
+  },
+  "settings": {
+    "notifications": {
+      "title": "Notificaciones",
+      "subtitle": "Elige sobre qué quieres enterarte",
+      "pushEnabled": "Notificaciones push activadas",
+      "pushDisabled": "Notificaciones push desactivadas",
+      "enableInSystem": "Activar en ajustes del dispositivo",
+      "testNotification": "Enviar notificación de prueba",
+      "testSent": "¡Notificación de prueba enviada!",
+      "categoryBookings": "Reservas y Pagos",
+      "categoryCommunity": "Comunidad",
+      "categoryReminders": "Recordatorios",
+      "sessionBooked": "Sesión reservada",
+      "sessionBookedDesc": "Cuando alguien se une a tu sesión",
+      "sessionCancelled": "Sesión cancelada",
+      "sessionCancelledDesc": "Cuando se cancela una sesión a la que te uniste",
+      "paymentReceived": "Pago recibido",
+      "paymentReceivedDesc": "Cuando un pago se completa con éxito",
+      "newFollower": "Nuevo seguidor",
+      "newFollowerDesc": "Cuando alguien comienza a seguirte",
+      "newMessage": "Nuevo mensaje",
+      "newMessageDesc": "Cuando recibes un mensaje directo",
+      "sessionReminder": "Recordatorio de sesión",
+      "sessionReminderDesc": "1 hora antes de que comience cada sesión",
+      "weeklyDigest": "Resumen semanal",
+      "weeklyDigestDesc": "Resumen de tu actividad cada lunes"
+    }
+  },
+  "postSession": {
+    "title": "¿Cómo estuvo tu sesión?",
+    "rateTitle": "Califica tu sesión",
+    "ratePrompt": "¿Volverías a entrenar con estos atletas?",
+    "skip": "Quizá después",
+    "submit": "Enviar",
+    "thanks": "¡Gracias por tu feedback!"
+  },
+  "tribePlus": {
+    "title": "Tribe+",
+    "tagline": "Desbloquea la experiencia completa de Tribe",
+    "monthly": "Mensual",
+    "yearly": "Anual",
+    "save": "Ahorra",
+    "startTrial": "Comienza prueba gratis de 7 días",
+    "subscribe": "Suscribirse",
+    "benefits": "Beneficios",
+    "benefit_unlimitedBookings": "Reservas de sesiones ilimitadas",
+    "benefit_priorityAccess": "Acceso prioritario a sesiones populares",
+    "benefit_noFees": "Sin tarifas de reserva",
+    "benefit_premiumBadge": "Insignia premium en tu perfil",
+    "benefit_earlyAccess": "Acceso anticipado a nuevas funciones",
+    "currentPlan": "Plan actual",
+    "manageSubscription": "Gestionar suscripción",
+    "cancelAnytime": "Cancela cuando quieras"
   }
 }

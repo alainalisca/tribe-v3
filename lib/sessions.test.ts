@@ -1,235 +1,222 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { joinSession } from './sessions';
 
-// Mock logger
-vi.mock('@/lib/logger', () => ({
-  logError: vi.fn(),
+/**
+ * Tests for lib/sessions.ts:joinSession.
+ *
+ * Rewritten 2026-04-21 against the post-LOGIC-01 contract: joinSession
+ * delegates the capacity check + insert to the join_session RPC
+ * (migration 042), which holds a row-level lock on the session and
+ * serializes concurrent joins. The pre-RPC client-side fallback is gone.
+ *
+ * What this file verifies:
+ *   1. Pre-RPC validation — session_not_found, session_not_active,
+ *      self_join, already_joined, invite_only — each returns the
+ *      expected error without calling the RPC.
+ *   2. Happy paths for open join (status: confirmed) and curated
+ *      join (status: pending) — RPC is called with the right args.
+ *   3. RPC-level errors propagate through the caller.
+ *   4. RPC returning `{success: false, error: 'Session is full'}` is
+ *      translated to the stable 'capacity_full' code.
+ */
+
+vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
+vi.mock('@/lib/dal', () => ({
+  fetchSessionFields: vi.fn(),
+  checkExistingParticipation: vi.fn(),
 }));
 
-// Mock fetch for notification calls
-const mockFetch = vi.fn().mockResolvedValue({ ok: true });
-vi.stubGlobal('fetch', mockFetch);
+import { joinSession } from './sessions';
+import { fetchSessionFields, checkExistingParticipation } from '@/lib/dal';
 
-// Factory for building a mock SupabaseClient tailored to joinSession's query sequence:
-// 1. from('sessions').select(...).eq('id', ...).single()
-// 2. from('session_participants').select('id, status').eq(...).eq(...).maybeSingle()
-// 3. from('session_participants').select('id', { count: 'exact', head: true }).eq(...).eq(...)
-// 4. from('session_participants').insert(...) -- terminal
-// 5. from('sessions').update(...).eq(...) -- terminal
-
-interface MockSessionData {
-  session?: Record<string, unknown> | null;
-  sessionError?: { message: string } | null;
-  existingParticipant?: Record<string, unknown> | null;
-  confirmedCount?: number;
-  insertError?: { message: string } | null;
+function makeSupabase(rpcResult: { data?: unknown; error?: { message: string } | null } = {}) {
+  const rpc = vi.fn().mockResolvedValue({
+    data: rpcResult.data ?? { success: true, participant_id: 'pp-1' },
+    error: rpcResult.error ?? null,
+  });
+  return { rpc, __rpc: rpc };
 }
 
-function createJoinSessionMock(config: MockSessionData) {
+function session(overrides: Partial<Record<string, unknown>> = {}) {
   return {
-    from: (table: string) => {
-      if (table === 'sessions') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: config.session ?? null,
-                error: config.sessionError ?? null,
-              }),
-            }),
-          }),
-          update: () => ({
-            eq: async () => ({ error: null }),
-          }),
-        };
-      }
-
-      if (table === 'session_participants') {
-        return {
-          select: (_cols?: string, opts?: { count?: string; head?: boolean }) => {
-            if (opts?.count === 'exact') {
-              // Call 3: count query
-              const countChain: Record<string, unknown> = {};
-              countChain.eq = () => countChain;
-              countChain.then = (resolve: (v: unknown) => void) =>
-                resolve({ count: config.confirmedCount ?? 0, error: null });
-              return countChain;
-            }
-            // Call 2: existing participant check
-            return {
-              eq: () => ({
-                eq: () => ({
-                  maybeSingle: async () => ({
-                    data: config.existingParticipant ?? null,
-                    error: null,
-                  }),
-                }),
-              }),
-            };
-          },
-          insert: () => ({
-            error: config.insertError ?? null,
-            then: (resolve: (v: unknown) => void) => resolve({ error: config.insertError ?? null }),
-          }),
-        };
-      }
-
-      return {};
-    },
-  } as unknown as SupabaseClient;
+    id: 'sess-1',
+    creator_id: 'creator-1',
+    join_policy: 'open',
+    max_participants: 10,
+    current_participants: 3,
+    status: 'active',
+    sport: 'bjj',
+    ...overrides,
+  };
 }
-
-const baseSession = {
-  id: 'session-1',
-  creator_id: 'creator-1',
-  join_policy: 'open',
-  max_participants: 10,
-  current_participants: 3,
-  status: 'active',
-  sport: 'Running',
-};
 
 describe('joinSession', () => {
   beforeEach(() => {
-    mockFetch.mockClear();
+    vi.clearAllMocks();
+    // Notification is fire-and-forget — tests don't assert on it but we stub.
+    global.fetch = vi.fn().mockResolvedValue({ ok: true }) as never;
   });
 
-  it('joins an open session successfully', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: baseSession,
-      existingParticipant: null,
-      confirmedCount: 3,
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+  it('returns session_not_found when fetchSessionFields fails', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: false, error: 'not found' } as never);
+    const s = makeSupabase();
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
-
-    expect(result.success).toBe(true);
-    expect(result.status).toBe('confirmed');
+    expect(res).toEqual({ success: false, error: 'session_not_found' });
+    expect(s.__rpc).not.toHaveBeenCalled();
   });
 
-  it('returns session_not_found when session does not exist', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: null,
-      sessionError: { message: 'Row not found' },
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'nonexistent',
+  it('returns session_not_active when session.status is cancelled', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ status: 'cancelled' }),
+    } as never);
+    const s = makeSupabase();
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('session_not_found');
+    expect(res.error).toBe('session_not_active');
+    expect(s.__rpc).not.toHaveBeenCalled();
   });
 
-  it('returns session_not_active for cancelled sessions', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: { ...baseSession, status: 'cancelled' },
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+  it('returns self_join when caller is the creator', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ creator_id: 'user-1' }),
+    } as never);
+    const s = makeSupabase();
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('session_not_active');
+    expect(res.error).toBe('self_join');
+    expect(s.__rpc).not.toHaveBeenCalled();
   });
 
-  it('returns self_join when creator tries to join own session', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: baseSession,
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
-      userId: 'creator-1',
-      userName: 'Creator',
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('self_join');
-  });
-
-  it('returns already_joined when user has existing participation', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: baseSession,
-      existingParticipant: { id: 'participant-1', status: 'confirmed' },
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+  it('returns already_joined when user already participates', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: true } as never);
+    const s = makeSupabase();
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('already_joined');
+    expect(res.error).toBe('already_joined');
+    expect(s.__rpc).not.toHaveBeenCalled();
   });
 
-  it('returns capacity_full when session is at max capacity', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: { ...baseSession, max_participants: 5 },
-      existingParticipant: null,
-      confirmedCount: 5,
-    });
-
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+  it('returns invite_only when join_policy is invite_only', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ join_policy: 'invite_only' }),
+    } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase();
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('capacity_full');
+    expect(res.error).toBe('invite_only');
+    expect(s.__rpc).not.toHaveBeenCalled();
   });
 
-  it('returns pending status for curated sessions', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: { ...baseSession, join_policy: 'curated' },
-      existingParticipant: null,
-      confirmedCount: 3,
-    });
+  it('calls join_session RPC with status=confirmed for open sessions', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: true, participant_id: 'pp-1', status: 'confirmed' } });
 
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
 
-    expect(result.success).toBe(true);
-    expect(result.status).toBe('pending');
+    expect(res).toEqual({ success: true, status: 'confirmed' });
+    expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+      p_session_id: 'sess-1',
+      p_user_id: 'user-1',
+      p_status: 'confirmed',
+    });
   });
 
-  it('returns invite_only error for invite-only sessions', async () => {
-    const mockSupabase = createJoinSessionMock({
-      session: { ...baseSession, join_policy: 'invite_only' },
-      existingParticipant: null,
-      confirmedCount: 3,
-    });
+  it('calls join_session RPC with status=pending for curated sessions', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ join_policy: 'curated' }),
+    } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: true, participant_id: 'pp-2', status: 'pending' } });
 
-    const result = await joinSession({
-      supabase: mockSupabase,
-      sessionId: 'session-1',
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
       userId: 'user-1',
-      userName: 'Test User',
+      userName: 'Al',
     });
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('invite_only');
+    expect(res).toEqual({ success: true, status: 'pending' });
+    expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+      p_session_id: 'sess-1',
+      p_user_id: 'user-1',
+      p_status: 'pending',
+    });
+  });
+
+  it('translates "Session is full" RPC error to capacity_full', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: false, error: 'Session is full' } });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: false, error: 'capacity_full' });
+  });
+
+  it('propagates RPC-level errors', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ error: { message: 'db down' } });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: false, error: 'db down' });
+  });
+
+  it('accepts a JSON-string rpc result (Supabase sometimes returns text)', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: JSON.stringify({ success: true, participant_id: 'pp-3' }) });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: true, status: 'confirmed' });
   });
 });

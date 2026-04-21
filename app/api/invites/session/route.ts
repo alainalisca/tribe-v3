@@ -4,28 +4,13 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { createNotification } from '@/lib/dal/notifications';
 import { fetchSession } from '@/lib/dal/sessions';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { logError } from '@/lib/logger';
 
 const inviteSchema = z.object({
   session_id: z.string().uuid(),
   recipient_user_id: z.string().uuid(),
 });
-
-// Simple in-memory rate limiter: userId -> timestamps[]
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT = 10;
-const RATE_WINDOW_MS = 60_000;
-
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(userId) || [];
-  const recent = timestamps.filter((t) => now - t < RATE_WINDOW_MS);
-  rateLimitMap.set(userId, recent);
-  if (recent.length >= RATE_LIMIT) return true;
-  recent.push(now);
-  rateLimitMap.set(userId, recent);
-  return false;
-}
 
 /**
  * @description Sends a session invite notification to another athlete.
@@ -46,8 +31,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit
-    if (isRateLimited(user.id)) {
+    // Rate limit: max 10 invites per minute per user.
+    const { allowed } = await checkRateLimit(supabase, `invite-session:${user.id}`, 10, 60_000);
+    if (!allowed) {
       return NextResponse.json({ error: 'Too many invites. Please wait a moment.' }, { status: 429 });
     }
 
@@ -55,10 +41,7 @@ export async function POST(request: Request) {
     const parsed = inviteSchema.safeParse(raw);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues.map((i) => i.message).join(', ') },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
     const { session_id, recipient_user_id } = parsed.data;

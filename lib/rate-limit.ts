@@ -1,16 +1,26 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { log, logError } from '@/lib/logger';
 
 /**
- * Supabase-backed rate limiter for serverless environments.
- * Requires this table (run in Supabase SQL Editor):
+ * Supabase-backed rate limiter.
  *
- *   CREATE TABLE IF NOT EXISTS rate_limits (
- *     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
- *     key text NOT NULL,
- *     created_at timestamptz DEFAULT now()
- *   );
- *   CREATE INDEX IF NOT EXISTS idx_rate_limits_key_created ON rate_limits (key, created_at);
+ * All callers should use `checkRateLimit(supabase, key, max, windowMs)`.
+ * The legacy in-memory `rateLimit()` export was removed in 2026-04-21
+ * (AUDIT-P0-1): it used a module-scoped Map that resets on every
+ * serverless cold start, so the effective throttle was ~0 in production.
+ *
+ * Storage: requires the `rate_limits` table from migration 049.
+ *
+ * Key construction convention: `"{namespace}:{partition}"`, e.g.
+ *   - `"signup:1.2.3.4"`         — IP-partitioned rate limits
+ *   - `"invite:{user-uuid}"`     — user-partitioned
+ *   - `"widget:{user-uuid}"`     — feedback widget
+ * Prefix is mandatory so unrelated endpoints never share a bucket.
+ *
+ * Failure mode: fails OPEN (allows the request) on DB errors. The threat
+ * model here is DoS amplification via spammable endpoints; if the DB is
+ * down we have bigger problems than rate-limit bypass, and we don't want
+ * a transient Supabase hiccup to 429 every user.
  */
 
 interface RateLimitResult {
@@ -19,11 +29,6 @@ interface RateLimitResult {
   resetAt: Date;
 }
 
-/**
- * Supabase-backed rate limit check.
- * Counts recent entries for the given key within the window.
- * Fails open (allows request) if DB is unavailable.
- */
 export async function checkRateLimit(
   supabase: SupabaseClient,
   key: string,
@@ -34,7 +39,6 @@ export async function checkRateLimit(
   const resetAt = new Date(Date.now() + windowMs);
 
   try {
-    // Count recent entries within the window
     const { count, error: countError } = await supabase
       .from('rate_limits')
       .select('id', { count: 'exact', head: true })
@@ -43,7 +47,6 @@ export async function checkRateLimit(
 
     if (countError) {
       logError(countError, { action: 'checkRateLimit_count', key });
-      // Fail open — allow the request if DB is unavailable
       return { allowed: true, remaining: maxRequests, resetAt };
     }
 
@@ -54,60 +57,31 @@ export async function checkRateLimit(
       return { allowed: false, remaining: 0, resetAt };
     }
 
-    // Insert a new entry for this request
     const { error: insertError } = await supabase.from('rate_limits').insert({ key });
     if (insertError) {
       logError(insertError, { action: 'checkRateLimit_insert', key });
-      // Still allow — the count was under limit
+      // Still allow — the count was under limit at read time.
     }
 
-    // Fire-and-forget cleanup of old entries
-    supabase
+    // Fire-and-forget cleanup of old entries. We don't await so the
+    // caller isn't blocked, but errors still need to land in the log
+    // stream — an unlogged failing cleanup means unbounded row growth
+    // in rate_limits, which silently degrades checkRateLimit count
+    // performance over time.
+    void supabase
       .from('rate_limits')
       .delete()
       .eq('key', key)
       .lt('created_at', windowStart)
-      .then(() => {
-        /* cleanup done */
+      .then(({ error: cleanupError }) => {
+        if (cleanupError) {
+          logError(cleanupError, { action: 'checkRateLimit_cleanup', key });
+        }
       });
 
     return { allowed: true, remaining: maxRequests - currentCount - 1, resetAt };
   } catch (error) {
     logError(error, { action: 'checkRateLimit', key });
-    // Fail open
     return { allowed: true, remaining: maxRequests, resetAt };
   }
-}
-
-/**
- * In-memory rate limiter fallback for cases where Supabase client isn't available.
- * Per-instance only — not shared across serverless cold starts.
- */
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-const store = new Map<string, RateLimitEntry>();
-
-export function rateLimit(
-  ip: string,
-  { maxRequests = 10, windowMs = 60_000 }: { maxRequests?: number; windowMs?: number } = {}
-): RateLimitResult {
-  const now = Date.now();
-  const entry = store.get(ip);
-
-  if (!entry || now > entry.resetAt) {
-    store.set(ip, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remaining: maxRequests - 1, resetAt: new Date(now + windowMs) };
-  }
-
-  entry.count++;
-
-  if (entry.count > maxRequests) {
-    log('warn', 'Rate limit exceeded (in-memory)', { ip, count: entry.count, maxRequests });
-    return { allowed: false, remaining: 0, resetAt: new Date(entry.resetAt) };
-  }
-
-  return { allowed: true, remaining: maxRequests - entry.count, resetAt: new Date(entry.resetAt) };
 }

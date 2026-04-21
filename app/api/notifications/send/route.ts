@@ -3,7 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
 
@@ -42,8 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 30, windowMs: 60_000 });
+    const { allowed } = await checkRateLimit(supabaseAuth, `notify-send:${authUser.id}`, 30, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -52,10 +51,7 @@ export async function POST(request: Request) {
     const parsed = sendNotificationSchema.safeParse(raw);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues.map((i) => i.message).join(', ') },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
     const { userId, title, body, url, data } = parsed.data;
@@ -170,8 +166,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
+    const { allowed } = await checkRateLimit(supabaseAuth, `notify-batch:${authUser.id}`, 10, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -180,42 +175,49 @@ export async function PUT(request: Request) {
     const parsed = batchNotificationSchema.safeParse(raw);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues.map((i) => i.message).join(', ') },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
     const { userIds, title, body, url, data } = parsed.data;
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Get all users' notification credentials
-    const userResults = await Promise.all(
-      userIds.map((id: string) => fetchUserProfileMaybe(supabase, id, 'id, push_subscription, fcm_token, fcm_platform'))
-    );
-    const fetchError = userResults.find((r) => !r.success);
-    if (fetchError) {
-      logError(fetchError.error, { route: '/api/notifications/send', action: 'fetch_users_batch' });
+    // AUDIT-P0-4: batch-fetch in a single IN query instead of N round trips.
+    // Previous implementation did `Promise.all(ids.map(id => fetchUserProfileMaybe(...)))`
+    // which issued one SELECT per user — a 100-user batch meant 100 RTs.
+    const { data: usersRaw, error: usersError } = await supabase
+      .from('users')
+      .select('id, push_subscription, fcm_token, fcm_platform')
+      .in('id', userIds);
+
+    if (usersError) {
+      logError(usersError, { route: '/api/notifications/send', action: 'fetch_users_batch' });
       return NextResponse.json({ error: 'Error fetching user data' }, { status: 500 });
     }
-    const users = userResults
-      .filter((r) => r.data != null)
-      .map(
-        (r) =>
-          r.data as { id: string; push_subscription: unknown; fcm_token: string | null; fcm_platform: string | null }
-      );
+    const users = (usersRaw ?? []) as Array<{
+      id: string;
+      push_subscription: unknown;
+      fcm_token: string | null;
+      fcm_platform: string | null;
+    }>;
 
     const notificationData: Record<string, string> = {
       url: url || '/',
       ...(data || {}),
     };
 
+    // `notFound` counts requested ids that didn't resolve to a user row
+    // (soft-deleted, wrong id, etc.). Previously these were silently folded
+    // into total, making results.total > (sent + failed + noSubscription)
+    // whenever any id was stale. Breaking it out lets callers distinguish
+    // "no push credentials" from "user doesn't exist".
+    const notFound = userIds.length - users.length;
     const results = {
       total: userIds.length,
       fcm: { sent: 0, failed: 0 },
       webPush: { sent: 0, failed: 0 },
       noSubscription: 0,
+      notFound,
     };
 
     const invalidFcmTokenUserIds: string[] = [];

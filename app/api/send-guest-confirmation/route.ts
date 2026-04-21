@@ -1,7 +1,8 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { rateLimit } from '@/lib/rate-limit';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -32,9 +33,15 @@ interface GuestConfirmationBody {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Rate limit: max 10 guest confirmations per minute per IP
+    // Rate limit: max 10 guest confirmations per minute per IP.
+    // No auth on this endpoint (public guest flow), so we use service role
+    // to write the rate_limits row.
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    const { allowed } = rateLimit(ip, { maxRequests: 10, windowMs: 60_000 });
+    const rateLimitClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { allowed } = await checkRateLimit(rateLimitClient, `guest-confirm:${ip}`, 10, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
