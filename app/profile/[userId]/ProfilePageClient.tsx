@@ -53,21 +53,28 @@ export interface ProfileStats {
 interface ProfilePageClientProps {
   userId: string;
   initialProfile: UserProfile | null;
-  initialStats: ProfileStats;
+  /**
+   * Pre-rendered stats section. Rendered by a separate async Server
+   * Component wrapped in Suspense, so the profile header can stream
+   * ahead of the stats. See page.tsx + ProfileStatsServer.tsx.
+   */
+  statsSlot: React.ReactNode;
 }
 
-export default function ProfilePageClient({ userId, initialProfile, initialStats }: ProfilePageClientProps) {
+export default function ProfilePageClient({ userId, initialProfile, statsSlot }: ProfilePageClientProps) {
   const router = useRouter();
   const supabase = createClient();
   const { language, t: globalT } = useLanguage();
   const t = getProfileTranslations(language);
 
-  // Profile + stats are authoritative from the server fetch. They're stored
-  // in state (not just used directly from props) because a future
-  // router.refresh() after block/unblock could re-seed them, and the state
-  // setter pattern leaves that door open without another refactor.
+  // Profile is authoritative from the server fetch. Stored in state (not
+  // used directly from props) because a future router.refresh() after
+  // block/unblock could re-seed it, and the state setter pattern leaves
+  // that door open without another refactor.
+  // Stats come in via the statsSlot prop — they're rendered by a separate
+  // Suspense-wrapped Server Component, so this component doesn't need the
+  // raw numbers.
   const [profile] = useState<UserProfile | null>(initialProfile);
-  const [stats] = useState<ProfileStats>(initialStats);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -246,7 +253,6 @@ export default function ProfilePageClient({ userId, initialProfile, initialStats
 
   const isOwnProfile = currentUser?.id === userId;
   const sports = profile.sports || [];
-  const hasLowAttendance = stats.totalAttendance >= 3 && stats.attendanceRate < 50;
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
@@ -356,14 +362,6 @@ export default function ProfilePageClient({ userId, initialProfile, initialStats
             );
           })()}
 
-          {hasLowAttendance && !isOwnProfile && (
-            <div className="mt-4 bg-orange-100 border border-orange-300 rounded-lg p-3">
-              <p className="text-sm text-orange-700">
-                ⚠️ {t.lowAttendance} {stats.attendanceRate.toFixed(0)}%
-              </p>
-            </div>
-          )}
-
           <div className="mt-4">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-3xl font-extrabold tracking-tight text-theme-primary">{profile?.name}</h2>
@@ -381,29 +379,13 @@ export default function ProfilePageClient({ userId, initialProfile, initialStats
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            {[
-              { value: stats.sessionsCreated, label: t.sessionsCreated },
-              { value: stats.sessionsJoined, label: t.sessionsJoined },
-              { value: stats.totalSessions, label: t.totalSessions },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border border-stone-200 dark:border-tribe-mid"
-              >
-                <p className="text-4xl font-bold text-theme-primary">{stat.value}</p>
-                <p className="text-sm text-theme-secondary mt-1">{stat.label}</p>
-              </div>
-            ))}
-            <div
-              className={`bg-white dark:bg-tribe-surface rounded-2xl p-4 text-center border ${hasLowAttendance ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20' : 'border-stone-200 dark:border-tribe-mid'}`}
-            >
-              <p className={`text-4xl font-bold ${hasLowAttendance ? 'text-orange-600' : 'text-theme-primary'}`}>
-                {stats.totalAttendance > 0 ? `${stats.attendanceRate.toFixed(0)}%` : '—'}
-              </p>
-              <p className="text-sm text-theme-secondary mt-1">{t.attendanceRate}</p>
-            </div>
-          </div>
+          {/* Stats grid — rendered by a Suspense-wrapped Server Component
+              via the statsSlot prop so the profile above can paint before
+              the attendance RPC resolves. Note: the "low attendance" warning
+              moved inside the stats component (it needs the stats numbers
+              and has always only fired on other users' profiles, which we
+              can infer from the ProfileStatsClient's own logic). */}
+          {statsSlot}
 
           {/* Reviews preview — instructors only */}
           {profile?.is_instructor && (
