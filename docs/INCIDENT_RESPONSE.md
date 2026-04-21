@@ -10,7 +10,7 @@ the steps. This file is organized that way.
 Critical URLs, keep handy:
 
 - Production: https://tribe-v3.vercel.app
-- Health check: https://tribe-v3.vercel.app/api/health
+- Health check: https://tribe-v3.vercel.app/api/health/
 - Vercel dashboard: https://vercel.com/alain-aliscas-projects/tribe-v3
 - Supabase dashboard: https://supabase.com/dashboard/project/<project-id>
 - Sentry (once live): https://sentry.io/organizations/tribe/issues/
@@ -23,7 +23,10 @@ Critical URLs, keep handy:
 
 Symptom: users report blank pages, 500s, or indefinite loading.
 
-1. Hit `/api/health` in a browser or `curl https://tribe-v3.vercel.app/api/health`.
+1. Hit `/api/health/` in a browser or `curl https://tribe-v3.vercel.app/api/health/`.
+   Note the trailing slash — without it you get a 308 redirect (Next.js
+   `trailingSlash: true`). UptimeRobot should be configured with the
+   trailing-slash URL so it sees the 200 directly.
    - **200** with `{status:'ok',db:'ok'}` → the app is up; the problem is
      likely client-side (CDN cache, user network). Jump to step 4.
    - **503** with `{status:'degraded',db:'down'}` → Supabase is unreachable
