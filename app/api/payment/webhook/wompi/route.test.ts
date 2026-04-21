@@ -1,6 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
+/**
+ * Rewritten fixtures for the post-LOGIC-04 Wompi webhook.
+ *
+ * Unlike Stripe, the Wompi handler performs an amount-tamper pre-check
+ * against the existing `payments` row BEFORE invoking the RPC. That's a
+ * belt-and-suspenders thing: finalize_payment also does the check
+ * internally, but pre-checking lets us fail fast with a 400 rather than
+ * making the RPC run.
+ *
+ * Coverage:
+ *   1. Missing signature/timestamp → 400
+ *   2. Signature fails verification → 401
+ *   3. Duplicate transaction_id (event-id dedup) → 200 duplicate:true
+ *   4. Amount tamper vs existing payment → 400, no RPC call
+ *   5. Same-status already-processed → 200, no RPC call
+ *   6. Happy path: approved status, calls finalize_payment with expected
+ *      args and schedules notification
+ *   7. RPC error → 500 so gateway retries
+ */
+
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 
 vi.mock('@/lib/payments/wompi', () => ({
@@ -9,275 +29,219 @@ vi.mock('@/lib/payments/wompi', () => ({
   extractWompiTransactionData: vi.fn(),
 }));
 
+vi.mock('@/lib/payments/notifyAfterFinalize', () => ({
+  notifyAfterFinalize: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(),
 }));
 
 import { POST } from './route';
 import { verifyWompiWebhookSignature, mapWompiStatus, extractWompiTransactionData } from '@/lib/payments/wompi';
+import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
 import { createClient } from '@supabase/supabase-js';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ── Supabase mock ──────────────────────────────────────────────────
 
-function createMockRequest(
-  body: object,
-  headers: Record<string, string> = {},
-): NextRequest {
+function mockSupabase(opts: {
+  isDuplicate?: boolean;
+  existingPayment?: { status: string; amount_cents: number | null; gateway_payment_id?: string } | null;
+  rpcResult?: {
+    data?: Record<string, unknown>;
+    error?: { message: string } | null;
+  };
+}) {
+  const insertFn = vi.fn().mockResolvedValue({
+    error: opts.isDuplicate ? { code: '23505', message: 'duplicate' } : null,
+  });
+  const rpcFn = vi.fn().mockResolvedValue({
+    data: opts.rpcResult?.data ?? { success: true, was_duplicate: false, payment_id: 'pay-wompi' },
+    error: opts.rpcResult?.error ?? null,
+  });
+
+  const paymentsChain = {
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: opts.existingPayment ?? null, error: null }),
+      }),
+    }),
+  };
+  const eventsChain = { insert: insertFn };
+
+  const supabase = {
+    from: vi.fn((table: string) => {
+      if (table === 'processed_webhook_events') return eventsChain;
+      if (table === 'payments') return paymentsChain;
+      return { insert: vi.fn(), select: vi.fn() };
+    }),
+    rpc: rpcFn,
+    __rpcFn: rpcFn,
+    __insertFn: insertFn,
+  };
+  return supabase;
+}
+
+function request(body: string, headers: Record<string, string> = {}) {
   return new NextRequest('http://localhost/api/payment/webhook/wompi', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
     headers: new Headers(headers),
   });
 }
 
-const DEFAULT_HEADERS = {
-  'x-signature': 'valid-sig',
-  'x-timestamp': '1700000000',
-};
-
-const DEFAULT_PAYLOAD = {
-  transaction: {
-    id: 'txn-001',
-    reference: 'pay-001',
-    amount_in_cents: 5000000,
-    currency: 'COP',
-    status: 'APPROVED',
-  },
-};
-
-const TRANSACTION_DATA = {
-  id: 'txn-001',
-  reference: 'pay-001',
-  amountInCents: 5000000,
-  currency: 'COP',
-  status: 'APPROVED',
-};
-
-// ---------------------------------------------------------------------------
-// Supabase chain mock — tracks table + operation so assertions are precise
-// ---------------------------------------------------------------------------
-
-interface MockSupabaseConfig {
-  existingPaymentStatus?: string | null;
-  paymentRecord?: { session_id: string; participant_user_id: string } | null;
-  updateError?: { message: string } | null;
-  upsertError?: { message: string } | null;
-}
-
-function createMockSupabase(config: MockSupabaseConfig = {}) {
-  const calls: { table: string; operation: string; args: unknown[] }[] = [];
-
-  // Track how many times `from('payments').select(...).eq(...).single()` is
-  // called so we can return different data for idempotency check vs. the
-  // second select that fetches session_id/participant_user_id.
-  let paymentsSelectCount = 0;
-
-  const mockClient = {
-    from: (table: string) => {
-      const tableApi: Record<string, unknown> = {};
-
-      tableApi.select = (...selectArgs: unknown[]) => {
-        calls.push({ table, operation: 'select', args: selectArgs });
-
-        const selectChain: Record<string, unknown> = {};
-        selectChain.eq = (...eqArgs: unknown[]) => {
-          calls.push({ table, operation: 'select.eq', args: eqArgs });
-
-          const eqChain: Record<string, unknown> = {};
-          eqChain.single = async () => {
-            calls.push({ table, operation: 'select.eq.single', args: [] });
-
-            if (table === 'payments') {
-              paymentsSelectCount++;
-              // First select = idempotency check
-              if (paymentsSelectCount === 1) {
-                return {
-                  data: config.existingPaymentStatus != null
-                    ? { status: config.existingPaymentStatus, wompi_transaction_id: 'txn-old' }
-                    : null,
-                  error: null,
-                };
-              }
-              // Second select = fetch payment record for participant insert
-              return {
-                data: config.paymentRecord ?? null,
-                error: null,
-              };
-            }
-            return { data: null, error: null };
-          };
-          return eqChain;
-        };
-        return selectChain;
-      };
-
-      tableApi.update = (...updateArgs: unknown[]) => {
-        calls.push({ table, operation: 'update', args: updateArgs });
-        const updateChain: Record<string, unknown> = {};
-        updateChain.eq = async (...eqArgs: unknown[]) => {
-          calls.push({ table, operation: 'update.eq', args: eqArgs });
-          return { error: config.updateError ?? null };
-        };
-        return updateChain;
-      };
-
-      tableApi.upsert = async (...upsertArgs: unknown[]) => {
-        calls.push({ table, operation: 'upsert', args: upsertArgs });
-        return { error: config.upsertError ?? null };
-      };
-
-      return tableApi;
-    },
-  };
-
-  return { client: mockClient, calls };
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+// ── Tests ──────────────────────────────────────────────────────────
 
 describe('POST /api/payment/webhook/wompi', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    // Default env vars
+    // clearAllMocks preserves vi.mock default implementations (the
+    // notifyAfterFinalize resolved promise); resetAllMocks would wipe them.
+    vi.clearAllMocks();
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://tribe.test';
-    process.env.CRON_SECRET = 'cron-secret';
-    // Default happy-path stubs
-    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
-    vi.mocked(mapWompiStatus).mockReturnValue('approved');
-    vi.mocked(extractWompiTransactionData).mockReturnValue(TRANSACTION_DATA as never);
-    global.fetch = vi.fn().mockResolvedValue(new Response('ok'));
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
   });
 
-  // 1 -----------------------------------------------------------------------
-  it('returns 400 if missing x-signature or x-timestamp headers', async () => {
-    const noSig = createMockRequest(DEFAULT_PAYLOAD, { 'x-timestamp': '123' });
-    const res1 = await POST(noSig);
-    expect(res1.status).toBe(400);
-
-    const noTs = createMockRequest(DEFAULT_PAYLOAD, { 'x-signature': 'sig' });
-    const res2 = await POST(noTs);
-    expect(res2.status).toBe(400);
-
-    const neither = createMockRequest(DEFAULT_PAYLOAD);
-    const res3 = await POST(neither);
-    expect(res3.status).toBe(400);
+  it('returns 400 when x-signature or x-timestamp is missing', async () => {
+    const res = await POST(request('{}'));
+    expect(res.status).toBe(400);
   });
 
-  // 2 -----------------------------------------------------------------------
-  it('returns 401 if signature verification fails', async () => {
+  it('returns 401 when signature verification fails', async () => {
     vi.mocked(verifyWompiWebhookSignature).mockReturnValue(false);
-
-    const req = createMockRequest(DEFAULT_PAYLOAD, DEFAULT_HEADERS);
-    const res = await POST(req);
-
+    const res = await POST(request('{}', { 'x-signature': 'bad', 'x-timestamp': '1' }));
     expect(res.status).toBe(401);
-    const body = await res.json();
-    expect(body.error).toBe('Invalid signature');
   });
 
-  // 3 -----------------------------------------------------------------------
-  it('returns 200 and skips processing if payment already has same status (idempotency)', async () => {
-    const { client } = createMockSupabase({ existingPaymentStatus: 'approved' });
-    vi.mocked(createClient).mockReturnValue(client as never);
+  it('short-circuits on duplicate transaction id', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 10000 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
 
-    const req = createMockRequest(DEFAULT_PAYLOAD, DEFAULT_HEADERS);
-    const res = await POST(req);
+    const supabase = mockSupabase({ isDuplicate: true });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.message).toBe('Already processed');
-    // fetch (notification) should NOT have been called
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  // 4 -----------------------------------------------------------------------
-  it('on approved status: updates payment, upserts participant, sends notification', async () => {
-    const paymentRecord = { session_id: 'sess-42', participant_user_id: 'user-99' };
-    const { client, calls } = createMockSupabase({
-      existingPaymentStatus: null, // no existing payment → not idempotent
-      paymentRecord,
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_dup',
+        reference: 'pay-X',
+        amount_in_cents: 10000,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
     });
-    vi.mocked(createClient).mockReturnValue(client as never);
-    vi.mocked(mapWompiStatus).mockReturnValue('approved');
-
-    const req = createMockRequest(DEFAULT_PAYLOAD, DEFAULT_HEADERS);
-    const res = await POST(req);
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
+    const json = await res.json();
 
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-
-    // Verify payment was updated
-    const updateCall = calls.find((c) => c.table === 'payments' && c.operation === 'update');
-    expect(updateCall).toBeDefined();
-    const updatePayload = updateCall!.args[0] as Record<string, unknown>;
-    expect(updatePayload.status).toBe('approved');
-    expect(updatePayload.wompi_transaction_id).toBe('txn-001');
-
-    // Verify session_participants upsert with correct user
-    const upsertCall = calls.find((c) => c.table === 'session_participants' && c.operation === 'upsert');
-    expect(upsertCall).toBeDefined();
-    const upsertPayload = upsertCall!.args[0] as Record<string, unknown>;
-    expect(upsertPayload).toMatchObject({
-      session_id: 'sess-42',
-      user_id: 'user-99',
-      status: 'confirmed',
-    });
-
-    // Verify notification fetch was called
-    expect(global.fetch).toHaveBeenCalledOnce();
-    const [fetchUrl, fetchOpts] = vi.mocked(global.fetch).mock.calls[0];
-    expect(fetchUrl).toBe('https://tribe.test/api/notifications/send');
-    const fetchBody = JSON.parse((fetchOpts as RequestInit).body as string);
-    expect(fetchBody.user_id).toBe('user-99');
-    expect(fetchBody.type).toBe('payment_confirmed');
-    expect(fetchBody.data.session_id).toBe('sess-42');
+    expect(json.duplicate).toBe(true);
+    expect(supabase.__rpcFn).not.toHaveBeenCalled();
   });
 
-  // 5 -----------------------------------------------------------------------
-  it('on non-approved status (declined): updates payment, does NOT add participant', async () => {
-    const { client, calls } = createMockSupabase({ existingPaymentStatus: null });
-    vi.mocked(createClient).mockReturnValue(client as never);
-    vi.mocked(mapWompiStatus).mockReturnValue('declined');
+  it('rejects amount-tamper before calling RPC', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 999 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
 
-    const req = createMockRequest(DEFAULT_PAYLOAD, DEFAULT_HEADERS);
-    const res = await POST(req);
+    const supabase = mockSupabase({
+      existingPayment: { status: 'pending', amount_cents: 1000 },
+    });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(true);
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_tamper',
+        reference: 'pay-X',
+        amount_in_cents: 999,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
+    });
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
+    const json = await res.json();
 
-    // Payment update should still happen
-    const updateCall = calls.find((c) => c.table === 'payments' && c.operation === 'update');
-    expect(updateCall).toBeDefined();
-    const updatePayload = updateCall!.args[0] as Record<string, unknown>;
-    expect(updatePayload.status).toBe('declined');
-
-    // No participant upsert
-    const upsertCall = calls.find((c) => c.table === 'session_participants' && c.operation === 'upsert');
-    expect(upsertCall).toBeUndefined();
-
-    // No notification
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(res.status).toBe(400);
+    expect(json.error).toBe('amount_mismatch');
+    expect(supabase.__rpcFn).not.toHaveBeenCalled();
+    expect(notifyAfterFinalize).not.toHaveBeenCalled();
   });
 
-  // 6 -----------------------------------------------------------------------
-  it('returns 200 even on internal errors to prevent Wompi retry loops', async () => {
-    vi.mocked(verifyWompiWebhookSignature).mockImplementation(() => {
-      throw new Error('Unexpected crash');
+  it('skips processing when status already matches (idempotency)', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 1000 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
+
+    const supabase = mockSupabase({
+      existingPayment: { status: 'approved', amount_cents: 1000 },
     });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
 
-    const req = createMockRequest(DEFAULT_PAYLOAD, DEFAULT_HEADERS);
-    const res = await POST(req);
-
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_same',
+        reference: 'pay-X',
+        amount_in_cents: 1000,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
+    });
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.success).toBe(false);
+    expect(supabase.__rpcFn).not.toHaveBeenCalled();
+  });
+
+  it('happy path: calls finalize_payment and notifies on first approval', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 1000 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
+
+    const supabase = mockSupabase({
+      existingPayment: { status: 'pending', amount_cents: 1000 },
+      rpcResult: { data: { success: true, was_duplicate: false, payment_id: 'pay-happy' } },
+    });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
+
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_happy',
+        reference: 'pay-happy',
+        amount_in_cents: 1000,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
+    });
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
+    expect(res.status).toBe(200);
+
+    expect(supabase.__rpcFn).toHaveBeenCalledWith('finalize_payment', {
+      p_gateway_payment_id: 'txn_happy',
+      p_expected_amount_cents: 1000,
+      p_gateway: 'wompi',
+      p_new_status: 'approved',
+    });
+    expect(notifyAfterFinalize).toHaveBeenCalledWith(supabase, 'pay-happy');
+  });
+
+  it('returns 500 on RPC error so Wompi retries', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 1000 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
+
+    const supabase = mockSupabase({
+      existingPayment: { status: 'pending', amount_cents: 1000 },
+      rpcResult: { error: { message: 'db down' } },
+    });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
+
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_err',
+        reference: 'pay-X',
+        amount_in_cents: 1000,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
+    });
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
+    expect(res.status).toBe(500);
   });
 });

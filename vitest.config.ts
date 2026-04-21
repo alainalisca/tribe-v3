@@ -26,10 +26,10 @@ export default defineConfig({
       '**/.next/**',
       '**/.git/**',
       // ── Stale fixtures (LOGIC-04 webhook refactor, PR #7) ─────────────
-      // Payment webhooks now call the finalize_payment RPC atomically.
-      // Mocks still expect the old .from(...).upsert(...) chain.
-      'app/api/payment/webhook/stripe/route.test.ts',
-      'app/api/payment/webhook/wompi/route.test.ts',
+      // webhook/stripe and webhook/wompi tests were rewritten 2026-04-21
+      // against the finalize_payment RPC contract (no longer excluded).
+      // payment/create is still excluded until its Zod-validation mocks
+      // are updated.
       'app/api/payment/create/route.test.ts',
       // ── Stale fixtures (LOGIC-01 join_session RPC, migration 042) ─────
       // joinSession routes through the atomic RPC; tests still mock the
