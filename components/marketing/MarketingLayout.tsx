@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Menu, X } from 'lucide-react';
 
@@ -12,7 +11,6 @@ import { Menu, X } from 'lucide-react';
 
 function MarketingHeader() {
   const { language, setLanguage } = useLanguage();
-  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -23,14 +21,14 @@ function MarketingHeader() {
   }, []);
 
   /*
-   * Logo variant logic:
-   *   - Scrolled header = bg-tribe-dark/95 → use light-on-dark wordmark.
-   *   - Not scrolled + on "/" (dark hero) → light wordmark.
-   *   - Not scrolled + other marketing pages (likely light hero) → dark wordmark.
-   * One rule covers every current marketing route.
+   * The MarketingLayout wrapper is bg-tribe-dark for every marketing route,
+   * so the header sits on a dark background in both the transparent state
+   * (over the hero) and the scrolled state (bg-tribe-dark/95). We used to
+   * render /tribe-wordmark.png here, but that PNG had transparent letter
+   * fills and only drew outlines, so the wordmark rendered as faint ghosts
+   * on dark backgrounds. Switched to text-rendered wordmark for the same
+   * reason as HeroSection.
    */
-  const isDarkBg = scrolled || pathname === '/';
-  const wordmarkSrc = isDarkBg ? '/tribe-wordmark.png' : '/tribe-wordmark-dark.png';
 
   const toggleLang = () => setLanguage(language === 'en' ? 'es' : 'en');
 
@@ -49,10 +47,14 @@ function MarketingHeader() {
         }`}
       >
         <nav className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          {/* Logo — single wordmark image, variant adapts to bg (QA-01, QA-02) */}
-          <Link href="/" className="flex items-center" aria-label="Tribe">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={wordmarkSrc} alt="Tribe" className="h-8 w-auto" />
+          {/* Wordmark — text, not a PNG. See note above on why. */}
+          <Link
+            href="/"
+            className="flex items-baseline leading-none font-black tracking-tight text-white text-2xl"
+            aria-label="Tribe"
+          >
+            <span>Tribe</span>
+            <span className="text-tribe-green-light">.</span>
           </Link>
 
           {/* Desktop nav links */}
@@ -142,9 +144,14 @@ function MarketingFooter() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div>
-          {/* Footer bg is tribe-dark, so use the light-on-dark wordmark variant */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/tribe-wordmark.png" alt="Tribe" className="h-8 w-auto mb-2" />
+          {/* Footer bg is tribe-dark. Text wordmark — see MarketingHeader note. */}
+          <div
+            className="flex items-baseline leading-none font-black tracking-tight text-white text-2xl mb-2"
+            aria-label="Tribe"
+          >
+            <span>Tribe</span>
+            <span className="text-tribe-green-light">.</span>
+          </div>
           <p className="text-sm text-gray-500 mb-4">
             {t('Never Train Alone in Medellín', 'Nunca Entrenes Solo en Medellín')}
           </p>
