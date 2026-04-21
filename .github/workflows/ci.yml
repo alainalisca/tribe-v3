@@ -22,21 +22,23 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # Temporary ceiling raised to cover accumulated warnings on
-        # feature/social-features. Main sits at ~41 warnings; bring this back
-        # down as warnings are cleaned up in follow-up PRs.
-        run: npx eslint app/ lib/ components/ hooks/ --max-warnings 250
+        # Warning budget breakdown (2026-04-21):
+        #   ~ 200 legacy warnings (unused vars, explicit any, etc.)
+        #   ~1500 i18n-backlog warnings (no-restricted-syntax rule flagging
+        #         every surviving `language === 'es'` ternary that hasn't
+        #         been migrated to useTranslations yet — see UI-I01/I02).
+        # Each migrated file drops the count. Target: cut by 200/week.
+        # Do NOT raise this ceiling without a PR comment explaining why.
+        run: npx eslint app/ lib/ components/ hooks/ --max-warnings 1750
 
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Test
-        # NOTE: Temporarily non-blocking while pre-existing test failures on
-        # feature/social-features (SessionCard rewrite + session/connection
-        # test fixtures that were never updated before this branch ran CI)
-        # are triaged in a follow-up PR. tsc and build are still fully enforced.
+        # Tests are blocking. 8 test files with stale fixtures are excluded in
+        # vitest.config.ts — each entry is annotated with the refactor that
+        # orphaned it. The remaining suite (120 tests) must pass.
         run: npx vitest run
-        continue-on-error: true
 
       - name: Build
         run: npm run build
@@ -47,3 +49,17 @@ jobs:
           NEXT_PUBLIC_POSTHOG_HOST: 'https://placeholder.posthog.com'
           NEXT_PUBLIC_GOOGLE_PLACES_API_KEY: 'placeholder'
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'placeholder'
+
+      - name: Bundle size budget
+        # Caps total client-bundle JS at 2.5 MB (uncompressed). If this fails,
+        # check the build output above for the largest chunks and look for a
+        # recently-added heavy dependency that should be dynamic()-imported.
+        # Ratchet down as bundle is trimmed.
+        run: |
+          BUDGET_KB=2560
+          TOTAL_KB=$(du -sk .next/static/chunks 2>/dev/null | awk '{print $1}')
+          echo "client bundle: ${TOTAL_KB} KB (budget: ${BUDGET_KB} KB)"
+          if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then
+            echo "::error::Bundle size ${TOTAL_KB} KB exceeds budget ${BUDGET_KB} KB"
+            exit 1
+          fi
