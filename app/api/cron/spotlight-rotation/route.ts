@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { getCurrentSpotlight, selectNextSpotlight, createSpotlight, endSpotlight } from '@/lib/dal/spotlight';
 import { createNotification } from '@/lib/dal/notifications';
 
@@ -10,6 +10,11 @@ import { createNotification } from '@/lib/dal/notifications';
  * Monday at 00:00 (scheduled in vercel.json or equivalent).
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:spotlight-rotation';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -34,8 +39,18 @@ export async function GET(request: Request) {
         expired = true;
       } else {
         // Still running, don't rotate
+        const duration_ms = Date.now() - startedAt;
+        log('info', 'cron_complete', {
+          action: 'cron_complete',
+          route,
+          duration_ms,
+          rotated: false,
+          skipped: 'current_spotlight_active',
+        });
         return NextResponse.json({
-          success: true,
+          ok: true,
+          route,
+          duration_ms,
           rotated: false,
           reason: 'current spotlight is still active',
           current_end: currentRes.data.end_date,
@@ -49,8 +64,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: nextRes.error }, { status: 500 });
     }
     if (!nextRes.data) {
+      const duration_ms = Date.now() - startedAt;
+      log('info', 'cron_complete', {
+        action: 'cron_complete',
+        route,
+        duration_ms,
+        rotated: false,
+        expired,
+        skipped: 'no_eligible_instructors',
+      });
       return NextResponse.json({
-        success: true,
+        ok: true,
+        route,
+        duration_ms,
         rotated: false,
         expired,
         reason: 'no eligible instructors',
@@ -74,8 +100,18 @@ export async function GET(request: Request) {
       message: "Congratulations! You've been selected as Instructor of the Week!",
     });
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      rotated: true,
+      expired,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       rotated: true,
       expired,
       instructor_id: nextRes.data.instructor_id,
@@ -84,7 +120,8 @@ export async function GET(request: Request) {
       end_date: endDate,
     });
   } catch (error) {
-    logError(error, { action: 'spotlight-rotation-cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

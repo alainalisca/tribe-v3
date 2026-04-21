@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { updateSession, fetchSessionsWithCreator, fetchSessionAttendance } from '@/lib/dal';
 
 /**
@@ -10,6 +10,11 @@ import { updateSession, fetchSessionsWithCreator, fetchSessionAttendance } from 
  * @returns {{ success: boolean, message: string, count: number }} Number of follow-up emails sent and sessions processed.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:post-session-followups';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     // Verify this is from Vercel Cron
     const authHeader = request.headers.get('authorization');
@@ -41,7 +46,9 @@ export async function GET(request: Request) {
     }>;
 
     if (sessions.length === 0) {
-      return NextResponse.json({ message: 'No sessions need follow-ups', count: 0 });
+      const duration_ms = Date.now() - startedAt;
+      log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, count: 0, skipped: 'no_sessions' });
+      return NextResponse.json({ ok: true, route, duration_ms, message: 'No sessions need follow-ups', count: 0 });
     }
 
     // Filter for sessions that actually ended
@@ -94,13 +101,24 @@ export async function GET(request: Request) {
       await updateSession(supabase, session.id, { followup_sent: true });
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      count: sentCount,
+      sessionsProcessed: endedSessions.length,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       message: `Sent ${sentCount} follow-up emails for ${endedSessions.length} sessions`,
       count: sentCount,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/post-session-followups', action: 'post_session_followups' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

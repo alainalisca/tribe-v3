@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import {
   updateSession,
   updateUser,
@@ -36,6 +36,11 @@ function isMorningWindow(): boolean {
  * @returns {{ success: boolean, colombiaHour: number, isMorningWindow: boolean, sessionReminders: number, morningMotivation: number }} Counts of reminders and motivational messages sent.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:reminders';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -197,15 +202,26 @@ export async function GET(request: Request) {
       }
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      sessionReminders: remindersSent,
+      morningMotivation: morningMotivationSent,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       colombiaHour,
       isMorningWindow: isMorningWindow(),
       sessionReminders: remindersSent,
       morningMotivation: morningMotivationSent,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/reminders', action: 'reminders_cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

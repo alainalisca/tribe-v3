@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { childSessionExists, createChildSession } from '@/lib/dal/sessions';
 import type { Session } from '@/lib/database.types';
 
@@ -86,6 +86,11 @@ function daysInMonth(year: number, month: number): number {
  * @returns {{ success: boolean, parentsProcessed: number, childrenCreated: number, errors: number }}
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:recurring-sessions';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -161,14 +166,26 @@ export async function GET(request: Request) {
       }
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      parentsProcessed: parentSessions.length,
+      childrenCreated,
+      errors: errorCount,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       parentsProcessed: parentSessions.length,
       childrenCreated,
       errors: errorCount,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/recurring-sessions', action: 'recurring_sessions_cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

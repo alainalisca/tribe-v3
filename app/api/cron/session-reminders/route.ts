@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import {
   updateSession,
   fetchActiveSessionsForDates,
@@ -40,6 +40,11 @@ const reminderMessages = {
  * @returns {{ success: boolean, timestamp: string, oneHourRemindersSent: number, fifteenMinRemindersSent: number }} Counts of reminders sent at each interval.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:session-reminders';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
@@ -183,14 +188,25 @@ export async function GET(request: Request) {
       }
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      oneHourRemindersSent,
+      fifteenMinRemindersSent,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       timestamp: now.toISOString(),
       oneHourRemindersSent,
       fifteenMinRemindersSent,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/session-reminders', action: 'session_reminders_cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

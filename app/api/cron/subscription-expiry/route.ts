@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { checkAndExpireSubscriptions } from '@/lib/dal/subscriptions';
 
 /**
@@ -9,6 +9,10 @@ import { checkAndExpireSubscriptions } from '@/lib/dal/subscriptions';
  * handled separately (future gateway integration).
  */
 export async function GET(request: Request) {
+  const route = 'cron:subscription-expiry';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -26,9 +30,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: res.error }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, expired: res.data?.expired ?? 0 });
+    const expired = res.data?.expired ?? 0;
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, expired });
+    return NextResponse.json({ ok: true, route, duration_ms, expired });
   } catch (error) {
-    logError(error, { action: 'subscription-expiry-cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

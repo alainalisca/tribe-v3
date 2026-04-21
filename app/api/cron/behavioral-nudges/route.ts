@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { generateNudgesForUser } from '@/lib/nudges/behavioral-engine';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { createNotification } from '@/lib/dal/notifications';
@@ -28,13 +28,20 @@ function isColombiaQuietHour(): boolean {
 }
 
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:behavioral-nudges';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (isColombiaQuietHour()) {
-      return NextResponse.json({ success: true, skipped: 'quiet_hours' });
+      const duration_ms = Date.now() - startedAt;
+      log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, skipped: 'quiet_hours' });
+      return NextResponse.json({ ok: true, route, duration_ms, skipped: 'quiet_hours' });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -118,9 +125,12 @@ export async function GET(request: Request) {
       sent += 1;
     }
 
-    return NextResponse.json({ success: true, sent, skipped });
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, sent, skipped });
+    return NextResponse.json({ ok: true, route, duration_ms, sent, skipped });
   } catch (error) {
-    logError(error, { action: 'behavioral-nudges-cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

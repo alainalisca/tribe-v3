@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 
 /** Haversine distance between two lat/lng points in km */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -55,6 +55,11 @@ interface UserWithPrefs {
  * @returns {{ success: boolean, processed: number, matches_created: number }}
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:smart-match';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -80,7 +85,16 @@ export async function GET(request: Request) {
     }
 
     if (!prefsRows?.length) {
-      return NextResponse.json({ success: true, processed: 0, matches_created: 0 });
+      const duration_ms = Date.now() - startedAt;
+      log('info', 'cron_complete', {
+        action: 'cron_complete',
+        route,
+        duration_ms,
+        processed: 0,
+        matches_created: 0,
+        skipped: 'no_preferences',
+      });
+      return NextResponse.json({ ok: true, route, duration_ms, processed: 0, matches_created: 0 });
     }
 
     const userIds = prefsRows.map((p) => p.user_id);
@@ -131,7 +145,10 @@ export async function GET(request: Request) {
       .eq('banned', false);
 
     // Build lookup maps for in-memory scoring
-    const allCandidatePrefsMap = new Map<string, Array<(typeof allCandidatePrefs extends (infer T)[] | null ? T : never)>>();
+    const allCandidatePrefsMap = new Map<
+      string,
+      Array<typeof allCandidatePrefs extends (infer T)[] | null ? T : never>
+    >();
     for (const cp of allCandidatePrefs || []) {
       if (!allCandidatePrefsMap.has(cp.user_id)) allCandidatePrefsMap.set(cp.user_id, []);
       allCandidatePrefsMap.get(cp.user_id)!.push(cp);
@@ -238,13 +255,24 @@ export async function GET(request: Request) {
       }
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      processed: prefsRows.length,
+      matches_created: matchesCreated,
+    });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       processed: prefsRows.length,
       matches_created: matchesCreated,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/smart-match', action: 'smart_match_cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

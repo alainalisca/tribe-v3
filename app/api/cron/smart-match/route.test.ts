@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
+vi.mock('@/lib/logger', () => ({ log: vi.fn(), logError: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
 
 import { GET } from './route';
@@ -49,17 +49,13 @@ function thenableChain(result: { data: unknown; error: unknown }) {
   // insert for notifications
   chain.insert = () => Promise.resolve({ data: null, error: null });
   // Make the chain thenable so `await chain` resolves to `result`
-  chain.then = (
-    onFulfilled?: (v: unknown) => unknown,
-    onRejected?: (e: unknown) => unknown,
-  ) => Promise.resolve(result).then(onFulfilled, onRejected);
+  chain.then = (onFulfilled?: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(onFulfilled, onRejected);
 
   return chain;
 }
 
-function createSupabaseMock(
-  tableData: Record<string, { data: unknown; error: unknown }>,
-) {
+function createSupabaseMock(tableData: Record<string, { data: unknown; error: unknown }>) {
   const supabase = {
     from: (table: string) => {
       const defaultResult = tableData[table] || { data: null, error: null };
@@ -137,7 +133,10 @@ describe('GET /api/cron/smart-match', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body).toEqual({ success: true, processed: 0, matches_created: 0 });
+    // LR-05 changed the response shape: `{ success }` → `{ ok, route, duration_ms, ... }`.
+    expect(body.ok).toBe(true);
+    expect(body.processed).toBe(0);
+    expect(body.matches_created).toBe(0);
   });
 
   it('processes matching users and creates matches', async () => {
@@ -152,7 +151,7 @@ describe('GET /api/cron/smart-match', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.ok).toBe(true);
     expect(body.processed).toBe(2);
     expect(body.matches_created).toBeGreaterThan(0);
   });
@@ -206,7 +205,7 @@ describe('GET /api/cron/smart-match', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.success).toBe(true);
+    expect(body.ok).toBe(true);
     expect(body.matches_created).toBe(0);
   });
 });

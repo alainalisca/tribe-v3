@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { resetMonthlyLeadCredits } from '@/lib/dal/leadDiscovery';
 
 /**
@@ -8,6 +8,10 @@ import { resetMonthlyLeadCredits } from '@/lib/dal/leadDiscovery';
  * tier's monthly allotment.
  */
 export async function GET(request: Request) {
+  const route = 'cron:lead-credits-reset';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -21,9 +25,14 @@ export async function GET(request: Request) {
 
     const res = await resetMonthlyLeadCredits(supabase);
     if (!res.success) return NextResponse.json({ error: res.error }, { status: 500 });
-    return NextResponse.json({ success: true, reset: res.data?.reset ?? 0 });
+
+    const reset = res.data?.reset ?? 0;
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, reset });
+    return NextResponse.json({ ok: true, route, duration_ms, reset });
   } catch (error) {
-    logError(error, { action: 'lead-credits-reset-cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

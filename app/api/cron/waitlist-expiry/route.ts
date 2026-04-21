@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { expireStaleOffers, offerSpotToNextInLine } from '@/lib/dal/waitlist';
 import { createNotification } from '@/lib/dal/notifications';
 
@@ -9,6 +9,11 @@ import { createNotification } from '@/lib/dal/notifications';
  * person in line. Protected by CRON_SECRET.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:waitlist-expiry';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -68,13 +73,25 @@ export async function GET(request: Request) {
       });
     }
 
+    const duration_ms = Date.now() - startedAt;
+    const expired = result.data?.expired ?? 0;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      expired,
+      reoffered,
+    });
     return NextResponse.json({
-      success: true,
-      expired: result.data?.expired ?? 0,
+      ok: true,
+      route,
+      duration_ms,
+      expired,
       reoffered,
     });
   } catch (error) {
-    logError(error, { action: 'waitlist-expiry-cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

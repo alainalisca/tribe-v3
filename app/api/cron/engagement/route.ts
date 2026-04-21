@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent, replaceMessageVariables } from '@/lib/motivational-messages';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import {
   updateUser,
   fetchUsersWithPush,
@@ -38,6 +38,13 @@ function isSundayEveningWindow(): boolean {
  * @returns {{ success: boolean, colombiaTime: Object, isSundayEvening: boolean, weeklyRecapsSent: number, reEngagementsSent: number }} Counts of notifications sent per category.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging so Vercel logs surface every cron execution.
+  // `cron_start` fires immediately; `cron_complete` on success carries counts
+  // + duration; `cron_failed` fires from the catch block with duration.
+  const route = 'cron:engagement';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     const authHeader = request.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -231,15 +238,27 @@ export async function GET(request: Request) {
       reEngagementsSent += results.filter((r) => r.status === 'fulfilled').length;
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', {
+      action: 'cron_complete',
+      route,
+      duration_ms,
+      weeklyRecapsSent,
+      reEngagementsSent,
+    });
+
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       colombiaTime: { hour, dayOfWeek },
       isSundayEvening: isSundayEveningWindow(),
       weeklyRecapsSent,
       reEngagementsSent,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/engagement', action: 'engagement_cron' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { route, action: 'cron_failed', duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }

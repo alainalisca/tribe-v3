@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { updateUser, fetchUsersWithPush } from '@/lib/dal';
 
 /**
@@ -11,6 +11,11 @@ import { updateUser, fetchUsersWithPush } from '@/lib/dal';
  * @returns {{ success: boolean, message: string, count: number }} Number of motivational messages sent.
  */
 export async function GET(request: Request) {
+  // LR-05: structured run logging.
+  const route = 'cron:daily-motivation';
+  const startedAt = Date.now();
+  log('info', 'cron_start', { action: 'cron_start', route });
+
   try {
     // Verify this is from Vercel Cron
     const authHeader = request.headers.get('authorization');
@@ -35,7 +40,9 @@ export async function GET(request: Request) {
     }>;
 
     if (users.length === 0) {
-      return NextResponse.json({ message: 'No users need motivation today', count: 0 });
+      const duration_ms = Date.now() - startedAt;
+      log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, count: 0, skipped: 'no_users' });
+      return NextResponse.json({ ok: true, route, duration_ms, message: 'No users need motivation today', count: 0 });
     }
 
     let sentCount = 0;
@@ -68,13 +75,18 @@ export async function GET(request: Request) {
       }
     }
 
+    const duration_ms = Date.now() - startedAt;
+    log('info', 'cron_complete', { action: 'cron_complete', route, duration_ms, count: sentCount });
     return NextResponse.json({
-      success: true,
+      ok: true,
+      route,
+      duration_ms,
       message: `Sent ${sentCount} motivational messages`,
       count: sentCount,
     });
   } catch (error: unknown) {
-    logError(error, { route: '/api/cron/daily-motivation', action: 'daily_motivation' });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const duration_ms = Date.now() - startedAt;
+    logError(error, { action: 'cron_failed', route, duration_ms });
+    return NextResponse.json({ ok: false, route, error: 'Internal server error' }, { status: 500 });
   }
 }
