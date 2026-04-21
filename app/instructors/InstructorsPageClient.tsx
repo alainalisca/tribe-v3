@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
@@ -9,11 +8,10 @@ import InstructorCard from '@/components/InstructorCard';
 import FeaturedInstructorCarousel from '@/components/FeaturedInstructorCarousel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { SkeletonCard } from '@/components/Skeleton';
 import { Search, MapPin, List, Navigation, Loader2 } from 'lucide-react';
 import { getUserLocation } from '@/lib/location';
 import { calculateDistance, formatDistance } from '@/lib/distance';
-import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors';
+import { type InstructorProfile } from '@/lib/dal/instructors';
 import { sportTranslations } from '@/lib/translations';
 
 /**
@@ -79,16 +77,13 @@ interface InstructorsPageClientProps {
 }
 
 export default function InstructorsPageClient({ initialInstructors }: InstructorsPageClientProps) {
-  const supabase = createClient();
   const { language } = useLanguage();
   const t = getTranslations(language);
 
-  // Seeded from server payload — no loading spinner on first render.
-  const [instructors, setInstructors] = useState<InstructorProfile[]>(initialInstructors);
+  // Seeded from server payload — no loading spinner on first render, and
+  // no client-side fetch on mount.
+  const [instructors] = useState<InstructorProfile[]>(initialInstructors);
   const [filtered, setFiltered] = useState<(InstructorProfile & { distanceKm?: number | null })[]>([]);
-  // `loading` is only true when the user triggers an explicit refresh.
-  // First render is already hydrated from the Server Component.
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('most_sessions');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -138,26 +133,6 @@ export default function InstructorsPageClient({ initialInstructors }: Instructor
     });
     setFiltered(list);
   }
-
-  /**
-   * Client-side refresh — used if the user lingers on the page and we
-   * want up-to-date data without a full navigation. Currently not wired
-   * to any UI control, but exposed so a future "pull to refresh" can
-   * call it. Kept here (not in the parent Server Component) because
-   * it's a purely interactive action.
-   */
-  async function refreshInstructors() {
-    try {
-      setLoading(true);
-      const result = await fetchInstructors(supabase);
-      if (result.success && result.data) setInstructors(result.data);
-    } catch (error) {
-      logError(error, { action: 'refreshInstructors' });
-    } finally {
-      setLoading(false);
-    }
-  }
-  void refreshInstructors; // exposed for future use; silence unused-var
 
   async function handleNearMe() {
     if (userLat != null) {
@@ -374,7 +349,7 @@ export default function InstructorsPageClient({ initialInstructors }: Instructor
         </div>
 
         {/* Featured Carousel */}
-        {!loading && <FeaturedInstructorCarousel language={language} />}
+        <FeaturedInstructorCarousel language={language} />
 
         {/* Map */}
         {viewMode === 'map' && (
@@ -383,14 +358,9 @@ export default function InstructorsPageClient({ initialInstructors }: Instructor
           </div>
         )}
 
-        {/* Results */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
+        {/* Results — data is hydrated from the server, so we go straight to
+            the empty-state check without a loading skeleton. */}
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
             <div className="text-5xl mb-4">🔍</div>
             <h2 className="text-xl font-semibold text-theme-primary mb-2">{t.noInstructorsFound}</h2>
