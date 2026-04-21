@@ -42,6 +42,16 @@ export function useSessionActions({
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   async function handleJoin() {
+    // LR-04 funnel: emit the click event BEFORE any gating so guest users
+    // (no auth) are still counted as intent-to-join. The downstream
+    // `session_join_succeeded` / `session_join_failed` fires only on the
+    // authenticated path.
+    trackEvent('session_join_clicked', {
+      session_id: session.id,
+      sport: session.sport,
+      has_auth: !!user,
+    });
+
     if (!user) {
       setShowGuestModal(true);
       return;
@@ -57,6 +67,13 @@ export function useSessionActions({
       });
       if (!result.success) {
         haptic('warning');
+        // LR-04 funnel: emit a failure event with the reason as a property,
+        // so the PostHog funnel can break down by cause (capacity_full,
+        // already_joined, self_join, etc.).
+        trackEvent('session_join_failed', {
+          session_id: session.id,
+          reason: result.error ?? 'unknown',
+        });
         const errorMessages = getJoinErrorMessages(language);
         showInfo(
           errorMessages[result.error!] ||
@@ -74,9 +91,16 @@ export function useSessionActions({
         );
       } else {
         haptic('success');
+        // LR-04 funnel: dual-emit the legacy `session_joined` and the
+        // canonical `session_join_succeeded` so the funnel has clean
+        // naming while pre-existing dashboards keep reading.
         trackEvent('session_joined', {
           session_id: session.id,
           session_type: 'free',
+          sport: session.sport,
+        });
+        trackEvent('session_join_succeeded', {
+          session_id: session.id,
           sport: session.sport,
         });
         celebrateJoin();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, MapPin, Calendar, User } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { haptic } from '@/lib/haptics';
+import { trackEvent } from '@/lib/analytics';
 
 interface OnboardingModalProps {
   onComplete: () => void;
@@ -17,6 +18,20 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
   const [step, setStep] = useState(1);
   const { t, language } = useLanguage();
   const router = useRouter();
+
+  // LR-04 funnel: emit `onboarding_started` once when the modal first
+  // mounts so the funnel (signup → email verify → onboarding start →
+  // onboarding complete → profile first save) has a clean entry point.
+  useEffect(() => {
+    trackEvent('onboarding_started');
+  }, []);
+
+  /** Wrap onComplete so the legacy and canonical events always fire together. */
+  const finishOnboarding = () => {
+    trackEvent('onboarding_finished'); // legacy
+    trackEvent('onboarding_completed'); // LR-04 canonical
+    onComplete();
+  };
 
   const steps = [
     {
@@ -57,7 +72,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
           data-modal-close="true"
           variant="ghost"
           size="icon"
-          onClick={onComplete}
+          onClick={finishOnboarding}
           className="absolute top-4 right-4 rounded-full"
         >
           <span className="w-5 h-5 text-stone-600 dark:text-gray-400">✕</span>
@@ -130,7 +145,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             onClick={() => {
               if (step === steps.length) {
                 void haptic('success');
-                onComplete();
+                finishOnboarding();
                 router.push('/profile/edit');
               } else {
                 void haptic('light');

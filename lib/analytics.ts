@@ -65,13 +65,20 @@ export function resetUser(): void {
 type EventName =
   // Onboarding
   | 'signup_started'
+  | 'signup_email_submitted' // LR-04: fires when email signup form is POSTed
   | 'signup_completed'
-  | 'email_verified'
+  | 'signup_email_verified' // LR-04: fires on /auth/callback when verification link is clicked
+  | 'email_verified' // legacy alias — kept for pre-LR-04 dashboards
+  | 'onboarding_started' // LR-04: fires when the OnboardingModal mounts
+  | 'onboarding_completed' // LR-04: fires when onComplete() resolves
+  | 'onboarding_finished' // legacy alias — kept for pre-LR-04 dashboards
+  | 'profile_first_save' // LR-04: fires on the first successful profile save
   | 'profile_completed'
-  | 'onboarding_finished'
 
   // Sessions (Athlete)
   | 'session_viewed'
+  | 'session_join_clicked' // LR-04: fires when the Join button is pressed, before the RPC attempt
+  | 'session_join_succeeded' // LR-04: canonical name for a successful join; session_joined retained below
   | 'session_joined'
   | 'session_join_failed'
   | 'session_left'
@@ -115,6 +122,11 @@ type EventName =
   | 'neighborhood_selected'
   | 'instructor_profile_viewed'
   | 'explore_city_tapped'
+
+  // Post-session rating (LR-04 funnel)
+  | 'rating_modal_shown'
+  | 'rating_submitted'
+  | 'rating_submit_failed'
 
   // Engagement
   | 'notification_received'

@@ -212,7 +212,12 @@ export function useAuthHandlers(language: 'en' | 'es') {
           setMessage(t.mustBe18);
           return;
         }
+        // LR-04 funnel: emit both `signup_started` (legacy) and
+        // `signup_email_submitted` (canonical) at the form-POST moment so
+        // the new funnel has clean naming while existing dashboards keep
+        // working. Same dual emit on the success side.
         trackEvent('signup_started', { method: 'email' });
+        trackEvent('signup_email_submitted', { method: 'email' });
         const response = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

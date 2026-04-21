@@ -78,7 +78,14 @@ export default function AuthCallbackPage() {
 
       if (data?.user) {
         const { isNewUser } = await upsertUserProfile(data.user);
+        // LR-04 funnel: email verification is the step between
+        // signup_email_submitted and onboarding_started. This handler
+        // runs on EVERY successful callback, but we only want to count
+        // it as a verification event when the user is new (otherwise
+        // it's just a login, and we'd double-count on every session).
         if (isNewUser) {
+          trackEvent('signup_email_verified', { user_id: data.user.id });
+
           // Apply referral code if stored during auth page visit
           const refCode = localStorage.getItem('tribe_referral_code');
           if (refCode) {

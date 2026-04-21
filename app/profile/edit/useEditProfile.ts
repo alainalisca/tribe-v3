@@ -10,6 +10,7 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { getEditProfileTranslations } from './translations';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
+import { trackEvent } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
 
 /** Compress headshot to max 600px dimension at 85% JPEG quality */
@@ -318,6 +319,21 @@ export function useEditProfile(language: 'en' | 'es') {
       });
 
       if (!updateResult.success) throw new Error(updateResult.error);
+
+      // LR-04 funnel: fire `profile_first_save` exactly once per user so
+      // the onboarding → first-save conversion is countable. A localStorage
+      // flag per user id is the cheapest dedupe that survives app restarts
+      // without a server round trip. (Per-browser only — fine for this
+      // funnel, which tracks activation behavior.)
+      try {
+        const flagKey = `tribe_profile_first_save_sent_${user.id}`;
+        if (typeof window !== 'undefined' && !localStorage.getItem(flagKey)) {
+          trackEvent('profile_first_save', { user_id: user.id });
+          localStorage.setItem(flagKey, '1');
+        }
+      } catch {
+        // localStorage can throw in privacy modes; non-fatal.
+      }
 
       showSuccess(tr.profileUpdated);
       router.push('/profile');

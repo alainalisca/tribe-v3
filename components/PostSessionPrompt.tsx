@@ -8,6 +8,7 @@ import StarRating from '@/components/StarRating';
 import { logError } from '@/lib/logger';
 import { showSuccess } from '@/lib/toast';
 import { shareSession, type SessionShareData } from '@/lib/share';
+import { trackEvent } from '@/lib/analytics';
 
 interface PostSessionPromptProps {
   sessionId: string;
@@ -47,6 +48,15 @@ export default function PostSessionPrompt({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitState, setSubmitState] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // LR-04 funnel: emit `rating_modal_shown` exactly once per mount so the
+  // post-session rating funnel starts from "seen the prompt" rather than
+  // "submitted a rating." Without this step we can't compute the
+  // view-to-submit conversion.
+  useEffect(() => {
+    trackEvent('rating_modal_shown', { session_id: sessionId, sport });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once per mount
+  }, []);
 
   // Translations
   const translations =
@@ -192,9 +202,19 @@ export default function PostSessionPrompt({
           reviewerId: userId,
           hostId: instructorId,
         });
+        // LR-04 funnel: break down submit failures by reason. `23505` is
+        // the Postgres unique-violation code that fires when the user
+        // already reviewed this session; anything else is a server error.
+        trackEvent('rating_submit_failed', {
+          session_id: sessionId,
+          reason: error.code === '23505' ? 'already_reviewed' : 'server_error',
+        });
         setErrorMessage(translations.submitError);
         setSubmitState('error');
       } else {
+        // LR-04 funnel: conversion point. Emit BEFORE the 2s auto-close
+        // so the event is reliable even if the user force-quits the app.
+        trackEvent('rating_submitted', { session_id: sessionId, rating });
         setSubmitState('success');
         // Auto-close after 2 seconds
         setTimeout(() => {
