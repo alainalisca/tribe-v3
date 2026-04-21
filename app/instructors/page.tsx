@@ -28,11 +28,17 @@ import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors'
 import { logError } from '@/lib/logger';
 import InstructorsPageClient from './InstructorsPageClient';
 
-// Server Components default to static rendering when possible; we force
-// dynamic here because the instructor list changes per deploy and we want
-// the next request to see a fresh snapshot. Revisit if we decide to cache
-// with revalidate:60 or similar.
-export const dynamic = 'force-dynamic';
+// ISR: cache the rendered page for 60 seconds between fetches. The instructor
+// list doesn't need per-request freshness — new instructors onboarding don't
+// expect their profile to appear in the discover list within milliseconds.
+// 60s is the cheapest setting that still feels live:
+//   - A new sign-up gets discoverability in under a minute.
+//   - A rating change propagates in under a minute.
+//   - At steady-state traffic, ~98% of requests are cache hits instead of
+//     hitting Supabase cold-start round-trips.
+// `dynamic = 'auto'` (the default) + `revalidate` gets us ISR behavior. We
+// don't set `dynamic = 'force-dynamic'` here for that reason.
+export const revalidate = 60;
 
 export default async function InstructorsPage() {
   let initialInstructors: InstructorProfile[] = [];

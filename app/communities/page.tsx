@@ -19,6 +19,13 @@ import { fetchCommunities, fetchUserCommunities, type CommunityWithCreator } fro
 import { logError } from '@/lib/logger';
 import CommunitiesPageClient from './CommunitiesPageClient';
 
+// NOT ISR-cacheable at the route level: the page renders the signed-in
+// user's "My Communities" section alongside the public discover list.
+// Next.js keys the ISR cache on pathname + search params only — NOT on
+// auth cookie — so a shared cache entry would leak one user's joined
+// communities to the next requester. Keeping force-dynamic here is
+// correct; see /instructors for the ISR-safe pattern (same-for-all-users
+// response).
 export const dynamic = 'force-dynamic';
 
 export default async function CommunitiesPage() {

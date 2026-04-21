@@ -26,7 +26,17 @@ import ProfilePageClient, { type ProfileStats } from './ProfilePageClient';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
-export const dynamic = 'force-dynamic';
+// ISR-safe: the server render contains only public profile data (name,
+// bio, sports, stats, attendance). Viewer-specific UI (block buttons,
+// connection button, invite sheet) is computed client-side after
+// hydration, so the cache entry is safe to share across users.
+//
+// 60s revalidate keeps freshness sensible for:
+//   - Name/bio edits (profile-owner waits up to a minute to see changes
+//     propagate to viewers — acceptable)
+//   - Stats counters (updated by other flows; 60s lag is invisible in
+//     practice because stats change slowly)
+export const revalidate = 60;
 
 interface ProfilePageProps {
   params: Promise<{ userId: string }>;
