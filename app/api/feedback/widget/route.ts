@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { logError } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rate-limit';
 import type { FeedbackCategory, FeedbackSubmitPayload } from '@/types/feedback';
 
 const feedbackSchema = z.object({
@@ -81,6 +82,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (authError || !user) {
       return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    // AUDIT-P0-2: rate-limit before firing the Resend email + Twilio SMS.
+    // Without this, any authenticated user could DoS the Resend quota or
+    // spam the admin phone by replaying the endpoint. 5 requests/minute is
+    // generous for legitimate use (a real user files feedback a few times a
+    // month) and hard-caps abuse.
+    const { allowed } = await checkRateLimit(supabaseAdmin, `widget-feedback:${user.id}`, 5, 60_000);
+    if (!allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many feedback submissions. Please wait a minute and try again.' },
+        { status: 429 }
+      );
     }
 
     // 2. Parse and validate the payload
