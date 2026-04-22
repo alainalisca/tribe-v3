@@ -18,9 +18,13 @@ export async function initPostHog(): Promise<PostHog | null> {
       ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
         api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
         loaded: (posthog) => {
-          if (process.env.NODE_ENV === 'development') posthog.debug()
+          if (process.env.NODE_ENV === 'development') posthog.debug();
         },
         capture_pageview: false, // We'll capture manually
+        // LR-01 (revised): auto-capture browser exceptions into PostHog's
+        // Activity → Exceptions view. Pairs with lib/captureError.ts on
+        // the server side. No separate Sentry vendor required.
+        capture_exceptions: true,
       });
       posthogInstance = ph;
       return ph;

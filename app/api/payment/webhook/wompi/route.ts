@@ -150,10 +150,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Always return 200 to acknowledge receipt
     return NextResponse.json({ success: true, result });
   } catch (error: unknown) {
-    logError(error, {
-      route: '/api/payment/webhook/wompi',
-      action: 'webhook_wompi_payment',
-    });
+    // LR-01 (PostHog): canonical 'wompi-webhook' route tag. logError
+    // auto-forwards to PostHog via lib/captureError.ts.
+    logError(error, { route: 'wompi-webhook', action: 'webhook_wompi_payment' });
     // Return 200 to prevent Wompi from retrying invalid requests
     return NextResponse.json({ success: false }, { status: 200 });
   }

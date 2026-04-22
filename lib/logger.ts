@@ -59,47 +59,26 @@ export function log(level: LogLevel, message: string, context?: LogContext) {
   }
 }
 
-/**
- * LR-01: lazy Sentry forwarder. Loaded on first use to avoid pulling
- * `@sentry/nextjs` into modules that only import the logger for
- * client-side `log(...)` calls. The sentry config files (client/server/
- * edge) are no-ops until `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` are set
- * in the runtime env, so this function is safe to call unconditionally.
- */
-type SentryModule = typeof import('@sentry/nextjs') | null;
-let sentryPromise: Promise<SentryModule> | null = null;
-
-function getSentry(): Promise<SentryModule> {
-  if (!sentryPromise) {
-    sentryPromise = import('@sentry/nextjs').then((m): SentryModule => m).catch((): SentryModule => null);
-  }
-  return sentryPromise;
-}
-
 export function logError(error: unknown, context?: LogContext) {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
   log('error', message, { ...context, stack });
 
-  // LR-01: forward every server-side logError to Sentry. Client-side
-  // errors are picked up by Sentry's own integrations (replayIntegration,
-  // window.onerror, React ErrorBoundary) configured in
-  // sentry.client.config.ts — no need to double-report.
+  // LR-01 (PostHog): forward every server-side logError to PostHog so
+  // exceptions show up in PostHog → Activity → Exceptions alongside the
+  // analytics/funnel events. Client-side errors are captured by PostHog's
+  // own `capture_exceptions: true` option in lib/posthog.ts + the
+  // React error boundaries in app/error.tsx and app/global-error.tsx.
   //
-  // Dev is skipped so local repro doesn't flood the production issue
-  // list during normal debugging.
+  // Dev is skipped so local repro doesn't pollute the production
+  // exception list during normal debugging.
   if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
-    void getSentry()
-      .then((Sentry) => {
-        if (!Sentry) return;
-        if (error instanceof Error) {
-          Sentry.captureException(error, { extra: context });
-        } else {
-          Sentry.captureMessage(message, { level: 'error', extra: context });
-        }
-      })
+    // Lazy import — captureServerError itself lazy-inits posthog-node, so
+    // modules that only use log() don't pay the import cost.
+    void import('@/lib/captureError')
+      .then(({ captureServerError }) => captureServerError(error, context ?? {}))
       .catch(() => {
-        // logError must never throw — swallow any Sentry transport failure.
+        // logError must never throw — swallow any forward-transport failure.
       });
   }
 }

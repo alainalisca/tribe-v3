@@ -13,7 +13,8 @@ Critical URLs, keep handy:
 - Health check: https://tribe-v3.vercel.app/api/health/
 - Vercel dashboard: https://vercel.com/alain-aliscas-projects/tribe-v3
 - Supabase dashboard: https://supabase.com/dashboard/project/<project-id>
-- Sentry (once live): https://sentry.io/organizations/tribe/issues/
+- PostHog exceptions: https://app.posthog.com → Activity → Exceptions
+- Vercel Logs: https://vercel.com/alain-aliscas-projects/tribe-v3/logs
 - Stripe: https://dashboard.stripe.com/webhooks
 - Wompi: https://comercios.wompi.co/ → Webhooks
 
@@ -48,7 +49,7 @@ Symptom: users report blank pages, 500s, or indefinite loading.
      paused? (Free tier auto-pauses after inactivity.) Resume it.
 
 4. **Client-side issues**:
-   - Check Sentry for a spike in client errors in the last 15 min.
+   - Check PostHog → Activity → Exceptions for a spike in the last 15 min.
    - Check browser console: CSP violations? Third-party script (PostHog,
      Maps, Leaflet CDN) failing? Network tab for failed requests.
    - Your CDN region (Vercel edge) might be misbehaving — check from a
@@ -84,12 +85,13 @@ path doesn't exist in this stack.
 
 ## "Payments aren't working"
 
-Symptoms: users say "I paid but the session isn't booked", or Sentry
-shows `stripe-webhook` / `wompi-webhook` errors.
+Symptoms: users say "I paid but the session isn't booked", or PostHog
+Exceptions shows `stripe-webhook` / `wompi-webhook` events.
 
-1. **Sentry first**: filter issues by tag `route:stripe-webhook` or
-   `route:wompi-webhook`. A recent spike tells you whether the problem is
-   signature verification, Supabase write, or the `finalize_payment` RPC.
+1. **PostHog Exceptions first**: Activity → Exceptions, filter by
+   property `route = stripe-webhook` or `route = wompi-webhook`. A
+   recent spike tells you whether the problem is signature verification,
+   Supabase write, or the `finalize_payment` RPC.
 2. **Stripe dashboard** → Developers → Webhooks → pick the production
    endpoint → look at the last 20 events. Red X's here mean our endpoint
    returned non-2xx. Click one to see the exact response body.
@@ -112,13 +114,13 @@ shows `stripe-webhook` / `wompi-webhook` errors.
    throwing, look at Supabase → Database → Functions → run it manually
    with a known good payment id in the SQL editor. The RPC body has an
    `EXCEPTION WHEN OTHERS` clause that returns `{success:false,error,code}` —
-   that's what the webhook handler logs to Sentry.
+   that's what the webhook handler logs to PostHog.
 
 ---
 
 ## "Users can't sign up"
 
-1. **Sentry** → filter by `route:/api/auth/signup`. Any 5xx spike?
+1. **PostHog Exceptions** → filter by `route = /api/auth/signup`. Any 5xx spike?
 2. **Supabase** → Authentication → Providers → is email / Google enabled?
    Accidentally disabling a provider in the dashboard is a surprisingly
    common incident cause.
@@ -130,8 +132,8 @@ shows `stripe-webhook` / `wompi-webhook` errors.
    WHERE created_at > NOW() - INTERVAL '1 hour';
    ```
    If this is much larger than expected, the cleanup logic in
-   `checkRateLimit` might be failing silently — check Sentry for
-   `action:checkRateLimit_cleanup` errors.
+   `checkRateLimit` might be failing silently — check PostHog Exceptions
+   for `action = checkRateLimit_cleanup` events.
 4. **Email deliverability**: if users can create accounts but don't get
    verification emails, it's Resend. Resend dashboard → Logs → search
    by recipient. Bounces and complaints show up here.
@@ -140,7 +142,7 @@ shows `stripe-webhook` / `wompi-webhook` errors.
 
 ## "Notifications aren't being delivered"
 
-1. **Sentry** → filter by `route:chatWebhook` or `action:notifyAfterFinalize`.
+1. **PostHog Exceptions** → filter by `route = chatWebhook` or `action = notifyAfterFinalize`.
 2. **FCM** (native apps): Firebase console → Cloud Messaging → recent
    sends. Check for unregistered tokens — the
    `notifications/send` handler auto-cleans invalid tokens, but if FCM
@@ -187,5 +189,5 @@ and one action item to prevent recurrence.
   seconds of deploy promotion.
 - **One user reports ghost screen**: check their cache. Full reload +
   service worker unregister fixes 80% of single-user ghost reports.
-- **Sentry shows `AbortError` on fetches**: someone navigated away
+- **PostHog Exceptions shows `AbortError` on fetches**: someone navigated away
   mid-request. Not real.

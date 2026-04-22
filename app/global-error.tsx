@@ -1,9 +1,34 @@
 'use client';
 
+/**
+ * Global error boundary — fires when the root layout itself crashes or
+ * when app/error.tsx throws. Renders its own <html>/<body> because the
+ * layout tree is broken at this point.
+ *
+ * LR-01 (PostHog, revised): forwards the error to PostHog via posthog-js
+ * since React render errors bypass the `capture_exceptions: true`
+ * window.onerror hook. Wrapped in useEffect + try/catch so a fault in
+ * captureException can't re-enter the error boundary.
+ */
+
+import { useEffect } from 'react';
 import { logError } from '@/lib/logger';
+import { getPostHog } from '@/lib/posthog';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  logError(error, { action: 'error_boundary', route: 'app/global-error' });
+  useEffect(() => {
+    logError(error, { action: 'error_boundary', route: 'app/global-error', digest: error.digest });
+    try {
+      const ph = getPostHog();
+      ph?.captureException(error, {
+        error_digest: error.digest,
+        source: 'react_global_error_boundary',
+        route: 'app/global-error',
+      });
+    } catch {
+      // Never throw from an error boundary.
+    }
+  }, [error]);
 
   return (
     <html>

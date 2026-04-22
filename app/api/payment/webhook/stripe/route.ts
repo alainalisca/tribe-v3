@@ -133,7 +133,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ success: true });
     }
   } catch (error: unknown) {
-    logError(error, { route: '/api/payment/webhook/stripe' });
+    // LR-01 (PostHog): route tag is canonical 'stripe-webhook' so
+    // Activity → Exceptions filters cleanly. logError auto-forwards to
+    // PostHog via lib/captureError.ts; no separate captureServerError
+    // call needed here.
+    logError(error, { route: 'stripe-webhook' });
     return NextResponse.json({ success: false }, { status: 200 });
   }
 }
