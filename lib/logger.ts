@@ -60,9 +60,35 @@ export function log(level: LogLevel, message: string, context?: LogContext) {
 }
 
 export function logError(error: unknown, context?: LogContext) {
-  const message = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? error.stack : undefined;
-  log('error', message, { ...context, stack });
+  // Extract a meaningful message + context for non-Error shapes. Without this,
+  // plain-object errors (like Supabase's { code, message, details, hint }
+  // shape) get stringified to "[object Object]" which is useless for
+  // debugging. Pull the common fields into context and fall back to a JSON
+  // dump so nothing gets silently dropped.
+  let message: string;
+  let stack: string | undefined;
+  const extraContext: Record<string, unknown> = {};
+
+  if (error instanceof Error) {
+    message = error.message;
+    stack = error.stack;
+  } else if (error && typeof error === 'object') {
+    const errObj = error as Record<string, unknown>;
+    message = typeof errObj.message === 'string' ? errObj.message : JSON.stringify(error);
+    // Surface Supabase / PostgREST / Stripe error fields if present.
+    if (typeof errObj.code === 'string' || typeof errObj.code === 'number') {
+      extraContext.code = errObj.code;
+    }
+    if (typeof errObj.details === 'string') extraContext.details = errObj.details;
+    if (typeof errObj.hint === 'string') extraContext.hint = errObj.hint;
+    if (typeof errObj.statusCode === 'number') extraContext.statusCode = errObj.statusCode;
+    if (typeof errObj.type === 'string') extraContext.type = errObj.type;
+    stack = typeof errObj.stack === 'string' ? errObj.stack : undefined;
+  } else {
+    message = String(error);
+  }
+
+  log('error', message, { ...context, ...extraContext, stack });
 
   // LR-01 (PostHog): forward every server-side logError to PostHog so
   // exceptions show up in PostHog → Activity → Exceptions alongside the

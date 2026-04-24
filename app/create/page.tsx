@@ -157,6 +157,26 @@ function CreateSessionPageInner() {
       if (!formData.price_display || isNaN(price) || price <= 0) {
         newErrors.price_cents =
           language === 'es' ? 'El precio es obligatorio para sesiones de pago' : 'Price is required for paid sessions';
+      } else {
+        // Minimum price enforcement.
+        // - USD: $5.00 minimum (well above Stripe's $0.50 hard floor; also
+        //   ensures the 15% platform fee rounds to something meaningful).
+        // - COP: 20,000 COP minimum (~$5 USD at ~4,000 COP/USD).
+        // Without this, an instructor could list a $0.01 session and bypass
+        // the platform fee, AND Stripe would reject the Checkout Session.
+        const MIN_USD = 5;
+        const MIN_COP = 20000;
+        if (formData.currency === 'USD' && price < MIN_USD) {
+          newErrors.price_cents =
+            language === 'es'
+              ? `El precio mínimo es $${MIN_USD.toFixed(2)} USD`
+              : `Minimum price is $${MIN_USD.toFixed(2)} USD`;
+        } else if (formData.currency === 'COP' && price < MIN_COP) {
+          newErrors.price_cents =
+            language === 'es'
+              ? `El precio mínimo es ${MIN_COP.toLocaleString('es-CO')} COP`
+              : `Minimum price is ${MIN_COP.toLocaleString('en-US')} COP`;
+        }
       }
       if (!formData.payment_instructions.trim()) {
         newErrors.payment_instructions =
@@ -626,7 +646,7 @@ function CreateSessionPageInner() {
                           name="price_display"
                           value={formData.price_display}
                           onChange={handleChange}
-                          min="0"
+                          min={formData.currency === 'COP' ? '20000' : '5'}
                           step={formData.currency === 'COP' ? '1000' : '0.01'}
                           placeholder={formData.currency === 'COP' ? '45000' : '15.00'}
                           className={`h-auto py-3 pl-8 bg-theme-card text-theme-primary ${errors.price_cents ? 'border-red-500' : 'border-theme'}`}
@@ -650,33 +670,42 @@ function CreateSessionPageInner() {
                                   {formData.currency}
                                 </span>
                               </div>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-stone-500 dark:text-gray-400">
-                                  {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
-                                </span>
-                                <span className="text-stone-500 dark:text-gray-400">
-                                  -
-                                  {formatDisplayAmount(
-                                    Math.round(Number(formData.price_display) * 0.15),
-                                    formData.currency as Currency
-                                  )}{' '}
-                                  {formData.currency}
-                                </span>
-                              </div>
-                              <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
-                                <div className="flex justify-between text-sm font-bold">
-                                  <span className="text-emerald-800 dark:text-emerald-300">
-                                    {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
-                                  </span>
-                                  <span className="text-emerald-800 dark:text-emerald-300">
-                                    {formatDisplayAmount(
-                                      Math.round(Number(formData.price_display) * 0.85),
-                                      formData.currency as Currency
-                                    )}{' '}
-                                    {formData.currency}
-                                  </span>
-                                </div>
-                              </div>
+                              {(() => {
+                                // Compute platform fee and payout the same way
+                                // the server does: convert to cents first,
+                                // round the *cents* value, then convert back
+                                // for display. Doing the rounding in dollars
+                                // (e.g. Math.round(0.05 * 0.15) = 0) gives
+                                // $0.00 for sub-dollar prices, which mis-
+                                // represents the actual fee.
+                                const priceCents = Math.round(Number(formData.price_display) * 100);
+                                const platformFeeCents = Math.round((priceCents * 15) / 100);
+                                const payoutCents = priceCents - platformFeeCents;
+                                return (
+                                  <>
+                                    <div className="flex justify-between text-sm">
+                                      <span className="text-stone-500 dark:text-gray-400">
+                                        {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
+                                      </span>
+                                      <span className="text-stone-500 dark:text-gray-400">
+                                        -{formatDisplayAmount(platformFeeCents / 100, formData.currency as Currency)}{' '}
+                                        {formData.currency}
+                                      </span>
+                                    </div>
+                                    <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
+                                      <div className="flex justify-between text-sm font-bold">
+                                        <span className="text-emerald-800 dark:text-emerald-300">
+                                          {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
+                                        </span>
+                                        <span className="text-emerald-800 dark:text-emerald-300">
+                                          {formatDisplayAmount(payoutCents / 100, formData.currency as Currency)}{' '}
+                                          {formData.currency}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                         )}

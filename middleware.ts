@@ -64,6 +64,7 @@ const publicApiPaths = [
   '/api/auth/signup',
   '/api/generate-calendar',
   '/api/webhook/chat-message',
+  '/api/payment/webhook/stripe', // Stripe sends webhooks without a session cookie; signature is verified in the handler.
   '/api/health', // LR-02: monitoring probes don't carry session cookies
 ];
 

@@ -207,16 +207,18 @@ export default function ActionButtons({
                   {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}
                 </p>
               </div>
-              <div className="text-xs text-green-600 dark:text-green-400 text-right">
+              <div className="text-xs text-green-800 dark:text-green-200 text-right font-medium">
                 {session.currency === 'USD' ? '💳 Stripe' : '🇨🇴 Wompi'}
                 <br />
-                {session.currency === 'USD'
-                  ? _language === 'es'
-                    ? 'Tarjeta de crédito/débito'
-                    : 'Credit/debit card'
-                  : _language === 'es'
-                    ? 'Nequi, PSE, tarjeta'
-                    : 'Nequi, PSE, card'}
+                <span className="text-green-700 dark:text-green-300 font-normal">
+                  {session.currency === 'USD'
+                    ? _language === 'es'
+                      ? 'Tarjeta de crédito/débito'
+                      : 'Credit/debit card'
+                    : _language === 'es'
+                      ? 'Nequi, PSE, tarjeta'
+                      : 'Nequi, PSE, card'}
+                </span>
               </div>
             </div>
           </div>

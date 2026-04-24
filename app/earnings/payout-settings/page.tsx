@@ -11,18 +11,29 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import BottomNav from '@/components/BottomNav';
 import Link from 'next/link';
-import { ArrowLeft, Building2, CreditCard, Save, Shield } from 'lucide-react';
+import { ArrowLeft, Building2, CreditCard, Save, Shield, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 
+type PayoutMethod = 'wompi' | 'manual' | 'stripe_connect';
+type StripeConnectState = 'not_started' | 'in_progress' | 'complete';
+
 interface PayoutFormData {
-  payout_method: 'wompi' | 'manual';
+  payout_method: PayoutMethod;
   payout_bank_name: string;
   payout_account_type: 'savings' | 'checking';
   payout_account_number: string;
   payout_document_type: 'CC' | 'CE' | 'NIT' | 'PP' | 'TI';
   payout_document_number: string;
+}
+
+interface StripeConnectStatus {
+  state: StripeConnectState;
+  account_id: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  requirements_due: string[];
 }
 
 const BANK_OPTIONS = [
@@ -144,6 +155,8 @@ export default function PayoutSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isInstructor, setIsInstructor] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<StripeConnectStatus | null>(null);
+  const [stripeBusy, setStripeBusy] = useState(false);
 
   const [formData, setFormData] = useState<PayoutFormData>({
     payout_method: 'manual',
@@ -208,11 +221,58 @@ export default function PayoutSettingsPage() {
           payout_document_number: profileData.payout_document_number || '',
         });
       }
+
+      // Fire-and-forget: fetch Stripe Connect status. We don't block the
+      // initial render on this — the UI just shows a spinner in the
+      // Connect card until the fetch resolves.
+      void fetchStripeStatus();
     } catch (err) {
       logError(err, { action: 'loadSettings' });
       setError('load_failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchStripeStatus() {
+    try {
+      const res = await fetch('/api/stripe/connect/status', { cache: 'no-store' });
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.success) {
+        setStripeStatus({
+          state: json.state,
+          account_id: json.account_id,
+          charges_enabled: json.charges_enabled,
+          payouts_enabled: json.payouts_enabled,
+          requirements_due: json.requirements_due || [],
+        });
+      }
+    } catch (err) {
+      logError(err, { action: 'fetchStripeStatus' });
+    }
+  }
+
+  async function handleStripeConnect() {
+    setStripeBusy(true);
+    try {
+      const res = await fetch('/api/stripe/connect/onboard', { method: 'POST' });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        showError(json.error || 'Failed to start Stripe onboarding');
+        return;
+      }
+
+      // Redirect full-page to Stripe's hosted flow. Browser back/forward
+      // will bring the user back to /api/stripe/connect/return (our
+      // return_url), so state stays consistent.
+      window.location.href = json.url;
+    } catch (err) {
+      logError(err, { action: 'handleStripeConnect' });
+      showError('Failed to start Stripe onboarding');
+    } finally {
+      setStripeBusy(false);
     }
   }
 
@@ -333,15 +393,37 @@ export default function PayoutSettingsPage() {
                   name="payout_method"
                   value="wompi"
                   checked={formData.payout_method === 'wompi'}
-                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as 'wompi' | 'manual' })}
+                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as PayoutMethod })}
                   className="mt-1 w-4 h-4 cursor-pointer accent-tribe-green"
                 />
                 <div className="flex-1">
                   <p className="font-semibold text-theme-primary">{tr.methodWompi}</p>
                   <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">
                     {language === 'es'
-                      ? 'Recibe pagos directamente a tu cuenta bancaria'
-                      : 'Receive payments directly to your bank account'}
+                      ? 'Recibe pagos en pesos colombianos (COP) directamente a tu cuenta bancaria'
+                      : 'Receive COP payments directly to your Colombian bank account'}
+                  </p>
+                </div>
+              </label>
+
+              {/* Stripe Connect Method — for USD payouts */}
+              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
+                <input
+                  type="radio"
+                  name="payout_method"
+                  value="stripe_connect"
+                  checked={formData.payout_method === 'stripe_connect'}
+                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as PayoutMethod })}
+                  className="mt-1 w-4 h-4 cursor-pointer accent-tribe-green"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-theme-primary">
+                    {language === 'es' ? 'Stripe (USD Internacional)' : 'Stripe (USD / International)'}
+                  </p>
+                  <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">
+                    {language === 'es'
+                      ? 'Recibe pagos en dólares (USD). Requiere completar verificación de identidad y cuenta bancaria en Stripe.'
+                      : 'Receive USD payments. Requires completing ID + bank verification on Stripe (takes ~5 minutes).'}
                   </p>
                 </div>
               </label>
@@ -353,7 +435,7 @@ export default function PayoutSettingsPage() {
                   name="payout_method"
                   value="manual"
                   checked={formData.payout_method === 'manual'}
-                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as 'wompi' | 'manual' })}
+                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as PayoutMethod })}
                   className="mt-1 w-4 h-4 cursor-pointer accent-tribe-green"
                 />
                 <div className="flex-1">
@@ -473,6 +555,146 @@ export default function PayoutSettingsPage() {
                   className="h-auto py-3 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                 />
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stripe Connect card — shown when stripe_connect is selected */}
+        {formData.payout_method === 'stripe_connect' && (
+          <Card className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-theme-primary">
+                <CreditCard className="w-5 h-5 text-tribe-green" />
+                {language === 'es' ? 'Stripe Connect' : 'Stripe Connect'}
+                {/* Status badge */}
+                {stripeStatus?.state === 'complete' && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {language === 'es' ? 'Activo' : 'Active'}
+                  </span>
+                )}
+                {stripeStatus?.state === 'in_progress' && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
+                    <AlertTriangle className="w-3 h-3" />
+                    {language === 'es' ? 'En progreso' : 'In progress'}
+                  </span>
+                )}
+                {stripeStatus?.state === 'not_started' && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-stone-700 dark:text-gray-300 bg-stone-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                    {language === 'es' ? 'No configurado' : 'Not connected'}
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription className="text-stone-600 dark:text-gray-400">
+                {language === 'es'
+                  ? 'Stripe maneja la verificación de identidad, cuenta bancaria y desembolsos automáticos. Tribe retiene una comisión del 15% en cada transacción.'
+                  : 'Stripe handles ID verification, bank setup, and automatic payouts. Tribe retains a 15% platform fee on each transaction.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* State: not_started — primary CTA */}
+              {stripeStatus?.state === 'not_started' && (
+                <div>
+                  <p className="text-sm text-theme-primary mb-3">
+                    {language === 'es'
+                      ? 'Haz clic a continuación para comenzar la verificación en Stripe. Necesitarás:'
+                      : 'Click below to start the Stripe verification flow. You will need:'}
+                  </p>
+                  <ul className="text-sm text-stone-600 dark:text-gray-400 list-disc list-inside space-y-1 mb-4">
+                    <li>
+                      {language === 'es'
+                        ? 'Una identificación oficial (licencia, pasaporte, etc.)'
+                        : 'Government ID (license, passport, etc.)'}
+                    </li>
+                    <li>{language === 'es' ? 'Un número de cuenta bancaria' : 'A bank account number'}</li>
+                    <li>
+                      {language === 'es'
+                        ? 'Tu SSN o EIN (solo para cuentas de EE.UU.)'
+                        : 'Your SSN or EIN (US accounts only)'}
+                    </li>
+                  </ul>
+                  <Button
+                    onClick={handleStripeConnect}
+                    disabled={stripeBusy}
+                    className="w-full py-3 font-bold bg-tribe-green hover:bg-tribe-green text-slate-900"
+                  >
+                    {stripeBusy ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {language === 'es' ? 'Conectando...' : 'Connecting...'}
+                      </>
+                    ) : language === 'es' ? (
+                      'Conectar Stripe'
+                    ) : (
+                      'Connect payouts with Stripe'
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* State: in_progress — secondary CTA to resume, plus requirements list */}
+              {stripeStatus?.state === 'in_progress' && (
+                <div>
+                  <p className="text-sm text-theme-primary mb-3">
+                    {language === 'es'
+                      ? 'Stripe todavía necesita más información antes de poder enviar pagos a tu cuenta.'
+                      : 'Stripe still needs more information before it can send you payouts.'}
+                  </p>
+                  {stripeStatus.requirements_due.length > 0 && (
+                    <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                        {language === 'es' ? 'Pendiente:' : 'Still needed:'}
+                      </p>
+                      <ul className="text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                        {stripeStatus.requirements_due.map((r) => (
+                          <li key={r}>{r.replace(/_/g, ' ')}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <Button onClick={handleStripeConnect} disabled={stripeBusy} className="w-full py-3 font-bold">
+                    {stripeBusy ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {language === 'es' ? 'Cargando...' : 'Loading...'}
+                      </>
+                    ) : language === 'es' ? (
+                      'Continuar configuración'
+                    ) : (
+                      'Resume Stripe setup'
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* State: complete — reassurance + dashboard link (future) */}
+              {stripeStatus?.state === 'complete' && (
+                <div>
+                  <div className="flex items-start gap-2 p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-700 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                        {language === 'es'
+                          ? 'Tu cuenta Stripe está lista para recibir pagos.'
+                          : 'Your Stripe account is ready to accept payments.'}
+                      </p>
+                      <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">
+                        {language === 'es'
+                          ? 'Los desembolsos se envían automáticamente según el horario configurado por Stripe (generalmente cada 2 días hábiles).'
+                          : 'Payouts are sent automatically on the schedule Stripe configures (typically every 2 business days).'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading placeholder while the status fetch is in flight */}
+              {!stripeStatus && (
+                <div className="flex items-center gap-2 text-stone-500 dark:text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {language === 'es' ? 'Cargando estado de Stripe...' : 'Loading Stripe status...'}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

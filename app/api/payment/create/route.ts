@@ -210,6 +210,17 @@ export async function POST(request: NextRequest) {
       .eq('id', session_id)
       .single();
 
+    // Fetch the instructor's Stripe Connect status. For USD sessions we
+    // MUST have a destination account ready before creating the Checkout
+    // Session — otherwise funds would land on the platform and get stuck.
+    // For COP sessions (Wompi) this is unused; payouts go through the
+    // manual/bank payout flow on the user profile.
+    const { data: creatorProfile } = await supabase
+      .from('users')
+      .select('stripe_account_id, stripe_onboarding_complete')
+      .eq('id', session?.creator_id ?? '')
+      .maybeSingle();
+
     if (sessionError || !session) {
       return NextResponse.json({ success: false, error: 'Session not found' }, { status: 404 });
     }
@@ -223,23 +234,81 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: `Unsupported currency: ${currency}` }, { status: 400 });
     }
 
+    // Minimum session price enforcement — defense in depth.
+    // The /create UI already validates this client-side (see
+    // app/create/page.tsx validate()), but a malicious instructor could POST
+    // directly or edit their session's price_cents via a crafted update. Both
+    // would let them bypass the platform fee via rounding, AND in the USD
+    // case would hit Stripe's $0.50 hard minimum and produce a confusing
+    // "Failed to create Stripe session" error for the buyer.
+    //
+    // Chosen floors:
+    //   USD: 500 cents ($5.00)    — well above Stripe's 50-cent hard minimum
+    //   COP: 2,000,000 cents (~20,000 COP) — comparable to $5 USD
+    const MIN_PRICE_CENTS: Record<string, number> = {
+      USD: 500,
+      COP: 2000000,
+    };
+    const minCents = MIN_PRICE_CENTS[currency];
+    if (minCents && session.price_cents < minCents) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            currency === 'USD'
+              ? `Session price must be at least $${(minCents / 100).toFixed(2)} USD`
+              : `Session price must be at least ${(minCents / 100).toLocaleString()} COP`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Check user isn't the creator
     if (session.creator_id === user.id) {
       return NextResponse.json({ success: false, error: 'Cannot pay for your own session' }, { status: 400 });
     }
 
-    // Check for existing pending/approved payment
+    // Check for existing approved payment (real money already changed hands —
+    // block a duplicate charge). We query `approved` specifically; other
+    // statuses are handled below.
     const serviceSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
-    const { data: existingPayment } = await serviceSupabase
+    const { data: approvedPayment } = await serviceSupabase
       .from('payments')
-      .select('id, status')
+      .select('id')
       .eq('session_id', session_id)
       .eq('participant_user_id', user.id)
-      .in('status', ['pending', 'processing', 'approved'])
+      .eq('status', 'approved')
       .maybeSingle();
 
-    if (existingPayment?.status === 'approved') {
+    if (approvedPayment) {
       return NextResponse.json({ success: false, error: 'Payment already completed' }, { status: 400 });
+    }
+
+    // Clean up any stale pending/processing rows from previous failed or
+    // abandoned attempts. Context: the payments table has a UNIQUE constraint
+    // on (session_id, participant_user_id, status) — so if a user clicks
+    // "Pay & Join", bounces out of Stripe without paying, and comes back to
+    // try again, the still-pending row blocks the new INSERT with a 23505
+    // duplicate-key error. Deleting the stale rows here is safe because any
+    // payment row in pending/processing represents an in-flight Checkout that
+    // never completed — no money moved. If a user legitimately has an open
+    // Stripe session, they'll just get a fresh one; the old URL becomes a
+    // dead link, which is the correct behavior.
+    const { error: cleanupError } = await serviceSupabase
+      .from('payments')
+      .delete()
+      .eq('session_id', session_id)
+      .eq('participant_user_id', user.id)
+      .in('status', ['pending', 'processing']);
+
+    if (cleanupError) {
+      // Non-fatal: log and continue. If the delete fails and a stale row
+      // exists, the insert below will surface the real error.
+      logError(cleanupError, {
+        route: '/api/payment/create',
+        action: 'cleanup_stale_payments',
+        sessionId: session_id,
+      });
     }
 
     // Apply promo code discount if provided
@@ -361,6 +430,29 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', paymentId);
     } else {
+      // USD session payment. Destination charge to instructor's Connect
+      // account — refuse to create the session unless onboarding is done,
+      // because otherwise Stripe will accept the Checkout creation but the
+      // funds will settle to the platform with no way to forward them.
+      if (!creatorProfile?.stripe_account_id || !creatorProfile?.stripe_onboarding_complete) {
+        await serviceSupabase.from('payments').update({ status: 'error' }).eq('id', paymentId);
+        logError(new Error('Instructor has not completed Stripe Connect onboarding'), {
+          route: '/api/payment/create',
+          action: 'stripe_session_missing_connect',
+          sessionId: session_id,
+          creatorId: session.creator_id,
+          hasAccountId: !!creatorProfile?.stripe_account_id,
+          onboardingComplete: !!creatorProfile?.stripe_onboarding_complete,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Instructor has not finished setting up payouts. Ask them to complete Connect onboarding.',
+          },
+          { status: 409 }
+        );
+      }
+
       const successUrl = `${siteUrl}/payment/confirm?payment_id=${paymentId}&gateway=stripe`;
       const cancelUrl = `${siteUrl}/session/${session_id}?payment=cancelled`;
 
@@ -372,6 +464,12 @@ export async function POST(request: NextRequest) {
         participantUserId: user.id,
         successUrl,
         cancelUrl,
+        instructorStripeAccountId: creatorProfile.stripe_account_id,
+        // Pass the exact DB-side platform fee so Stripe's split matches our
+        // row. calculateFeesForUser() above already applied Tribe+ waivers.
+        applicationFeeCents: platformFeeCents,
+        productName: `Tribe Session — ${session.sport}`,
+        paymentType: 'session_participation_fee',
       });
 
       if (!stripeResult?.url) {
