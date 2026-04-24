@@ -77,10 +77,22 @@ import { createStripeCheckoutSession } from '@/lib/payments/stripe';
 const AUTH_USER = { id: 'user-1', email: 'buyer@test.com' };
 const CREATOR_ID = 'creator-1';
 
-function makeAuthClient(authenticated: boolean, session?: Record<string, unknown> | null) {
+function makeAuthClient(
+  authenticated: boolean,
+  session?: Record<string, unknown> | null,
+  creatorProfile?: { stripe_account_id: string | null; stripe_onboarding_complete: boolean } | null
+) {
   const sessionSingle = vi.fn().mockResolvedValue({
     data: session ?? null,
     error: session ? null : { message: 'not found' },
+  });
+  // Default: creator has completed Connect onboarding (happy path for USD
+  // tests). Individual tests can pass `creatorProfile: null` to simulate a
+  // not-yet-onboarded instructor.
+  const defaultCreator = { stripe_account_id: 'acct_test_creator', stripe_onboarding_complete: true };
+  const creatorProfileMaybeSingle = vi.fn().mockResolvedValue({
+    data: creatorProfile === undefined ? defaultCreator : creatorProfile,
+    error: null,
   });
   return {
     auth: {
@@ -92,17 +104,29 @@ function makeAuthClient(authenticated: boolean, session?: Record<string, unknown
             : { data: { user: null }, error: { message: 'Unauthorized' } }
         ),
     },
-    from: vi.fn(() => ({
-      select: () => ({
-        eq: () => ({ single: sessionSingle }),
-      }),
-    })),
+    from: vi.fn((table: string) => {
+      if (table === 'users') {
+        return {
+          select: () => ({
+            eq: () => ({ maybeSingle: creatorProfileMaybeSingle }),
+          }),
+        };
+      }
+      // Default shape: sessions lookup.
+      return {
+        select: () => ({
+          eq: () => ({ single: sessionSingle }),
+        }),
+      };
+    }),
   };
 }
 
 function makeServiceClient(existingPayment: { status: string } | null = null) {
-  const existingPaymentMaybeSingle = vi.fn().mockResolvedValue({
-    data: existingPayment,
+  // Approved-payment lookup is now .select().eq().eq().eq().maybeSingle()
+  // (three eqs: session_id, participant_user_id, status='approved').
+  const approvedPaymentMaybeSingle = vi.fn().mockResolvedValue({
+    data: existingPayment && existingPayment.status === 'approved' ? existingPayment : null,
     error: null,
   });
   const buyerProfileMaybeSingle = vi.fn().mockResolvedValue({
@@ -114,6 +138,8 @@ function makeServiceClient(existingPayment: { status: string } | null = null) {
     error: null,
   });
   const paymentUpdateEq = vi.fn().mockResolvedValue({ error: null });
+  // Stale-row cleanup: .delete().eq().eq().in(...).
+  const paymentsDeleteIn = vi.fn().mockResolvedValue({ error: null });
 
   return {
     from: vi.fn((table: string) => {
@@ -122,12 +148,17 @@ function makeServiceClient(existingPayment: { status: string } | null = null) {
           select: () => ({
             eq: () => ({
               eq: () => ({
-                in: () => ({ maybeSingle: existingPaymentMaybeSingle }),
+                eq: () => ({ maybeSingle: approvedPaymentMaybeSingle }),
               }),
             }),
           }),
           insert: () => ({ select: () => ({ single: paymentInsertSingle }) }),
           update: () => ({ eq: paymentUpdateEq }),
+          delete: () => ({
+            eq: () => ({
+              eq: () => ({ in: paymentsDeleteIn }),
+            }),
+          }),
         };
       }
       if (table === 'users') {
@@ -266,7 +297,9 @@ describe('POST /api/payment/create', () => {
       makeAuthClient(true, {
         id: 'sess-2',
         is_paid: true,
-        price_cents: 50000,
+        // Must be ≥ COP 20,000 (2,000,000 "cents") to clear the server-side
+        // minimum-price gate in the route.
+        price_cents: 4500000,
         currency: 'COP',
         creator_id: CREATOR_ID,
         platform_fee_percent: 10,

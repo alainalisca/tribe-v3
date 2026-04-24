@@ -129,6 +129,47 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return finalize(piId, null, paymentStatus);
       }
 
+      case 'account.updated': {
+        // Fires whenever a Connect account's state changes — including the
+        // transition we care about: the instructor finishing hosted
+        // onboarding, which flips charges_enabled + payouts_enabled to true.
+        //
+        // We look up our user by stripe_account_id (partial index from
+        // migration 051_stripe_connect.sql) and sync the
+        // stripe_onboarding_complete flag. Idempotent: running twice is a
+        // no-op.
+        const account = event.data.object as unknown as {
+          id: string;
+          charges_enabled?: boolean;
+          payouts_enabled?: boolean;
+          details_submitted?: boolean;
+        };
+
+        const accountId = account.id;
+        if (!accountId) return NextResponse.json({ success: true });
+
+        const ready = !!account.charges_enabled && !!account.payouts_enabled;
+
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ stripe_onboarding_complete: ready })
+          .eq('stripe_account_id', accountId);
+
+        if (updateError) {
+          logError(updateError, {
+            action: 'stripe_webhook_account_updated',
+            accountId,
+            ready,
+          });
+          // Return 500 so Stripe retries — a dropped flag means the
+          // instructor can't accept payments even though they should be able
+          // to. We'd rather get the retry than leave them stranded.
+          return NextResponse.json({ error: 'account_sync_failed' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, ready });
+      }
+
       default:
         return NextResponse.json({ success: true });
     }
