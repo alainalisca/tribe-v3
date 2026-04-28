@@ -20,21 +20,34 @@ const STORAGE_KEY = 'tribe.preferred_currency';
 const CHANGE_EVENT = 'tribe:currency-change';
 
 /**
- * Static FX rate. Real spot rate hovers ~3,800–4,200 COP/USD. Using 4,000
- * keeps the math obvious and the parenthetical conversion roughly correct
- * (the "~" prefix already signals it's an approximation). Refresh from a
- * real source if/when we add server-side billing in mixed currencies.
+ * COP-per-USD exchange rate used purely for the parenthetical "(~$25 USD)"
+ * conversion hint on session prices. Default 4,000 keeps the math obvious
+ * and the conversion roughly correct (the "~" prefix already signals it's
+ * an approximation; real spot bounces 3,800–4,200).
+ *
+ * Override via `NEXT_PUBLIC_COP_PER_USD` in Vercel env vars when the rate
+ * drifts far enough that you want to refresh without a code deploy. We
+ * intentionally do NOT bill in mixed currencies server-side — Stripe and
+ * Wompi each handle one — so this number only affects display.
  */
-const COP_PER_USD = 4000;
+function getCopPerUsd(): number {
+  const raw = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_COP_PER_USD : undefined;
+  if (raw) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return 4000;
+}
 
 export function convertCents(amountCents: number, from: Currency, to: Currency): number {
   if (from === to) return amountCents;
+  const rate = getCopPerUsd();
   const amount = amountCents / 100;
   if (from === 'USD' && to === 'COP') {
-    return Math.round(amount * COP_PER_USD * 100);
+    return Math.round(amount * rate * 100);
   }
   if (from === 'COP' && to === 'USD') {
-    return Math.round((amount / COP_PER_USD) * 100);
+    return Math.round((amount / rate) * 100);
   }
   return amountCents;
 }
