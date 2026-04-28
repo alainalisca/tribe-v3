@@ -11,6 +11,7 @@ import { showError } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
 import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import WhatsAppShareButton from '@/components/session/WhatsAppShareButton';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -125,6 +126,10 @@ export default function ActionButtons({
           </div>
           {!isPast && (
             <>
+              {/* Highest-leverage fill-rate tool: WhatsApp share lands above
+                  Edit/Cancel for the host so it's the first thing they
+                  see after acknowledging they're hosting. */}
+              <WhatsAppShareButton session={session} language={_language} isCreator />
               <Button
                 onClick={onEdit}
                 variant="outline"
@@ -282,6 +287,11 @@ export default function ActionButtons({
           {t('addToCalendar')}
         </Button>
       )}
+      {/* Non-creator, future session → muted WhatsApp share. Creators see the
+          prominent variant higher up; this is for attendees and prospects
+          who'd want to invite a friend to come along. */}
+      {!isCreator && !isPast && <WhatsAppShareButton session={session} language={_language} />}
+
       {hasJoined && (
         <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
           <p className="text-sm font-semibold text-stone-900 dark:text-white">
