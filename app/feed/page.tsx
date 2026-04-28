@@ -21,8 +21,9 @@ import {
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
 import PostCommentSection from '@/components/PostCommentSection';
-import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { useUserCurrency } from '@/lib/useUserCurrency';
+import { formatPriceForUser } from '@/lib/userCurrency';
 
 interface InstructorPost {
   id: string;
@@ -431,6 +432,7 @@ function PostCard({
   language,
 }: PostCardProps) {
   const [showFullContent, setShowFullContent] = useState(false);
+  const { currency: userCurrency } = useUserCurrency();
 
   useEffect(() => {
     onView();
@@ -539,7 +541,9 @@ function PostCard({
             </div>
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-tribe-green" />
-              <span>{formatPrice(session.price_cents, (session.currency || 'USD') as Currency)}</span>
+              <span>
+                {formatPriceForUser(session.price_cents, (session.currency || 'USD') as Currency, userCurrency)}
+              </span>
             </div>
           </div>
         </div>

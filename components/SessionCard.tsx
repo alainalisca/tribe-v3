@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { useUserCurrency } from '@/lib/useUserCurrency';
+import { formatPriceForUser } from '@/lib/userCurrency';
+import type { Currency } from '@/lib/payments/config';
 import { getSessionHeroImage, getSportGradient } from '@/lib/sport-images';
 
 import { Calendar, MapPin, Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
@@ -30,6 +33,7 @@ export default function SessionCard({
 }: SessionCardProps) {
   const router = useRouter();
   const { language } = useLanguage();
+  const { currency: userCurrency } = useUserCurrency();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
   const [imageError, setImageError] = useState(false);
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
@@ -270,7 +274,7 @@ export default function SessionCard({
                   ? 'Gratis'
                   : 'Free'
                 : session.price_cents
-                  ? `$${(session.price_cents / 100).toLocaleString()} ${session.currency || 'COP'}`
+                  ? formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)
                   : `$0 ${session.currency || 'COP'}`}
             </span>
           </div>

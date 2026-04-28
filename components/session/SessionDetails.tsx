@@ -10,6 +10,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { useUserCurrency } from '@/lib/useUserCurrency';
+import { formatPriceForUser } from '@/lib/userCurrency';
 
 interface CreatorInfo {
   id: string;
@@ -45,6 +47,7 @@ export default function SessionDetails({
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
+  const { currency: userCurrency } = useUserCurrency();
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -177,7 +180,7 @@ export default function SessionDetails({
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
-                {formatPrice(session.price_cents, (session.currency || 'USD') as Currency)} {session.currency || 'USD'}
+                {formatPriceForUser(session.price_cents, (session.currency || 'USD') as Currency, userCurrency)}
               </span>
               <Badge className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-xs border-transparent">
                 {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
