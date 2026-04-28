@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { getSessionHeroImage, getSportGradient } from '@/lib/sport-images';
 
 import { Calendar, MapPin, Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
@@ -34,24 +35,23 @@ export default function SessionCard({
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
   const isCreator = Boolean(currentUserId && session.creator_id === currentUserId);
 
+  // Detected neighborhood — used for the share-button payload and the
+  // little inline neighborhood badge next to the location label.
   const sessionHood =
     session.location_lat && session.location_lng
       ? detectNeighborhood(session.location_lat, session.location_lng) ||
         getNearestNeighborhood(session.location_lat, session.location_lng)
       : null;
 
-  // Detect legacy sessions whose location field was saved as raw lat/lng
-  // (e.g. "6.220661, -75.573718"). Replace with a human-readable fallback
-  // so users never see raw coordinates in the feed.
-  const RAW_COORDS_RE = /^-?\d+\.\d+\s*,\s*-?\d+\.\d+$/;
-  const displayLocation =
-    session.location && RAW_COORDS_RE.test(session.location.trim())
-      ? sessionHood
-        ? sessionHood.name
-        : language === 'es'
-          ? 'Ubicación en mapa'
-          : 'Location on map'
-      : session.location;
+  // Centralised location-render so cards never show raw "6.22, -75.57"
+  // strings. Falls back to detected neighborhood or "Location not
+  // specified". See lib/sessionLocation.ts.
+  const displayLocation = formatSessionLocation(
+    session.location,
+    session.location_lat ?? null,
+    session.location_lng ?? null,
+    language === 'es' ? 'es' : 'en'
+  );
 
   const sportName =
     language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;

@@ -9,6 +9,7 @@ import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 interface CreatorInfo {
   id: string;
@@ -116,7 +117,13 @@ export default function SessionDetails({
                 onClick={() => onOpenLightbox(idx, 'location')}
                 className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
               >
-                <Image src={photo} alt={`Session location photo ${idx + 1}`} fill className="object-cover" unoptimized />
+                <Image
+                  src={photo}
+                  alt={`Session location photo ${idx + 1}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               </button>
             ))}
           </div>
@@ -145,7 +152,14 @@ export default function SessionDetails({
 
         <div className="flex items-start text-muted-foreground">
           <MapPin className="w-5 h-5 mr-3 mt-0.5 text-muted-foreground" />
-          <span>{session.location}</span>
+          <span>
+            {formatSessionLocation(
+              session.location,
+              session.latitude ?? null,
+              session.longitude ?? null,
+              language === 'es' ? 'es' : 'en'
+            )}
+          </span>
         </div>
 
         {session.equipment && (

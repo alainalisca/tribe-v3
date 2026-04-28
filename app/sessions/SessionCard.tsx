@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { SessionsTranslations } from './translations';
 import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 interface SessionCardProps {
   session: {
@@ -81,7 +82,7 @@ export default function SessionCard({
                 </div>
                 <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
                   <MapPin className="w-4 h-4 mr-2 text-stone-400" />
-                  <span className="truncate">{session.location}</span>
+                  <span className="truncate">{formatSessionLocation(session.location, null, null, language)}</span>
                 </div>
                 {!isPast && (
                   <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">

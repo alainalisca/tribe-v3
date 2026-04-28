@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { sportTranslations } from '@/lib/translations';
 import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
 import Image from 'next/image';
@@ -455,7 +456,14 @@ function SessionResult({ session, language, onSelect }: SessionResultProps) {
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
-            <span>{session.location}</span>
+            <span>
+              {formatSessionLocation(
+                session.location,
+                (session as { location_lat?: number | null }).location_lat ?? null,
+                (session as { location_lng?: number | null }).location_lng ?? null,
+                language === 'es' ? 'es' : 'en'
+              )}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />

@@ -18,7 +18,21 @@ function toRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-export function formatDistance(km: number, _language: string = 'en', unit: 'km' | 'mi' = 'km'): string {
+/**
+ * Distances above this many km are treated as garbage and replaced with a
+ * "Distance not available" label. The Hiking session that read "540 km" was
+ * the canonical bug — the user's GPS placed them in a different city than
+ * the venue, so a literal haversine answer is technically correct but
+ * useless to a Medellín user looking for a nearby session.
+ */
+const MAX_REASONABLE_DISTANCE_KM = 100;
+
+export function formatDistance(km: number, language: string = 'en', unit: 'km' | 'mi' = 'km'): string {
+  // Reject NaN, negatives, and absurdly large values up front.
+  if (!Number.isFinite(km) || km < 0 || km > MAX_REASONABLE_DISTANCE_KM) {
+    return language === 'es' ? 'Distancia no disponible' : 'Distance not available';
+  }
+
   let value: number;
   let unitLabel: string;
 
