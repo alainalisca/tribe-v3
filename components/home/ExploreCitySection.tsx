@@ -1,59 +1,29 @@
 'use client';
 
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { ACTIVE_CITY, getPopularNeighborhoods } from '@/lib/city-config';
-import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-
-interface NeighborhoodStats {
-  sessionCount: number;
-  instructorCount: number;
-}
+import { fetchNeighborhoodStats, type NeighborhoodStats } from '@/lib/dal/neighborhoods';
 
 export default function ExploreCitySection() {
   const { language } = useLanguage();
   const [stats, setStats] = useState<Record<string, NeighborhoodStats>>({});
-  const supabase = createClient();
 
   useEffect(() => {
-    loadStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
-  }, []);
-
-  async function loadStats() {
+    const supabase = createClient();
     const hoods = getPopularNeighborhoods();
-    const result: Record<string, NeighborhoodStats> = {};
-
-    // TODO: Replace per-neighborhood queries with a single RPC that returns all stats at once
-    // This will be needed when we expand beyond 8 neighborhoods
-    for (const hood of hoods) {
-      const { count: sessionCount } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['active', 'upcoming'])
-        .gte('location_lat', hood.bounds.sw.lat)
-        .lte('location_lat', hood.bounds.ne.lat)
-        .gte('location_lng', hood.bounds.sw.lng)
-        .lte('location_lng', hood.bounds.ne.lng);
-
-      const { data: instructorData } = await supabase
-        .from('sessions')
-        .select('creator_id')
-        .gte('location_lat', hood.bounds.sw.lat)
-        .lte('location_lat', hood.bounds.ne.lat)
-        .gte('location_lng', hood.bounds.sw.lng)
-        .lte('location_lng', hood.bounds.ne.lng);
-
-      const uniqueInstructors = new Set(instructorData?.map((s) => s.creator_id) || []);
-
-      result[hood.id] = {
-        sessionCount: sessionCount || 0,
-        instructorCount: uniqueInstructors.size,
-      };
-    }
-
-    setStats(result);
-  }
+    let cancelled = false;
+    fetchNeighborhoodStats(supabase, hoods).then((res) => {
+      if (cancelled) return;
+      if (res.success && res.data) setStats(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hoods = getPopularNeighborhoods();
 
@@ -63,15 +33,17 @@ export default function ExploreCitySection() {
         {language === 'es' ? `Explora ${ACTIVE_CITY.name}` : `Explore ${ACTIVE_CITY.name}`}
       </h2>
       <p className="text-[11px] text-stone-500 dark:text-gray-500 mb-3">
-        {language === 'es'
-          ? 'Toca un barrio para ver qu\u00e9 est\u00e1 pasando'
-          : "Tap a neighborhood to see what's happening"}
+        {language === 'es' ? 'Toca un barrio para ver qué está pasando' : "Tap a neighborhood to see what's happening"}
       </p>
 
       <div className="space-y-2.5">
         {hoods.map((hood) => {
           const s = stats[hood.id] || { sessionCount: 0, instructorCount: 0 };
           const desc = language === 'es' ? hood.description.es : hood.description.en;
+          const isEmpty = s.sessionCount === 0 && s.instructorCount === 0;
+          // Pre-fill /create with the neighborhood name + center coords so the
+          // CTA actually saves the host a step. /create already reads these.
+          const createHref = `/create?location=${encodeURIComponent(hood.name)}&lat=${hood.center.lat}&lng=${hood.center.lng}`;
 
           return (
             <div
@@ -82,20 +54,33 @@ export default function ExploreCitySection() {
                 {hood.emoji} {hood.name}
               </div>
               <p className="text-[11px] text-stone-500 dark:text-gray-400 leading-relaxed mb-2">{desc}</p>
-              <div className="flex gap-4">
-                <div className="text-center">
-                  <div className="text-base font-extrabold text-blue-400">{s.sessionCount}</div>
-                  <div className="text-[9px] text-stone-500 dark:text-gray-500">
-                    {language === 'es' ? 'Sesiones' : 'Sessions'}
+
+              {isEmpty ? (
+                <Link
+                  href={createHref}
+                  className="inline-flex items-center gap-1 text-[12px] font-semibold text-tribe-green hover:underline"
+                >
+                  {language === 'es'
+                    ? `Sé el primero en organizar en ${hood.name}`
+                    : `Be the first to host in ${hood.name}`}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <div className="flex gap-4">
+                  <div className="text-center">
+                    <div className="text-base font-extrabold text-blue-400">{s.sessionCount}</div>
+                    <div className="text-[9px] text-stone-500 dark:text-gray-500">
+                      {language === 'es' ? 'Sesiones' : 'Sessions'}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-base font-extrabold text-blue-400">{s.instructorCount}</div>
+                    <div className="text-[9px] text-stone-500 dark:text-gray-500">
+                      {language === 'es' ? 'Instructores' : 'Instructors'}
+                    </div>
                   </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-base font-extrabold text-blue-400">{s.instructorCount}</div>
-                  <div className="text-[9px] text-stone-500 dark:text-gray-500">
-                    {language === 'es' ? 'Instructores' : 'Instructors'}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           );
         })}

@@ -24,6 +24,15 @@ export interface Neighborhood {
   comuna?: string;
   isPopular: boolean;
   sortOrder: number;
+  /**
+   * Lower-case substrings used to match a free-text location string
+   * (session.location, user.location) to this neighborhood. Sessions
+   * mostly store text like "parque lleras" or "el poblado", not lat/lng,
+   * so the home-page neighborhood counts can't rely on the bounds box.
+   * Diacritics should be stripped here so the matcher (which strips them
+   * on input too) can ILIKE both forms.
+   */
+  locationKeywords?: string[];
 }
 
 export interface CityConfig {
@@ -86,6 +95,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: 'Comuna 14',
       isPopular: true,
       sortOrder: 1,
+      locationKeywords: ['poblado', 'lleras', 'provenza'],
     },
     {
       id: 'laureles',
@@ -104,6 +114,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: 'Comuna 11',
       isPopular: true,
       sortOrder: 2,
+      locationKeywords: ['laureles', 'la 70', 'segundo parque'],
     },
     {
       id: 'envigado',
@@ -122,6 +133,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: undefined,
       isPopular: true,
       sortOrder: 3,
+      locationKeywords: ['envigado'],
     },
     {
       id: 'centro',
@@ -140,6 +152,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: 'Comuna 10 - La Candelaria',
       isPopular: true,
       sortOrder: 4,
+      locationKeywords: ['centro', 'candelaria', 'pies descalzos', 'parque berrio', 'parque berrío', 'las luces'],
     },
     {
       id: 'belen',
@@ -158,6 +171,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: 'Comuna 16',
       isPopular: true,
       sortOrder: 5,
+      locationKeywords: ['belen', 'belén'],
     },
     {
       id: 'sabaneta',
@@ -176,6 +190,7 @@ export const MEDELLIN_CONFIG: CityConfig = {
       comuna: undefined,
       isPopular: true,
       sortOrder: 6,
+      locationKeywords: ['sabaneta'],
     },
     {
       id: 'estadio',
@@ -266,4 +281,25 @@ export function getNearestNeighborhood(lat: number, lng: number): Neighborhood {
  */
 export function getPopularNeighborhoods(): Neighborhood[] {
   return ACTIVE_CITY.neighborhoods.filter((n) => n.isPopular).sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+/**
+ * Diacritic-strip + lower-case for substring matching.
+ */
+function normalizeForMatch(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/**
+ * Test whether a free-text location string ("parque lleras", "Carrera 70 #45-12, Laureles")
+ * plausibly belongs to the given neighborhood, using its locationKeywords.
+ * Diacritic + case insensitive. Returns false if the neighborhood has no
+ * keywords configured.
+ */
+export function locationMatchesNeighborhood(location: string | null | undefined, hood: Neighborhood): boolean {
+  if (!location) return false;
+  const keywords = hood.locationKeywords;
+  if (!keywords || keywords.length === 0) return false;
+  const haystack = normalizeForMatch(location);
+  return keywords.some((kw) => haystack.includes(normalizeForMatch(kw)));
 }
