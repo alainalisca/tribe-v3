@@ -176,7 +176,20 @@ export async function fetchPartnerSessions(supabase: SupabaseClient, partnerId: 
     // Also include the partner's own user_id
     const { data: partner } = await supabase.from('featured_partners').select('user_id').eq('id', partnerId).single();
 
-    const instructorIds = [...(instructors?.map((i) => i.instructor_id) ?? []), ...(partner ? [partner.user_id] : [])];
+    const candidateIds = [...(instructors?.map((i) => i.instructor_id) ?? []), ...(partner ? [partner.user_id] : [])];
+    if (candidateIds.length === 0) return { success: true, data: [] };
+
+    // Drop any candidate user that's flagged as a test account (migration
+    // 052). The partner's own user_id wasn't covered by the inner-join
+    // filter on `fetchPartnerInstructors`, so it's checked here too.
+    const { data: liveUsers, error: liveErr } = await supabase
+      .from('users')
+      .select('id')
+      .in('id', candidateIds)
+      .eq('is_test_account', false);
+
+    if (liveErr) return { success: false, error: liveErr.message };
+    const instructorIds = (liveUsers ?? []).map((u) => u.id);
 
     if (instructorIds.length === 0) return { success: true, data: [] };
 

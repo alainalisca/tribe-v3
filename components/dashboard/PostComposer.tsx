@@ -86,6 +86,7 @@ export default function PostComposer({ open, onClose, instructorId, language, on
 
   const t = {
     title: language === 'es' ? 'Nueva Publicación' : 'Share an Update',
+    close: language === 'es' ? 'Cerrar' : 'Close',
     pickType: language === 'es' ? 'Tipo' : 'Type',
     titleLabel: language === 'es' ? 'Título (opcional)' : 'Title (optional)',
     bodyLabel: language === 'es' ? 'Contenido' : 'Content',
@@ -210,7 +211,7 @@ export default function PostComposer({ open, onClose, instructorId, language, on
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-tribe-surface"
-            aria-label="Close"
+            aria-label={t.close}
           >
             <X className="w-5 h-5 text-theme-secondary" />
           </button>

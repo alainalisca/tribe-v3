@@ -49,6 +49,7 @@ export default function StorefrontEditor({
     save: language === 'es' ? 'Guardar Cambios' : 'Save Changes',
     saved: language === 'es' ? 'Guardado' : 'Saved!',
     saveError: language === 'es' ? 'Error al guardar' : 'Failed to save',
+    specialtiesPlaceholder: language === 'es' ? 'Yoga, HIIT, Crossfit' : 'Yoga, HIIT, Boxing',
   };
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -150,7 +151,7 @@ export default function StorefrontEditor({
           type="text"
           value={specialties}
           onChange={(e) => setSpecialties(e.target.value)}
-          placeholder="Yoga, HIIT, Boxing"
+          placeholder={txt.specialtiesPlaceholder}
           className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
