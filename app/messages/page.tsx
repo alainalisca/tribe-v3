@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
 import { useState } from 'react';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 type Tab = 'sessions' | 'direct';
 
@@ -180,7 +181,12 @@ export default function MessagesPage() {
                               )}
                             </div>
                             <p className="text-sm text-stone-500 dark:text-gray-400 truncate mb-1">
-                              {conv.session.location}
+                              {formatSessionLocation(
+                                conv.session.location,
+                                null,
+                                null,
+                                language === 'es' ? 'es' : 'en'
+                              )}
                             </p>
                             {conv.last_message && (
                               <p className="text-sm text-stone-600 dark:text-gray-300 truncate">

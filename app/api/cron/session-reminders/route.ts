@@ -8,6 +8,7 @@ import {
   fetchParticipantsWithUserDetails,
 } from '@/lib/dal';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 // Reminder messages in both languages
 const reminderMessages = {
@@ -145,7 +146,17 @@ export async function GET(request: Request) {
               const lang = userInfo.lang as 'en' | 'es';
               const messages = needsOneHourReminder ? reminderMessages.oneHour : reminderMessages.fifteenMin;
               const title = messages[lang]?.title || messages.en.title;
-              const body = (messages[lang]?.body || messages.en.body)(session.sport, session.location);
+              const safeLocation = formatSessionLocation(
+                session.location,
+                (session as { latitude?: number | null; location_lat?: number | null }).latitude ??
+                  (session as { location_lat?: number | null }).location_lat ??
+                  null,
+                (session as { longitude?: number | null; location_lng?: number | null }).longitude ??
+                  (session as { location_lng?: number | null }).location_lng ??
+                  null,
+                lang
+              );
+              const body = (messages[lang]?.body || messages.en.body)(session.sport, safeLocation);
 
               return fetch(`${SITE_URL}/api/notifications/send`, {
                 method: 'POST',

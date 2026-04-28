@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForAdmin } from '@/lib/dal';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -100,7 +101,14 @@ export async function POST(request: Request) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${participatedHeader}</h3><ul style="color: #374151;">`;
           for (const item of participatedSessions) {
             const session = item.session;
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
+            const loc = formatSessionLocation(
+              session.location,
+              (session as { latitude?: number | null }).latitude ?? null,
+              (session as { longitude?: number | null }).longitude ?? null,
+              isSpanish ? 'es' : 'en'
+            );
+            const atWord = isSpanish ? 'en' : 'at';
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
           }
           sessionsHTML += '</ul>';
         }
@@ -108,7 +116,14 @@ export async function POST(request: Request) {
         if (hostedSessions.length > 0) {
           sessionsHTML += `<h3 style="color: #1e293b; margin-top: 20px;">${hostedHeader}</h3><ul style="color: #374151;">`;
           for (const session of hostedSessions) {
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> at ${session.location} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
+            const loc = formatSessionLocation(
+              session.location,
+              (session as { latitude?: number | null }).latitude ?? null,
+              (session as { longitude?: number | null }).longitude ?? null,
+              isSpanish ? 'es' : 'en'
+            );
+            const atWord = isSpanish ? 'en' : 'at';
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
           }
           sessionsHTML += '</ul>';
         }

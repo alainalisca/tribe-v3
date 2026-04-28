@@ -10,6 +10,7 @@ import {
   fetchUsersWithPush,
 } from '@/lib/dal';
 import type { SessionWithCreator } from '@/lib/dal/types';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 // Colombia timezone offset (UTC-5)
 const COLOMBIA_TZ_OFFSET = -5;
@@ -85,11 +86,21 @@ export async function GET(request: Request) {
 
         if (session.creator) {
           const hostLang = session.creator.preferred_language || 'en';
+          const safeLocation = formatSessionLocation(
+            session.location,
+            (session as { latitude?: number | null; location_lat?: number | null }).latitude ??
+              (session as { location_lat?: number | null }).location_lat ??
+              null,
+            (session as { longitude?: number | null; location_lng?: number | null }).longitude ??
+              (session as { location_lng?: number | null }).location_lng ??
+              null,
+            hostLang === 'es' ? 'es' : 'en'
+          );
           const hostTitle = hostLang === 'es' ? '¡Tu sesión comienza pronto!' : 'Your session starts soon!';
           const hostBody =
             hostLang === 'es'
-              ? `${session.sport} comienza en 2 horas en ${session.location}`
-              : `${session.sport} starts in 2 hours at ${session.location}`;
+              ? `${session.sport} comienza en 2 horas en ${safeLocation}`
+              : `${session.sport} starts in 2 hours at ${safeLocation}`;
 
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',

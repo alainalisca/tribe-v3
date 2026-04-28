@@ -15,6 +15,7 @@ import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
 import { formatTime12Hour } from '@/lib/utils';
 import { sportTranslations } from '@/lib/translations';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 
@@ -308,7 +309,14 @@ export default function SubscriptionsPage() {
                     {/* Location */}
                     <div className="flex items-start mb-3">
                       <MapPin className="w-4 h-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <span className="text-sm text-muted-foreground">{subscription.session.location}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {formatSessionLocation(
+                          subscription.session.location,
+                          null,
+                          null,
+                          language === 'es' ? 'es' : 'en'
+                        )}
+                      </span>
                     </div>
 
                     {/* Price Info */}
