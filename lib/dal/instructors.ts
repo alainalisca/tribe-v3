@@ -44,7 +44,10 @@ export async function fetchInstructors(
       .select(
         'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience'
       )
-      .eq('is_instructor', true);
+      .eq('is_instructor', true)
+      // Hide seeded/test accounts from any public instructor listing
+      // (Browse Instructors, sport-specific matchmaking, etc.). Migration 052.
+      .eq('is_test_account', false);
 
     // Filter by sport in specialties array
     if (options?.sport) {
@@ -134,6 +137,9 @@ export async function fetchFeaturedInstructors(
         'id, name, avatar_url, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, years_experience'
       )
       .eq('is_instructor', true)
+      // Hide seeded/test accounts from the home-page Featured Instructors
+      // carousel. Migration 052.
+      .eq('is_test_account', false)
       .order('is_verified_instructor', { ascending: false, nullsFirst: false })
       .order('average_rating', { ascending: false, nullsFirst: false })
       .order('total_sessions_hosted', { ascending: false, nullsFirst: false })
