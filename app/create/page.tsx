@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { insertSession, fetchUserProfile } from '@/lib/dal';
+import { ACTIVE_CITY, locationMatchesNeighborhood } from '@/lib/city-config';
 import { formatDisplayAmount } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import type { User as AuthUser } from '@supabase/supabase-js';
@@ -221,6 +222,22 @@ function CreateSessionPageInner() {
     try {
       // Build the session payload — strip UI-only fields and add paid fields
       const { price_display, is_paid, currency, payment_instructions, attached_promo_id, ...rest } = formData;
+
+      // If the user typed a location but never picked a place from the
+      // Google autocomplete (so coords are null), fall back to the matching
+      // popular neighborhood's centre. This is a coarse approximation but
+      // it puts the session inside the right city/neighborhood for the
+      // home-feed bounding-box queries and the SessionCard map preview.
+      // Costs zero API quota — pure text match against locationKeywords.
+      if (rest.location && (rest.latitude == null || rest.longitude == null)) {
+        for (const hood of ACTIVE_CITY.neighborhoods) {
+          if (locationMatchesNeighborhood(rest.location, hood)) {
+            rest.latitude = rest.latitude ?? hood.center.lat;
+            rest.longitude = rest.longitude ?? hood.center.lng;
+            break;
+          }
+        }
+      }
       const paidFields = is_paid
         ? {
             is_paid: true as const,
@@ -241,6 +258,10 @@ function CreateSessionPageInner() {
           }
         : { is_recurring: false };
 
+      // Write to both coord pairs so the data is correct whether or not
+      // migration 054's sync trigger has been applied yet. Once the
+      // trigger is universally in place, dropping `latitude`/`longitude`
+      // from the schema becomes safe.
       const result = await insertSession(supabase, {
         ...rest,
         ...paidFields,
@@ -249,6 +270,8 @@ function CreateSessionPageInner() {
         current_participants: 0,
         status: 'active',
         photos: photos.length > 0 ? photos : null,
+        location_lat: rest.latitude ?? null,
+        location_lng: rest.longitude ?? null,
       });
       if (!result.success) throw new Error(result.error);
       trackEvent('session_created', {
