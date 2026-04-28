@@ -38,7 +38,13 @@ export interface SessionWithRelations extends Session {
  */
 export async function fetchSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<Session>> {
   try {
-    const { data, error } = await supabase.from('sessions').select('id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at').eq('id', sessionId).single();
+    const { data, error } = await supabase
+      .from('sessions')
+      .select(
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+      )
+      .eq('id', sessionId)
+      .single();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data };
@@ -63,7 +69,13 @@ export async function fetchSessionWithDetails(
   }>
 > {
   try {
-    const { data: session, error } = await supabase.from('sessions').select('id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at').eq('id', sessionId).single();
+    const { data: session, error } = await supabase
+      .from('sessions')
+      .select(
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+      )
+      .eq('id', sessionId)
+      .single();
 
     if (error) return { success: false, error: error.message };
 
@@ -191,7 +203,9 @@ export async function cancelSession(
     if (session.is_paid) {
       const { data: payments } = await supabase
         .from('payments')
-        .select('id, participant_user_id, amount_cents, currency, gateway, stripe_payment_intent_id, gateway_payment_id')
+        .select(
+          'id, participant_user_id, amount_cents, currency, gateway, stripe_payment_intent_id, gateway_payment_id'
+        )
         .eq('session_id', sessionId)
         .eq('status', 'approved');
 
@@ -655,8 +669,13 @@ export async function createChildSession(
       price_cents: parent.price_cents,
       currency: parent.currency,
       photos: parent.photos,
-      latitude: parent.latitude,
-      longitude: parent.longitude,
+      // `location_lat`/`location_lng` is the canonical pair; the legacy
+      // `latitude`/`longitude` columns are kept in sync via the BEFORE
+      // INSERT/UPDATE trigger added in migration 054. Read both off the
+      // parent in case the parent was written before the trigger
+      // existed.
+      location_lat: parent.location_lat ?? parent.latitude ?? null,
+      location_lng: parent.location_lng ?? parent.longitude ?? null,
       title: parent.title,
       visibility: parent.visibility,
       platform_fee_percent: parent.platform_fee_percent,
