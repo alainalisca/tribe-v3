@@ -3,6 +3,38 @@ import { upsertVenues, fetchNearbyVenues } from '@/lib/dal/venues';
 import { NextResponse, NextRequest } from 'next/server';
 import { z } from 'zod';
 import { logError } from '@/lib/logger';
+import { ACTIVE_CITY } from '@/lib/city-config';
+
+// Address tokens we expect to see on a venue that's actually in our active
+// city. Used to drop cross-city junk (e.g. Barranquilla addresses leaking
+// in when the caller's GPS is in a different city) before the home-page
+// "Popular Spots" carousel ever sees them. Built once per request from the
+// active CityConfig so swapping cities later doesn't require touching this.
+function buildCityAddressAllowlist(): string[] {
+  const tokens: string[] = [];
+  // City name + diacritic-stripped variant so "Medellin" matches "Medellín".
+  tokens.push(ACTIVE_CITY.name);
+  tokens.push(stripDiacritics(ACTIVE_CITY.name));
+  // Region/department for Medellín = Antioquia. Only one config today, but
+  // adding a `region` field on CityConfig later would slot in here.
+  if (ACTIVE_CITY.id === 'medellin') tokens.push('Antioquia');
+  for (const hood of ACTIVE_CITY.neighborhoods) {
+    tokens.push(hood.name);
+    tokens.push(stripDiacritics(hood.name));
+  }
+  // Lowercase + dedupe.
+  return Array.from(new Set(tokens.map((t) => t.toLowerCase()).filter(Boolean)));
+}
+
+function stripDiacritics(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function addressIsInActiveCity(address: string | null | undefined, allowlist: string[]): boolean {
+  if (!address) return false;
+  const haystack = stripDiacritics(address).toLowerCase();
+  return allowlist.some((token) => haystack.includes(token));
+}
 
 const nearbyVenuesSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
@@ -46,27 +78,35 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues.map((i) => i.message).join(', ') },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
     const { lat, lng, category } = parsed.data;
     const radius = parsed.data.radius ?? 5000;
     const limit = parsed.data.limit ?? 10;
 
+    const cityAllowlist = buildCityAddressAllowlist();
+
     // Check cache first
     const cachedResult = await fetchNearbyVenues(supabase, lat, lng, category, limit);
     if (cachedResult.success && cachedResult.data && cachedResult.data.length > 0) {
-      // Calculate distance for each venue
-      const withDistance = cachedResult.data.map((venue) => ({
-        ...venue,
-        distance_km: calculateDistance(lat, lng, venue.location_lat, venue.location_lng),
-      }));
-      return NextResponse.json({ venues: withDistance, fromCache: true }, {
-        headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
-      });
+      // Drop cross-city junk that's accumulated in the cache. This is
+      // intentionally permissive — a missing address slips through; the
+      // common bug we're fixing is "Barranquilla venue showing on the
+      // Medellín home feed", which has a clearly non-Medellín address.
+      const inCity = cachedResult.data.filter((v) => addressIsInActiveCity(v.address, cityAllowlist));
+      // If the cache is mostly cross-city junk, fall through to a fresh
+      // Google fetch instead of returning a stale, wrongly-located list.
+      if (inCity.length > 0) {
+        const withDistance = inCity.map((venue) => ({
+          ...venue,
+          distance_km: calculateDistance(lat, lng, venue.location_lat, venue.location_lng),
+        }));
+        return NextResponse.json(
+          { venues: withDistance, fromCache: true },
+          { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } }
+        );
+      }
     }
 
     // Cache miss or stale — fetch from Google Places API
@@ -175,17 +215,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (venuesArray.length > 0) {
+      // Cache everything Google returned (so a future Barranquilla user
+      // who DOES want their nearby spots back gets value), but only return
+      // venues whose address is clearly in our active city.
       await upsertVenues(supabase, venuesArray);
     }
 
-    const withDistance = venuesArray.map((venue) => ({
+    const inCity = venuesArray.filter((v) => addressIsInActiveCity(v.address, cityAllowlist));
+    const withDistance = inCity.map((venue) => ({
       ...venue,
       distance_km: calculateDistance(lat, lng, venue.location_lat, venue.location_lng),
     }));
 
-    return NextResponse.json({ venues: withDistance, fromCache: false }, {
-      headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
-    });
+    return NextResponse.json(
+      { venues: withDistance, fromCache: false },
+      {
+        headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' },
+      }
+    );
   } catch (error) {
     logError(error, { route: '/api/venues/nearby', action: 'fetch_nearby_venues' });
     return NextResponse.json({ error: 'Failed to fetch venues' }, { status: 500 });
