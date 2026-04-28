@@ -109,10 +109,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Cache miss or stale — fetch from Google Places API
+    // Cache miss or stale — fetch from Google Places API.
+    //
+    // If no API key is configured (typical in dev / preview environments
+    // without the Places key wired up), don't 500 — that hangs a fixed
+    // home-feed section in a permanently-broken state. Return an empty
+    // list with a structured warning instead, so the PopularVenuesSection
+    // renders its empty-state copy ("No venues available") rather than
+    // throwing.
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY || process.env.GOOGLE_MAPS_SERVER_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'Google API key not configured' }, { status: 500 });
+      logError(new Error('Google Places API key not configured'), {
+        route: '/api/venues/nearby',
+        action: 'missing_api_key',
+        env: process.env.NODE_ENV,
+      });
+      return NextResponse.json({ venues: [], fromCache: false, warning: 'venues_api_unavailable' }, { status: 200 });
     }
 
     // Search for multiple types to build a comprehensive variety
