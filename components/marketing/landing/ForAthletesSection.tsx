@@ -13,10 +13,11 @@ import { Activity, Flame, Ticket, type LucideIcon } from 'lucide-react';
 const FEATURE_IMAGES = {
   neighborhood: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80', // outdoor group training
   freePaid: 'https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=800&q=80', // gym/boxing training
-  // "Connect After You Train" — group training photo (was a cable-car shot that
-  // didn't read as a fitness scene). Replace with your own asset whenever a
-  // clearer Medellín-specific shot is available.
-  connect: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800&q=80', // group fitness class celebrating
+  // "Connect After You Train" — soccer scene (Medellín plays a lot of pickup
+  // soccer; this maps directly to the "train together" thesis better than the
+  // earlier dance/cable-car shots). Swap for a real Medellín-shot photo when
+  // available.
+  connect: 'https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&q=80', // group playing soccer
 };
 
 const blocks = {
@@ -35,7 +36,7 @@ const blocks = {
     },
     {
       image: FEATURE_IMAGES.connect,
-      alt: 'Athletes connecting after a workout',
+      alt: 'Friends playing pickup soccer in Medellín',
       title: 'Connect After You Train',
       desc: 'No cold DMs. Chat is session-gated — you build real relationships with people you actually trained with.',
     },
@@ -55,7 +56,7 @@ const blocks = {
     },
     {
       image: FEATURE_IMAGES.connect,
-      alt: 'Atletas conectando después de entrenar',
+      alt: 'Amigos jugando fútbol pickup en Medellín',
       title: 'Conéctate Después de Entrenar',
       desc: 'Sin mensajes fríos. El chat está vinculado a sesiones — construyes relaciones reales con gente con la que entrenaste.',
     },
