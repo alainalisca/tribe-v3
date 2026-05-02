@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Zap } from 'lucide-react';
+import { ArrowLeft, Search, Users, Zap } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -106,8 +106,20 @@ export default function InstructorDiscoverPage() {
     scheduleFilter: language === 'es' ? 'Horario' : 'Schedule',
     loading: language === 'es' ? 'Cargando…' : 'Loading…',
     empty: language === 'es' ? 'Ningún atleta coincide con estos filtros' : 'No athletes match these filters',
+    emptyHint:
+      language === 'es'
+        ? 'Prueba quitar un filtro para ver más atletas.'
+        : 'Try removing a filter to see more athletes.',
+    resetFilters: language === 'es' ? 'Restablecer filtros' : 'Reset filters',
     reached: language === 'es' ? 'Contactado' : 'Reached',
     error: language === 'es' ? 'Error' : 'Error',
+  };
+
+  const hasFilters = Boolean(sport || budget || schedule);
+  const resetFilters = () => {
+    setSport('');
+    setBudget('');
+    setSchedule('');
   };
 
   const budgetLabel = (b: SeekingBudget | ''): string => {
@@ -157,22 +169,26 @@ export default function InstructorDiscoverPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-stone-50 dark:bg-tribe-dark text-theme-primary">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/instructor" className="p-2 rounded-lg hover:bg-[#3D4349]" aria-label="Back">
+          <Link
+            href="/dashboard/instructor"
+            className="p-2 rounded-lg hover:bg-stone-200 dark:hover:bg-tribe-surface transition-colors"
+            aria-label="Back"
+          >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex-1">
             <h1 className="text-xl font-extrabold flex items-center gap-2">
-              <Search className="w-5 h-5 text-[#A3E635]" />
+              <Search className="w-5 h-5 text-tribe-green" />
               {t.title}
             </h1>
-            <p className="text-xs text-gray-400">{t.subtitle}</p>
+            <p className="text-xs text-theme-secondary">{t.subtitle}</p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">{t.filters}</p>
-            <p className="text-sm font-bold text-[#A3E635] flex items-center gap-1 justify-end">
+            <p className="text-xs text-theme-secondary">{t.filters}</p>
+            <p className="text-sm font-bold text-tribe-green flex items-center gap-1 justify-end">
               <Zap className="w-3.5 h-3.5" />
               {leadTier === 'unlimited' ? t.unlimited : t.reachesLeft(credits)}
             </p>
@@ -180,12 +196,12 @@ export default function InstructorDiscoverPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-[#3D4349] rounded-xl p-3 grid grid-cols-3 gap-2">
+        <div className="bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl p-3 grid grid-cols-3 gap-2">
           <select
             aria-label={t.sportFilter}
             value={sport}
             onChange={(e) => setSport(e.target.value)}
-            className="px-2 py-1.5 rounded-lg bg-[#272D34] text-white text-xs"
+            className="px-2 py-1.5 rounded-lg bg-stone-100 dark:bg-tribe-dark text-theme-primary border border-stone-200 dark:border-tribe-mid text-xs focus-visible:ring-2 focus-visible:ring-tribe-green outline-none"
           >
             <option value="">{t.sportFilter}</option>
             {Object.keys(sportTranslations)
@@ -200,7 +216,7 @@ export default function InstructorDiscoverPage() {
             aria-label={t.budgetFilter}
             value={budget}
             onChange={(e) => setBudget(e.target.value as SeekingBudget | '')}
-            className="px-2 py-1.5 rounded-lg bg-[#272D34] text-white text-xs"
+            className="px-2 py-1.5 rounded-lg bg-stone-100 dark:bg-tribe-dark text-theme-primary border border-stone-200 dark:border-tribe-mid text-xs focus-visible:ring-2 focus-visible:ring-tribe-green outline-none"
           >
             {BUDGET_OPTIONS.map((b) => (
               <option key={b || 'any-filter'} value={b}>
@@ -212,7 +228,7 @@ export default function InstructorDiscoverPage() {
             aria-label={t.scheduleFilter}
             value={schedule}
             onChange={(e) => setSchedule(e.target.value as SeekingSchedule | '')}
-            className="px-2 py-1.5 rounded-lg bg-[#272D34] text-white text-xs"
+            className="px-2 py-1.5 rounded-lg bg-stone-100 dark:bg-tribe-dark text-theme-primary border border-stone-200 dark:border-tribe-mid text-xs focus-visible:ring-2 focus-visible:ring-tribe-green outline-none"
           >
             {SCHEDULE_OPTIONS.map((s) => (
               <option key={s || 'any-schedule'} value={s}>
@@ -223,9 +239,26 @@ export default function InstructorDiscoverPage() {
         </div>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-secondary">{t.loading}</p>
         ) : athletes.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-400">{t.empty}</p>
+          <div className="bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-2xl p-8 text-center flex flex-col items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-tribe-green/10 dark:bg-tribe-green/15 border border-tribe-green/30 flex items-center justify-center">
+              <Users className="w-6 h-6 text-tribe-green" />
+            </div>
+            <p className="text-sm font-semibold text-theme-primary">{t.empty}</p>
+            {hasFilters && (
+              <>
+                <p className="text-xs text-theme-secondary">{t.emptyHint}</p>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="mt-1 px-4 py-2 rounded-lg bg-tribe-green/10 dark:bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-xs font-semibold hover:bg-tribe-green/20 dark:hover:bg-tribe-green/25 transition-colors"
+                >
+                  {t.resetFilters}
+                </button>
+              </>
+            )}
+          </div>
         ) : (
           <ul className="space-y-3">
             {athletes.map((a) => {
@@ -235,31 +268,34 @@ export default function InstructorDiscoverPage() {
                 .join(', ');
               const canReach = leadTier === 'unlimited' || credits > 0;
               return (
-                <li key={a.id} className="bg-[#3D4349] rounded-2xl p-4">
+                <li
+                  key={a.id}
+                  className="bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-2xl p-4"
+                >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#272D34] overflow-hidden relative flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-stone-200 dark:bg-tribe-dark overflow-hidden relative flex-shrink-0">
                       {a.avatar_url ? (
                         <Image src={a.avatar_url} alt={a.name} fill sizes="40px" className="object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+                        <div className="w-full h-full flex items-center justify-center text-sm text-theme-secondary">
                           {(a.name || '?').charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold">
+                      <p className="font-semibold text-theme-primary">
                         {firstAndInitial(a.name)}
                         {a.location ? (
-                          <span className="text-xs text-gray-400 font-normal ml-2">{a.location}</span>
+                          <span className="text-xs text-theme-secondary font-normal ml-2">{a.location}</span>
                         ) : null}
                       </p>
-                      {sportLabels && <p className="text-xs text-gray-300">{sportLabels}</p>}
-                      <p className="text-xs text-gray-400">
+                      {sportLabels && <p className="text-xs text-theme-secondary">{sportLabels}</p>}
+                      <p className="text-xs text-theme-secondary">
                         {budgetLabel(a.seeking_trainer_budget || '')}
                         {a.seeking_trainer_schedule ? ` · ${scheduleLabel(a.seeking_trainer_schedule)}` : ''}
                       </p>
                       {a.seeking_trainer_note && (
-                        <p className="text-sm italic text-gray-200 mt-2">&ldquo;{a.seeking_trainer_note}&rdquo;</p>
+                        <p className="text-sm italic text-theme-primary mt-2">&ldquo;{a.seeking_trainer_note}&rdquo;</p>
                       )}
                     </div>
                   </div>
@@ -267,7 +303,7 @@ export default function InstructorDiscoverPage() {
                     type="button"
                     onClick={() => handleReach(a.id)}
                     disabled={!canReach || busyFor === a.id}
-                    className="mt-3 w-full py-2 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-xs font-bold disabled:bg-[#272D34] disabled:text-gray-500"
+                    className="mt-3 w-full py-2 rounded-lg bg-tribe-green hover:bg-tribe-green-hover text-tribe-dark text-xs font-bold disabled:bg-stone-200 dark:disabled:bg-tribe-dark disabled:text-theme-secondary disabled:cursor-not-allowed transition-colors"
                   >
                     {busyFor === a.id ? '…' : canReach ? t.reach : t.outOf}
                   </button>

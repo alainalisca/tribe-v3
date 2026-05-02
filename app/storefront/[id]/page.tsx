@@ -463,19 +463,29 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="relative h-56 md:h-72 bg-gradient-to-br from-tribe-green to-lime-500 overflow-hidden pt-14">
+      {/* Hero Section — neutral when no banner, image fill when present. */}
+      <div className="relative h-56 md:h-72 overflow-hidden pt-14 bg-tribe-dark">
         {instructor.storefront_banner_url ? (
           <Image
             src={instructor.storefront_banner_url}
             alt="Instructor storefront banner"
             fill
-            className="object-cover opacity-60"
+            className="object-cover"
             unoptimized
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-tribe-green to-lime-500"></div>
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-tribe-dark via-tribe-surface to-tribe-dark" />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle at 30% 50%, rgba(132,204,22,0.18) 0%, transparent 55%)',
+              }}
+            />
+          </>
         )}
+        {/* Bottom fade so the avatar card sits cleanly against the hero. */}
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
 
         {/* Instructor Info Card */}
         <div className="absolute -bottom-20 left-4 right-4 mx-auto max-w-2xl md:max-w-4xl">

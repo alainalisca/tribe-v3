@@ -193,7 +193,7 @@ export default function InstructorDashboardPage() {
               <LeadsTab instructorId={profile.id} language={language as 'en' | 'es'} />
               <Link
                 href="/dashboard/instructor/discover"
-                className="block w-full py-3 px-4 rounded-xl bg-[#3D4349] hover:bg-[#404549] text-center text-sm font-semibold"
+                className="block w-full py-3 px-4 rounded-xl bg-tribe-green/10 dark:bg-tribe-green/15 border border-tribe-green/30 hover:bg-tribe-green/20 dark:hover:bg-tribe-green/25 text-tribe-green text-center text-sm font-semibold transition-colors"
               >
                 {language === 'es' ? 'Descubrir atletas disponibles →' : 'Discover available athletes →'}
               </Link>

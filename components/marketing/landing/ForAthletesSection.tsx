@@ -13,7 +13,10 @@ import { Activity, Flame, Ticket, type LucideIcon } from 'lucide-react';
 const FEATURE_IMAGES = {
   neighborhood: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&q=80', // outdoor group training
   freePaid: 'https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=800&q=80', // gym/boxing training
-  connect: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80', // people high-fiving after workout
+  // "Connect After You Train" — group training photo (was a cable-car shot that
+  // didn't read as a fitness scene). Replace with your own asset whenever a
+  // clearer Medellín-specific shot is available.
+  connect: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800&q=80', // group fitness class celebrating
 };
 
 const blocks = {
