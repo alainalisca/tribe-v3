@@ -72,8 +72,10 @@ export default function MessagesPage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
-        {/* Tabs */}
-        <div className="flex border-b border-stone-300 dark:border-tribe-mid px-4 gap-0">
+        {/* Tabs — gap between cells + a thin divider in the middle so the
+            two labels read as separate buttons instead of one run-on string
+            like "Sesiones 1 Directo" on narrow screens. */}
+        <div className="flex border-b border-stone-300 dark:border-tribe-mid px-4 gap-2 divide-x divide-stone-300 dark:divide-tribe-mid">
           <button
             onClick={() => setActiveTab('sessions')}
             className={`flex-1 py-3 px-4 text-center font-medium border-b-2 transition flex items-center justify-center gap-2 ${

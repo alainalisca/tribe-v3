@@ -101,13 +101,15 @@ export default function FilterBar({
 
   return (
     <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark">
-      <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4">
-        <Link href="/profile">
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white cursor-pointer">
+      <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4 gap-4">
+        <Link href="/profile" className="shrink-0">
+          {/* Slightly larger so the wordmark dominates and the notification
+              badge can't visually mash into the green dot. */}
+          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-white cursor-pointer leading-none tracking-tight">
             Tribe<span className="text-tribe-green">.</span>
           </h1>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <NotificationBell />
           <LanguageToggle />
         </div>
