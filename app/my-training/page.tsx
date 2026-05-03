@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Activity, Calendar as CalendarIcon, Flame, Share2, Star, Users } from 'lucide-react';
+import { Activity, ArrowRight, Calendar as CalendarIcon, Compass, Flame, Share2, Star, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -25,9 +25,10 @@ import { showSuccess, showError } from '@/lib/toast';
 const HEATMAP_DAYS = 84; // 12 weeks
 
 function heatmapClass(count: number): string {
-  if (count <= 0) return 'bg-[#3D4349]';
-  if (count === 1) return 'bg-lime-900/50';
-  if (count === 2) return 'bg-lime-700/70';
+  // 3x3 cell — single bg class, no border (border-on-tiny-cells = visual noise).
+  if (count <= 0) return 'bg-stone-200 dark:bg-tribe-mid';
+  if (count === 1) return 'bg-lime-200 dark:bg-lime-900/50';
+  if (count === 2) return 'bg-lime-400 dark:bg-lime-700/70';
   return 'bg-lime-500';
 }
 
@@ -117,6 +118,13 @@ export default function MyTrainingPage() {
     shareCopied: language === 'es' ? 'Enlace copiado' : 'Link copied',
     shareFailed: language === 'es' ? 'No se pudo compartir' : 'Could not share',
     loading: language === 'es' ? 'Cargando…' : 'Loading…',
+    // Empty-state hero (shown only when the user has zero session history).
+    emptyTitle: language === 'es' ? 'Tu viaje de entrenamiento empieza aquí' : 'Your training journey starts here',
+    emptyBody:
+      language === 'es'
+        ? 'Reserva tu primera sesión para comenzar a registrar tu progreso, racha y logros.'
+        : 'Book your first session to start tracking your progress, streak, and achievements.',
+    browseSessions: language === 'es' ? 'Explorar sesiones cerca de mí' : 'Browse sessions near me',
   };
 
   const handleShare = async () => {
@@ -171,7 +179,7 @@ export default function MyTrainingPage() {
   const totalHeatmapCount = Object.values(heatmap).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-stone-50 dark:bg-tribe-dark text-theme-primary">
       <div className="max-w-3xl mx-auto px-4 pt-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -180,7 +188,7 @@ export default function MyTrainingPage() {
             <button
               onClick={handleShare}
               disabled={sharing}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#3D4349] text-sm text-white hover:bg-[#404549] disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-sm text-theme-primary hover:bg-stone-200 dark:hover:bg-tribe-surface-hover disabled:opacity-50 transition-colors"
               aria-label={t.shareStats}
             >
               <Share2 className="w-4 h-4" />
@@ -190,9 +198,29 @@ export default function MyTrainingPage() {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-sm text-gray-400">{t.loading}</div>
+          <div className="py-16 text-center text-sm text-theme-secondary">{t.loading}</div>
         ) : (
           <>
+            {/* Empty-state hero — shown when the user hasn't attended any session yet.
+                Without this, brand-new users see 0/0/0/0 + 7 locked achievements
+                and conclude the platform is empty. */}
+            {(stats?.totalSessions ?? 0) === 0 && history.length === 0 && (
+              <div className="bg-tribe-green/10 dark:bg-tribe-green/15 border border-tribe-green/30 rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-tribe-green/20 border border-tribe-green/40 flex items-center justify-center">
+                  <Compass className="w-6 h-6 text-tribe-green" />
+                </div>
+                <h2 className="text-lg font-bold text-stone-900 dark:text-white">{t.emptyTitle}</h2>
+                <p className="text-sm text-stone-700 dark:text-gray-300 max-w-md">{t.emptyBody}</p>
+                <Link
+                  href="/"
+                  className="mt-1 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-tribe-green hover:bg-tribe-green-hover text-tribe-dark text-sm font-bold transition-colors"
+                >
+                  {t.browseSessions}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            )}
+
             {/* Section 1: Stats cards */}
             <div className="grid grid-cols-2 gap-3">
               <StatCard value={stats?.totalSessions ?? 0} label={t.totalSessions} Icon={CalendarIcon} />
@@ -202,7 +230,7 @@ export default function MyTrainingPage() {
             </div>
 
             {/* Section 2: Training heatmap */}
-            <section className="bg-[#3D4349] rounded-xl p-4">
+            <section className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">{t.heatmapTitle}</h2>
               <div className="overflow-x-auto">
                 <div className="inline-flex gap-1">
@@ -219,14 +247,14 @@ export default function MyTrainingPage() {
                   ))}
                 </div>
               </div>
-              <p className="mt-3 text-xs text-gray-400">{t.heatmapSummary(totalHeatmapCount)}</p>
+              <p className="mt-3 text-xs text-theme-secondary">{t.heatmapSummary(totalHeatmapCount)}</p>
             </section>
 
             {/* Section 3: Training history */}
-            <section className="bg-[#3D4349] rounded-xl p-4">
+            <section className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">{t.historyTitle}</h2>
               {history.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">{t.noHistory}</p>
+                <p className="text-sm text-theme-secondary py-4 text-center">{t.noHistory}</p>
               ) : (
                 <ul className="space-y-2">
                   {history.map((entry) => {
@@ -238,13 +266,13 @@ export default function MyTrainingPage() {
                     return (
                       <li
                         key={entry.session_id}
-                        className="flex items-center gap-3 py-2 border-b border-[#272D34] last:border-b-0"
+                        className="flex items-center gap-3 py-2 border-b border-stone-200 dark:border-tribe-mid last:border-b-0"
                       >
                         <Link href={`/session/${entry.session_id}`} className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 text-sm font-medium truncate">
                             <span>{entry.title || sportLabel}</span>
                           </div>
-                          <div className="text-xs text-gray-400 truncate">
+                          <div className="text-xs text-theme-secondary truncate">
                             {entry.instructor?.name ? `${entry.instructor.name} · ` : ''}
                             {formatDayLabel(entry.date, language)}
                             {entry.start_time ? ` · ${entry.start_time.slice(0, 5)}` : ''}
@@ -260,8 +288,8 @@ export default function MyTrainingPage() {
                                   size={12}
                                   className={
                                     n <= (entry.user_rating || 0)
-                                      ? 'fill-[#F59E0B] text-[#F59E0B]'
-                                      : 'fill-transparent text-gray-600'
+                                      ? 'fill-tribe-amber text-tribe-amber'
+                                      : 'fill-transparent text-stone-400 dark:text-gray-600'
                                   }
                                 />
                               ))}
@@ -269,7 +297,7 @@ export default function MyTrainingPage() {
                           ) : (
                             <Link
                               href={`/session/${entry.session_id}`}
-                              className="text-xs font-medium text-[#84cc16] hover:text-[#A3E635]"
+                              className="text-xs font-medium text-tribe-green hover:text-tribe-green-light"
                             >
                               {t.rateCta}
                             </Link>
@@ -284,7 +312,7 @@ export default function MyTrainingPage() {
 
             {/* Section 4: Milestones — reuses existing AchievementBadges */}
             {userId && (
-              <section className="bg-[#3D4349] rounded-xl p-4">
+              <section className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl p-4">
                 <h2 className="text-sm font-semibold mb-3">{t.milestonesTitle}</h2>
                 <AchievementBadges userId={userId} isOwnProfile={true} />
               </section>
@@ -308,10 +336,10 @@ export default function MyTrainingPage() {
 
 function StatCard({ value, label, Icon }: { value: number; label: string; Icon: LucideIcon }) {
   return (
-    <div className="bg-[#3D4349] rounded-xl p-4 relative">
-      <Icon className="absolute top-3 right-3 text-gray-500" size={16} />
-      <p className="text-3xl font-extrabold text-[#84cc16]">{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{label}</p>
+    <div className="bg-stone-100 dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl p-4 relative">
+      <Icon className="absolute top-3 right-3 text-stone-400 dark:text-gray-500" size={16} />
+      <p className="text-3xl font-extrabold text-tribe-green">{value}</p>
+      <p className="text-xs text-theme-secondary mt-1">{label}</p>
     </div>
   );
 }

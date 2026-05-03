@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { createPaymentSchema } from '@/lib/validations/payment';
 import {
   getPaymentGateway,
@@ -43,7 +44,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate limit: max 10 payment creation attempts per minute per user.
-    const { allowed } = await checkRateLimit(supabase, `payment-create:${user.id}`, 10, 60_000);
+    // Use service-role client — `rate_limits` denies inserts for non-service roles via RLS.
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `payment-create:${user.id}`, 10, 60_000);
     if (!allowed) {
       return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
     }

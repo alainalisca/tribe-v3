@@ -23,39 +23,53 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
-  // Get user location and fetch venues
+  // Always search around the active city's centre — this carousel is
+  // titled "Popular Spots in Medellín", so showing whatever's near the
+  // caller's GPS (which can be anywhere in the world) is wrong. User's own
+  // GPS is used only to compute a distance label on each venue card.
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError(lang === 'es' ? 'Geolocalización no disponible' : 'Geolocation unavailable');
-      setLoading(false);
-      return;
+    let cancelled = false;
+
+    const fetchVenues = async (searchLat: number, searchLng: number) => {
+      try {
+        const response = await fetch(`/api/venues/nearby?lat=${searchLat}&lng=${searchLng}&limit=15&radius=5000`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch venues');
+        }
+
+        const data = await response.json();
+        if (!cancelled) setVenues(data.venues || []);
+      } catch {
+        if (!cancelled) {
+          setError(lang === 'es' ? 'Error al cargar lugares' : 'Failed to load venues');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    // Kick off the spot fetch immediately around the city centre.
+    fetchVenues(ACTIVE_CITY.center.lat, ACTIVE_CITY.center.lng);
+
+    // In parallel, ask the browser for the user's location so distance
+    // labels can show. If they deny or the API isn't available, we just
+    // skip distance — the section still renders.
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (cancelled) return;
+          setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        () => {
+          /* user denied; distance just won't render */
+        }
+      );
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-
-        try {
-          const response = await fetch(`/api/venues/nearby?lat=${latitude}&lng=${longitude}&limit=15&radius=5000`);
-
-          if (!response.ok) {
-            throw new Error('Failed to fetch venues');
-          }
-
-          const data = await response.json();
-          setVenues(data.venues || []);
-        } catch (err) {
-          setError(lang === 'es' ? 'Error al cargar lugares' : 'Failed to load venues');
-        } finally {
-          setLoading(false);
-        }
-      },
-      () => {
-        setError(lang === 'es' ? 'Permiso de ubicación denegado' : 'Location permission denied');
-        setLoading(false);
-      }
-    );
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   // Handle scroll visibility for arrows

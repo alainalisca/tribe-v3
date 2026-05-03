@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchInviteWithSession, fetchUsersByIds, insertParticipant, updateSession } from '@/lib/dal';
@@ -186,7 +187,14 @@ export default function InvitePage() {
               </div>
               <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
                 <MapPin className="w-4 h-4" />
-                <span>{session.location}</span>
+                <span>
+                  {formatSessionLocation(
+                    session.location,
+                    (session as { location_lat?: number | null }).location_lat ?? null,
+                    (session as { location_lng?: number | null }).location_lng ?? null,
+                    language === 'es' ? 'es' : 'en'
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
                 <Users className="w-4 h-4" />

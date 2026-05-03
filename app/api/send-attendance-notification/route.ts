@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchSessionFields, fetchUserProfileMaybe } from '@/lib/dal';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -61,9 +62,16 @@ export async function POST(request: Request) {
 
     const greeting = isSpanish ? `¡Gran sesión, ${user.name}! 🎉` : `Great session, ${user.name}! 🎉`;
 
+    const safeLocation = formatSessionLocation(
+      session.location,
+      (session as { latitude?: number | null }).latitude ?? null,
+      (session as { longitude?: number | null }).longitude ?? null,
+      isSpanish ? 'es' : 'en'
+    );
+
     const thanks = isSpanish
-      ? `Gracias por unirte a <strong>${session.sport}</strong> en ${session.location}. ¡Nunca entrenes solo!`
-      : `Thanks for joining <strong>${session.sport}</strong> at ${session.location}. Never train alone!`;
+      ? `Gracias por unirte a <strong>${session.sport}</strong> en ${safeLocation}. ¡Nunca entrenes solo!`
+      : `Thanks for joining <strong>${session.sport}</strong> at ${safeLocation}. Never train alone!`;
 
     const sharePrompt = isSpanish
       ? `Comparte tus fotos de la sesión de hoy para ayudar a construir nuestra comunidad.`

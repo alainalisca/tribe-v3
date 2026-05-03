@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MessageCircle, UserIcon, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageCircle, UserIcon, X, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import {
   fetchInterestForInstructor,
@@ -42,10 +42,11 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
 
   const t = {
     title: language === 'es' ? 'Interesados' : 'Leads',
+    emptyTitle: language === 'es' ? 'Aún ningún interesado' : 'No leads yet',
     empty:
       language === 'es'
-        ? 'Aún ningún atleta ha expresado interés. Completa tu perfil y ofrece grandes sesiones — ¡los atletas interesados aparecerán aquí!'
-        : 'No athletes have expressed interest yet. Complete your profile and host great sessions — interested athletes will show up here!',
+        ? 'Completa tu perfil y ofrece grandes sesiones — los atletas interesados aparecerán aquí.'
+        : 'Complete your profile and host great sessions — interested athletes will show up here.',
     active: language === 'es' ? 'Activos' : 'Active',
     contacted: language === 'es' ? 'Contactados' : 'Contacted',
     dismissed: language === 'es' ? 'Descartados' : 'Dismissed',
@@ -170,8 +171,12 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
 
   if (totalActive === 0 && dismissed.length === 0) {
     return (
-      <div className="bg-white dark:bg-tribe-surface rounded-2xl p-6 text-center border border-stone-200 dark:border-tribe-mid">
-        <p className="text-sm text-theme-secondary">{t.empty}</p>
+      <div className="bg-white dark:bg-tribe-surface rounded-2xl p-8 text-center border border-stone-200 dark:border-tribe-mid flex flex-col items-center gap-3">
+        <div className="w-12 h-12 rounded-full bg-tribe-green/10 dark:bg-tribe-green/15 border border-tribe-green/30 flex items-center justify-center">
+          <UserPlus className="w-6 h-6 text-tribe-green" />
+        </div>
+        <p className="text-base font-semibold text-theme-primary">{t.emptyTitle}</p>
+        <p className="text-sm text-theme-secondary max-w-md">{t.empty}</p>
       </div>
     );
   }

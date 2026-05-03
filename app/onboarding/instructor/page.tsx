@@ -34,6 +34,7 @@ import {
   Tag,
   Megaphone,
   TrendingUp,
+  Wallet,
 } from 'lucide-react';
 
 const SPORTS_LIST = [
@@ -140,6 +141,16 @@ const getTranslations = (language: 'en' | 'es') => ({
     language === 'es'
       ? 'Encontrarás todas estas herramientas en tu Hub de Promoción después de completar tu perfil.'
       : "You'll find all these tools in your Promote Hub after completing your profile.",
+  // Get Paid card (next-step nudge for payout setup)
+  payoutsTitle: language === 'es' ? 'Recibe pagos por tus sesiones' : 'Get paid for your sessions',
+  payoutsBodyUSD:
+    language === 'es'
+      ? 'Después de Completar Perfil, conectamos Stripe para que recibas pagos en USD. Necesitarás un documento de identidad y datos bancarios — unos 5 minutos.'
+      : "After Complete Profile, we'll connect Stripe so you can receive USD payouts. You'll need a government ID and bank info — about 5 minutes.",
+  payoutsBodyCOP:
+    language === 'es'
+      ? 'Después de Completar Perfil, agrega tu cuenta bancaria colombiana para que Wompi pueda depositar tus ganancias.'
+      : 'After Complete Profile, add your Colombian bank account so Wompi can deposit your earnings.',
   // Navigation
   back: language === 'es' ? 'Atrás' : 'Back',
   next: language === 'es' ? 'Siguiente' : 'Next',
@@ -356,8 +367,11 @@ export default function InstructorOnboardingPage() {
       await haptic('success');
       showSuccess(t.profileComplete);
 
-      // Instructors land on their storefront so they see the result
-      router.push(`/storefront/${userId}`);
+      // After onboarding, take instructors straight to payout setup. Without
+      // this, they'd land with payout_method = NULL / no Stripe Connect, and
+      // any paid session would fail at checkout time. They can navigate to
+      // their storefront from the dashboard once payouts are wired.
+      router.push('/earnings/payout-settings');
     } catch (err) {
       logError(err, { action: 'instructorOnboarding.handleFinish' });
       showError(getErrorMessage(err, 'update_profile', language));
@@ -799,6 +813,17 @@ export default function InstructorOnboardingPage() {
             <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-4 flex items-start gap-3">
               <Sparkles className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
               <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">{t.readyNote}</p>
+            </div>
+
+            {/* Get Paid — currency-aware nudge to set up payouts as the next step. */}
+            <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-4 flex items-start gap-3">
+              <Wallet className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-stone-900 dark:text-white mb-1">{t.payoutsTitle}</h4>
+                <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">
+                  {form.earnings_currency === 'USD' ? t.payoutsBodyUSD : t.payoutsBodyCOP}
+                </p>
+              </div>
             </div>
           </div>
         )}

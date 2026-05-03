@@ -231,16 +231,21 @@ export default function CreateProductPage() {
           <div className="border border-theme rounded-lg p-4 bg-theme-card space-y-3">
             <div>
               <Label className="text-theme-primary mb-2">{language === 'es' ? 'Moneda' : 'Currency'}</Label>
-              <div className="grid grid-cols-2 gap-2">
+              {/* Segmented control \u2014 both cells share a track; selected cell elevates
+                  with a subtle green ring instead of flooding the whole button green.
+                  This makes the unselected option still feel selectable rather than
+                  visually dead. */}
+              <div className="flex gap-1 p-1 rounded-lg bg-stone-100 dark:bg-tribe-dark border border-theme">
                 {(['COP', 'USD'] as const).map((cur) => (
                   <button
                     key={cur}
                     type="button"
                     onClick={() => setForm((prev) => ({ ...prev, currency: cur }))}
-                    className={`p-3 rounded-lg font-medium transition-all text-center ${
+                    aria-pressed={form.currency === cur}
+                    className={`flex-1 py-2.5 rounded-md font-semibold text-sm transition-all ${
                       form.currency === cur
-                        ? 'bg-tribe-green text-slate-900 ring-2 ring-tribe-green'
-                        : 'bg-theme-card border border-theme text-theme-primary hover:border-tribe-green'
+                        ? 'bg-white dark:bg-tribe-surface text-tribe-green shadow-sm ring-1 ring-tribe-green/40'
+                        : 'text-theme-secondary hover:text-theme-primary'
                     }`}
                   >
                     {cur === 'COP' ? '\uD83C\uDDE8\uD83C\uDDF4 COP' : '\uD83C\uDDFA\uD83C\uDDF8 USD'}

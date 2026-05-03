@@ -9,6 +9,9 @@ import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { formatSessionLocation } from '@/lib/sessionLocation';
+import { useUserCurrency } from '@/lib/useUserCurrency';
+import { formatPriceForUser } from '@/lib/userCurrency';
 
 interface CreatorInfo {
   id: string;
@@ -44,6 +47,7 @@ export default function SessionDetails({
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
+  const { currency: userCurrency } = useUserCurrency();
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <div className="flex items-center justify-between mb-4">
@@ -116,7 +120,13 @@ export default function SessionDetails({
                 onClick={() => onOpenLightbox(idx, 'location')}
                 className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 border-stone-200 hover:border-tribe-green transition active:scale-95"
               >
-                <Image src={photo} alt={`Session location photo ${idx + 1}`} fill className="object-cover" unoptimized />
+                <Image
+                  src={photo}
+                  alt={`Session location photo ${idx + 1}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
               </button>
             ))}
           </div>
@@ -145,7 +155,14 @@ export default function SessionDetails({
 
         <div className="flex items-start text-muted-foreground">
           <MapPin className="w-5 h-5 mr-3 mt-0.5 text-muted-foreground" />
-          <span>{session.location}</span>
+          <span>
+            {formatSessionLocation(
+              session.location,
+              session.latitude ?? null,
+              session.longitude ?? null,
+              language === 'es' ? 'es' : 'en'
+            )}
+          </span>
         </div>
 
         {session.equipment && (
@@ -163,7 +180,7 @@ export default function SessionDetails({
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300 text-lg">
-                {formatPrice(session.price_cents, (session.currency || 'USD') as Currency)} {session.currency || 'USD'}
+                {formatPriceForUser(session.price_cents, (session.currency || 'USD') as Currency, userCurrency)}
               </span>
               <Badge className="px-2 py-0.5 bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-full text-xs border-transparent">
                 {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
@@ -179,60 +196,79 @@ export default function SessionDetails({
                 </p>
               </div>
             )}
-            {isCreator && (
-              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
-                  {language === 'es' ? 'Tu desglose de pago' : 'Your Earnings Breakdown'}
-                </p>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      {language === 'es' ? 'Precio por persona' : 'Price per person'}
-                    </span>
-                    <span className="text-emerald-700 dark:text-emerald-300">
-                      {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}{' '}
-                      {session.currency || 'USD'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-stone-500 dark:text-gray-400">
-                      {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
-                    </span>
-                    <span className="text-stone-500 dark:text-gray-400">
-                      -{formatPrice(Math.round(session.price_cents! * 0.15), (session.currency || 'USD') as Currency)}{' '}
-                      {session.currency || 'USD'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
-                    <span className="text-emerald-800 dark:text-emerald-300">
-                      {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
-                    </span>
-                    <span className="text-emerald-800 dark:text-emerald-300">
-                      {formatPrice(Math.round(session.price_cents! * 0.85), (session.currency || 'USD') as Currency)}{' '}
-                      {session.currency || 'USD'}
-                    </span>
-                  </div>
-                  {participants.filter((p) => p.status === 'confirmed').length > 0 && (
-                    <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 pt-1">
-                      <span>
-                        {language === 'es'
-                          ? `Total estimado (${participants.filter((p) => p.status === 'confirmed').length} confirmados)`
-                          : `Est. total (${participants.filter((p) => p.status === 'confirmed').length} confirmed)`}
-                      </span>
-                      <span>
-                        {formatPrice(
-                          Math.round(
-                            session.price_cents! * 0.85 * participants.filter((p) => p.status === 'confirmed').length
-                          ),
-                          (session.currency || 'USD') as Currency
-                        )}{' '}
-                        {session.currency || 'USD'}
-                      </span>
+            {isCreator &&
+              (() => {
+                // Pull the actual fee percent from the session row. The
+                // `sessions.platform_fee_percent` column overrides the global
+                // 15% default per-session (e.g. promotional sessions, partner
+                // accounts). Falls back to 15 if null/missing.
+                const feePct =
+                  typeof (session as { platform_fee_percent?: number | null }).platform_fee_percent === 'number'
+                    ? ((session as { platform_fee_percent?: number | null }).platform_fee_percent as number)
+                    : 15;
+                const feeRatio = feePct / 100;
+                const payoutRatio = 1 - feeRatio;
+                const confirmedCount = participants.filter((p) => p.status === 'confirmed').length;
+                return (
+                  <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+                      {language === 'es' ? 'Tu desglose de pago' : 'Your Earnings Breakdown'}
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-emerald-600 dark:text-emerald-400">
+                          {language === 'es' ? 'Precio por persona' : 'Price per person'}
+                        </span>
+                        <span className="text-emerald-700 dark:text-emerald-300">
+                          {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}{' '}
+                          {session.currency || 'USD'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-stone-500 dark:text-gray-400">
+                          {language === 'es' ? `Tarifa de plataforma (${feePct}%)` : `Platform fee (${feePct}%)`}
+                        </span>
+                        <span className="text-stone-500 dark:text-gray-400">
+                          -
+                          {formatPrice(
+                            Math.round(session.price_cents! * feeRatio),
+                            (session.currency || 'USD') as Currency
+                          )}{' '}
+                          {session.currency || 'USD'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
+                        <span className="text-emerald-800 dark:text-emerald-300">
+                          {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
+                        </span>
+                        <span className="text-emerald-800 dark:text-emerald-300">
+                          {formatPrice(
+                            Math.round(session.price_cents! * payoutRatio),
+                            (session.currency || 'USD') as Currency
+                          )}{' '}
+                          {session.currency || 'USD'}
+                        </span>
+                      </div>
+                      {confirmedCount > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 pt-1">
+                          <span>
+                            {language === 'es'
+                              ? `Total estimado (${confirmedCount} confirmados)`
+                              : `Est. total (${confirmedCount} confirmed)`}
+                          </span>
+                          <span>
+                            {formatPrice(
+                              Math.round(session.price_cents! * payoutRatio * confirmedCount),
+                              (session.currency || 'USD') as Currency
+                            )}{' '}
+                            {session.currency || 'USD'}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            )}
+                  </div>
+                );
+              })()}
           </div>
         )}
 

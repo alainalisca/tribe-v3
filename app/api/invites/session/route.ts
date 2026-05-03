@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createNotification } from '@/lib/dal/notifications';
 import { fetchSession } from '@/lib/dal/sessions';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { logError } from '@/lib/logger';
 
 const inviteSchema = z.object({
@@ -31,8 +32,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit: max 10 invites per minute per user.
-    const { allowed } = await checkRateLimit(supabase, `invite-session:${user.id}`, 10, 60_000);
+    // Rate limit: max 10 invites per minute per user. Service-role client required (RLS).
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `invite-session:${user.id}`, 10, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many invites. Please wait a moment.' }, { status: 429 });
     }

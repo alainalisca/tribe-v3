@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { Button } from '@/components/ui/button';
 import { fetchUserIsAdmin, fetchSession } from '@/lib/dal';
 import { logError } from '@/lib/logger';
@@ -88,7 +89,12 @@ export default function ChatPage() {
                 {sportName} {t('chat')}
               </h1>
               <p className="text-xs text-gray-500 leading-tight truncate max-w-[250px]">
-                {session.location}
+                {formatSessionLocation(
+                  session.location,
+                  (session as { latitude?: number | null }).latitude ?? null,
+                  (session as { longitude?: number | null }).longitude ?? null,
+                  language === 'es' ? 'es' : 'en'
+                )}
                 {isAdmin && <span className="ml-2 text-red-500">• Admin</span>}
                 {isHost && !isAdmin && <span className="ml-2 text-tribe-green">• {t('host')}</span>}
               </p>

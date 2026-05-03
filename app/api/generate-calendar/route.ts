@@ -4,6 +4,7 @@ import { createEvents, type EventAttributes } from 'ics';
 import { log, logError } from '@/lib/logger';
 import { fetchSessionFields } from '@/lib/dal';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app';
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     // Rate limit to prevent abuse on this public endpoint
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const supabase = await createClient();
-    const { allowed } = await checkRateLimit(supabase, `calendar:${ip}`, 30, 60_000);
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `calendar:${ip}`, 30, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

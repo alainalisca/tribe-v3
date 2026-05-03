@@ -4,7 +4,7 @@ import MarketingLayout from '@/components/marketing/MarketingLayout';
 import HeroSection from '@/components/marketing/landing/HeroSection';
 import HowItWorksSection from '@/components/marketing/landing/HowItWorksSection';
 import ForAthletesSection from '@/components/marketing/landing/ForAthletesSection';
-import ForInstructorsPreview from '@/components/marketing/landing/ForInstructorsPreview';
+import TribeOSSection from '@/components/marketing/landing/TribeOSSection';
 import FAQPreviewSection from '@/components/marketing/landing/FAQPreviewSection';
 import FinalCTASection from '@/components/marketing/landing/FinalCTASection';
 
@@ -16,7 +16,7 @@ export default function LandingPage(): JSX.Element {
       <HeroSection />
       <HowItWorksSection />
       <ForAthletesSection />
-      <ForInstructorsPreview />
+      <TribeOSSection />
       <FAQPreviewSection />
       <FinalCTASection />
     </MarketingLayout>

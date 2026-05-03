@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { allowed } = await checkRateLimit(supabaseAuth, `notify-send:${authUser.id}`, 30, 60_000);
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-send:${authUser.id}`, 30, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -166,7 +167,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { allowed } = await checkRateLimit(supabaseAuth, `notify-batch:${authUser.id}`, 10, 60_000);
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-batch:${authUser.id}`, 10, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

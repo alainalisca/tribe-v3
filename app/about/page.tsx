@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
@@ -55,9 +56,15 @@ export default function AboutPage() {
       <section className="py-16 px-4 bg-tribe-surface">
         <div className="max-w-3xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center gap-8">
-            {/* TODO: Al — add your real photo to public/images/al-alisca.jpg */}
-            <div className="w-32 h-32 rounded-full bg-tribe-mid flex items-center justify-center text-3xl font-black text-gray-600 shrink-0">
-              AA
+            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-tribe-green/40 shrink-0">
+              <Image
+                src="/images/al-alisca.jpg"
+                alt="Al Alisca, founder & CEO of Tribe"
+                fill
+                sizes="128px"
+                className="object-cover"
+                priority
+              />
             </div>
             <div>
               <h3 className="text-xl font-bold mb-1">Al Alisca</h3>

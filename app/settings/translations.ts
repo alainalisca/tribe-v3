@@ -4,6 +4,13 @@ export function getSettingsTranslations(language: 'en' | 'es') {
     language: language === 'es' ? 'Idioma' : 'Language',
     english: language === 'es' ? 'Inglés' : 'English',
     spanish: language === 'es' ? 'Español' : 'Spanish',
+    currency: language === 'es' ? 'Moneda' : 'Currency',
+    currencyDesc:
+      language === 'es'
+        ? 'Cómo verás los precios. Los instructores siguen publicando en su moneda elegida.'
+        : 'How prices show up for you. Instructors still post in their chosen currency.',
+    currencyCop: language === 'es' ? 'Pesos colombianos (COP)' : 'Colombian Pesos (COP)',
+    currencyUsd: language === 'es' ? 'Dólares estadounidenses (USD)' : 'US Dollars (USD)',
     account: language === 'es' ? 'Cuenta' : 'Account',
     signOut: language === 'es' ? 'Cerrar Sesión' : 'Sign Out',
     deleteAccount: language === 'es' ? 'Eliminar Cuenta' : 'Delete Account',

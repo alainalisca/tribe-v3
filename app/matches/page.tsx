@@ -12,6 +12,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { sportTranslations } from '@/lib/translations';
+import { formatSessionLocation } from '@/lib/sessionLocation';
 import { useMatches } from './useMatches';
 
 export default function MatchesPage() {
@@ -110,7 +111,13 @@ export default function MatchesPage() {
                                 ? sportTranslations[request.session.sport]?.es || request.session.sport
                                 : request.session.sport}
                             </span>{' '}
-                            • {request.session.location}
+                            •{' '}
+                            {formatSessionLocation(
+                              request.session.location,
+                              null,
+                              null,
+                              language === 'es' ? 'es' : 'en'
+                            )}
                           </div>
                         )}
                       </CardContent>
@@ -153,7 +160,9 @@ export default function MatchesPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4" />
-                          <span>{session.location}</span>
+                          <span>
+                            {formatSessionLocation(session.location, null, null, language === 'es' ? 'es' : 'en')}
+                          </span>
                         </div>
                       </div>
                     </CardContent>

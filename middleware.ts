@@ -66,6 +66,7 @@ const publicApiPaths = [
   '/api/webhook/chat-message',
   '/api/payment/webhook/stripe', // Stripe sends webhooks without a session cookie; signature is verified in the handler.
   '/api/health', // LR-02: monitoring probes don't carry session cookies
+  '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
 ];
 
 function isPublicPath(pathname: string): boolean {

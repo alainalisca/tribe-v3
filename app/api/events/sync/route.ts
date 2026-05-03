@@ -4,6 +4,7 @@ import { createClient as createAuthClient } from '@/lib/supabase/server';
 import { fetchNearbyExternalEvents, isCacheFresh, type ExternalEvent } from '@/lib/dal/externalEvents';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 
 /**
  * GET /api/events/sync?lat=40.7128&lng=-74.0060&radius=25&sport=running
@@ -28,8 +29,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limit — keyed by user id, not IP, since this endpoint requires auth.
-    const { allowed } = await checkRateLimit(authSupabase, `events-sync:${user.id}`, 20, 60_000);
+    // Rate limit — keyed by user id. Service-role client required for `rate_limits` writes (RLS).
+    const { allowed } = await checkRateLimit(getServiceRoleClient(), `events-sync:${user.id}`, 20, 60_000);
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }

@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  DollarSign,
   Globe,
   LogOut,
   Shield,
@@ -15,6 +16,7 @@ import {
   HeartHandshake,
   ShoppingBag,
 } from 'lucide-react';
+import { useUserCurrency } from '@/lib/useUserCurrency';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -27,6 +29,7 @@ import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
+  const { currency: userCurrency, setCurrency: setUserCurrency } = useUserCurrency();
   const router = useRouter();
 
   useEffect(() => {
@@ -265,6 +268,38 @@ export default function SettingsPage() {
               }`}
             >
               {txt.spanish}
+            </button>
+          </div>
+        </div>
+
+        {/* Currency Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-2">
+            <DollarSign className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{txt.currency}</h2>
+          </div>
+          <p className="text-xs text-theme-secondary mb-4">{txt.currencyDesc}</p>
+
+          <div className="space-y-2">
+            <button
+              onClick={() => setUserCurrency('COP')}
+              className={`w-full p-4 rounded-xl text-left transition ${
+                userCurrency === 'COP'
+                  ? 'bg-tribe-green text-slate-900 font-semibold'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+              }`}
+            >
+              {txt.currencyCop}
+            </button>
+            <button
+              onClick={() => setUserCurrency('USD')}
+              className={`w-full p-4 rounded-xl text-left transition ${
+                userCurrency === 'USD'
+                  ? 'bg-tribe-green text-slate-900 font-semibold'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+              }`}
+            >
+              {txt.currencyUsd}
             </button>
           </div>
         </div>

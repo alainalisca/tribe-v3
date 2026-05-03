@@ -6,8 +6,10 @@ import { formatTime12Hour } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import type { SessionsTranslations } from './translations';
-import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { formatSessionLocation } from '@/lib/sessionLocation';
+import { useUserCurrency } from '@/lib/useUserCurrency';
+import { formatPriceForUser } from '@/lib/userCurrency';
 
 interface SessionCardProps {
   session: {
@@ -37,6 +39,7 @@ export default function SessionCard({
   isHost = false,
   isPast = false,
 }: SessionCardProps) {
+  const { currency: userCurrency } = useUserCurrency();
   return (
     <Link href={`/session/${session.id}`}>
       <Card
@@ -57,8 +60,7 @@ export default function SessionCard({
                 </span>
                 {session.is_paid && session.price_cents && (
                   <Badge className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full border-transparent font-bold">
-                    {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}{' '}
-                    {session.currency || 'COP'}
+                    {formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)}
                   </Badge>
                 )}
                 {isHost && (
@@ -81,7 +83,7 @@ export default function SessionCard({
                 </div>
                 <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
                   <MapPin className="w-4 h-4 mr-2 text-stone-400" />
-                  <span className="truncate">{session.location}</span>
+                  <span className="truncate">{formatSessionLocation(session.location, null, null, language)}</span>
                 </div>
                 {!isPast && (
                   <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
