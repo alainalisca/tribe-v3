@@ -62,7 +62,11 @@ export default function AboutPage() {
                 alt="Al Alisca, founder & CEO of Tribe"
                 fill
                 sizes="128px"
-                className="object-cover"
+                // Tight crop on the face — `scale-125` zooms in 25% so arms /
+                // shirt edges don't show; `object-[center_25%]` biases the
+                // crop toward the top of the source so the head fills the
+                // circle instead of getting cut off.
+                className="object-cover object-[center_25%] scale-125"
                 priority
               />
             </div>
