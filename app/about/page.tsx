@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
@@ -52,48 +51,20 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* FOUNDER CARD */}
+      {/* TEAM / CONTACT */}
       <section className="py-16 px-4 bg-tribe-surface">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center gap-8">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-tribe-green/40 shrink-0">
-              <Image
-                src="/images/al-alisca.jpg"
-                alt="Al Alisca, founder & CEO of Tribe"
-                fill
-                sizes="128px"
-                // Tight crop on the face — `scale-125` zooms in 25% so arms /
-                // shirt edges don't show; `object-[center_25%]` biases the
-                // crop toward the top of the source so the head fills the
-                // circle instead of getting cut off.
-                className="object-cover object-[center_25%] scale-125"
-                priority
-              />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-1">Al Alisca</h3>
-              <p className="text-tribe-green text-sm font-semibold mb-3">{es ? 'Fundador y CEO' : 'Founder & CEO'}</p>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                {es
-                  ? 'Emprendedor fitness radicado en Medellín. Construyendo Tribe para resolver el problema que vivió en carne propia: encontrar gente con quien entrenar en una ciudad nueva.'
-                  : 'Fitness entrepreneur based in Medellín. Building Tribe to solve the problem he lived firsthand: finding people to train with in a new city.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-tribe-mid text-center">
-            <p className="text-gray-400 mb-4">
-              {es
-                ? 'Tribe es construido por un equipo pequeño con grandes ambiciones para el fitness en Medellín.'
-                : 'Tribe is built by a small team with big ambitions for fitness in Medellín.'}
-            </p>
-            <a
-              href="mailto:support@tribe.fitness"
-              className="text-tribe-green font-semibold hover:text-tribe-green-hover transition-colors"
-            >
-              {es ? 'Contáctanos' : 'Get In Touch'}
-            </a>
-          </div>
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-gray-400 mb-4">
+            {es
+              ? 'Tribe es construido por un equipo pequeño con grandes ambiciones para el fitness en Medellín.'
+              : 'Tribe is built by a small team with big ambitions for fitness in Medellín.'}
+          </p>
+          <a
+            href="mailto:support@tribe.fitness"
+            className="text-tribe-green font-semibold hover:text-tribe-green-hover transition-colors"
+          >
+            {es ? 'Contáctanos' : 'Get In Touch'}
+          </a>
         </div>
       </section>
 

@@ -232,7 +232,7 @@ function MarketingFooter() {
       </div>
 
       <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-tribe-mid text-center text-xs text-gray-600">
-        © {new Date().getFullYear()} A+ Fitness LLC. {t('All rights reserved.', 'Todos los derechos reservados.')}
+        © {new Date().getFullYear()} A Plus Fitness LLC. {t('All rights reserved.', 'Todos los derechos reservados.')}
       </div>
     </footer>
   );
