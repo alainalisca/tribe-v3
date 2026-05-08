@@ -167,7 +167,7 @@ export async function sendTribeOsWaitlistAdminNotification(params: AdminNotifica
   const resend = getResendClient();
   const sessions = params.sessionsPerWeek === null ? '(not specified)' : String(params.sessionsPerWeek);
   const pricingText = pricingLabel(params.pricingPreference, 'en');
-  const comments = params.comments && params.comments.trim().length > 0 ? params.comments : '—';
+  const comments = params.comments && params.comments.trim().length > 0 ? params.comments : '(none)';
 
   const text = [
     'A new Tribe.OS waitlist entry just landed.',
