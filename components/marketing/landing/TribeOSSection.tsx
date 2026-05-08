@@ -5,11 +5,15 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { showError } from '@/lib/toast';
 
+type PricingPreference = 'monthly_30' | 'revenue_share_15';
+
 interface FormState {
   name: string;
   email: string;
   whatTheyTeach: string;
   sessionsPerWeek: string;
+  pricingPreference: PricingPreference | '';
+  comments: string;
 }
 
 const INITIAL_FORM: FormState = {
@@ -17,54 +21,96 @@ const INITIAL_FORM: FormState = {
   email: '',
   whatTheyTeach: '',
   sessionsPerWeek: '',
+  pricingPreference: '',
+  comments: '',
 };
 
+// English copy is the canonical source. Spanish strings below are starter-pack
+// drafts pending Verónica's review; once she returns edits, replace the `es`
+// block and remove the marker comment.
 const t = {
   en: {
-    eyebrow: 'Tribe OS — Coming Soon',
-    headline: 'Run Your Fitness Business on Tribe',
-    sub: 'Create paid sessions, manage clients, and grow your business — all in one platform.',
-    features: [
-      'Create and manage paid sessions',
-      'Process payments automatically',
-      'Track clients and revenue',
-      'Grow your business',
+    eyebrow: 'Tribe.OS',
+    headline: 'Run your fitness business inside Tribe.',
+    sub: 'Tribe.OS is the premium tier for instructors and group leaders. Charge for your sessions, manage your clients, and grow your practice without leaving the app your community already uses.',
+    reasonsHeading: 'Why instructors are joining',
+    reasons: [
+      {
+        title: 'Charge for what you teach.',
+        body: 'Take payments through Tribe with one tap from the participant. No second app, no separate sign-in.',
+      },
+      {
+        title: 'Keep your client list in one place.',
+        body: 'The people who show up to your free sessions today become your client base. Tribe.OS keeps them organized.',
+      },
+      {
+        title: 'Grow beyond your WhatsApp group.',
+        body: 'Every session you post reaches participants you have not met yet, in your sport, at your level, near you.',
+      },
     ],
-    launchBadge: 'Launching Q2 2026',
-    cardTitle: 'Join the Waitlist',
-    cardSub: 'Get early access when we launch.',
-    namePh: 'Your name',
-    emailPh: 'your@email.com',
-    teachPh: 'CrossFit, Yoga, BJJ, etc.',
-    sessionsPh: 'Sessions per week',
-    submit: 'Join Waitlist',
-    submitting: 'Joining...',
-    successTitle: "You're on the list!",
-    successSub: "We'll email you when Tribe OS launches.",
-    networkError: 'Network error. Please try again.',
+    cardTitle: 'Join the Tribe.OS waitlist',
+    cardSub:
+      'Tell us about your work and the pricing model that would work for you. We will reach out as we open early access.',
+    nameLabel: 'Your name',
+    emailLabel: 'Email',
+    teachLabel: 'What do you teach?',
+    teachPh: 'Yoga, running, boxing, dance, BJJ',
+    sessionsLabel: 'How many sessions do you run per week?',
+    sessionsPh: 'For example, 5',
+    pricingHeading: 'Which pricing model would work for you?',
+    pricingMonthly: 'Thirty dollars per month for unlimited paid session creation.',
+    pricingRevShare: 'Free to use. Tribe takes fifteen percent of paid session revenue.',
+    commentsLabel: 'Anything else we should know?',
+    commentsPh: 'Optional. Tell us about your practice, your clients, and what would help most.',
+    submit: 'Join the waitlist',
+    submitting: 'Saving your entry',
+    successTitle: 'Thanks. You are on the list.',
+    successSub:
+      'We will reach out as Tribe.OS opens for early access. In the meantime, keep using the free Tribe app. Every session you post reaches participants you have not met yet.',
+    pricingMissing: 'Pick the pricing model that works for you.',
+    networkError: 'Something went wrong on our side. Please try again.',
   },
+  // ES PENDING VERONICA REVIEW
   es: {
-    eyebrow: 'Tribe OS — Próximamente',
-    headline: 'Lleva tu Negocio Fitness en Tribe',
-    sub: 'Crea sesiones pagas, gestiona clientes y haz crecer tu negocio — todo en una sola plataforma.',
-    features: [
-      'Crea y gestiona sesiones pagas',
-      'Procesa pagos automáticamente',
-      'Sigue a tus clientes e ingresos',
-      'Haz crecer tu negocio',
+    eyebrow: 'Tribe.OS',
+    headline: 'Gestiona tu negocio de fitness dentro de Tribe.',
+    sub: 'Tribe.OS es el plan premium para instructores y líderes de grupo. Cobra por tus sesiones, gestiona a tus clientes y haz crecer tu práctica sin salir de la aplicación que tu comunidad ya usa.',
+    reasonsHeading: 'Por qué los instructores se están uniendo',
+    reasons: [
+      {
+        title: 'Cobra por lo que enseñas.',
+        body: 'Recibe pagos a través de Tribe con un toque por parte del participante. Sin una segunda aplicación y sin un inicio de sesión separado.',
+      },
+      {
+        title: 'Mantén tu lista de clientes en un solo lugar.',
+        body: 'Las personas que asisten a tus sesiones gratuitas hoy se convierten en tu base de clientes. Tribe.OS los mantiene organizados.',
+      },
+      {
+        title: 'Crece más allá de tu grupo de WhatsApp.',
+        body: 'Cada sesión que publicas llega a participantes que aún no conoces, en tu deporte, en tu nivel, cerca de ti.',
+      },
     ],
-    launchBadge: 'Lanzamiento Q2 2026',
-    cardTitle: 'Únete a la Lista',
-    cardSub: 'Obtén acceso anticipado cuando lancemos.',
-    namePh: 'Tu nombre',
-    emailPh: 'tu@correo.com',
-    teachPh: 'CrossFit, Yoga, BJJ, etc.',
-    sessionsPh: 'Sesiones por semana',
-    submit: 'Únete a la Lista',
-    submitting: 'Enviando...',
-    successTitle: '¡Estás en la lista!',
-    successSub: 'Te avisaremos por correo cuando Tribe OS lance.',
-    networkError: 'Error de red. Intenta de nuevo.',
+    cardTitle: 'Únete a la lista de espera de Tribe.OS',
+    cardSub:
+      'Cuéntanos sobre tu trabajo y el modelo de precios que funcionaría para ti. Te contactaremos cuando abramos el acceso anticipado.',
+    nameLabel: 'Tu nombre',
+    emailLabel: 'Correo electrónico',
+    teachLabel: '¿Qué enseñas?',
+    teachPh: 'Yoga, running, boxeo, baile, BJJ',
+    sessionsLabel: '¿Cuántas sesiones realizas por semana?',
+    sessionsPh: 'Por ejemplo, 5',
+    pricingHeading: '¿Qué modelo de precios funcionaría para ti?',
+    pricingMonthly: 'Treinta dólares al mes por la creación ilimitada de sesiones de pago.',
+    pricingRevShare: 'Gratis de usar. Tribe toma el quince por ciento de los ingresos de las sesiones de pago.',
+    commentsLabel: '¿Algo más que debamos saber?',
+    commentsPh: 'Opcional. Cuéntanos sobre tu práctica, tus clientes y qué te ayudaría más.',
+    submit: 'Únete a la lista de espera',
+    submitting: 'Guardando tu entrada',
+    successTitle: 'Gracias. Estás en la lista.',
+    successSub:
+      'Te contactaremos cuando Tribe.OS abra el acceso anticipado. Mientras tanto, sigue usando la aplicación Tribe gratuita. Cada sesión que publicas llega a participantes que aún no conoces.',
+    pricingMissing: 'Elige el modelo de precios que funciona para ti.',
+    networkError: 'Algo salió mal de nuestro lado. Por favor intenta de nuevo.',
   },
 } as const;
 
@@ -81,6 +127,13 @@ export default function TribeOSSection() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return;
+
+    if (form.pricingPreference === '') {
+      setErrorMsg(s.pricingMissing);
+      showError(s.pricingMissing);
+      return;
+    }
+
     setSubmitting(true);
     setErrorMsg('');
 
@@ -96,6 +149,8 @@ export default function TribeOSSection() {
           email: form.email,
           whatTheyTeach: form.whatTheyTeach,
           sessionsPerWeek: form.sessionsPerWeek === '' ? null : Number(form.sessionsPerWeek),
+          pricingPreference: form.pricingPreference,
+          comments: form.comments.trim() === '' ? null : form.comments.trim(),
           language,
         }),
       });
@@ -118,7 +173,6 @@ export default function TribeOSSection() {
 
   return (
     <section id="tribe-os" className="relative py-24 px-4 overflow-hidden bg-tribe-dark">
-      {/* Subtle radial accent — matches hero treatment */}
       <div className="absolute inset-0 pointer-events-none">
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] rounded-full"
@@ -130,8 +184,8 @@ export default function TribeOSSection() {
         ref={ref}
         className={`relative z-10 max-w-6xl mx-auto transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10 lg:gap-12 items-center">
-          {/* Left column */}
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10 lg:gap-12 items-start">
+          {/* Left column — pitch */}
           <div>
             <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.eyebrow}</p>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1] mb-5">
@@ -139,20 +193,20 @@ export default function TribeOSSection() {
             </h2>
             <p className="text-base sm:text-lg text-white/85 leading-relaxed mb-8">{s.sub}</p>
 
-            <ul className="space-y-3 mb-8">
-              {s.features.map((feature, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="mt-0.5 w-5 h-5 rounded-full bg-tribe-green/20 flex items-center justify-center shrink-0">
-                    <span className="text-tribe-green text-xs font-bold">✓</span>
-                  </span>
-                  <span className="text-base text-white/90">{feature}</span>
+            <h3 className="text-tribe-green uppercase tracking-[0.1em] text-xs font-semibold mb-4">
+              {s.reasonsHeading}
+            </h3>
+            <ul className="space-y-5">
+              {s.reasons.map((reason) => (
+                <li key={reason.title} className="flex items-start gap-3">
+                  <span className="mt-1.5 w-2 h-2 rounded-full bg-tribe-green shrink-0" />
+                  <div>
+                    <p className="text-base font-bold text-white mb-1">{reason.title}</p>
+                    <p className="text-sm text-white/80 leading-relaxed">{reason.body}</p>
+                  </div>
                 </li>
               ))}
             </ul>
-
-            <span className="inline-block px-4 py-2 rounded-full bg-tribe-green text-tribe-dark text-sm font-bold">
-              {s.launchBadge}
-            </span>
           </div>
 
           {/* Right column — waitlist card */}
@@ -160,49 +214,106 @@ export default function TribeOSSection() {
             {!success ? (
               <>
                 <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-2">{s.cardTitle}</h3>
-                <p className="text-sm text-gray-500 mb-6">{s.cardSub}</p>
+                <p className="text-sm text-gray-600 mb-6 leading-relaxed">{s.cardSub}</p>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                  <input
-                    type="text"
-                    placeholder={s.namePh}
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                    disabled={submitting}
-                    maxLength={255}
-                    className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                  />
-                  <input
-                    type="email"
-                    placeholder={s.emailPh}
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
-                    disabled={submitting}
-                    maxLength={255}
-                    className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                  />
-                  <input
-                    type="text"
-                    placeholder={s.teachPh}
-                    value={form.whatTheyTeach}
-                    onChange={(e) => setForm({ ...form, whatTheyTeach: e.target.value })}
-                    required
-                    disabled={submitting}
-                    maxLength={255}
-                    className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                  />
-                  <input
-                    type="number"
-                    placeholder={s.sessionsPh}
-                    value={form.sessionsPerWeek}
-                    onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
-                    min={0}
-                    max={1000}
-                    disabled={submitting}
-                    className="w-full px-4 py-3 text-base rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                  />
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+                    {s.nameLabel}
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                      disabled={submitting}
+                      maxLength={255}
+                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+                    {s.emailLabel}
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      required
+                      disabled={submitting}
+                      maxLength={255}
+                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+                    {s.teachLabel}
+                    <input
+                      type="text"
+                      placeholder={s.teachPh}
+                      value={form.whatTheyTeach}
+                      onChange={(e) => setForm({ ...form, whatTheyTeach: e.target.value })}
+                      required
+                      disabled={submitting}
+                      maxLength={255}
+                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+                    {s.sessionsLabel}
+                    <input
+                      type="number"
+                      placeholder={s.sessionsPh}
+                      value={form.sessionsPerWeek}
+                      onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
+                      min={0}
+                      max={1000}
+                      disabled={submitting}
+                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+                    />
+                  </label>
+
+                  <fieldset className="flex flex-col gap-2 mt-1" disabled={submitting}>
+                    <legend className="text-sm font-semibold text-tribe-dark mb-2">{s.pricingHeading}</legend>
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'monthly_30' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <input
+                        type="radio"
+                        name="pricingPreference"
+                        value="monthly_30"
+                        checked={form.pricingPreference === 'monthly_30'}
+                        onChange={() => setForm({ ...form, pricingPreference: 'monthly_30' })}
+                        required
+                        className="mt-1 accent-tribe-green"
+                      />
+                      <span className="text-sm text-tribe-dark leading-snug">{s.pricingMonthly}</span>
+                    </label>
+                    <label
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'revenue_share_15' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <input
+                        type="radio"
+                        name="pricingPreference"
+                        value="revenue_share_15"
+                        checked={form.pricingPreference === 'revenue_share_15'}
+                        onChange={() => setForm({ ...form, pricingPreference: 'revenue_share_15' })}
+                        className="mt-1 accent-tribe-green"
+                      />
+                      <span className="text-sm text-tribe-dark leading-snug">{s.pricingRevShare}</span>
+                    </label>
+                  </fieldset>
+
+                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+                    {s.commentsLabel}
+                    <textarea
+                      placeholder={s.commentsPh}
+                      value={form.comments}
+                      onChange={(e) => setForm({ ...form, comments: e.target.value })}
+                      disabled={submitting}
+                      maxLength={2000}
+                      rows={3}
+                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60 resize-y"
+                    />
+                  </label>
 
                   {errorMsg && (
                     <p className="text-sm text-red-600" role="alert">
@@ -222,10 +333,10 @@ export default function TribeOSSection() {
             ) : (
               <div className="text-center py-8">
                 <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-tribe-green flex items-center justify-center">
-                  <span className="text-white text-2xl font-black">✓</span>
+                  <span className="text-tribe-dark text-2xl font-black">✓</span>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-2">{s.successTitle}</h3>
-                <p className="text-sm text-gray-500">{s.successSub}</p>
+                <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-3">{s.successTitle}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{s.successSub}</p>
               </div>
             )}
           </div>

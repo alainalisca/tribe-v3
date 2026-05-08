@@ -16,9 +16,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
-import { insertTribeOSWaitlistEntry } from '@/lib/dal/tribeOSWaitlist';
+import { insertTribeOSWaitlistEntry, type PricingPreference } from '@/lib/dal/tribeOSWaitlist';
+import { sendTribeOsWaitlistConfirmation, sendTribeOsWaitlistAdminNotification } from '@/lib/email/tribeOsWaitlist';
 
 const MAX_LEN = 255;
+const MAX_COMMENTS_LEN = 2000;
+const VALID_PRICING: ReadonlySet<PricingPreference> = new Set(['monthly_30', 'revenue_share_15']);
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -27,6 +30,7 @@ function isValidEmail(value: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const referrer = request.headers.get('referer') ?? null;
     const admin = getServiceRoleClient();
 
     const { allowed } = await checkRateLimit(admin, `tribe-os-waitlist:${ip}`, 5, 60_000);
@@ -49,6 +53,8 @@ export async function POST(request: NextRequest) {
     const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '';
     const whatTheyTeach = typeof raw.whatTheyTeach === 'string' ? raw.whatTheyTeach.trim() : '';
     const sessionsPerWeekRaw = raw.sessionsPerWeek;
+    const pricingPreferenceRaw = typeof raw.pricingPreference === 'string' ? raw.pricingPreference : '';
+    const commentsRaw = typeof raw.comments === 'string' ? raw.comments.trim() : '';
 
     if (!name || !email || !whatTheyTeach) {
       return NextResponse.json(
@@ -58,6 +64,26 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (!VALID_PRICING.has(pricingPreferenceRaw as PricingPreference)) {
+      return NextResponse.json(
+        {
+          error: t('Pick the pricing model that works for you.', 'Elige el modelo de precios que funciona para ti.'),
+        },
+        { status: 400 }
+      );
+    }
+    const pricingPreference = pricingPreferenceRaw as PricingPreference;
+
+    if (commentsRaw.length > MAX_COMMENTS_LEN) {
+      return NextResponse.json(
+        {
+          error: t('Comments are too long.', 'Los comentarios son demasiado largos.'),
+        },
+        { status: 400 }
+      );
+    }
+    const comments = commentsRaw.length > 0 ? commentsRaw : null;
 
     if (name.length > MAX_LEN || email.length > MAX_LEN || whatTheyTeach.length > MAX_LEN) {
       return NextResponse.json(
@@ -96,6 +122,10 @@ export async function POST(request: NextRequest) {
       what_they_teach: whatTheyTeach,
       sessions_per_week: sessionsPerWeek,
       language,
+      pricing_preference: pricingPreference,
+      comments,
+      ip_address: ip === 'unknown' ? null : ip,
+      referrer,
     });
 
     if (!result.success) {
@@ -112,6 +142,39 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Best-effort email sends. A Resend outage cannot fail a successful signup —
+    // the DB row is the source of truth. Failures are logged for follow-up.
+    const createdAt = new Date().toISOString();
+    const settled = await Promise.allSettled([
+      sendTribeOsWaitlistConfirmation({
+        name,
+        email,
+        whatTheyTeach,
+        sessionsPerWeek,
+        pricingPreference,
+        language,
+      }),
+      sendTribeOsWaitlistAdminNotification({
+        name,
+        email,
+        whatTheyTeach,
+        sessionsPerWeek,
+        pricingPreference,
+        comments,
+        language,
+        createdAt,
+      }),
+    ]);
+    settled.forEach((res, i) => {
+      if (res.status === 'rejected') {
+        logError(res.reason, {
+          route: '/api/tribe-os-waitlist',
+          action: i === 0 ? 'send_confirmation_email' : 'send_admin_notification',
+          email,
+        });
+      }
+    });
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error: unknown) {
