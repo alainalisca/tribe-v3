@@ -75,7 +75,7 @@ const confirmationCopy = {
     greeting: (name: string) => `Hi ${name},`,
     body: (teaches: string, sessions: string, pricingText: string) =>
       `Thanks for joining the Tribe.OS waitlist.\n\nYou signed up because you teach ${teaches} and run about ${sessions} sessions per week. Your pricing preference is ${pricingText}.\n\nWe are building Tribe.OS based on what instructors and group leaders are actually asking for. We will reach out as soon as we open early access. If you have ideas for what would help your business most, just reply to this email.\n\nIn the meantime, keep using the free Tribe app. Every session you post reaches participants you have not met yet.`,
-    sign: 'Alain\nA+ Fitness LLC',
+    sign: 'Alain\nA Plus Fitness LLC',
     appStoreLabel: 'App Store',
     googlePlayLabel: 'Google Play',
     instagramLabel: 'Instagram',
@@ -85,7 +85,7 @@ const confirmationCopy = {
     greeting: (name: string) => `Hola ${name},`,
     body: (teaches: string, sessions: string, pricingText: string) =>
       `Gracias por unirte a la lista de espera de Tribe.OS.\n\nTe inscribiste porque enseñas ${teaches} y realizas alrededor de ${sessions} sesiones por semana. Tu preferencia de precios es ${pricingText}.\n\nEstamos construyendo Tribe.OS con base en lo que los instructores y líderes de grupo realmente están pidiendo. Te contactaremos en cuanto abramos el acceso anticipado. Si tienes ideas sobre qué ayudaría más a tu negocio, simplemente responde a este correo.\n\nMientras tanto, sigue usando la aplicación Tribe gratuita. Cada sesión que publicas llega a participantes que aún no conoces.`,
-    sign: 'Alain\nA+ Fitness LLC',
+    sign: 'Alain\nA Plus Fitness LLC',
     appStoreLabel: 'App Store',
     googlePlayLabel: 'Google Play',
     instagramLabel: 'Instagram',
@@ -112,6 +112,7 @@ function renderConfirmationHtml(params: ConfirmationParams): string {
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 24px;">
       <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
         <div style="background: #272D34; padding: 28px 28px 22px;">
+          <div style="font-size: 26px; font-weight: 900; color: white; line-height: 1; letter-spacing: -0.02em; margin: 0 0 22px;">Tribe<span style="color: #9EE551;">.</span></div>
           <p style="margin: 0; color: #9EE551; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;">Tribe.OS</p>
           <h1 style="margin: 8px 0 0; color: white; font-size: 22px; font-weight: 800; line-height: 1.25;">${c.subject}</h1>
         </div>
