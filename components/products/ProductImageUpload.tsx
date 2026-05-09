@@ -60,7 +60,7 @@ export default function ProductImageUpload({ images, onImagesChange, userId, lan
       <div className="flex gap-2 flex-wrap">
         {images.map((url, idx) => (
           <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-200 dark:bg-tribe-surface">
-            <Image src={url} alt="" fill className="object-cover" unoptimized />
+            <Image src={url} alt={`Product image ${idx + 1}`} fill className="object-cover" unoptimized />
             <button
               type="button"
               onClick={() => handleRemove(idx)}

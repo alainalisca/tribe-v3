@@ -76,7 +76,7 @@ export default function FeedPostPreview() {
         </div>
 
         {post.media_url && post.media_type?.startsWith('image') && (
-          <img src={post.media_url} alt="" className="w-full h-48 object-cover" loading="lazy" />
+          <img src={post.media_url} alt="Post image" className="w-full h-48 object-cover" loading="lazy" />
         )}
 
         <div className="px-4 py-2.5">

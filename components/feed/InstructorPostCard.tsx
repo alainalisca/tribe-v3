@@ -198,7 +198,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={post.media_urls[0]} alt="" className="w-full h-full object-cover" />
+            <img src={post.media_urls[0]} alt="Post image" className="w-full h-full object-cover" />
           )}
           {post.post_type === 'video' && !post.media_urls[0].endsWith('.mp4') && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
