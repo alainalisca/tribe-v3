@@ -8,6 +8,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyStripeWebhookSignature, mapStripeStatus, getStripePaymentIntent } from '@/lib/payments/stripe';
 import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
+import { syncFromStripeSubscription, clearTribeOSSubscription } from '@/lib/dal/tribeOSSubscription';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -168,6 +169,77 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         return NextResponse.json({ success: true, ready });
+      }
+
+      // ----------------------------------------------------------------
+      // Tribe.OS subscription billing (Mission 2)
+      // ----------------------------------------------------------------
+      // Distinct from the Connect events above: these are events about
+      // the platform charging instructors directly for the Tribe.OS
+      // premium tier. Both flows arrive at this same endpoint; routing
+      // is by event.type. Idempotency is already guaranteed by the
+      // event-id dedup at the top of this handler.
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as unknown as {
+          id: string;
+          customer: string;
+          status: string;
+          items: { data: Array<{ price: { id: string } }> };
+        };
+
+        const result = await syncFromStripeSubscription(supabase, {
+          id: subscription.id,
+          customer: subscription.customer,
+          status: subscription.status,
+          items: { data: subscription.items.data.map((i) => ({ price: { id: i.price.id } })) },
+        });
+
+        if (!result.success) {
+          // user_not_found_for_stripe_customer means the subscription is
+          // for a customer we never tagged with a tribe user. Treat as
+          // benign (not our subscription) — return 200 so Stripe doesn't
+          // retry forever. All other errors get a 500 so Stripe retries.
+          if (result.error === 'user_not_found_for_stripe_customer') {
+            return NextResponse.json({ success: true, ignored: true });
+          }
+          logError(new Error(`tribe_os_subscription_sync_failed: ${result.error ?? 'unknown'}`), {
+            action: 'stripe_webhook_subscription_sync',
+            subscriptionId: subscription.id,
+            eventType: event.type,
+          });
+          return NextResponse.json({ error: 'subscription_sync_failed' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, userId: result.data?.userId });
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as unknown as { id: string; customer: string };
+        const result = await clearTribeOSSubscription(supabase, subscription.customer);
+
+        if (!result.success) {
+          if (result.error === 'user_not_found_for_stripe_customer') {
+            return NextResponse.json({ success: true, ignored: true });
+          }
+          logError(new Error(`tribe_os_subscription_clear_failed: ${result.error ?? 'unknown'}`), {
+            action: 'stripe_webhook_subscription_clear',
+            customerId: subscription.customer,
+            subscriptionId: subscription.id,
+          });
+          return NextResponse.json({ error: 'subscription_clear_failed' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, userId: result.data?.userId });
+      }
+
+      case 'invoice.paid':
+      case 'invoice.payment_failed': {
+        // Stripe fires customer.subscription.updated alongside these
+        // with the resulting subscription state, and that handler is
+        // the canonical state-sync path. We acknowledge invoice events
+        // with 200 so Stripe stops retrying. Future: hook user-facing
+        // emails (receipt on paid, dunning on failed) here.
+        return NextResponse.json({ success: true });
       }
 
       default:

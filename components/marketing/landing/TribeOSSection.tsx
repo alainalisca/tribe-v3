@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { showError } from '@/lib/toast';
+import { createClient } from '@/lib/supabase/client';
 
 type PricingPreference = 'monthly_30' | 'revenue_share_15';
 
@@ -24,6 +26,19 @@ const INITIAL_FORM: FormState = {
   pricingPreference: '',
   comments: '',
 };
+
+interface PremiumRow {
+  tribe_os_tier: 'solo' | 'team_studio' | null;
+  tribe_os_status: 'active' | 'past_due' | 'canceled' | 'trialing' | null;
+}
+
+function isPremiumActive(row: PremiumRow | null): boolean {
+  if (!row || !row.tribe_os_tier) return false;
+  const status = row.tribe_os_status;
+  return status === null || status === 'active' || status === 'trialing';
+}
+
+type AuthState = 'loading' | 'anon' | 'not_premium' | 'premium';
 
 // English copy is the canonical source. Spanish strings below are starter-pack
 // drafts pending Verónica's review; once she returns edits, replace the `es`
@@ -48,6 +63,7 @@ const t = {
         body: 'Every session you post reaches participants you have not met yet, in your sport, at your level, near you.',
       },
     ],
+    // Waitlist (anon visitors)
     cardTitle: 'Join the Tribe.OS waitlist',
     cardSub:
       'Tell us about your work and the pricing model that would work for you. We will reach out as we open early access.',
@@ -69,6 +85,26 @@ const t = {
       'We will reach out as Tribe.OS opens for early access. In the meantime, keep using the free Tribe app. Every session you post reaches participants you have not met yet.',
     pricingMissing: 'Pick the pricing model that works for you.',
     networkError: 'Something went wrong on our side. Please try again.',
+    // Upgrade (signed-in, not premium)
+    upgradeTitle: 'Upgrade to Tribe.OS premium',
+    upgradePrice: '$30 / month',
+    upgradePriceHint: 'Cancel anytime.',
+    upgradeBenefits: [
+      'Charge for sessions with zero per-transaction platform fee.',
+      'Manage clients, attendance, and payments in one place.',
+      'Track revenue and grow your practice on the same app your community already uses.',
+    ],
+    subscribeButton: 'Subscribe',
+    subscribingLabel: 'Redirecting to Stripe',
+    subscribeError: 'Could not start checkout. Please try again.',
+    // Active (signed-in, premium)
+    activeTitle: 'You are on Tribe.OS premium',
+    activeSub:
+      'Open your dashboard to manage clients, attendance, and payments. You can cancel or update billing anytime.',
+    openDashboard: 'Open dashboard',
+    managePortal: 'Manage subscription',
+    portalLoading: 'Opening Stripe',
+    portalError: 'Could not open Stripe portal. Please try again.',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -111,6 +147,24 @@ const t = {
       'Te contactaremos cuando Tribe.OS abra el acceso anticipado. Mientras tanto, sigue usando la aplicación Tribe gratuita. Cada sesión que publicas llega a participantes que aún no conoces.',
     pricingMissing: 'Elige el modelo de precios que funciona para ti.',
     networkError: 'Algo salió mal de nuestro lado. Por favor intenta de nuevo.',
+    upgradeTitle: 'Activa Tribe.OS premium',
+    upgradePrice: '$30 / mes',
+    upgradePriceHint: 'Cancela cuando quieras.',
+    upgradeBenefits: [
+      'Cobra por tus sesiones sin comisión por transacción.',
+      'Gestiona clientes, asistencias y pagos en un solo lugar.',
+      'Sigue tus ingresos y haz crecer tu práctica en la misma app que tu comunidad ya usa.',
+    ],
+    subscribeButton: 'Suscribirme',
+    subscribingLabel: 'Redirigiendo a Stripe',
+    subscribeError: 'No se pudo iniciar el pago. Por favor intenta de nuevo.',
+    activeTitle: 'Tienes Tribe.OS premium',
+    activeSub:
+      'Abre tu panel para gestionar clientes, asistencias y pagos. Puedes cancelar o actualizar tu facturación cuando quieras.',
+    openDashboard: 'Abrir panel',
+    managePortal: 'Gestionar suscripción',
+    portalLoading: 'Abriendo Stripe',
+    portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
   },
 } as const;
 
@@ -119,57 +173,27 @@ export default function TribeOSSection() {
   const s = t[language];
   const { ref, visible } = useScrollReveal(0.1);
 
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [authState, setAuthState] = useState<AuthState>('loading');
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (submitting) return;
-
-    if (form.pricingPreference === '') {
-      setErrorMsg(s.pricingMissing);
-      showError(s.pricingMissing);
-      return;
-    }
-
-    setSubmitting(true);
-    setErrorMsg('');
-
-    try {
-      // Trailing slash is required (next.config has trailingSlash: true).
-      // Without it the request hits a 308 → which browsers follow but it adds
-      // an extra round trip and historically caused issues with POST bodies.
-      const res = await fetch('/api/tribe-os-waitlist/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          whatTheyTeach: form.whatTheyTeach,
-          sessionsPerWeek: form.sessionsPerWeek === '' ? null : Number(form.sessionsPerWeek),
-          pricingPreference: form.pricingPreference,
-          comments: form.comments.trim() === '' ? null : form.comments.trim(),
-          language,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-
-      if (!res.ok) {
-        const msg = data.error || s.networkError;
-        setErrorMsg(msg);
-        showError(msg);
-        setSubmitting(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        if (!cancelled) setAuthState('anon');
         return;
       }
-      setSuccess(true);
-    } catch {
-      setErrorMsg(s.networkError);
-      showError(s.networkError);
-      setSubmitting(false);
-    }
-  }
+      const { data } = await supabase.from('users').select('tribe_os_tier, tribe_os_status').eq('id', user.id).single();
+      if (cancelled) return;
+      setAuthState(isPremiumActive((data as PremiumRow | null) ?? null) ? 'premium' : 'not_premium');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="tribe-os" className="relative py-24 px-4 overflow-hidden bg-tribe-dark">
@@ -209,139 +233,330 @@ export default function TribeOSSection() {
             </ul>
           </div>
 
-          {/* Right column — waitlist card */}
+          {/* Right column — content varies by auth state */}
           <div className="bg-white rounded-2xl p-7 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-            {!success ? (
-              <>
-                <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-2">{s.cardTitle}</h3>
-                <p className="text-sm text-gray-600 mb-6 leading-relaxed">{s.cardSub}</p>
-
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
-                    {s.nameLabel}
-                    <input
-                      type="text"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      required
-                      disabled={submitting}
-                      maxLength={255}
-                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                    />
-                  </label>
-
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
-                    {s.emailLabel}
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      required
-                      disabled={submitting}
-                      maxLength={255}
-                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                    />
-                  </label>
-
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
-                    {s.teachLabel}
-                    <input
-                      type="text"
-                      placeholder={s.teachPh}
-                      value={form.whatTheyTeach}
-                      onChange={(e) => setForm({ ...form, whatTheyTeach: e.target.value })}
-                      required
-                      disabled={submitting}
-                      maxLength={255}
-                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                    />
-                  </label>
-
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
-                    {s.sessionsLabel}
-                    <input
-                      type="number"
-                      placeholder={s.sessionsPh}
-                      value={form.sessionsPerWeek}
-                      onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
-                      min={0}
-                      max={1000}
-                      disabled={submitting}
-                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
-                    />
-                  </label>
-
-                  <fieldset className="flex flex-col gap-2 mt-1" disabled={submitting}>
-                    <legend className="text-sm font-semibold text-tribe-dark mb-2">{s.pricingHeading}</legend>
-                    <label
-                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'monthly_30' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
-                    >
-                      <input
-                        type="radio"
-                        name="pricingPreference"
-                        value="monthly_30"
-                        checked={form.pricingPreference === 'monthly_30'}
-                        onChange={() => setForm({ ...form, pricingPreference: 'monthly_30' })}
-                        required
-                        className="mt-1 accent-tribe-green"
-                      />
-                      <span className="text-sm text-tribe-dark leading-snug">{s.pricingMonthly}</span>
-                    </label>
-                    <label
-                      className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'revenue_share_15' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
-                    >
-                      <input
-                        type="radio"
-                        name="pricingPreference"
-                        value="revenue_share_15"
-                        checked={form.pricingPreference === 'revenue_share_15'}
-                        onChange={() => setForm({ ...form, pricingPreference: 'revenue_share_15' })}
-                        className="mt-1 accent-tribe-green"
-                      />
-                      <span className="text-sm text-tribe-dark leading-snug">{s.pricingRevShare}</span>
-                    </label>
-                  </fieldset>
-
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
-                    {s.commentsLabel}
-                    <textarea
-                      placeholder={s.commentsPh}
-                      value={form.comments}
-                      onChange={(e) => setForm({ ...form, comments: e.target.value })}
-                      disabled={submitting}
-                      maxLength={2000}
-                      rows={3}
-                      className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60 resize-y"
-                    />
-                  </label>
-
-                  {errorMsg && (
-                    <p className="text-sm text-red-600" role="alert">
-                      {errorMsg}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="mt-2 w-full px-6 py-3.5 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    {submitting ? s.submitting : s.submit}
-                  </button>
-                </form>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-tribe-green flex items-center justify-center">
-                  <span className="text-tribe-dark text-2xl font-black">✓</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-3">{s.successTitle}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{s.successSub}</p>
-              </div>
-            )}
+            {authState === 'loading' ? <LoadingPlaceholder /> : null}
+            {authState === 'anon' ? <WaitlistCard copy={s} language={language} /> : null}
+            {authState === 'not_premium' ? <UpgradeCard copy={s} /> : null}
+            {authState === 'premium' ? <ActiveCard copy={s} /> : null}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function LoadingPlaceholder() {
+  return (
+    <div className="min-h-[400px] flex items-center justify-center">
+      <div className="w-6 h-6 rounded-full border-2 border-tribe-green border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
+function UpgradeCard({ copy: s }: { copy: typeof t.en | typeof t.es }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubscribe() {
+    if (submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/tribe-os/subscription/checkout/', { method: 'POST' });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; error?: string };
+      if (!res.ok || !body.success || !body.url) {
+        const message = body.error || s.subscribeError;
+        setError(message);
+        showError(message);
+        setSubmitting(false);
+        return;
+      }
+      window.location.href = body.url;
+      // Don't reset submitting — page is navigating away.
+    } catch {
+      setError(s.subscribeError);
+      showError(s.subscribeError);
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-2">{s.upgradeTitle}</h3>
+      <div className="flex items-baseline gap-2 mb-1">
+        <span className="text-3xl sm:text-4xl font-black text-tribe-dark">{s.upgradePrice}</span>
+      </div>
+      <p className="text-sm text-gray-600 mb-6">{s.upgradePriceHint}</p>
+
+      <ul className="space-y-3 mb-6">
+        {s.upgradeBenefits.map((b) => (
+          <li key={b} className="flex items-start gap-2.5 text-sm text-tribe-dark leading-relaxed">
+            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-tribe-green shrink-0" />
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+
+      {error ? (
+        <p className="text-sm text-red-600 mb-3" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={handleSubscribe}
+        disabled={submitting}
+        className="w-full px-6 py-3.5 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+      >
+        {submitting ? `${s.subscribingLabel}…` : s.subscribeButton}
+      </button>
+    </div>
+  );
+}
+
+function ActiveCard({ copy: s }: { copy: typeof t.en | typeof t.es }) {
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handlePortal() {
+    if (openingPortal) return;
+    setOpeningPortal(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/tribe-os/subscription/portal/', { method: 'POST' });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; error?: string };
+      if (!res.ok || !body.success || !body.url) {
+        const message = body.error || s.portalError;
+        setError(message);
+        showError(message);
+        setOpeningPortal(false);
+        return;
+      }
+      window.location.href = body.url;
+    } catch {
+      setError(s.portalError);
+      showError(s.portalError);
+      setOpeningPortal(false);
+    }
+  }
+
+  return (
+    <div className="text-center sm:text-left">
+      <div className="w-14 h-14 mb-4 rounded-full bg-tribe-green flex items-center justify-center mx-auto sm:mx-0">
+        <span className="text-tribe-dark text-2xl font-black">✓</span>
+      </div>
+      <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-3">{s.activeTitle}</h3>
+      <p className="text-sm text-gray-600 leading-relaxed mb-6">{s.activeSub}</p>
+
+      {error ? (
+        <p className="text-sm text-red-600 mb-3" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-2.5">
+        <Link
+          href="/os/dashboard"
+          className="w-full inline-flex items-center justify-center px-5 py-3 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:-translate-y-0.5 transition-all"
+        >
+          {s.openDashboard}
+        </Link>
+        <button
+          type="button"
+          onClick={handlePortal}
+          disabled={openingPortal}
+          className="w-full inline-flex items-center justify-center px-5 py-3 bg-gray-100 text-tribe-dark text-base font-bold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {openingPortal ? `${s.portalLoading}…` : s.managePortal}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WaitlistCard({ copy: s, language }: { copy: typeof t.en | typeof t.es; language: 'en' | 'es' }) {
+  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (submitting) return;
+
+    if (form.pricingPreference === '') {
+      setErrorMsg(s.pricingMissing);
+      showError(s.pricingMissing);
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMsg('');
+
+    try {
+      // Trailing slash is required (next.config has trailingSlash: true).
+      const res = await fetch('/api/tribe-os-waitlist/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          whatTheyTeach: form.whatTheyTeach,
+          sessionsPerWeek: form.sessionsPerWeek === '' ? null : Number(form.sessionsPerWeek),
+          pricingPreference: form.pricingPreference,
+          comments: form.comments.trim() === '' ? null : form.comments.trim(),
+          language,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        const msg = data.error || s.networkError;
+        setErrorMsg(msg);
+        showError(msg);
+        setSubmitting(false);
+        return;
+      }
+      setSuccess(true);
+    } catch {
+      setErrorMsg(s.networkError);
+      showError(s.networkError);
+      setSubmitting(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-16 h-16 mx-auto mb-5 rounded-full bg-tribe-green flex items-center justify-center">
+          <span className="text-tribe-dark text-2xl font-black">✓</span>
+        </div>
+        <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-3">{s.successTitle}</h3>
+        <p className="text-sm text-gray-600 leading-relaxed">{s.successSub}</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <h3 className="text-xl sm:text-2xl font-black text-tribe-dark mb-2">{s.cardTitle}</h3>
+      <p className="text-sm text-gray-600 mb-6 leading-relaxed">{s.cardSub}</p>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+          {s.nameLabel}
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+            disabled={submitting}
+            maxLength={255}
+            className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+          {s.emailLabel}
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
+            disabled={submitting}
+            maxLength={255}
+            className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+          {s.teachLabel}
+          <input
+            type="text"
+            placeholder={s.teachPh}
+            value={form.whatTheyTeach}
+            onChange={(e) => setForm({ ...form, whatTheyTeach: e.target.value })}
+            required
+            disabled={submitting}
+            maxLength={255}
+            className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+          {s.sessionsLabel}
+          <input
+            type="number"
+            placeholder={s.sessionsPh}
+            value={form.sessionsPerWeek}
+            onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
+            min={0}
+            max={1000}
+            disabled={submitting}
+            className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60"
+          />
+        </label>
+
+        <fieldset className="flex flex-col gap-2 mt-1" disabled={submitting}>
+          <legend className="text-sm font-semibold text-tribe-dark mb-2">{s.pricingHeading}</legend>
+          <label
+            className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'monthly_30' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
+          >
+            <input
+              type="radio"
+              name="pricingPreference"
+              value="monthly_30"
+              checked={form.pricingPreference === 'monthly_30'}
+              onChange={() => setForm({ ...form, pricingPreference: 'monthly_30' })}
+              required
+              className="mt-1 accent-tribe-green"
+            />
+            <span className="text-sm text-tribe-dark leading-snug">{s.pricingMonthly}</span>
+          </label>
+          <label
+            className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${form.pricingPreference === 'revenue_share_15' ? 'border-tribe-green bg-tribe-green/5' : 'border-gray-200 hover:border-gray-300'}`}
+          >
+            <input
+              type="radio"
+              name="pricingPreference"
+              value="revenue_share_15"
+              checked={form.pricingPreference === 'revenue_share_15'}
+              onChange={() => setForm({ ...form, pricingPreference: 'revenue_share_15' })}
+              className="mt-1 accent-tribe-green"
+            />
+            <span className="text-sm text-tribe-dark leading-snug">{s.pricingRevShare}</span>
+          </label>
+        </fieldset>
+
+        <label className="flex flex-col gap-1.5 text-sm font-semibold text-tribe-dark">
+          {s.commentsLabel}
+          <textarea
+            placeholder={s.commentsPh}
+            value={form.comments}
+            onChange={(e) => setForm({ ...form, comments: e.target.value })}
+            disabled={submitting}
+            maxLength={2000}
+            rows={3}
+            className="w-full px-4 py-3 text-base font-normal rounded-lg border-2 border-gray-200 focus:border-tribe-green focus:outline-none transition disabled:opacity-60 resize-y"
+          />
+        </label>
+
+        {errorMsg && (
+          <p className="text-sm text-red-600" role="alert">
+            {errorMsg}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="mt-2 w-full px-6 py-3.5 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {submitting ? s.submitting : s.submit}
+        </button>
+      </form>
+    </>
   );
 }
