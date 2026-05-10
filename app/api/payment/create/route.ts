@@ -24,6 +24,7 @@ import {
 } from '@/lib/payments/config';
 import { createWompiTransaction } from '@/lib/payments/wompi';
 import { createStripeCheckoutSession } from '@/lib/payments/stripe';
+import { isCreatorPremium } from '@/lib/dal/tribeOSSubscription';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -340,7 +341,28 @@ export async function POST(request: NextRequest) {
     }
 
     const amountCents = finalAmountCents;
-    const feePercent = session.platform_fee_percent || PLATFORM_FEE_PERCENT;
+
+    // Effective platform fee. Order of precedence:
+    //   1. Session-level override (legacy `session.platform_fee_percent`)
+    //   2. Tribe.OS premium creator → 0% (their $30/mo subscription replaces
+    //      the 15% per-transaction Connect fee per the build plan)
+    //   3. Default PLATFORM_FEE_PERCENT (15%)
+    //
+    // The premium check fails closed: any DB error or missing row falls
+    // back to the standard fee. Worst case is a premium user is briefly
+    // charged the fee on a session and we refund — better than silently
+    // losing platform revenue on a transient lookup failure.
+    const creatorPremiumResult = await isCreatorPremium(serviceSupabase, session.creator_id);
+    const creatorIsPremium = creatorPremiumResult.success && creatorPremiumResult.data === true;
+
+    let feePercent: number;
+    if (session.platform_fee_percent !== null && session.platform_fee_percent !== undefined) {
+      feePercent = session.platform_fee_percent;
+    } else if (creatorIsPremium) {
+      feePercent = 0;
+    } else {
+      feePercent = PLATFORM_FEE_PERCENT;
+    }
 
     // Tribe+ members pay no platform fee. Fetch subscription state for the buyer
     // and let calculateFeesForUser apply the waiver. If the lookup fails, fall

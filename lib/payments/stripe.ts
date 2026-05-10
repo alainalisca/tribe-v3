@@ -388,3 +388,140 @@ export async function getStripePaymentIntent(paymentIntentId: string): Promise<S
     return null;
   }
 }
+
+// ------------------------------------------------------------------
+// Tribe.OS subscription billing
+// ------------------------------------------------------------------
+//
+// Distinct from Stripe Connect (above): Connect handles the platform
+// charging participants on behalf of instructors. This section handles
+// the platform charging instructors directly for the Tribe.OS premium
+// tier (currently $30/mo USD via the price referenced by env var
+// STRIPE_TRIBE_OS_PRICE_ID).
+//
+// The two flows coexist on the same Stripe account; events for both
+// arrive at the same webhook endpoint. Subscription events are routed
+// by event.type to the Tribe.OS subscription handlers; payment_intent
+// events stay on the Connect path.
+
+interface CreateTribeOSCustomerParams {
+  email: string;
+  /** Tribe user id; written to customer metadata for traceability. */
+  userId: string;
+  name?: string | null;
+}
+
+/**
+ * Create a Stripe customer for the Tribe.OS subscription flow. Caller
+ * is responsible for persisting the returned customer id on the user
+ * row (`tribe_os_stripe_customer_id`) — this function intentionally
+ * doesn't touch the database so the Stripe lib stays a pure SDK
+ * wrapper.
+ */
+export async function createTribeOSStripeCustomer(
+  params: CreateTribeOSCustomerParams
+): Promise<{ success: true; customerId: string } | { success: false; error: string }> {
+  try {
+    const stripe = getStripeInstance();
+    const customer = await stripe.customers.create({
+      email: params.email,
+      name: params.name ?? undefined,
+      metadata: {
+        tribe_user_id: params.userId,
+        tribe_purpose: 'tribe_os_subscription',
+      },
+    });
+    return { success: true, customerId: customer.id };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown Stripe customer error';
+    logError(error, { action: 'createTribeOSStripeCustomer', userId: params.userId });
+    return { success: false, error: message };
+  }
+}
+
+interface CreateTribeOSCheckoutSessionParams {
+  customerId: string;
+  /** Where Stripe redirects on successful checkout (use absolute URL). */
+  successUrl: string;
+  /** Where Stripe redirects if the user cancels (use absolute URL). */
+  cancelUrl: string;
+  /** Tribe user id, written to subscription metadata for traceability. */
+  userId: string;
+}
+
+/**
+ * Create a Stripe Checkout Session in `subscription` mode for the
+ * Tribe.OS premium tier. The price comes from STRIPE_TRIBE_OS_PRICE_ID
+ * (must be a recurring price, monthly USD per current product).
+ *
+ * Returns the URL the client should redirect to. The actual subscription
+ * is not active until the user completes payment and Stripe fires
+ * `customer.subscription.created` (which the webhook handler picks up
+ * and syncs into our `tribe_os_*` columns).
+ */
+export async function createTribeOSCheckoutSession(
+  params: CreateTribeOSCheckoutSessionParams
+): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  const priceId = process.env.STRIPE_TRIBE_OS_PRICE_ID;
+  if (!priceId) {
+    return { success: false, error: 'STRIPE_TRIBE_OS_PRICE_ID is not configured' };
+  }
+  try {
+    const stripe = getStripeInstance();
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: params.customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      // Write the tribe user id onto the subscription so we can
+      // sanity-check it in the webhook handler if needed.
+      subscription_data: {
+        metadata: {
+          tribe_user_id: params.userId,
+          tribe_purpose: 'tribe_os_subscription',
+        },
+      },
+      // Allow customer to apply promo codes from Stripe Dashboard.
+      allow_promotion_codes: true,
+    });
+    if (!session.url) {
+      return { success: false, error: 'Stripe did not return a checkout URL' };
+    }
+    return { success: true, url: session.url };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown Stripe checkout error';
+    logError(error, { action: 'createTribeOSCheckoutSession', userId: params.userId });
+    return { success: false, error: message };
+  }
+}
+
+interface CreateCustomerPortalSessionParams {
+  customerId: string;
+  returnUrl: string;
+}
+
+/**
+ * Create a Stripe Customer Portal session so the user can manage their
+ * subscription (cancel, update payment method, view invoices) without
+ * leaving the app. Returns the portal URL for client redirect.
+ */
+export async function createTribeOSCustomerPortalSession(
+  params: CreateCustomerPortalSessionParams
+): Promise<{ success: true; url: string } | { success: false; error: string }> {
+  try {
+    const stripe = getStripeInstance();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: params.customerId,
+      return_url: params.returnUrl,
+    });
+    if (!session.url) {
+      return { success: false, error: 'Stripe did not return a portal URL' };
+    }
+    return { success: true, url: session.url };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown Stripe portal error';
+    logError(error, { action: 'createTribeOSCustomerPortalSession', customerId: params.customerId });
+    return { success: false, error: message };
+  }
+}

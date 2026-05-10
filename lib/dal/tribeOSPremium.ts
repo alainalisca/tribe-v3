@@ -29,15 +29,19 @@ const PREMIUM_SELECT =
   'tribe_os_tier, tribe_os_status, tribe_os_granted_at, tribe_os_granted_by, tribe_os_stripe_customer_id, tribe_os_stripe_subscription_id';
 
 /**
- * Pure helper: a user is "premium-active" when they're on a tier and
- * either have no Stripe billing status (manually granted) or the billing
- * status is `active`. Past-due / canceled / trialing all evaluate to NOT
- * active so a downgrade flips the gate immediately.
+ * Pure helper: a user is "premium-active" when they're on a tier AND
+ * one of:
+ *   - status is NULL (manually granted; no Stripe billing yet)
+ *   - status is 'active' (Stripe-billed, current invoice paid)
+ *   - status is 'trialing' (Stripe-billed, in their trial window — they
+ *     get full access until the trial converts or expires)
+ * 'past_due' and 'canceled' BOTH evaluate to not-active so the gate
+ * flips immediately on a failed invoice or explicit cancellation.
  */
 export function isTribeOSPremiumActive(user: Partial<TribeOSPremiumFields> | null | undefined): boolean {
   if (!user || !user.tribe_os_tier) return false;
   const status = user.tribe_os_status ?? null;
-  return status === null || status === 'active';
+  return status === null || status === 'active' || status === 'trialing';
 }
 
 /**
