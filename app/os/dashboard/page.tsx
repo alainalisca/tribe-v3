@@ -1,14 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+/**
+ * /os/dashboard
+ *
+ * Three states based on the viewer's auth + Tribe.OS premium status:
+ *
+ *   - anon: never reaches here (middleware redirects to /auth?returnTo=)
+ *   - not_premium: render the upgrade card. Subscribing redirects to
+ *     Stripe Checkout. After payment the success_url brings them back
+ *     here as premium and they see the dashboard.
+ *   - premium: render the dashboard (manage clients + manage subscription
+ *     + back to Tribe).
+ *
+ * This page deliberately does NOT use useTribeOSPremiumGate (which
+ * redirects non-premium users away). The dashboard URL is the natural
+ * landing surface for "I want Tribe.OS premium" intent — so we serve
+ * the upgrade flow inline here rather than bouncing the user back to
+ * the marketing landing (which they may not even see, since signed-in
+ * users hit the feed home not the marketing page).
+ */
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CreditCard, Users } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { showError } from '@/lib/toast';
+import { createClient } from '@/lib/supabase/client';
+import UpgradeCard from '@/components/tribe-os/UpgradeCard';
+
+interface PremiumRow {
+  tribe_os_tier: 'solo' | 'team_studio' | null;
+  tribe_os_status: 'active' | 'past_due' | 'canceled' | 'trialing' | null;
+}
+
+function isPremiumActive(row: PremiumRow | null): boolean {
+  if (!row || !row.tribe_os_tier) return false;
+  const status = row.tribe_os_status;
+  return status === null || status === 'active' || status === 'trialing';
+}
+
+type PageState = 'checking' | 'redirecting' | 'not_premium' | 'premium';
 
 const copy = {
   en: {
+    // Premium dashboard
     welcome: 'Welcome to Tribe.OS',
     placeholder:
       'You are one of our first design partners. The full Tribe.OS dashboard with paid sessions and revenue analytics is being built right now based on what you and a small group of other instructors are telling us. Client management is live below.',
@@ -18,6 +54,22 @@ const copy = {
     portalError: 'Could not open Stripe portal. Please try again.',
     backLabel: 'Back to Tribe',
     redirectingLabel: 'Redirecting',
+    loadingLabel: 'Loading',
+    // Upgrade flow (signed-in, not premium)
+    upgradeEyebrow: 'Tribe.OS',
+    upgradeIntro:
+      "You're not on Tribe.OS premium yet. Activate it to unlock client management, attendance tracking, and zero per-session platform fees.",
+    upgradeTitle: 'Upgrade to Tribe.OS premium',
+    upgradePrice: '$30 / month',
+    upgradePriceHint: 'Cancel anytime.',
+    upgradeBenefits: [
+      'Charge for sessions with zero per-transaction platform fee.',
+      'Manage clients, attendance, and payments in one place.',
+      'Track revenue and grow your practice on the same app your community already uses.',
+    ],
+    subscribeButton: 'Subscribe',
+    subscribingLabel: 'Redirecting to Stripe',
+    subscribeError: 'Could not start checkout. Please try again.',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -30,14 +82,65 @@ const copy = {
     portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
     backLabel: 'Volver a Tribe',
     redirectingLabel: 'Redirigiendo',
+    loadingLabel: 'Cargando',
+    upgradeEyebrow: 'Tribe.OS',
+    upgradeIntro:
+      'Aún no tienes Tribe.OS premium. Actívalo para acceder a gestión de clientes, seguimiento de asistencia y cero comisiones por sesión.',
+    upgradeTitle: 'Activa Tribe.OS premium',
+    upgradePrice: '$30 / mes',
+    upgradePriceHint: 'Cancela cuando quieras.',
+    upgradeBenefits: [
+      'Cobra por tus sesiones sin comisión por transacción.',
+      'Gestiona clientes, asistencias y pagos en un solo lugar.',
+      'Sigue tus ingresos y haz crecer tu práctica en la misma app que tu comunidad ya usa.',
+    ],
+    subscribeButton: 'Suscribirme',
+    subscribingLabel: 'Redirigiendo a Stripe',
+    subscribeError: 'No se pudo iniciar el pago. Por favor intenta de nuevo.',
   },
 } as const;
 
 export default function TribeOSDashboardPage() {
   const { language } = useLanguage();
   const s = copy[language];
-  const { state } = useTribeOSPremiumGate();
+  const router = useRouter();
+
+  const [pageState, setPageState] = useState<PageState>('checking');
   const [openingPortal, setOpeningPortal] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        if (!cancelled) {
+          setPageState('redirecting');
+          router.replace('/auth?returnTo=/os/dashboard/');
+        }
+        return;
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('tribe_os_tier, tribe_os_status')
+        .eq('id', user.id)
+        .single();
+      if (cancelled) return;
+      if (error) {
+        // Treat lookup failures as not-premium (fail closed) so the
+        // user sees the upgrade flow rather than getting redirected
+        // away from the page they intended to reach.
+        setPageState('not_premium');
+        return;
+      }
+      setPageState(isPremiumActive(data as PremiumRow | null) ? 'premium' : 'not_premium');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function handlePortal() {
     if (openingPortal) return;
@@ -58,16 +161,34 @@ export default function TribeOSDashboardPage() {
     }
   }
 
-  if (state !== 'allowed') {
+  if (pageState === 'checking' || pageState === 'redirecting') {
     return (
       <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
-          {state === 'redirecting' ? s.redirectingLabel : ''}
+          {pageState === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
         </p>
       </main>
     );
   }
 
+  if (pageState === 'not_premium') {
+    return (
+      <main className="min-h-screen bg-tribe-dark px-4 py-16 sm:py-24">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.upgradeEyebrow}</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-4">
+            {s.upgradeTitle}
+          </h1>
+          <p className="text-base sm:text-lg text-white/80 leading-relaxed mb-10">{s.upgradeIntro}</p>
+          <div className="bg-white rounded-2xl p-7 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+            <UpgradeCard copy={s} />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // pageState === 'premium'
   return (
     <main className="min-h-screen bg-tribe-dark px-4 py-16 sm:py-24">
       <div className="max-w-2xl mx-auto">
