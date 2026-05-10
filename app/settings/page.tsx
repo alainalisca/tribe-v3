@@ -335,6 +335,19 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Privacy Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.privacySection}</h2>
+          <Link href="/settings/blocked">
+            <Button
+              variant="ghost"
+              className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
+            >
+              {txt.blockedUsers}
+            </Button>
+          </Link>
+        </div>
+
         {/* Account Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>

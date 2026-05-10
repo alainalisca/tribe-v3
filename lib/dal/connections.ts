@@ -51,24 +51,20 @@ export async function sendConnectionRequest(
   recipientId: string
 ): Promise<DalResult<string>> {
   try {
-    // 1. Check if either user has blocked the other
-    // TODO: Create blocked_users table if it doesn't exist:
-    //   CREATE TABLE IF NOT EXISTS blocked_users (
-    //     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    //     user_id uuid NOT NULL REFERENCES users(id),
-    //     blocked_user_id uuid NOT NULL REFERENCES users(id),
-    //     created_at timestamptz DEFAULT now(),
-    //     UNIQUE(user_id, blocked_user_id)
-    //   );
-    const { data: blockExists } = await supabase
-      .from('blocked_users')
-      .select('id')
-      .or(
-        `and(user_id.eq.${requesterId},blocked_user_id.eq.${recipientId}),and(user_id.eq.${recipientId},blocked_user_id.eq.${requesterId})`
-      )
-      .maybeSingle();
-
-    if (blockExists) {
+    // 1. Check if either user has blocked the other. Routes through the
+    // is_user_blocked() RPC (migration 061) which is SECURITY DEFINER —
+    // RLS on blocked_users limits SELECT to the blocker only, so a
+    // direct query as the requester wouldn't see "recipient blocked
+    // requester" rows.
+    const { data: isBlocked, error: blockErr } = await supabase.rpc('is_user_blocked', {
+      p_user_a: requesterId,
+      p_user_b: recipientId,
+    });
+    if (blockErr) {
+      logError(blockErr, { action: 'sendConnectionRequest.isBlocked', requesterId, recipientId });
+      return { success: false, error: 'Failed to verify connection eligibility' };
+    }
+    if (isBlocked) {
       return { success: false, error: 'Cannot connect with this user' };
     }
 
