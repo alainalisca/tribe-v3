@@ -78,9 +78,9 @@ landed at `tribe@aplusfitnessllc.com`.
   `revokeTribeOSPremium`, `getTribeOSPremiumStatus`,
   `listTribeOSPremiumUsers`, pure `isTribeOSPremiumActive` helper.
 - `app/api/admin/tribe-os/grant-premium/route.ts` — admin-only POST
-  endpoint, uses existing `isAdmin()` from `lib/admin.ts` (NOT a bcrypt
-  - env password as the trip plan suggested; the codebase has a real
-    admin auth model based on `ADMIN_EMAILS` allowlist).
+  endpoint, uses existing `isAdmin()` from `lib/admin.ts` (NOT the
+  bcrypt-with-env-password pattern the trip plan suggested; the
+  codebase has a real admin auth model based on `ADMIN_EMAILS` allowlist).
 - `scripts/grant-tribe-os-premium.js` — Node CLI for terminal use.
   Reads `.env.local`, supports `--email/--tier`, `--email/--revoke`,
   `--list`. Audit trail records `granted_by = "cli:<user>@<host>"` so
