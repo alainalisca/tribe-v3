@@ -36,10 +36,19 @@ When validation greenlights one of these features:
 
 ## Files in this folder
 
-- `clients_and_attendance.draft.sql` — Instructor's private client roster
-  - per-session attendance/payment tracking.
 - `session_packages.draft.sql` — Pre-paid session packs ("10 sessions for
   $200, valid 90 days").
 - `instructor_revenue_summary.draft.sql` — SQL function returning
   aggregated revenue metrics for an instructor over a period. Source for
   the future revenue-dashboard UI.
+
+## Promotion log
+
+- **2026-05-10** — `clients_and_attendance.draft.sql` promoted to
+  `supabase/migrations/062_clients_and_attendance.sql`. Several columns
+  added during promotion to match the Mission 2 DAL spec: `tags text[]`
+  on clients, `amount_paid_cents` + `currency` + `payment_method` on
+  client_attendance, `archived_at` on clients, `updated_at` triggers on
+  both tables. Integrity CHECK constraints added (archive consistency,
+  payment-fields consistency, paid-implies-amount). See migration body
+  for design rationale on each.
