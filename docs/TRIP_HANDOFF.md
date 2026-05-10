@@ -68,11 +68,11 @@ landed at `tribe@aplusfitnessllc.com`.
 ### Mission 6 — Tribe.OS premium tier infrastructure (`c98fa64`)
 
 - `supabase/migrations/060_tribe_os_premium.sql` — adds
-  `tribe_os_tier` ('solo' | 'team*studio'), `tribe_os_status`,
+  `tribe_os_tier` (`'solo'` | `'team_studio'`), `tribe_os_status`,
   `tribe_os_granted_at`, `tribe_os_granted_by`,
   `tribe_os_stripe_customer_id`, `tribe_os_stripe_subscription_id`.
-  Namespaced under `tribe_os*\*`to avoid colliding with the existing
-athlete-side Tribe+`subscription_tier` (free/plus/pro from migration
+  Namespaced under `tribe_os_*` to avoid colliding with the existing
+  athlete-side Tribe+ `subscription_tier` (free/plus/pro from migration
   035).
 - `lib/dal/tribeOSPremium.ts` — `grantTribeOSPremium`,
   `revokeTribeOSPremium`, `getTribeOSPremiumStatus`,
@@ -123,9 +123,9 @@ signal.** Don't apply blind.
 a11y alt attributes — 8 components touched:
 
 - 5 informational images get descriptive alt text:
-  `CommunityBulletinTab` ("Bulletin image preview"), `FeedPostPreview`
-  - `InstructorPostCard` ("Post image"), `ProductImageUpload` (indexed
-    "Product image N"), `PostComposer` ("Image preview").
+  `CommunityBulletinTab` ("Bulletin image preview"); `FeedPostPreview`
+  and `InstructorPostCard` ("Post image"); `ProductImageUpload`
+  (indexed "Product image N"); `PostComposer` ("Image preview").
 - 3 decorative images keep `alt=""` but get explicit `aria-hidden="true"`
   so screen readers skip them: `SpotlightBanner` banner background,
   `FinalCTASection` bg photo, `VideoIntro` poster image.
