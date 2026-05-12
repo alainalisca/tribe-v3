@@ -28,17 +28,9 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
+import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
-interface PremiumRow {
-  tribe_os_tier: 'solo' | 'team_studio' | null;
-  tribe_os_status: 'active' | 'past_due' | 'canceled' | 'trialing' | null;
-}
-
-function isPremiumActive(row: PremiumRow | null): boolean {
-  if (!row || !row.tribe_os_tier) return false;
-  const status = row.tribe_os_status;
-  return status === null || status === 'active' || status === 'trialing';
-}
+type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
 
 type PageState = 'checking' | 'redirecting' | 'not_premium' | 'premium';
 
@@ -137,7 +129,7 @@ export default function TribeOSDashboardPage() {
         setPageState('not_premium');
         return;
       }
-      setPageState(isPremiumActive(data as PremiumRow | null) ? 'premium' : 'not_premium');
+      setPageState(isTribeOSPremiumActive(data as PremiumRow | null) ? 'premium' : 'not_premium');
     })();
     return () => {
       cancelled = true;

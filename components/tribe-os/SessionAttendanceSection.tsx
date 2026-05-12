@@ -28,6 +28,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { showError, showSuccess } from '@/lib/toast';
 import { formatCents } from '@/lib/format/currency';
 import type { ClientRow, AttendanceRow, Currency, PaymentMethod } from '@/lib/dal/clients';
+import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
 interface ParticipantRow {
   user_id: string;
@@ -39,16 +40,7 @@ interface ParticipantRow {
   } | null;
 }
 
-interface PremiumRow {
-  tribe_os_tier: 'solo' | 'team_studio' | null;
-  tribe_os_status: 'active' | 'past_due' | 'canceled' | 'trialing' | null;
-}
-
-function isPremiumActive(row: PremiumRow | null): boolean {
-  if (!row || !row.tribe_os_tier) return false;
-  const status = row.tribe_os_status;
-  return status === null || status === 'active';
-}
+type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
 
 interface Props {
   sessionId: string;
@@ -148,7 +140,7 @@ export default function SessionAttendanceSection({ sessionId, isCreator }: Props
           .eq('id', user.id)
           .single();
         if (cancelled) return;
-        if (premiumErr || !isPremiumActive(premiumRow as PremiumRow)) {
+        if (premiumErr || !isTribeOSPremiumActive(premiumRow as PremiumRow)) {
           setState({ kind: 'hidden' });
           return;
         }

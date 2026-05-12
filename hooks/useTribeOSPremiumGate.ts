@@ -17,19 +17,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
 export type PremiumGateState = 'checking' | 'allowed' | 'redirecting';
 
-interface PremiumRow {
-  tribe_os_tier: 'solo' | 'team_studio' | null;
-  tribe_os_status: 'active' | 'past_due' | 'canceled' | 'trialing' | null;
-}
-
-function isPremiumActive(row: PremiumRow | null): boolean {
-  if (!row || !row.tribe_os_tier) return false;
-  const status = row.tribe_os_status;
-  return status === null || status === 'active';
-}
+type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
 
 export interface PremiumGateResult {
   state: PremiumGateState;
@@ -62,7 +54,7 @@ export function useTribeOSPremiumGate(): PremiumGateResult {
         .eq('id', user.id)
         .single();
       if (cancelled) return;
-      if (error || !isPremiumActive(data as PremiumRow | null)) {
+      if (error || !isTribeOSPremiumActive(data as PremiumRow | null)) {
         setState('redirecting');
         router.replace('/#tribe-os');
         return;
