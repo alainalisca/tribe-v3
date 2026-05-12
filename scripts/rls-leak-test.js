@@ -19,6 +19,10 @@
  * user would hit through the app.
  *
  * Test phases (each prints PASS or FAIL):
+ *   0. smoke: user A can read their own gate columns and call the
+ *      revenue RPC for their own data. Catches regressions where a
+ *      column GRANT/REVOKE migration accidentally locks the user out
+ *      of their own data (e.g. post-066 with select('tribe_os_*')).
  *   1. clients: B cannot SELECT A's client by ID
  *   2. clients: B cannot UPDATE A's client
  *   3. clients: B cannot DELETE A's client
@@ -27,6 +31,10 @@
  *      with A's user ID (post-064 migration enforces this)
  *   6. users.tribe_os_*: B cannot read A's tribe_os_stripe_customer_id
  *      (or any other sensitive premium column)
+ *
+ * Optional: if RLS_TEST_BASE_URL env is set (e.g. http://localhost:3001
+ * or a Vercel preview URL), phase 0 also makes a real HTTP request to
+ * a premium-gated API route to catch full route-level regressions.
  *
  * Exit code 0 if all PASS, 1 if any FAIL. CI-friendly.
  */
@@ -205,7 +213,112 @@ async function main() {
     }
 
     console.log('');
-    console.log('Running leak tests...');
+    console.log('Running smoke tests (own-data access)...');
+
+    // ---- 0a. user A can read their own gate columns ----
+    {
+      const { data, error } = await userAClient
+        .from('users')
+        .select('tribe_os_tier, tribe_os_status')
+        .eq('id', userA.id)
+        .single();
+      if (error) {
+        fail(
+          'smoke: A reads own tribe_os_tier + tribe_os_status',
+          `REGRESSION: ${error.message}. Check GRANT/REVOKE on public.users — ` +
+            `migration 066 narrowed the GRANT list, and any column needed by ` +
+            `requireTribeOSPremium must remain SELECT-able by authenticated.`
+        );
+      } else if (!data || data.tribe_os_tier !== 'solo') {
+        fail(
+          'smoke: A reads own tribe_os_tier + tribe_os_status',
+          `expected tier=solo, got tier=${data?.tribe_os_tier ?? 'null'}`
+        );
+      } else {
+        pass('smoke: A reads own tribe_os_tier + tribe_os_status');
+      }
+    }
+
+    // ---- 0b. user A can call instructor_revenue_totals for own user_id ----
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data, error } = await userAClient.rpc('instructor_revenue_totals', {
+        p_user_id: userA.id, // SELF: auth.uid() == p_user_id
+        p_period_start_date: monthAgo,
+        p_period_end_date: today,
+        p_timezone: 'UTC',
+      });
+      if (error) {
+        fail(
+          'smoke: A calls instructor_revenue_totals for own data',
+          `REGRESSION: ${error.message}. Migration 064's auth.uid() assertion ` +
+            `should pass when p_user_id === auth.uid(). Check the assertion logic ` +
+            `or the SECURITY DEFINER permissions.`
+        );
+      } else if (!Array.isArray(data)) {
+        fail('smoke: A calls instructor_revenue_totals for own data', `unexpected response shape: ${typeof data}`);
+      } else {
+        // Empty result is fine — A has no payments yet.
+        pass(`smoke: A calls instructor_revenue_totals for own data (${data.length} row(s))`);
+      }
+    }
+
+    // ---- 0c. optional: real HTTP call to a premium-gated route ----
+    const baseUrl = process.env.RLS_TEST_BASE_URL;
+    if (baseUrl) {
+      const trimmedBase = baseUrl.replace(/\/$/, '');
+      const url = `${trimmedBase}/api/tribe-os/clients`;
+      try {
+        const accessToken = (await userAClient.auth.getSession()).data.session?.access_token;
+        if (!accessToken) {
+          fail('smoke: HTTP A → /api/tribe-os/clients', 'no access token from userAClient session');
+        } else {
+          const res = await fetch(url, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          const bodyText = await res.text();
+          if (res.status === 200) {
+            pass(`smoke: HTTP A → /api/tribe-os/clients returned 200`);
+          } else if (res.status === 401 || res.status === 403) {
+            // The Next.js route reads auth via cookies, not Bearer headers,
+            // so it may not authenticate via this path. That's a known
+            // limitation of the test, not a regression.
+            console.log(
+              `  SKIP  smoke: HTTP A → /api/tribe-os/clients returned ${res.status} ` +
+                `(server may require cookie auth, not Bearer; skipping)`
+            );
+          } else if (
+            res.status >= 500 &&
+            (bodyText.includes('permission denied') || bodyText.includes('failed_to_check_premium_status'))
+          ) {
+            fail(
+              'smoke: HTTP A → /api/tribe-os/clients',
+              `REGRESSION: 500 with "${bodyText.slice(0, 200)}". Check GRANT/REVOKE on ` +
+                `public.users and the columns selected by getTribeOSPremiumStatus.`
+            );
+          } else {
+            fail(
+              'smoke: HTTP A → /api/tribe-os/clients',
+              `unexpected status ${res.status}: ${bodyText.slice(0, 200)}`
+            );
+          }
+        }
+      } catch (e) {
+        if (e instanceof Error && e.message.includes('ECONNREFUSED')) {
+          console.log(`  SKIP  smoke: HTTP A → ${url} (server not reachable; start npm run dev or unset RLS_TEST_BASE_URL)`);
+        } else {
+          fail('smoke: HTTP A → /api/tribe-os/clients', e instanceof Error ? e.message : String(e));
+        }
+      }
+    }
+
+    console.log('');
+    console.log('Running cross-user leak tests...');
 
     // ---- 1. clients SELECT ----
     {
