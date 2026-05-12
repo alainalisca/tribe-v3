@@ -19,16 +19,21 @@
  * user would hit through the app.
  *
  * Test phases (each prints PASS or FAIL):
- *   0. smoke: user A can read their own gate columns and call the
- *      revenue RPC for their own data. Catches regressions where a
+ *   0. smoke: user A can read their own gate columns, call the
+ *      user-keyed revenue RPC, and call the gym-keyed totals + buckets
+ *      RPCs for their own gym. Catches regressions where a
  *      column GRANT/REVOKE migration accidentally locks the user out
- *      of their own data (e.g. post-066 with select('tribe_os_*')).
+ *      of their own data, OR where the gym_coaches membership check
+ *      added in migration 071 accidentally rejects gym owners.
  *   1. clients: B cannot SELECT A's client by ID
  *   2. clients: B cannot UPDATE A's client
  *   3. clients: B cannot DELETE A's client
  *   4. client_attendance: B cannot SELECT A's attendance row
  *   5. revenue SQL function: B cannot call instructor_revenue_totals
- *      with A's user ID (post-064 migration enforces this)
+ *      with A's user ID (post-064 migration enforces this);
+ *      B cannot call gym_revenue_totals/buckets with A's gym ID
+ *      (post-071 migration enforces this via gym_coaches membership);
+ *      B cannot SELECT A's gym row or A's coach roster.
  *   6. users.tribe_os_*: B cannot read A's tribe_os_stripe_customer_id
  *      (or any other sensitive premium column)
  *
@@ -120,6 +125,41 @@ async function grantPremium(adminClient, userId) {
   if (error) throw new Error(`grantPremium ${userId}: ${error.message}`);
 }
 
+/**
+ * Provision a gym for a test user. Mirrors what migration 069 did for
+ * existing premium users and what the grant CLI now does on grant.
+ * Needed so we can exercise the gym-keyed SQL functions
+ * (gym_revenue_totals / gym_revenue_buckets) which gate on gym_coaches
+ * membership.
+ *
+ * Returns the gym id so test phases can reference it.
+ */
+async function provisionGym(adminClient, userId, label) {
+  const timestamp = Date.now();
+  const slug = `rls-test-${label}-${timestamp}`.slice(0, 80);
+  const { data: gym, error } = await adminClient
+    .from('gyms')
+    .insert({
+      name: `RLS Test Gym ${label.toUpperCase()}`,
+      slug,
+      owner_user_id: userId,
+      tribe_os_tier: 'solo',
+      tribe_os_status: null,
+      tribe_os_granted_at: new Date().toISOString(),
+      tribe_os_granted_by: 'rls-leak-test',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(`provisionGym ${userId}: ${error.message}`);
+
+  const { error: coachErr } = await adminClient
+    .from('gym_coaches')
+    .insert({ gym_id: gym.id, user_id: userId, role: 'owner' });
+  if (coachErr) throw new Error(`provisionGym.coach ${userId}: ${coachErr.message}`);
+
+  return gym.id;
+}
+
 async function deleteUser(adminClient, userId) {
   // Hard-delete via the admin API. Cascades through FKs.
   const { error } = await adminClient.auth.admin.deleteUser(userId);
@@ -162,6 +202,12 @@ async function main() {
 
   await grantPremium(adminClient, userA.id);
   await grantPremium(adminClient, userB.id);
+
+  // Provision a gym for each user so gym-keyed SQL functions
+  // (gym_revenue_totals / gym_revenue_buckets) are exercisable. The
+  // gym ids are referenced by the cross-user attack phases below.
+  const gymAId = await provisionGym(adminClient, userA.id, 'a');
+  const gymBId = await provisionGym(adminClient, userB.id, 'b');
 
   let userAClient;
   let userBClient;
@@ -273,6 +319,56 @@ async function main() {
       } else {
         // Empty result is fine — A has no payments yet.
         pass(`smoke: A calls instructor_revenue_totals for own data (${data.length} row(s))`);
+      }
+    }
+
+    // ---- 0d. user A can call gym_revenue_totals for own gym_id ----
+    // Catches regressions where the gym_coaches membership check
+    // (introduced in migration 071) accidentally locks owners out of
+    // their own gym's revenue.
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data, error } = await userAClient.rpc('gym_revenue_totals', {
+        p_gym_id: gymAId, // SELF: A is a coach in this gym
+        p_period_start_date: monthAgo,
+        p_period_end_date: today,
+        p_timezone: 'UTC',
+      });
+      if (error) {
+        fail(
+          'smoke: A calls gym_revenue_totals for own gym',
+          `REGRESSION: ${error.message}. Migration 071's gym_coaches ` +
+            `membership check should pass when the caller is a coach in p_gym_id.`
+        );
+      } else if (!Array.isArray(data)) {
+        fail('smoke: A calls gym_revenue_totals for own gym', `unexpected response shape: ${typeof data}`);
+      } else {
+        pass(`smoke: A calls gym_revenue_totals for own gym (${data.length} row(s))`);
+      }
+    }
+
+    // ---- 0e. user A can call gym_revenue_buckets for own gym_id ----
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data, error } = await userAClient.rpc('gym_revenue_buckets', {
+        p_gym_id: gymAId,
+        p_period_start_date: monthAgo,
+        p_period_end_date: today,
+        p_group_by: 'week',
+        p_timezone: 'UTC',
+      });
+      if (error) {
+        fail(
+          'smoke: A calls gym_revenue_buckets for own gym',
+          `REGRESSION: ${error.message}. Migration 071's gym_coaches ` +
+            `membership check should pass when the caller is a coach in p_gym_id.`
+        );
+      } else if (!Array.isArray(data)) {
+        fail('smoke: A calls gym_revenue_buckets for own gym', `unexpected response shape: ${typeof data}`);
+      } else {
+        pass(`smoke: A calls gym_revenue_buckets for own gym (${data.length} row(s))`);
       }
     }
 
@@ -440,6 +536,123 @@ async function main() {
       }
     }
 
+    // ---- 5b. gym revenue SQL function: B requests A's gym revenue ----
+    // Migration 071 gates gym_revenue_totals on
+    // EXISTS (SELECT 1 FROM gym_coaches WHERE gym_id = p_gym_id
+    // AND user_id = auth.uid()). B is NOT in A's gym, so this should
+    // raise 42501 'unauthorized: caller is not a coach in gym <id>'.
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data, error } = await userBClient.rpc('gym_revenue_totals', {
+        p_gym_id: gymAId, // <-- the cross-gym attack: B requests A's gym totals
+        p_period_start_date: monthAgo,
+        p_period_end_date: today,
+        p_timezone: 'UTC',
+      });
+      if (error) {
+        if (
+          error.message.toLowerCase().includes('unauthorized') ||
+          error.message.toLowerCase().includes('not a coach') ||
+          error.code === '42501' ||
+          error.code === 'P0001'
+        ) {
+          pass(`gym revenue RPC (B requests A's gym totals) rejected: ${error.message.slice(0, 80)}`);
+        } else {
+          fail(
+            "gym revenue RPC (B requests A's gym totals)",
+            `unexpected error shape: code=${error.code} message=${error.message}`
+          );
+        }
+      } else if (data && data.length > 0) {
+        fail(
+          "gym revenue RPC (B requests A's gym totals)",
+          `LEAK: function returned ${data.length} row(s) of A's gym revenue to B`
+        );
+      } else {
+        fail(
+          "gym revenue RPC (B requests A's gym totals)",
+          'expected exception (42501) but got empty result. Membership check may be missing.'
+        );
+      }
+    }
+
+    // ---- 5c. gym revenue buckets: B requests A's gym buckets ----
+    // Same gate as 5b, exercised against gym_revenue_buckets.
+    {
+      const today = new Date().toISOString().slice(0, 10);
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const { data, error } = await userBClient.rpc('gym_revenue_buckets', {
+        p_gym_id: gymAId,
+        p_period_start_date: monthAgo,
+        p_period_end_date: today,
+        p_group_by: 'week',
+        p_timezone: 'UTC',
+      });
+      if (error) {
+        if (
+          error.message.toLowerCase().includes('unauthorized') ||
+          error.message.toLowerCase().includes('not a coach') ||
+          error.code === '42501' ||
+          error.code === 'P0001'
+        ) {
+          pass(`gym revenue buckets (B requests A's gym) rejected: ${error.message.slice(0, 80)}`);
+        } else {
+          fail(
+            "gym revenue buckets (B requests A's gym)",
+            `unexpected error shape: code=${error.code} message=${error.message}`
+          );
+        }
+      } else if (data && data.length > 0) {
+        fail(
+          "gym revenue buckets (B requests A's gym)",
+          `LEAK: function returned ${data.length} bucket(s) of A's gym revenue to B`
+        );
+      } else {
+        fail(
+          "gym revenue buckets (B requests A's gym)",
+          'expected exception (42501) but got empty result. Membership check may be missing.'
+        );
+      }
+    }
+
+    // ---- 5d. gyms table: B cannot SELECT A's gym row ----
+    // Migration 068 sets a SELECT policy on gyms gated by
+    // owner_user_id = auth.uid() OR EXISTS in gym_coaches. B is
+    // neither owner nor coach of A's gym.
+    {
+      const { data, error } = await userBClient.from('gyms').select('id, name, slug').eq('id', gymAId);
+      if (error) {
+        pass(`gyms SELECT (B reads A's gym) rejected: ${error.message.slice(0, 60)}`);
+      } else if (!data || data.length === 0) {
+        pass("gyms SELECT (B reads A's gym) returns zero rows");
+      } else {
+        fail("gyms SELECT (B reads A's gym)", `LEAK: B saw A's gym row (name=${data[0].name})`);
+      }
+    }
+
+    // ---- 5e. gym_coaches table: B cannot SELECT A's coach row ----
+    // Migration 068 (post-hotfix dd0aac5) sets a SELECT policy of
+    // user_id = auth.uid(). B is not A; the query should return zero
+    // rows. Defends against accidental loosening of the policy in
+    // future migrations.
+    {
+      const { data, error } = await userBClient
+        .from('gym_coaches')
+        .select('gym_id, user_id, role')
+        .eq('gym_id', gymAId);
+      if (error) {
+        pass(`gym_coaches SELECT (B reads A's gym roster) rejected: ${error.message.slice(0, 60)}`);
+      } else if (!data || data.length === 0) {
+        pass("gym_coaches SELECT (B reads A's gym roster) returns zero rows");
+      } else {
+        fail(
+          "gym_coaches SELECT (B reads A's gym roster)",
+          `LEAK: B saw ${data.length} coach row(s) for A's gym`
+        );
+      }
+    }
+
     // ---- 6. users.tribe_os_* column read ----
     {
       // Set a sentinel value on A so we can detect leakage.
@@ -589,6 +802,12 @@ async function main() {
     if (createdSessionId) {
       await adminClient.from('sessions').delete().eq('id', createdSessionId);
     }
+    // Delete the gyms before the users — gyms.owner_user_id is
+    // ON DELETE RESTRICT, so deleting an auth user with a gym fails.
+    // gym_coaches rows cascade away with the gym (ON DELETE CASCADE
+    // on gym_coaches.gym_id REFERENCES gyms(id)).
+    if (gymAId) await adminClient.from('gyms').delete().eq('id', gymAId);
+    if (gymBId) await adminClient.from('gyms').delete().eq('id', gymBId);
     await deleteUser(adminClient, userA.id);
     await deleteUser(adminClient, userB.id);
   }
