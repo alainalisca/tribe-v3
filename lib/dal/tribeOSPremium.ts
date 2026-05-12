@@ -74,15 +74,21 @@ export async function grantTribeOSPremium(
       return { success: false, error: 'user_not_found' };
     }
 
+    // Reset tribe_os_status to NULL. Manual grants put the user in the
+    // "design partner" state (NULL status), which isTribeOSPremiumActive
+    // treats as active. If the user was previously on Stripe and got
+    // canceled, the stale 'canceled' status would survive the grant and
+    // cause the gate to fail. The webhook flips status to 'active' /
+    // 'trialing' / 'past_due' / 'canceled' if and when the user later
+    // re-subscribes via Stripe. Stripe customer/subscription IDs are
+    // preserved for audit and future Stripe re-attachment.
     const { data, error } = await supabase
       .from('users')
       .update({
         tribe_os_tier: tier,
+        tribe_os_status: null,
         tribe_os_granted_at: new Date().toISOString(),
         tribe_os_granted_by: grantedBy,
-        // tribe_os_status stays whatever it is. Manual grants leave it
-        // NULL (= "no Stripe billing yet"); a later Stripe webhook can
-        // flip it to 'active' when paid billing starts.
       })
       .eq('id', (existing as { id: string }).id)
       .select(`id, ${PREMIUM_SELECT}`)
