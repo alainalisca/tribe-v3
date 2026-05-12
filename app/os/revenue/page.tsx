@@ -24,6 +24,9 @@ import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import type { RevenueSummary } from '@/lib/dal/revenue';
 import SummaryCards from './_components/SummaryCards';
 import EmptyState from './_components/EmptyState';
+import PeriodSelector from './_components/PeriodSelector';
+import RevenueChart from './_components/RevenueChart';
+import { allTimePeriod, browserTimezone, thisMonthPeriod, type Period } from './_lib/periods';
 
 type FetchState =
   | { kind: 'idle' }
@@ -31,59 +34,13 @@ type FetchState =
   | { kind: 'error'; message: string }
   | { kind: 'ready'; summary: RevenueSummary };
 
-interface Period {
-  /** Inclusive ISO date (YYYY-MM-DD). */
-  from: string;
-  /** Inclusive ISO date (YYYY-MM-DD). */
-  to: string;
-  /** Human label for the current period selection. */
-  label: string;
-}
-
-/** Formats a Date as YYYY-MM-DD in the given IANA timezone. */
-function isoDateInTimezone(d: Date, timezone: string): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  // en-CA renders YYYY-MM-DD natively.
-  return fmt.format(d);
-}
-
-function browserTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
-    return 'UTC';
-  }
-}
-
-function currentMonthPeriod(timezone: string, monthLabel: (m: number, y: number) => string): Period {
-  const now = new Date();
-  const todayIso = isoDateInTimezone(now, timezone);
-  const [yearStr, monthStr] = todayIso.split('-');
-  const firstOfMonthIso = `${yearStr}-${monthStr}-01`;
-  return {
-    from: firstOfMonthIso,
-    to: todayIso,
-    label: monthLabel(Number(monthStr), Number(yearStr)),
-  };
-}
-
-function allTimePeriod(label: string): Period {
-  // 2020 covers everything ever recorded for Tribe. Sufficient for "all time" UX.
-  return { from: '2020-01-01', to: isoDateInTimezone(new Date(), browserTimezone()), label };
-}
-
 export default function RevenueDashboardPage(): JSX.Element {
   const { language } = useLanguage();
   const s = COPY[language];
   const gate = useTribeOSPremiumGate();
 
   const [timezone] = useState<string>(() => browserTimezone());
-  const [period, setPeriod] = useState<Period>(() => currentMonthPeriod(timezone, (m, y) => s.monthYearLabel(m, y)));
+  const [period, setPeriod] = useState<Period>(() => thisMonthPeriod(timezone, language));
   const [fetchState, setFetchState] = useState<FetchState>({ kind: 'idle' });
 
   const fetchSummary = useCallback(
@@ -135,7 +92,7 @@ export default function RevenueDashboardPage(): JSX.Element {
     <main className="min-h-screen bg-tribe-dark px-4 py-10 sm:py-14">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Link
             href="/os/dashboard"
             className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white mb-3 transition-colors"
@@ -145,6 +102,11 @@ export default function RevenueDashboardPage(): JSX.Element {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-1">{s.title}</h1>
           <p className="text-sm text-white/60">{period.label}</p>
+        </div>
+
+        {/* Period selector */}
+        <div className="mb-8">
+          <PeriodSelector value={period} onChange={setPeriod} timezone={timezone} />
         </div>
 
         {/* Content */}
@@ -166,17 +128,22 @@ export default function RevenueDashboardPage(): JSX.Element {
           </div>
         ) : isEmpty ? (
           <EmptyState
-            alreadyAllTime={period.from === '2020-01-01'}
-            onWiden={() => setPeriod(allTimePeriod(s.allTimeLabel))}
+            alreadyAllTime={period.preset === 'all_time'}
+            onWiden={() => setPeriod(allTimePeriod(timezone, language))}
           />
         ) : (
           <>
             <SummaryCards totals={fetchState.summary.totals} currencyDefault={fetchState.summary.currency_default} />
 
-            {/* Placeholders for Mission 4 (chart) and Mission 5 (table) */}
-            <div className="mt-8 rounded-2xl bg-white/5 border border-white/10 border-dashed p-8 text-center text-white/40 text-sm">
-              {s.chartPlaceholder}
+            <div className="mt-8">
+              <RevenueChart
+                buckets={fetchState.summary.buckets}
+                currencyDefault={fetchState.summary.currency_default}
+                groupBy={fetchState.summary.group_by}
+              />
             </div>
+
+            {/* Placeholder for Mission 5 (payment table) */}
             <div className="mt-4 rounded-2xl bg-white/5 border border-white/10 border-dashed p-8 text-center text-white/40 text-sm">
               {s.tablePlaceholder}
             </div>
@@ -205,26 +172,7 @@ const COPY = {
     loading: 'Loading',
     redirecting: 'Redirecting',
     retry: 'Retry',
-    chartPlaceholder: 'Chart coming next',
     tablePlaceholder: 'Payment list coming next',
-    monthYearLabel: (month: number, year: number) => {
-      const monthNames = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ];
-      return `${monthNames[month - 1]} ${year}`;
-    },
-    allTimeLabel: 'All time',
     errorGeneric: 'Something went wrong loading revenue data.',
     errorNetwork: 'Could not reach the server. Check your connection and try again.',
     errorPremiumRequired: 'Tribe.OS premium is required to see revenue data.',
@@ -237,26 +185,7 @@ const COPY = {
     loading: 'Cargando',
     redirecting: 'Redirigiendo',
     retry: 'Reintentar',
-    chartPlaceholder: 'Gráfico próximamente',
     tablePlaceholder: 'Lista de pagos próximamente',
-    monthYearLabel: (month: number, year: number) => {
-      const monthNames = [
-        'enero',
-        'febrero',
-        'marzo',
-        'abril',
-        'mayo',
-        'junio',
-        'julio',
-        'agosto',
-        'septiembre',
-        'octubre',
-        'noviembre',
-        'diciembre',
-      ];
-      return `${monthNames[month - 1]} ${year}`;
-    },
-    allTimeLabel: 'Todo el tiempo',
     errorGeneric: 'Algo salió mal al cargar los datos de ingresos.',
     errorNetwork: 'No se pudo conectar al servidor. Verifica tu conexión e intenta de nuevo.',
     errorPremiumRequired: 'Se requiere Tribe.OS premium para ver los datos de ingresos.',
