@@ -26,6 +26,14 @@ export type PaymentMethod = 'cash' | 'transfer' | 'stripe' | 'other';
 export interface ClientRow {
   id: string;
   instructor_user_id: string;
+  /**
+   * Owning gym. Nullable during the Path B transition (migration 068):
+   * existing rows are backfilled by migration 069; new rows created
+   * via createClient with a gym context populate this; rows created
+   * via the legacy code path leave it null and rely on the legacy
+   * instructor_user_id RLS branch (migration 070).
+   */
+  gym_id: string | null;
   name: string;
   email: string | null;
   phone: string | null;
@@ -37,6 +45,16 @@ export interface ClientRow {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Tenant context — discriminated union the DAL accepts in place of a
+ * bare instructorUserId. The gym branch is preferred; the legacy
+ * branch stays for backward compat until the cleanup migration drops
+ * the instructor_user_id RLS path.
+ */
+export type ClientTenantContext =
+  | { gymId: string; instructorUserId: string }
+  | { gymId: null; instructorUserId: string };
 
 /** Mirror of the client_attendance table columns. */
 export interface AttendanceRow {
@@ -155,7 +173,7 @@ export interface ListClientsFilters {
 }
 
 const CLIENT_SELECT =
-  'id, instructor_user_id, name, email, phone, contact_info, notes, tags, archived, archived_at, created_at, updated_at';
+  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, archived, archived_at, created_at, updated_at';
 
 const ATTENDANCE_SELECT =
   'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, created_at, updated_at';
@@ -165,19 +183,33 @@ const ATTENDANCE_SELECT =
 // ------------------------------------------------------------------
 
 /**
- * Create a client. RLS enforces auth.uid() = instructor_user_id, so the
- * caller must be the instructor whose roster this row is being added to.
+ * Create a client. RLS (migration 070) accepts either the legacy
+ * instructor path (auth.uid() = instructor_user_id) or the gym path
+ * (caller is a coach in the named gym).
+ *
+ * The DAL writes BOTH columns when a gym context is provided —
+ * instructor_user_id stays populated for backward compatibility with
+ * any code still reading it, and gym_id is the new source of truth.
+ * Callers that pass only an instructorUserId (legacy code path) get a
+ * row with gym_id = null; that row is still queryable via the
+ * legacy RLS branch.
  */
 export async function createClient(
   supabase: SupabaseClient,
-  instructorUserId: string,
+  context: ClientTenantContext | string,
   input: CreateClientInput
 ): Promise<DalResult<ClientRow>> {
+  // Backward-compat: callers that haven't been refactored yet pass a
+  // bare instructorUserId string. Normalize to the context shape.
+  const ctx: ClientTenantContext = typeof context === 'string' ? { gymId: null, instructorUserId: context } : context;
+  const instructorUserId = ctx.instructorUserId;
+  const gymId = ctx.gymId;
   try {
     const { data, error } = await supabase
       .from('clients')
       .insert({
         instructor_user_id: instructorUserId,
+        gym_id: gymId,
         name: input.name,
         email: input.email ?? null,
         phone: input.phone ?? null,
@@ -189,12 +221,12 @@ export async function createClient(
       .single();
 
     if (error) {
-      logError(error, { action: 'createClient', instructorUserId });
+      logError(error, { action: 'createClient', instructorUserId, gymId });
       return { success: false, error: error.message };
     }
     return { success: true, data: data as ClientRow };
   } catch (error) {
-    logError(error, { action: 'createClient', instructorUserId });
+    logError(error, { action: 'createClient', instructorUserId, gymId });
     return { success: false, error: 'Failed to create client' };
   }
 }
@@ -272,15 +304,25 @@ export async function getClient(supabase: SupabaseClient, clientId: string): Pro
  */
 export async function listClients(
   supabase: SupabaseClient,
-  instructorUserId: string,
+  context: ClientTenantContext | string,
   filters?: ListClientsFilters
 ): Promise<DalResult<ClientWithStats[]>> {
+  // Backward-compat: callers that haven't been refactored yet pass a
+  // bare instructorUserId. Normalize to the context shape.
+  const ctx: ClientTenantContext = typeof context === 'string' ? { gymId: null, instructorUserId: context } : context;
+  const instructorUserId = ctx.instructorUserId;
+  const gymId = ctx.gymId;
   try {
-    let q = supabase
-      .from('clients')
-      .select(CLIENT_SELECT)
-      .eq('instructor_user_id', instructorUserId)
-      .eq('archived', false);
+    // Filter strategy: when we have a gymId, scope by gym (preferred,
+    // catches rows owned by any coach in the gym). When we only have
+    // instructorUserId, scope the legacy way. RLS guarantees neither
+    // case can leak rows from a tenant the caller doesn't belong to.
+    let q = supabase.from('clients').select(CLIENT_SELECT).eq('archived', false);
+    if (gymId) {
+      q = q.eq('gym_id', gymId);
+    } else {
+      q = q.eq('instructor_user_id', instructorUserId);
+    }
 
     if (filters?.searchQuery && filters.searchQuery.trim().length > 0) {
       // Case-insensitive substring match on name. Sequential scan is
@@ -295,7 +337,7 @@ export async function listClients(
 
     const { data: clients, error: clientsErr } = await q;
     if (clientsErr) {
-      logError(clientsErr, { action: 'listClients.clients', instructorUserId });
+      logError(clientsErr, { action: 'listClients.clients', instructorUserId, gymId });
       return { success: false, error: clientsErr.message };
     }
 
@@ -311,7 +353,7 @@ export async function listClients(
       .select('client_id, attended, attended_at, paid, amount_paid_cents, currency')
       .in('client_id', clientIds);
     if (attErr) {
-      logError(attErr, { action: 'listClients.attendance', instructorUserId });
+      logError(attErr, { action: 'listClients.attendance', instructorUserId, gymId });
       return { success: false, error: attErr.message };
     }
 
@@ -350,7 +392,7 @@ export async function listClients(
 
     return { success: true, data: enriched };
   } catch (error) {
-    logError(error, { action: 'listClients', instructorUserId });
+    logError(error, { action: 'listClients', instructorUserId, gymId });
     return { success: false, error: 'Failed to list clients' };
   }
 }

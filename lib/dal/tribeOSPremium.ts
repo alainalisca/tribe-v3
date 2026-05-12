@@ -159,6 +159,13 @@ export async function revokeTribeOSPremium(
  * granted_at, granted_by) are restricted from authenticated/anon by
  * migration 066 and are not needed for the gate check anyway. Callers
  * that need those fields must use service-role.
+ *
+ * NOTE: Post-migration 068, the source of truth for premium status is
+ * `gyms` (a user is premium if they own or coach in a gym with an
+ * active/trialing status). Callers should prefer
+ * `getTribeOSPremiumStatusForUser` below, which checks gyms first and
+ * falls back to legacy users columns. This function is preserved for
+ * backward compat with code that explicitly wants only the legacy row.
  */
 export async function getTribeOSPremiumStatus(
   supabase: SupabaseClient,
@@ -183,6 +190,112 @@ export async function getTribeOSPremiumStatus(
   } catch (error) {
     logError(error, { action: 'getTribeOSPremiumStatus', userId });
     return { success: false, error: 'Failed to read Tribe.OS premium status' };
+  }
+}
+
+/**
+ * Gym-aware premium status resolver. Replaces the legacy
+ * users.tribe_os_* read path for new call sites.
+ *
+ * Resolution order:
+ *   1. Any gym the user OWNS with active/trialing status → premium.
+ *   2. Any gym the user is a COACH in with active/trialing status → premium.
+ *   3. Legacy users.tribe_os_tier + tribe_os_status row → premium iff
+ *      isTribeOSPremiumActive(legacyRow) returns true.
+ *
+ * The legacy fallback exists because migration 069 backfills gyms for
+ * every existing premium user, but Mission 6's onboarding path may
+ * not have run yet for brand-new signups in the transition window.
+ * Once the legacy users.tribe_os_* path is removed (cleanup migration,
+ * Week 5+), this function collapses to gym checks only.
+ *
+ * Returns:
+ *   - active: boolean — the final premium-gate answer
+ *   - tier: the tier the user is on (gym tier wins over legacy)
+ *   - gymId: the gym that granted access (null if it came from
+ *            the legacy users row instead)
+ */
+export interface PremiumStatusResolved {
+  active: boolean;
+  tier: TribeOSTier | null;
+  status: TribeOSStatus | null;
+  gymId: string | null;
+}
+
+export async function getTribeOSPremiumStatusForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<DalResult<PremiumStatusResolved>> {
+  try {
+    // (1) Owned gyms.
+    const owned = await supabase
+      .from('gyms')
+      .select('id, tribe_os_tier, tribe_os_status')
+      .eq('owner_user_id', userId)
+      .is('deleted_at', null);
+    if (owned.error) {
+      logError(owned.error, { action: 'getTribeOSPremiumStatusForUser.owned', userId });
+      return { success: false, error: owned.error.message };
+    }
+    type GymGate = { id: string; tribe_os_tier: TribeOSTier | null; tribe_os_status: TribeOSStatus | null };
+    const ownedRows = (owned.data ?? []) as GymGate[];
+    for (const g of ownedRows) {
+      if (isTribeOSPremiumActive({ tribe_os_tier: g.tribe_os_tier, tribe_os_status: g.tribe_os_status })) {
+        return {
+          success: true,
+          data: { active: true, tier: g.tribe_os_tier, status: g.tribe_os_status, gymId: g.id },
+        };
+      }
+    }
+
+    // (2) Coached gyms.
+    const coached = await supabase
+      .from('gym_coaches')
+      .select('gym:gyms(id, tribe_os_tier, tribe_os_status, deleted_at)')
+      .eq('user_id', userId);
+    if (coached.error) {
+      logError(coached.error, { action: 'getTribeOSPremiumStatusForUser.coach', userId });
+      return { success: false, error: coached.error.message };
+    }
+    type CoachJoin = { gym: (GymGate & { deleted_at: string | null }) | null };
+    const coachRows = (coached.data ?? []) as unknown as CoachJoin[];
+    for (const row of coachRows) {
+      const g = row.gym;
+      if (!g || g.deleted_at) continue;
+      if (isTribeOSPremiumActive({ tribe_os_tier: g.tribe_os_tier, tribe_os_status: g.tribe_os_status })) {
+        return {
+          success: true,
+          data: { active: true, tier: g.tribe_os_tier, status: g.tribe_os_status, gymId: g.id },
+        };
+      }
+    }
+
+    // (3) Legacy fallback.
+    const legacy = await supabase.from('users').select('tribe_os_tier, tribe_os_status').eq('id', userId).maybeSingle();
+    if (legacy.error) {
+      logError(legacy.error, { action: 'getTribeOSPremiumStatusForUser.legacy', userId });
+      return { success: false, error: legacy.error.message };
+    }
+    const legacyRow = legacy.data as Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> | null;
+    if (legacyRow && isTribeOSPremiumActive(legacyRow)) {
+      return {
+        success: true,
+        data: {
+          active: true,
+          tier: legacyRow.tribe_os_tier ?? null,
+          status: legacyRow.tribe_os_status ?? null,
+          gymId: null,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: { active: false, tier: null, status: null, gymId: null },
+    };
+  } catch (error) {
+    logError(error, { action: 'getTribeOSPremiumStatusForUser', userId });
+    return { success: false, error: 'Failed to resolve Tribe.OS premium status' };
   }
 }
 

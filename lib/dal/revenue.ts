@@ -690,3 +690,79 @@ function csvEscape(value: string): string {
   }
   return value;
 }
+
+// ---- Gym-aware wrappers ----
+//
+// Background
+// ----------
+// The SQL functions instructor_revenue_totals / instructor_revenue_buckets
+// (migration 063 + 064 auth assertion) take a `p_user_id` and gate on
+// auth.uid() = p_user_id. They cannot be invoked with a gym id today.
+//
+// During the Path B transition, every gym has exactly one owner
+// (backfilled in migration 069). For single-owner gyms, "the gym's
+// revenue" is identical to "the owner's revenue" — payments are filtered
+// by sessions.creator_id, and the gym's owner is that creator.
+//
+// So a gym-keyed wrapper just resolves gym → owner_user_id, then calls
+// the existing user-keyed function. The wrapper enforces that the
+// caller IS the gym owner (because the SQL gate requires
+// auth.uid() = ownerUserId). Coaches who are NOT the owner cannot use
+// these wrappers today.
+//
+// Multi-coach revenue (every coach can see the gym's revenue regardless
+// of their own creator_id) is a Week 2 task that requires:
+//   - new SQL functions gym_revenue_totals / gym_revenue_buckets keyed
+//     on p_gym_id, gated by `EXISTS (SELECT 1 FROM gym_coaches
+//     WHERE gym_id = p_gym_id AND user_id = auth.uid())` instead of
+//     `auth.uid() = p_user_id`
+//   - listPayments path swapped from `sessions.creator_id` to
+//     `payments.gym_id` (already backfilled in migration 069)
+// Tracked in docs/LATER.md.
+
+import { getGym } from './gyms';
+
+/**
+ * Gym-keyed revenue summary. Resolves the gym's owner and delegates to
+ * getRevenueSummary. Caller MUST be the gym owner (SQL function gate).
+ * For multi-coach gyms with non-owner callers, a future SQL function
+ * will replace this — see file header.
+ */
+export async function getRevenueSummaryForGym(
+  supabase: SupabaseClient,
+  gymId: string,
+  fromIsoDate: string,
+  toIsoDate: string,
+  options: RevenueSummaryOptions = {}
+): Promise<DalResult<RevenueSummary>> {
+  const gymRes = await getGym(supabase, gymId);
+  if (!gymRes.success) {
+    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  }
+  if (!gymRes.data) {
+    return { success: false, error: 'gym_not_found' };
+  }
+  return getRevenueSummary(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate, options);
+}
+
+/**
+ * Gym-keyed payment list. Resolves the gym's owner and delegates to
+ * listPayments. Same caller-must-be-owner constraint as
+ * getRevenueSummaryForGym.
+ */
+export async function listPaymentsForGym(
+  supabase: SupabaseClient,
+  gymId: string,
+  fromIsoDate: string,
+  toIsoDate: string,
+  options: ListPaymentsOptions = {}
+): Promise<DalResult<PaymentListResult>> {
+  const gymRes = await getGym(supabase, gymId);
+  if (!gymRes.success) {
+    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  }
+  if (!gymRes.data) {
+    return { success: false, error: 'gym_not_found' };
+  }
+  return listPayments(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate, options);
+}
