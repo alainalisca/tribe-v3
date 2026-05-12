@@ -119,19 +119,11 @@ CREATE TRIGGER gyms_touch_updated_at
 
 ALTER TABLE public.gyms ENABLE ROW LEVEL SECURITY;
 
--- Minimal placeholder policies. The real dual-path policies land in
--- migration 070. Until then: a user can read their own gym(s), and
--- nobody can write except service-role.
-DROP POLICY IF EXISTS "gyms_owner_select" ON public.gyms;
-CREATE POLICY "gyms_owner_select"
-  ON public.gyms FOR SELECT
-  USING (
-    owner_user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM public.gym_coaches gc
-      WHERE gc.gym_id = gyms.id AND gc.user_id = auth.uid()
-    )
-  );
+-- NOTE: the gyms RLS policy below references public.gym_coaches in an
+-- EXISTS subquery. Postgres validates referenced relations at policy
+-- creation time, so gym_coaches MUST be created before the gyms
+-- policy. We defer the gyms policy to after the gym_coaches CREATE
+-- TABLE below.
 
 -- ------------------------------------------------------------------
 -- gym_coaches
@@ -150,6 +142,25 @@ CREATE INDEX IF NOT EXISTS idx_gym_coaches_user
   ON public.gym_coaches (user_id);
 
 ALTER TABLE public.gym_coaches ENABLE ROW LEVEL SECURITY;
+
+-- ------------------------------------------------------------------
+-- Policies (created AFTER both tables exist so the cross-reference
+-- in the gyms policy resolves)
+-- ------------------------------------------------------------------
+
+-- Minimal placeholder policy on gyms. The real dual-path policies on
+-- tenant tables land in migration 070; this one just makes gym lookup
+-- work for the owner and any of their coaches.
+DROP POLICY IF EXISTS "gyms_owner_select" ON public.gyms;
+CREATE POLICY "gyms_owner_select"
+  ON public.gyms FOR SELECT
+  USING (
+    owner_user_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM public.gym_coaches gc
+      WHERE gc.gym_id = gyms.id AND gc.user_id = auth.uid()
+    )
+  );
 
 -- A user can see the coach rows for any gym they themselves are in.
 -- Write access stays service-role-only until Mission 5 / 6 add an
