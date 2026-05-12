@@ -7,17 +7,32 @@ unless they're a long-lived architectural reference (those go in
 
 ## Active
 
-Phase 2 Tribe.OS — Weeks 1-4 of the post-trip build, currently
-on `feature/tribe-os`.
+Phase 2 Tribe.OS — Weeks 1-4 of the post-trip build, plus the
+Weeks 1-3 gym-tenant integration on top. All on `feature/tribe-os`.
 
 - **`LATER.md`** — Append-only log of deferred items, feature
   requests, and scope-creep candidates surfaced during a sprint.
   The operational scope-creep guard. Read this first when triaging
   new asks.
 - **`SECURITY_AUDIT_2026-05-12.md`** — Pre-beta security
-  walkthrough of all Phase 2 code. Every Tribe.OS route, RLS
-  policy, webhook handler, service-role caller, SQL function,
-  and CSV export reviewed. PASS / FIX / DEFER per item.
+  walkthrough of all Phase 2 code, with the post-gym-tenant
+  integration audit appended at the bottom (covers migrations
+  068–073, new RLS surfaces, new SECURITY DEFINER functions, and
+  the new /api/tribe-os/{coaches,gym,clients/at-risk} routes).
+  PASS / FIX / DEFER per item.
+- **`WEEK_1_MISSIONS.md`** — Gym-tenant additive foundation:
+  schema, backfill, dual-path RLS, DAL, onboarding wiring.
+- **`WEEK_2_MISSIONS.md`** — Multi-coach activation + member
+  roster enrichment (status, health notes, at-risk widget).
+- **`WEEK_3_MISSIONS.md`** — Pre-beta polish autonomous build day:
+  leak-test extension, /os/coaches roster, /os/gym settings,
+  audit + checklist docs, plus bonus mission A
+  (`list_gym_coaches` SECURITY DEFINER function), B (PostHog
+  observability sweep), C (this playbook).
+- **`INSTRUCTOR_PLAYBOOK_BETA.md`** — 5-minute self-contained doc
+  to hand a beta candidate before onboarding. Bilingual EN+ES.
+  Covers what Tribe.OS does today, what's coming, what we're
+  asking from the instructor, and the post-beta pricing choice.
 - **`BETA_OUTREACH.md`** — Candidate-selection SQL, outreach
   tracking table, EN+ES message templates, and per-candidate
   onboarding checklist for Mission 4 of the Week 4 spec.
@@ -32,8 +47,8 @@ on `feature/tribe-os`.
   at retrospective time.
 - **`PRE_MERGE_CHECKLIST.md`** — Operational gate for merging
   `feature/tribe-os` → `main`. Walks code health, security,
-  migrations, beta validation, operational, communication. Use
-  before requesting the merge from Al.
+  migrations, beta validation, gym-tenant integration, operational,
+  communication. Use before requesting the merge from Al.
 
 ## Reference
 
