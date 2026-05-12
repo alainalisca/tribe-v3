@@ -26,6 +26,8 @@ import SummaryCards from './_components/SummaryCards';
 import EmptyState from './_components/EmptyState';
 import PeriodSelector from './_components/PeriodSelector';
 import RevenueChart from './_components/RevenueChart';
+import PaymentTable from './_components/PaymentTable';
+import ExportButton from './_components/ExportButton';
 import { allTimePeriod, browserTimezone, thisMonthPeriod, type Period } from './_lib/periods';
 
 type FetchState =
@@ -104,9 +106,10 @@ export default function RevenueDashboardPage(): JSX.Element {
           <p className="text-sm text-white/60">{period.label}</p>
         </div>
 
-        {/* Period selector */}
-        <div className="mb-8">
+        {/* Period selector + export */}
+        <div className="mb-8 flex items-start justify-between gap-3 flex-wrap">
           <PeriodSelector value={period} onChange={setPeriod} timezone={timezone} />
+          {fetchState.kind === 'ready' && !isEmpty && <ExportButton period={period} />}
         </div>
 
         {/* Content */}
@@ -143,9 +146,8 @@ export default function RevenueDashboardPage(): JSX.Element {
               />
             </div>
 
-            {/* Placeholder for Mission 5 (payment table) */}
-            <div className="mt-4 rounded-2xl bg-white/5 border border-white/10 border-dashed p-8 text-center text-white/40 text-sm">
-              {s.tablePlaceholder}
+            <div className="mt-6">
+              <PaymentTable period={period} timezone={timezone} />
             </div>
           </>
         )}
@@ -172,7 +174,6 @@ const COPY = {
     loading: 'Loading',
     redirecting: 'Redirecting',
     retry: 'Retry',
-    tablePlaceholder: 'Payment list coming next',
     errorGeneric: 'Something went wrong loading revenue data.',
     errorNetwork: 'Could not reach the server. Check your connection and try again.',
     errorPremiumRequired: 'Tribe.OS premium is required to see revenue data.',
@@ -185,7 +186,6 @@ const COPY = {
     loading: 'Cargando',
     redirecting: 'Redirigiendo',
     retry: 'Reintentar',
-    tablePlaceholder: 'Lista de pagos próximamente',
     errorGeneric: 'Algo salió mal al cargar los datos de ingresos.',
     errorNetwork: 'No se pudo conectar al servidor. Verifica tu conexión e intenta de nuevo.',
     errorPremiumRequired: 'Se requiere Tribe.OS premium para ver los datos de ingresos.',
