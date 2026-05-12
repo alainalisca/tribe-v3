@@ -28,6 +28,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
+import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
 type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
@@ -189,7 +190,7 @@ export default function TribeOSDashboardPage() {
         <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">Tribe.OS</p>
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-6">{s.welcome}</h1>
         <p className="text-base sm:text-lg text-white/80 leading-relaxed mb-10">{s.placeholder}</p>
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap mb-10">
           <Link
             href="/os/clients"
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all"
@@ -220,6 +221,9 @@ export default function TribeOSDashboardPage() {
             {s.backLabel}
           </Link>
         </div>
+
+        {/* At-risk clients widget (Week 2 Mission 5) */}
+        <AtRiskClientsWidget />
       </div>
     </main>
   );
