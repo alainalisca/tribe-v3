@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import ClientForm from '@/components/tribe-os/ClientForm';
+import { trackEvent } from '@/lib/analytics';
 import type { ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -144,6 +145,20 @@ export default function EditClientPage() {
         };
         if (!res.ok || !body.success) {
           return { success: false, error: body.error || 'update_failed' };
+        }
+        trackEvent('tribe_os_client_updated', {
+          status: cleaned.status,
+          // Aggregate signal — which categories of field were touched
+          // without leaking their values
+          changed_status: cleaned.status !== c.status,
+          changed_health_notes: (cleaned.health_notes ?? '') !== (c.health_notes ?? ''),
+          changed_tags: cleaned.tags.join(',') !== c.tags.join(','),
+        });
+        if (cleaned.status !== c.status) {
+          trackEvent('tribe_os_client_status_changed', {
+            from: c.status,
+            to: cleaned.status,
+          });
         }
         router.push(`/os/clients/${c.id}`);
         return { success: true };

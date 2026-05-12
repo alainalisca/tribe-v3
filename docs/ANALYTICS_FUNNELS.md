@@ -116,3 +116,72 @@ conversion rates:
 - Discovery (`search_executed`, `filter_applied`, `neighborhood_selected`)
 
 See `lib/analytics.ts` for the complete taxonomy.
+
+---
+
+## Tribe.OS funnels (added Week 3 of gym-tenant integration)
+
+Suggested funnels to build in PostHog once these events have a few
+days of data:
+
+### Subscription conversion funnel
+
+`tribe_os_dashboard_viewed` (not_premium branch) →
+`tribe_os_checkout_started` →
+`tribe_os_checkout_succeeded`
+
+Measures: how many users who land on `/os/dashboard` without premium
+actually subscribe. Drop-off between steps 1 and 2 = upgrade-card
+friction. Drop-off between 2 and 3 = Stripe-checkout friction.
+
+### First-week activation funnel (premium users)
+
+`tribe_os_dashboard_viewed` →
+`tribe_os_client_created` (first one) →
+`tribe_os_revenue_viewed` (first one with non-empty data)
+
+Measures: how many newly-premium users actually use the product.
+Anyone who gets to the final step is genuinely activated. Set the
+funnel window to 14 days post-subscription.
+
+### Engagement retention funnel (week-over-week)
+
+`tribe_os_dashboard_viewed` (weekly aggregation) →
+`tribe_os_client_status_changed` OR `tribe_os_at_risk_clicked`
+
+Measures: how many premium users do meaningful work in a given week,
+not just check the dashboard.
+
+### Revenue export funnel
+
+`tribe_os_revenue_viewed` → `tribe_os_revenue_exported`
+
+Useful signal for tax-season behavior; if export rate is high in
+March/April, the dashboard is solving a real need.
+
+## Tribe.OS event taxonomy
+
+Premium-gated events fire only after the page renders for premium
+users. Properties are intentionally lean — no client names, no
+payment amounts. Reach into the user via PostHog identity if you
+need who.
+
+| Event                            | Fires                                         | Notable props                                                        |
+| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| `tribe_os_dashboard_viewed`      | `/os/dashboard` mount, premium branch         | (none)                                                               |
+| `tribe_os_client_created`        | POST `/api/tribe-os/clients` success          | `status`, `has_email`, `has_health_notes`, `tag_count`, `has_gym_id` |
+| `tribe_os_client_updated`        | PATCH success                                 | `status`, `changed_status`, `changed_health_notes`                   |
+| `tribe_os_client_status_changed` | Subset of `_client_updated` (status diff)     | `from`, `to`                                                         |
+| `tribe_os_at_risk_clicked`       | Click on a row in the at-risk widget          | `status`, `days_since_last_seen`, `has_email`                        |
+| `tribe_os_revenue_viewed`        | `/os/revenue` summary fetch success           | `period_days`, `group_by`, `currency_default`, `has_usd`, `has_cop`  |
+| `tribe_os_revenue_exported`      | Successful CSV download                       | `from`, `to`                                                         |
+| `tribe_os_coaches_viewed`        | `/os/coaches` successful render               | `coach_count`                                                        |
+| `tribe_os_gym_settings_viewed`   | `/os/gym` successful render                   | `can_edit`                                                           |
+| `tribe_os_gym_settings_saved`    | PATCH `/api/tribe-os/gym` success             | `changed_name`, `changed_timezone`, `changed_currency`               |
+| `tribe_os_checkout_started`      | Subscribe button clicked                      | (none)                                                               |
+| `tribe_os_checkout_succeeded`    | `/os/dashboard` mount with `?subscribed=true` | (none)                                                               |
+| `tribe_os_portal_opened`         | Manage-subscription button → Stripe redirect  | (none)                                                               |
+
+`tribe_os_attendance_recorded` is reserved in `lib/analytics.ts` but
+not yet wired — it lands when the attendance flow is touched in a
+future mission.

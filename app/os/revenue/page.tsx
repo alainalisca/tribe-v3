@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { trackEvent } from '@/lib/analytics';
 import type { RevenueSummary } from '@/lib/dal/revenue';
 import SummaryCards from './_components/SummaryCards';
 import EmptyState from './_components/EmptyState';
@@ -62,6 +63,17 @@ export default function RevenueDashboardPage(): JSX.Element {
           return;
         }
         setFetchState({ kind: 'ready', summary: body.data });
+        // Fire once per successful summary fetch. Properties tell us
+        // which currency lane the user is on + whether they have data
+        // in the period, without leaking amounts.
+        trackEvent('tribe_os_revenue_viewed', {
+          period_days: rangeDaysApprox(p.from, p.to),
+          group_by: body.data.group_by,
+          currency_default: body.data.currency_default,
+          has_usd: Boolean(body.data.totals.USD),
+          has_cop: Boolean(body.data.totals.COP),
+          bucket_count: body.data.buckets.length,
+        });
       } catch {
         setFetchState({ kind: 'error', message: s.errorNetwork });
       }
@@ -154,6 +166,18 @@ export default function RevenueDashboardPage(): JSX.Element {
       </div>
     </main>
   );
+}
+
+/**
+ * Coarse day count between two YYYY-MM-DD strings, inclusive on both
+ * ends. Used only as an analytics property (bucketing into "this
+ * month", "last 90 days", etc.) so we don't need timezone correctness.
+ */
+function rangeDaysApprox(fromIso: string, toIso: string): number {
+  const from = new Date(`${fromIso}T00:00:00Z`).getTime();
+  const to = new Date(`${toIso}T00:00:00Z`).getTime();
+  if (Number.isNaN(from) || Number.isNaN(to)) return 0;
+  return Math.max(1, Math.round((to - from) / (24 * 60 * 60 * 1000)) + 1);
 }
 
 function translateError(code: string, s: (typeof COPY)[keyof typeof COPY]): string {

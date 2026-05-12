@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
 import type { Period } from '../_lib/periods';
 
 interface Props {
@@ -62,6 +63,12 @@ export default function ExportButton({ period }: Props): JSX.Element {
       document.body.removeChild(anchor);
       // Free the object URL after a brief delay to let the browser dispatch.
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      // Fire on successful download. Period is the only meaningful
+      // signal — the CSV contents themselves are private financial data.
+      trackEvent('tribe_os_revenue_exported', {
+        from: period.from,
+        to: period.to,
+      });
     } catch {
       showError(s.errorNetwork);
     } finally {

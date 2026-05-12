@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { ArrowLeft, Users, Crown, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { trackEvent } from '@/lib/analytics';
 import type { GymCoachWithUser } from '@/lib/dal/gymCoaches';
 
 interface RosterResponse {
@@ -105,6 +106,7 @@ export default function CoachesPage() {
           return;
         }
         setState({ kind: 'ready', gym: body.data.gym, coaches: body.data.coaches });
+        trackEvent('tribe_os_coaches_viewed', { coach_count: body.data.coaches.length });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.error });
       }

@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+import { trackEvent } from '@/lib/analytics';
 
 type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
 
@@ -134,7 +135,21 @@ export default function TribeOSDashboardPage() {
         setPageState('not_premium');
         return;
       }
-      setPageState(isTribeOSPremiumActive(data as PremiumRow | null) ? 'premium' : 'not_premium');
+      const isPremium = isTribeOSPremiumActive(data as PremiumRow | null);
+      setPageState(isPremium ? 'premium' : 'not_premium');
+      // Fire once per page mount on the premium path so we can build
+      // the dashboard-views funnel. The not_premium path fires its
+      // own event when the checkout flow surfaces (handled in
+      // UpgradeCard).
+      if (isPremium) {
+        trackEvent('tribe_os_dashboard_viewed');
+        // Stripe success_url is /os/dashboard?subscribed=true. If
+        // we see it, the user just completed checkout — close the
+        // funnel here regardless of which device they returned on.
+        if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
+          trackEvent('tribe_os_checkout_succeeded');
+        }
+      }
     })();
     return () => {
       cancelled = true;
@@ -152,6 +167,7 @@ export default function TribeOSDashboardPage() {
         setOpeningPortal(false);
         return;
       }
+      trackEvent('tribe_os_portal_opened');
       window.location.href = body.url;
       // No reset — page is navigating away.
     } catch {

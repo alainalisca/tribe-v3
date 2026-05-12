@@ -19,6 +19,7 @@ import { ArrowLeft, AlertCircle, Building2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { createClient } from '@/lib/supabase/client';
+import { trackEvent } from '@/lib/analytics';
 import type { GymRow } from '@/lib/dal/gyms';
 
 type LoadState =
@@ -143,6 +144,7 @@ export default function GymSettingsPage() {
         }
         const canEdit = !!callerId && body.data.owner_user_id === callerId;
         setState({ kind: 'ready', gym: body.data, canEdit });
+        trackEvent('tribe_os_gym_settings_viewed', { can_edit: canEdit });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.error });
       }
@@ -276,6 +278,12 @@ function GymForm({
       }
       setSuccess(s.saveSuccess);
       setSaving(false);
+      trackEvent('tribe_os_gym_settings_saved', {
+        // Which fields changed — coarse aggregation, no values
+        changed_name: 'name' in payload,
+        changed_timezone: 'timezone' in payload,
+        changed_currency: 'default_currency' in payload,
+      });
       onSaved();
     } catch {
       setError(s.genericError);

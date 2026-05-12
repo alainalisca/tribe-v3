@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import ClientForm from '@/components/tribe-os/ClientForm';
+import { trackEvent } from '@/lib/analytics';
 import type { ClientRow } from '@/lib/dal/clients';
 
 const copy = {
@@ -55,6 +56,15 @@ export default function NewClientPage() {
         if (!res.ok || !body.success || !body.data) {
           return { success: false, error: body.error || 'create_failed' };
         }
+        trackEvent('tribe_os_client_created', {
+          status: body.data.status,
+          has_email: body.data.email !== null,
+          has_phone: body.data.phone !== null,
+          has_notes: body.data.notes !== null && body.data.notes.length > 0,
+          has_health_notes: body.data.health_notes !== null && body.data.health_notes.length > 0,
+          tag_count: body.data.tags.length,
+          has_gym_id: body.data.gym_id !== null,
+        });
         router.push(`/os/clients/${body.data.id}`);
         return { success: true };
       }}

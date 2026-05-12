@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { trackEvent } from '@/lib/analytics';
 import type { AtRiskClient } from '@/lib/dal/clients';
 
 type WidgetState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; clients: AtRiskClient[] };
@@ -157,6 +158,13 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
     <li>
       <Link
         href={`/os/clients/${client.id}`}
+        onClick={() =>
+          trackEvent('tribe_os_at_risk_clicked', {
+            status: client.status,
+            days_since_last_seen: client.days_since_last_seen,
+            has_email: client.email !== null,
+          })
+        }
         className="flex items-center gap-3 p-3 bg-tribe-dark/30 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 hover:bg-tribe-dark/50 transition-colors"
       >
         <div className="flex-1 min-w-0">

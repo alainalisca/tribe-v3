@@ -149,6 +149,26 @@ type EventName =
   | 'instructor_onboarding_completed'
   | 'account_deleted'
 
+  // Tribe.OS (Weeks 1-3 of the gym-tenant integration)
+  // Fires from the OS routes once a user has premium. Properties
+  // intentionally lean — keep PII out, prefer enums (tier, status,
+  // role, currency) over free-form strings. Build dashboards on the
+  // counts; reach into the user via posthog identity if you need who.
+  | 'tribe_os_dashboard_viewed' // every load of /os/dashboard (premium-gated)
+  | 'tribe_os_client_created' // POST /api/tribe-os/clients success
+  | 'tribe_os_client_updated' // PATCH /api/tribe-os/clients/[id] success
+  | 'tribe_os_client_status_changed' // status field on update differs from before — signal for engagement health
+  | 'tribe_os_attendance_recorded' // POST /api/tribe-os/clients/[id]/attendance success
+  | 'tribe_os_at_risk_clicked' // user clicked a row in the at-risk widget on /os/dashboard
+  | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
+  | 'tribe_os_revenue_exported' // CSV export download
+  | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)
+  | 'tribe_os_gym_settings_viewed' // /os/gym page rendered
+  | 'tribe_os_gym_settings_saved' // PATCH /api/tribe-os/gym success
+  | 'tribe_os_checkout_started' // user clicked the checkout button
+  | 'tribe_os_checkout_succeeded' // Stripe checkout returned ?subscribed=true
+  | 'tribe_os_portal_opened' // user clicked manage subscription -> Stripe portal
+
   // Errors
   | 'error_occurred'
   | 'api_error';

@@ -18,6 +18,7 @@
 
 import { useState } from 'react';
 import { showError } from '@/lib/toast';
+import { trackEvent } from '@/lib/analytics';
 
 interface UpgradeCardCopy {
   upgradeTitle: string;
@@ -37,6 +38,7 @@ export default function UpgradeCard({ copy: s }: { copy: UpgradeCardCopy }) {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
+    trackEvent('tribe_os_checkout_started');
     try {
       const res = await fetch('/api/tribe-os/subscription/checkout/', { method: 'POST' });
       const body = (await res.json().catch(() => ({}))) as {
