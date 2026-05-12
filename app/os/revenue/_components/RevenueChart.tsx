@@ -105,7 +105,7 @@ export default function RevenueChart({ buckets, currencyDefault, groupBy }: Prop
 
   if (!hasUsd && !hasCop) {
     return (
-      <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 p-8 text-center text-sm text-tribe-mid">
+      <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-8 text-center text-sm text-gray-600">
         {s.notEnoughData}
       </div>
     );
@@ -152,9 +152,9 @@ function ChartCard({
   const s = COPY[language];
 
   return (
-    <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 p-5 sm:p-6">
+    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-5 sm:p-6">
       <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-bold uppercase tracking-[0.1em] text-tribe-mid">
+        <h3 className="text-sm font-bold uppercase tracking-[0.1em] text-gray-500">
           {groupBy === 'week' ? s.titleWeekly : s.titleMonthly} ({currency})
         </h3>
       </div>

@@ -119,7 +119,7 @@ export default function RevenueDashboardPage(): JSX.Element {
             <div className="h-44 rounded-2xl bg-white/5 animate-pulse" />
           </div>
         ) : fetchState.kind === 'error' ? (
-          <div className="rounded-2xl bg-tribe-card border border-red-500/30 p-8 text-center">
+          <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] border border-red-300 p-8 text-center">
             <p className="text-tribe-dark font-semibold mb-4">{fetchState.message}</p>
             <button
               type="button"

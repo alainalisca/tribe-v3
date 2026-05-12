@@ -61,10 +61,10 @@ interface CurrencyCardProps {
 function CurrencyCard({ currency, totals, copy, language }: CurrencyCardProps): JSX.Element {
   const hasRefunds = totals.refund_cents > 0;
   return (
-    <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 p-5 sm:p-6">
+    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-5 sm:p-6">
       <div className="flex items-baseline justify-between mb-4">
-        <span className="text-xs uppercase tracking-[0.1em] font-semibold text-tribe-mid">{currency}</span>
-        <span className="text-xs text-tribe-mid">
+        <span className="text-xs uppercase tracking-[0.1em] font-semibold text-gray-500">{currency}</span>
+        <span className="text-xs text-gray-500">
           {totals.payment_count === 1 ? copy.onePayment : copy.nPayments(totals.payment_count)}
         </span>
       </div>
@@ -75,7 +75,7 @@ function CurrencyCard({ currency, totals, copy, language }: CurrencyCardProps): 
         {hasRefunds && (
           <Row label={copy.refunds} value={`-${formatMoney(totals.refund_cents, currency, language)}`} muted />
         )}
-        <div className="pt-3 border-t border-tribe-mid/20">
+        <div className="pt-3 border-t border-gray-200">
           <Row label={copy.net} value={formatMoney(totals.net_cents, currency, language)} emphasis />
         </div>
       </div>
@@ -96,13 +96,13 @@ function Row({
 }): JSX.Element {
   return (
     <div className="flex items-baseline justify-between">
-      <span className={`text-sm ${muted ? 'text-tribe-mid' : 'text-tribe-dark'}`}>{label}</span>
+      <span className={`text-sm ${muted ? 'text-gray-500' : 'text-tribe-dark'}`}>{label}</span>
       <span
         className={
           emphasis
             ? 'text-2xl font-black text-tribe-dark'
             : muted
-              ? 'text-sm text-tribe-mid'
+              ? 'text-sm text-gray-500'
               : 'text-base font-semibold text-tribe-dark'
         }
       >

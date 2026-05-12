@@ -90,7 +90,7 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
 
   if (loading) {
     return (
-      <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 p-8 text-center text-sm text-tribe-mid">
+      <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-8 text-center text-sm text-gray-600">
         <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin" />
         {s.loading}
       </div>
@@ -99,7 +99,7 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
 
   if (error) {
     return (
-      <div className="rounded-2xl bg-tribe-card border border-red-500/30 p-6 text-center">
+      <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] border border-red-300 p-6 text-center">
         <p className="text-tribe-dark font-semibold mb-3 text-sm">{error}</p>
         <button
           type="button"
@@ -114,14 +114,14 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 p-8 text-center text-sm text-tribe-mid">
+      <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-8 text-center text-sm text-gray-600">
         {s.empty}
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-tribe-card border border-tribe-mid/20 overflow-hidden">
+    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-tribe-mid/10">
