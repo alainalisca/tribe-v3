@@ -23,6 +23,7 @@ import {
   type InstructorStats,
   type ServicePackageRow,
 } from '@/lib/dal/instructorDashboard';
+import { fetchUserProfile } from '@/lib/dal/users';
 import type { User } from '@/lib/database.types';
 
 type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages' | 'leads';
@@ -69,13 +70,17 @@ export default function InstructorDashboardPage() {
         return;
       }
 
-      const { data: userRow, error } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-
-      if (error || !userRow?.is_instructor) {
+      // Use the DAL helper rather than select('*') so we get an explicit
+      // safe-column list. Migration 065 revoked SELECT on sensitive
+      // tribe_os_* columns from the authenticated role; select('*')
+      // would now fail with permission denied. fetchUserProfile selects
+      // a vetted column set that excludes the revoked columns.
+      const profileResult = await fetchUserProfile(supabase, authUser.id);
+      if (!profileResult.success || !profileResult.data?.is_instructor) {
         router.replace('/profile');
         return;
       }
-      setProfile(userRow as User);
+      setProfile(profileResult.data as unknown as User);
 
       // Load all data in parallel
       const [sessResult, statsResult, pkgResult, leadsResult] = await Promise.all([
