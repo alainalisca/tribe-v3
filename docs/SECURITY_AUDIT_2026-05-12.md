@@ -185,7 +185,24 @@ The `/os/dashboard` page uses an inline premium-state machine that does the same
 
 No CRITICAL findings. All FIX items addressed in this mission. **Leak test established at `scripts/rls-leak-test.js` (~10 seconds runtime) — re-run after any future schema change on `public.users` or new RLS policy.**
 
+## Post-audit expansion (2026-05-12)
+
+After the initial Mission 1 closeout, the leak test was expanded to
+also check Phase 1 columns on `users` (payout, PII, push tokens).
+Two further findings:
+
+| #   | Severity | Item                                                                                                                                                                                                                                                                                                                                                                                                          | Status                                                                                                                    |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| H   | FIX      | `push_subscription`, `fcm_token`, `fcm_platform`, `fcm_updated_at` readable cross-user. These are server-role-only fields; restricting them is unambiguously safe. The push subscription contains private VAPID keys (impersonation-adjacent).                                                                                                                                                                | **FIXED** in migration `067`. Leak test verifies `fcm_token` is now blocked.                                              |
+| I   | DEFER    | `payout_account_number`, `payout_document_number`, `payout_bank_name`/`type`/`method`, `payout_document_type`, `emergency_contact_*`, `date_of_birth`, `wompi_merchant_id` remain readable cross-user. Restricting them at the GRANT level would also block self-reads in `/earnings/payout-settings`, `/api/stripe/connect/*`, and `fetchUserProfile`. Proper fix requires the `users_public` view refactor. | **DEFER** to Week 5+. Documented in `docs/LATER.md`. Leak test prints these as WARN (not FAIL) so the suite stays useful. |
+
+`stripe_account_id` deliberately not restricted: needed cross-user by
+`/api/payment/create` to look up the creator's Connect account for
+destination charges. Stripe account IDs are identifiers, not
+credentials.
+
 ## Known follow-up (Week 5+ hardening)
 
 - `tribe_os_tier` and `tribe_os_status` remain readable cross-user. Reveals "is X premium" and their subscription state. Not removed because `useTribeOSPremiumGate` reads them client-side for the user's own row, and column-level GRANTs are role-based not row-based. Proper fix is either (a) replace the wildcard SELECT policy on `users` with a self-only policy + a `users_public` view for cross-user reads, or (b) move the gate check to a server endpoint that uses service-role.
-- **Schema rule from migration 066**: future migrations adding columns to `public.users` MUST include `GRANT SELECT (new_col) ON public.users TO authenticated, anon` if the column is safe for cross-user reads. New columns are private-by-default after migration 066.
+- **Payout / PII / financial leak**: see finding I above and the `users_public` entry in `docs/LATER.md`. This is the structural fix that resolves both this finding AND the tier/status follow-up.
+- **Schema rule from migrations 066+067**: future migrations adding columns to `public.users` MUST include `GRANT SELECT (new_col) ON public.users TO authenticated, anon` if the column is safe for cross-user reads. New columns are private-by-default after these migrations.

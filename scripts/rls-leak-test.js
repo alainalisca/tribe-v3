@@ -65,7 +65,9 @@ function loadEnvLocal() {
 
 let passCount = 0;
 let failCount = 0;
+let warnCount = 0;
 const failures = [];
+const warnings = [];
 
 function pass(label) {
   passCount += 1;
@@ -76,6 +78,16 @@ function fail(label, detail) {
   failCount += 1;
   failures.push({ label, detail });
   console.log(`  FAIL  ${label}`);
+  if (detail) console.log(`        ${detail}`);
+}
+
+/** Print a known-issue warning that does not fail the run.
+ *  Use for documented leaks waiting on a structural fix (e.g. the
+ *  users_public view refactor for payout/PII columns). */
+function warn(label, detail) {
+  warnCount += 1;
+  warnings.push({ label, detail });
+  console.log(`  WARN  ${label}`);
   if (detail) console.log(`        ${detail}`);
 }
 
@@ -454,6 +466,80 @@ async function main() {
         );
       }
     }
+
+    // ---- 7. users push / FCM columns (post-067 restricted) ----
+    // These should be restricted by migration 067. Read-only by
+    // service-role; authenticated/anon should get permission denied
+    // (or an empty result if the column is null on A's row).
+    {
+      const sentinelToken = `RLS_TEST_FCM_${Date.now()}`;
+      await adminClient.from('users').update({ fcm_token: sentinelToken }).eq('id', userA.id);
+
+      const { data, error } = await userBClient.from('users').select('fcm_token').eq('id', userA.id);
+      if (error) {
+        pass(`users.fcm_token (B reads A) rejected: ${error.message.slice(0, 60)}`);
+      } else if (!data || data.length === 0) {
+        pass('users.fcm_token (B reads A) returns zero rows');
+      } else if (data[0].fcm_token === sentinelToken) {
+        fail('users.fcm_token (B reads A)', `LEAK: B saw A's fcm_token (post-067 should prevent)`);
+      } else if (data[0].fcm_token === null) {
+        pass('users.fcm_token (B reads A) returned null');
+      } else {
+        fail('users.fcm_token (B reads A)', `unexpected value: ${data[0].fcm_token}`);
+      }
+    }
+
+    // ---- 8. KNOWN LEAKS: payout / PII columns (DEFER — see LATER.md) ----
+    // These columns leak cross-user under the current setup because:
+    //   - The wildcard "view all profiles" SELECT policy on users
+    //     allows cross-user row reads.
+    //   - Column-level GRANT restriction is role-based, not row-based,
+    //     so revoking these columns from authenticated would also
+    //     block self-reads in /earnings/payout-settings,
+    //     /api/stripe/connect/*, fetchUserProfile, etc.
+    // Proper fix: replace the wildcard policy with a self-only policy
+    // and create a `users_public` view that exposes only safe columns
+    // for cross-user reads. Tracked in docs/LATER.md.
+    // These checks WARN (do not fail the run) until the structural fix.
+    {
+      const sentinelAccount = `RLS_TEST_BANK_${Date.now()}`;
+      const sentinelDoc = `RLS_TEST_DOC_${Date.now()}`;
+      const sentinelEmergency = `RLS_TEST_EMERGENCY_${Date.now()}`;
+      const sentinelDob = '1990-01-01';
+      await adminClient
+        .from('users')
+        .update({
+          payout_account_number: sentinelAccount,
+          payout_document_number: sentinelDoc,
+          emergency_contact_phone: sentinelEmergency,
+          date_of_birth: sentinelDob,
+        })
+        .eq('id', userA.id);
+
+      const sensitiveCols = [
+        { col: 'payout_account_number', expectedNot: sentinelAccount, label: 'bank account number' },
+        { col: 'payout_document_number', expectedNot: sentinelDoc, label: 'document/ID number' },
+        { col: 'emergency_contact_phone', expectedNot: sentinelEmergency, label: 'emergency contact phone' },
+        { col: 'date_of_birth', expectedNot: sentinelDob, label: 'date of birth' },
+      ];
+      for (const { col, expectedNot, label } of sensitiveCols) {
+        const { data, error } = await userBClient.from('users').select(col).eq('id', userA.id);
+        if (error) {
+          pass(`users.${col} (B reads A's ${label}) rejected: ${error.message.slice(0, 60)}`);
+        } else if (!data || data.length === 0) {
+          pass(`users.${col} (B reads A's ${label}) returns zero rows`);
+        } else if (data[0][col] === expectedNot) {
+          warn(
+            `users.${col} (B reads A's ${label})`,
+            `KNOWN LEAK: B saw A's ${col}. See docs/LATER.md → users_public view refactor.`
+          );
+        } else if (data[0][col] === null) {
+          pass(`users.${col} (B reads A's ${label}) returned null`);
+        } else {
+          warn(`users.${col} (B reads A's ${label})`, `unexpected value: ${data[0][col]}`);
+        }
+      }
+    }
   } finally {
     console.log('');
     console.log('Cleaning up...');
@@ -483,7 +569,16 @@ async function main() {
   }
 
   console.log('');
-  console.log(`Summary: ${passCount} pass, ${failCount} fail`);
+  const warnSuffix = warnCount > 0 ? `, ${warnCount} warn (known issues, see docs/LATER.md)` : '';
+  console.log(`Summary: ${passCount} pass, ${failCount} fail${warnSuffix}`);
+  if (warnCount > 0) {
+    console.log('');
+    console.log('Warnings (documented known issues, not blocking):');
+    for (const w of warnings) {
+      console.log(`  - ${w.label}`);
+      if (w.detail) console.log(`      ${w.detail}`);
+    }
+  }
   if (failCount > 0) {
     console.log('');
     console.log('Failures:');

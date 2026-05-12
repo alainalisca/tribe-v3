@@ -45,6 +45,54 @@ period totals are reduced accordingly, verify CSV export reflects it.
 
 ---
 
+## 2026-05-12 — `users_public` view refactor for payout / PII / financial leak
+
+**Source:** Week 4 audit follow-up, caught when expanding the RLS leak
+test to check payout and PII columns.
+
+**Description:** The `users` table's "Users can view all profiles" SELECT
+policy + column-level GRANT pattern (post-066/067) restricts only a
+handful of columns. The following are still readable cross-user by any
+authenticated caller:
+
+- `payout_account_number` (bank account number)
+- `payout_document_number` (government ID)
+- `payout_bank_name`, `payout_account_type`, `payout_document_type`, `payout_method`
+- `emergency_contact_name`, `emergency_contact_phone`
+- `date_of_birth`
+- `stripe_account_id` (Stripe Connect account; needed cross-user for
+  payment routing so this one stays accessible)
+- `wompi_merchant_id`
+
+The leak test (`scripts/rls-leak-test.js`) prints these as WARN
+entries with a pointer to this doc. The test does not fail on them so
+the suite stays green and useful.
+
+**Why deferred:** Column-level GRANT/REVOKE is role-based, not
+row-based. Revoking payout/PII columns from `authenticated` would also
+block self-reads in `/earnings/payout-settings`, `/api/stripe/connect/*`,
+`fetchUserProfile`, and other places where the user legitimately reads
+their own row via the session client. Doing it right requires:
+
+1. Replace the wildcard SELECT policy on `users` with a self-only
+   policy (`auth.uid() = id`).
+2. Create a `users_public` view exposing only safe columns, with its
+   own permissive policy and SELECT grant for authenticated/anon.
+3. Refactor every cross-user `from('users').select(...)` in the app
+   to use `users_public` instead. Estimated ~15-25 call sites across
+   feed, instructor listings, partner rosters, profile pages, etc.
+
+That refactor is too large to slip into the pre-beta sprint. Risk of
+breaking a previously-working cross-user lookup outweighs the leak
+severity given that beta is 1-3 instructors who are not adversarial.
+
+**Trigger to revisit:** Before wider public launch (post-beta). Once
+multiple instructors are on the platform with bank account numbers
+stored, the leak severity rises. The view refactor should be its own
+focused mission with a thorough test pass.
+
+---
+
 ## 2026-05-12 — Wider `users` cross-user read leak (tier + status)
 
 **Source:** Security audit (DEFER item, follow-up to Week 4 Mission 1).
