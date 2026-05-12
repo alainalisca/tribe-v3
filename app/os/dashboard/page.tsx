@@ -23,7 +23,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Users, TrendingUp, UserCog } from 'lucide-react';
+import { CreditCard, Users, TrendingUp, UserCog, Building2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
@@ -44,6 +44,7 @@ const copy = {
     clientsCta: 'Manage clients',
     revenueCta: 'View revenue',
     coachesCta: 'Coaches',
+    gymCta: 'Gym settings',
     portalCta: 'Manage subscription',
     portalLoading: 'Opening Stripe',
     portalError: 'Could not open Stripe portal. Please try again.',
@@ -74,6 +75,7 @@ const copy = {
     clientsCta: 'Gestionar clientes',
     revenueCta: 'Ver ingresos',
     coachesCta: 'Entrenadores',
+    gymCta: 'Configuración del gym',
     portalCta: 'Gestionar suscripción',
     portalLoading: 'Abriendo Stripe',
     portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
@@ -213,6 +215,13 @@ export default function TribeOSDashboardPage() {
           >
             <UserCog className="w-4 h-4" />
             {s.coachesCta}
+          </Link>
+          <Link
+            href="/os/gym"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
+          >
+            <Building2 className="w-4 h-4" />
+            {s.gymCta}
           </Link>
           <button
             type="button"
