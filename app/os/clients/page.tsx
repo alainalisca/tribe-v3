@@ -115,7 +115,7 @@ export default function ClientsListPage() {
 
   if (gate.state !== 'allowed') {
     return (
-      <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : ''}
         </p>
@@ -126,10 +126,9 @@ export default function ClientsListPage() {
   const isSearching = debouncedSearch.length > 0;
 
   return (
-    <main className="min-h-screen bg-tribe-dark text-white px-4 pt-8 pb-24">
+    <main className="text-white px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <header className="mb-6">
-          <p className="text-tribe-green uppercase tracking-[0.1em] text-xs font-semibold mb-2">Tribe.OS</p>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">{s.title}</h1>
           <p className="text-sm text-white/70 mt-1">{s.subtitle}</p>
         </header>

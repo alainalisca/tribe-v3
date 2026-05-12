@@ -18,7 +18,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -89,7 +88,7 @@ export default function RevenueDashboardPage(): JSX.Element {
   // Gate states render their own loading / redirecting UI.
   if (gate.state !== 'allowed') {
     return (
-      <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirecting : s.loading}…
         </p>
@@ -103,17 +102,10 @@ export default function RevenueDashboardPage(): JSX.Element {
     fetchState.summary.buckets.length === 0;
 
   return (
-    <main className="min-h-screen bg-tribe-dark px-4 py-10 sm:py-14">
+    <main className="px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <Link
-            href="/os/dashboard"
-            className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white mb-3 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {s.backToDashboard}
-          </Link>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-1">{s.title}</h1>
           <p className="text-sm text-white/60">{period.label}</p>
         </div>

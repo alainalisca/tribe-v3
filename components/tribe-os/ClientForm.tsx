@@ -183,7 +183,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
   }
 
   return (
-    <main className="min-h-screen bg-tribe-dark text-white px-4 pt-6 pb-24">
+    <main className="text-white px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <button
           type="button"

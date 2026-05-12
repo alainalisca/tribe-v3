@@ -21,9 +21,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Users, TrendingUp, UserCog, Building2 } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
@@ -178,7 +177,7 @@ export default function TribeOSDashboardPage() {
 
   if (pageState === 'checking' || pageState === 'redirecting') {
     return (
-      <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
           {pageState === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
         </p>
@@ -188,7 +187,7 @@ export default function TribeOSDashboardPage() {
 
   if (pageState === 'not_premium') {
     return (
-      <main className="min-h-screen bg-tribe-dark px-4 py-16 sm:py-24">
+      <main className="px-4 py-12 sm:py-20">
         <div className="max-w-2xl mx-auto">
           <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.upgradeEyebrow}</p>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-4">
@@ -204,60 +203,36 @@ export default function TribeOSDashboardPage() {
   }
 
   // pageState === 'premium'
+  //
+  // The OS shell (app/os/layout.tsx) handles top-level navigation to
+  // Clients, Revenue, Coaches, and Gym settings. This page focuses
+  // on the welcome surface + the at-risk widget (the active signal)
+  // + a single secondary action (manage subscription). Keeps the
+  // landing visually quiet for an instructor coming back to check
+  // who they need to follow up with.
   return (
-    <main className="min-h-screen bg-tribe-dark px-4 py-16 sm:py-24">
+    <main className="px-4 py-8 sm:py-12">
       <div className="max-w-2xl mx-auto">
-        <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">Tribe.OS</p>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-6">{s.welcome}</h1>
-        <p className="text-base sm:text-lg text-white/80 leading-relaxed mb-10">{s.placeholder}</p>
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap mb-10">
-          <Link
-            href="/os/clients"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-green text-tribe-dark text-base font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all"
-          >
-            <Users className="w-4 h-4" />
-            {s.clientsCta}
-          </Link>
-          <Link
-            href="/os/revenue"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
-          >
-            <TrendingUp className="w-4 h-4" />
-            {s.revenueCta}
-          </Link>
-          <Link
-            href="/os/coaches"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
-          >
-            <UserCog className="w-4 h-4" />
-            {s.coachesCta}
-          </Link>
-          <Link
-            href="/os/gym"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
-          >
-            <Building2 className="w-4 h-4" />
-            {s.gymCta}
-          </Link>
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-3">{s.welcome}</h1>
+        <p className="text-sm sm:text-base text-white/70 leading-relaxed mb-8">{s.placeholder}</p>
+
+        {/* At-risk clients widget — the primary signal on this page. */}
+        <AtRiskClientsWidget />
+
+        {/* Secondary actions tucked at the bottom so they don't compete
+            with the at-risk widget. Manage subscription is the only
+            action not already in the shell nav or the account menu. */}
+        <div className="mt-8 flex flex-wrap gap-3">
           <button
             type="button"
             onClick={handlePortal}
             disabled={openingPortal}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-tribe-surface text-white text-xs font-semibold rounded-full border border-tribe-mid hover:bg-tribe-mid transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <CreditCard className="w-4 h-4" />
+            <CreditCard className="w-3.5 h-3.5" />
             {openingPortal ? `${s.portalLoading}…` : s.portalCta}
           </button>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
-          >
-            {s.backLabel}
-          </Link>
         </div>
-
-        {/* At-risk clients widget (Week 2 Mission 5) */}
-        <AtRiskClientsWidget />
       </div>
     </main>
   );

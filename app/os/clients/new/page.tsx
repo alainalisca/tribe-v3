@@ -29,7 +29,7 @@ export default function NewClientPage() {
 
   if (gate.state !== 'allowed') {
     return (
-      <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : ''}
         </p>

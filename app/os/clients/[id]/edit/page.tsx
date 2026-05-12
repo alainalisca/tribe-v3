@@ -95,7 +95,7 @@ export default function EditClientPage() {
 
   if (gate.state !== 'allowed') {
     return (
-      <main className="min-h-screen bg-tribe-dark flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24">
         <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : ''}
         </p>
@@ -105,7 +105,7 @@ export default function EditClientPage() {
 
   if (state.kind === 'loading') {
     return (
-      <main className="min-h-screen bg-tribe-dark text-white flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24 text-white">
         <p className="text-sm text-white/60">{s.loading}…</p>
       </main>
     );
@@ -113,7 +113,7 @@ export default function EditClientPage() {
 
   if (state.kind === 'not_found') {
     return (
-      <main className="min-h-screen bg-tribe-dark text-white flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24 text-white">
         <p className="text-sm text-white/60">{s.notFound}</p>
       </main>
     );
@@ -121,7 +121,7 @@ export default function EditClientPage() {
 
   if (state.kind === 'error') {
     return (
-      <main className="min-h-screen bg-tribe-dark text-white flex items-center justify-center px-4">
+      <main className="flex items-center justify-center px-4 py-24 text-white">
         <p className="text-sm text-white/60">{state.message}</p>
       </main>
     );
