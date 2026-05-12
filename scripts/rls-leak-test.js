@@ -467,6 +467,31 @@ async function main() {
       }
     }
 
+    // ---- 6b. clients INSERT spoof (B tries to insert claiming A as instructor) ----
+    // The clients RLS policy is FOR ALL with WITH CHECK (auth.uid() = instructor_user_id),
+    // so an INSERT with someone else's id should be rejected.
+    {
+      const { data, error } = await userBClient
+        .from('clients')
+        .insert({
+          instructor_user_id: userA.id, // <-- the spoof: B claiming A as instructor
+          name: 'RLS Test Spoof Client',
+        })
+        .select('id');
+      if (error) {
+        pass(`clients INSERT spoof (B inserts claiming A as instructor) rejected: ${error.message.slice(0, 60)}`);
+      } else if (!data || data.length === 0) {
+        pass('clients INSERT spoof (B inserts claiming A as instructor) returned no row');
+      } else {
+        // Cleanup the leaked row before failing so we don't pollute.
+        await adminClient.from('clients').delete().eq('id', data[0].id);
+        fail(
+          'clients INSERT spoof (B inserts claiming A as instructor)',
+          `LEAK: B successfully inserted a client claiming A as instructor (id=${data[0].id}, deleted)`
+        );
+      }
+    }
+
     // ---- 7. users push / FCM columns (post-067 restricted) ----
     // These should be restricted by migration 067. Read-only by
     // service-role; authenticated/anon should get permission denied
