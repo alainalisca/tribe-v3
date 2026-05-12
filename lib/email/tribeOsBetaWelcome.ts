@@ -25,6 +25,13 @@ interface BetaWelcomeParams {
   /** Free premium runway in days. Default 90 per Week 4 spec. */
   freeDays: number;
   language: 'en' | 'es';
+  /**
+   * Gym name (display label of the user's Tribe.OS tenant). Optional
+   * for backward compat with grants that pre-date the gym-tenant model
+   * (migration 068). When present, the headline addresses the gym
+   * rather than the individual instructor.
+   */
+  gymName?: string;
 }
 
 function getResendClient(): Resend {
@@ -47,7 +54,8 @@ const copy = {
   en: {
     subject: 'Welcome to the Tribe.OS beta',
     eyebrow: 'Tribe.OS · Beta',
-    headline: (name: string) => `${name}, you're in.`,
+    headline: (name: string, gymName?: string) =>
+      gymName ? `Welcome to Tribe.OS, ${gymName}.` : `${name}, you're in.`,
     intro: (freeDays: number) =>
       `You have full Tribe.OS premium access free for the next ${freeDays} days. ` +
       `That covers all the tools we built for instructors running paid sessions: ` +
@@ -92,7 +100,8 @@ const copy = {
   es: {
     subject: 'Bienvenido a la beta de Tribe.OS',
     eyebrow: 'Tribe.OS · Beta',
-    headline: (name: string) => `${name}, estás dentro.`,
+    headline: (name: string, gymName?: string) =>
+      gymName ? `Bienvenido a Tribe.OS, ${gymName}.` : `${name}, estás dentro.`,
     intro: (freeDays: number) =>
       `Tienes acceso completo a Tribe.OS premium gratis durante los próximos ${freeDays} días. ` +
       `Esto cubre todas las herramientas que construimos para instructores que cobran por sus sesiones: ` +
@@ -139,6 +148,7 @@ const copy = {
 function renderBetaWelcomeHtml(params: BetaWelcomeParams, siteUrl: string): string {
   const c = copy[params.language];
   const name = escapeHtml(params.name);
+  const gymName = params.gymName ? escapeHtml(params.gymName) : undefined;
 
   const canDoItemsHtml = c.canDoItems
     .map(
@@ -164,7 +174,7 @@ function renderBetaWelcomeHtml(params: BetaWelcomeParams, siteUrl: string): stri
         <div style="background: #272D34; padding: 28px 28px 22px;">
           <div style="font-size: 26px; font-weight: 900; color: white; line-height: 1; letter-spacing: -0.02em; margin: 0 0 22px;">Tribe<span style="color: #9EE551;">.</span></div>
           <p style="margin: 0; color: #9EE551; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;">${c.eyebrow}</p>
-          <h1 style="margin: 8px 0 0; color: white; font-size: 24px; font-weight: 800; line-height: 1.25;">${c.headline(name)}</h1>
+          <h1 style="margin: 8px 0 0; color: white; font-size: 24px; font-weight: 800; line-height: 1.25;">${c.headline(name, gymName)}</h1>
         </div>
         <div style="padding: 26px 28px 8px;">
           <p style="margin: 0 0 22px; font-size: 15px; line-height: 1.6; color: #1f2937;">${escapeHtml(c.intro(params.freeDays))}</p>
@@ -198,7 +208,7 @@ function renderBetaWelcomeText(params: BetaWelcomeParams, siteUrl: string): stri
   const expectationsLines = c.expectations.map((e) => `- ${e}`).join('\n');
 
   return [
-    c.headline(params.name),
+    c.headline(params.name, params.gymName),
     '',
     c.intro(params.freeDays),
     '',

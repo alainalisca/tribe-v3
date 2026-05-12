@@ -16,6 +16,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 import type { TribeOSStatus, TribeOSTier } from './tribeOSPremium';
+import { createGym, getGymByStripeCustomerId, getGymByStripeSubscriptionId, getGymForUser, updateGym } from './gyms';
+import { addCoachToGym } from './gymCoaches';
 
 /**
  * Translates a Stripe subscription's `status` to our `tribe_os_status`.
@@ -178,10 +180,141 @@ export async function syncFromStripeSubscription(
       logError(error, { action: 'syncFromStripeSubscription', userId, subscriptionId: subscription.id });
       return { success: false, error: error.message };
     }
+
+    // Mirror the subscription state onto the user's gym. Post-Path-B,
+    // the gym is the canonical source of truth; the users.tribe_os_*
+    // columns above are kept in sync only for backward-compat with
+    // code that hasn't migrated to the gym-aware DAL yet.
+    //
+    // Failures here are logged but do not fail the webhook — the user
+    // row is already correct, so the gate works. If gym sync drops, a
+    // future webhook retry or manual sweep can repair it. This avoids
+    // a Stripe retry storm if gym tables ever go transiently 5xx.
+    const gymSync = await syncGymFromStripeSubscription(supabase, {
+      userId,
+      subscriptionId: subscription.id,
+      customerId: subscription.customer,
+      tier,
+      status,
+    });
+    if (!gymSync.success) {
+      logError(new Error(`gym_sync_failed: ${gymSync.error ?? ''}`), {
+        action: 'syncFromStripeSubscription.gymSync',
+        userId,
+        subscriptionId: subscription.id,
+      });
+      // Do not return failure — the user row is canonical for the
+      // legacy gate path, and the dual-path RLS in migration 070
+      // accepts either source.
+    }
+
     return { success: true, data: { userId } };
   } catch (error) {
     logError(error, { action: 'syncFromStripeSubscription', subscriptionId: subscription.id });
     return { success: false, error: 'Failed to sync subscription' };
+  }
+}
+
+/**
+ * Sync the subscription state onto the user's gym. Lookup chain:
+ *   1. By stripe_subscription_id (returning event for an already-synced sub)
+ *   2. By stripe_customer_id (first event after checkout — the checkout
+ *      route persists the customer id onto the gym so this hits)
+ *   3. By owner_user_id (fallback when neither id is set yet —
+ *      legacy users provisioned via the CLI before Mission 6's gym
+ *      auto-creation flow shipped)
+ *   4. Create a gym for the user (brand-new subscriber on the
+ *      gym-tenant code path).
+ *
+ * Caller passes the already-resolved (userId, tier, status). This
+ * function is safe to call repeatedly; field-level updateGym is
+ * idempotent.
+ */
+async function syncGymFromStripeSubscription(
+  supabase: SupabaseClient,
+  params: {
+    userId: string;
+    subscriptionId: string;
+    customerId: string;
+    tier: TribeOSTier | null;
+    status: TribeOSStatus | null;
+  }
+): Promise<DalResult<{ gymId: string }>> {
+  try {
+    // (1) Find by subscription id (preferred).
+    let gymRes = await getGymByStripeSubscriptionId(supabase, params.subscriptionId);
+    if (!gymRes.success) {
+      return { success: false, error: gymRes.error ?? 'lookup_failed' };
+    }
+    let gym = gymRes.data;
+
+    // (2) Find by customer id (first event for this subscription).
+    if (!gym) {
+      gymRes = await getGymByStripeCustomerId(supabase, params.customerId);
+      if (!gymRes.success) {
+        return { success: false, error: gymRes.error ?? 'lookup_failed' };
+      }
+      gym = gymRes.data;
+    }
+
+    // (3) Find by owner_user_id (legacy users without stripe ids yet).
+    if (!gym) {
+      const owned = await getGymForUser(supabase, params.userId);
+      if (!owned.success) {
+        return { success: false, error: owned.error ?? 'lookup_failed' };
+      }
+      gym = owned.data;
+    }
+
+    // (4) Create one. Auto-provisioning path for brand-new subscribers
+    // whose gym was never set up by the checkout route (defensive: this
+    // should not happen if Mission 6's checkout flow is in place).
+    if (!gym) {
+      const userRow = await supabase.from('users').select('name, email').eq('id', params.userId).single();
+      const display =
+        ((userRow.data as { name: string | null; email: string | null } | null)?.name ??
+          (userRow.data as { name: string | null; email: string | null } | null)?.email?.split('@')[0]) ||
+        'Solo Practice';
+      const created = await createGym(supabase, {
+        name: display,
+        ownerUserId: params.userId,
+        tier: params.tier,
+        status: params.status,
+        stripeCustomerId: params.customerId,
+        stripeSubscriptionId: params.subscriptionId,
+        grantedAt: new Date().toISOString(),
+        grantedBy: 'stripe',
+      });
+      if (!created.success) {
+        return { success: false, error: created.error ?? 'create_failed' };
+      }
+      const newGym = created.data!;
+      // Owner needs the gym_coaches row so the dual-path RLS works.
+      await addCoachToGym(supabase, newGym.id, params.userId, 'owner');
+      return { success: true, data: { gymId: newGym.id } };
+    }
+
+    // Existing gym → patch it in place.
+    const updateRes = await updateGym(supabase, gym.id, {
+      tier: params.tier ?? gym.tribe_os_tier,
+      status: params.status,
+      stripeCustomerId: params.customerId,
+      stripeSubscriptionId: params.subscriptionId,
+      // Only stamp granted_at on a transition from "no tier" to "tier".
+      grantedAt: gym.tribe_os_tier ? undefined : new Date().toISOString(),
+      grantedBy: gym.tribe_os_tier ? undefined : 'stripe',
+    });
+    if (!updateRes.success) {
+      return { success: false, error: updateRes.error ?? 'update_failed' };
+    }
+    return { success: true, data: { gymId: gym.id } };
+  } catch (error) {
+    logError(error, {
+      action: 'syncGymFromStripeSubscription',
+      userId: params.userId,
+      subscriptionId: params.subscriptionId,
+    });
+    return { success: false, error: 'Failed to sync gym from subscription' };
   }
 }
 
@@ -221,6 +354,42 @@ export async function clearTribeOSSubscription(
       logError(error, { action: 'clearTribeOSSubscription', userId });
       return { success: false, error: error.message };
     }
+
+    // Mirror the cancellation onto the user's gym(s). We flip
+    // tribe_os_status to 'canceled' but PRESERVE tier — that way the
+    // gym record remains identifiable as "previously on solo tier"
+    // for re-subscribe attribution, and isTribeOSPremiumActive's
+    // tier-null short-circuit isn't required (status='canceled' is
+    // enough to fail the gate).
+    //
+    // Lookup order: subscription id → customer id → owner_user_id.
+    // We don't fail the webhook if gym lookup misses — the user row
+    // is canonical for the legacy gate.
+    let gymRes = await getGymByStripeCustomerId(supabase, stripeCustomerId);
+    if (!gymRes.success) {
+      logError(new Error(`gym_lookup_failed: ${gymRes.error ?? ''}`), {
+        action: 'clearTribeOSSubscription.gymLookup',
+        userId,
+        stripeCustomerId,
+      });
+    } else if (!gymRes.data) {
+      gymRes = await getGymForUser(supabase, userId);
+    }
+    const gym = gymRes.success ? gymRes.data : null;
+    if (gym) {
+      const updateRes = await updateGym(supabase, gym.id, {
+        status: 'canceled',
+        // Stripe IDs preserved for re-subscribe traceability.
+      });
+      if (!updateRes.success) {
+        logError(new Error(`gym_update_failed: ${updateRes.error ?? ''}`), {
+          action: 'clearTribeOSSubscription.gymUpdate',
+          userId,
+          gymId: gym.id,
+        });
+      }
+    }
+
     return { success: true, data: { userId } };
   } catch (error) {
     logError(error, { action: 'clearTribeOSSubscription', stripeCustomerId });

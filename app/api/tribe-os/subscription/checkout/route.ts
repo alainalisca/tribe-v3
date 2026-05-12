@@ -32,6 +32,8 @@ import { logError } from '@/lib/logger';
 import { createTribeOSStripeCustomer, createTribeOSCheckoutSession } from '@/lib/payments/stripe';
 import { setTribeOSStripeCustomerId } from '@/lib/dal/tribeOSSubscription';
 import { isTribeOSPremiumActive } from '@/lib/dal/tribeOSPremium';
+import { createGym, getGymForUser, updateGym } from '@/lib/dal/gyms';
+import { addCoachToGym } from '@/lib/dal/gymCoaches';
 
 interface PremiumRow {
   tribe_os_tier: 'solo' | 'team_studio' | null;
@@ -109,6 +111,54 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
           customerId,
         });
         return NextResponse.json({ success: false, error: 'failed_to_persist_customer' }, { status: 500 });
+      }
+    }
+
+    // Ensure the user has a gym (gym-tenant model, migration 068+).
+    // The gym is the unit of subscription billing — the webhook handler
+    // syncs status onto it via stripe_customer_id (and later
+    // stripe_subscription_id). We resolve or create here so the webhook
+    // never has to fall back to ad-hoc gym creation, which would race
+    // against a UI flow that depends on the gym being present.
+    const gymRes = await getGymForUser(service, user.id);
+    if (!gymRes.success) {
+      logError(new Error(`gym_lookup_failed: ${gymRes.error ?? ''}`), {
+        action: 'tribe_os_checkout.gym_lookup',
+        userId: user.id,
+      });
+      return NextResponse.json({ success: false, error: 'failed_to_resolve_gym' }, { status: 500 });
+    }
+    if (!gymRes.data) {
+      const display = premiumRow.name || user.email.split('@')[0] || 'Solo Practice';
+      const created = await createGym(service, {
+        name: display,
+        ownerUserId: user.id,
+        // Tier and status get populated by the webhook after Checkout
+        // completes. Until then the gym exists in a pre-billing state.
+        stripeCustomerId: customerId,
+      });
+      if (!created.success) {
+        logError(new Error(`gym_create_failed: ${created.error ?? ''}`), {
+          action: 'tribe_os_checkout.gym_create',
+          userId: user.id,
+        });
+        return NextResponse.json({ success: false, error: 'failed_to_create_gym' }, { status: 500 });
+      }
+      const newGymId = created.data!.id;
+      // Owner needs the gym_coaches row for dual-path RLS to work.
+      await addCoachToGym(service, newGymId, user.id, 'owner');
+    } else if (!gymRes.data.tribe_os_stripe_customer_id) {
+      // Existing gym (e.g. backfilled in migration 069) without a Stripe
+      // customer id yet. Tag it so the webhook can find it on the first
+      // subscription event.
+      const tagged = await updateGym(service, gymRes.data.id, { stripeCustomerId: customerId });
+      if (!tagged.success) {
+        logError(new Error(`gym_tag_customer_failed: ${tagged.error ?? ''}`), {
+          action: 'tribe_os_checkout.gym_tag_customer',
+          userId: user.id,
+          gymId: gymRes.data.id,
+        });
+        // Non-fatal — webhook can fall back to owner_user_id lookup.
       }
     }
 

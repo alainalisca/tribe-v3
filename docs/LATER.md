@@ -165,3 +165,65 @@ Editor instead. Works, just slower than the CLI would be.
 
 **Trigger to revisit:** If we ever need to script migration application
 in CI. Or if Al wants the convenience back.
+
+---
+
+## 2026-05-12 — Multi-coach revenue SQL functions
+
+**Source:** Week 1 (gym-tenant integration) Mission 5, DAL update.
+
+**Description:** `instructor_revenue_totals` and
+`instructor_revenue_buckets` (migration 063 + 064 auth assertion) are
+keyed on `p_user_id` and gated by `auth.uid() = p_user_id`. They
+cannot be invoked with a gym id today. The Mission 5
+`getRevenueSummaryForGym` and `listPaymentsForGym` wrappers compensate
+by resolving gym → owner user id and delegating — which works because
+every gym currently has exactly one owner, but breaks the moment a
+multi-coach gym wants a non-owner coach to see revenue.
+
+**Why deferred:** The Path B foundation (Week 1) is about schema and
+RLS. Multi-coach revenue queries belong in Week 2 alongside the rest
+of the multi-coach UX work (gym switcher, coach roster page,
+role-based permissions).
+
+**Trigger to revisit:** Start of Week 2. Build:
+
+- `gym_revenue_totals(p_gym_id, period_start, period_end, p_timezone)`
+  gated by `EXISTS (SELECT 1 FROM gym_coaches WHERE gym_id = p_gym_id
+AND user_id = auth.uid())`. Reads from `payments.gym_id` directly
+  (already backfilled in migration 069).
+- `gym_revenue_buckets(p_gym_id, ...)` same gate.
+- Swap `lib/dal/revenue.ts` `listPayments` to query
+  `payments.gym_id = ?` instead of `sessions.creator_id`.
+- Update the `getRevenueSummaryForGym` wrapper to call the new SQL
+  functions directly instead of delegating to the user-keyed path.
+
+---
+
+## 2026-05-12 — Cleanup migration: drop legacy `instructor_user_id` RLS path
+
+**Source:** Week 1 Mission 4 (dual-path RLS), file header notes.
+
+**Description:** Migration 070 RLS policies accept either
+`instructor_user_id = auth.uid()` OR `gym_coaches` membership. Both
+are valid during the transition. Once every Tribe.OS user has been
+operating exclusively on the gym path for some time (and every row in
+`clients` / `client_attendance` / `payments` has `gym_id` populated),
+a cleanup migration should:
+
+1. Verify zero rows with `gym_id IS NULL` for premium tenants.
+2. Replace each dual-path policy with a gym-only variant.
+3. Flip `clients.gym_id`, `client_attendance.gym_id`,
+   `payments.gym_id` to NOT NULL.
+4. Drop `clients.instructor_user_id` (or leave as an informational
+   column — decision deferred until the cleanup mission runs).
+
+**Why deferred:** Removing the legacy branch is irreversible without
+a backup restore. We want at least a few weeks of dual-path operation
+to surface any rows that slipped through migration 069's backfill.
+
+**Trigger to revisit:** Week 5+ or when the team is confident no new
+rows are landing without `gym_id`. The leak test
+(`scripts/rls-leak-test.js`) is the canary — if it ever WARNs about
+a row missing `gym_id` for a premium tenant, the cleanup migration
+gets delayed until that's fixed.

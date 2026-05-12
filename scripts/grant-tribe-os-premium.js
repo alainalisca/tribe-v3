@@ -93,7 +93,7 @@ async function findUserByEmail(supabase, email) {
  * Throws on Resend error so the caller can decide. The grant CLI logs
  * and continues — the grant should succeed even if the email fails.
  */
-async function sendBetaWelcome({ email, name, freeDays, language, siteUrl }) {
+async function sendBetaWelcome({ email, name, gymName, freeDays, language, siteUrl }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     throw new Error('RESEND_API_KEY not set in .env.local');
@@ -126,8 +126,16 @@ async function sendBetaWelcome({ email, name, freeDays, language, siteUrl }) {
       ? `Después de ${freeDays} días, eliges: treinta dólares al mes o quince por ciento de participación en ingresos.`
       : `After ${freeDays} days you choose: thirty dollars per month or fifteen percent revenue share.`;
 
+  const greeting = gymName
+    ? language === 'es'
+      ? `Bienvenido a Tribe.OS, ${gymName}.`
+      : `Welcome to Tribe.OS, ${gymName}.`
+    : language === 'es'
+      ? `${name}, estás dentro.`
+      : `${name}, you're in.`;
+
   const text = [
-    language === 'es' ? `${name}, estás dentro.` : `${name}, you're in.`,
+    greeting,
     '',
     intro,
     '',
@@ -147,6 +155,106 @@ async function sendBetaWelcome({ email, name, freeDays, language, siteUrl }) {
     subject,
     text,
   });
+}
+
+// FNV-1a 32-bit hash → 6 hex chars. Mirrors deriveGymSlug in
+// lib/dal/gyms.ts and the SQL in migration 069 so all three paths
+// produce stable, deterministic slugs.
+function simpleHash6(input) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0').slice(0, 6);
+}
+
+function deriveGymSlug(name, uniquenessSeed) {
+  const base = String(name)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const safeBase = base.length > 0 ? base : 'gym';
+  return `${safeBase}-${simpleHash6(uniquenessSeed)}`.slice(0, 80);
+}
+
+/**
+ * Ensure the user has a gym, owned by them. Idempotent. Returns the
+ * gym row. Called as part of grant() so the gym-tenant scaffolding is
+ * in place before any tenant data lands on the user.
+ *
+ * Mirrors lib/dal/gyms.ts createGym + gymCoaches.ts addCoachToGym but
+ * inlined here so the CLI stays a single-file JS script.
+ */
+async function ensureGymForUser(supabase, user, tier, grantedBy) {
+  // Look for an existing gym owned by the user (any deleted_at).
+  const existing = await supabase
+    .from('gyms')
+    .select(
+      'id, name, slug, owner_user_id, tribe_os_tier, tribe_os_status, tribe_os_granted_at, tribe_os_granted_by, deleted_at'
+    )
+    .eq('owner_user_id', user.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing.error) {
+    throw new Error(`gym lookup failed: ${existing.error.message}`);
+  }
+
+  if (existing.data) {
+    // Idempotent refresh: ensure tier/status/granted_at match the
+    // grant we just performed on the user row.
+    const updates = {
+      tribe_os_tier: tier,
+      tribe_os_status: null,
+      tribe_os_granted_at: new Date().toISOString(),
+      tribe_os_granted_by: grantedBy,
+    };
+    const { data, error } = await supabase
+      .from('gyms')
+      .update(updates)
+      .eq('id', existing.data.id)
+      .select('id, name, slug')
+      .single();
+    if (error) {
+      throw new Error(`gym update failed: ${error.message}`);
+    }
+    // Owner row idempotent upsert.
+    await supabase
+      .from('gym_coaches')
+      .upsert({ gym_id: data.id, user_id: user.id, role: 'owner' }, { onConflict: 'gym_id,user_id' });
+    return { gym: data, created: false };
+  }
+
+  const name = user.name || (user.email ? user.email.split('@')[0] : 'Solo Practice');
+  const slug = deriveGymSlug(name, user.id);
+  const insertRes = await supabase
+    .from('gyms')
+    .insert({
+      name,
+      slug,
+      owner_user_id: user.id,
+      tribe_os_tier: tier,
+      tribe_os_status: null,
+      tribe_os_granted_at: new Date().toISOString(),
+      tribe_os_granted_by: grantedBy,
+    })
+    .select('id, name, slug')
+    .single();
+  if (insertRes.error) {
+    throw new Error(`gym create failed: ${insertRes.error.message}`);
+  }
+  await supabase
+    .from('gym_coaches')
+    .upsert(
+      { gym_id: insertRes.data.id, user_id: user.id, role: 'owner' },
+      { onConflict: 'gym_id,user_id' }
+    );
+  return { gym: insertRes.data, created: true };
 }
 
 async function grant(supabase, email, tier, options) {
@@ -182,11 +290,26 @@ async function grant(supabase, email, tier, options) {
   console.log(`granted ${tier} to ${data.email} (${data.name})`);
   console.log(JSON.stringify(data, null, 2));
 
+  // Ensure gym-tenant scaffolding (migration 068+). The gym is the
+  // canonical billing tenant going forward; the users.tribe_os_*
+  // columns above stay in sync for backward compat with code that
+  // hasn't moved to the gym-aware DAL yet.
+  let gymName = null;
+  try {
+    const { gym, created } = await ensureGymForUser(supabase, data, tier, grantedBy);
+    console.log(`${created ? 'created' : 'refreshed'} gym ${gym.slug} (${gym.id}) for ${data.email}`);
+    gymName = gym.name;
+  } catch (err) {
+    console.error(`gym scaffold FAILED for ${data.email}: ${err.message}`);
+    console.error('(the user-row grant succeeded; the legacy RLS path still works)');
+  }
+
   if (options && options.welcome) {
     try {
       await sendBetaWelcome({
         email: data.email,
         name: data.name || data.email.split('@')[0],
+        gymName,
         freeDays: options.freeDays,
         language: options.language,
         siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app',
@@ -219,6 +342,24 @@ async function revoke(supabase, email) {
     process.exit(3);
   }
   console.log(`revoked Tribe.OS premium from ${user.email}`);
+
+  // Mirror the revoke onto the user's gym(s). Tier is cleared and
+  // status flipped to 'canceled' to match the Stripe-flow semantics.
+  // Stripe IDs preserved for re-grant attribution.
+  const { error: gymErr } = await supabase
+    .from('gyms')
+    .update({
+      tribe_os_tier: null,
+      tribe_os_status: 'canceled',
+    })
+    .eq('owner_user_id', user.id)
+    .is('deleted_at', null);
+  if (gymErr) {
+    console.error(`gym revoke FAILED for ${user.email}: ${gymErr.message}`);
+    console.error('(the user-row revoke succeeded; check gyms.tribe_os_status manually)');
+  } else {
+    console.log(`gym status flipped to canceled for owner ${user.email}`);
+  }
 }
 
 async function list(supabase) {
