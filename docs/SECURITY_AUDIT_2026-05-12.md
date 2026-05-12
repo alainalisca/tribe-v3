@@ -206,3 +206,93 @@ credentials.
 - `tribe_os_tier` and `tribe_os_status` remain readable cross-user. Reveals "is X premium" and their subscription state. Not removed because `useTribeOSPremiumGate` reads them client-side for the user's own row, and column-level GRANTs are role-based not row-based. Proper fix is either (a) replace the wildcard SELECT policy on `users` with a self-only policy + a `users_public` view for cross-user reads, or (b) move the gate check to a server endpoint that uses service-role.
 - **Payout / PII / financial leak**: see finding I above and the `users_public` entry in `docs/LATER.md`. This is the structural fix that resolves both this finding AND the tier/status follow-up.
 - **Schema rule from migrations 066+067**: future migrations adding columns to `public.users` MUST include `GRANT SELECT (new_col) ON public.users TO authenticated, anon` if the column is safe for cross-user reads. New columns are private-by-default after these migrations.
+
+---
+
+## Post-gym-tenant integration audit (2026-05-12, Weeks 1–3 of integration)
+
+After the original Mission 1 closeout, three weeks of gym-tenant
+integration shipped on `feature/tribe-os`. Migrations 068–072
+landed; new pages (`/os/coaches`, `/os/gym`), new API routes
+(coaches, at-risk, gym), and gym-keyed SQL functions
+(`gym_revenue_totals`, `gym_revenue_buckets`) were added. This
+section catalogs the security-relevant changes and the new findings.
+
+### Migrations added
+
+| #   | Migration                       | Touches                                                                                                                                                                                                       |
+| --- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 068 | `gym_tenant_schema.sql`         | Creates `gyms` + `gym_coaches` tables with RLS enabled. Adds nullable `gym_id` to `clients`, `client_attendance`, `payments`.                                                                                 |
+| 069 | `gym_tenant_backfill.sql`       | Synthesizes one gym per existing Tribe.OS user, populates `gym_coaches` (owner role), backfills `gym_id` on all tenant rows.                                                                                  |
+| 070 | `dual_path_rls.sql`             | Replaces FOR ALL policies on `clients` + `client_attendance` with split policies that accept EITHER legacy `instructor_user_id = auth.uid()` OR `gym_coaches` membership.                                     |
+| 071 | `gym_revenue_functions.sql`     | New SECURITY DEFINER functions `gym_revenue_totals` / `gym_revenue_buckets` gated by `EXISTS (SELECT 1 FROM gym_coaches WHERE gym_id = p_gym_id AND user_id = auth.uid())`. Reads `payments.gym_id` directly. |
+| 072 | `clients_member_enrichment.sql` | Adds `status`, `health_notes`, `last_seen_at` to `clients`. Trigger `sync_client_last_seen` (SECURITY DEFINER) on `client_attendance` keeps `last_seen_at` cached.                                            |
+
+Hotfix `dd0aac5`: the original `gym_coaches_member_select` policy
+self-referenced and caused infinite recursion when queried from the
+tenant-table policies. Collapsed to `user_id = auth.uid()`. The
+"list every coach in my gym" UI need is deferred to a future
+SECURITY DEFINER function.
+
+### RLS surface for the new tables
+
+`gyms`:
+
+- SELECT: `owner_user_id = auth.uid()` OR caller is in `gym_coaches`
+- INSERT/UPDATE/DELETE: service-role only (no user-facing policy)
+
+`gym_coaches`:
+
+- SELECT: `user_id = auth.uid()` (caller can see their own row).
+  Listing the full gym roster goes through `GET /api/tribe-os/coaches`
+  which calls `listCoachesForGym` from a session client — and that
+  query returns only the caller's own row under current RLS. This is
+  a deliberate trade-off for Week 3; the proper fix is a SECURITY
+  DEFINER `list_gym_coaches(p_gym_id)` function that gates on
+  membership without recursing. **Tracked as a Week 4 hardening
+  item** (see Findings below).
+- INSERT/UPDATE/DELETE: service-role only.
+
+### New SECURITY DEFINER surfaces
+
+| Function                | Gate                                                                                                                                               | Verified by                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `gym_revenue_totals`    | `EXISTS in gym_coaches(p_gym_id, auth.uid())`. Raises 42501 if not a coach.                                                                        | Leak test phase 5b (post-Mission-1, Week 3)       |
+| `gym_revenue_buckets`   | Same.                                                                                                                                              | Leak test phase 5c (post-Mission-1, Week 3)       |
+| `sync_client_last_seen` | Trigger, AFTER INSERT/UPDATE on `client_attendance`. SECURITY DEFINER bypasses RLS on the cross-table write to `clients`. Not externally callable. | Migration 072 backfill regression test (implicit) |
+| `touch_gyms_updated_at` | Trigger, BEFORE UPDATE on `gyms`. Not externally callable.                                                                                         | (n/a)                                             |
+
+### Per-route audit (new routes, Week 1–3 integration)
+
+| Route                                 | Auth | Premium | Zod | Try/catch + logger | Status                                                                                |
+| ------------------------------------- | ---- | ------- | --- | ------------------ | ------------------------------------------------------------------------------------- |
+| `/api/tribe-os/coaches` (GET)         | ✅   | ✅      | n/a | ✅                 | PASS. Read-only, returns only the gym the caller is in.                               |
+| `/api/tribe-os/gym` (GET)             | ✅   | ✅      | n/a | ✅                 | PASS. Returns the caller's gym row.                                                   |
+| `/api/tribe-os/gym` (PATCH)           | ✅   | ✅      | ✅  | ✅                 | PASS. **Owner-only**: returns 403 'owner_only' if `gym.owner_user_id !== auth.uid()`. |
+| `/api/tribe-os/clients/at-risk` (GET) | ✅   | ✅      | ✅  | ✅                 | PASS. Scoped by gym (preferred) or instructor (fallback).                             |
+
+### Findings (Weeks 1–3 integration)
+
+| #   | Severity | Item                                                                                                                                                                                                                                                                                  | Status                                                                                                                                                                                                                               |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| J   | PASS     | Dual-path RLS preserves cross-user isolation. Leak test 11/0/4 baseline unchanged after migrations 068–072.                                                                                                                                                                           | Verified.                                                                                                                                                                                                                            |
+| K   | PASS     | Gym SQL functions reject cross-gym access with 42501. Closes the only DEFER item from the Week 2 audit ("Leak test coverage for new gym SQL functions").                                                                                                                              | Verified by Week 3 Mission 1 (leak test phases 5b–5e). Expected post-extension: 16/0/4.                                                                                                                                              |
+| L   | PASS     | The Stripe webhook `syncFromStripeSubscription` now mirrors gym state alongside the user row. Gym sync failures are logged but do not fail the webhook — the user row remains canonical for the legacy gate path, and dual-path RLS ensures both sources stay valid.                  | Verified by code review. No live retry storm risk.                                                                                                                                                                                   |
+| M   | DEFER    | `listCoachesForGym` returns only the caller's own row under current `gym_coaches_member_select` policy (`user_id = auth.uid()`). The `/os/coaches` page shows just the owner because of this. Functional for Week 3 (only one coach exists per gym today), but blocks multi-coach UX. | Tracked as **Week 4 hardening**. Proper fix: SECURITY DEFINER function `list_gym_coaches(p_gym_id)` that gates on `EXISTS in gym_coaches(p_gym_id, auth.uid())` and returns all coaches without recursing. Added to `docs/LATER.md`. |
+| N   | INFO     | `/os/gym` PATCH is owner-only. Non-owner coaches see the form in read-only mode with an explanatory notice. Editing affects every coach + client-facing surfaces (welcome email subject line, share URLs); centralizing edit on the owner avoids confusion during beta.               | Intentional. When role-based permissions land, this becomes role='owner' instead of `owner_user_id` check.                                                                                                                           |
+
+No FIX or CRITICAL items added by Weeks 1–3. The integration left
+the security posture unchanged: same leak-test baseline, same
+deferred items, no new pre-merge blockers.
+
+### New schema rule for the gym-tenant era
+
+Any future migration that adds a tenant-scoped table MUST:
+
+1. Add `gym_id uuid REFERENCES public.gyms(id)` (nullable during
+   transition; flip NOT NULL in the cleanup migration).
+2. Enable RLS with dual-path policies that accept either legacy
+   ownership OR gym_coaches membership.
+3. Add an index on `gym_id` partial on the active subset.
+4. Backfill `gym_id` from the legacy scoping column in a follow-up
+   migration with verification counts before any RLS flip.

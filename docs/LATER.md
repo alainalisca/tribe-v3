@@ -200,6 +200,41 @@ AND user_id = auth.uid())`. Reads from `payments.gym_id` directly
 
 ---
 
+## 2026-05-12 — SECURITY DEFINER function `list_gym_coaches` for full roster view
+
+**Source:** Week 3 Mission 2 post-build audit (finding M).
+
+**Description:** The `/os/coaches` page renders only the caller's own
+coach row because the `gym_coaches_member_select` policy collapsed to
+`user_id = auth.uid()` after the recursion hotfix in `dd0aac5`. The
+original intent of the policy was "a user can see the coach rows for
+any gym they themselves are in", but the natural way to express that
+is an EXISTS subquery on `gym_coaches` itself — which causes infinite
+recursion when Postgres evaluates the policy.
+
+**Why deferred:** Functional for Week 3 because every gym has
+exactly one coach today (the owner, synthesized in migration 069).
+The page's "Only you for now" empty state covers the case. The fix
+is non-trivial and benefits from being designed once the multi-coach
+invite UX is ready (so the function returns whatever shape the UI
+actually needs).
+
+**Trigger to revisit:** Before onboarding the first multi-coach gym
+in beta, OR when building the coach-invite flow — whichever comes
+first. Concretely:
+
+1. Add SQL function `list_gym_coaches(p_gym_id uuid) RETURNS TABLE(...)`,
+   SECURITY DEFINER, gated by `EXISTS (SELECT 1 FROM gym_coaches WHERE
+gym_id = p_gym_id AND user_id = auth.uid())`. Returns every coach
+   in the gym joined with users (name, email, avatar).
+2. Update `lib/dal/gymCoaches.ts listCoachesForGym` to call the new
+   RPC instead of SELECTing the table directly.
+3. Update `scripts/rls-leak-test.js` to add a phase: B cannot call
+   `list_gym_coaches(gymAId)` because B is not a coach in A's gym.
+4. Audit finding M can then be marked PASS.
+
+---
+
 ## 2026-05-12 — Cleanup migration: drop legacy `instructor_user_id` RLS path
 
 **Source:** Week 1 Mission 4 (dual-path RLS), file header notes.
