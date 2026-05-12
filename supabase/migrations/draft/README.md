@@ -38,9 +38,6 @@ When validation greenlights one of these features:
 
 - `session_packages.draft.sql` — Pre-paid session packs ("10 sessions for
   $200, valid 90 days").
-- `instructor_revenue_summary.draft.sql` — SQL function returning
-  aggregated revenue metrics for an instructor over a period. Source for
-  the future revenue-dashboard UI.
 
 ## Promotion log
 
@@ -52,3 +49,30 @@ When validation greenlights one of these features:
   both tables. Integrity CHECK constraints added (archive consistency,
   payment-fields consistency, paid-implies-amount). See migration body
   for design rationale on each.
+
+- **2026-05-12** — `instructor_revenue_summary.draft.sql` promoted to
+  `supabase/migrations/063_revenue_dashboard.sql`. Significant changes
+  during promotion to match the Week 3 spec and fix latent issues:
+  - **Bug fix**: draft referenced `p.user_id` on the payments table;
+    actual column is `p.participant_user_id`. Corrected.
+  - **Split into two functions**: `instructor_revenue_totals` and
+    `instructor_revenue_buckets`. The draft's single-function approach
+    returned only totals; the dashboard needs a time series too.
+  - **Refund tracking added**: new `payments.refunded_at` and
+    `payments.refunded_amount_cents` columns, populated by a new
+    `charge.refunded` branch in `/api/payment/webhook/stripe/`. Refunds
+    are bucketed by `refunded_at`, not the original `created_at`.
+  - **Timezone-aware bucketing**: new `users.timezone` column (defaults
+    to `America/Bogota`). Functions take a `p_timezone` arg and use
+    `date_trunc(field, ts, tz)` (Postgres 12+) to truncate in the
+    instructor's local time. A payment at 23:45 local on the last day
+    of a month lives in that month, not the next.
+  - **Test-data filter**: payments where the creator or participant has
+    `users.is_test_account = true` are excluded. No new column needed —
+    relies on the existing migration 052 flag.
+  - **Currency-default column**: new `users.tribe_os_revenue_currency_default`
+    (nullable, CHECK 'USD' | 'COP') to let instructors pin which
+    currency the dashboard leads with.
+  - **Indexes**: composite partial index on `payments(session_id,
+created_at) WHERE status='approved'` and partial on
+    `payments(session_id, refunded_at) WHERE refunded_at IS NOT NULL`.
