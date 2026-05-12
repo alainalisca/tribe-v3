@@ -691,42 +691,36 @@ function csvEscape(value: string): string {
   return value;
 }
 
-// ---- Gym-aware wrappers ----
+// ---- Gym-aware queries ----
 //
 // Background
 // ----------
-// The SQL functions instructor_revenue_totals / instructor_revenue_buckets
-// (migration 063 + 064 auth assertion) take a `p_user_id` and gate on
-// auth.uid() = p_user_id. They cannot be invoked with a gym id today.
+// Week 2 Mission 2 introduces gym-keyed SQL functions
+// (gym_revenue_totals / gym_revenue_buckets, migration 071) that are
+// gated by gym_coaches membership rather than `auth.uid() =
+// p_user_id`. Any coach in the gym can read the gym's revenue.
 //
-// During the Path B transition, every gym has exactly one owner
-// (backfilled in migration 069). For single-owner gyms, "the gym's
-// revenue" is identical to "the owner's revenue" — payments are filtered
-// by sessions.creator_id, and the gym's owner is that creator.
+// These wrappers call those SQL functions DIRECTLY — no more gym ->
+// owner_user_id hop. Same for listPaymentsForGym /
+// generatePaymentsCsvForGym, which query `payments.gym_id` directly
+// (denormalized in migration 068, backfilled in 069) instead of
+// going through sessions.creator_id.
 //
-// So a gym-keyed wrapper just resolves gym → owner_user_id, then calls
-// the existing user-keyed function. The wrapper enforces that the
-// caller IS the gym owner (because the SQL gate requires
-// auth.uid() = ownerUserId). Coaches who are NOT the owner cannot use
-// these wrappers today.
+// The user-keyed functions (getRevenueSummary, listPayments,
+// generatePaymentsCsv) remain unchanged — they're the fallback when
+// a route handler has no gym context yet (transition window only).
 //
-// Multi-coach revenue (every coach can see the gym's revenue regardless
-// of their own creator_id) is a Week 2 task that requires:
-//   - new SQL functions gym_revenue_totals / gym_revenue_buckets keyed
-//     on p_gym_id, gated by `EXISTS (SELECT 1 FROM gym_coaches
-//     WHERE gym_id = p_gym_id AND user_id = auth.uid())` instead of
-//     `auth.uid() = p_user_id`
-//   - listPayments path swapped from `sessions.creator_id` to
-//     `payments.gym_id` (already backfilled in migration 069)
-// Tracked in docs/LATER.md.
-
-import { getGym } from './gyms';
+// Caller contract: caller must be a coach in the gym. The SQL
+// function gate enforces it for the totals/buckets RPC; for the
+// direct payments/CSV queries, the dual-path RLS on payments (which
+// is gated by sessions.creator_id today — see note in DAL header)
+// plus the gym's RLS policy provide defense in depth.
 
 /**
- * Gym-keyed revenue summary. Resolves the gym's owner and delegates to
- * getRevenueSummary. Caller MUST be the gym owner (SQL function gate).
- * For multi-coach gyms with non-owner callers, a future SQL function
- * will replace this — see file header.
+ * Gym-keyed revenue summary. Calls gym_revenue_totals +
+ * gym_revenue_buckets directly. Caller must be a coach in the gym
+ * (enforced by the SQL function gate; RAISE EXCEPTION 42501 on
+ * mismatch).
  */
 export async function getRevenueSummaryForGym(
   supabase: SupabaseClient,
@@ -735,20 +729,104 @@ export async function getRevenueSummaryForGym(
   toIsoDate: string,
   options: RevenueSummaryOptions = {}
 ): Promise<DalResult<RevenueSummary>> {
-  const gymRes = await getGym(supabase, gymId);
-  if (!gymRes.success) {
-    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  try {
+    const { toExclusiveEnd: toExcl } = prepareRange(fromIsoDate, toIsoDate);
+    const groupBy: RevenueGroupBy = options.groupBy ?? autoGroupBy(fromIsoDate, toIsoDate);
+
+    // Resolve gym's timezone / currency preference. Falls back to UTC
+    // + null default if the gym row is missing (RLS would also block
+    // this for non-coaches, but the lookup is defensive).
+    const { data: gymRow, error: gymErr } = await supabase
+      .from('gyms')
+      .select('timezone, default_currency')
+      .eq('id', gymId)
+      .maybeSingle();
+    if (gymErr) {
+      logError(gymErr, { action: 'getRevenueSummaryForGym.gymLookup', gymId });
+      return { success: false, error: gymErr.message };
+    }
+    const gymPrefs = gymRow as { timezone: string | null; default_currency: RevenueCurrency | null } | null;
+    const timezone = gymPrefs?.timezone ?? 'UTC';
+    const currencyDefaultPref = gymPrefs?.default_currency ?? null;
+
+    const [totalsRes, bucketsRes] = await Promise.all([
+      supabase.rpc('gym_revenue_totals', {
+        p_gym_id: gymId,
+        p_period_start_date: fromIsoDate,
+        p_period_end_date: toExcl,
+        p_timezone: timezone,
+      }),
+      supabase.rpc('gym_revenue_buckets', {
+        p_gym_id: gymId,
+        p_period_start_date: fromIsoDate,
+        p_period_end_date: toExcl,
+        p_group_by: groupBy,
+        p_timezone: timezone,
+      }),
+    ]);
+
+    if (totalsRes.error) {
+      logError(totalsRes.error, { action: 'getRevenueSummaryForGym.totals', gymId });
+      return { success: false, error: totalsRes.error.message };
+    }
+    if (bucketsRes.error) {
+      logError(bucketsRes.error, { action: 'getRevenueSummaryForGym.buckets', gymId });
+      return { success: false, error: bucketsRes.error.message };
+    }
+
+    const totalsRows = (totalsRes.data ?? []) as TotalsRow[];
+    const totals: RevenueSummary['totals'] = {};
+    for (const row of totalsRows) {
+      if (options.currency && options.currency !== 'all' && row.currency !== options.currency) continue;
+      totals[row.currency] = totalsRowToCurrencyTotals(row);
+    }
+
+    const bucketsRows = (bucketsRes.data ?? []) as BucketsRow[];
+    const bucketMap = new Map<string, RevenueBucket>();
+    for (const row of bucketsRows) {
+      if (options.currency && options.currency !== 'all' && row.currency !== options.currency) continue;
+      const startIso = row.bucket_start.slice(0, 10);
+      let bucket = bucketMap.get(startIso);
+      if (!bucket) {
+        bucket = {
+          period_start: startIso,
+          period_end: bucketEnd(startIso, groupBy),
+        };
+        bucketMap.set(startIso, bucket);
+      }
+      bucket[row.currency] = {
+        gross_cents: num(row.gross_cents),
+        fee_cents: num(row.fee_cents),
+        refund_cents: num(row.refund_cents),
+        net_cents: num(row.net_cents),
+        payment_count: num(row.payment_count),
+      };
+    }
+    const buckets = Array.from(bucketMap.values()).sort((a, b) => a.period_start.localeCompare(b.period_start));
+
+    return {
+      success: true,
+      data: {
+        totals,
+        buckets,
+        currency_default: currencyDefaultPref ?? inferCurrencyDefault(totals),
+        group_by: groupBy,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'getRevenueSummaryForGym', gymId });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch gym revenue summary',
+    };
   }
-  if (!gymRes.data) {
-    return { success: false, error: 'gym_not_found' };
-  }
-  return getRevenueSummary(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate, options);
 }
 
 /**
- * Gym-keyed payment list. Resolves the gym's owner and delegates to
- * listPayments. Same caller-must-be-owner constraint as
- * getRevenueSummaryForGym.
+ * Gym-keyed payment list. Queries payments.gym_id directly — skips
+ * the sessions.creator_id hop the user-keyed listPayments does.
+ * Caller must be a coach in the gym; RLS on the payments table
+ * (and the gym's gym_coaches policy) backs the access check.
  */
 export async function listPaymentsForGym(
   supabase: SupabaseClient,
@@ -757,23 +835,153 @@ export async function listPaymentsForGym(
   toIsoDate: string,
   options: ListPaymentsOptions = {}
 ): Promise<DalResult<PaymentListResult>> {
-  const gymRes = await getGym(supabase, gymId);
-  if (!gymRes.success) {
-    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  try {
+    prepareRange(fromIsoDate, toIsoDate);
+
+    // Pull gym timezone for local-day boundary alignment.
+    const { data: gymRow } = await supabase.from('gyms').select('timezone').eq('id', gymId).maybeSingle();
+    const timezone = (gymRow as { timezone: string | null } | null)?.timezone ?? 'UTC';
+
+    const fromTs = startOfDayUtcIso(fromIsoDate, timezone);
+    const toTs = startOfDayUtcIso(toExclusiveEnd(toIsoDate), timezone);
+
+    const limit = Math.min(options.limit ?? DEFAULT_PAYMENT_LIMIT, MAX_PAYMENT_LIMIT);
+    const offset = Math.max(options.offset ?? 0, 0);
+    const sort = options.sort ?? 'date_desc';
+
+    let query = supabase
+      .from('payments')
+      .select(
+        'id, created_at, session_id, participant_user_id, currency, amount_cents, platform_fee_cents, refunded_amount_cents, refunded_at, status, stripe_payment_intent_id',
+        { count: 'exact' }
+      )
+      .eq('gym_id', gymId)
+      .eq('status', 'approved')
+      .gte('created_at', fromTs)
+      .lt('created_at', toTs);
+
+    if (options.currency && options.currency !== 'all') {
+      query = query.eq('currency', options.currency);
+    }
+
+    switch (sort) {
+      case 'date_asc':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'amount_desc':
+        query = query.order('amount_cents', { ascending: false });
+        break;
+      case 'amount_asc':
+        query = query.order('amount_cents', { ascending: true });
+        break;
+      case 'date_desc':
+      default:
+        query = query.order('created_at', { ascending: false });
+        break;
+    }
+
+    query = query.range(offset, offset + limit - 1);
+
+    const { data: paymentRows, error: paymentsErr, count } = await query;
+    if (paymentsErr) {
+      logError(paymentsErr, { action: 'listPaymentsForGym.payments', gymId });
+      return { success: false, error: paymentsErr.message };
+    }
+
+    type PaymentSelectRow = {
+      id: string;
+      created_at: string;
+      session_id: string;
+      participant_user_id: string | null;
+      currency: RevenueCurrency;
+      amount_cents: number | string;
+      platform_fee_cents: number | string | null;
+      refunded_amount_cents: number | string | null;
+      refunded_at: string | null;
+      status: string;
+      stripe_payment_intent_id: string | null;
+    };
+
+    const rows = (paymentRows ?? []) as PaymentSelectRow[];
+
+    // Resolve session titles + participant names in two parallel
+    // batched lookups. We don't join in the main query so RLS on
+    // sessions / users doesn't constrain the page size.
+    const sessionIds = Array.from(new Set(rows.map((r) => r.session_id)));
+    const participantIds = Array.from(
+      new Set(rows.map((r) => r.participant_user_id).filter((id): id is string => !!id))
+    );
+
+    const sessionTitleById = new Map<string, string>();
+    const participantById = new Map<string, { name: string; email: string | null }>();
+
+    if (sessionIds.length > 0) {
+      const { data: sessRows, error: sessErr } = await supabase
+        .from('sessions')
+        .select('id, title, sport')
+        .in('id', sessionIds);
+      if (sessErr) {
+        logError(sessErr, { action: 'listPaymentsForGym.sessions', gymId });
+      } else {
+        for (const s of (sessRows ?? []) as Array<{ id: string; title: string | null; sport: string | null }>) {
+          sessionTitleById.set(s.id, s.title || s.sport || 'Untitled session');
+        }
+      }
+    }
+
+    if (participantIds.length > 0) {
+      const { data: userRows, error: usersErr } = await supabase
+        .from('users')
+        .select('id, name, email')
+        .in('id', participantIds);
+      if (usersErr) {
+        logError(usersErr, { action: 'listPaymentsForGym.users', gymId });
+      } else {
+        for (const u of (userRows ?? []) as Array<{ id: string; name: string | null; email: string | null }>) {
+          participantById.set(u.id, { name: u.name || 'Unknown', email: u.email });
+        }
+      }
+    }
+
+    const payments: PaymentRow[] = rows.map((r) => {
+      const gross = num(r.amount_cents);
+      const fee = num(r.platform_fee_cents);
+      const refunded = num(r.refunded_amount_cents);
+      return {
+        id: r.id,
+        created_at: r.created_at,
+        session_id: r.session_id,
+        session_title: sessionTitleById.get(r.session_id) ?? 'Untitled session',
+        participant_name: (r.participant_user_id && participantById.get(r.participant_user_id)?.name) ?? 'Unknown',
+        participant_email: (r.participant_user_id && participantById.get(r.participant_user_id)?.email) ?? null,
+        currency: r.currency,
+        gross_cents: gross,
+        fee_cents: fee,
+        net_cents: gross - fee - refunded,
+        refunded_cents: refunded,
+        status: r.status,
+        stripe_payment_intent_id: r.stripe_payment_intent_id,
+        refunded_at: r.refunded_at,
+      };
+    });
+
+    const total = count ?? 0;
+    const has_more = offset + payments.length < total;
+
+    return { success: true, data: { payments, total, has_more } };
+  } catch (error) {
+    logError(error, { action: 'listPaymentsForGym', gymId });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to list gym payments',
+    };
   }
-  if (!gymRes.data) {
-    return { success: false, error: 'gym_not_found' };
-  }
-  return listPayments(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate, options);
 }
 
 /**
- * Gym-keyed CSV export. Same owner-resolution pattern as
- * getRevenueSummaryForGym / listPaymentsForGym. Multi-coach CSV
- * (non-owner coaches exporting gym revenue) lands in Week 2 Mission 2
- * via the gym-keyed SQL functions, at which point this wrapper
- * collapses into a direct call to the gym-aware path instead of
- * delegating through user id.
+ * Gym-keyed CSV export. Like listPaymentsForGym, queries
+ * payments.gym_id directly. Memory-built; same 5000-row in-memory
+ * cap as the user-keyed export (see generatePaymentsCsv).
  */
 export async function generatePaymentsCsvForGym(
   supabase: SupabaseClient,
@@ -781,12 +989,75 @@ export async function generatePaymentsCsvForGym(
   fromIsoDate: string,
   toIsoDate: string
 ): Promise<DalResult<string>> {
-  const gymRes = await getGym(supabase, gymId);
-  if (!gymRes.success) {
-    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  // Reuse listPaymentsForGym with the export caps applied. This
+  // accepts a slight inefficiency (we go through the same name/title
+  // resolution as the table view) in exchange for a single source of
+  // truth for the gym-keyed payments query.
+  const list = await listPaymentsForGym(supabase, gymId, fromIsoDate, toIsoDate, {
+    limit: MAX_PAYMENT_LIMIT, // 200 per page
+    offset: 0,
+    sort: 'date_asc',
+  });
+  if (!list.success || !list.data) {
+    return { success: false, error: list.error ?? 'gym_payments_failed' };
   }
-  if (!gymRes.data) {
-    return { success: false, error: 'gym_not_found' };
+
+  // Page through additional rows if there are more than MAX_PAYMENT_LIMIT.
+  // Cap at 5000 to match the user-keyed CSV export's memory budget.
+  const CSV_HARD_CAP = 5000;
+  const all = [...list.data.payments];
+  let offset = all.length;
+  while (offset < list.data.total && all.length < CSV_HARD_CAP) {
+    const page = await listPaymentsForGym(supabase, gymId, fromIsoDate, toIsoDate, {
+      limit: MAX_PAYMENT_LIMIT,
+      offset,
+      sort: 'date_asc',
+    });
+    if (!page.success || !page.data) break;
+    if (page.data.payments.length === 0) break;
+    all.push(...page.data.payments);
+    offset += page.data.payments.length;
   }
-  return generatePaymentsCsv(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate);
+
+  // Cap then format as CSV. Header matches generatePaymentsCsv exactly.
+  const rows = all.slice(0, CSV_HARD_CAP);
+  const header = [
+    'payment_id',
+    'created_at_utc',
+    'session_id',
+    'session_title',
+    'participant_name',
+    'participant_email',
+    'currency',
+    'gross_cents',
+    'fee_cents',
+    'refunded_cents',
+    'net_cents',
+    'status',
+    'stripe_payment_intent_id',
+    'refunded_at_utc',
+  ].join(',');
+
+  const lines = rows.map((r) =>
+    [
+      r.id,
+      r.created_at,
+      r.session_id,
+      csvEscape(r.session_title),
+      csvEscape(r.participant_name),
+      csvEscape(r.participant_email ?? ''),
+      r.currency,
+      String(r.gross_cents),
+      String(r.fee_cents),
+      String(r.refunded_cents),
+      String(r.net_cents),
+      r.status,
+      r.stripe_payment_intent_id ?? '',
+      r.refunded_at ?? '',
+    ].join(',')
+  );
+
+  // UTF-8 BOM so Excel opens the file with the right encoding.
+  const csv = '﻿' + [header, ...lines].join('\n') + '\n';
+  return { success: true, data: csv };
 }
