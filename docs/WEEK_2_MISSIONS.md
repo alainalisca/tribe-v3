@@ -64,9 +64,9 @@ rare post-Week-1 Mission 6, but possible).
   - `/os/revenue` loads, summary cards + chart render
   - Create a test client via `/os/clients/new` — confirm the Status
     select + Health notes textarea render and the submit succeeds
-- [ ] `node scripts/rls-leak-test.js` stays at **11 PASS / 0 FAIL / 4 WARN**
+- [x] `node scripts/rls-leak-test.js` stays at **11 PASS / 0 FAIL / 4 WARN**
       (the WARNs are the documented payout/PII columns deferred in
-      `LATER.md`)
+      `LATER.md`). Verified post-072 and post-mission-5 widget.
 
 ## Deferred to Week 3+ (in LATER.md)
 
