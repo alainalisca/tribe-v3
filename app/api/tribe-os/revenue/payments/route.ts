@@ -15,41 +15,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logger';
-import { isTribeOSPremiumActive } from '@/lib/dal/tribeOSPremium';
+import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { listPayments } from '@/lib/dal/revenue';
 import { revenuePaymentsQuerySchema } from '@/lib/validations/revenue';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const gate = await requireTribeOSPremium();
+  if (!gate.ok) return gate.response;
+  const { supabase, userId } = gate;
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
-    }
-
-    const { data: profile, error: profileErr } = await supabase
-      .from('users')
-      .select('tribe_os_tier, tribe_os_status')
-      .eq('id', user.id)
-      .single();
-    if (profileErr || !profile) {
-      logError(profileErr ?? new Error('profile_missing'), {
-        action: 'revenue_payments.premium_check',
-        userId: user.id,
-      });
-      return NextResponse.json({ success: false, error: 'profile_lookup_failed' }, { status: 500 });
-    }
-    if (!isTribeOSPremiumActive(profile)) {
-      return NextResponse.json(
-        { success: false, error: 'premium_required', hint: 'upgrade_to_tribe_os' },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const parsed = revenuePaymentsQuerySchema.safeParse({
       from: searchParams.get('from') ?? undefined,
@@ -66,7 +42,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await listPayments(supabase, user.id, parsed.data.from, parsed.data.to, {
+    const result = await listPayments(supabase, userId, parsed.data.from, parsed.data.to, {
       currency: parsed.data.currency,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
@@ -76,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!result.success || !result.data) {
       logError(new Error(result.error ?? 'unknown'), {
         action: 'revenue_payments.dal',
-        userId: user.id,
+        userId,
       });
       return NextResponse.json({ success: false, error: result.error ?? 'payments_failed' }, { status: 500 });
     }
