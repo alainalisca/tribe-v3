@@ -169,6 +169,42 @@ function toExclusiveEnd(toIsoDate: string): string {
   return formatIsoDate(addDays(parseIsoDate(toIsoDate), 1));
 }
 
+/**
+ * Returns the UTC ISO timestamp corresponding to 00:00:00 on `dateIso` in
+ * the given IANA `timezone`. Used to align Supabase's UTC-based filters
+ * with the instructor's local-time view of "May 1".
+ *
+ * Strategy: format a UTC anchor in the target timezone, see how it
+ * differs from the desired local moment, and shift by that delta. Robust
+ * across DST transitions because Intl.DateTimeFormat does the heavy
+ * lifting.
+ */
+function startOfDayUtcIso(dateIso: string, timezone: string): string {
+  const utcAnchor = new Date(`${dateIso}T00:00:00Z`);
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(utcAnchor);
+  const get = (type: string): number => {
+    const v = parts.find((p) => p.type === type)?.value ?? '0';
+    // 'hour' in en-CA can be '24' for midnight; normalize.
+    const n = parseInt(v, 10);
+    return type === 'hour' && n === 24 ? 0 : n;
+  };
+  const localMoment = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  const [targetY, targetM, targetD] = dateIso.split('-').map(Number);
+  const targetMoment = Date.UTC(targetY, targetM - 1, targetD, 0, 0, 0);
+  const delta = targetMoment - localMoment;
+  return new Date(utcAnchor.getTime() + delta).toISOString();
+}
+
 /** Days between two ISO date strings, inclusive of both ends. */
 function rangeDays(fromIsoDate: string, toIsoDate: string): number {
   const from = parseIsoDate(fromIsoDate);
@@ -379,9 +415,12 @@ export async function listPayments(
     prepareRange(fromIsoDate, toIsoDate);
     const { timezone } = await getUserTimezoneAndDefault(supabase, userId);
 
-    const fromTs = `${fromIsoDate}T00:00:00`;
-    const toExclIso = toExclusiveEnd(toIsoDate);
-    const toTs = `${toExclIso}T00:00:00`;
+    // Align the date filters with the instructor's local timezone so
+    // a payment at 23:45 local on the last day of the period is still
+    // included. SQL functions handle this via date_trunc(... , tz);
+    // here we precompute the UTC equivalents for the Supabase filter.
+    const fromTs = startOfDayUtcIso(fromIsoDate, timezone);
+    const toTs = startOfDayUtcIso(toExclusiveEnd(toIsoDate), timezone);
 
     const limit = Math.min(options.limit ?? DEFAULT_PAYMENT_LIMIT, MAX_PAYMENT_LIMIT);
     const offset = Math.max(options.offset ?? 0, 0);
@@ -512,10 +551,6 @@ export async function listPayments(
 
     const total = count ?? 0;
     const has_more = offset + payments.length < total;
-
-    // timezone unused in this function body but kept in scope for future
-    // grouping/formatting. Silence the unused-var by binding to void.
-    void timezone;
 
     return { success: true, data: { payments, total, has_more } };
   } catch (error) {

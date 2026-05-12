@@ -1,0 +1,94 @@
+/**
+ * GET /api/tribe-os/revenue/summary
+ *
+ * Returns per-currency totals + a time-series of revenue buckets for a
+ * creator over an inclusive date range. Auto-picks weekly buckets for
+ * ranges up to 90 days, monthly for longer (overridable via `groupBy`).
+ *
+ * Response shape (200):
+ *   { success: true, data: RevenueSummary }
+ *   where RevenueSummary has totals (per-currency), buckets (time series),
+ *   currency_default ('USD' | 'COP'), and group_by ('week' | 'month').
+ *
+ * Failure modes:
+ *   400 invalid query params (Zod error)
+ *   401 not signed in
+ *   403 signed in but not Tribe.OS premium
+ *   500 server / DB error
+ *
+ * Auth model: the route reads auth.uid() from the session and passes it
+ * as p_user_id to the underlying SQL functions. The functions are
+ * SECURITY DEFINER and trust the caller — this layer is the gate.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
+import { isTribeOSPremiumActive } from '@/lib/dal/tribeOSPremium';
+import { getRevenueSummary } from '@/lib/dal/revenue';
+import { revenueSummaryQuerySchema } from '@/lib/validations/revenue';
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+    }
+
+    // Premium gate. Fetch only the columns isTribeOSPremiumActive reads.
+    const { data: profile, error: profileErr } = await supabase
+      .from('users')
+      .select('tribe_os_tier, tribe_os_status')
+      .eq('id', user.id)
+      .single();
+    if (profileErr || !profile) {
+      logError(profileErr ?? new Error('profile_missing'), {
+        action: 'revenue_summary.premium_check',
+        userId: user.id,
+      });
+      return NextResponse.json({ success: false, error: 'profile_lookup_failed' }, { status: 500 });
+    }
+    if (!isTribeOSPremiumActive(profile)) {
+      return NextResponse.json(
+        { success: false, error: 'premium_required', hint: 'upgrade_to_tribe_os' },
+        { status: 403 }
+      );
+    }
+
+    // Validate query params
+    const { searchParams } = new URL(request.url);
+    const parsed = revenueSummaryQuerySchema.safeParse({
+      from: searchParams.get('from') ?? undefined,
+      to: searchParams.get('to') ?? undefined,
+      currency: searchParams.get('currency') ?? undefined,
+      groupBy: searchParams.get('groupBy') ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message ?? 'invalid_query' },
+        { status: 400 }
+      );
+    }
+
+    const result = await getRevenueSummary(supabase, user.id, parsed.data.from, parsed.data.to, {
+      currency: parsed.data.currency,
+      groupBy: parsed.data.groupBy,
+    });
+
+    if (!result.success || !result.data) {
+      logError(new Error(result.error ?? 'unknown'), {
+        action: 'revenue_summary.dal',
+        userId: user.id,
+      });
+      return NextResponse.json({ success: false, error: result.error ?? 'summary_failed' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: result.data });
+  } catch (error) {
+    logError(error, { route: 'GET /api/tribe-os/revenue/summary' });
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
+  }
+}
