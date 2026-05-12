@@ -162,19 +162,23 @@ CREATE POLICY "gyms_owner_select"
     )
   );
 
--- A user can see the coach rows for any gym they themselves are in.
--- Write access stays service-role-only until Mission 5 / 6 add an
--- explicit coach-invite endpoint.
+-- A user can see their own gym_coaches row. The "list every coach in
+-- my gym" view is deferred to Week 2; when it lands it goes through a
+-- SECURITY DEFINER function so the policy itself does not have to
+-- query gym_coaches to figure out gym_coaches membership.
+--
+-- Original draft of this policy added an OR branch that did
+-- `EXISTS (SELECT 1 FROM gym_coaches gc2 ...)` to let any coach see
+-- the rest of the gym's roster. That branch self-referenced
+-- gym_coaches, and when a tenant-table RLS check (clients,
+-- client_attendance, migration 070) queried gym_coaches, Postgres
+-- triggered the gym_coaches policy, which recursed into another
+-- gym_coaches query, ... → "infinite recursion detected in policy
+-- for relation 'gym_coaches'". Hotfixed here.
 DROP POLICY IF EXISTS "gym_coaches_member_select" ON public.gym_coaches;
 CREATE POLICY "gym_coaches_member_select"
   ON public.gym_coaches FOR SELECT
-  USING (
-    user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM public.gym_coaches gc2
-      WHERE gc2.gym_id = gym_coaches.gym_id AND gc2.user_id = auth.uid()
-    )
-  );
+  USING (user_id = auth.uid());
 
 -- ------------------------------------------------------------------
 -- gym_id columns on tenant-scoped tables
