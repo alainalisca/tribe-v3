@@ -766,3 +766,27 @@ export async function listPaymentsForGym(
   }
   return listPayments(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate, options);
 }
+
+/**
+ * Gym-keyed CSV export. Same owner-resolution pattern as
+ * getRevenueSummaryForGym / listPaymentsForGym. Multi-coach CSV
+ * (non-owner coaches exporting gym revenue) lands in Week 2 Mission 2
+ * via the gym-keyed SQL functions, at which point this wrapper
+ * collapses into a direct call to the gym-aware path instead of
+ * delegating through user id.
+ */
+export async function generatePaymentsCsvForGym(
+  supabase: SupabaseClient,
+  gymId: string,
+  fromIsoDate: string,
+  toIsoDate: string
+): Promise<DalResult<string>> {
+  const gymRes = await getGym(supabase, gymId);
+  if (!gymRes.success) {
+    return { success: false, error: gymRes.error ?? 'gym_lookup_failed' };
+  }
+  if (!gymRes.data) {
+    return { success: false, error: 'gym_not_found' };
+  }
+  return generatePaymentsCsv(supabase, gymRes.data.owner_user_id, fromIsoDate, toIsoDate);
+}

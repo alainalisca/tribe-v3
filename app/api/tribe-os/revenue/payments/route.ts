@@ -17,13 +17,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
-import { listPayments } from '@/lib/dal/revenue';
+import { listPayments, listPaymentsForGym } from '@/lib/dal/revenue';
 import { revenuePaymentsQuerySchema } from '@/lib/validations/revenue';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId } = gate;
+  const { supabase, userId, gymId } = gate;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -42,17 +42,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await listPayments(supabase, userId, parsed.data.from, parsed.data.to, {
-      currency: parsed.data.currency,
-      limit: parsed.data.limit,
-      offset: parsed.data.offset,
-      sort: parsed.data.sort,
-    });
+    // Prefer gym-keyed path when a gym context is available. See
+    // /api/tribe-os/revenue/summary/route.ts for the same pattern.
+    const result = gymId
+      ? await listPaymentsForGym(supabase, gymId, parsed.data.from, parsed.data.to, {
+          currency: parsed.data.currency,
+          limit: parsed.data.limit,
+          offset: parsed.data.offset,
+          sort: parsed.data.sort,
+        })
+      : await listPayments(supabase, userId, parsed.data.from, parsed.data.to, {
+          currency: parsed.data.currency,
+          limit: parsed.data.limit,
+          offset: parsed.data.offset,
+          sort: parsed.data.sort,
+        });
 
     if (!result.success || !result.data) {
       logError(new Error(result.error ?? 'unknown'), {
         action: 'revenue_payments.dal',
         userId,
+        gymId,
       });
       return NextResponse.json({ success: false, error: result.error ?? 'payments_failed' }, { status: 500 });
     }

@@ -20,7 +20,7 @@ function firstZodMessage(error: ZodError): string {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId } = gate;
+  const { supabase, userId, gymId } = gate;
 
   try {
     let body: unknown;
@@ -40,14 +40,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       throw error;
     }
 
-    const result = await dalCreateClient(supabase, userId, {
-      name: parsed.name,
-      email: parsed.email ?? null,
-      phone: parsed.phone ?? null,
-      notes: parsed.notes ?? null,
-      tags: parsed.tags ?? [],
-      contact_info: parsed.contact_info ?? null,
-    });
+    // Pass full tenant context: gym_id (when available) becomes the
+    // new source of truth, instructor_user_id stays populated for the
+    // legacy RLS branch and any code still reading it. Brand-new
+    // signups without a gym yet (very rare post-Mission-6, but
+    // possible) fall through with gymId = null and the legacy path.
+    const result = await dalCreateClient(
+      supabase,
+      { gymId: gymId ?? null, instructorUserId: userId },
+      {
+        name: parsed.name,
+        email: parsed.email ?? null,
+        phone: parsed.phone ?? null,
+        notes: parsed.notes ?? null,
+        tags: parsed.tags ?? [],
+        contact_info: parsed.contact_info ?? null,
+      }
+    );
 
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'create_failed' }, { status: 500 });
@@ -62,7 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId } = gate;
+  const { supabase, userId, gymId } = gate;
 
   try {
     const url = new URL(request.url);
@@ -81,10 +90,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw error;
     }
 
-    const result = await listClients(supabase, userId, {
-      searchQuery: parsed.search,
-      tag: parsed.tag,
-    });
+    // Prefer gym context when available — listClients scopes by gym_id
+    // for multi-coach correctness. Without a gym, fall through to the
+    // legacy instructor_user_id path.
+    const result = await listClients(
+      supabase,
+      { gymId: gymId ?? null, instructorUserId: userId },
+      {
+        searchQuery: parsed.search,
+        tag: parsed.tag,
+      }
+    );
 
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'list_failed' }, { status: 500 });

@@ -24,13 +24,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
-import { getRevenueSummary } from '@/lib/dal/revenue';
+import { getRevenueSummary, getRevenueSummaryForGym } from '@/lib/dal/revenue';
 import { revenueSummaryQuerySchema } from '@/lib/validations/revenue';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId } = gate;
+  const { supabase, userId, gymId } = gate;
 
   try {
     // Validate query params
@@ -48,15 +48,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await getRevenueSummary(supabase, userId, parsed.data.from, parsed.data.to, {
-      currency: parsed.data.currency,
-      groupBy: parsed.data.groupBy,
-    });
+    // Prefer gym-keyed path when a gym context is available. The gym
+    // wrapper resolves to the gym owner's user id and delegates to
+    // the same SQL functions under the hood — Week 2 Mission 2 swaps
+    // the SQL for gym-aware variants without changing this route.
+    const result = gymId
+      ? await getRevenueSummaryForGym(supabase, gymId, parsed.data.from, parsed.data.to, {
+          currency: parsed.data.currency,
+          groupBy: parsed.data.groupBy,
+        })
+      : await getRevenueSummary(supabase, userId, parsed.data.from, parsed.data.to, {
+          currency: parsed.data.currency,
+          groupBy: parsed.data.groupBy,
+        });
 
     if (!result.success || !result.data) {
       logError(new Error(result.error ?? 'unknown'), {
         action: 'revenue_summary.dal',
         userId,
+        gymId,
       });
       return NextResponse.json({ success: false, error: result.error ?? 'summary_failed' }, { status: 500 });
     }
