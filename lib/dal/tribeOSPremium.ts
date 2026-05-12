@@ -153,22 +153,33 @@ export async function revokeTribeOSPremium(
 }
 
 /**
- * Read the current Tribe.OS premium fields for a user by id. Used by the
- * /os/dashboard premium gate.
+ * Read the Tribe.OS premium-gate fields for a user by id. Only selects
+ * the two columns needed by `isTribeOSPremiumActive`: tier + status.
+ * The remaining premium fields (stripe_customer_id, stripe_subscription_id,
+ * granted_at, granted_by) are restricted from authenticated/anon by
+ * migration 066 and are not needed for the gate check anyway. Callers
+ * that need those fields must use service-role.
  */
 export async function getTribeOSPremiumStatus(
   supabase: SupabaseClient,
   userId: string
-): Promise<DalResult<TribeOSPremiumFields>> {
+): Promise<DalResult<Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>>> {
   try {
-    const { data, error } = await supabase.from('users').select(PREMIUM_SELECT).eq('id', userId).single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('tribe_os_tier, tribe_os_status')
+      .eq('id', userId)
+      .single();
 
     if (error) {
       logError(error, { action: 'getTribeOSPremiumStatus', userId });
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data as unknown as TribeOSPremiumFields };
+    return {
+      success: true,
+      data: data as unknown as Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>,
+    };
   } catch (error) {
     logError(error, { action: 'getTribeOSPremiumStatus', userId });
     return { success: false, error: 'Failed to read Tribe.OS premium status' };
