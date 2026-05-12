@@ -1,16 +1,18 @@
 /**
  * GET /api/tribe-os/clients/at-risk
  *
- * Returns clients flagged as at-risk by the dashboard widget. See
- * lib/dal/clients.ts listAtRiskClients for the rule set: active
- * clients gone quiet for thresholdDays, manually-marked lapsed, and
- * leads that never converted.
+ * Returns clients flagged as at-risk by the dashboard widget plus a
+ * total-clients count so the widget can distinguish between "you
+ * have no clients yet" (different empty state — encourage the user
+ * to add one) and "you have clients, none are at risk right now"
+ * (affirming empty state). See lib/dal/clients.ts listAtRiskClients
+ * for the at-risk rule set.
  *
  * Query params:
  *   thresholdDays — int, 1..365, default 14. The "gone quiet" window.
  *   limit         — int, 1..100,  default 25. Max rows returned.
  *
- * Response (200): { success: true, data: AtRiskClient[] }
+ * Response (200): { success: true, data: { at_risk: AtRiskClient[], total_clients: number } }
  * Failures: 400 invalid query, 401 unauthorized, 403 not premium,
  * 500 server error.
  */
@@ -56,25 +58,56 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const result = await listAtRiskClients(
-      supabase,
-      { gymId: gymId ?? null, instructorUserId: userId },
-      {
-        thresholdDays: parsed.data.thresholdDays,
-        limit: parsed.data.limit,
-      }
-    );
+    // Parallel: at-risk list + a total-count probe on the same
+    // clients table. The total-count probe scopes by gym (preferred)
+    // or instructor and skips archived rows; same RLS filtering as
+    // the at-risk query, so they always agree on the tenant.
+    let countQuery = supabase.from('clients').select('id', { count: 'exact', head: true }).eq('archived', false);
+    if (gymId) {
+      countQuery = countQuery.eq('gym_id', gymId);
+    } else {
+      countQuery = countQuery.eq('instructor_user_id', userId);
+    }
 
-    if (!result.success) {
-      logError(new Error(result.error ?? 'unknown'), {
+    const [atRiskResult, countResult] = await Promise.all([
+      listAtRiskClients(
+        supabase,
+        { gymId: gymId ?? null, instructorUserId: userId },
+        {
+          thresholdDays: parsed.data.thresholdDays,
+          limit: parsed.data.limit,
+        }
+      ),
+      countQuery,
+    ]);
+
+    if (!atRiskResult.success) {
+      logError(new Error(atRiskResult.error ?? 'unknown'), {
         action: 'clients_at_risk.dal',
         userId,
         gymId,
       });
-      return NextResponse.json({ success: false, error: result.error ?? 'at_risk_failed' }, { status: 500 });
+      return NextResponse.json({ success: false, error: atRiskResult.error ?? 'at_risk_failed' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: result.data ?? [] });
+    if (countResult.error) {
+      // Non-fatal: surface the at-risk list with total_clients = null
+      // so the widget falls back to the existing affirming empty
+      // state. Better than 500-ing the whole endpoint.
+      logError(countResult.error, {
+        action: 'clients_at_risk.count',
+        userId,
+        gymId,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        at_risk: atRiskResult.data ?? [],
+        total_clients: countResult.error ? null : (countResult.count ?? 0),
+      },
+    });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/clients/at-risk' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });

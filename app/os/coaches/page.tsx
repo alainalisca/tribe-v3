@@ -168,20 +168,27 @@ export default function CoachesPage() {
             <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
               <p className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-1">{s.gymLabel}</p>
               <p className="text-base font-bold text-white truncate">{state.gym.name}</p>
-              <p className="text-xs text-white/50 mt-0.5 font-mono">{state.gym.slug}</p>
+              {/* Slug is technical metadata — useful for support /
+                  shared-URL traceability, but de-emphasized until
+                  there's an actual shared URL surface that uses it. */}
+              <p className="text-[10px] text-white/30 mt-1 font-mono tracking-wide">{state.gym.slug}</p>
             </section>
 
             {state.coaches.length === 0 || (state.coaches.length === 1 && state.coaches[0].role === 'owner') ? (
+              // Empty / solo case already says "invite flow coming
+              // in a future update" in its hint — no need for a
+              // second copy of the same message below.
               <OnlyYouState copy={s} />
             ) : (
-              <ul className="space-y-2">
-                {state.coaches.map((coach) => (
-                  <CoachRow key={`${coach.gym_id}:${coach.user_id}`} coach={coach} copy={s} />
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-2">
+                  {state.coaches.map((coach) => (
+                    <CoachRow key={`${coach.gym_id}:${coach.user_id}`} coach={coach} copy={s} />
+                  ))}
+                </ul>
+                <p className="text-xs text-white/40 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
+              </>
             )}
-
-            <p className="text-xs text-white/40 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
           </>
         )}
       </div>

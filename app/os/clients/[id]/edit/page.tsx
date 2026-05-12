@@ -6,6 +6,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import ClientForm from '@/components/tribe-os/ClientForm';
 import { trackEvent } from '@/lib/analytics';
+import { isValidUuid } from '@/lib/validations/uuid';
 import type { ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -52,6 +53,15 @@ export default function EditClientPage() {
   useEffect(() => {
     if (gate.state !== 'allowed') return;
     if (!clientId) return;
+    // Short-circuit obviously-bad params (e.g. someone typed
+    // /os/clients/[id]/edit literally, or hit a route where the
+    // upstream link forgot to interpolate). Without this guard
+    // the value reaches Postgres and surfaces as a raw
+    // "invalid input syntax for type uuid" error.
+    if (!isValidUuid(clientId)) {
+      setState({ kind: 'not_found' });
+      return;
+    }
     let cancelled = false;
     setState({ kind: 'loading' });
 

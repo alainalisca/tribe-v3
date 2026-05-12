@@ -17,12 +17,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ChevronRight } from 'lucide-react';
+import { AlertTriangle, ChevronRight, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
 import type { AtRiskClient } from '@/lib/dal/clients';
 
-type WidgetState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; clients: AtRiskClient[] };
+type WidgetState =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  | { kind: 'ready'; clients: AtRiskClient[]; totalClients: number | null };
 
 interface AtRiskClientsWidgetProps {
   /** Days-since-last-seen threshold. Defaults to 14. */
@@ -40,6 +43,9 @@ const copy = {
     error: 'Could not load this list.',
     emptyTitle: 'Nobody to check in on',
     emptyHint: 'Every active client has been seen recently. Nice work.',
+    zeroClientsTitle: 'Add your first client',
+    zeroClientsHint: 'Once you have clients on your roster, this card will surface anyone who has not shown up lately.',
+    zeroClientsCta: 'Add a client',
     viewAll: 'See all clients',
     daysAgo: (n: number) => (n === 1 ? '1 day ago' : `${n} days ago`),
     neverSeen: 'Never attended',
@@ -53,6 +59,10 @@ const copy = {
     error: 'No se pudo cargar esta lista.',
     emptyTitle: 'Nadie pendiente',
     emptyHint: 'Has visto a todos tus clientes activos recientemente. Buen trabajo.',
+    zeroClientsTitle: 'Agrega tu primer cliente',
+    zeroClientsHint:
+      'Cuando tengas clientes en tu lista, esta tarjeta resaltará a quienes no se han aparecido últimamente.',
+    zeroClientsCta: 'Agregar un cliente',
     viewAll: 'Ver todos los clientes',
     daysAgo: (n: number) => (n === 1 ? 'hace 1 día' : `hace ${n} días`),
     neverSeen: 'Nunca asistió',
@@ -81,15 +91,19 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
         if (cancelled) return;
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
-          data?: AtRiskClient[];
+          data?: { at_risk?: AtRiskClient[]; total_clients?: number | null };
           error?: string;
         };
         if (cancelled) return;
-        if (!res.ok || !body.success) {
+        if (!res.ok || !body.success || !body.data) {
           setState({ kind: 'error' });
           return;
         }
-        setState({ kind: 'ready', clients: body.data ?? [] });
+        setState({
+          kind: 'ready',
+          clients: body.data.at_risk ?? [],
+          totalClients: body.data.total_clients ?? null,
+        });
       } catch {
         if (!cancelled) setState({ kind: 'error' });
       }
@@ -118,7 +132,23 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
         </div>
       ) : state.kind === 'error' ? (
         <p className="text-sm text-white/60 py-4 text-center">{s.error}</p>
+      ) : state.clients.length === 0 && state.totalClients === 0 ? (
+        // Distinct empty state when the user has zero clients at
+        // all — encourage onboarding rather than affirm an
+        // accomplishment they haven't actually made.
+        <div className="py-6 text-center space-y-3">
+          <p className="text-sm font-semibold text-white">{s.zeroClientsTitle}</p>
+          <p className="text-xs text-white/60 max-w-xs mx-auto leading-relaxed">{s.zeroClientsHint}</p>
+          <Link
+            href="/os/clients/new"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full hover:-translate-y-0.5 transition-transform"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            {s.zeroClientsCta}
+          </Link>
+        </div>
       ) : state.clients.length === 0 ? (
+        // Has clients, none currently at-risk — affirming empty state.
         <div className="py-6 text-center space-y-1">
           <p className="text-sm font-semibold text-white">{s.emptyTitle}</p>
           <p className="text-xs text-white/60">{s.emptyHint}</p>
@@ -131,15 +161,19 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
         </ul>
       )}
 
-      <div className="mt-4">
-        <Link
-          href="/os/clients"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80 transition-colors"
-        >
-          {s.viewAll}
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
+      {/* Hide the "see all clients" footer when there are zero clients —
+          the empty-state CTA above already points at the right action. */}
+      {!(state.kind === 'ready' && state.totalClients === 0) ? (
+        <div className="mt-4">
+          <Link
+            href="/os/clients"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80 transition-colors"
+          >
+            {s.viewAll}
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

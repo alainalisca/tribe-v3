@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/currency';
+import { isValidUuid } from '@/lib/validations/uuid';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -152,6 +153,15 @@ export default function ClientDetailPage() {
   useEffect(() => {
     if (gate.state !== 'allowed') return;
     if (!clientId) return;
+    // Short-circuit obviously-bad params (e.g. someone typed
+    // /os/clients/edit or hit a route with the literal [id]
+    // placeholder still in the URL). Without this we'd send the
+    // bogus value to Supabase, which surfaces a raw
+    // "invalid input syntax for type uuid" error.
+    if (!isValidUuid(clientId)) {
+      setState({ kind: 'not_found' });
+      return;
+    }
     let cancelled = false;
     setState({ kind: 'loading' });
 
