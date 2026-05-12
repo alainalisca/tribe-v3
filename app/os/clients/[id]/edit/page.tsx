@@ -129,6 +129,8 @@ export default function EditClientPage() {
         phone: c.phone ?? '',
         notes: c.notes ?? '',
         tags: c.tags.join(', '),
+        status: c.status,
+        health_notes: c.health_notes ?? '',
       }}
       onSubmit={async (cleaned) => {
         const res = await fetch(`/api/tribe-os/clients/${c.id}/`, {

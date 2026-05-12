@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import type { ClientStatus } from '@/lib/dal/clients';
 
 export interface ClientFormValues {
   name: string;
@@ -26,6 +27,10 @@ export interface ClientFormValues {
   phone: string;
   notes: string;
   tags: string;
+  /** Engagement status. Added in Week 2 Mission 4. */
+  status: ClientStatus;
+  /** Health / injury / restriction notes. Added in Week 2 Mission 4. */
+  health_notes: string;
 }
 
 export interface ClientFormProps {
@@ -46,6 +51,8 @@ export interface ClientFormProps {
     phone: string | null;
     notes: string | null;
     tags: string[];
+    status: ClientStatus;
+    health_notes: string | null;
   }) => Promise<{ success: true } | { success: false; error: string }>;
   /** Where the back arrow / cancel link points. */
   cancelHref: string;
@@ -59,11 +66,22 @@ const copy = {
     emailPlaceholder: 'Optional',
     phoneLabel: 'Phone',
     phonePlaceholder: 'Optional',
+    statusLabel: 'Status',
+    statusOptions: {
+      active: 'Active',
+      inactive: 'Inactive',
+      lead: 'Lead',
+      lapsed: 'Lapsed',
+    },
+    statusHint: 'Tracks engagement. Active is the default.',
     tagsLabel: 'Tags',
     tagsHint: 'Comma-separated. Up to 10 tags, 30 characters each.',
     tagsPlaceholder: 'vip, lead, yoga',
     notesLabel: 'Notes',
     notesPlaceholder: 'Anything you want to remember about this client',
+    healthLabel: 'Health notes',
+    healthHint: 'Injuries, conditions, restrictions, goals. Only you can see this.',
+    healthPlaceholder: 'Optional',
     cancel: 'Cancel',
     saving: 'Saving',
     nameRequired: 'Name is required.',
@@ -77,11 +95,22 @@ const copy = {
     emailPlaceholder: 'Opcional',
     phoneLabel: 'Teléfono',
     phonePlaceholder: 'Opcional',
+    statusLabel: 'Estado',
+    statusOptions: {
+      active: 'Activo',
+      inactive: 'Inactivo',
+      lead: 'Prospecto',
+      lapsed: 'Suspendido',
+    },
+    statusHint: 'Rastrea el nivel de compromiso. Activo es el predeterminado.',
     tagsLabel: 'Etiquetas',
     tagsHint: 'Separadas por comas. Hasta 10 etiquetas, 30 caracteres cada una.',
     tagsPlaceholder: 'vip, prospecto, yoga',
     notesLabel: 'Notas',
     notesPlaceholder: 'Cualquier cosa que quieras recordar sobre este cliente',
+    healthLabel: 'Notas de salud',
+    healthHint: 'Lesiones, condiciones, restricciones, objetivos. Solo tú las ves.',
+    healthPlaceholder: 'Opcional',
     cancel: 'Cancelar',
     saving: 'Guardando',
     nameRequired: 'El nombre es obligatorio.',
@@ -113,6 +142,8 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
   const [phone, setPhone] = useState(initialValues?.phone ?? '');
   const [tags, setTags] = useState(initialValues?.tags ?? '');
   const [notes, setNotes] = useState(initialValues?.notes ?? '');
+  const [status, setStatus] = useState<ClientStatus>(initialValues?.status ?? 'active');
+  const [healthNotes, setHealthNotes] = useState(initialValues?.health_notes ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,6 +167,8 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
         phone: phone.trim().length > 0 ? phone.trim() : null,
         notes: notes.trim().length > 0 ? notes.trim() : null,
         tags: splitTags(tags),
+        status,
+        health_notes: healthNotes.trim().length > 0 ? healthNotes.trim() : null,
       });
       if (!result.success) {
         setError(result.error || s.genericError);
@@ -201,6 +234,20 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
             />
           </Field>
 
+          <Field label={s.statusLabel} hint={s.statusHint}>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ClientStatus)}
+              disabled={submitting}
+              className="w-full px-4 py-2.5 bg-tribe-surface text-white text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+            >
+              <option value="active">{s.statusOptions.active}</option>
+              <option value="inactive">{s.statusOptions.inactive}</option>
+              <option value="lead">{s.statusOptions.lead}</option>
+              <option value="lapsed">{s.statusOptions.lapsed}</option>
+            </select>
+          </Field>
+
           <Field label={s.tagsLabel} hint={s.tagsHint}>
             <input
               type="text"
@@ -219,6 +266,18 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               placeholder={s.notesPlaceholder}
               maxLength={2000}
               rows={4}
+              disabled={submitting}
+              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
+            />
+          </Field>
+
+          <Field label={s.healthLabel} hint={s.healthHint}>
+            <textarea
+              value={healthNotes}
+              onChange={(e) => setHealthNotes(e.target.value)}
+              placeholder={s.healthPlaceholder}
+              maxLength={4000}
+              rows={3}
               disabled={submitting}
               className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
             />

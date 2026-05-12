@@ -31,6 +31,12 @@ const copy = {
     redirectingLabel: 'Redirecting',
     paidNothingYet: 'No payments recorded',
     lastAttendance: 'Last:',
+    statusLabels: {
+      active: 'Active',
+      inactive: 'Inactive',
+      lead: 'Lead',
+      lapsed: 'Lapsed',
+    },
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -50,6 +56,12 @@ const copy = {
     redirectingLabel: 'Redirigiendo',
     paidNothingYet: 'Sin pagos registrados',
     lastAttendance: 'Última:',
+    statusLabels: {
+      active: 'Activo',
+      inactive: 'Inactivo',
+      lead: 'Prospecto',
+      lapsed: 'Suspendido',
+    },
   },
 } as const;
 
@@ -232,7 +244,10 @@ function ClientRow({
           {initial}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{client.name}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{client.name}</p>
+            <StatusBadge status={client.status} label={s.statusLabels[client.status]} />
+          </div>
           <p className="text-xs text-white/60 mt-0.5 truncate">
             {lastAt ? `${s.lastAttendance} ${lastAt}` : s.noSessionsYet}
           </p>
@@ -243,5 +258,31 @@ function ClientRow({
         </div>
       </Link>
     </li>
+  );
+}
+
+/**
+ * Status pill. Active is the default state for any client so we don't
+ * render a badge — keeps the row visually quiet for the common case.
+ * Other statuses show a small color-coded pill.
+ *
+ *   lead     — amber  (potential, not started)
+ *   inactive — neutral (explicitly stopped, no urgency)
+ *   lapsed   — red    (stopped without explicit reactivation)
+ */
+function StatusBadge({ status, label }: { status: ClientWithStats['status']; label: string }) {
+  if (status === 'active') return null;
+  const tone =
+    status === 'lapsed'
+      ? 'bg-tribe-red/20 text-tribe-red border-tribe-red/40'
+      : status === 'lead'
+        ? 'bg-tribe-amber/20 text-tribe-amber border-tribe-amber/40'
+        : 'bg-tribe-mid text-white/70 border-tribe-mid';
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${tone}`}
+    >
+      {label}
+    </span>
   );
 }

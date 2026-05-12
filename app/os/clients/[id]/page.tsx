@@ -52,6 +52,18 @@ const copy = {
     notesTitle: 'Notes',
     noNotes: 'No notes.',
 
+    // Health (Week 2 Mission 4)
+    healthTitle: 'Health notes',
+    noHealth: 'No health notes recorded.',
+
+    // Status (Week 2 Mission 4)
+    statusLabels: {
+      active: 'Active',
+      inactive: 'Inactive',
+      lead: 'Lead',
+      lapsed: 'Lapsed',
+    },
+
     // History
     historyTitle: 'Attendance history',
     historyEmpty: 'No attendance recorded yet.',
@@ -95,6 +107,16 @@ const copy = {
 
     notesTitle: 'Notas',
     noNotes: 'Sin notas.',
+
+    healthTitle: 'Notas de salud',
+    noHealth: 'Sin notas de salud registradas.',
+
+    statusLabels: {
+      active: 'Activo',
+      inactive: 'Inactivo',
+      lead: 'Prospecto',
+      lapsed: 'Suspendido',
+    },
 
     historyTitle: 'Historial de asistencias',
     historyEmpty: 'Aún no hay asistencias registradas.',
@@ -242,9 +264,12 @@ export default function ClientDetailPage() {
           <>
             <header className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight break-words">
-                  {state.client.name}
-                </h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight break-words">
+                    {state.client.name}
+                  </h1>
+                  <StatusBadge status={state.client.status} label={s.statusLabels[state.client.status]} />
+                </div>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Link
@@ -352,6 +377,16 @@ export default function ClientDetailPage() {
               )}
             </section>
 
+            {/* Health notes (Week 2 Mission 4) */}
+            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.healthTitle}</h2>
+              {state.client.health_notes ? (
+                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{state.client.health_notes}</p>
+              ) : (
+                <p className="text-sm text-white/60">{s.noHealth}</p>
+              )}
+            </section>
+
             {/* Attendance history */}
             <section className="mt-6">
               <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.historyTitle}</h2>
@@ -415,6 +450,28 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-xs text-white/50 mb-1">{label}</p>
       <p className="text-lg font-bold text-white truncate">{value}</p>
     </div>
+  );
+}
+
+/**
+ * Status pill. Active renders nothing (the default state for any
+ * client) to keep the header visually clean for the common case.
+ * Other statuses get a small color-coded pill matching the list page.
+ */
+function StatusBadge({ status, label }: { status: ClientRow['status']; label: string }) {
+  if (status === 'active') return null;
+  const tone =
+    status === 'lapsed'
+      ? 'bg-tribe-red/20 text-tribe-red border-tribe-red/40'
+      : status === 'lead'
+        ? 'bg-tribe-amber/20 text-tribe-amber border-tribe-amber/40'
+        : 'bg-tribe-mid text-white/70 border-tribe-mid';
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${tone}`}
+    >
+      {label}
+    </span>
   );
 }
 
