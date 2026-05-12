@@ -23,7 +23,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Users, TrendingUp } from 'lucide-react';
+import { CreditCard, Users, TrendingUp, UserCog } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
@@ -43,6 +43,7 @@ const copy = {
       'You are one of our first design partners. The full Tribe.OS dashboard with paid sessions and revenue analytics is being built right now based on what you and a small group of other instructors are telling us. Client management is live below.',
     clientsCta: 'Manage clients',
     revenueCta: 'View revenue',
+    coachesCta: 'Coaches',
     portalCta: 'Manage subscription',
     portalLoading: 'Opening Stripe',
     portalError: 'Could not open Stripe portal. Please try again.',
@@ -72,6 +73,7 @@ const copy = {
       'Eres uno de nuestros primeros socios de diseño. El panel completo de Tribe.OS con sesiones de pago y analítica de ingresos se está construyendo ahora mismo con base en lo que tú y un grupo pequeño de instructores nos están diciendo. La gestión de clientes ya está disponible abajo.',
     clientsCta: 'Gestionar clientes',
     revenueCta: 'Ver ingresos',
+    coachesCta: 'Entrenadores',
     portalCta: 'Gestionar suscripción',
     portalLoading: 'Abriendo Stripe',
     portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
@@ -204,6 +206,13 @@ export default function TribeOSDashboardPage() {
           >
             <TrendingUp className="w-4 h-4" />
             {s.revenueCta}
+          </Link>
+          <Link
+            href="/os/coaches"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tribe-surface text-white text-base font-bold rounded-lg hover:bg-tribe-mid transition-colors"
+          >
+            <UserCog className="w-4 h-4" />
+            {s.coachesCta}
           </Link>
           <button
             type="button"
