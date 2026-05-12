@@ -84,10 +84,19 @@ async function grant(supabase, email, tier) {
     process.exit(2);
   }
   const grantedBy = `cli:${os.userInfo().username}@${os.hostname()}`;
+  // Reset tribe_os_status to NULL. By design, manually-granted users
+  // sit in the "design partner" state (NULL status), which the
+  // isTribeOSPremiumActive check treats as active. Without this reset,
+  // re-granting a user whose Stripe subscription was previously
+  // canceled would leave status='canceled' in place, causing the
+  // premium gate to fail despite the new grant. We preserve
+  // tribe_os_stripe_customer_id and tribe_os_stripe_subscription_id
+  // so the audit trail of any prior Stripe relationship survives.
   const { data, error } = await supabase
     .from('users')
     .update({
       tribe_os_tier: tier,
+      tribe_os_status: null,
       tribe_os_granted_at: new Date().toISOString(),
       tribe_os_granted_by: grantedBy,
     })
