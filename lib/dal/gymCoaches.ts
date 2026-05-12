@@ -112,31 +112,64 @@ export async function removeCoachFromGym(
 }
 
 /**
- * List all coaches in a gym with their display profiles. Ordered with
- * the owner first, then everyone else by created_at asc.
+ * List all coaches in a gym with their display profiles. Calls the
+ * SECURITY DEFINER `list_gym_coaches(p_gym_id)` function from
+ * migration 073, which breaks the recursion that a direct SELECT
+ * on gym_coaches would hit (the gym_coaches RLS policy was
+ * collapsed to `user_id = auth.uid()` after the dd0aac5 hotfix,
+ * which would otherwise restrict this query to the caller's own
+ * row).
+ *
+ * Caller must be a coach in the gym; mismatch raises 42501 in the
+ * RPC which surfaces as an error here. The function returns rows
+ * already sorted (owner first, then created_at asc) so no extra
+ * sort is needed.
  */
 export async function listCoachesForGym(
   supabase: SupabaseClient,
   gymId: string
 ): Promise<DalResult<GymCoachWithUser[]>> {
   try {
-    const { data, error } = await supabase
-      .from('gym_coaches')
-      .select(`${COACH_SELECT}, user:users(id, name, email, avatar_url)`)
-      .eq('gym_id', gymId)
-      .order('created_at', { ascending: true });
+    const { data, error } = await supabase.rpc('list_gym_coaches', {
+      p_gym_id: gymId,
+    });
 
     if (error) {
       logError(error, { action: 'listCoachesForGym', gymId });
       return { success: false, error: error.message };
     }
 
-    const rows = ((data ?? []) as unknown as GymCoachWithUser[]).slice();
-    rows.sort((a, b) => {
-      if (a.role === 'owner' && b.role !== 'owner') return -1;
-      if (b.role === 'owner' && a.role !== 'owner') return 1;
-      return a.created_at.localeCompare(b.created_at);
-    });
+    // The RPC returns flat columns (user_name, user_email,
+    // user_avatar_url) for performance — no embedded user object.
+    // Reshape to the existing GymCoachWithUser interface so call
+    // sites stay unchanged.
+    type RpcRow = {
+      gym_id: string;
+      user_id: string;
+      role: GymCoachRole;
+      created_at: string;
+      user_name: string | null;
+      user_email: string | null;
+      user_avatar_url: string | null;
+    };
+
+    const rows = ((data ?? []) as RpcRow[]).map(
+      (r): GymCoachWithUser => ({
+        gym_id: r.gym_id,
+        user_id: r.user_id,
+        role: r.role,
+        created_at: r.created_at,
+        user: r.user_name
+          ? {
+              id: r.user_id,
+              name: r.user_name,
+              email: r.user_email ?? '',
+              avatar_url: r.user_avatar_url,
+            }
+          : null,
+      })
+    );
+
     return { success: true, data: rows };
   } catch (error) {
     logError(error, { action: 'listCoachesForGym', gymId });

@@ -37,12 +37,12 @@ a crown icon and green border; other coaches show their initial.
 Empty state ("Only you for now") covers the single-coach default.
 No-gym error state covers the edge case.
 
-**Known limit per audit finding M:** the page currently renders only
+**Known limit per audit finding M:** the page initially rendered only
 the caller's own coach row because `gym_coaches_member_select`
 collapsed to `user_id = auth.uid()` after the recursion hotfix.
-Functional for Week 3 (every gym has one coach today). The proper
-fix is a SECURITY DEFINER `list_gym_coaches(p_gym_id)` function;
-added to `LATER.md` as a Week 4 hardening item.
+✅ **Resolved later the same day** in migration 073 + DAL refactor
+(see "Bonus mission A" below). Finding M flipped from DEFER to
+FIX (fixed).
 
 ### Mission 3 — `/os/gym`
 
@@ -62,12 +62,19 @@ routes, and Findings J–N (no FIX or CRITICAL items added).
 `PRE_MERGE_CHECKLIST.md` gets new Security + Migrations + Gym-tenant
 integration sections.
 
+## Bonus mission A (shipped same day) — `list_gym_coaches`
+
+Closed audit finding M. Migration 073 adds a SECURITY DEFINER function
+`list_gym_coaches(p_gym_id)` gated by gym_coaches membership; the
+DAL's `listCoachesForGym` now calls the RPC instead of SELECTing the
+table directly. Two new leak test phases (5f smoke, 5g cross-gym
+attack) verify the gate. Once migration 073 is applied to the live
+DB, the `/os/coaches` page will show every coach in a multi-coach
+gym rather than just the caller. See `LATER.md` for the completion
+entry preserving the original problem statement.
+
 ## Deferred to Week 4+ (in LATER.md)
 
-- **SECURITY DEFINER `list_gym_coaches` function** — fixes Audit
-  finding M so the `/os/coaches` page can show all coaches in a
-  multi-coach gym without hitting the recursion trap on the
-  `gym_coaches` policy.
 - Beta launch resumption (Week 4 Missions 2–6 from the original
   pre-integration plan): real $1 USD refund test, mobile device
   verification, outreach, onboarding 1–3 instructors, retrospective.

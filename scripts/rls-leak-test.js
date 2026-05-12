@@ -653,6 +653,60 @@ async function main() {
       }
     }
 
+    // ---- 5f. list_gym_coaches RPC: A can call for own gym ----
+    // Smoke check for migration 073. The owner is a coach, so this
+    // should succeed and return at least one row (the owner).
+    {
+      const { data, error } = await userAClient.rpc('list_gym_coaches', { p_gym_id: gymAId });
+      if (error) {
+        fail(
+          'smoke: A calls list_gym_coaches for own gym',
+          `REGRESSION: ${error.message}. Migration 073's membership ` +
+            `check should pass when the caller is a coach in p_gym_id.`
+        );
+      } else if (!Array.isArray(data) || data.length === 0) {
+        fail(
+          'smoke: A calls list_gym_coaches for own gym',
+          `expected at least 1 coach row (the owner), got ${Array.isArray(data) ? data.length : typeof data}`
+        );
+      } else {
+        pass(`smoke: A calls list_gym_coaches for own gym (${data.length} coach(es))`);
+      }
+    }
+
+    // ---- 5g. list_gym_coaches RPC: B cannot call for A's gym ----
+    // Migration 073 gates list_gym_coaches on the same gym_coaches
+    // membership check as gym_revenue_totals/buckets. B is not in
+    // A's gym, so this should raise 42501.
+    {
+      const { data, error } = await userBClient.rpc('list_gym_coaches', { p_gym_id: gymAId });
+      if (error) {
+        if (
+          error.message.toLowerCase().includes('unauthorized') ||
+          error.message.toLowerCase().includes('not a coach') ||
+          error.code === '42501' ||
+          error.code === 'P0001'
+        ) {
+          pass(`list_gym_coaches (B requests A's gym) rejected: ${error.message.slice(0, 80)}`);
+        } else {
+          fail(
+            "list_gym_coaches (B requests A's gym)",
+            `unexpected error shape: code=${error.code} message=${error.message}`
+          );
+        }
+      } else if (data && data.length > 0) {
+        fail(
+          "list_gym_coaches (B requests A's gym)",
+          `LEAK: function returned ${data.length} coach row(s) for A's gym to B`
+        );
+      } else {
+        fail(
+          "list_gym_coaches (B requests A's gym)",
+          'expected exception (42501) but got empty result. Membership check may be missing.'
+        );
+      }
+    }
+
     // ---- 6. users.tribe_os_* column read ----
     {
       // Set a sentinel value on A so we can detect leakage.
