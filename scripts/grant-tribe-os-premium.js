@@ -6,8 +6,15 @@
  * Usage from the tribe-v3 directory:
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=solo
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=team_studio
+ *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=solo --welcome
+ *     (also sends the bilingual beta welcome email)
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --revoke
  *   node scripts/grant-tribe-os-premium.js --list
+ *
+ * Optional flags:
+ *   --welcome       send the beta welcome email after a successful grant
+ *   --free-days=N   free runway communicated in the welcome email (default 90)
+ *   --lang=en|es    welcome email language (default 'en')
  *
  * Reads NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from
  * .env.local in the repo root. Hits Supabase directly with the service
@@ -23,6 +30,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
 
 const VALID_TIERS = new Set(['solo', 'team_studio']);
 const PREMIUM_SELECT =
@@ -77,7 +85,71 @@ async function findUserByEmail(supabase, email) {
   return data;
 }
 
-async function grant(supabase, email, tier) {
+/**
+ * Send a text-only beta welcome email via Resend. The richer HTML
+ * version lives in lib/email/tribeOsBetaWelcome.ts for server-side use;
+ * the CLI uses a minimal text template to avoid a TS build step.
+ *
+ * Throws on Resend error so the caller can decide. The grant CLI logs
+ * and continues — the grant should succeed even if the email fails.
+ */
+async function sendBetaWelcome({ email, name, freeDays, language, siteUrl }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY not set in .env.local');
+  }
+  const resend = new Resend(apiKey);
+  const subject =
+    language === 'es' ? 'Bienvenido a la beta de Tribe.OS' : 'Welcome to the Tribe.OS beta';
+  const intro =
+    language === 'es'
+      ? `Tienes acceso completo a Tribe.OS premium gratis durante los próximos ${freeDays} días.`
+      : `You have full Tribe.OS premium access free for the next ${freeDays} days.`;
+  const links =
+    language === 'es'
+      ? [
+          `Gestiona tus clientes: ${siteUrl}/os/clients`,
+          `Crea una sesión pagada: ${siteUrl}/create`,
+          `Ve tus ingresos: ${siteUrl}/os/revenue`,
+        ]
+      : [
+          `Manage your clients: ${siteUrl}/os/clients`,
+          `Create a paid session: ${siteUrl}/create`,
+          `See your revenue: ${siteUrl}/os/revenue`,
+        ];
+  const ask =
+    language === 'es'
+      ? `Lo que te pedimos: úsalo semanalmente con al menos una sesión pagada, avísanos rápido cuando algo falle, y haz una llamada de 30 minutos al final del mes.`
+      : `What we are asking: use it weekly with at least one real paid session, tell us fast when something breaks, and sit for a 30-minute feedback call at the end of the month.`;
+  const after =
+    language === 'es'
+      ? `Después de ${freeDays} días, eliges: treinta dólares al mes o quince por ciento de participación en ingresos.`
+      : `After ${freeDays} days you choose: thirty dollars per month or fifteen percent revenue share.`;
+
+  const text = [
+    language === 'es' ? `${name}, estás dentro.` : `${name}, you're in.`,
+    '',
+    intro,
+    '',
+    ...links,
+    '',
+    ask,
+    '',
+    after,
+    '',
+    'Alain',
+    'A Plus Fitness LLC',
+  ].join('\n');
+
+  await resend.emails.send({
+    from: 'Tribe <tribe@aplusfitnessllc.com>',
+    to: email,
+    subject,
+    text,
+  });
+}
+
+async function grant(supabase, email, tier, options) {
   const user = await findUserByEmail(supabase, email);
   if (!user) {
     console.error(`error: user not found with email "${email}"`);
@@ -109,6 +181,22 @@ async function grant(supabase, email, tier) {
   }
   console.log(`granted ${tier} to ${data.email} (${data.name})`);
   console.log(JSON.stringify(data, null, 2));
+
+  if (options && options.welcome) {
+    try {
+      await sendBetaWelcome({
+        email: data.email,
+        name: data.name || data.email.split('@')[0],
+        freeDays: options.freeDays,
+        language: options.language,
+        siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.app',
+      });
+      console.log(`welcome email sent to ${data.email} (lang=${options.language}, freeDays=${options.freeDays})`);
+    } catch (err) {
+      console.error(`welcome email FAILED for ${data.email}: ${err.message}`);
+      console.error('(the grant succeeded; send the welcome email manually)');
+    }
+  }
 }
 
 async function revoke(supabase, email) {
@@ -194,7 +282,15 @@ async function main() {
     console.error(`error: --tier must be one of ${Array.from(VALID_TIERS).join(', ')}`);
     process.exit(1);
   }
-  await grant(supabase, args.email, tier);
+
+  // Optional welcome-email flags. Default freeDays to 90 per Week 4 spec.
+  const welcome = args.welcome === true || args.welcome === 'true';
+  const freeDaysRaw = args['free-days'];
+  const freeDays =
+    typeof freeDaysRaw === 'string' && /^\d+$/.test(freeDaysRaw) ? Number(freeDaysRaw) : 90;
+  const language = args.lang === 'es' ? 'es' : 'en';
+
+  await grant(supabase, args.email, tier, { welcome, freeDays, language });
 }
 
 main().catch((err) => {
