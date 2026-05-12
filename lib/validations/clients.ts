@@ -41,6 +41,21 @@ const notesSchema = z.string().max(2000, 'Notes must be 2000 characters or fewer
 
 const contactInfoSchema = z.record(z.string(), z.unknown()).nullable().optional();
 
+/**
+ * Engagement status (migration 072). Mirrors the CHECK constraint on
+ * clients.status. Defaults to 'active' at DB level — schema makes the
+ * field optional on create so omitting it just falls through to the
+ * default.
+ */
+const statusSchema = z.enum(['active', 'inactive', 'lead', 'lapsed']);
+
+/**
+ * Health notes (migration 072). Free-form, up to 4000 chars. Distinct
+ * from the catch-all `notes` field — purpose-built for medical /
+ * injury / restriction metadata.
+ */
+const healthNotesSchema = z.string().max(4000, 'Health notes must be 4000 characters or fewer').nullable().optional();
+
 // ------------------------------------------------------------------
 // Client create / update
 // ------------------------------------------------------------------
@@ -52,6 +67,8 @@ export const CreateClientInputSchema = z.object({
   notes: notesSchema,
   tags: tagsSchema,
   contact_info: contactInfoSchema,
+  status: statusSchema.optional(),
+  health_notes: healthNotesSchema,
 });
 export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;
 
@@ -68,6 +85,8 @@ export const UpdateClientInputSchema = z
     tags: tagsSchema,
     contact_info: contactInfoSchema,
     archived: z.boolean().optional(),
+    status: statusSchema.optional(),
+    health_notes: healthNotesSchema,
   })
   .refine((data) => Object.values(data).some((v) => v !== undefined), {
     message: 'At least one field must be provided',

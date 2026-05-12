@@ -22,6 +22,19 @@ import type { DalResult } from './types';
 export type Currency = 'USD' | 'COP';
 export type PaymentMethod = 'cash' | 'transfer' | 'stripe' | 'other';
 
+/**
+ * Engagement state. Added by migration 072. Distinct from `archived`
+ * (which is the soft-delete flag).
+ *   active   — currently training
+ *   inactive — stopped but kept on the roster for possible reactivation
+ *   lead     — potential client who has not yet started
+ *   lapsed   — stopped without explicit reactivation; the at-risk
+ *              widget flags `active` clients whose last_seen_at is
+ *              older than the threshold and `lapsed` is the manual
+ *              override of that signal
+ */
+export type ClientStatus = 'active' | 'inactive' | 'lead' | 'lapsed';
+
 /** Mirror of the clients table columns. */
 export interface ClientRow {
   id: string;
@@ -40,6 +53,16 @@ export interface ClientRow {
   contact_info: Record<string, unknown> | null;
   notes: string | null;
   tags: string[];
+  /** Engagement state. Added in migration 072. Defaults to 'active'. */
+  status: ClientStatus;
+  /** Free-form medical / injury / restriction notes. Added in 072. */
+  health_notes: string | null;
+  /**
+   * Cached max(attended_at). Maintained by the sync_client_last_seen
+   * trigger on client_attendance. NULL when the client has no
+   * attended attendance rows yet. Added in migration 072.
+   */
+  last_seen_at: string | null;
   archived: boolean;
   archived_at: string | null;
   created_at: string;
@@ -146,6 +169,10 @@ export interface CreateClientInput {
   notes?: string | null;
   tags?: string[];
   contact_info?: Record<string, unknown> | null;
+  /** Added in migration 072. Optional on create; defaults to 'active' at DB level. */
+  status?: ClientStatus;
+  /** Added in migration 072. */
+  health_notes?: string | null;
 }
 
 export interface UpdateClientInput {
@@ -156,6 +183,10 @@ export interface UpdateClientInput {
   tags?: string[];
   contact_info?: Record<string, unknown> | null;
   archived?: boolean;
+  /** Added in migration 072. */
+  status?: ClientStatus;
+  /** Added in migration 072. */
+  health_notes?: string | null;
 }
 
 export type RecordAttendanceInput = {
@@ -173,7 +204,7 @@ export interface ListClientsFilters {
 }
 
 const CLIENT_SELECT =
-  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, archived, archived_at, created_at, updated_at';
+  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at';
 
 const ATTENDANCE_SELECT =
   'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, created_at, updated_at';
@@ -216,6 +247,9 @@ export async function createClient(
         notes: input.notes ?? null,
         tags: input.tags ?? [],
         contact_info: input.contact_info ?? null,
+        // status omitted → DB default 'active' applies.
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.health_notes !== undefined ? { health_notes: input.health_notes } : {}),
       })
       .select(CLIENT_SELECT)
       .single();
@@ -250,6 +284,8 @@ export async function updateClient(
     if (updates.tags !== undefined) payload.tags = updates.tags;
     if (updates.contact_info !== undefined) payload.contact_info = updates.contact_info;
     if (updates.archived !== undefined) payload.archived = updates.archived;
+    if (updates.status !== undefined) payload.status = updates.status;
+    if (updates.health_notes !== undefined) payload.health_notes = updates.health_notes;
 
     if (Object.keys(payload).length === 0) {
       return { success: false, error: 'no_updates' };
@@ -583,6 +619,129 @@ export async function getClientAttendanceSummary(
   } catch (error) {
     logError(error, { action: 'getClientAttendanceSummary', clientId });
     return { success: false, error: 'Failed to load attendance summary' };
+  }
+}
+
+// ------------------------------------------------------------------
+// At-risk roster query (Week 2 Mission 5)
+// ------------------------------------------------------------------
+
+/** A client flagged as at-risk by the dashboard widget. */
+export interface AtRiskClient {
+  id: string;
+  name: string;
+  email: string | null;
+  status: ClientStatus;
+  last_seen_at: string | null;
+  /**
+   * Days since last_seen_at, computed by the DAL. Null when
+   * last_seen_at is null (the client has never been marked attended).
+   */
+  days_since_last_seen: number | null;
+}
+
+export interface ListAtRiskClientsOptions {
+  /**
+   * Threshold in days. A client with status='active' and last_seen_at
+   * older than this many days counts as at-risk. Defaults to 14.
+   */
+  thresholdDays?: number;
+  /** Max rows to return. Defaults to 25. */
+  limit?: number;
+}
+
+/**
+ * Lists clients who appear to have stopped showing up. Used by the
+ * `/os/dashboard` at-risk widget. Three categories qualify:
+ *
+ *   1. status = 'active' AND last_seen_at older than thresholdDays.
+ *      The instructor hasn't manually marked them as inactive or
+ *      lapsed yet, but the data says they have stopped.
+ *   2. status = 'lapsed' (regardless of last_seen_at). Manual
+ *      override — the instructor knows they have stopped.
+ *   3. status = 'active' AND last_seen_at IS NULL AND the client was
+ *      created more than thresholdDays ago. Onboarded but never
+ *      attended — likely a stalled lead.
+ *
+ * Inactive and lead clients are NOT flagged: inactive is the
+ * instructor's explicit "stopped, not at-risk" signal, and lead is
+ * "not started yet" which is fine.
+ *
+ * Returned ordered by oldest last_seen_at first (most urgent), then by
+ * created_at (oldest onboarding) for the never-attended set.
+ */
+export async function listAtRiskClients(
+  supabase: SupabaseClient,
+  context: ClientTenantContext | string,
+  options: ListAtRiskClientsOptions = {}
+): Promise<DalResult<AtRiskClient[]>> {
+  const ctx: ClientTenantContext = typeof context === 'string' ? { gymId: null, instructorUserId: context } : context;
+  const instructorUserId = ctx.instructorUserId;
+  const gymId = ctx.gymId;
+
+  const thresholdDays = Math.max(1, Math.floor(options.thresholdDays ?? 14));
+  const limit = Math.max(1, Math.min(options.limit ?? 25, 100));
+
+  try {
+    const cutoff = new Date();
+    cutoff.setUTCDate(cutoff.getUTCDate() - thresholdDays);
+    const cutoffIso = cutoff.toISOString();
+
+    let q = supabase
+      .from('clients')
+      .select('id, name, email, status, last_seen_at, created_at')
+      .eq('archived', false)
+      .in('status', ['active', 'lapsed']);
+
+    if (gymId) {
+      q = q.eq('gym_id', gymId);
+    } else {
+      q = q.eq('instructor_user_id', instructorUserId);
+    }
+
+    // Three OR branches: lapsed (any time), stale last_seen, or
+    // never-attended-but-old-enough. The Supabase JS `.or()` builder
+    // gives us this in a single round-trip.
+    q = q.or(`status.eq.lapsed,last_seen_at.lt.${cutoffIso},and(last_seen_at.is.null,created_at.lt.${cutoffIso})`);
+
+    // Order: oldest last_seen first (NULLS LAST), then oldest created.
+    q = q.order('last_seen_at', { ascending: true, nullsFirst: false }).order('created_at', {
+      ascending: true,
+    });
+
+    q = q.limit(limit);
+
+    const { data, error } = await q;
+    if (error) {
+      logError(error, { action: 'listAtRiskClients', instructorUserId, gymId });
+      return { success: false, error: error.message };
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      name: string;
+      email: string | null;
+      status: ClientStatus;
+      last_seen_at: string | null;
+      created_at: string;
+    }>;
+
+    const now = Date.now();
+    const out: AtRiskClient[] = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      status: r.status,
+      last_seen_at: r.last_seen_at,
+      days_since_last_seen: r.last_seen_at
+        ? Math.floor((now - new Date(r.last_seen_at).getTime()) / (24 * 60 * 60 * 1000))
+        : null,
+    }));
+
+    return { success: true, data: out };
+  } catch (error) {
+    logError(error, { action: 'listAtRiskClients', instructorUserId, gymId });
+    return { success: false, error: 'Failed to list at-risk clients' };
   }
 }
 
