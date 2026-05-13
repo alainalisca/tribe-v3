@@ -342,10 +342,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-        All three now render with friendly labels in the /os/audit
-        viewer (English + Spanish). The pattern is reusable — adding
-        new audit event types just means calling `writeAuditEntry` from
-        the relevant route and adding a label entry.
+            All three now render with friendly labels in the /os/audit
+            viewer (English + Spanish). The pattern is reusable — adding
+            new audit event types just means calling `writeAuditEntry` from
+            the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -367,16 +367,42 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     marketing copy. Real privacy/trust signal — important for
     LATAM/EU members where data-portability is increasingly expected.
 
-20. **"Sign up for Tribe" invite email** — when a coach adds a client
+20. ✅ **"Money owed to you" collection surface** — shipped. New page
+    at `/os/revenue/unpaid` lists every client with at least one
+    attended-but-not-paid session in the last 30/60/90 days (default
+    60). Grouped by client, sorted by most-recent unpaid first. Each
+    row gets a one-tap WhatsApp deep link with a bilingual
+    payment-reminder message pre-filled — "Hi Carlos, hope you're
+    doing well! Just a friendly reminder about 3 training sessions
+    since Apr 12 that we still need to settle up…"
+
+    Linked from `/os/revenue` next to the export buttons as
+    "Money owed" / "Lo que te deben". Two new analytics events:
+    `tribe_os_unpaid_attendance_viewed` and
+    `tribe_os_unpaid_whatsapp_clicked`.
+
+    **Design decisions worth knowing**:
+    - No dollar amount shown — the schema only stores
+      `amount_paid_cents` (NULL when unpaid), so we don't know what
+      the coach normally charges per session. The message tells the
+      member to settle up but lets the coach quote the exact figure
+      in the thread.
+    - No bulk send — firing the same WhatsApp to 30 people at once
+      is the kind of action that benefits from per-row review.
+    - Archived clients are excluded — they're usually not actionable.
+    - 60-day default window keeps the surface focused on actionable
+      debt vs. write-offs.
+
+21. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-21. **Stripe Connect rough-edge polish** — but this is hard to do
+22. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-22. **Per-attendance trigger optimization** — migration 079 recomputes
+23. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-23. **Generator feedback loop** — use the feedback data from #5 to:
+24. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

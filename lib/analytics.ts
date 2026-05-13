@@ -194,6 +194,8 @@ type EventName =
   | 'tribe_member_data_export_clicked' // /my-coach "Download my data" tapped
   | 'tribe_member_data_export_succeeded' // GET /api/me/training/export returned + blob saved
   | 'tribe_member_data_export_failed' // export endpoint failed or blob write threw
+  | 'tribe_os_unpaid_attendance_viewed' // /os/revenue/unpaid rendered with N unpaid groups
+  | 'tribe_os_unpaid_whatsapp_clicked' // per-row WhatsApp reminder tapped on /os/revenue/unpaid
   | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered

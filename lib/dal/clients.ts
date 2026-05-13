@@ -896,6 +896,134 @@ export async function getClientAttendanceSummary(
 }
 
 // ------------------------------------------------------------------
+// Unpaid attendance roll-up (revenue collection workflow)
+// ------------------------------------------------------------------
+
+/**
+ * One row per client with at least one unpaid (attended but not paid)
+ * attendance in the window. Powers the /os/revenue/unpaid surface.
+ *
+ * We deliberately don't try to compute an "amount owed" — the
+ * attendance table only records `amount_paid_cents` (NULL when unpaid),
+ * there's no per-session "price list" today. Coaches know their own
+ * pricing; the surface answers "who do I need to nudge?" not "send
+ * the exact dollar amount."
+ */
+export interface UnpaidClientGroup {
+  client_id: string;
+  client_name: string;
+  /** Free-form phone. Drives WhatsApp deep links; nullable. */
+  client_phone: string | null;
+  client_email: string | null;
+  /** Number of unpaid (attended, !paid) rows in the window. */
+  unpaid_count: number;
+  /** Earliest attended_at among the unpaid rows. ISO date string. */
+  oldest_unpaid_at: string;
+  /** Most recent attended_at among the unpaid rows. ISO date string. */
+  newest_unpaid_at: string;
+}
+
+export interface ListUnpaidAttendanceOptions {
+  /**
+   * Look-back window in days. Defaults to 60. Older unpaid sessions
+   * are excluded — at some point they're not actionable as a payment
+   * reminder, they're write-offs the coach should handle in their
+   * books. 60 days strikes the balance: covers a missed month of
+   * monthly billing without surfacing year-old debt.
+   */
+  windowDays?: number;
+}
+
+const DEFAULT_UNPAID_WINDOW_DAYS = 60;
+
+/**
+ * Group every unpaid (attended, !paid) attendance row in the gym
+ * into one entry per client, ordered by most-recent unpaid first
+ * (the assumption being: a client with a fresh unpaid session is
+ * the most likely to pay if nudged today).
+ *
+ * Scoping comes through RLS — the client_attendance policy already
+ * scopes to the caller's clients via the parent client row.
+ */
+export async function listUnpaidAttendance(
+  supabase: SupabaseClient,
+  opts: ListUnpaidAttendanceOptions = {}
+): Promise<DalResult<UnpaidClientGroup[]>> {
+  const windowDays = Math.max(1, Math.floor(opts.windowDays ?? DEFAULT_UNPAID_WINDOW_DAYS));
+  // Build a cutoff ISO string for the SQL filter. attended_at is the
+  // event time; we keep created_at out of the filter so a freshly
+  // RECORDED-but-backdated row still shows up.
+  const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
+
+  try {
+    const { data, error } = await supabase
+      .from('client_attendance')
+      .select(
+        `
+          attended_at, attended, paid, client_id,
+          client:clients(id, name, email, phone, archived)
+        `
+      )
+      .eq('attended', true)
+      .eq('paid', false)
+      .gte('attended_at', cutoff)
+      .order('attended_at', { ascending: false, nullsFirst: false });
+    if (error) {
+      logError(error, { action: 'listUnpaidAttendance' });
+      return { success: false, error: error.message };
+    }
+
+    // Group client-side. Could push this into a SQL view, but the
+    // expected payload is small (a gym with 30 active members and a
+    // 60-day window rarely exceeds a few hundred rows) and the
+    // group-by logic stays in TS where the test surface is friendlier.
+    const groups = new Map<string, UnpaidClientGroup>();
+    for (const row of data ?? []) {
+      const client = row.client as unknown as {
+        id: string;
+        name: string;
+        email: string | null;
+        phone: string | null;
+        archived: boolean;
+      } | null;
+      // Skip rows whose parent client was archived — those usually
+      // aren't actionable as a payment reminder.
+      if (!client || client.archived) continue;
+      const attendedAt = (row.attended_at as string | null) ?? '';
+      if (!attendedAt) continue;
+
+      const existing = groups.get(client.id);
+      if (!existing) {
+        groups.set(client.id, {
+          client_id: client.id,
+          client_name: client.name,
+          client_phone: client.phone,
+          client_email: client.email,
+          unpaid_count: 1,
+          oldest_unpaid_at: attendedAt,
+          newest_unpaid_at: attendedAt,
+        });
+      } else {
+        existing.unpaid_count += 1;
+        if (attendedAt < existing.oldest_unpaid_at) existing.oldest_unpaid_at = attendedAt;
+        if (attendedAt > existing.newest_unpaid_at) existing.newest_unpaid_at = attendedAt;
+      }
+    }
+
+    const result = Array.from(groups.values()).sort((a, b) =>
+      // Most-recent unpaid first. Clients with fresh debt are the
+      // ones most worth nudging today.
+      b.newest_unpaid_at.localeCompare(a.newest_unpaid_at)
+    );
+
+    return { success: true, data: result };
+  } catch (error) {
+    logError(error, { action: 'listUnpaidAttendance.exception' });
+    return { success: false, error: 'Failed to load unpaid attendance' };
+  }
+}
+
+// ------------------------------------------------------------------
 // At-risk roster query (Week 2 Mission 5)
 // ------------------------------------------------------------------
 

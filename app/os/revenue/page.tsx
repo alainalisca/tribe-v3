@@ -17,6 +17,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { DollarSign } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -125,6 +127,17 @@ export default function RevenueDashboardPage(): JSX.Element {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <PeriodSelector value={period} onChange={setPeriod} timezone={timezone} />
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Link to the "money owed" surface — quick collection
+                workflow that exists alongside the historical revenue
+                dashboard. Always rendered (revenue could be empty
+                but there could still be unpaid recent sessions). */}
+            <Link
+              href="/os/revenue/unpaid"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              {s.unpaidLink}
+            </Link>
             <AttendanceExportButton period={period} />
             {fetchState.kind === 'ready' && !isEmpty && <ExportButton period={period} />}
           </div>
@@ -210,6 +223,7 @@ const COPY = {
     errorNetwork: 'Could not reach the server. Check your connection and try again.',
     errorPremiumRequired: 'Tribe.OS premium is required to see revenue data.',
     errorUnauthorized: 'You need to sign in to see revenue data.',
+    unpaidLink: 'Money owed',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -223,5 +237,6 @@ const COPY = {
     errorNetwork: 'No se pudo conectar al servidor. Verifica tu conexión e intenta de nuevo.',
     errorPremiumRequired: 'Se requiere Tribe.OS premium para ver los datos de ingresos.',
     errorUnauthorized: 'Necesitas iniciar sesión para ver los datos de ingresos.',
+    unpaidLink: 'Lo que te deben',
   },
 } as const;
