@@ -168,6 +168,8 @@ type EventName =
   | 'tribe_os_bulk_attendance_saved' // bulk attendance form submitted
   | 'tribe_os_bulk_attendance_picker_opened' // dashboard session-picker modal opened
   | 'tribe_os_members_viewed' // /os/members page rendered with the roster
+  | 'tribe_os_teams_viewed' // /os/teams page rendered with the list
+  | 'tribe_os_team_created' // POST /api/tribe-os/teams success
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)

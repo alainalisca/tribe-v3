@@ -1,17 +1,518 @@
 'use client';
 
-import { Users2 } from 'lucide-react';
-import ComingSoonPage from '@/components/tribe-os/ComingSoonPage';
+/**
+ * /os/teams — list of teams in the caller's gym (matches mockup 1).
+ *
+ * Each team is a card showing:
+ *   - Colored top stripe (six color options)
+ *   - Name + description
+ *   - Member count + status breakdown (X active, Y at risk)
+ *   - Head coach (avatar + name)
+ *   - Member avatar preview + "+N" overflow chip
+ *   - "View Members" affordance
+ *
+ * Data: GET /api/tribe-os/teams returns each team with aggregated
+ * stats (member_count, active_count, at_risk_count, preview_members)
+ * via the list_teams_for_gym RPC.
+ *
+ * Creating a team: a "Create Team" button at the top right opens an
+ * inline form. Owner-only — non-owners see the button disabled.
+ */
+
+import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
+import { Plus, MessageSquare, Search, AlertCircle, X as XIcon } from 'lucide-react';
+import { useLanguage } from '@/lib/LanguageContext';
+import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { trackEvent } from '@/lib/analytics';
+import type { GymTeamWithStats, TeamColor } from '@/lib/dal/gymTeams';
+
+interface ListResponse {
+  gym: { id: string; name: string };
+  teams: GymTeamWithStats[];
+}
+
+type PageState =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'no_gym' }
+  | { kind: 'ready'; gym: ListResponse['gym']; teams: GymTeamWithStats[] };
+
+// ES PENDING VERONICA REVIEW
+const copy = {
+  en: {
+    redirectingLabel: 'Redirecting',
+    loadingLabel: 'Loading',
+    pageTitle: 'Teams',
+    teamSummary: (n: number, members: number) =>
+      `${n} ${n === 1 ? 'team' : 'teams'} · ${members} unique ${members === 1 ? 'member' : 'members'}`,
+    createTeam: 'Create Team',
+    searchPlaceholder: 'Search teams…',
+    members: (n: number) => (n === 1 ? '1 member' : `${n} members`),
+    activeShort: (n: number) => `${n} active`,
+    atRiskShort: (n: number) => `${n} at risk`,
+    coachLabel: 'Coach:',
+    noCoach: 'Unassigned',
+    viewMembers: 'View Members',
+    noTeamsTitle: 'No teams yet',
+    noTeamsHint:
+      'Group your members by program, time slot, or training focus. Teams help you message and track in bulk.',
+    noTeamsCta: 'Create your first team',
+    noMatch: 'No teams match your search.',
+    errorTitle: 'Could not load teams.',
+    retry: 'Retry',
+    noGymTitle: 'No gym yet',
+    noGymHint: 'A gym is created automatically when you subscribe to Tribe.OS premium.',
+    // Inline form
+    formTitle: 'Create team',
+    formNameLabel: 'Name',
+    formNamePlaceholder: 'e.g. Morning Crew',
+    formDescriptionLabel: 'Description (optional)',
+    formDescriptionPlaceholder: 'A short note about who this team is for',
+    formColorLabel: 'Color',
+    formSubmit: 'Create',
+    formSubmitting: 'Creating',
+    formCancel: 'Cancel',
+    formDuplicate: 'A team with that name already exists.',
+    formError: 'Could not create team.',
+  },
+  es: {
+    redirectingLabel: 'Redirigiendo',
+    loadingLabel: 'Cargando',
+    pageTitle: 'Equipos',
+    teamSummary: (n: number, members: number) =>
+      `${n} ${n === 1 ? 'equipo' : 'equipos'} · ${members} ${members === 1 ? 'miembro único' : 'miembros únicos'}`,
+    createTeam: 'Crear equipo',
+    searchPlaceholder: 'Buscar equipos…',
+    members: (n: number) => (n === 1 ? '1 miembro' : `${n} miembros`),
+    activeShort: (n: number) => `${n} activos`,
+    atRiskShort: (n: number) => `${n} en riesgo`,
+    coachLabel: 'Coach:',
+    noCoach: 'Sin asignar',
+    viewMembers: 'Ver miembros',
+    noTeamsTitle: 'Aún sin equipos',
+    noTeamsHint:
+      'Agrupa a tus miembros por programa, horario o enfoque de entrenamiento. Los equipos ayudan a enviar mensajes y monitorear en bloque.',
+    noTeamsCta: 'Crear tu primer equipo',
+    noMatch: 'Ningún equipo coincide con tu búsqueda.',
+    errorTitle: 'No se pudieron cargar los equipos.',
+    retry: 'Reintentar',
+    noGymTitle: 'Aún sin gym',
+    noGymHint: 'Se crea un gym automáticamente al suscribirte a Tribe.OS premium.',
+    formTitle: 'Crear equipo',
+    formNameLabel: 'Nombre',
+    formNamePlaceholder: 'p.ej. Crew de la mañana',
+    formDescriptionLabel: 'Descripción (opcional)',
+    formDescriptionPlaceholder: 'Una nota breve sobre para quién es este equipo',
+    formColorLabel: 'Color',
+    formSubmit: 'Crear',
+    formSubmitting: 'Creando',
+    formCancel: 'Cancelar',
+    formDuplicate: 'Ya existe un equipo con ese nombre.',
+    formError: 'No se pudo crear el equipo.',
+  },
+} as const;
+
+const STRIPE_COLOR: Record<TeamColor, string> = {
+  lime: 'bg-tribe-green',
+  blue: 'bg-blue-500',
+  amber: 'bg-amber-500',
+  red: 'bg-tribe-red',
+  purple: 'bg-purple-500',
+  slate: 'bg-slate-500',
+};
 
 export default function TeamsPage() {
+  const { language } = useLanguage();
+  const s = copy[language];
+  const gate = useTribeOSPremiumGate();
+  const [state, setState] = useState<PageState>({ kind: 'loading' });
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (gate.state !== 'allowed') return;
+    let cancelled = false;
+    setState({ kind: 'loading' });
+
+    (async () => {
+      try {
+        const res = await fetch('/api/tribe-os/teams/', { method: 'GET' });
+        if (cancelled) return;
+        if (res.status === 404) {
+          setState({ kind: 'no_gym' });
+          return;
+        }
+        const body = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          data?: ListResponse;
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok || !body.success || !body.data) {
+          setState({ kind: 'error', message: body.error || s.errorTitle });
+          return;
+        }
+        setState({ kind: 'ready', gym: body.data.gym, teams: body.data.teams });
+        trackEvent('tribe_os_teams_viewed', { team_count: body.data.teams.length });
+      } catch {
+        if (!cancelled) setState({ kind: 'error', message: s.errorTitle });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gate.state, reloadKey, s.errorTitle]);
+
+  const filteredTeams =
+    state.kind === 'ready' && search.trim().length > 0
+      ? state.teams.filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
+      : state.kind === 'ready'
+        ? state.teams
+        : [];
+
+  if (gate.state !== 'allowed') {
+    return (
+      <main className="flex items-center justify-center px-4 py-24">
+        <p className="text-gray-500 text-sm uppercase tracking-[0.1em]">
+          {gate.state === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
+        </p>
+      </main>
+    );
+  }
+
+  const uniqueMemberCount =
+    state.kind === 'ready' ? new Set(state.teams.flatMap((t) => t.preview_members.map((m) => m.id))).size : 0;
+
   return (
-    <ComingSoonPage
-      Icon={Users2}
-      title={{ en: 'Teams', es: 'Equipos' }}
-      description={{
-        en: 'Group members into teams like Competition Squad, Morning Crew, or Foundations. Assign a head coach, see at-risk counts at a glance, and message a whole team in one tap.',
-        es: 'Agrupa a tus miembros en equipos como Competition Squad, Crew de la Mañana o Foundations. Asigna un coach principal, ve los miembros en riesgo de un vistazo y envía un mensaje a todo el equipo en un toque.',
-      }}
-    />
+    <div className="px-4 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-5">
+        <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">{s.pageTitle}</h1>
+            {state.kind === 'ready' ? (
+              <p className="text-sm text-gray-500 mt-1">{s.teamSummary(state.teams.length, uniqueMemberCount)}</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-xl hover:shadow-[0_4px_20px_rgba(132,204,22,0.25)] hover:-translate-y-0.5 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            {s.createTeam}
+          </button>
+        </header>
+
+        <div className="relative max-w-md">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={s.searchPlaceholder}
+            className="w-full pl-10 pr-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20"
+          />
+        </div>
+
+        {state.kind === 'loading' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-white rounded-xl border border-gray-200 animate-pulse" />
+            ))}
+          </div>
+        ) : state.kind === 'no_gym' ? (
+          <div className="py-12 text-center space-y-2">
+            <h2 className="text-lg font-bold text-gray-900">{s.noGymTitle}</h2>
+            <p className="text-sm text-gray-600">{s.noGymHint}</p>
+          </div>
+        ) : state.kind === 'error' ? (
+          <div className="py-12 text-center space-y-3">
+            <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
+            <p className="text-sm text-gray-700">{state.message}</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="px-4 py-2 bg-gray-100 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-200"
+            >
+              {s.retry}
+            </button>
+          </div>
+        ) : state.teams.length === 0 ? (
+          <div className="py-12 text-center space-y-3">
+            <p className="text-sm font-semibold text-gray-900">{s.noTeamsTitle}</p>
+            <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">{s.noTeamsHint}</p>
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-1.5 mt-2 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {s.noTeamsCta}
+            </button>
+          </div>
+        ) : filteredTeams.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-sm text-gray-500">{s.noMatch}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {filteredTeams.map((t) => (
+              <TeamCard key={t.id} team={t} copy={s} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showCreate ? (
+        <CreateTeamModal
+          copy={s}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy.en | typeof copy.es }) {
+  const coachInitial = (team.coach_name?.charAt(0) || '?').toUpperCase();
+  const preview = team.preview_members.slice(0, 5);
+  const overflow = Math.max(0, team.member_count - preview.length);
+
+  return (
+    <article className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className={`h-1 ${STRIPE_COLOR[team.color]}`} aria-hidden="true" />
+      <div className="p-5 space-y-4">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-gray-900 truncate">{team.name}</h3>
+            {team.description ? <p className="text-xs text-gray-500 mt-1 line-clamp-2">{team.description}</p> : null}
+          </div>
+          <button
+            type="button"
+            aria-label="Message team"
+            className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
+        </header>
+
+        <div className="flex items-center gap-4 flex-wrap text-xs">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-gray-900">
+            <span className="text-base font-black">{team.member_count}</span>
+            <span className="text-gray-500 font-medium">
+              {team.member_count === 1
+                ? (s.members(1).split(' ')[1] ?? '')
+                : (s.members(team.member_count).split(' ')[1] ?? '')}
+            </span>
+          </span>
+          {team.active_count > 0 ? (
+            <span className="inline-flex items-center gap-1 text-tribe-green">
+              <span className="w-1.5 h-1.5 rounded-full bg-tribe-green" />
+              {s.activeShort(team.active_count)}
+            </span>
+          ) : null}
+          {team.at_risk_count > 0 ? (
+            <span className="inline-flex items-center gap-1 text-amber-700">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              {s.atRiskShort(team.at_risk_count)}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
+              {coachInitial}
+            </div>
+            <p className="text-xs text-gray-600 truncate">
+              <span className="text-gray-400">{s.coachLabel}</span>{' '}
+              <span className="font-semibold text-gray-900">{team.coach_name || s.noCoach}</span>
+            </p>
+          </div>
+
+          {preview.length > 0 ? (
+            <div className="flex items-center -space-x-2 shrink-0">
+              {preview.map((m) => (
+                <span
+                  key={m.id}
+                  title={m.name}
+                  className="w-7 h-7 rounded-full bg-tribe-green/15 border-2 border-white text-tribe-dark font-bold flex items-center justify-center text-[10px]"
+                >
+                  {(m.name.charAt(0) || '?').toUpperCase()}
+                </span>
+              ))}
+              {overflow > 0 ? (
+                <span className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white text-gray-600 font-bold flex items-center justify-center text-[10px]">
+                  +{overflow}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        <Link
+          href={`/os/teams/${team.id}`}
+          className="flex items-center justify-center gap-1 w-full py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors border-t border-gray-100 pt-3 -mx-5 -mb-5 px-5 pb-3 mt-1"
+        >
+          {s.viewMembers}
+          <span aria-hidden="true">↓</span>
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+/** Inline create-team form rendered as a modal-style overlay. */
+function CreateTeamModal({
+  copy: s,
+  onClose,
+  onCreated,
+}: {
+  copy: typeof copy.en | typeof copy.es;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [color, setColor] = useState<TeamColor>('lime');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/tribe-os/teams/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          color,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        if (body.error === 'duplicate_name') {
+          setError(s.formDuplicate);
+        } else {
+          setError(s.formError);
+        }
+        setSubmitting(false);
+        return;
+      }
+      trackEvent('tribe_os_team_created');
+      onCreated();
+    } catch {
+      setError(s.formError);
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <button
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/40"
+      />
+      <form
+        onSubmit={handleSubmit}
+        className="relative bg-white rounded-xl border border-gray-200 shadow-xl w-full max-w-md p-5 space-y-4"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-gray-900">{s.formTitle}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={s.formCancel}
+            className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">{s.formNameLabel}</span>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={s.formNamePlaceholder}
+            maxLength={80}
+            disabled={submitting}
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20 disabled:opacity-60"
+          />
+        </label>
+
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">{s.formDescriptionLabel}</span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={s.formDescriptionPlaceholder}
+            maxLength={500}
+            rows={2}
+            disabled={submitting}
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20 disabled:opacity-60 resize-none"
+          />
+        </label>
+
+        <div>
+          <span className="block text-xs font-semibold text-gray-700 mb-2">{s.formColorLabel}</span>
+          <div className="flex items-center gap-2">
+            {(['lime', 'blue', 'amber', 'red', 'purple', 'slate'] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={c}
+                onClick={() => setColor(c)}
+                disabled={submitting}
+                className={`w-8 h-8 rounded-full transition-transform ${STRIPE_COLOR[c]} ${
+                  color === c ? 'ring-2 ring-offset-2 ring-tribe-dark scale-110' : 'hover:scale-105'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {error ? (
+          <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60"
+          >
+            {s.formCancel}
+          </button>
+          <button
+            type="submit"
+            disabled={submitting || name.trim().length === 0}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-lg disabled:opacity-60 disabled:cursor-not-allowed hover:shadow transition-all"
+          >
+            {submitting ? `${s.formSubmitting}…` : s.formSubmit}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
