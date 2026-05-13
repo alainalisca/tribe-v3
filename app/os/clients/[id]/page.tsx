@@ -123,6 +123,11 @@ const copy = {
     methodOther: 'Other',
 
     // Delete confirmation
+    purgeToggleLabel: 'Permanently delete all their data (GDPR request)',
+    purgeWarning:
+      'This wipes attendance, payments, AI insights, training-partner edges, and team memberships. Irreversible. Use this when a member exercises their right to deletion.',
+    purgeConfirmLabel: 'Yes, purge permanently',
+    purgeOwnerOnly: 'Only the gym owner can permanently delete a client.',
     deleteTitle: 'Delete this client?',
     deleteDesc:
       'This client will be archived. Their attendance history is preserved for your revenue records but they will no longer appear in your active client list. You can undo this from the database if needed.',
@@ -183,6 +188,12 @@ const copy = {
     paid: 'Pagado',
     notPaid: 'No pagado',
 
+    purgeToggleLabel: 'Eliminar permanentemente todos los datos (solicitud GDPR)',
+    purgeWarning:
+      'Esto borra asistencias, pagos, insights de IA, aristas de compañeros y pertenencia a equipos. Irreversible. Úsalo cuando un miembro ejerce su derecho al borrado.',
+    purgeConfirmLabel: 'Sí, eliminar permanentemente',
+    purgeOwnerOnly: 'Solo el dueño del gym puede eliminar permanentemente.',
+
     // Attendance row edit / delete
     attEditAria: 'Editar asistencia',
     attDeleteAria: 'Eliminar asistencia',
@@ -228,6 +239,10 @@ export default function ClientDetailPage() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // When true, the delete dialog's confirm button hits the hard-
+  // purge endpoint instead of the soft-archive one. Resets to false
+  // each time the dialog re-opens so it's never sticky.
+  const [purgeMode, setPurgeMode] = useState(false);
 
   useEffect(() => {
     if (gate.state !== 'allowed') return;
@@ -294,14 +309,22 @@ export default function ClientDetailPage() {
     if (!clientId || deleting) return;
     setDeleting(true);
     setDeleteError(null);
+    // purgeMode → hard delete via the GDPR endpoint. Default →
+    // soft archive (the common case).
+    const url = purgeMode ? `/api/tribe-os/clients/${clientId}/purge` : `/api/tribe-os/clients/${clientId}/`;
+    const method = purgeMode ? 'POST' : 'DELETE';
     try {
-      const res = await fetch(`/api/tribe-os/clients/${clientId}/`, { method: 'DELETE' });
+      const res = await fetch(url, { method });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setDeleteError(body.error || s.deleteError);
+        // Map server-side error codes to localized messages.
+        let message = body.error || s.deleteError;
+        if (body.error === 'owner_only') message = s.purgeOwnerOnly;
+        setDeleteError(message);
         setDeleting(false);
         return;
       }
+      trackEvent('tribe_os_client_purged', { mode: purgeMode ? 'purge' : 'archive' });
       router.push('/os/clients');
     } catch {
       setDeleteError(s.deleteError);
@@ -594,11 +617,43 @@ export default function ClientDetailPage() {
         )}
       </div>
 
-      {/* Delete confirmation dialog */}
-      <Dialog open={showDelete} onOpenChange={(open) => !open && setShowDelete(false)}>
+      {/* Delete confirmation dialog. Two modes:
+            - Default: soft archive (keeps attendance for revenue records)
+            - GDPR toggle: hard purge (cascades to attendance + AI +
+              partners + teams; irreversible) */}
+      <Dialog
+        open={showDelete}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowDelete(false);
+            setPurgeMode(false); // reset so it's never sticky
+            setDeleteError(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-sm rounded-xl p-6 bg-white border border-gray-200 text-gray-900">
           <DialogTitle className="text-lg font-bold text-tribe-red">{s.deleteTitle}</DialogTitle>
           <p className="text-sm text-gray-700 mt-2 leading-relaxed">{s.deleteDesc}</p>
+
+          {/* GDPR toggle. Off by default — most deletes are
+              archives. When checked, the confirm button label
+              changes + the destructive warning shows. */}
+          <label className="flex items-start gap-2 mt-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={purgeMode}
+              onChange={(e) => setPurgeMode(e.target.checked)}
+              disabled={deleting}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-tribe-red focus:ring-tribe-red"
+            />
+            <span className="text-xs text-gray-700 leading-relaxed">{s.purgeToggleLabel}</span>
+          </label>
+          {purgeMode ? (
+            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-tribe-red leading-relaxed">
+              {s.purgeWarning}
+            </div>
+          ) : null}
+
           {deleteError ? (
             <div
               className="flex items-start gap-2 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
@@ -611,7 +666,11 @@ export default function ClientDetailPage() {
           <div className="flex gap-3 mt-5">
             <button
               type="button"
-              onClick={() => setShowDelete(false)}
+              onClick={() => {
+                setShowDelete(false);
+                setPurgeMode(false);
+                setDeleteError(null);
+              }}
               disabled={deleting}
               className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-card transition-colors disabled:opacity-60"
             >
@@ -623,7 +682,7 @@ export default function ClientDetailPage() {
               disabled={deleting}
               className="flex-1 px-4 py-2.5 bg-tribe-red text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-red/80 transition-colors disabled:opacity-60"
             >
-              {deleting ? `${s.deleting}…` : s.confirmDelete}
+              {deleting ? `${s.deleting}…` : purgeMode ? s.purgeConfirmLabel : s.confirmDelete}
             </button>
           </div>
         </DialogContent>

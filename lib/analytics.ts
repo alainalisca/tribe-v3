@@ -188,6 +188,7 @@ type EventName =
   | 'tribe_pwa_install_prompt_clicked' // user clicked Install on the PWA install banner
   | 'tribe_pwa_install_prompt_dismissed' // user clicked Not now / X on the PWA install banner
   | 'tribe_pwa_installed' // browser confirmed the PWA install completed
+  | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
   | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success

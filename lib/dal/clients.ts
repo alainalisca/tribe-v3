@@ -565,6 +565,43 @@ export async function deleteClient(supabase: SupabaseClient, clientId: string): 
   }
 }
 
+/**
+ * Hard delete — GDPR-style data removal. Drops the client row and
+ * cascades to: client_attendance, training_partners (both sides),
+ * community_insight_members, gym_team_members. All ON DELETE CASCADE
+ * relationships are set in their respective migrations (062 / 074 /
+ * 075), so a single DELETE on clients.id is sufficient.
+ *
+ * This is irreversible. Use deleteClient (soft) for "remove from
+ * active roster" and this for "the member exercised their right to
+ * have all their data wiped."
+ *
+ * Notes that DO NOT cascade and need explicit cleanup:
+ *   - community_insights rows that reference ONLY this client (via
+ *     community_insight_members) get orphaned. We don't delete them
+ *     here because the insight may have been generated for a now-
+ *     deleted member but read by the coach historically. The audit
+ *     trail in the insight (severity / type / created_at) stays
+ *     useful; only the personal link to the member disappears.
+ *
+ * If you want to also purge orphaned insights, call cleanupGymSampleData-
+ * style cleanup separately. For most GDPR purposes the
+ * insight_member link removal is sufficient.
+ */
+export async function purgeClient(supabase: SupabaseClient, clientId: string): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase.from('clients').delete().eq('id', clientId);
+    if (error) {
+      logError(error, { action: 'purgeClient', clientId });
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'purgeClient.exception', clientId });
+    return { success: false, error: 'Failed to purge client' };
+  }
+}
+
 // ------------------------------------------------------------------
 // Attendance
 // ------------------------------------------------------------------
