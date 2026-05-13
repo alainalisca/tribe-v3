@@ -19,6 +19,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
+import SampleDataSeedButton from '@/components/tribe-os/SampleDataSeedButton';
 import type { GymRow } from '@/lib/dal/gyms';
 
 type LoadState =
@@ -413,6 +414,12 @@ function GymForm({
           {saving ? `${s.saving}…` : s.save}
         </button>
       ) : null}
+
+      {/* Dev tools — only renders when NEXT_PUBLIC_ALLOW_SAMPLE_DATA_SEED
+          is set and the caller is the gym owner. Server matches with
+          ALLOW_SAMPLE_DATA_SEED. Production deployments leave both
+          unset so this section is invisible there. */}
+      <SampleDataSeedButton canEdit={canEdit} />
     </form>
   );
 }
