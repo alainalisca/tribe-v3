@@ -30,6 +30,7 @@ integration is complete and Al gives explicit ask.
 | K   | Persistent onboarding checklist on /os/dashboard                                    | ✅ done | `7998813`                       |
 | L   | Bulk attendance recording for group sessions                                        | ✅ done | `51f7cc0`                       |
 | M   | Tribe.OS redesign: light theme + new IA + Teams + Schedule                          | ✅ done | `b9f31b3`..`ae86d63`            |
+| N   | Reconciliation with sibling `tribe-os` codebase (Phases A/B/C)                      | ✅ done | `eb81a80`..`cdf0b3d`            |
 
 ## What shipped
 
@@ -256,6 +257,138 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission N — Reconciliation with the sibling `tribe-os` codebase
+
+Al pointed at a separate Next.js + Prisma codebase at
+`/Users/alainalisca/Desktop/Projects/Tribe.Ecosystem.4.4.2026/
+tribe-os/` and said it's closer to the vision for Tribe.OS than the
+look I had been building. That codebase carries:
+
+- a canonical UI primitive library (Button / Card / Badge / Avatar
+  / Input / StatCard / DataTable / EmptyState)
+- the canonical brand-green `#A8DA36` from the design-guidelines PDF
+  (vs. tribe-v3's `#84cc16` Tailwind lime-500)
+- nested color scales (`tribe-green-50/100/dark`, `tribe-dark-40/60/80`)
+- `rounded-tribe`, `shadow-tribe`, `spacing.sidebar`, `spacing.topbar`
+  tokens
+- canonical sidebar with left-border accent on active items
+- a full Prisma schema with intelligence-ready fields
+  (`Member.churnRiskScore`, `TrainingPartner`, `CommunityInsight`,
+  `AgentRunLog`, `ExerciseVideo`)
+- the agentic-AI infrastructure from
+  `AGENTIC_FEATURES_STRATEGY.md` — Tier 1 churn scoring, message
+  drafter, workout generator, revenue forecast, smart scheduling
+
+I reconciled tribe-v3 against that codebase in three phases.
+
+### Phase A (`eb81a80`) — Canonical tokens + UI primitives + shell
+
+- `tailwind.config.ts`: brand green flipped to canonical `#A8DA36`
+  globally. Added nested `tribe-green-50/100/dark`, `tribe-dark-40/
+60/80`, `tribe-success/warning/danger/info/sky/peach`, `rounded-
+tribe (10px)`, `shadow-tribe / -lg / -green`, `spacing.sidebar
+(220px)`, `spacing.topbar (60px)`. Legacy flat names kept as
+  aliases so existing call sites still compile.
+- Ported all 8 UI primitives into `components/tribe-os/ui/`. Each
+  primitive is a thin wrapper around Tailwind classes that uses the
+  new tokens. Namespaced under `tribe-os/ui/` so they don't collide
+  with the consumer-app shadcn primitives.
+- Refactored `OSShell.tsx`: sidebar width 224→220px, left-border
+  accent on active nav items (canonical pattern), bigger 5×5 icons,
+  user card uses the canonical Avatar pattern with lime ring, sign-
+  out button uses `red-100/200` (matches tribe-os). Topbar height
+  56→60px, surfaces now use `bg-tribe-dark-40` / `border-tribe-dark-
+40/80` instead of generic gray-50/200.
+- Refactored `DashboardStats` to consume the new `<StatCard />`
+  primitive directly — first page to use the new library.
+
+### Phase B (`0f1896a`, `1ac6f49`) — Component-by-component refactor
+
+Three dashboard widgets + the teams and schedule cards moved onto
+the new primitives + token system:
+
+- `AtRiskClientsWidget` — wraps in `<Card><CardHeader><CardContent>`.
+  Pulsing red dot on the AlertCircle icon. Avatar primitive +
+  ghost-variant Button for "Reach Out". Rows in `divide-y
+divide-tribe-dark-40`.
+- `UpcomingSessionsCard` — Card wrap + status badges switched from
+  blue/amber/red Tailwind to canonical `tribe-sky/peach/red-100`
+  with `tribe-info/warning/danger` text.
+- `RecentActivityWidget` — Card wrap + activity dots colored
+  `tribe-green/info/dark-60` (was `blue-400/gray-300`).
+- `/os/teams` team card — color stripe up to 1.5px to match the
+  canonical, lime ghost-Button for "message team", member count
+  prominent + dot-prefixed active/at-risk legend, avatar primitive
+  everywhere.
+- `/os/schedule` session card — `rounded-tribe` + `shadow-tribe` +
+  hover-lift to `shadow-tribe-lg`. Status badges via the `<Badge />`
+  primitive (variant=info/success/default/danger). Enrollment bar
+  on `bg-tribe-dark-40`. Full sweep of remaining gray-\* classes on
+  the schedule page → `tribe-dark-{40..80}`.
+
+### Phase C (`cdf0b3d`) — Intelligence schema + Tier 1 AI foundation
+
+Migration `075_intelligence_schema.sql` is fully additive — no data
+migration needed:
+
+1. `clients` table: new columns `churn_risk_score`,
+   `churn_risk_updated_at`, `health_status` (default HEALTHY),
+   `total_sessions`, `sessions_last_30_days`, `current_streak_days`,
+   `longest_streak_days`. Indexes on (gym_id, health_status) and
+   (gym_id, churn_risk_score).
+2. `training_partners` — community-graph edges with
+   shared_sessions / last_30_day_sessions / compatibility_score /
+   retention_correlation. Unique on (member_a_id, member_b_id).
+3. `community_insights` + `community_insight_members` — insight
+   cards with type/severity/headline/body/action_type and a
+   data_payload JSON for auditability.
+4. `agent_run_log` — every AI invocation logs model + token usage
+   - cost_usd + duration_ms + success. Powers the cost dashboard.
+5. `exercise_videos` — curated YouTube library for the workout
+   generator (global + per-gym overrides via NULL gym_id semantics).
+
+`lib/ai/`:
+
+- `config.ts` — canonical model IDs (Haiku + Sonnet), pricing,
+  rate-limit tiers, feature flags, churn weights, health thresholds.
+- `types.ts` — `ChurnSignals`, `ScoreInput`, `ScoreOutput`,
+  `AIResponse<T>`, `HealthStatus`.
+- `churn-scoring.ts` — pure-compute weighted heuristic (no LLM).
+  7-signal score → 0–1 + HEALTHY/WATCH/AT_RISK label.
+- `logger.ts` — `aiLogger(feature, gymId)` start/success/failure
+  helper that writes to `agent_run_log` via service-role.
+- `data-access.ts` — `fetchChurnSignals(clientId, gymId)` gathers
+  live data from clients + training_partners; `persistMemberScore()`
+  writes back. Adapted from the tribe-os Prisma version to use
+  Supabase JS.
+
+Endpoint: `POST /api/tribe-os/ai/rescore-member` — premium-gated
+manual rescoring for one client. Returns ScoreOutput + AIResponseMeta.
+
+**Manual step you'll need to run:**
+
+- Apply migration 075 (and 074 if you haven't yet) to the live
+  Supabase DB before the new surfaces become end-to-end functional.
+
+**Pending follow-ups (Phase D, not in this round):**
+
+- The four LLM-backed features (message drafter, workout generator,
+  revenue forecast, session scheduler) — need ANTHROPIC_API_KEY +
+  per-gym rate limiting + a budget UX. Their feature flags are wired
+  with `enabled: false` until we make that product call.
+- Cross-app signals — paymentFailures90d / cancellationRate30d /
+  communityEngagementDrop currently return 0 in `data-access.ts`.
+  Need the Stripe-webhook payments table and the consumer Tribe
+  community-app feed wired in.
+- The nightly batch job — cron route that scores every member in
+  every gym at 2am gym-local. Will live as a Vercel Cron + Edge
+  Function once we have the scaffold.
+- A `/os/intelligence` page that renders `community_insights` cards.
+  Currently a `ComingSoonPage` stub.
+- Sibling-codebase Prisma → tribe-v3 Supabase migration of the
+  TrainingPartner attendance-write trigger (the thing that
+  populates `training_partners` on every co-attendance).
 
 ## Mission M — Tribe.OS redesign (light theme + new IA + new entities)
 
