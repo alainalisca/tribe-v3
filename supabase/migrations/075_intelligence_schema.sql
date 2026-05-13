@@ -140,9 +140,15 @@ CREATE TABLE IF NOT EXISTS public.community_insights (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- NOTE: this index used to carry a `WHERE expires_at > now()` partial
+-- predicate, but Postgres requires IMMUTABLE functions in index
+-- predicates and now() is STABLE — the migration aborts at runtime
+-- with 42P17. We include expires_at as a trailing index column
+-- instead; queries that filter expires_at > now() at query time
+-- still use the index efficiently via the (gym_id, is_actioned,
+-- severity) leading prefix + range scan on expires_at.
 CREATE INDEX IF NOT EXISTS idx_community_insights_gym_unactioned
-  ON public.community_insights (gym_id, is_actioned, severity)
-  WHERE expires_at > now();
+  ON public.community_insights (gym_id, is_actioned, severity, expires_at);
 
 CREATE INDEX IF NOT EXISTS idx_community_insights_gym_type
   ON public.community_insights (gym_id, type);
