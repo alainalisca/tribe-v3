@@ -315,16 +315,38 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
 
     (Replace the URL with your actual deployment.)
 
-16. **"Sign up for Tribe" invite email** — when a coach adds a client
+16. ✅ **Member self check-in on /my-coach** — shipped. New "Today's
+    sessions" card on /my-coach lists every session the gym owner
+    created for today (in the gym's timezone) with an "I'm here"
+    button per row. Tap once → optimistic flip to a "Checked in"
+    pill, then `POST /api/me/check-in` writes the attendance row
+    with `attended=true, paid=false`. Idempotent (a second tap is a
+    no-op), today-only (yesterday/tomorrow sessions can't be
+    self-marked), and identity-gated (email must match
+    `clients.email`). Coach can edit/delete the row from the existing
+    attendance flow if a member checks in by accident. Three new
+    analytics events: `tribe_member_self_check_in_clicked`,
+    `tribe_member_self_check_in_succeeded`,
+    `tribe_member_self_check_in_failed`.
+
+    **What this buys you**:
+    - Takes attendance-marking off the coach at the start of class
+      (was a real pain point at peak times — coach holding phone,
+      members lined up).
+    - Gives members a small "I'm tracked" moment that reinforces
+      /my-coach as a daily-open surface (stickiness).
+    - Streak counters update immediately via the 079 trigger.
+
+17. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-17. **Stripe Connect rough-edge polish** — but this is hard to do
+18. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-18. **Per-attendance trigger optimization** — migration 079 recomputes
+19. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-19. **Generator feedback loop** — use the feedback data from #5 to:
+20. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

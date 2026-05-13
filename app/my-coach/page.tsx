@@ -33,11 +33,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Flame, Users, Trophy, AlertCircle, Building2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Flame, Users, Trophy, AlertCircle, Building2, Check, Hand } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/format/currency';
 import { trackEvent } from '@/lib/analytics';
+import { showError } from '@/lib/toast';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import PwaInstallPrompt from '@/components/tribe-os/PwaInstallPrompt';
 
@@ -69,6 +70,15 @@ interface AttendanceRow {
   session_start_time: string | null;
 }
 
+interface TodaySession {
+  session_id: string;
+  title: string | null;
+  sport: string | null;
+  start_time: string | null;
+  duration_minutes: number | null;
+  already_checked_in: boolean;
+}
+
 interface TrainingRecord {
   client_id: string;
   member_name: string;
@@ -82,6 +92,7 @@ interface TrainingRecord {
   last_seen_at: string | null;
   partners: Partner[];
   recent_attendance: AttendanceRow[];
+  today_sessions: TodaySession[];
 }
 
 type PageState =
@@ -112,6 +123,15 @@ const copy = {
       'Once a coach adds you with the email you signed in with, your training data will show up here automatically. Ask your coach to use the email shown below.',
     yourEmail: 'Your email',
     gymPickerLabel: 'Gym',
+    todayTitle: "Today's sessions",
+    todayHint: 'Tap when you arrive. Your coach sees it instantly.',
+    todayEmpty: 'Nothing on the schedule today.',
+    checkInCta: "I'm here",
+    checkInDone: 'Checked in',
+    checkInPending: 'Saving…',
+    checkInError: "Couldn't save check-in. Try again.",
+    sessionFallbackTitle: 'Session',
+    sessionDurationMinutes: (n: number) => `${n} min`,
     statsTitle: 'Your stats',
     totalSessions: 'Total sessions',
     sessionsLast30: 'Last 30 days',
@@ -144,6 +164,15 @@ const copy = {
       'Cuando un coach te agregue con el correo con el que iniciaste sesión, tus datos aparecerán aquí automáticamente. Pídele a tu coach que use el correo que ves abajo.',
     yourEmail: 'Tu correo',
     gymPickerLabel: 'Gimnasio',
+    todayTitle: 'Sesiones de hoy',
+    todayHint: 'Marca cuando llegues. Tu coach lo ve al instante.',
+    todayEmpty: 'No hay nada programado para hoy.',
+    checkInCta: 'Estoy aquí',
+    checkInDone: 'Registrado',
+    checkInPending: 'Guardando…',
+    checkInError: 'No se pudo registrar tu llegada. Intenta de nuevo.',
+    sessionFallbackTitle: 'Sesión',
+    sessionDurationMinutes: (n: number) => `${n} min`,
     statsTitle: 'Tus estadísticas',
     totalSessions: 'Sesiones totales',
     sessionsLast30: 'Últimos 30 días',
@@ -256,6 +285,87 @@ export default function MyCoachPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey, s.errorTitle]);
 
+  // Self check-in for one of today's sessions. Optimistic flip so the
+  // button confirms instantly; on failure, revert + toast. The
+  // endpoint is idempotent (`created: false` if a row already
+  // existed), so worst case the user double-taps and nothing changes.
+  async function handleCheckIn(sessionId: string) {
+    if (state.kind !== 'ready' || !state.record) return;
+    const record = state.record;
+    const target = record.today_sessions.find((s) => s.session_id === sessionId);
+    if (!target || target.already_checked_in) return;
+
+    // Optimistic update.
+    setState({
+      ...state,
+      record: {
+        ...record,
+        today_sessions: record.today_sessions.map((s) =>
+          s.session_id === sessionId ? { ...s, already_checked_in: true } : s
+        ),
+      },
+    });
+    trackEvent('tribe_member_self_check_in_clicked', {
+      gym_id: record.gym_id,
+      session_id: sessionId,
+    });
+
+    try {
+      const res = await fetch('/api/me/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: record.client_id, session_id: sessionId }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        // Revert optimistic flip.
+        setState((prev) => {
+          if (prev.kind !== 'ready' || !prev.record) return prev;
+          return {
+            ...prev,
+            record: {
+              ...prev.record,
+              today_sessions: prev.record.today_sessions.map((s) =>
+                s.session_id === sessionId ? { ...s, already_checked_in: false } : s
+              ),
+            },
+          };
+        });
+        showError(copy[language].checkInError);
+        trackEvent('tribe_member_self_check_in_failed', {
+          gym_id: record.gym_id,
+          session_id: sessionId,
+          reason: body.error ?? 'unknown',
+        });
+        return;
+      }
+      trackEvent('tribe_member_self_check_in_succeeded', {
+        gym_id: record.gym_id,
+        session_id: sessionId,
+      });
+    } catch {
+      // Revert optimistic flip.
+      setState((prev) => {
+        if (prev.kind !== 'ready' || !prev.record) return prev;
+        return {
+          ...prev,
+          record: {
+            ...prev.record,
+            today_sessions: prev.record.today_sessions.map((s) =>
+              s.session_id === sessionId ? { ...s, already_checked_in: false } : s
+            ),
+          },
+        };
+      });
+      showError(copy[language].checkInError);
+      trackEvent('tribe_member_self_check_in_failed', {
+        gym_id: record.gym_id,
+        session_id: sessionId,
+        reason: 'network',
+      });
+    }
+  }
+
   // Switch active membership without a full reload.
   async function handleGymChange(clientId: string) {
     if (state.kind !== 'ready' || state.activeClientId === clientId) return;
@@ -336,7 +446,9 @@ export default function MyCoachPage() {
   }
 
   // state.kind === 'ready'
-  return <ReadyView state={state} copy={s} language={language} onGymChange={handleGymChange} />;
+  return (
+    <ReadyView state={state} copy={s} language={language} onGymChange={handleGymChange} onCheckIn={handleCheckIn} />
+  );
 }
 
 function ReadyView({
@@ -344,11 +456,13 @@ function ReadyView({
   copy: s,
   language,
   onGymChange,
+  onCheckIn,
 }: {
   state: Extract<PageState, { kind: 'ready' }>;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
   onGymChange: (clientId: string) => void;
+  onCheckIn: (sessionId: string) => void;
 }) {
   const activeMembership = useMemo(
     () => state.memberships.find((m) => m.client_id === state.activeClientId),
@@ -400,7 +514,13 @@ function ReadyView({
             <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
           </div>
         ) : (
-          <RecordBlocks record={state.record} membership={activeMembership} copy={s} language={language} />
+          <RecordBlocks
+            record={state.record}
+            membership={activeMembership}
+            copy={s}
+            language={language}
+            onCheckIn={onCheckIn}
+          />
         )}
 
         {/* Subtle "powered by" footer — reinforces brand without
@@ -422,11 +542,13 @@ function RecordBlocks({
   membership,
   copy: s,
   language,
+  onCheckIn,
 }: {
   record: TrainingRecord;
   membership: Membership | undefined;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
+  onCheckIn: (sessionId: string) => void;
 }) {
   return (
     <>
@@ -437,6 +559,52 @@ function RecordBlocks({
         </p>
         <p className="text-xl font-bold text-gray-900">{record.member_name}</p>
       </section>
+
+      {/* Today's sessions — self check-in. Hidden entirely when the
+          gym owner has nothing scheduled today; we don't want a dead
+          empty-state competing with the stats section. */}
+      {record.today_sessions.length > 0 ? (
+        <section className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Hand className="w-4 h-4 text-tribe-green-dark" />
+            <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.todayTitle}</h2>
+          </div>
+          <p className="text-xs text-gray-500 leading-relaxed mb-3">{s.todayHint}</p>
+          <ul className="space-y-2">
+            {record.today_sessions.map((session) => {
+              const title = session.title?.trim() || session.sport?.trim() || s.sessionFallbackTitle;
+              return (
+                <li
+                  key={session.session_id}
+                  className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{title}</p>
+                    <p className="text-xs text-gray-500">
+                      {session.start_time ? formatTimeOfDay(session.start_time, language) : '—'}
+                      {session.duration_minutes ? ` · ${s.sessionDurationMinutes(session.duration_minutes)}` : ''}
+                    </p>
+                  </div>
+                  {session.already_checked_in ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-tribe-green/15 text-tribe-green-dark text-xs font-semibold rounded-full whitespace-nowrap">
+                      <Check className="w-3.5 h-3.5" />
+                      {s.checkInDone}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onCheckIn(session.session_id)}
+                      className="px-3 py-1.5 bg-tribe-green text-white text-xs font-semibold rounded-full hover:bg-tribe-green-dark transition-colors whitespace-nowrap"
+                    >
+                      {s.checkInCta}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {/* Stats grid */}
       <section>
@@ -554,6 +722,25 @@ function StatCard({
       </div>
     </div>
   );
+}
+
+/**
+ * Format a "HH:MM:SS" or "HH:MM" Postgres `time` value for display.
+ * Mirrors the helper in /os/schedule so the member-side time format
+ * matches what the coach sees on the coach surface.
+ *
+ * Spanish keeps the 12-hour AM/PM convention because gym time-of-day
+ * is almost always quoted that way colloquially (e.g. "9 AM clase",
+ * "6 PM clase") even when written times go 24-hour. Revisit if a
+ * Spanish-speaking partner pushes back.
+ */
+function formatTimeOfDay(timeStr: string, _language: 'en' | 'es'): string {
+  const [hh, mm] = timeStr.split(':');
+  const h = Number(hh);
+  if (!Number.isFinite(h)) return timeStr;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return `${display}:${mm ?? '00'} ${period}`;
 }
 
 function initialsFromName(name: string): string {
