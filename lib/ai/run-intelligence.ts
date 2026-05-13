@@ -17,7 +17,12 @@ import { createClient as createServiceClient, type SupabaseClient } from '@supab
 import { logError } from '@/lib/logger';
 import { scoreMember, hasEnoughHistory, newMemberDefault } from './churn-scoring';
 import { fetchChurnSignals, persistMemberScore } from './data-access';
-import { generateChurnInsights } from './insight-generator';
+import {
+  generateChurnInsights,
+  generateRetentionInsights,
+  generateRevenueInsights,
+  generateGrowthInsights,
+} from './insight-generator';
 import type { ScoreOutput } from './types';
 
 const DEFAULT_MAX_MEMBERS = 500;
@@ -113,14 +118,36 @@ export async function runIntelligenceForGym(
     }
   }
 
-  const insightSummary = await generateChurnInsights(gymId, scoredMembers);
+  // Run every insight generator sequentially. Each one operates on
+  // independent data (CHURN_RISK reads scoring outputs; RETENTION_OPP
+  // reads training_partners + health_status; REVENUE reads
+  // client_attendance; GROWTH reads sessions) so they don't conflict,
+  // but they share the same dedupe horizon (open insights for this
+  // gym) — sequencing keeps the dedupe queries deterministic.
+  const churnSummary = await generateChurnInsights(gymId, scoredMembers);
+  const retentionSummary = await generateRetentionInsights(gymId);
+  const revenueSummary = await generateRevenueInsights(gymId);
+  const growthSummary = await generateGrowthInsights(gymId);
+
+  const totals = {
+    insights_created:
+      churnSummary.insights_created +
+      retentionSummary.insights_created +
+      revenueSummary.insights_created +
+      growthSummary.insights_created,
+    insights_skipped_duplicate:
+      churnSummary.insights_skipped_duplicate +
+      retentionSummary.insights_skipped_duplicate +
+      revenueSummary.insights_skipped_duplicate +
+      growthSummary.insights_skipped_duplicate,
+  };
 
   return {
     scored,
     skipped_new_member: skippedNewMember,
     at_risk_count: atRiskCount,
-    insights_created: insightSummary.insights_created,
-    insights_skipped_duplicate: insightSummary.insights_skipped_duplicate,
+    insights_created: totals.insights_created,
+    insights_skipped_duplicate: totals.insights_skipped_duplicate,
     duration_ms: Date.now() - startTime,
     errored,
   };

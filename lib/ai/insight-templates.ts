@@ -32,7 +32,13 @@ export type InsightLanguage = 'en' | 'es';
 export type InsightTemplateKey =
   | 'churn_risk.default.headline'
   | 'churn_risk.default.body'
-  | 'churn_risk.no_signals.body';
+  | 'churn_risk.no_signals.body'
+  | 'retention_opp.partner_at_risk.headline'
+  | 'retention_opp.partner_at_risk.body'
+  | 'revenue.unpaid_attendance.headline'
+  | 'revenue.unpaid_attendance.body'
+  | 'growth.high_fill_rate.headline'
+  | 'growth.high_fill_rate.body';
 
 /** Args bag for a single template render. Flat for simple substitution. */
 export interface InsightTemplateArgs {
@@ -99,6 +105,45 @@ const TEMPLATES: Record<InsightTemplateKey, Record<InsightLanguage, string>> = {
   'churn_risk.no_signals.body': {
     en: 'Churn risk crossed the threshold (score {score}). Reach out to keep them engaged.',
     es: 'El riesgo de abandono cruzó el umbral (puntuación {score}). Contáctalos para mantenerlos comprometidos.',
+  },
+
+  // ── RETENTION_OPP ────────────────────────────────────────────
+  // "Your healthy member has a struggling training partner."
+  // The subject is the HEALTHY member (the one we want to nudge);
+  // the body names the at-risk partner so the coach can guide a
+  // peer-to-peer save.
+  'retention_opp.partner_at_risk.headline': {
+    en: '{name} could pull {partnerName} back',
+    es: '{name} puede traer de vuelta a {partnerName}',
+  },
+  'retention_opp.partner_at_risk.body': {
+    en: '{name} is showing up consistently; their training partner {partnerName} has slipped to AT_RISK. A short message from {name} converts at much higher rates than a coach check-in — they already train together.',
+    es: '{name} viene constante; su compañero/a {partnerName} cayó en riesgo. Un mensaje de {name} convierte mucho mejor que el del coach — ya entrenan juntos.',
+  },
+
+  // ── REVENUE ───────────────────────────────────────────────────
+  // "This client trained but didn't pay." Predicted-revenue field
+  // on the insight carries the cents number for the UI's $ pill.
+  'revenue.unpaid_attendance.headline': {
+    en: '{name} trained {count} times this month without paying',
+    es: '{name} entrenó {count} veces este mes sin pagar',
+  },
+  'revenue.unpaid_attendance.body': {
+    en: 'There’s about {amount} left on the table. A quick "want to settle up?" message usually closes the gap — most missed payments are forgetfulness, not refusal.',
+    es: 'Hay aproximadamente {amount} pendiente. Un mensaje breve "¿lo dejamos al día?" suele cerrar la brecha — la mayoría de los pagos olvidados son distracción, no negativa.',
+  },
+
+  // ── GROWTH ────────────────────────────────────────────────────
+  // "This session is consistently full — add capacity." Subject is
+  // gym-level (no individual member); action_type is REVIEW_SCHEDULE
+  // so the card deep-links into /os/schedule.
+  'growth.high_fill_rate.headline': {
+    en: '{sessionLabel} is filling up — time to add a slot?',
+    es: '{sessionLabel} se está llenando — ¿hora de abrir otro horario?',
+  },
+  'growth.high_fill_rate.body': {
+    en: '{sessionLabel} hit {fillPct}% capacity {weekCount} of the last 4 weeks. Adding a second slot at a nearby time is the lowest-risk way to capture the demand you’re already turning away.',
+    es: '{sessionLabel} llegó al {fillPct}% de capacidad {weekCount} de las últimas 4 semanas. Abrir un segundo horario cercano es la forma más segura de captar la demanda que ya estás rechazando.',
   },
 };
 
