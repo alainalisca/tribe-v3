@@ -29,6 +29,7 @@ import RevenueChart from './_components/RevenueChart';
 import PaymentTable from './_components/PaymentTable';
 import ExportButton from './_components/ExportButton';
 import AttendanceExportButton from './_components/AttendanceExportButton';
+import StripeConnectBanner from '@/components/tribe-os/StripeConnectBanner';
 import { allTimePeriod, browserTimezone, thisMonthPeriod, type Period } from './_lib/periods';
 
 type FetchState =
@@ -110,6 +111,11 @@ export default function RevenueDashboardPage(): JSX.Element {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">{s.title}</h1>
           <p className="text-sm text-gray-500 mt-1">{s.subtitle}</p>
         </header>
+
+        {/* Stripe Connect status nudge. Hides itself when the gym
+            owner has finished onboarding; otherwise prompts them to
+            connect / finish setup so revenue can actually flow. */}
+        <StripeConnectBanner />
 
         {/* Period selector + exports. Both exports share the same
             date range so the resulting CSVs reconcile against each

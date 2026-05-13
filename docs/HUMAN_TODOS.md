@@ -177,16 +177,31 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
    chips when applicable. Helps coaches spot patterns over time
    ("AI has flagged Carlos 4 times in the last 30 days → maybe call,
    not message").
-7. **"Sign up for Tribe" invite email** — when a coach adds a client
-   whose email DOESN'T match a Tribe user, send a different email
-   inviting them to sign up + claim their training. Different value
-   calculation than the welcome — borders on cold outreach, so deferred.
-8. **Stripe Connect rough-edge polish** — but this is hard to do
-   without an actual test account, so probably better as a human task.
-9. **Per-attendance trigger optimization** — migration 079 recomputes
-   counters from scratch on every write. Could switch to delta updates
-   if perf ever becomes a concern at scale (>10k clients).
-10. **Generator feedback loop** — use the feedback data from #5 to:
+7. ✅ **Edit + delete attendance** — shipped. Coaches can fix mistakes
+   (wrong attended, wrong amount, refund flips paid → false, wrong
+   client) without dropping into SQL. Pencil icon on each attendance
+   row opens an inline form. The 079 counter trigger re-fires on
+   UPDATE OF attended/attended_at + DELETE so cached counters stay
+   accurate.
+8. ✅ **Tag filter on /os/members** — shipped. Dropdown next to
+   status pills, composes with the status filter ("at-risk VIPs").
+9. ✅ **Unit tests for core lib** — shipped. 48 tests covering
+   CSV parser, CSV serializer, i18n templates renderer, and the
+   health classifier. Run via `npm test`.
+10. ✅ **Stripe Connect banner on /os/revenue** — shipped. When the
+    gym owner hasn't finished Stripe Connect onboarding, a nudge
+    banner explains why revenue is at zero + links to the existing
+    /earnings/payout-settings flow. Hides itself when complete.
+11. **"Sign up for Tribe" invite email** — when a coach adds a client
+    whose email DOESN'T match a Tribe user, send a different email
+    inviting them to sign up + claim their training. Different value
+    calculation than the welcome — borders on cold outreach, so deferred.
+12. **Stripe Connect rough-edge polish** — but this is hard to do
+    without an actual test account, so probably better as a human task.
+13. **Per-attendance trigger optimization** — migration 079 recomputes
+    counters from scratch on every write. Could switch to delta updates
+    if perf ever becomes a concern at scale (>10k clients).
+14. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
