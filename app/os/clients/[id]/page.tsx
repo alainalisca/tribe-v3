@@ -25,6 +25,7 @@ import { trackEvent } from '@/lib/analytics';
 import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline';
 import ChurnRiskPanel from '@/components/tribe-os/ChurnRiskPanel';
 import TrainingPartnersSection from '@/components/tribe-os/TrainingPartnersSection';
+import InsightHistorySection from '@/components/tribe-os/InsightHistorySection';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -498,6 +499,11 @@ export default function ClientDetailPage() {
                 when this client hasn't co-attended any sessions yet
                 so brand-new clients don't get an empty section. */}
             <TrainingPartnersSection clientId={state.client.id} />
+
+            {/* AI insight history — every time the engine flagged
+                this client (active + dismissed + expired). Hides
+                when zero history. Helps spot patterns over time. */}
+            <InsightHistorySection clientId={state.client.id} />
 
             {/* Attendance history */}
             <section className="mt-6">

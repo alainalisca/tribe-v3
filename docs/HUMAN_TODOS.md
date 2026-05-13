@@ -171,23 +171,29 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
    is collected; **TODO for you**: review the rate of "Not useful"
    per insight type after some real-world use → tune the generator
    heuristics (threshold for AT_RISK, REVENUE unpaid count, etc.).
-6. **"Sign up for Tribe" invite email** — when a coach adds a client
+6. ✅ **Per-client insight history** — shipped. New section on
+   /os/clients/[id] showing every insight that ever referenced this
+   member with status (Active / Dismissed / Expired) + feedback
+   chips when applicable. Helps coaches spot patterns over time
+   ("AI has flagged Carlos 4 times in the last 30 days → maybe call,
+   not message").
+7. **"Sign up for Tribe" invite email** — when a coach adds a client
    whose email DOESN'T match a Tribe user, send a different email
    inviting them to sign up + claim their training. Different value
    calculation than the welcome — borders on cold outreach, so deferred.
-7. **Stripe Connect rough-edge polish** — but this is hard to do
+8. **Stripe Connect rough-edge polish** — but this is hard to do
    without an actual test account, so probably better as a human task.
-8. **Per-attendance trigger optimization** — migration 079 recomputes
+9. **Per-attendance trigger optimization** — migration 079 recomputes
    counters from scratch on every write. Could switch to delta updates
    if perf ever becomes a concern at scale (>10k clients).
-9. **Generator feedback loop** — use the feedback data from #5 to:
-   - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
-     > 30% on CHURN_RISK cards
-   - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
-     rate dominates on REVENUE cards
-   - Skip re-emitting same-member insight types that were marked
-     'false_positive' within the last 60 days (currently 14)
-     Needs ~50+ real feedback signals before tuning is meaningful.
+10. **Generator feedback loop** — use the feedback data from #5 to:
+    - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
+      > 30% on CHURN_RISK cards
+    - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
+      rate dominates on REVENUE cards
+    - Skip re-emitting same-member insight types that were marked
+      'false_positive' within the last 60 days (currently 14)
+      Needs ~50+ real feedback signals before tuning is meaningful.
 
 I'll keep building down this list and updating this file as new items
 surface.
