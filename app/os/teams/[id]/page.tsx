@@ -96,6 +96,9 @@ const copy = {
     nameLabel: 'Name',
     descriptionLabel: 'Description',
     colorLabel: 'Color',
+    coachLabelForm: 'Head coach',
+    coachUnassignedOption: 'Unassigned',
+    coachLoading: 'Loading coaches…',
     save: 'Save',
     saving: 'Saving',
     saveError: 'Could not save changes.',
@@ -150,6 +153,9 @@ const copy = {
     nameLabel: 'Nombre',
     descriptionLabel: 'Descripción',
     colorLabel: 'Color',
+    coachLabelForm: 'Coach principal',
+    coachUnassignedOption: 'Sin asignar',
+    coachLoading: 'Cargando entrenadores…',
     save: 'Guardar',
     saving: 'Guardando',
     saveError: 'No se pudieron guardar los cambios.',
@@ -690,8 +696,46 @@ function EditTeamModal({
   const [name, setName] = useState(team.name);
   const [description, setDescription] = useState(team.description ?? '');
   const [color, setColor] = useState<TeamColor>(team.color);
+  const [coachUserId, setCoachUserId] = useState<string | null>(team.coach_user_id);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Coach roster for the dropdown. Null while loading, [] when no
+  // coaches yet (only the owner exists), otherwise the populated
+  // list filtered to non-owner roles + the owner row itself.
+  const [coaches, setCoaches] = useState<Array<{ user_id: string; name: string; role: string }> | null>(null);
+
+  // Lazy-load the coach roster on mount. Reuses the existing
+  // /api/tribe-os/coaches endpoint which already returns the full
+  // gym roster including the owner.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/tribe-os/coaches/', { method: 'GET' });
+        const body = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          data?: { coaches?: Array<{ user_id: string; role: string; user: { name: string } | null }> };
+        };
+        if (cancelled) return;
+        if (!res.ok || !body.success || !body.data?.coaches) {
+          setCoaches([]);
+          return;
+        }
+        setCoaches(
+          body.data.coaches.map((c) => ({
+            user_id: c.user_id,
+            name: c.user?.name ?? 'Unknown',
+            role: c.role,
+          }))
+        );
+      } catch {
+        if (!cancelled) setCoaches([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -706,6 +750,7 @@ function EditTeamModal({
           name: name.trim(),
           description: description.trim() || null,
           color,
+          coach_user_id: coachUserId,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
@@ -762,6 +807,24 @@ function EditTeamModal({
               disabled={submitting}
               className="w-full px-3 py-2 bg-white border-2 border-tribe-dark-40 rounded-tribe text-sm focus:outline-none focus:border-tribe-green focus:ring-1 focus:ring-tribe-green-50 disabled:opacity-60 resize-none"
             />
+          </label>
+
+          <label className="block">
+            <span className="block text-xs font-semibold text-tribe-dark mb-1">{s.coachLabelForm}</span>
+            <select
+              value={coachUserId ?? ''}
+              onChange={(e) => setCoachUserId(e.target.value || null)}
+              disabled={submitting || coaches === null}
+              className="w-full px-3 py-2 bg-white border-2 border-tribe-dark-40 rounded-tribe text-sm focus:outline-none focus:border-tribe-green focus:ring-1 focus:ring-tribe-green-50 disabled:opacity-60"
+            >
+              <option value="">{coaches === null ? s.coachLoading : s.coachUnassignedOption}</option>
+              {(coaches ?? []).map((c) => (
+                <option key={c.user_id} value={c.user_id}>
+                  {c.name}
+                  {c.role === 'owner' ? ' (owner)' : ''}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div>
