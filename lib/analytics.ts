@@ -196,6 +196,8 @@ type EventName =
   | 'tribe_member_data_export_failed' // export endpoint failed or blob write threw
   | 'tribe_os_unpaid_attendance_viewed' // /os/revenue/unpaid rendered with N unpaid groups
   | 'tribe_os_unpaid_whatsapp_clicked' // per-row WhatsApp reminder tapped on /os/revenue/unpaid
+  | 'tribe_member_streak_at_risk_shown' // /my-coach rendered with the at-risk banner visible
+  | 'tribe_member_streak_milestone_shown' // /my-coach rendered with a milestone celebration banner (7/14/30/100)
   | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered

@@ -342,10 +342,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-            All three now render with friendly labels in the /os/audit
-            viewer (English + Spanish). The pattern is reusable — adding
-            new audit event types just means calling `writeAuditEntry` from
-            the relevant route and adding a label entry.
+                All three now render with friendly labels in the /os/audit
+                viewer (English + Spanish). The pattern is reusable — adding
+                new audit event types just means calling `writeAuditEntry` from
+                the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -393,16 +393,44 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     - 60-day default window keeps the surface focused on actionable
       debt vs. write-offs.
 
-21. **"Sign up for Tribe" invite email** — when a coach adds a client
+21. ✅ **Streak banner on /my-coach (at-risk + milestone)** — shipped.
+    Two-state banner that surfaces on `/my-coach` between the hero
+    and today's sessions:
+    - **At-risk** (loss aversion): `current_streak >= 3` AND member
+      hasn't trained today (gym-local time) → "Your 14-day streak is
+      at risk — show up today to keep it alive." Variant copy when
+      no sessions are on the schedule today (routes to coach).
+    - **Milestone** (dopamine): `trained_today` AND current_streak
+      exactly equals 7 / 14 / 30 / 100 → "30-day streak unlocked.
+      Thirty days. Whatever you trained for, you can feel the
+      difference now." Persistent streak chip on the stats grid
+      keeps the achievement visible after the celebration day.
+
+    DAL: new `trained_today: boolean` field on `MyTrainingRecord`,
+    computed server-side using gym timezone. Belt-and-suspenders:
+    also counts `today_sessions[].already_checked_in === true` as
+    "trained today" so freshly-checked-in members never see the
+    at-risk warning by accident. Two new analytics events:
+    `tribe_member_streak_at_risk_shown` and
+    `tribe_member_streak_milestone_shown` (fired once per render
+    when each state is visible).
+
+    **What this buys you**: the highest-leverage stickiness pattern
+    in consumer fitness — Duolingo, Strava, Fitbit all run on
+    streak-loss-aversion + milestone-celebration. Tribe.OS now does
+    too, without push notifications, without a cron, just visual
+    state on a page they already visit.
+
+22. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-22. **Stripe Connect rough-edge polish** — but this is hard to do
+23. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-23. **Per-attendance trigger optimization** — migration 079 recomputes
+24. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-24. **Generator feedback loop** — use the feedback data from #5 to:
+25. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

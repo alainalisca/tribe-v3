@@ -57,6 +57,17 @@ export interface MyTrainingRecord {
   longest_streak_days: number;
   /** Most recent attended_at (UTC ISO). Null when no attendance recorded. */
   last_seen_at: string | null;
+  /**
+   * True when the member has at least one attended-today record (in
+   * the gym's timezone). Powers the streak-at-risk banner — when
+   * trained_today is false but current_streak_days >= 3, the member
+   * is one day away from losing their streak.
+   *
+   * Computed server-side rather than client-side so the timezone
+   * comparison is consistent with what powered the today_sessions
+   * query above.
+   */
+  trained_today: boolean;
   /** Member's training partners in this gym, capped at MAX_PARTNERS, sorted by shared_sessions DESC. */
   partners: Array<{
     partner_id: string;
@@ -366,6 +377,31 @@ export async function getMyTrainingRecord(
       };
     });
 
+    // Resolve "did they train today in gym-local time?" by formatting
+    // last_seen_at into a YYYY-MM-DD string under the gym's TZ and
+    // comparing to gymToday. Belt-and-suspenders: also count an
+    // already_checked_in today_session row as "trained today" — that
+    // catches edge cases where the streak trigger has fired but the
+    // last_seen_at cached column lags by a beat.
+    const lastSeenAt = (clientRow.last_seen_at as string | null) ?? null;
+    let trainedToday = false;
+    if (lastSeenAt) {
+      try {
+        const fmt = new Intl.DateTimeFormat('en-CA', {
+          timeZone: gym.timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        });
+        trainedToday = fmt.format(new Date(lastSeenAt)) === gymToday;
+      } catch {
+        trainedToday = false;
+      }
+    }
+    if (!trainedToday && today_sessions.some((s) => s.already_checked_in)) {
+      trainedToday = true;
+    }
+
     return {
       success: true,
       data: {
@@ -378,7 +414,8 @@ export async function getMyTrainingRecord(
         sessions_last_30_days: (clientRow.sessions_last_30_days as number) ?? 0,
         current_streak_days: (clientRow.current_streak_days as number) ?? 0,
         longest_streak_days: (clientRow.longest_streak_days as number) ?? 0,
-        last_seen_at: (clientRow.last_seen_at as string | null) ?? null,
+        last_seen_at: lastSeenAt,
+        trained_today: trainedToday,
         partners,
         recent_attendance,
         today_sessions,

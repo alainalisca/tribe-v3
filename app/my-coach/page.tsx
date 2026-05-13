@@ -90,6 +90,8 @@ interface TrainingRecord {
   current_streak_days: number;
   longest_streak_days: number;
   last_seen_at: string | null;
+  /** Server-resolved (in gym TZ) "did this member train today?". Drives the streak-at-risk banner. */
+  trained_today: boolean;
   partners: Partner[];
   recent_attendance: AttendanceRow[];
   today_sessions: TodaySession[];
@@ -123,6 +125,15 @@ const copy = {
       'Once a coach adds you with the email you signed in with, your training data will show up here automatically. Ask your coach to use the email shown below.',
     yourEmail: 'Your email',
     gymPickerLabel: 'Gym',
+    streakAtRiskTitle: (n: number) => `Your ${n}-day streak is at risk`,
+    streakAtRiskHint: 'Show up today to keep it alive. One session is all it takes.',
+    streakAtRiskTitleNoSessions: (n: number) => `Your ${n}-day streak is at risk — no sessions on the schedule today`,
+    streakAtRiskHintNoSessions: 'Reach out to your coach to fit in a session, or your streak ends tomorrow.',
+    streakMilestoneTitle: (n: number) => `${n}-day streak unlocked`,
+    streakMilestoneHint7: 'A full week of showing up. The hard part is starting; you already did it.',
+    streakMilestoneHint14: 'Two weeks in. This is the part most people quit. Not you.',
+    streakMilestoneHint30: 'Thirty days. Whatever you trained for, you can feel the difference now.',
+    streakMilestoneHint100: 'One hundred days. You are a different person than you were when you started.',
     todayTitle: "Today's sessions",
     todayHint: 'Tap when you arrive. Your coach sees it instantly.',
     todayEmpty: 'Nothing on the schedule today.',
@@ -169,6 +180,15 @@ const copy = {
       'Cuando un coach te agregue con el correo con el que iniciaste sesión, tus datos aparecerán aquí automáticamente. Pídele a tu coach que use el correo que ves abajo.',
     yourEmail: 'Tu correo',
     gymPickerLabel: 'Gimnasio',
+    streakAtRiskTitle: (n: number) => `Tu racha de ${n} días está en riesgo`,
+    streakAtRiskHint: 'Preséntate hoy para mantenerla viva. Una sesión basta.',
+    streakAtRiskTitleNoSessions: (n: number) => `Tu racha de ${n} días está en riesgo — no hay sesiones hoy`,
+    streakAtRiskHintNoSessions: 'Pide a tu coach que abra un espacio, o tu racha termina mañana.',
+    streakMilestoneTitle: (n: number) => `Racha de ${n} días desbloqueada`,
+    streakMilestoneHint7: 'Una semana entera de presentarte. Lo difícil es empezar; ya lo hiciste.',
+    streakMilestoneHint14: 'Dos semanas. Aquí es donde la mayoría abandona. Tú no.',
+    streakMilestoneHint30: 'Treinta días. Sea lo que sea que entrenas, ya sientes la diferencia.',
+    streakMilestoneHint100: 'Cien días. Eres una persona distinta a la que empezó.',
     todayTitle: 'Sesiones de hoy',
     todayHint: 'Marca cuando llegues. Tu coach lo ve al instante.',
     todayEmpty: 'No hay nada programado para hoy.',
@@ -576,6 +596,13 @@ function RecordBlocks({
         <p className="text-xl font-bold text-gray-900">{record.member_name}</p>
       </section>
 
+      {/* Streak banner — at-risk warning (loss aversion) when the
+          member has a meaningful streak going AND hasn't trained
+          today, or milestone celebration when they hit 7/14/30/100
+          days exactly today. Renders nothing otherwise so the page
+          doesn't grow unnecessarily for members not on a streak. */}
+      <StreakBanner record={record} copy={s} />
+
       {/* Today's sessions — self check-in. Hidden entirely when the
           gym owner has nothing scheduled today; we don't want a dead
           empty-state competing with the stats section. */}
@@ -738,6 +765,99 @@ function StatCard({
       </div>
     </div>
   );
+}
+
+/**
+ * Streak banner. Shows ONE of two states, or nothing:
+ *
+ *  - **Milestone celebration** — `trained_today` AND current_streak
+ *    exactly equals 7 / 14 / 30 / 100. Means the member crossed
+ *    the threshold today; we want a moment of pride before the
+ *    badge becomes routine. Persistent chip on the stats card
+ *    keeps the achievement visible after the celebration day.
+ *
+ *  - **At-risk warning** — current_streak >= 3 AND !trained_today.
+ *    The threshold is 3 because a 2-day streak isn't meaningfully
+ *    a streak (everyone gets two-in-a-row by accident). 3+ is the
+ *    floor where loss aversion starts paying off.
+ *
+ * Why both states live in one component: they're mutually exclusive
+ * (you can't have an at-risk streak and a milestone hit on the same
+ * day), and the layout uses the same banner slot. Sharing the
+ * component keeps the page rendering compact.
+ *
+ * Why a banner rather than a toast: toasts vanish; the streak status
+ * is something the member should be able to look at and act on for
+ * the whole session. Persistent visual = reliable nudge.
+ */
+const STREAK_MILESTONES = new Set([7, 14, 30, 100]);
+const STREAK_AT_RISK_THRESHOLD = 3;
+
+function StreakBanner({ record, copy: s }: { record: TrainingRecord; copy: typeof copy.en | typeof copy.es }) {
+  const streak = record.current_streak_days;
+  const trainedToday = record.trained_today;
+  const hasTodaySession = record.today_sessions.length > 0;
+  const milestone = trainedToday && STREAK_MILESTONES.has(streak) ? streak : null;
+  const atRisk = !trainedToday && streak >= STREAK_AT_RISK_THRESHOLD;
+
+  // Fire a one-shot analytics event when the banner becomes visible.
+  // The deps array intentionally captures the banner *state* rather
+  // than the underlying values, so we don't re-fire on every
+  // re-render when nothing changed.
+  useEffect(() => {
+    if (milestone) {
+      trackEvent('tribe_member_streak_milestone_shown', { streak_days: milestone });
+    } else if (atRisk) {
+      trackEvent('tribe_member_streak_at_risk_shown', {
+        streak_days: streak,
+        has_today_session: hasTodaySession,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestone, atRisk]);
+
+  if (milestone) {
+    const hintMap = {
+      7: s.streakMilestoneHint7,
+      14: s.streakMilestoneHint14,
+      30: s.streakMilestoneHint30,
+      100: s.streakMilestoneHint100,
+    } as const;
+    return (
+      <section className="bg-gradient-to-br from-tribe-green/25 to-tribe-green/10 border border-tribe-green/40 rounded-2xl p-4 flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-tribe-green/30 text-tribe-green-dark flex items-center justify-center shrink-0">
+          <Flame className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-tribe-green-dark">{s.streakMilestoneTitle(milestone)}</p>
+          <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">{hintMap[milestone as 7 | 14 | 30 | 100]}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (atRisk) {
+    // Two variants of the at-risk banner: the "you have sessions
+    // today" version is upbeat ("just show up"), the "no sessions
+    // today" version routes the member to their coach. We never
+    // tell members to "skip the queue" — only the coach can add
+    // a session, so the message respects that boundary.
+    const title = hasTodaySession ? s.streakAtRiskTitle(streak) : s.streakAtRiskTitleNoSessions(streak);
+    const hint = hasTodaySession ? s.streakAtRiskHint : s.streakAtRiskHintNoSessions;
+    return (
+      <section className="bg-tribe-warning/10 border border-tribe-warning/40 rounded-2xl p-4 flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-tribe-warning/20 text-tribe-warning flex items-center justify-center shrink-0">
+          <Flame className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-tribe-dark">{title}</p>
+          <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">{hint}</p>
+        </div>
+      </section>
+    );
+  }
+
+  return null;
 }
 
 /**
