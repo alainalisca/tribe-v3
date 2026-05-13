@@ -180,6 +180,7 @@ type EventName =
   | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success
   | 'tribe_os_insight_action_clicked' // user clicked the action button on an insight card
   | 'tribe_os_member_rescored' // /os/clients/[id] ChurnRiskPanel "Rescore now" button
+  | 'tribe_os_rescore_all_run' // POST /api/tribe-os/ai/rescore-all success
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)

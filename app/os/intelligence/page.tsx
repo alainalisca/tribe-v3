@@ -31,6 +31,7 @@ import {
   Brain,
   ChevronRight,
   CircleDollarSign,
+  RefreshCw,
   Sparkles,
   TrendingUp,
   Users,
@@ -40,7 +41,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
-import { Avatar, Badge, Card, CardContent } from '@/components/tribe-os/ui';
+import { Avatar, Badge, Button, Card, CardContent } from '@/components/tribe-os/ui';
 import type { CommunityInsight, InsightActionType, InsightSeverity, InsightType } from '@/lib/dal/communityInsights';
 
 type WidgetState =
@@ -85,6 +86,11 @@ const copy = {
     confidence: (pct: number) => `${pct}% confidence`,
     dismiss: 'Dismiss',
     dismissAria: 'Dismiss insight',
+    runEngine: 'Run intelligence engine',
+    runningEngine: 'Running',
+    runEngineError: 'Could not run the engine. Try again in a moment.',
+    runEngineSummary: (n: number, atRisk: number, created: number) =>
+      `Scored ${n} ${n === 1 ? 'member' : 'members'} · ${atRisk} at risk · ${created} new ${created === 1 ? 'alert' : 'alerts'}`,
   },
   es: {
     redirectingLabel: 'Redirigiendo',
@@ -121,6 +127,11 @@ const copy = {
     confidence: (pct: number) => `${pct}% de confianza`,
     dismiss: 'Descartar',
     dismissAria: 'Descartar insight',
+    runEngine: 'Ejecutar motor de inteligencia',
+    runningEngine: 'Ejecutando',
+    runEngineError: 'No se pudo ejecutar el motor. Intenta en un momento.',
+    runEngineSummary: (n: number, atRisk: number, created: number) =>
+      `${n} ${n === 1 ? 'miembro evaluado' : 'miembros evaluados'} · ${atRisk} en riesgo · ${created} ${created === 1 ? 'alerta nueva' : 'alertas nuevas'}`,
   },
 } as const;
 
@@ -152,6 +163,49 @@ export default function IntelligencePage() {
 
   const [state, setState] = useState<WidgetState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  // Bulk-rescore state: controls the "Run intelligence engine"
+  // button + the small summary line under it after a run completes.
+  const [rescoring, setRescoring] = useState(false);
+  const [rescoreSummary, setRescoreSummary] = useState<string | null>(null);
+  const [rescoreError, setRescoreError] = useState<string | null>(null);
+
+  async function handleRescoreAll() {
+    if (rescoring) return;
+    setRescoring(true);
+    setRescoreError(null);
+    setRescoreSummary(null);
+    try {
+      const res = await fetch('/api/tribe-os/ai/rescore-all/', { method: 'POST' });
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: {
+          scored: number;
+          at_risk_count: number;
+          insights_created: number;
+        };
+        error?: { code: string; message: string };
+      };
+      if (!res.ok || !body.success || !body.data) {
+        setRescoreError(s.runEngineError);
+        setRescoring(false);
+        return;
+      }
+      const { scored, at_risk_count, insights_created } = body.data;
+      setRescoreSummary(s.runEngineSummary(scored, at_risk_count, insights_created));
+      trackEvent('tribe_os_rescore_all_run', {
+        scored,
+        at_risk_count,
+        insights_created,
+      });
+      // Bump the reload key so the insight list refetches with the
+      // freshly created CHURN_RISK cards.
+      setReloadKey((k) => k + 1);
+    } catch {
+      setRescoreError(s.runEngineError);
+    } finally {
+      setRescoring(false);
+    }
+  }
 
   useEffect(() => {
     if (gate.state !== 'allowed') return;
@@ -209,13 +263,23 @@ export default function IntelligencePage() {
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8">
       <div className="max-w-4xl mx-auto space-y-5">
-        <header className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-tribe bg-tribe-green-50 flex items-center justify-center shrink-0">
-            <Brain className="w-5 h-5 text-tribe-green-dark" />
+        <header className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-tribe bg-tribe-green-50 flex items-center justify-center shrink-0">
+              <Brain className="w-5 h-5 text-tribe-green-dark" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-tribe-dark">{s.pageTitle}</h1>
+              <p className="text-sm text-tribe-dark-80 mt-1">{s.pageSubtitle}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-tribe-dark">{s.pageTitle}</h1>
-            <p className="text-sm text-tribe-dark-80 mt-1">{s.pageSubtitle}</p>
+          <div className="flex flex-col items-end gap-1">
+            <Button onClick={handleRescoreAll} loading={rescoring} variant="primary" size="sm">
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              {rescoring ? s.runningEngine : s.runEngine}
+            </Button>
+            {rescoreError ? <span className="text-xs text-tribe-danger">{rescoreError}</span> : null}
+            {rescoreSummary ? <span className="text-xs text-tribe-dark-80">{rescoreSummary}</span> : null}
           </div>
         </header>
 
