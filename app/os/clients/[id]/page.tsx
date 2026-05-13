@@ -98,6 +98,28 @@ const copy = {
     paid: 'Paid',
     notPaid: 'Not paid',
 
+    // Attendance row edit / delete affordances
+    attEditAria: 'Edit this attendance',
+    attDeleteAria: 'Delete this attendance',
+    attEditTitle: 'Edit attendance',
+    attEditAttendedLabel: 'Attended',
+    attEditPaidLabel: 'Paid',
+    attEditAmountLabel: 'Amount',
+    attEditCurrencyLabel: 'Currency',
+    attEditMethodLabel: 'Payment method',
+    attEditNotesLabel: 'Notes (optional)',
+    attEditSave: 'Save',
+    attEditSaving: 'Saving',
+    attEditCancel: 'Cancel',
+    attEditError: "Couldn't save changes. Try again.",
+    attEditConfirmDelete: 'Delete this attendance row? This affects the cached counters on the member detail.',
+    attEditDeleting: 'Deleting',
+    attEditDeleteError: "Couldn't delete. Try again.",
+    methodCash: 'Cash',
+    methodTransfer: 'Transfer',
+    methodStripe: 'Stripe',
+    methodOther: 'Other',
+
     // Delete confirmation
     deleteTitle: 'Delete this client?',
     deleteDesc:
@@ -158,6 +180,28 @@ const copy = {
     notAttended: 'No asistió',
     paid: 'Pagado',
     notPaid: 'No pagado',
+
+    // Attendance row edit / delete
+    attEditAria: 'Editar asistencia',
+    attDeleteAria: 'Eliminar asistencia',
+    attEditTitle: 'Editar asistencia',
+    attEditAttendedLabel: 'Asistió',
+    attEditPaidLabel: 'Pagado',
+    attEditAmountLabel: 'Monto',
+    attEditCurrencyLabel: 'Moneda',
+    attEditMethodLabel: 'Método de pago',
+    attEditNotesLabel: 'Notas (opcional)',
+    attEditSave: 'Guardar',
+    attEditSaving: 'Guardando',
+    attEditCancel: 'Cancelar',
+    attEditError: 'No se pudieron guardar los cambios. Intenta de nuevo.',
+    attEditConfirmDelete: '¿Eliminar esta asistencia? Afecta los contadores en cache del cliente.',
+    attEditDeleting: 'Eliminando',
+    attEditDeleteError: 'No se pudo eliminar. Intenta de nuevo.',
+    methodCash: 'Efectivo',
+    methodTransfer: 'Transferencia',
+    methodStripe: 'Stripe',
+    methodOther: 'Otro',
 
     deleteTitle: '¿Eliminar este cliente?',
     deleteDesc:
@@ -523,7 +567,13 @@ export default function ClientDetailPage() {
               ) : (
                 <ul className="space-y-2">
                   {state.attendance.map((a) => (
-                    <AttendanceListItem key={a.id} row={a} language={language} copy={s} />
+                    <AttendanceListItem
+                      key={a.id}
+                      row={a}
+                      language={language}
+                      copy={s}
+                      onChanged={() => setReloadKey((k) => k + 1)}
+                    />
                   ))}
                 </ul>
               )}
@@ -606,11 +656,33 @@ function AttendanceListItem({
   row,
   language,
   copy: s,
+  onChanged,
 }: {
   row: AttendanceWithSession;
   language: 'en' | 'es';
   copy: typeof copy.en | typeof copy.es;
+  onChanged: () => void;
 }) {
+  // Editing state. We render two distinct UIs from the same component
+  // — the compact read-only row, and an expanded inline form. The form
+  // keeps its own draft state so cancel restores cleanly.
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Draft state — initialized from the row, only used while editing.
+  const [draftAttended, setDraftAttended] = useState(row.attended);
+  const [draftPaid, setDraftPaid] = useState(row.paid);
+  const [draftAmount, setDraftAmount] = useState<string>(
+    row.amount_paid_cents != null ? (row.amount_paid_cents / 100).toString() : ''
+  );
+  const [draftCurrency, setDraftCurrency] = useState<'USD' | 'COP'>(row.currency === 'COP' ? 'COP' : 'USD');
+  const [draftMethod, setDraftMethod] = useState<'cash' | 'transfer' | 'stripe' | 'other'>(
+    (row.payment_method as 'cash' | 'transfer' | 'stripe' | 'other') || 'cash'
+  );
+  const [draftNotes, setDraftNotes] = useState<string>(row.notes ?? '');
+
   const dateIso = row.attended_at ?? row.session?.date ?? row.created_at;
   const dateLabel = formatShortDate(dateIso, language);
   const sessionLabel = row.session?.title ?? row.session?.sport ?? '—';
@@ -619,29 +691,244 @@ function AttendanceListItem({
       ? formatCents(row.amount_paid_cents, row.currency, language)
       : null;
 
+  function startEdit() {
+    setEditing(true);
+    setError(null);
+    // Reset draft to current row values in case the row changed since
+    // the component first rendered.
+    setDraftAttended(row.attended);
+    setDraftPaid(row.paid);
+    setDraftAmount(row.amount_paid_cents != null ? (row.amount_paid_cents / 100).toString() : '');
+    setDraftCurrency(row.currency === 'COP' ? 'COP' : 'USD');
+    setDraftMethod((row.payment_method as 'cash' | 'transfer' | 'stripe' | 'other') || 'cash');
+    setDraftNotes(row.notes ?? '');
+  }
+
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      // Build a partial update payload. The Zod schema enforces
+      // co-required payment fields, so we always send the trio when
+      // paid changes or when paid is currently true.
+      const payload: Record<string, unknown> = {
+        attended: draftAttended,
+        paid: draftPaid,
+        notes: draftNotes.trim() || null,
+      };
+      if (draftPaid) {
+        const cents = Math.round(parseFloat(draftAmount || '0') * 100);
+        payload.amount_paid_cents = cents;
+        payload.currency = draftCurrency;
+        payload.payment_method = draftMethod;
+      } else {
+        // Flipping to unpaid: clear all three payment fields.
+        payload.amount_paid_cents = null;
+        payload.currency = null;
+        payload.payment_method = null;
+      }
+      const res = await fetch(`/api/tribe-os/attendance/${row.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        setError(s.attEditError);
+        setSaving(false);
+        return;
+      }
+      trackEvent('tribe_os_attendance_recorded', { mode: 'edit' });
+      setEditing(false);
+      setSaving(false);
+      onChanged();
+    } catch {
+      setError(s.attEditError);
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (deleting) return;
+    if (typeof window !== 'undefined' && !window.confirm(s.attEditConfirmDelete)) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/tribe-os/attendance/${row.id}`, { method: 'DELETE' });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean };
+      if (!res.ok || !body.success) {
+        setError(s.attEditDeleteError);
+        setDeleting(false);
+        return;
+      }
+      trackEvent('tribe_os_attendance_deleted');
+      onChanged();
+    } catch {
+      setError(s.attEditDeleteError);
+      setDeleting(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <li className="bg-white rounded-xl border border-tribe-green/40 ring-2 ring-tribe-green/20 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-bold text-gray-900">{s.attEditTitle}</p>
+          <p className="text-xs text-gray-500">
+            {sessionLabel} · {dateLabel}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draftAttended}
+              onChange={(e) => setDraftAttended(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green"
+            />
+            {s.attEditAttendedLabel}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draftPaid}
+              onChange={(e) => setDraftPaid(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green"
+            />
+            {s.attEditPaidLabel}
+          </label>
+        </div>
+
+        {draftPaid ? (
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-700 mb-1">{s.attEditAmountLabel}</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={draftAmount}
+                onChange={(e) => setDraftAmount(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-green"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-700 mb-1">{s.attEditCurrencyLabel}</span>
+              <select
+                value={draftCurrency}
+                onChange={(e) => setDraftCurrency(e.target.value as 'USD' | 'COP')}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-green"
+              >
+                <option value="USD">USD</option>
+                <option value="COP">COP</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-700 mb-1">{s.attEditMethodLabel}</span>
+              <select
+                value={draftMethod}
+                onChange={(e) => setDraftMethod(e.target.value as 'cash' | 'transfer' | 'stripe' | 'other')}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-green"
+              >
+                <option value="cash">{s.methodCash}</option>
+                <option value="transfer">{s.methodTransfer}</option>
+                <option value="stripe">{s.methodStripe}</option>
+                <option value="other">{s.methodOther}</option>
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        <label className="block">
+          <span className="block text-xs font-semibold text-gray-700 mb-1">{s.attEditNotesLabel}</span>
+          <textarea
+            value={draftNotes}
+            onChange={(e) => setDraftNotes(e.target.value)}
+            rows={2}
+            maxLength={2000}
+            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-green resize-none"
+          />
+        </label>
+
+        {error ? (
+          <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-tribe-red">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || saving}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-tribe-red hover:bg-red-50 rounded-lg disabled:opacity-50"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {deleting ? s.attEditDeleting : s.delete}
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={saving || deleting}
+              className="px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+            >
+              {s.attEditCancel}
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || deleting}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-tribe-green text-tribe-dark rounded-lg hover:shadow-tribe disabled:opacity-50"
+            >
+              {saving ? s.attEditSaving : s.attEditSave}
+            </button>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
   return (
-    <li className="bg-white rounded-xl border border-gray-200 p-4">
+    <li className="bg-white rounded-xl border border-gray-200 p-4 group">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-gray-900 truncate">{sessionLabel}</p>
           <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             {dateLabel}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.attended ? 'text-tribe-green' : 'text-gray-500'}`}
+        <div className="flex items-start gap-3 shrink-0">
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-semibold ${row.attended ? 'text-tribe-green' : 'text-gray-500'}`}
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              {row.attended ? s.attended : s.notAttended}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-semibold ${row.paid ? 'text-tribe-green' : 'text-gray-500'}`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              {paidLabel ?? (row.paid ? s.paid : s.notPaid)}
+            </span>
+          </div>
+          {/* Edit affordance — visible on hover desktop, always visible
+              on touch so coaches can still tap it on mobile. */}
+          <button
+            type="button"
+            onClick={startEdit}
+            aria-label={s.attEditAria}
+            title={s.attEditAria}
+            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
-            <CheckCircle className="w-3.5 h-3.5" />
-            {row.attended ? s.attended : s.notAttended}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.paid ? 'text-tribe-green' : 'text-gray-500'}`}
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            {paidLabel ?? (row.paid ? s.paid : s.notPaid)}
-          </span>
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
       {row.notes ? <p className="text-xs text-gray-600 mt-2 leading-relaxed whitespace-pre-wrap">{row.notes}</p> : null}

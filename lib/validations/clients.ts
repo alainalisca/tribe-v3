@@ -146,6 +146,52 @@ export const RecordAttendanceInputSchema = z
   );
 export type RecordAttendanceInput = z.infer<typeof RecordAttendanceInputSchema>;
 
+/**
+ * Partial-update for an existing attendance row. Same payment-field
+ * co-required + paid-implies-amount invariants as RecordAttendanceInput,
+ * but everything is optional and at least one field must be present.
+ */
+export const UpdateAttendanceInputSchema = z
+  .object({
+    attended: z.boolean().optional(),
+    paid: z.boolean().optional(),
+    attended_at: z.string().datetime({ offset: true }).nullable().optional(),
+    notes: z.string().max(2000, 'Notes must be 2000 characters or fewer').nullable().optional(),
+    amount_paid_cents: z.number().int().min(0).nullable().optional(),
+    currency: currencySchema.nullable().optional(),
+    payment_method: paymentMethodSchema.nullable().optional(),
+  })
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: 'At least one field must be provided',
+  })
+  .refine(
+    (data) => {
+      // If ANY payment field is in the update, ALL must be present
+      // (matching the DB CHECK). Skip the check entirely when no
+      // payment field is being changed — the existing row's values
+      // stay coherent untouched.
+      const hasAmount = data.amount_paid_cents !== undefined;
+      const hasCurrency = data.currency !== undefined;
+      const hasMethod = data.payment_method !== undefined;
+      const anyTouched = hasAmount || hasCurrency || hasMethod;
+      if (!anyTouched) return true;
+      return hasAmount && hasCurrency && hasMethod;
+    },
+    {
+      message: 'amount_paid_cents, currency, and payment_method must be updated together',
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.paid !== true) return true;
+      // When flipping to paid=true, amount must be supplied + positive.
+      if (data.amount_paid_cents == null) return false;
+      return data.amount_paid_cents > 0;
+    },
+    { message: 'Marking paid=true requires a positive amount_paid_cents in the same update' }
+  );
+export type UpdateAttendanceInput = z.infer<typeof UpdateAttendanceInputSchema>;
+
 // ------------------------------------------------------------------
 // Query string filters for list endpoints
 // ------------------------------------------------------------------

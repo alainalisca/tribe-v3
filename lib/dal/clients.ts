@@ -221,6 +221,22 @@ export type RecordAttendanceInput = {
 } & PaymentFields;
 
 /**
+ * Partial-update shape for an existing attendance row. Every field
+ * is optional; absent fields are left unchanged. Payment fields are
+ * still co-required when ANY of them is set — the Zod schema for
+ * the route enforces that.
+ */
+export interface UpdateAttendanceInput {
+  attended?: boolean;
+  paid?: boolean;
+  attended_at?: string | null;
+  notes?: string | null;
+  amount_paid_cents?: number | null;
+  currency?: 'USD' | 'COP' | null;
+  payment_method?: 'cash' | 'transfer' | 'stripe' | 'other' | null;
+}
+
+/**
  * Sort options for the clients list. Defaults to `last_seen_desc`
  * because "who haven't I seen lately" is the most-common scanning
  * question. `name_asc` is for finding-a-specific-person mode.
@@ -602,6 +618,78 @@ export async function recordAttendance(
       sessionId: input.session_id,
     });
     return { success: false, error: 'Failed to record attendance' };
+  }
+}
+
+/**
+ * Partial-update an attendance row. Used when the coach realizes
+ * they recorded the wrong status (attended=true → false), need to
+ * fix a payment amount, or want to flip paid → unpaid after a refund.
+ *
+ * The 079 counter trigger refires on UPDATE OF attended / attended_at,
+ * so the client's cached counters stay correct after this call. The
+ * 076 partner trigger only fires on false → true transitions (handled),
+ * so flipping attended back to false leaves the partner edges in
+ * place — that's intentional, partial history shouldn't blow away
+ * the community graph.
+ *
+ * RLS scopes the UPDATE to attendance rows the caller can see; the
+ * client_id ownership chain runs through the parent client.
+ */
+export async function updateAttendance(
+  supabase: SupabaseClient,
+  attendanceId: string,
+  updates: UpdateAttendanceInput
+): Promise<DalResult<AttendanceRow>> {
+  try {
+    const payload: Record<string, unknown> = {};
+    if (updates.attended !== undefined) payload.attended = updates.attended;
+    if (updates.paid !== undefined) payload.paid = updates.paid;
+    if (updates.attended_at !== undefined) payload.attended_at = updates.attended_at;
+    if (updates.notes !== undefined) payload.notes = updates.notes;
+    if (updates.amount_paid_cents !== undefined) payload.amount_paid_cents = updates.amount_paid_cents;
+    if (updates.currency !== undefined) payload.currency = updates.currency;
+    if (updates.payment_method !== undefined) payload.payment_method = updates.payment_method;
+
+    if (Object.keys(payload).length === 0) {
+      return { success: false, error: 'no_updates' };
+    }
+
+    const { data, error } = await supabase
+      .from('client_attendance')
+      .update(payload)
+      .eq('id', attendanceId)
+      .select(ATTENDANCE_SELECT)
+      .single();
+
+    if (error) {
+      logError(error, { action: 'updateAttendance', attendanceId });
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: data as AttendanceRow };
+  } catch (error) {
+    logError(error, { action: 'updateAttendance.exception', attendanceId });
+    return { success: false, error: 'Failed to update attendance' };
+  }
+}
+
+/**
+ * Hard-delete an attendance row. The 079 counter trigger fires on
+ * DELETE so the client's cached counters update automatically. Use
+ * sparingly — usually editing the row is the right move; deletion
+ * is for "this was recorded for the wrong client entirely."
+ */
+export async function deleteAttendance(supabase: SupabaseClient, attendanceId: string): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase.from('client_attendance').delete().eq('id', attendanceId);
+    if (error) {
+      logError(error, { action: 'deleteAttendance', attendanceId });
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'deleteAttendance.exception', attendanceId });
+    return { success: false, error: 'Failed to delete attendance' };
   }
 }
 
