@@ -29,6 +29,7 @@ integration is complete and Al gives explicit ask.
 | J   | WhatsApp follow-up buttons (client detail + at-risk widget)                         | ✅ done | `24e8281`                       |
 | K   | Persistent onboarding checklist on /os/dashboard                                    | ✅ done | `7998813`                       |
 | L   | Bulk attendance recording for group sessions                                        | ✅ done | `51f7cc0`                       |
+| M   | Tribe.OS redesign: light theme + new IA + Teams + Schedule                          | ✅ done | `b9f31b3`..`ae86d63`            |
 
 ## What shipped
 
@@ -255,6 +256,130 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission M — Tribe.OS redesign (light theme + new IA + new entities)
+
+Direction change after reviewing the new mockups (5 screens covering
+Dashboard / Members / Teams / Schedule / Revenue). The previous dark-
+theme shell was replaced wholesale with a light-content, dark-sidebar
+layout, plus a new IA and two new entities. Shipped across seven
+commits.
+
+**Shell (`b9f31b3`)**
+
+- New OSShell: dark left sidebar with vertical nav (9 items), user
+  card + Sign Out pinned to the bottom, light-theme top bar on the
+  main content area with section title + notification bell + help.
+- Mobile: sidebar becomes a slide-out drawer.
+- New IA: Dashboard / Members / Teams / Programs / Schedule /
+  Revenue / Messages / Intelligence / Settings.
+- Stub pages for Programs / Messages / Intelligence via a shared
+  ComingSoonPage component (deleted as features ship).
+- /os/settings redirects to /os/gym; /os/members redirects to
+  /os/clients in this commit (later: /os/clients redirects to
+  /os/members; see commit 7 below).
+
+**Dashboard rebuild (`c512234`)**
+
+- Time-aware greeting ("Good morning/afternoon/evening, [first name]").
+- 4 KPI cards with MoM deltas: Total Members, Active Sessions,
+  Monthly Revenue, Retention Rate. Per-metric isolated failures.
+- /api/tribe-os/dashboard/stats now returns prior-month figures and
+  computes retention rate (share of last-month-active members still
+  active this month).
+- Two-column mid section: Upcoming Sessions (table, today+tomorrow,
+  enrollment progress bars, status badges) + Members at Risk (Reach
+  Out CTAs).
+- Recent Activity feed below as a single column.
+- New /api/tribe-os/dashboard/upcoming-sessions endpoint.
+- AtRiskClientsWidget, RecentActivityWidget, DashboardStats,
+  OnboardingChecklist all converted from dark to light.
+
+**Members rebuild (`795aec9`)**
+
+- New /os/members surface (the redirect target). Search + Add Member
+  CTA at top, "All Members" card with filter pills
+  (All / Active / Watch / At Risk / Churned) and a table with
+  columns matching the mockup: avatar+name+email, status, teams
+  (placeholder), tags, days since login, sessions(30d), actions
+  (view + WhatsApp).
+- Status filter mapping while the DB enum still uses
+  {active, lead, lapsed, inactive}: UI Active→active, Watch→lapsed,
+  Churned→inactive, At Risk→client-side computed (active + last
+  attendance > 14d).
+- Teams column shows "—" until membership data flows from the
+  Teams model (next commit).
+
+**Teams (`cb0027b`)** — net-new feature
+
+- Migration 074: gym_teams (id, gym_id, name, description, color,
+  coach_user_id) and gym_team_members (team_id, client_id).
+  Color enum: lime/blue/amber/red/purple/slate. Unique (gym_id, name).
+- RLS: all gym members SELECT, owner-only INSERT/UPDATE/DELETE on
+  gym_teams; gym_team_members writes via service-role.
+- list_teams_for_gym SECURITY DEFINER RPC returns each team with
+  member_count, active_count, at_risk_count, and a preview_members
+  JSON array.
+- lib/dal/gymTeams.ts and lib/validations/teams.ts.
+- GET /api/tribe-os/teams (list) + POST (create, owner-only,
+  returns 400 duplicate_name on unique violation).
+- /os/teams page with team cards matching mockup 1: color stripe,
+  name + description, member count + active/at-risk breakdown,
+  head coach (avatar + name), member-avatar preview with +N
+  overflow, View Members link. Create Team modal with color picker.
+
+**Schedule (`44ec1df`)** — net-new surface
+
+- /os/schedule with week navigator (prev/next, week-of label,
+  "This Week" reset). List view ships first; Calendar view next round.
+- Sessions grouped by day Mon–Sun in 3-up grids with empty-day
+  placeholders. Each card: time range, name, coach, enrollment
+  progress + spots, status badge.
+- Each card links to /os/sessions/[id]/attendance.
+- New /api/tribe-os/schedule?from=&to= endpoint joins sessions with
+  creator name as coach_name.
+
+**Revenue restyle (`62d982f`)**
+
+- Page wrapper + all 6 subcomponents (SummaryCards, PaymentTable,
+  PeriodSelector, EmptyState, ExportButton, RevenueChart) converted
+  to light theme. Containers go from heavy box-shadow on dark to
+  white + border-gray-200. Period selector pills become white with
+  gray borders + lime when active.
+- Note: the full mockup 5 redesign (Annual Revenue / Avg per Member
+  / Outstanding Payments KPIs + Revenue-by-Type breakdown) is a
+  follow-up — those require new DB shape for payment categorization.
+
+**Light-theme sweep (`ae86d63`)**
+
+- Batch conversion of dark-theme classes across 7 pages and 4
+  components via a single sed pass per file. Pages: /os/clients/[id]
+  detail (47 changes), edit, new, redirect; /os/coaches (25);
+  /os/gym (17); /os/sessions/[id]/attendance (19). Components:
+  ClientForm, InviteCoachForm, RecordAttendanceInline,
+  RecordGroupAttendanceButton.
+- OSShell sidebar kept dark on purpose. Components used outside
+  /os/\* (TribeOSEntryCard, ReplayToursButton,
+  SessionAttendanceSection, QuickGuide) stay dark to fit consumer-
+  app surfaces.
+- /os/clients root now redirects to /os/members.
+
+**Pending follow-up after this redesign**
+
+- Apply migration 074 to the live DB before /os/teams works
+  end-to-end (it'll return 500 on the list_teams_for_gym RPC until
+  then).
+- Verónica's ES review of every new copy file shipped here.
+- Calendar view variant for /os/schedule.
+- Mockup-5 revenue KPIs (Annual / Avg per Member / Outstanding)
+  - Revenue-by-Type breakdown — needs payment categorization DB
+    changes.
+- Teams detail page (/os/teams/[id]) with add/remove members.
+- Programs, Messages, Intelligence — full implementations to
+  replace the ComingSoonPage stubs.
+- Quick Guides: their dark-theme styling is now inconsistent with
+  the light OS surfaces; the Quick Guides shipped with light-theme
+  variants in OS only (kept dark on consumer-app home).
 
 ## Mission L — Bulk attendance recording for group sessions
 
