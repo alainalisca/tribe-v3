@@ -4,6 +4,27 @@ Running list of items the autonomous build can't finish on its own.
 Grows as I keep working. Sorted by urgency — top items block the
 biggest unknowns.
 
+## ⚠️ Cron jobs aren't scheduled until merge to main
+
+Vercel reads the cron schedule **only from the production deployment**.
+Your production branch is `main`; all Tribe.OS work lives on
+`feature/tribe-os` (preview deployment). Vercel **Settings → Cron Jobs**
+shows the crons from production, so any `/api/cron/tribe-os/*` you
+see is whatever was in `vercel.json` when `main` was last deployed.
+
+What this means:
+
+- The nightly intelligence engine (`/api/cron/tribe-os/intelligence`,
+  schedule `0 7 * * *`) is **NOT** firing automatically. It only runs
+  when you click "Run intelligence engine" on `/os/intelligence`.
+- The Monday weekly summary (`/api/cron/tribe-os/weekly-summary`,
+  schedule `0 8 * * 1`) is **NOT** firing automatically.
+- Both routes work end-to-end when called manually (curl with the
+  CRON_SECRET to the preview URL).
+
+To activate scheduled firing: merge `feature/tribe-os` → `main`. Per
+your branch-strategy note this should wait until testing is complete.
+
 ## 🚨 Before the next ship-or-test session
 
 ### Vercel env vars to set
