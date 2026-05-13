@@ -17,9 +17,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Users, Calendar, DollarSign, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { Users, Calendar, DollarSign, TrendingUp } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatCents } from '@/lib/format/currency';
+import { StatCard } from '@/components/tribe-os/ui';
 
 interface DashboardStatsData {
   total_members: { current: number; prior: number } | null;
@@ -90,9 +91,9 @@ export default function DashboardStats() {
 
   if (state.kind === 'loading') {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-hidden="true">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-28 bg-white rounded-xl border border-gray-200 animate-pulse" />
+          <div key={i} className="h-28 bg-white rounded-tribe shadow-tribe animate-pulse" />
         ))}
       </div>
     );
@@ -114,101 +115,47 @@ export default function DashboardStats() {
   const revenueDelta =
     revenuePriorUsd > 0 ? Math.round(((revenueCurrentUsd - revenuePriorUsd) / revenuePriorUsd) * 1000) / 10 : null;
 
+  // Build per-card hint strings up-front to keep the JSX below tidy.
+  const membersHint =
+    totalAbs != null ? (totalAbs >= 0 ? s.thisMonthDelta(totalAbs) : s.thisMonthDeltaNeg(totalAbs)) : undefined;
+  const sessionsHint = data.active_sessions_today ? s.today(data.active_sessions_today.current) : undefined;
+  const revenueHint = revenueDelta != null ? s.vsLastMonth : data.monthly_revenue ? s.noPriorData : undefined;
+  const retentionHint = data.retention_rate?.current != null ? s.vsLastMonth : undefined;
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <KpiCard
-        Icon={Users}
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <StatCard
+        icon={Users}
         label={s.totalMembers}
         value={data.total_members ? String(data.total_members.current) : '—'}
-        delta={totalDelta}
-        absoluteDelta={totalAbs}
-        deltaHint={
-          totalAbs != null ? (totalAbs >= 0 ? s.thisMonthDelta(totalAbs) : s.thisMonthDeltaNeg(totalAbs)) : null
-        }
+        change={totalDelta ?? undefined}
+        changeLabel={membersHint}
       />
-      <KpiCard
-        Icon={Calendar}
+      <StatCard
+        icon={Calendar}
         label={s.activeSessions}
         value={data.active_sessions_today ? String(data.active_sessions_today.current) : '—'}
-        delta={null}
-        deltaHint={data.active_sessions_today ? s.today(data.active_sessions_today.current) : null}
+        change={undefined}
+        changeLabel={sessionsHint}
       />
-      <KpiCard
-        Icon={DollarSign}
+      <StatCard
+        icon={DollarSign}
         label={s.monthlyRevenue}
         value={data.monthly_revenue ? formatCents(revenueCurrentUsd, 'USD', language) : '—'}
-        delta={revenueDelta}
-        deltaHint={revenueDelta != null ? s.vsLastMonth : data.monthly_revenue ? s.noPriorData : null}
+        change={revenueDelta ?? undefined}
+        changeLabel={revenueHint}
       />
-      <KpiCard
-        Icon={TrendingUp}
+      <StatCard
+        icon={TrendingUp}
         label={s.retentionRate}
         value={
           data.retention_rate && data.retention_rate.current != null
             ? `${data.retention_rate.current.toFixed(1)}%`
             : '—'
         }
-        delta={null}
-        deltaHint={data.retention_rate?.current != null ? s.vsLastMonth : null}
+        change={undefined}
+        changeLabel={retentionHint}
       />
-    </div>
-  );
-}
-
-/**
- * One KPI tile. Renders a colored icon chip top-right, large value
- * mid-card, and either a percentage delta with up/down arrow or a
- * plain hint string at the bottom.
- */
-function KpiCard({
-  Icon,
-  label,
-  value,
-  delta,
-  absoluteDelta,
-  deltaHint,
-}: {
-  Icon: typeof Users;
-  label: string;
-  value: string;
-  /** Percentage delta vs prior period; positive renders green up, negative red down. Null hides the indicator. */
-  delta: number | null;
-  /** Optional absolute delta the consumer wants surfaced (e.g. +12 members). */
-  absoluteDelta?: number | null;
-  /** Plain-text hint shown below the value when delta is null OR alongside it. */
-  deltaHint: string | null;
-}) {
-  const showDelta = delta != null && Number.isFinite(delta);
-  const isUp = showDelta && (delta as number) >= 0;
-  const DeltaArrow = isUp ? ArrowUp : ArrowDown;
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <p className="text-xs text-gray-500 font-medium">{label}</p>
-        <div className="w-9 h-9 rounded-lg bg-tribe-green/15 text-tribe-dark flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4" />
-        </div>
-      </div>
-      <p className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 leading-none mb-2">{value}</p>
-      {showDelta || deltaHint ? (
-        <div className="flex items-center gap-1 text-xs">
-          {showDelta ? (
-            <span
-              className={`inline-flex items-center gap-0.5 font-semibold ${isUp ? 'text-tribe-green' : 'text-tribe-red'}`}
-            >
-              <DeltaArrow className="w-3 h-3" />
-              {Math.abs(delta as number).toFixed(1)}%
-            </span>
-          ) : null}
-          {deltaHint ? <span className="text-gray-500">{deltaHint}</span> : null}
-          {showDelta && absoluteDelta != null && !deltaHint ? (
-            <span className="text-gray-500">
-              {absoluteDelta >= 0 ? '+' : ''}
-              {absoluteDelta}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

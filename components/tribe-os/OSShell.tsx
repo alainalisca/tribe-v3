@@ -196,11 +196,11 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
   // with only the light surface. The page-level upgrade flow handles
   // the rest. Avoids flashing a sidebar to users who can't use it.
   if (premiumStatus === 'not_premium') {
-    return <div className="min-h-screen bg-gray-50 text-gray-900">{children}</div>;
+    return <div className="min-h-screen bg-tribe-dark-40 text-tribe-dark">{children}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 lg:flex">
+    <div className="min-h-screen bg-tribe-dark-40 text-tribe-dark lg:flex">
       {/* Mobile scrim. Closes the drawer on tap. */}
       {mobileNavOpen ? (
         <button
@@ -212,29 +212,32 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
         />
       ) : null}
 
-      {/* Sidebar. Dark surface so the lime accents pop and the
-          content-area light theme reads as the "canvas". */}
+      {/* Sidebar — mirrors the sibling tribe-os codebase pixel-for-
+          pixel: fixed 220px width (via spacing.sidebar token), dark
+          surface, active items get a tribe-green fill plus a darker
+          left-border accent that visually pins the active row to
+          the rail. */}
       <aside
-        className={`fixed lg:sticky top-0 z-50 h-screen w-56 bg-tribe-dark text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
+        className={`fixed lg:sticky top-0 z-50 h-screen w-sidebar bg-tribe-dark border-r border-tribe-dark-80 text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         {/* Wordmark + close-button on mobile */}
-        <div className="px-5 py-4 flex items-center gap-2">
-          <span className="text-xl font-black tracking-tight">{s.wordmark}</span>
-          <span className="text-[10px] font-bold tracking-[0.15em] text-white/40 uppercase">{s.wordmarkSub}</span>
+        <div className="px-6 py-6 flex items-center gap-3 border-b border-tribe-dark-80">
+          <span className="text-xl font-black tracking-tight text-white">{s.wordmark}</span>
+          <span className="text-xs font-semibold tracking-widest text-tribe-dark-60 uppercase">{s.wordmarkSub}</span>
           <button
             type="button"
             onClick={() => setMobileNavOpen(false)}
             aria-label={s.closeMenu}
-            className="lg:hidden ml-auto p-1 text-white/60 hover:text-white"
+            className="lg:hidden ml-auto p-1 text-tribe-dark-60 hover:text-white"
           >
             <XIcon className="w-4 h-4" />
           </button>
         </div>
 
         {/* Nav */}
-        <nav aria-label="Tribe.OS" className="flex-1 px-3 overflow-y-auto">
+        <nav aria-label="Tribe.OS" className="flex-1 px-3 py-6 overflow-y-auto">
           <ul className="space-y-1">
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.matchPrefix);
@@ -246,11 +249,13 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     onClick={() => setMobileNavOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
-                      active ? 'bg-tribe-green text-tribe-dark' : 'text-white/70 hover:text-white hover:bg-white/5'
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm rounded-tribe transition-all ${
+                      active
+                        ? 'bg-tribe-green text-tribe-dark font-semibold border-l-4 border-tribe-green-dark'
+                        : 'text-tribe-dark-60 hover:text-white hover:bg-tribe-dark-80'
                     }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
+                    <Icon className="w-5 h-5 shrink-0" />
                     <span className="truncate">{label}</span>
                   </Link>
                 </li>
@@ -260,22 +265,22 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User card + Sign Out */}
-        <div className="px-3 pb-3 pt-3 border-t border-white/10 space-y-2">
-          <div className="flex items-center gap-2 px-2 py-1">
-            <div className="w-9 h-9 rounded-full bg-tribe-green text-tribe-dark font-black flex items-center justify-center text-sm shrink-0">
+        <div className="border-t border-tribe-dark-80 p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full border-2 border-tribe-green-dark bg-tribe-green-50 text-tribe-green-dark font-semibold flex items-center justify-center text-sm shrink-0">
               {initial}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate">{user?.name || s.userLabel}</p>
-              <p className="text-[10px] text-white/50 truncate">{displayEmail}</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name || s.userLabel}</p>
+              <p className="text-xs text-tribe-dark-60 truncate">{displayEmail}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-tribe-red bg-tribe-red/10 hover:bg-tribe-red/20 rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-tribe text-sm font-semibold text-tribe-danger bg-red-100 hover:bg-red-200 transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="h-4 w-4" />
             {s.signOut}
           </button>
         </div>
@@ -283,26 +288,26 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
 
       {/* Main column */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 h-14 flex items-center gap-2 px-4 lg:px-8 pt-[env(safe-area-inset-top)]">
+        {/* Top bar — canonical 60px (spacing.topbar) */}
+        <header className="sticky top-0 z-30 bg-white border-b border-tribe-dark-40 h-topbar flex items-center gap-2 px-4 lg:px-8 pt-[env(safe-area-inset-top)]">
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
             aria-label={s.openMenu}
-            className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+            className="lg:hidden p-2 -ml-2 text-tribe-dark-80 hover:text-tribe-dark rounded-tribe hover:bg-tribe-dark-40"
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">{s.topBarTitle}</h1>
+          <h1 className="text-lg font-semibold text-tribe-dark">{s.topBarTitle}</h1>
           <div className="flex-1" />
           <button
             type="button"
             aria-label={s.bellAria}
-            className="relative w-9 h-9 inline-flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+            className="relative w-9 h-9 inline-flex items-center justify-center text-tribe-dark-80 hover:text-tribe-dark rounded-full hover:bg-tribe-dark-40 transition-colors"
           >
             <Bell className="w-5 h-5" />
             {/* Static dot for now — backend hook in a later mission. */}
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-tribe-red rounded-full" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-tribe-danger rounded-full" />
           </button>
           <Link
             href="/feedback"
