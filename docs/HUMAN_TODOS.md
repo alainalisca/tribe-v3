@@ -176,6 +176,16 @@ a fresh account. Things to verify when you can:
 - The revenue CSV export gets non-empty rows after at least one real
   payment
 
+## 🧪 Pre-existing test failure (not from this session)
+
+`lib/dal/connections.test.ts` → `sendConnectionRequest > rejects when
+either user has blocked the other` is failing. This is in the
+athlete-to-athlete connections DAL (consumer Tribe app), NOT
+Tribe.OS code. It was failing before this session's work and is
+unrelated to anything we built — but worth noting for whoever ends
+up running the full suite. Skim once if you have time, otherwise
+ignore until the consumer-side surfaces are next on the roadmap.
+
 ## 🧹 Code/data items I noticed but didn't act on
 
 - `lib/dal/clients.ts` is now over 900 lines (DAL pattern). Splitting

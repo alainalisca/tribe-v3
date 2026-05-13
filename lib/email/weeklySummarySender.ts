@@ -43,7 +43,7 @@ function buildServiceClient(): SupabaseClient | null {
  * enough for the global market we target. A future per-gym timezone
  * version is on the queue.
  */
-function previousWeekRange(now: Date = new Date()): { fromIso: string; toIso: string } {
+export function previousWeekRange(now: Date = new Date()): { fromIso: string; toIso: string } {
   // getUTCDay: Sunday = 0, Monday = 1, ... Saturday = 6
   // We want the Monday OF the previous week.
   // Last Monday at 00:00 UTC:
