@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, AlertCircle } from 'lucide-react';
+import { Plus, Search, AlertCircle, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatPaidTotal, formatShortDate } from '@/lib/format/currency';
-import type { ClientWithStats } from '@/lib/dal/clients';
+import type { ClientStatus, ClientWithStats } from '@/lib/dal/clients';
 
 type ListState =
   | { kind: 'loading' }
@@ -37,6 +37,12 @@ const copy = {
       lead: 'Lead',
       lapsed: 'Lapsed',
     },
+    filterAll: 'All',
+    filterByStatus: 'Filter by status',
+    filterByTag: 'Filter by tag',
+    clearFilter: 'Clear',
+    emptyFilteredTitle: 'No clients match these filters',
+    emptyFilteredHint: 'Try clearing a filter or use a different search.',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -62,6 +68,12 @@ const copy = {
       lead: 'Prospecto',
       lapsed: 'Suspendido',
     },
+    filterAll: 'Todos',
+    filterByStatus: 'Filtrar por estado',
+    filterByTag: 'Filtrar por etiqueta',
+    clearFilter: 'Limpiar',
+    emptyFilteredTitle: 'Ningún cliente coincide con estos filtros',
+    emptyFilteredHint: 'Prueba limpiar un filtro o usa otra búsqueda.',
   },
 } as const;
 
@@ -72,7 +84,13 @@ export default function ClientsListPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ClientStatus | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [list, setList] = useState<ListState>({ kind: 'loading' });
+  // Keep a snapshot of the unfiltered roster (no status/tag filters,
+  // no search) so the tag-pill row stays stable as the user filters —
+  // otherwise filtering by a tag would hide other tags from the picker.
+  const [allTagsSnapshot, setAllTagsSnapshot] = useState<string[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
 
   // Debounce the search input by 300ms before firing a new fetch.
@@ -90,6 +108,8 @@ export default function ClientsListPage() {
       try {
         const url = new URL('/api/tribe-os/clients/', window.location.origin);
         if (debouncedSearch.length > 0) url.searchParams.set('search', debouncedSearch);
+        if (tagFilter) url.searchParams.set('tag', tagFilter);
+        if (statusFilter) url.searchParams.set('status', statusFilter);
 
         const res = await fetch(url.toString(), { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
@@ -102,7 +122,19 @@ export default function ClientsListPage() {
           setList({ kind: 'error', message: body.error || s.errorTitle });
           return;
         }
-        setList({ kind: 'ready', clients: body.data ?? [] });
+        const clients = body.data ?? [];
+        setList({ kind: 'ready', clients });
+
+        // Refresh the tag snapshot only when filters are clear, so
+        // the tag-pill row reflects the whole roster and doesn't
+        // disappear as the user narrows.
+        if (debouncedSearch.length === 0 && !tagFilter && !statusFilter) {
+          const tagSet = new Set<string>();
+          for (const c of clients) {
+            for (const t of c.tags ?? []) tagSet.add(t);
+          }
+          setAllTagsSnapshot(Array.from(tagSet).sort((a, b) => a.localeCompare(b)));
+        }
       } catch {
         if (!cancelled) setList({ kind: 'error', message: s.errorTitle });
       }
@@ -111,7 +143,13 @@ export default function ClientsListPage() {
     return () => {
       cancelled = true;
     };
-  }, [gate.state, debouncedSearch, reloadKey, s.errorTitle]);
+  }, [gate.state, debouncedSearch, tagFilter, statusFilter, reloadKey, s.errorTitle]);
+
+  // True when any filter is active beyond the unfiltered default.
+  const anyFilterActive = useMemo(
+    () => debouncedSearch.length > 0 || tagFilter !== null || statusFilter !== null,
+    [debouncedSearch, tagFilter, statusFilter]
+  );
 
   if (gate.state !== 'allowed') {
     return (
@@ -133,7 +171,7 @@ export default function ClientsListPage() {
           <p className="text-sm text-white/70 mt-1">{s.subtitle}</p>
         </header>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-3">
           <Link
             href="/os/clients/new"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-lg shadow-[0_4px_20px_rgba(132,204,22,0.3)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 transition-all"
@@ -153,15 +191,72 @@ export default function ClientsListPage() {
           </div>
         </div>
 
+        {/* Filter pill rows. Only render when there are clients or
+            filters active — keeps the zero-clients empty state clean. */}
+        {list.kind === 'ready' && (list.clients.length > 0 || anyFilterActive) ? (
+          <div className="mb-4 space-y-2">
+            {/* Status filter */}
+            <div className="flex items-center gap-1.5 flex-wrap" aria-label={s.filterByStatus}>
+              <StatusPill active={statusFilter === null} label={s.filterAll} onClick={() => setStatusFilter(null)} />
+              <StatusPill
+                active={statusFilter === 'active'}
+                label={s.statusLabels.active}
+                onClick={() => setStatusFilter(statusFilter === 'active' ? null : 'active')}
+              />
+              <StatusPill
+                active={statusFilter === 'lead'}
+                label={s.statusLabels.lead}
+                onClick={() => setStatusFilter(statusFilter === 'lead' ? null : 'lead')}
+              />
+              <StatusPill
+                active={statusFilter === 'lapsed'}
+                label={s.statusLabels.lapsed}
+                onClick={() => setStatusFilter(statusFilter === 'lapsed' ? null : 'lapsed')}
+              />
+              <StatusPill
+                active={statusFilter === 'inactive'}
+                label={s.statusLabels.inactive}
+                onClick={() => setStatusFilter(statusFilter === 'inactive' ? null : 'inactive')}
+              />
+            </div>
+
+            {/* Tag filter — only render when we've seen any tags on
+                the roster. Tags are user-defined so we don't know
+                them ahead of time. */}
+            {allTagsSnapshot.length > 0 ? (
+              <div className="flex items-center gap-1.5 flex-wrap" aria-label={s.filterByTag}>
+                {allTagsSnapshot.map((tag) => (
+                  <TagPill
+                    key={tag}
+                    active={tagFilter === tag}
+                    label={tag}
+                    onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                  />
+                ))}
+                {tagFilter ? (
+                  <button
+                    type="button"
+                    onClick={() => setTagFilter(null)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-white/60 hover:text-white transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    {s.clearFilter}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {list.kind === 'loading' ? (
           <p className="py-12 text-center text-sm text-white/60">{s.loading}…</p>
         ) : list.kind === 'error' ? (
           <ErrorState message={list.message} onRetry={() => setReloadKey((k) => k + 1)} retryLabel={s.retry} />
         ) : list.clients.length === 0 ? (
           <EmptyState
-            title={isSearching ? s.emptySearchTitle : s.emptyTitle}
-            hint={isSearching ? s.emptySearchHint : s.emptyHint}
-            ctaHref={isSearching ? null : '/os/clients/new'}
+            title={anyFilterActive ? (isSearching ? s.emptySearchTitle : s.emptyFilteredTitle) : s.emptyTitle}
+            hint={anyFilterActive ? (isSearching ? s.emptySearchHint : s.emptyFilteredHint) : s.emptyHint}
+            ctaHref={anyFilterActive ? null : '/os/clients/new'}
             ctaLabel={s.newClient}
           />
         ) : (
@@ -283,5 +378,47 @@ function StatusBadge({ status, label }: { status: ClientWithStats['status']; lab
     >
       {label}
     </span>
+  );
+}
+
+/**
+ * Status filter pill. "All" is the default un-filtered state. Each
+ * status pill toggles its own filter on/off when clicked.
+ */
+function StatusPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+        active
+          ? 'bg-tribe-green text-tribe-dark'
+          : 'bg-tribe-surface text-white/70 hover:bg-tribe-mid hover:text-white border border-tribe-mid'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+/**
+ * Tag filter pill. Tags are user-defined; we render them in
+ * alphabetical order derived from the unfiltered roster snapshot.
+ */
+function TagPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`inline-flex items-center px-2.5 py-1 text-[11px] font-medium rounded-full transition-colors ${
+        active
+          ? 'bg-tribe-green/20 text-tribe-green border border-tribe-green/40'
+          : 'bg-tribe-surface text-white/60 hover:text-white hover:bg-tribe-mid border border-tribe-mid'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

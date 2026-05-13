@@ -201,6 +201,8 @@ export type RecordAttendanceInput = {
 export interface ListClientsFilters {
   searchQuery?: string;
   tag?: string;
+  /** Filter by engagement status. Omit for "any status". */
+  status?: ClientStatus;
 }
 
 const CLIENT_SELECT =
@@ -369,6 +371,12 @@ export async function listClients(
       // Array containment: the client's tags array contains this tag.
       // Backed by idx_clients_tags GIN index.
       q = q.contains('tags', [filters.tag.trim()]);
+    }
+    if (filters?.status) {
+      // Exact-match status filter (Week 3 polish, added with the
+      // filter-pill UI on /os/clients). The status column has a CHECK
+      // constraint so the value space is bounded.
+      q = q.eq('status', filters.status);
     }
 
     const { data: clients, error: clientsErr } = await q;

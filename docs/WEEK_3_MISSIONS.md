@@ -73,6 +73,91 @@ DB, the `/os/coaches` page will show every coach in a multi-coach
 gym rather than just the caller. See `LATER.md` for the completion
 entry preserving the original problem statement.
 
+## Bonus mission B — PostHog observability sweep
+
+14 new `tribe_os_*` events wired across the OS surfaces. Full taxonomy
+
+- four suggested funnels in `docs/ANALYTICS_FUNNELS.md`. Properties
+  are intentionally lean — no client names, no payment amounts.
+
+## Bonus mission C — Beta instructor playbook
+
+`docs/INSTRUCTOR_PLAYBOOK_BETA.md` — 5-minute self-contained read for
+a beta candidate. Bilingual EN+ES (ES marked PENDING VERONICA).
+Answers: what Tribe.OS is, what you can do today, what's coming,
+what we ask in exchange for the 90 free days, what happens after.
+
+## Mission E — Real-device polish from the Vercel walkthrough
+
+Five fixes after Al ran through the OS surfaces on the preview:
+
+1. **UUID validation** on `/os/clients/[id]` + `/edit` so bogus URLs
+   (e.g. `/os/clients/edit`) render the friendly not-found state
+   instead of leaking raw Postgres errors. Helper at
+   `lib/validations/uuid.ts`.
+2. **`/os/coaches` duplicate "invite coming soon"** copy collapsed
+   into one placement.
+3. **Revenue empty-state card** restyled from white-on-dark mismatch
+   to `bg-tribe-surface` + `border-tribe-mid` matching the rest of
+   the OS aesthetic.
+4. **At-risk widget** now distinguishes "zero clients on the roster"
+   (CTA to onboard the first one) from "has clients but none at-risk"
+   (affirming empty state). Endpoint returns `{ at_risk,
+total_clients }` in one round-trip.
+5. **Gym slug** de-emphasized visually on `/os/coaches` (smaller,
+   dimmer) so it doesn't compete with the gym name.
+
+## Mission D — Persistent OS shell
+
+`components/tribe-os/OSShell.tsx` rendered via `app/os/layout.tsx` on
+every `/os/*` route. Structure:
+
+- **Left:** Tribe.OS wordmark, links to `/os/dashboard`
+- **Center (desktop) / bottom-tab-bar (mobile):** four primary nav
+  items — Dashboard, Clients, Revenue, Coaches. Active state
+  highlights the current section and stays highlighted for child
+  routes (`/os/clients/[id]/edit` etc.).
+- **Right:** account menu — Gym settings (premium-only), Back to
+  Tribe escape hatch.
+
+Every OS page got refactored: dashboard dropped the six-button action
+grid (shell handles it now), refocused on the welcome surface + at-
+risk widget. Other pages lost their "Volver al panel" back links and
+redundant `min-h-screen bg-tribe-dark` outer wrappers (shell provides
+them). Dashboard copy tightened from a three-sentence design-partner
+paragraph to a tight "Your gym at a glance" + one-line orientation.
+
+## Mission D polish round — premium-aware + mobile + safe-area
+
+Follow-ups after the shell landed:
+
+1. **Premium-aware nav** — shell now probes the user's premium
+   status and hides nav links for non-premium users (otherwise they'd
+   click a link and get bounced to `/#tribe-os` by the page-level
+   gate). Three states: 'unknown' (defensive render to avoid
+   no-nav flash for premium users), 'premium' (full nav),
+   'not_premium' (wordmark + back-to-Tribe only).
+2. **iOS Capacitor safe-area** — `pt-[env(safe-area-inset-top)]`
+   on the top header and `pb-[env(safe-area-inset-bottom)]` on the
+   bottom tab bar so the status bar / home-indicator don't overlap
+   the shell. Web users see 0 inset.
+3. **Mobile bottom tab bar** — replaced the horizontal-scroll pill
+   row at the top with a fixed four-tab bottom bar on mobile.
+   Thumb-reach is much better than top-of-screen. Desktop keeps the
+   top nav.
+4. **Keyboard Escape closes the account menu** — minimum
+   accessibility for keyboard users.
+
+## Mission D polish round — clients page filters
+
+`/os/clients` now has status + tag filter pills. Status pills:
+All / Active / Lead / Lapsed / Inactive — click to filter, click
+again to clear. Tag pills derive from the unfiltered roster
+snapshot so they stay stable as you narrow. Empty states branch
+between "no roster yet" and "no rows match these filters". Server-
+side: `ListClientsQuerySchema` and the DAL accept the new `status`
+filter; the existing `tag` filter remains.
+
 ## Deferred to Week 4+ (in LATER.md)
 
 - Beta launch resumption (Week 4 Missions 2–6 from the original

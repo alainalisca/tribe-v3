@@ -153,5 +153,10 @@ export type RecordAttendanceInput = z.infer<typeof RecordAttendanceInputSchema>;
 export const ListClientsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
   tag: z.string().trim().max(30).optional(),
+  /**
+   * Engagement-status filter. Added alongside the filter pill UI on
+   * /os/clients. Mirrors the CHECK constraint on clients.status.
+   */
+  status: statusSchema.optional(),
 });
 export type ListClientsQuery = z.infer<typeof ListClientsQuerySchema>;

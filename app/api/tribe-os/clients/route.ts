@@ -78,6 +78,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const queryRaw = {
       search: url.searchParams.get('search') ?? undefined,
       tag: url.searchParams.get('tag') ?? undefined,
+      status: url.searchParams.get('status') ?? undefined,
     };
 
     let parsed;
@@ -99,6 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       {
         searchQuery: parsed.search,
         tag: parsed.tag,
+        status: parsed.status,
       }
     );
 

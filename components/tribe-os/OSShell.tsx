@@ -292,6 +292,17 @@ function AccountMenu({
   /** Gym settings is a premium-only surface; hide for non-premium users. */
   includeGymLink: boolean;
 }) {
+  // Close the menu on Escape. Without this, keyboard users have no
+  // way to dismiss the menu other than clicking the scrim.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setOpen]);
+
   return (
     <div className="relative shrink-0">
       <button
