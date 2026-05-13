@@ -26,8 +26,19 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { log, logError } from '@/lib/logger';
 import { runIntelligenceForGym, type IntelligenceRunSummary } from '@/lib/ai/run-intelligence';
+import { maybeSendDigestForGym } from '@/lib/ai/digest-sender';
 
 const MAX_GYMS_PER_RUN = 50;
+
+/**
+ * Site URL used to build absolute deep-links in outbound emails.
+ * Reads NEXT_PUBLIC_SITE_URL (set in Vercel env). Falls back to the
+ * staging origin so a missing var doesn't break links entirely —
+ * the email is still readable, the deep-links just point at staging.
+ */
+function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tribe-v3.vercel.app';
+}
 
 export async function GET(request: Request): Promise<NextResponse> {
   const route = 'cron:tribe-os/intelligence';
@@ -72,11 +83,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     let totalScored = 0;
     let totalAtRisk = 0;
     let totalInsightsCreated = 0;
+    let digestsSent = 0;
     const perGym: Array<{ gymId: string; name: string; summary: IntelligenceRunSummary }> = [];
 
     for (const g of gymRows ?? []) {
       const gymId = g.id as string;
       const gymName = (g.name as string) ?? '(unnamed)';
+      // Capture the per-gym start time *before* runIntelligenceForGym
+      // so the digest sender's "insights created since runStart"
+      // filter catches every row produced by this pass — including
+      // ones written in the first few milliseconds.
+      const gymStartIso = new Date().toISOString();
       try {
         const summary = await runIntelligenceForGym(gymId);
         if (!summary) {
@@ -93,6 +110,18 @@ export async function GET(request: Request): Promise<NextResponse> {
           gymId,
           ...summary,
         });
+
+        // Fire the email digest if this pass produced new insights.
+        // Wrapped in its own try/catch so a Resend hiccup or a stale
+        // owner email doesn't block the loop from moving on.
+        if (summary.insights_created > 0) {
+          try {
+            const result = await maybeSendDigestForGym(gymId, gymStartIso, siteUrl());
+            if (result.sent) digestsSent += 1;
+          } catch (error) {
+            logError(error, { action: 'cron.intelligence.digest', gymId });
+          }
+        }
       } catch (error) {
         gymsFailed += 1;
         logError(error, { action: 'cron.intelligence.gym', gymId });
@@ -107,6 +136,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       total_scored: totalScored,
       total_at_risk: totalAtRisk,
       total_insights_created: totalInsightsCreated,
+      digests_sent: digestsSent,
       duration_ms,
       // Truncate per-gym detail to keep the response payload bounded
       // when there are many gyms — first 10 only.

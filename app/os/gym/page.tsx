@@ -68,6 +68,10 @@ const copy = {
     currencyLabel: 'Default currency',
     currencyHint: 'Which currency the revenue dashboard leads with when both USD and COP have activity.',
     currencyNoDefault: 'Auto (pick based on activity)',
+    notificationsSection: 'Notifications',
+    intelligenceEmailLabel: 'Email me when AI flags new at-risk members',
+    intelligenceEmailHint:
+      'The nightly intelligence engine sends a digest of the alerts it generated. Turn this off if you’d rather check the dashboard manually.',
     save: 'Save changes',
     saving: 'Saving',
     saveSuccess: 'Gym settings updated.',
@@ -96,6 +100,10 @@ const copy = {
     currencyLabel: 'Moneda predeterminada',
     currencyHint: 'Con cuál moneda inicia el panel cuando hay actividad en USD y COP.',
     currencyNoDefault: 'Automática (según la actividad)',
+    notificationsSection: 'Notificaciones',
+    intelligenceEmailLabel: 'Avísame cuando la IA marque nuevos miembros en riesgo',
+    intelligenceEmailHint:
+      'El análisis nocturno envía un resumen de las alertas generadas. Desactívalo si prefieres revisar el panel manualmente.',
     save: 'Guardar cambios',
     saving: 'Guardando',
     saveSuccess: 'Configuración del gym actualizada.',
@@ -226,6 +234,7 @@ function GymForm({
   const [name, setName] = useState(initialGym.name);
   const [timezone, setTimezone] = useState(initialGym.timezone);
   const [currency, setCurrency] = useState<'USD' | 'COP' | ''>(initialGym.default_currency ?? '');
+  const [intelligenceEmailEnabled, setIntelligenceEmailEnabled] = useState(initialGym.intelligence_email_enabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -244,6 +253,9 @@ function GymForm({
       if (timezone !== initialGym.timezone) payload.timezone = timezone;
       const normalizedCurrency = currency === '' ? null : currency;
       if (normalizedCurrency !== initialGym.default_currency) payload.default_currency = normalizedCurrency;
+      if (intelligenceEmailEnabled !== initialGym.intelligence_email_enabled) {
+        payload.intelligence_email_enabled = intelligenceEmailEnabled;
+      }
 
       if (Object.keys(payload).length === 0) {
         setSuccess(s.saveSuccess);
@@ -273,6 +285,7 @@ function GymForm({
         changed_name: 'name' in payload,
         changed_timezone: 'timezone' in payload,
         changed_currency: 'default_currency' in payload,
+        changed_intelligence_email: 'intelligence_email_enabled' in payload,
       });
       onSaved();
     } catch {
@@ -347,6 +360,30 @@ function GymForm({
           <option value="COP">COP</option>
         </select>
       </Field>
+
+      {/* Notifications section — currently a single toggle, but kept
+          in its own header so it scales when we add more preferences
+          (per-coach digest opt-in, weekly summary, push, etc.). */}
+      <div className="pt-2">
+        <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">
+          {s.notificationsSection}
+        </h2>
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={intelligenceEmailEnabled}
+            onChange={(e) => setIntelligenceEmailEnabled(e.target.checked)}
+            disabled={!canEdit || saving}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green disabled:opacity-60"
+          />
+          <span className="flex-1">
+            <span className="block text-sm font-semibold text-gray-900 group-hover:text-tribe-dark">
+              {s.intelligenceEmailLabel}
+            </span>
+            <span className="block text-xs text-gray-500 mt-0.5">{s.intelligenceEmailHint}</span>
+          </span>
+        </label>
+      </div>
 
       {error ? (
         <div

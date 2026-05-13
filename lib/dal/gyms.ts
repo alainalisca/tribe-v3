@@ -33,6 +33,8 @@ export interface GymRow {
   tribe_os_granted_by: string | null;
   timezone: string;
   default_currency: GymCurrency | null;
+  /** When true, the nightly intelligence cron emails a digest of new insights. Defaults true (migration 081). */
+  intelligence_email_enabled: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -57,6 +59,7 @@ export interface UpdateGymInput {
   slug?: string;
   timezone?: string;
   defaultCurrency?: GymCurrency | null;
+  intelligenceEmailEnabled?: boolean;
   tier?: TribeOSTier | null;
   status?: TribeOSStatus | null;
   stripeCustomerId?: string | null;
@@ -66,7 +69,7 @@ export interface UpdateGymInput {
 }
 
 const GYM_SELECT =
-  'id, name, slug, owner_user_id, tribe_os_status, tribe_os_tier, tribe_os_stripe_customer_id, tribe_os_stripe_subscription_id, tribe_os_granted_at, tribe_os_granted_by, timezone, default_currency, created_at, updated_at, deleted_at';
+  'id, name, slug, owner_user_id, tribe_os_status, tribe_os_tier, tribe_os_stripe_customer_id, tribe_os_stripe_subscription_id, tribe_os_granted_at, tribe_os_granted_by, timezone, default_currency, intelligence_email_enabled, created_at, updated_at, deleted_at';
 
 /**
  * Generate a slug from a display name. Lowercases, scrubs non
@@ -321,6 +324,8 @@ export async function updateGym(
     if (updates.slug !== undefined) payload.slug = updates.slug;
     if (updates.timezone !== undefined) payload.timezone = updates.timezone;
     if (updates.defaultCurrency !== undefined) payload.default_currency = updates.defaultCurrency;
+    if (updates.intelligenceEmailEnabled !== undefined)
+      payload.intelligence_email_enabled = updates.intelligenceEmailEnabled;
     if (updates.tier !== undefined) payload.tribe_os_tier = updates.tier;
     if (updates.status !== undefined) payload.tribe_os_status = updates.status;
     if (updates.stripeCustomerId !== undefined) payload.tribe_os_stripe_customer_id = updates.stripeCustomerId;

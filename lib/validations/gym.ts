@@ -23,6 +23,9 @@ export const UpdateGymInputSchema = z
       .optional(),
     timezone: z.string().trim().min(1, 'Timezone must not be empty').max(64, 'Timezone is too long').optional(),
     default_currency: currencySchema.nullable().optional(),
+    // Per-gym opt-in for the nightly insight digest email. Defaults
+    // true in the DB (migration 081); patching this flips it off.
+    intelligence_email_enabled: z.boolean().optional(),
   })
   .refine((data) => Object.values(data).some((v) => v !== undefined), {
     message: 'At least one field must be provided',

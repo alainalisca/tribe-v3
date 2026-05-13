@@ -114,6 +114,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       name: parsed.name,
       timezone: parsed.timezone,
       defaultCurrency: parsed.default_currency,
+      intelligenceEmailEnabled: parsed.intelligence_email_enabled,
     });
     if (!updateRes.success) {
       logError(new Error(updateRes.error ?? 'unknown'), {
