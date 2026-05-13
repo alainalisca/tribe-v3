@@ -246,7 +246,13 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
 
     Test totals: 85 passing across 5 files. Run with `npm test`.
 
-14. ✅ **Weekly summary email** — shipped. New cron at `0 8 * * 1`
+14. ✅ **Insight type filter on /os/intelligence** — shipped. Type
+    dropdown next to the existing team filter. Always available
+    (4 types is small enough to never warrant hiding). Client-side
+    filter — no refetch when swapping. Composes with team filter
+    so a coach can ask "show me only churn-risk in team X."
+
+15. ✅ **Weekly summary email** — shipped. New cron at `0 8 * * 1`
     (Monday 8am UTC) sends a bilingual recap to each premium gym
     owner with last week's stats: sessions recorded, unique
     attenders, revenue, top attender, at-risk count, active alerts.
@@ -264,16 +270,16 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
 
     (Replace the URL with your actual deployment.)
 
-15. **"Sign up for Tribe" invite email** — when a coach adds a client
+16. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-16. **Stripe Connect rough-edge polish** — but this is hard to do
+17. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-17. **Per-attendance trigger optimization** — migration 079 recomputes
+18. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-18. **Generator feedback loop** — use the feedback data from #5 to:
+19. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

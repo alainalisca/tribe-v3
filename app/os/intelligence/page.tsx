@@ -111,6 +111,8 @@ const copy = {
     dismissAllError: "Couldn't dismiss those alerts. Try again.",
     teamFilterAllOption: 'All teams',
     teamFilterAria: 'Filter insights by team',
+    typeFilterAllOption: 'All types',
+    typeFilterAria: 'Filter insights by type',
     feedbackPrompt: 'Was this useful?',
     feedbackHelpful: 'Helpful',
     feedbackFalsePositive: 'Not useful',
@@ -171,6 +173,8 @@ const copy = {
     dismissAllError: 'No se pudieron descartar. Intenta de nuevo.',
     teamFilterAllOption: 'Todos los equipos',
     teamFilterAria: 'Filtrar insights por equipo',
+    typeFilterAllOption: 'Todos los tipos',
+    typeFilterAria: 'Filtrar insights por tipo',
     feedbackPrompt: '¿Fue útil?',
     feedbackHelpful: 'Útil',
     feedbackFalsePositive: 'No útil',
@@ -216,6 +220,10 @@ export default function IntelligencePage() {
   // hides when the gym has fewer than 2 teams (filter wouldn't have
   // a meaningful choice to make).
   const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
+  // Insight type filter — client-side filter applied after the server
+  // returns the list. null = all four types. Composes with the team
+  // filter so a coach can ask "show me only churn-risk in team X."
+  const [typeFilter, setTypeFilter] = useState<InsightType | null>(null);
   // Bulk-rescore state: controls the "Run intelligence engine"
   // button + the small summary line under it after a run completes.
   const [rescoring, setRescoring] = useState(false);
@@ -325,18 +333,32 @@ export default function IntelligencePage() {
     };
   }, [gate.state, reloadKey, view, teamFilter, s.errorTitle]);
 
-  // Group by severity for the section headers.
+  // Group by severity for the section headers. Apply the type filter
+  // here (client-side) — composes with the team filter (server-side)
+  // without needing another round-trip when only type changes.
   const grouped = useMemo(() => {
     if (state.kind !== 'ready') return null;
+    const filtered = typeFilter ? state.insights.filter((i) => i.type === typeFilter) : state.insights;
     const buckets: Record<InsightSeverity, CommunityInsight[]> = {
       CRITICAL: [],
       HIGH: [],
       MEDIUM: [],
       LOW: [],
     };
-    for (const i of state.insights) buckets[i.severity].push(i);
+    for (const i of filtered) buckets[i.severity].push(i);
     return buckets;
-  }, [state]);
+  }, [state, typeFilter]);
+
+  // Whether the filtered view is empty even though the unfiltered set
+  // has rows. Used to swap the empty state copy to something that
+  // suggests clearing the filter rather than "no insights yet."
+  const isFilteredEmpty = useMemo(() => {
+    if (state.kind !== 'ready') return false;
+    if (state.insights.length === 0) return false;
+    return (typeFilter !== null || teamFilter !== null) && grouped
+      ? Object.values(grouped).every((arr) => arr.length === 0)
+      : false;
+  }, [state, grouped, typeFilter, teamFilter]);
 
   if (gate.state !== 'allowed') {
     return (
@@ -363,6 +385,23 @@ export default function IntelligencePage() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* Type filter — always available; empty value means
+                  "all four insight types." Client-side filter (the
+                  page already has the full list loaded) so swapping
+                  this doesn't refetch. */}
+              <select
+                value={typeFilter ?? ''}
+                onChange={(e) => setTypeFilter((e.target.value || null) as InsightType | null)}
+                aria-label={s.typeFilterAria}
+                className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-tribe-dark-40 rounded-tribe text-tribe-dark focus:outline-none focus:border-tribe-green"
+              >
+                <option value="">{s.typeFilterAllOption}</option>
+                {(['CHURN_RISK', 'RETENTION_OPP', 'REVENUE', 'GROWTH'] as const).map((t) => (
+                  <option key={t} value={t}>
+                    {s.type[t]}
+                  </option>
+                ))}
+              </select>
               {/* Team filter — only renders when the gym has 2+ teams.
                   Empty value means "all teams"; selecting a team
                   filters to insights touching at least one of its
