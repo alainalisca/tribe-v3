@@ -23,6 +23,7 @@ import { isValidUuid } from '@/lib/validations/uuid';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { trackEvent } from '@/lib/analytics';
 import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline';
+import ChurnRiskPanel from '@/components/tribe-os/ChurnRiskPanel';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -321,6 +322,20 @@ export default function ClientDetailPage() {
                 </button>
               </div>
             </header>
+
+            {/* Churn-risk intelligence panel — the AI's view of this
+                member's health. Surfaces churn_risk_score + health_status
+                with a "Rescore now" button (calls /api/tribe-os/ai/
+                rescore-member). Rendered first because retention
+                follow-up is the most actionable signal. */}
+            <div className="mb-4">
+              <ChurnRiskPanel
+                clientId={state.client.id}
+                initialScore={state.client.churn_risk_score}
+                initialHealthStatus={state.client.health_status}
+                initialUpdatedAt={state.client.churn_risk_updated_at}
+              />
+            </div>
 
             {/* Stats card */}
             <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">

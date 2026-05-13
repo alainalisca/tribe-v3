@@ -67,6 +67,27 @@ export interface ClientRow {
   archived_at: string | null;
   created_at: string;
   updated_at: string;
+  // ── Intelligence columns (migration 075) ────────────────────────
+  /**
+   * AI-computed churn probability (0.000–1.000). Updated by the
+   * nightly batch and on demand via /api/tribe-os/ai/rescore-member.
+   * NULL means the member has never been scored yet.
+   */
+  churn_risk_score: number | null;
+  /** When churn_risk_score was last updated. NULL on never-scored rows. */
+  churn_risk_updated_at: string | null;
+  /**
+   * Derived health label from churn_risk_score. Distinct from
+   * `status` (which is the admin-controlled active/lead/lapsed/
+   * inactive enum) — health_status is what the AI assigns, status
+   * is what the gym owner sets manually.
+   */
+  health_status: 'HEALTHY' | 'WATCH' | 'AT_RISK';
+  /** Cached attendance counters (updated by triggers / nightly batch). */
+  total_sessions: number;
+  sessions_last_30_days: number;
+  current_streak_days: number;
+  longest_streak_days: number;
 }
 
 /**
@@ -217,7 +238,7 @@ export interface ListClientsFilters {
 }
 
 const CLIENT_SELECT =
-  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at';
+  'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at, churn_risk_score, churn_risk_updated_at, health_status, total_sessions, sessions_last_30_days, current_streak_days, longest_streak_days';
 
 const ATTENDANCE_SELECT =
   'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, created_at, updated_at';
