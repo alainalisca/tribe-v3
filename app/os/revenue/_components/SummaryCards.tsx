@@ -61,7 +61,7 @@ interface CurrencyCardProps {
 function CurrencyCard({ currency, totals, copy, language }: CurrencyCardProps): JSX.Element {
   const hasRefunds = totals.refund_cents > 0;
   return (
-    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-5 sm:p-6">
+    <div className="rounded-xl bg-white border border-gray-200 p-5 sm:p-6">
       <div className="flex items-baseline justify-between mb-4">
         <span className="text-xs uppercase tracking-[0.1em] font-semibold text-gray-500">{currency}</span>
         <span className="text-xs text-gray-500">

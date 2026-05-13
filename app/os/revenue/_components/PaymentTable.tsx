@@ -114,19 +114,17 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-8 text-center text-sm text-gray-600">
-        {s.empty}
-      </div>
+      <div className="rounded-xl bg-white border border-gray-200 p-8 text-center text-sm text-gray-600">{s.empty}</div>
     );
   }
 
   return (
-    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] overflow-hidden">
+    <div className="rounded-xl bg-white border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-tribe-mid/10">
+          <thead className="bg-gray-50">
             <tr className="text-left">
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">
                 <SortableHeader
                   label={s.colDate}
                   active={sort.startsWith('date')}
@@ -134,11 +132,11 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
                   onClick={() => toggleSort('date')}
                 />
               </th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs">{s.colSession}</th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">{s.colSession}</th>
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs">
                 {s.colParticipant}
               </th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs text-right">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs text-right">
                 <SortableHeader
                   label={s.colGross}
                   active={sort.startsWith('amount')}
@@ -147,13 +145,13 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
                   align="right"
                 />
               </th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs text-right">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs text-right">
                 {s.colFee}
               </th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs text-right">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs text-right">
                 {s.colRefund}
               </th>
-              <th className="px-4 py-3 font-semibold text-tribe-mid uppercase tracking-wide text-xs text-right">
+              <th className="px-4 py-3 font-semibold text-gray-500 uppercase tracking-wide text-xs text-right">
                 {s.colNet}
               </th>
             </tr>
@@ -172,8 +170,8 @@ export default function PaymentTable({ period, timezone }: Props): JSX.Element {
         </table>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3 border-t border-tribe-mid/20 bg-tribe-mid/5">
-        <span className="text-xs text-tribe-mid">{s.showingCount(rows.length, total)}</span>
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+        <span className="text-xs text-gray-500">{s.showingCount(rows.length, total)}</span>
         {hasMore && (
           <button
             type="button"
@@ -218,8 +216,8 @@ function PaymentRowItem({
     <tr
       className={
         isRefunded
-          ? 'border-t border-tribe-mid/10 text-tribe-mid'
-          : 'border-t border-tribe-mid/10 text-tribe-dark hover:bg-tribe-mid/5'
+          ? 'border-t border-gray-100 text-gray-400'
+          : 'border-t border-gray-100 text-gray-900 hover:bg-gray-50'
       }
     >
       <td className="px-4 py-3 whitespace-nowrap">

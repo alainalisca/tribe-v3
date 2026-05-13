@@ -121,7 +121,7 @@ export default function PeriodSelector({ value, onChange, timezone }: Props): JS
               className={
                 active
                   ? 'px-3.5 py-1.5 rounded-full text-xs font-bold bg-tribe-green text-tribe-dark transition-colors'
-                  : 'px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/10 text-white/80 hover:bg-white/15 transition-colors'
+                  : 'px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors'
               }
             >
               {label}
@@ -131,7 +131,7 @@ export default function PeriodSelector({ value, onChange, timezone }: Props): JS
       </div>
 
       {customOpen && (
-        <div className="mt-4 rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-4 sm:p-5">
+        <div className="mt-4 rounded-xl bg-white border border-gray-200 p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
             <div className="flex-1">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">

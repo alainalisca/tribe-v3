@@ -81,7 +81,7 @@ export default function ExportButton({ period }: Props): JSX.Element {
       type="button"
       onClick={handleExport}
       disabled={generating}
-      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 text-white/80 hover:bg-white/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Download className="w-3.5 h-3.5" />
       {generating ? s.generating : s.label}

@@ -152,7 +152,7 @@ function ChartCard({
   const s = COPY[language];
 
   return (
-    <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] p-5 sm:p-6">
+    <div className="rounded-xl bg-white border border-gray-200 p-5 sm:p-6">
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-sm font-bold uppercase tracking-[0.1em] text-gray-500">
           {groupBy === 'week' ? s.titleWeekly : s.titleMonthly} ({currency})

@@ -22,14 +22,14 @@ export default function EmptyState({ onWiden, alreadyAllTime }: Props): JSX.Elem
   const s = COPY[language];
 
   return (
-    <div className="rounded-2xl bg-tribe-surface border border-tribe-mid p-10 sm:p-14 text-center">
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tribe-mid mb-5">
-        <Receipt className="w-6 h-6 text-white/70" />
+    <div className="rounded-xl bg-white border border-gray-200 p-10 sm:p-14 text-center">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 mb-5">
+        <Receipt className="w-6 h-6 text-gray-500" />
       </div>
-      <h2 className="text-xl sm:text-2xl font-black text-white mb-2">
+      <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">
         {alreadyAllTime ? s.emptyAllTimeTitle : s.emptyTitle}
       </h2>
-      <p className="text-sm sm:text-base text-white/70 leading-relaxed max-w-md mx-auto mb-6">
+      <p className="text-sm sm:text-base text-gray-600 leading-relaxed max-w-md mx-auto mb-6">
         {alreadyAllTime ? s.emptyAllTimeHint : s.emptyHint}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -37,7 +37,7 @@ export default function EmptyState({ onWiden, alreadyAllTime }: Props): JSX.Elem
           <button
             type="button"
             onClick={onWiden}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-tribe-mid text-white text-sm font-semibold rounded-lg hover:bg-tribe-mid/70 transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors"
           >
             {s.widenButton}
           </button>

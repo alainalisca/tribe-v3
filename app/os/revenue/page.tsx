@@ -90,7 +90,7 @@ export default function RevenueDashboardPage(): JSX.Element {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-500 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirecting : s.loading}…
         </p>
       </main>
@@ -103,16 +103,16 @@ export default function RevenueDashboardPage(): JSX.Element {
     fetchState.summary.buckets.length === 0;
 
   return (
-    <main className="px-4 py-8 sm:py-10 pb-24">
-      <div className="max-w-4xl mx-auto">
+    <div className="px-4 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-5">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-1">{s.title}</h1>
-          <p className="text-sm text-white/60">{period.label}</p>
-        </div>
+        <header>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">{s.title}</h1>
+          <p className="text-sm text-gray-500 mt-1">{s.subtitle}</p>
+        </header>
 
         {/* Period selector + export */}
-        <div className="mb-8 flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
           <PeriodSelector value={period} onChange={setPeriod} timezone={timezone} />
           {fetchState.kind === 'ready' && !isEmpty && <ExportButton period={period} />}
         </div>
@@ -120,12 +120,12 @@ export default function RevenueDashboardPage(): JSX.Element {
         {/* Content */}
         {fetchState.kind === 'loading' || fetchState.kind === 'idle' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="h-44 rounded-2xl bg-white/5 animate-pulse" />
-            <div className="h-44 rounded-2xl bg-white/5 animate-pulse" />
+            <div className="h-44 rounded-xl bg-white border border-gray-200 animate-pulse" />
+            <div className="h-44 rounded-xl bg-white border border-gray-200 animate-pulse" />
           </div>
         ) : fetchState.kind === 'error' ? (
-          <div className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] border border-red-300 p-8 text-center">
-            <p className="text-tribe-dark font-semibold mb-4">{fetchState.message}</p>
+          <div className="rounded-xl bg-white border border-red-200 p-8 text-center">
+            <p className="text-gray-900 font-semibold mb-4">{fetchState.message}</p>
             <button
               type="button"
               onClick={() => fetchSummary(period)}
@@ -143,17 +143,13 @@ export default function RevenueDashboardPage(): JSX.Element {
           <>
             <SummaryCards totals={fetchState.summary.totals} currencyDefault={fetchState.summary.currency_default} />
 
-            <div className="mt-8">
-              <RevenueChart
-                buckets={fetchState.summary.buckets}
-                currencyDefault={fetchState.summary.currency_default}
-                groupBy={fetchState.summary.group_by}
-              />
-            </div>
+            <RevenueChart
+              buckets={fetchState.summary.buckets}
+              currencyDefault={fetchState.summary.currency_default}
+              groupBy={fetchState.summary.group_by}
+            />
 
-            <div className="mt-6">
-              <PaymentTable period={period} timezone={timezone} />
-            </div>
+            <PaymentTable period={period} timezone={timezone} />
           </>
         )}
       </div>
@@ -162,7 +158,7 @@ export default function RevenueDashboardPage(): JSX.Element {
           Tribe.OS guides — a user who skipped the dashboard tour
           still gets a chance to learn this page on first landing. */}
       <RevenuePageGuide enabled />
-    </main>
+    </div>
   );
 }
 
@@ -192,6 +188,7 @@ function translateError(code: string, s: (typeof COPY)[keyof typeof COPY]): stri
 const COPY = {
   en: {
     title: 'Revenue',
+    subtitle: "Track your gym's financial performance and member payments.",
     backToDashboard: 'Back to Tribe.OS',
     loading: 'Loading',
     redirecting: 'Redirecting',
@@ -204,6 +201,7 @@ const COPY = {
   // ES PENDING VERONICA REVIEW
   es: {
     title: 'Ingresos',
+    subtitle: 'Sigue el desempeño financiero de tu gym y los pagos de tus miembros.',
     backToDashboard: 'Volver a Tribe.OS',
     loading: 'Cargando',
     redirecting: 'Redirigiendo',
