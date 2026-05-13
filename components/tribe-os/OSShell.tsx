@@ -41,6 +41,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import OSShellBell from './OSShellBell';
+import PwaInstallPrompt from './PwaInstallPrompt';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -327,6 +328,12 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1">{children}</main>
       </div>
+
+      {/* PWA install nudge — auto-shows when the browser fires
+          beforeinstallprompt and the user hasn't dismissed within
+          the last 30 days. Self-hides for installed users and the
+          native Capacitor wrapper. */}
+      <PwaInstallPrompt />
     </div>
   );
 }

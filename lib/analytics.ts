@@ -185,6 +185,9 @@ type EventName =
   | 'tribe_os_my_coach_viewed' // /my-coach rendered with at least one membership
   | 'tribe_os_my_coach_no_records' // /my-coach rendered but no client rows match the user's email
   | 'tribe_os_my_coach_gym_switched' // user picked a different gym in the multi-gym selector
+  | 'tribe_pwa_install_prompt_clicked' // user clicked Install on the PWA install banner
+  | 'tribe_pwa_install_prompt_dismissed' // user clicked Not now / X on the PWA install banner
+  | 'tribe_pwa_installed' // browser confirmed the PWA install completed
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
   | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success

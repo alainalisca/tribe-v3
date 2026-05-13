@@ -39,6 +39,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/format/currency';
 import { trackEvent } from '@/lib/analytics';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
+import PwaInstallPrompt from '@/components/tribe-os/PwaInstallPrompt';
 
 interface Membership {
   client_id: string;
@@ -406,6 +407,12 @@ function ReadyView({
             interfering with the member-first feel of the page. */}
         <p className="text-xs text-gray-400 text-center pt-6">{s.poweredBy}</p>
       </div>
+
+      {/* PWA install nudge — self-hides for already-installed users,
+          users in the native app, and users who dismissed within
+          the last 30 days. Highest-leverage retention lever for a
+          member surface. */}
+      <PwaInstallPrompt />
     </main>
   );
 }
