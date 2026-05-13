@@ -38,6 +38,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/format/currency';
 import { trackEvent } from '@/lib/analytics';
+import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 
 interface Membership {
   client_id: string;
@@ -448,6 +449,7 @@ function RecordBlocks({
             icon={<Flame className="w-4 h-4" />}
             label={s.currentStreak}
             value={record.current_streak_days > 0 ? s.streakDays(record.current_streak_days) : s.streakNone}
+            badge={<StreakMilestoneChip currentStreakDays={record.current_streak_days} />}
           />
           <StatCard
             icon={<Trophy className="w-4 h-4" />}
@@ -520,14 +522,29 @@ function RecordBlocks({
   );
 }
 
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  badge,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  // Optional inline badge — used for streak milestone chips on the
+  // current-streak stat. Renders to the right of the value.
+  badge?: React.ReactNode;
+}) {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <div className="flex items-center gap-1.5 text-gray-500 mb-2">
         <span aria-hidden="true">{icon}</span>
         <p className="text-xs uppercase tracking-[0.08em] font-semibold">{label}</p>
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        {badge}
+      </div>
     </div>
   );
 }

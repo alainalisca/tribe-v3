@@ -26,6 +26,7 @@ import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline
 import ChurnRiskPanel from '@/components/tribe-os/ChurnRiskPanel';
 import TrainingPartnersSection from '@/components/tribe-os/TrainingPartnersSection';
 import InsightHistorySection from '@/components/tribe-os/InsightHistorySection';
+import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -436,6 +437,10 @@ export default function ClientDetailPage() {
                         ? s.streakLongest(state.client.longest_streak_days)
                         : undefined
                     }
+                    // Celebratory chip shows automatically when the
+                    // current streak crosses 7/14/30/100 days. Cues
+                    // the coach to acknowledge the member.
+                    badge={<StreakMilestoneChip currentStreakDays={state.client.current_streak_days} />}
                   />
                 </div>
               ) : null}
@@ -620,11 +625,26 @@ export default function ClientDetailPage() {
   );
 }
 
-function Stat({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
+function Stat({
+  label,
+  value,
+  sublabel,
+  badge,
+}: {
+  label: string;
+  value: string;
+  sublabel?: string;
+  // Optional inline badge — rendered next to the value. Used for
+  // streak milestone chips on the streak stat.
+  badge?: React.ReactNode;
+}) {
   return (
     <div>
       <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
+        {badge}
+      </div>
       {sublabel ? <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p> : null}
     </div>
   );
