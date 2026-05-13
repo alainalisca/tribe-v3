@@ -13,8 +13,9 @@
  */
 
 import { useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Building2 } from 'lucide-react';
+import { AlertCircle, Building2, ScrollText } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { createClient } from '@/lib/supabase/client';
@@ -78,6 +79,9 @@ const copy = {
     saveSuccess: 'Gym settings updated.',
     genericError: 'Something went wrong. Please try again.',
     readOnlyNotice: 'Only the gym owner can edit these settings.',
+    auditLinkLabel: 'View forensic log',
+    auditLinkHint:
+      'Every archive, purge, and other sensitive action in this gym. Useful if you ever need to answer "who did that?"',
   },
   es: {
     backLabel: 'Volver al panel',
@@ -110,6 +114,9 @@ const copy = {
     saveSuccess: 'Configuración del gym actualizada.',
     genericError: 'Algo salió mal. Por favor intenta de nuevo.',
     readOnlyNotice: 'Solo el propietario del gym puede editar estos ajustes.',
+    auditLinkLabel: 'Ver registro forense',
+    auditLinkHint:
+      'Cada archivo, eliminación y otra acción sensible de este gym. Útil cuando necesitas saber "¿quién hizo eso?"',
   },
 } as const;
 
@@ -414,6 +421,22 @@ function GymForm({
           {saving ? `${s.saving}…` : s.save}
         </button>
       ) : null}
+
+      {/* Forensic log link — always visible to any coach in the gym
+          (read access is gated by migration 082's RLS, not by owner).
+          Discreet placement at the bottom because most users will
+          never click it; the ones who need it know to look here. */}
+      <div className="pt-6 border-t border-gray-100">
+        <Link href="/os/audit" className="inline-flex items-start gap-2 group">
+          <ScrollText className="w-4 h-4 text-tribe-green-dark mt-0.5 shrink-0" />
+          <span>
+            <span className="block text-sm font-semibold text-gray-900 group-hover:text-tribe-dark">
+              {s.auditLinkLabel}
+            </span>
+            <span className="block text-xs text-gray-500 mt-0.5">{s.auditLinkHint}</span>
+          </span>
+        </Link>
+      </div>
 
       {/* Dev tools — only renders when NEXT_PUBLIC_ALLOW_SAMPLE_DATA_SEED
           is set and the caller is the gym owner. Server matches with

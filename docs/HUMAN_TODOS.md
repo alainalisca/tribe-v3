@@ -4,40 +4,19 @@ Running list of items the autonomous build can't finish on its own.
 Grows as I keep working. Sorted by urgency — top items block the
 biggest unknowns.
 
-## 🆕 New migration to run: 082 (gym_audit_log)
+## ✅ Migration 082 (gym_audit_log) — RUN
 
-Append-only forensic log table for sensitive gym actions. Lands the
-foundation for the audit log feature — today it records soft-archive
+Append-only forensic log table is live. First row will appear the next
+time a client is archived or purged from `/os/clients/[id]`.
 
-- hard-purge of clients; future destructive actions hook in via the
-  same `writeAuditEntry` helper without needing another migration.
-
-The migration is short and safe to run anytime. Contents:
+Inspect with:
 
 ```sql
--- See supabase/migrations/082_gym_audit_log.sql for the full file
-CREATE TABLE IF NOT EXISTS public.gym_audit_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
-  actor_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
-  action text NOT NULL,
-  target_type text NOT NULL,
-  target_id uuid,
-  payload jsonb,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
--- + 2 indexes + RLS policies (select + insert for gym coaches,
---   no update / delete — append-only)
+SELECT created_at, action, target_id, payload, actor_user_id
+FROM public.gym_audit_log
+ORDER BY created_at DESC
+LIMIT 5;
 ```
-
-After running, verify with:
-
-```sql
-SELECT COUNT(*) FROM public.gym_audit_log;  -- 0 rows expected on fresh table
-```
-
-The first row should appear when you archive or purge a test client
-from `/os/clients/[id]`.
 
 ## ⚠️ When you're ready to fire the weekly summary manually
 
@@ -337,16 +316,31 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
       /my-coach as a daily-open surface (stickiness).
     - Streak counters update immediately via the 079 trigger.
 
-17. **"Sign up for Tribe" invite email** — when a coach adds a client
+17. ✅ **Audit log viewer** — shipped. New page at `/os/audit` renders
+    the `gym_audit_log` table as a filterable list (action, target
+    type, last 25/50/100). Linked from `/os/gym` near the bottom as
+    a low-emphasis "View forensic log" entry. Both mobile and desktop
+    layouts. Access mirrors migration 082's RLS: any coach in the gym
+    can read, none can mutate. Today the log only contains client
+    archive + purge entries; future destructive actions will start
+    showing up here automatically as their DAL paths call
+    `writeAuditEntry`.
+
+    **What this buys you**: real visibility into what happened in a
+    multi-coach gym. Before this, the audit table existed but nobody
+    could see it without SQL. Now coaches can answer "who archived
+    that member last week?" in five seconds.
+
+18. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-18. **Stripe Connect rough-edge polish** — but this is hard to do
+19. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-19. **Per-attendance trigger optimization** — migration 079 recomputes
+20. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-20. **Generator feedback loop** — use the feedback data from #5 to:
+21. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
