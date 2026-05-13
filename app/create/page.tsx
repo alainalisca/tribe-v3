@@ -622,6 +622,20 @@ function CreateSessionPageInner() {
                     <p className="text-xs text-theme-secondary mt-0.5">
                       {language === 'es' ? 'Cobra a los atletas por esta sesión' : 'Charge athletes for this session'}
                     </p>
+                    {/* Tribe.OS hint — paid sessions on the main app
+                        are one-offs; ongoing client management,
+                        attendance, and revenue tracking live in
+                        Tribe.OS. Always visible to instructors so
+                        they can discover the upgrade path even
+                        before they toggle the price on. */}
+                    <Link
+                      href="/os/dashboard"
+                      className="inline-flex items-center gap-1 text-[11px] text-tribe-green hover:underline mt-1.5 font-medium"
+                    >
+                      {language === 'es'
+                        ? 'Gestiona clientes, asistencia e ingresos en Tribe.OS →'
+                        : 'Manage clients, attendance & revenue with Tribe.OS →'}
+                    </Link>
                   </div>
                   <button
                     type="button"

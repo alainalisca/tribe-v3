@@ -29,6 +29,7 @@ import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
+import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -234,6 +235,12 @@ export default function TribeOSDashboardPage() {
 
         {/* At-risk clients widget — the primary signal on this page. */}
         <AtRiskClientsWidget />
+
+        {/* Recent activity — positive-signal companion to the at-risk
+            widget. Shows the most recent attendance + payment events
+            so an instructor returning to the dashboard sees what's
+            been happening at a glance. */}
+        <RecentActivityWidget />
 
         {/* Primary action — sessions are created via the regular
             Tribe /create flow, so we link there. New instructors
