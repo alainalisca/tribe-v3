@@ -52,6 +52,10 @@ const copy = {
     members: (n: number) => (n === 1 ? '1 member' : `${n} members`),
     activeShort: (n: number) => `${n} active`,
     atRiskShort: (n: number) => `${n} at risk`,
+    healthyShort: (n: number) => `${n} healthy`,
+    watchShort: (n: number) => `${n} watch`,
+    healthSnapshotLabel: 'Health',
+    healthAllClear: 'All healthy',
     coachLabel: 'Coach:',
     noCoach: 'Unassigned',
     viewMembers: 'View Members',
@@ -88,6 +92,10 @@ const copy = {
     members: (n: number) => (n === 1 ? '1 miembro' : `${n} miembros`),
     activeShort: (n: number) => `${n} activos`,
     atRiskShort: (n: number) => `${n} en riesgo`,
+    healthyShort: (n: number) => `${n} saludables`,
+    watchShort: (n: number) => `${n} en seguimiento`,
+    healthSnapshotLabel: 'Salud',
+    healthAllClear: 'Todos saludables',
     coachLabel: 'Coach:',
     noCoach: 'Sin asignar',
     viewMembers: 'Ver miembros',
@@ -305,7 +313,12 @@ function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy
           </div>
         </div>
 
-        {/* Stats row — large member count + inline active/at-risk dots */}
+        {/* Stats row — large member count + three-bucket health snapshot.
+            Health buckets come from the AI-aware list_teams_for_gym
+            RPC (migration 080): healthy / watch / at_risk. We render
+            only the non-zero buckets so a tidy team doesn't carry
+            empty pills, and fall back to "All healthy" when the team
+            has members but every bucket but healthy is zero. */}
         <div className="flex items-center gap-6 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-tribe-dark">{team.member_count}</span>
@@ -315,18 +328,7 @@ function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy
                 : (s.members(team.member_count).split(' ').slice(1).join(' ') ?? '')}
             </span>
           </div>
-          {team.active_count > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-tribe-success" />
-              <span className="text-sm text-tribe-dark-80">{s.activeShort(team.active_count)}</span>
-            </div>
-          ) : null}
-          {team.at_risk_count > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-tribe-warning" />
-              <span className="text-sm text-tribe-dark-80">{s.atRiskShort(team.at_risk_count)}</span>
-            </div>
-          ) : null}
+          <HealthSnapshot healthy={team.healthy_count} watch={team.watch_count} atRisk={team.at_risk_count} copy={s} />
         </div>
 
         {/* Coach line + stacked member avatars */}
@@ -368,6 +370,69 @@ function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy
         </Link>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * HealthSnapshot — pills showing the at-risk / watch / healthy
+ * breakdown for a team card. Renders only buckets with non-zero
+ * counts so a healthy team stays visually quiet, and collapses to
+ * a single "All healthy" badge when only the healthy bucket has
+ * members. Empty teams render nothing.
+ *
+ * Order is deliberate: at-risk first (the most actionable), watch
+ * second, healthy last. That way a coach's eye lands on the
+ * problem column first when scanning a long team list.
+ */
+function HealthSnapshot({
+  healthy,
+  watch,
+  atRisk,
+  copy: s,
+}: {
+  healthy: number;
+  watch: number;
+  atRisk: number;
+  copy: typeof copy.en | typeof copy.es;
+}) {
+  // Empty team (no clients in the active/lapsed health math) renders
+  // nothing — the parent's member_count already covers "this team is
+  // empty" messaging.
+  if (healthy === 0 && watch === 0 && atRisk === 0) return null;
+
+  // Tidy collapse: when only healthy is non-zero, swap the per-pill
+  // breakdown for a single "All healthy" badge. Keeps the most common
+  // state from feeling cluttered.
+  if (atRisk === 0 && watch === 0 && healthy > 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-tribe-success" />
+        <span className="text-sm text-tribe-dark-80">{s.healthAllClear}</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {atRisk > 0 ? (
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-tribe-danger" />
+          <span className="text-sm text-tribe-dark-80">{s.atRiskShort(atRisk)}</span>
+        </div>
+      ) : null}
+      {watch > 0 ? (
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-tribe-warning" />
+          <span className="text-sm text-tribe-dark-80">{s.watchShort(watch)}</span>
+        </div>
+      ) : null}
+      {healthy > 0 ? (
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-tribe-success" />
+          <span className="text-sm text-tribe-dark-80">{s.healthyShort(healthy)}</span>
+        </div>
+      ) : null}
+    </>
   );
 }
 

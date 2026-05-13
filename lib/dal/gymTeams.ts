@@ -26,7 +26,11 @@ export interface GymTeamWithStats {
   coach_user_id: string | null;
   coach_name: string | null;
   member_count: number;
+  /** Manual status = 'active', kept for back-compat — not health-aware. */
   active_count: number;
+  /** Three-bucket health snapshot, AI + heuristic. Sums to active+lapsed members. */
+  healthy_count: number;
+  watch_count: number;
   at_risk_count: number;
   /** Array of `{ id, name }` for the first members in the team (alphabetical). */
   preview_members: Array<{ id: string; name: string }>;
@@ -99,6 +103,8 @@ export async function listTeamsForGym(supabase: SupabaseClient, gymId: string): 
       coach_name: string | null;
       member_count: number | string;
       active_count: number | string;
+      healthy_count: number | string | null;
+      watch_count: number | string | null;
       at_risk_count: number | string;
       preview_members: unknown;
       created_at: string;
@@ -114,6 +120,11 @@ export async function listTeamsForGym(supabase: SupabaseClient, gymId: string): 
       coach_name: r.coach_name,
       member_count: Number(r.member_count ?? 0),
       active_count: Number(r.active_count ?? 0),
+      // healthy_count / watch_count are nullable in the type for the
+      // brief window between an old client and the new RPC — once
+      // migration 080 is applied they always come back as numbers.
+      healthy_count: Number(r.healthy_count ?? 0),
+      watch_count: Number(r.watch_count ?? 0),
       at_risk_count: Number(r.at_risk_count ?? 0),
       preview_members: Array.isArray(r.preview_members)
         ? (r.preview_members as Array<{ id: string; name: string }>)

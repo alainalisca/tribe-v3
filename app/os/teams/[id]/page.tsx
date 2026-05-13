@@ -44,6 +44,7 @@ import { buildWhatsAppUrl } from '@/lib/phone';
 import { Avatar, Badge, Button, Card, CardContent } from '@/components/tribe-os/ui';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import ReachOutToTeamModal from '@/components/tribe-os/ReachOutToTeamModal';
+import { bucketCounts } from '@/lib/health/teamHealth';
 import type { GymTeamWithMembers, TeamColor } from '@/lib/dal/gymTeams';
 import type { ClientWithStats } from '@/lib/dal/clients';
 
@@ -64,6 +65,9 @@ const copy = {
     membersCount: (n: number) => (n === 1 ? '1 member' : `${n} members`),
     activeCount: (n: number) => `${n} active`,
     atRiskCount: (n: number) => `${n} at risk`,
+    watchCount: (n: number) => `${n} watch`,
+    healthyCount: (n: number) => `${n} healthy`,
+    healthAllClear: 'All healthy',
     addMember: 'Add Member',
     reachOut: 'Reach out to all',
     edit: 'Edit',
@@ -122,6 +126,9 @@ const copy = {
     membersCount: (n: number) => (n === 1 ? '1 miembro' : `${n} miembros`),
     activeCount: (n: number) => `${n} activos`,
     atRiskCount: (n: number) => `${n} en riesgo`,
+    watchCount: (n: number) => `${n} en seguimiento`,
+    healthyCount: (n: number) => `${n} saludables`,
+    healthAllClear: 'Todos saludables',
     addMember: 'Agregar miembro',
     reachOut: 'Contactar a todos',
     edit: 'Editar',
@@ -273,15 +280,12 @@ export default function TeamDetailPage() {
     );
   }
 
-  // Derived counts for the stats strip
-  const activeCount =
-    state.kind === 'ready'
-      ? state.team.members.filter((m) => m.status === 'active' && (m.health_status ?? 'HEALTHY') !== 'AT_RISK').length
-      : 0;
-  const atRiskCount =
-    state.kind === 'ready'
-      ? state.team.members.filter((m) => m.health_status === 'AT_RISK' || m.status === 'lapsed').length
-      : 0;
+  // Derived health counts for the stats strip. Uses the shared
+  // classifier in lib/health/teamHealth.ts so the team detail matches
+  // the team list card and /os/members on what each bucket means.
+  const healthBuckets =
+    state.kind === 'ready' ? bucketCounts(state.team.members) : { healthy: 0, watch: 0, at_risk: 0 };
+  const showAllClear = healthBuckets.healthy > 0 && healthBuckets.watch === 0 && healthBuckets.at_risk === 0;
 
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8">
@@ -347,18 +351,38 @@ export default function TeamDetailPage() {
                       {s.membersCount(state.team.members.length).split(' ').slice(1).join(' ')}
                     </span>
                   </div>
-                  {activeCount > 0 ? (
+                  {/* Health snapshot — same three-bucket precedence as the
+                      team list card and /os/members. Renders only the
+                      non-zero buckets so a quiet team stays quiet, and
+                      collapses to "All healthy" when only healthy is
+                      non-zero. Empty teams render nothing. */}
+                  {showAllClear ? (
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-tribe-success" />
-                      <span className="text-sm text-tribe-dark-80">{s.activeCount(activeCount)}</span>
+                      <span className="text-sm text-tribe-dark-80">{s.healthAllClear}</span>
                     </div>
-                  ) : null}
-                  {atRiskCount > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-tribe-warning" />
-                      <span className="text-sm text-tribe-dark-80">{s.atRiskCount(atRiskCount)}</span>
-                    </div>
-                  ) : null}
+                  ) : (
+                    <>
+                      {healthBuckets.at_risk > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-tribe-danger" />
+                          <span className="text-sm text-tribe-dark-80">{s.atRiskCount(healthBuckets.at_risk)}</span>
+                        </div>
+                      ) : null}
+                      {healthBuckets.watch > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-tribe-warning" />
+                          <span className="text-sm text-tribe-dark-80">{s.watchCount(healthBuckets.watch)}</span>
+                        </div>
+                      ) : null}
+                      {healthBuckets.healthy > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-tribe-success" />
+                          <span className="text-sm text-tribe-dark-80">{s.healthyCount(healthBuckets.healthy)}</span>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
