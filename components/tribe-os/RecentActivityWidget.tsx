@@ -21,7 +21,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Activity, ChevronRight, Check, X as XIcon, DollarSign } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
@@ -63,6 +63,9 @@ const copy = {
     noShow: 'No show',
     unknownClient: 'Client',
     unknownSession: 'Session',
+    verbAttended: 'attended',
+    verbPaid: 'paid for',
+    verbMissed: 'missed',
     minutesAgo: (n: number) => (n === 1 ? '1 min ago' : `${n} min ago`),
     hoursAgo: (n: number) => (n === 1 ? '1 hr ago' : `${n} hr ago`),
     daysAgo: (n: number) => (n === 1 ? '1 day ago' : `${n} days ago`),
@@ -80,6 +83,9 @@ const copy = {
     noShow: 'No vino',
     unknownClient: 'Cliente',
     unknownSession: 'Sesión',
+    verbAttended: 'asistió a',
+    verbPaid: 'pagó por',
+    verbMissed: 'faltó a',
     minutesAgo: (n: number) => (n === 1 ? 'hace 1 min' : `hace ${n} min`),
     hoursAgo: (n: number) => (n === 1 ? 'hace 1 h' : `hace ${n} h`),
     daysAgo: (n: number) => (n === 1 ? 'hace 1 día' : `hace ${n} días`),
@@ -126,47 +132,34 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
   }, [limit]);
 
   return (
-    <section className="bg-tribe-surface rounded-2xl border border-tribe-mid p-5 sm:p-6 mt-4">
+    <section className="bg-white rounded-xl border border-gray-200 p-5">
       <header className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <Activity className="w-4 h-4 text-tribe-green shrink-0" />
-          <h2 className="text-base sm:text-lg font-bold text-white truncate">{s.title}</h2>
+          <h2 className="text-base font-bold text-gray-900 truncate">{s.title}</h2>
         </div>
       </header>
-      <p className="text-xs sm:text-sm text-white/60 mb-4 leading-relaxed">{s.subtitle}</p>
 
       {state.kind === 'loading' ? (
         <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 bg-tribe-mid/40 rounded-lg animate-pulse" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : state.kind === 'error' ? (
-        <p className="text-sm text-white/60 py-4 text-center">{s.error}</p>
+        <p className="text-sm text-gray-500 py-4 text-center">{s.error}</p>
       ) : state.items.length === 0 ? (
         <div className="py-6 text-center space-y-1">
-          <p className="text-sm font-semibold text-white">{s.emptyTitle}</p>
-          <p className="text-xs text-white/60 max-w-xs mx-auto leading-relaxed">{s.emptyHint}</p>
+          <p className="text-sm font-semibold text-gray-900">{s.emptyTitle}</p>
+          <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.emptyHint}</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-gray-100">
           {state.items.map((item) => (
             <ActivityRow key={item.id} item={item} copy={s} language={language} />
           ))}
         </ul>
       )}
-
-      {state.kind === 'ready' && state.items.length > 0 ? (
-        <div className="mt-4">
-          <Link
-            href="/os/clients"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80 transition-colors"
-          >
-            {s.viewAll}
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -193,6 +186,12 @@ function ActivityRow({
     item.amount_paid_cents > 0 &&
     (item.currency === 'USD' || item.currency === 'COP');
 
+  // Color dot encodes event type: green = paid attendance, blue =
+  // attended (no payment), gray = no-show. Matches the colored dots
+  // in the mockup's activity feed.
+  const dotColor = item.paid ? 'bg-tribe-green' : item.attended ? 'bg-blue-400' : 'bg-gray-300';
+  const verb = item.paid ? s.verbPaid : item.attended ? s.verbAttended : s.verbMissed;
+
   return (
     <li>
       <Link
@@ -203,32 +202,21 @@ function ActivityRow({
             paid: item.paid,
           })
         }
-        className="flex items-center gap-3 p-3 bg-tribe-dark/40 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 transition-colors"
+        className="flex items-start gap-3 py-3 group"
       >
-        {/* Attended badge — green check or muted X. The strongest
-            at-a-glance signal: who showed and who didn't. */}
-        <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-            item.attended ? 'bg-tribe-green/20 text-tribe-green' : 'bg-tribe-mid text-white/40'
-          }`}
-          aria-label={item.attended ? s.attended : s.noShow}
-        >
-          {item.attended ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
-        </div>
-
+        <span className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 shrink-0`} aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{clientName}</p>
-          <p className="text-[11px] text-white/55 truncate mt-0.5">{sessionTitle}</p>
-        </div>
-
-        <div className="flex flex-col items-end gap-0.5 shrink-0">
-          <span className="text-[10px] text-white/50 uppercase tracking-wider">{when}</span>
-          {showPaid ? (
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-tribe-green">
-              <DollarSign className="w-3 h-3" />
-              {formatCents(item.amount_paid_cents ?? 0, item.currency as Currency, language)}
-            </span>
-          ) : null}
+          <p className="text-sm text-gray-900 group-hover:text-tribe-dark">
+            <span className="font-semibold">{clientName}</span> <span className="text-gray-500">{verb}</span>{' '}
+            <span className="font-medium">{sessionTitle}</span>
+            {showPaid ? (
+              <span className="text-tribe-green font-semibold">
+                {' '}
+                · {formatCents(item.amount_paid_cents ?? 0, item.currency as Currency, language)}
+              </span>
+            ) : null}
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">{when}</p>
         </div>
       </Link>
     </li>

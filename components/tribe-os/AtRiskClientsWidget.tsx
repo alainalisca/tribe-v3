@@ -54,6 +54,7 @@ const copy = {
     statusLead: 'Lead',
     whatsappAria: 'Message on WhatsApp',
     whatsappCheckInMessage: (name: string) => `Hey ${name}! Haven't seen you at training in a bit — everything ok?`,
+    reachOut: 'Reach Out',
   },
   es: {
     title: 'Miembros para hacer seguimiento',
@@ -73,6 +74,7 @@ const copy = {
     statusLead: 'Prospecto',
     whatsappAria: 'Enviar mensaje por WhatsApp',
     whatsappCheckInMessage: (name: string) => `¡Hola ${name}! No te he visto entrenando hace rato. ¿Todo bien?`,
+    reachOut: 'Contactar',
   },
 } as const;
 
@@ -119,31 +121,34 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
     };
   }, [thresholdDays, limit]);
 
+  const atRiskCount = state.kind === 'ready' ? state.clients.length : null;
+
   return (
-    <section className="bg-tribe-surface rounded-2xl border border-tribe-mid p-5 sm:p-6">
+    <section className="bg-white rounded-xl border border-gray-200 p-5">
       <header className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <AlertTriangle className="w-4 h-4 text-tribe-amber shrink-0" />
-          <h2 className="text-base sm:text-lg font-bold text-white truncate">{s.title}</h2>
+          <AlertTriangle className="w-4 h-4 text-tribe-red shrink-0" />
+          <h2 className="text-base font-bold text-gray-900 truncate">{s.title}</h2>
         </div>
+        {atRiskCount != null && atRiskCount > 0 ? (
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-tribe-red/10 text-tribe-red text-xs font-bold">
+            {atRiskCount}
+          </span>
+        ) : null}
       </header>
-      <p className="text-xs sm:text-sm text-white/60 mb-4 leading-relaxed">{s.subtitle}</p>
 
       {state.kind === 'loading' ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 bg-tribe-mid/40 rounded-lg animate-pulse" />
+            <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : state.kind === 'error' ? (
-        <p className="text-sm text-white/60 py-4 text-center">{s.error}</p>
+        <p className="text-sm text-gray-500 py-4 text-center">{s.error}</p>
       ) : state.clients.length === 0 && state.totalClients === 0 ? (
-        // Distinct empty state when the user has zero clients at
-        // all — encourage onboarding rather than affirm an
-        // accomplishment they haven't actually made.
         <div className="py-6 text-center space-y-3">
-          <p className="text-sm font-semibold text-white">{s.zeroClientsTitle}</p>
-          <p className="text-xs text-white/60 max-w-xs mx-auto leading-relaxed">{s.zeroClientsHint}</p>
+          <p className="text-sm font-semibold text-gray-900">{s.zeroClientsTitle}</p>
+          <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.zeroClientsHint}</p>
           <Link
             href="/os/clients/new"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full hover:-translate-y-0.5 transition-transform"
@@ -153,23 +158,20 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
           </Link>
         </div>
       ) : state.clients.length === 0 ? (
-        // Has clients, none currently at-risk — affirming empty state.
         <div className="py-6 text-center space-y-1">
-          <p className="text-sm font-semibold text-white">{s.emptyTitle}</p>
-          <p className="text-xs text-white/60">{s.emptyHint}</p>
+          <p className="text-sm font-semibold text-gray-900">{s.emptyTitle}</p>
+          <p className="text-xs text-gray-500">{s.emptyHint}</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1 -mx-1">
           {state.clients.map((c) => (
             <AtRiskRow key={c.id} client={c} copy={s} />
           ))}
         </ul>
       )}
 
-      {/* Hide the "see all clients" footer when there are zero clients —
-          the empty-state CTA above already points at the right action. */}
       {!(state.kind === 'ready' && state.totalClients === 0) ? (
-        <div className="mt-4">
+        <div className="mt-3 pt-3 border-t border-gray-100">
           <Link
             href="/os/clients"
             className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80 transition-colors"
@@ -205,11 +207,14 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
   // Row uses a div instead of a wrapping Link so the WhatsApp
   // button can be its own clickable target (nested anchors are
   // invalid HTML and the inner click would otherwise bubble up
-  // to the parent Link). The chevron + label area remains a
-  // Link via the inner span.
+  // to the parent Link).
+  const initial = (client.name.charAt(0) || '?').toUpperCase();
   return (
     <li>
-      <div className="flex items-center gap-2 bg-tribe-dark/30 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 hover:bg-tribe-dark/50 transition-colors pr-2">
+      <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
+        <div className="w-8 h-8 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
+          {initial}
+        </div>
         <Link
           href={`/os/clients/${client.id}`}
           onClick={() =>
@@ -219,13 +224,10 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
               has_email: client.email !== null,
             })
           }
-          className="flex items-center gap-3 p-3 flex-1 min-w-0"
+          className="flex-1 min-w-0"
         >
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{client.name}</p>
-            <p className="text-xs text-white/60 mt-0.5 truncate">{subtitle}</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+          <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-tribe-dark">{client.name}</p>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">{subtitle}</p>
         </Link>
         {waUrl ? (
           <a
@@ -234,9 +236,10 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
             rel="noopener noreferrer"
             aria-label={s.whatsappAria}
             onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'at_risk_widget' })}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-tribe-green/15 text-tribe-green hover:bg-tribe-green/25 border border-tribe-green/30 transition-colors shrink-0"
+            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-tribe-dark hover:bg-tribe-green/15 rounded-full transition-colors shrink-0"
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className="w-3.5 h-3.5" />
+            {s.reachOut}
           </a>
         ) : null}
       </div>

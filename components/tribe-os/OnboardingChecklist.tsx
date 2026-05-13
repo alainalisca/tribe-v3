@@ -138,21 +138,21 @@ export default function OnboardingChecklist() {
   }
 
   return (
-    <section className="relative bg-gradient-to-br from-tribe-green/10 to-tribe-surface rounded-2xl border border-tribe-green/30 p-5 sm:p-6 mb-4">
+    <section className="relative bg-gradient-to-br from-tribe-green/10 to-white rounded-xl border border-tribe-green/30 p-5">
       <button
         type="button"
         onClick={handleDismiss}
         aria-label={s.dismissAria}
-        className="absolute top-3 right-3 text-white/40 hover:text-white/80 transition-colors"
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition-colors"
       >
         <X className="w-4 h-4" />
       </button>
 
       <header className="flex items-center gap-2 mb-1 pr-8">
         <Sparkles className="w-4 h-4 text-tribe-green shrink-0" />
-        <h2 className="text-base sm:text-lg font-bold text-white">{s.title}</h2>
+        <h2 className="text-base font-bold text-gray-900">{s.title}</h2>
       </header>
-      <p className="text-xs sm:text-sm text-white/60 mb-4 leading-relaxed pr-8">{s.subtitle}</p>
+      <p className="text-xs sm:text-sm text-gray-600 mb-4 leading-relaxed pr-8">{s.subtitle}</p>
 
       <ul className="space-y-2">
         <ChecklistItem
@@ -207,30 +207,28 @@ function ChecklistItem({
         href={href}
         onClick={() => trackEvent('tribe_os_onboarding_step_clicked', { step: eventName })}
         className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-          done
-            ? 'bg-tribe-dark/30 border-tribe-green/20'
-            : 'bg-tribe-dark/40 border-tribe-mid/60 hover:border-tribe-green/40'
+          done ? 'bg-tribe-green/5 border-tribe-green/20' : 'bg-white border-gray-200 hover:border-tribe-green/40'
         }`}
       >
         {done ? (
           <CheckCircle2 className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
         ) : (
-          <Circle className="w-5 h-5 text-white/40 shrink-0 mt-0.5" />
+          <Circle className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={`text-sm font-semibold truncate ${done ? 'text-white/60 line-through' : 'text-white'}`}>
+            <p className={`text-sm font-semibold truncate ${done ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
               {title}
             </p>
             {badge ? (
-              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-tribe-mid text-white/70 border border-tribe-mid font-bold">
+              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 font-bold">
                 {badge}
               </span>
             ) : null}
           </div>
-          <p className={`text-xs mt-0.5 leading-relaxed ${done ? 'text-white/30' : 'text-white/60'}`}>{hint}</p>
+          <p className={`text-xs mt-0.5 leading-relaxed ${done ? 'text-gray-400' : 'text-gray-600'}`}>{hint}</p>
         </div>
-        {!done ? <ChevronRight className="w-4 h-4 text-white/40 shrink-0 mt-1" /> : null}
+        {!done ? <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 mt-1" /> : null}
       </Link>
     </li>
   );

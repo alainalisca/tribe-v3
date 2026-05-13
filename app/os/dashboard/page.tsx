@@ -1,31 +1,28 @@
 'use client';
 
 /**
- * /os/dashboard
+ * /os/dashboard — Tribe.OS dashboard surface.
  *
- * Three states based on the viewer's auth + Tribe.OS premium status:
+ * Three viewer states:
+ *   - anon:        middleware redirects to /auth?returnTo=
+ *   - not_premium: upgrade pitch + Stripe Checkout
+ *   - premium:     the dashboard proper
  *
- *   - anon: never reaches here (middleware redirects to /auth?returnTo=)
- *   - not_premium: render the upgrade card. Subscribing redirects to
- *     Stripe Checkout. After payment the success_url brings them back
- *     here as premium and they see the dashboard.
- *   - premium: render the dashboard (manage clients + manage subscription
- *     + back to Tribe).
+ * Premium layout (matches mockup):
+ *   - Greeting header: "Good morning, [name]" + one-liner subhead
+ *   - KPI strip:       4 stat cards across the top
+ *   - Two-column mid:  Upcoming Sessions (left, 2/3) + Members at Risk (right, 1/3)
+ *   - Recent Activity: feed below
  *
  * This page deliberately does NOT use useTribeOSPremiumGate (which
  * redirects non-premium users away). The dashboard URL is the natural
  * landing surface for "I want Tribe.OS premium" intent — so we serve
- * the upgrade flow inline here rather than bouncing the user back to
- * the marketing landing (which they may not even see, since signed-in
- * users hit the feed home not the marketing page).
+ * the upgrade flow inline.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, HelpCircle, Plus } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
-import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
@@ -33,30 +30,30 @@ import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
-import RecordGroupAttendanceButton from '@/components/tribe-os/RecordGroupAttendanceButton';
+import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
-type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
+type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> & {
+  name?: string | null;
+  email?: string | null;
+};
 
-type PageState = 'checking' | 'redirecting' | 'not_premium' | 'premium';
+type PageState =
+  | { kind: 'checking' }
+  | { kind: 'redirecting' }
+  | { kind: 'not_premium' }
+  | { kind: 'premium'; firstName: string };
 
+// ES PENDING VERONICA REVIEW
 const copy = {
   en: {
     // Premium dashboard
-    welcome: 'Your gym at a glance',
-    placeholder:
-      'Members below need a check-in. Use the nav above for the full client roster, revenue, coaches, or gym settings.',
-    clientsCta: 'Manage clients',
-    revenueCta: 'View revenue',
-    coachesCta: 'Coaches',
-    gymCta: 'Gym settings',
-    portalCta: 'Manage subscription',
-    portalLoading: 'Opening Stripe',
-    portalError: 'Could not open Stripe portal. Please try again.',
-    replayTour: 'Take the tour again',
-    createSessionCta: 'Create a paid session',
-    backLabel: 'Back to Tribe',
+    greetingMorning: (name: string) => `Good morning, ${name}`,
+    greetingAfternoon: (name: string) => `Good afternoon, ${name}`,
+    greetingEvening: (name: string) => `Good evening, ${name}`,
+    greetingFallback: (name: string) => `Welcome back, ${name}`,
+    subhead: "Here's what's happening with your gym today.",
     redirectingLabel: 'Redirecting',
     loadingLabel: 'Loading',
     // Upgrade flow (signed-in, not premium)
@@ -74,22 +71,14 @@ const copy = {
     subscribeButton: 'Subscribe',
     subscribingLabel: 'Redirecting to Stripe',
     subscribeError: 'Could not start checkout. Please try again.',
+    portalError: 'Could not open Stripe portal. Please try again.',
   },
-  // ES PENDING VERONICA REVIEW
   es: {
-    welcome: 'Tu gym de un vistazo',
-    placeholder:
-      'Los miembros de abajo necesitan seguimiento. Usa la navegación arriba para ver la lista completa de clientes, ingresos, entrenadores o la configuración del gym.',
-    clientsCta: 'Gestionar clientes',
-    revenueCta: 'Ver ingresos',
-    coachesCta: 'Entrenadores',
-    gymCta: 'Configuración del gym',
-    portalCta: 'Gestionar suscripción',
-    portalLoading: 'Abriendo Stripe',
-    portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
-    replayTour: 'Ver el tour de nuevo',
-    createSessionCta: 'Crear sesión pagada',
-    backLabel: 'Volver a Tribe',
+    greetingMorning: (name: string) => `Buenos días, ${name}`,
+    greetingAfternoon: (name: string) => `Buenas tardes, ${name}`,
+    greetingEvening: (name: string) => `Buenas noches, ${name}`,
+    greetingFallback: (name: string) => `Bienvenido de nuevo, ${name}`,
+    subhead: 'Esto es lo que está pasando en tu gym hoy.',
     redirectingLabel: 'Redirigiendo',
     loadingLabel: 'Cargando',
     upgradeEyebrow: 'Tribe.OS',
@@ -106,19 +95,28 @@ const copy = {
     subscribeButton: 'Suscribirme',
     subscribingLabel: 'Redirigiendo a Stripe',
     subscribeError: 'No se pudo iniciar el pago. Por favor intenta de nuevo.',
+    portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
   },
 } as const;
+
+function pickGreeting(s: typeof copy.en | typeof copy.es, name: string): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return s.greetingMorning(name);
+  if (hour < 18) return s.greetingAfternoon(name);
+  if (hour < 22) return s.greetingEvening(name);
+  return s.greetingFallback(name);
+}
 
 export default function TribeOSDashboardPage() {
   const { language } = useLanguage();
   const s = copy[language];
   const router = useRouter();
 
-  const [pageState, setPageState] = useState<PageState>('checking');
-  const [openingPortal, setOpeningPortal] = useState(false);
-  // Replay-ref pattern: the TribeOSWelcomeGuide owns its open-state
-  // via useQuickGuide; this ref receives the `replay` function so a
-  // "Take the tour again" button on the dashboard can re-open it.
+  const [pageState, setPageState] = useState<PageState>({ kind: 'checking' });
+  // Replay-ref pattern: TribeOSWelcomeGuide owns its open-state via
+  // useQuickGuide; this ref receives the `replay` function so a
+  // "Take the tour again" affordance (in Settings or elsewhere) can
+  // re-open it.
   const replayWelcomeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -130,38 +128,36 @@ export default function TribeOSDashboardPage() {
       } = await supabase.auth.getUser();
       if (!user) {
         if (!cancelled) {
-          setPageState('redirecting');
+          setPageState({ kind: 'redirecting' });
           router.replace('/auth?returnTo=/os/dashboard/');
         }
         return;
       }
       const { data, error } = await supabase
         .from('users')
-        .select('tribe_os_tier, tribe_os_status')
+        .select('tribe_os_tier, tribe_os_status, name, email')
         .eq('id', user.id)
         .single();
       if (cancelled) return;
       if (error) {
-        // Treat lookup failures as not-premium (fail closed) so the
-        // user sees the upgrade flow rather than getting redirected
-        // away from the page they intended to reach.
-        setPageState('not_premium');
+        // Fail-open to upgrade flow.
+        setPageState({ kind: 'not_premium' });
         return;
       }
-      const isPremium = isTribeOSPremiumActive(data as PremiumRow | null);
-      setPageState(isPremium ? 'premium' : 'not_premium');
-      // Fire once per page mount on the premium path so we can build
-      // the dashboard-views funnel. The not_premium path fires its
-      // own event when the checkout flow surfaces (handled in
-      // UpgradeCard).
+      const row = data as PremiumRow;
+      const isPremium = isTribeOSPremiumActive(row);
       if (isPremium) {
+        // First-name extraction — used for the greeting. Fall back to
+        // email local-part, then "there" if nothing else.
+        const rawName = row.name ?? row.email?.split('@')[0] ?? 'there';
+        const firstName = rawName.trim().split(/\s+/)[0] || rawName;
+        setPageState({ kind: 'premium', firstName });
         trackEvent('tribe_os_dashboard_viewed');
-        // Stripe success_url is /os/dashboard?subscribed=true. If
-        // we see it, the user just completed checkout — close the
-        // funnel here regardless of which device they returned on.
         if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
           trackEvent('tribe_os_checkout_succeeded');
         }
+      } else {
+        setPageState({ kind: 'not_premium' });
       }
     })();
     return () => {
@@ -169,138 +165,83 @@ export default function TribeOSDashboardPage() {
     };
   }, [router]);
 
-  async function handlePortal() {
-    if (openingPortal) return;
-    setOpeningPortal(true);
-    try {
-      const res = await fetch('/api/tribe-os/subscription/portal/', { method: 'POST' });
-      const body = (await res.json().catch(() => ({}))) as { success?: boolean; url?: string; error?: string };
-      if (!res.ok || !body.success || !body.url) {
-        showError(body.error || s.portalError);
-        setOpeningPortal(false);
-        return;
-      }
-      trackEvent('tribe_os_portal_opened');
-      window.location.href = body.url;
-      // No reset — page is navigating away.
-    } catch {
-      showError(s.portalError);
-      setOpeningPortal(false);
-    }
-  }
-
-  if (pageState === 'checking' || pageState === 'redirecting') {
+  if (pageState.kind === 'checking' || pageState.kind === 'redirecting') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
-          {pageState === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
+        <p className="text-gray-500 text-sm uppercase tracking-[0.1em]">
+          {pageState.kind === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
         </p>
       </main>
     );
   }
 
-  if (pageState === 'not_premium') {
+  if (pageState.kind === 'not_premium') {
     return (
       <main className="px-4 py-12 sm:py-20">
         <div className="max-w-2xl mx-auto">
           <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.upgradeEyebrow}</p>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-4">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-[1.1] mb-4">
             {s.upgradeTitle}
           </h1>
-          <p className="text-base sm:text-lg text-white/80 leading-relaxed mb-10">{s.upgradeIntro}</p>
-          <div className="bg-white rounded-2xl p-7 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-            <UpgradeCard copy={s} />
+          <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-10">{s.upgradeIntro}</p>
+          <div className="bg-white rounded-2xl p-7 sm:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)] border border-gray-200">
+            <UpgradeCard
+              copy={{
+                upgradeTitle: s.upgradeTitle,
+                upgradePrice: s.upgradePrice,
+                upgradePriceHint: s.upgradePriceHint,
+                upgradeBenefits: s.upgradeBenefits,
+                subscribeButton: s.subscribeButton,
+                subscribingLabel: s.subscribingLabel,
+                subscribeError: s.subscribeError,
+              }}
+            />
           </div>
         </div>
       </main>
     );
   }
 
-  // pageState === 'premium'
-  //
-  // The OS shell (app/os/layout.tsx) handles top-level navigation to
-  // Clients, Revenue, Coaches, and Gym settings. This page focuses
-  // on the welcome surface + the at-risk widget (the active signal)
-  // + a single secondary action (manage subscription). Keeps the
-  // landing visually quiet for an instructor coming back to check
-  // who they need to follow up with.
+  // pageState.kind === 'premium'
   return (
-    <main className="px-4 py-8 sm:py-12">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-3">{s.welcome}</h1>
-        <p className="text-sm sm:text-base text-white/70 leading-relaxed mb-6">{s.placeholder}</p>
+    <div className="px-4 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto space-y-5">
+        {/* Greeting */}
+        <header>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
+            {pickGreeting(s, pageState.firstName)}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">{s.subhead}</p>
+        </header>
 
-        {/* Onboarding checklist — only renders for instructors who
-            haven't completed the three first-week actions yet (or
-            who haven't dismissed it). Self-hides once graduated. */}
+        {/* Onboarding checklist — auto-hides once graduated or dismissed. */}
         <OnboardingChecklist />
 
-        {/* Quick-stats row — active clients / sessions this month /
-            revenue this month. One round-trip; failures degrade
-            gracefully (silent hide vs blocking error). */}
+        {/* KPI strip */}
         <DashboardStats />
 
-        {/* At-risk clients widget — the primary signal on this page. */}
-        <AtRiskClientsWidget />
+        {/* Two-column mid section: upcoming sessions (2/3 wide) +
+            members at risk (1/3 wide). Stacks on smaller widths. */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2">
+            <UpcomingSessionsCard />
+          </div>
+          <div>
+            <AtRiskClientsWidget />
+          </div>
+        </div>
 
-        {/* Recent activity — positive-signal companion to the at-risk
-            widget. Shows the most recent attendance + payment events
-            so an instructor returning to the dashboard sees what's
-            been happening at a glance. */}
+        {/* Recent activity feed */}
         <RecentActivityWidget />
-
-        {/* Primary actions: create a new session OR record
-            attendance for an existing one. New instructors wouldn't
-            know /create is where sessions come from, and the bulk
-            attendance flow needs a discoverable entry point on the
-            dashboard since a group class is the canonical "I'm
-            done teaching, now record who showed up" moment. */}
-        <div className="mt-6 flex flex-wrap gap-3 items-center">
-          <Link
-            href="/create"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-full shadow-[0_4px_20px_rgba(132,204,22,0.3)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            {s.createSessionCta}
-          </Link>
-          <RecordGroupAttendanceButton />
-        </div>
-
-        {/* Secondary actions tucked at the bottom so they don't compete
-            with the at-risk widget. Manage subscription is the only
-            action not already in the shell nav or the account menu;
-            "Take the tour again" lets a user re-open the welcome
-            guide they may have skipped on first visit. */}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={handlePortal}
-            disabled={openingPortal}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-tribe-surface text-white text-xs font-semibold rounded-full border border-tribe-mid hover:bg-tribe-mid transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            {openingPortal ? `${s.portalLoading}…` : s.portalCta}
-          </button>
-          <button
-            type="button"
-            onClick={() => replayWelcomeRef.current?.()}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-tribe-surface text-white/70 text-xs font-semibold rounded-full border border-tribe-mid hover:bg-tribe-mid hover:text-white transition-colors"
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            {s.replayTour}
-          </button>
-        </div>
       </div>
 
-      {/* Auto-shown on first visit for premium users; dismissible.
-          The ref lets the "Take the tour again" button above
-          re-trigger the guide without changing the seen flag. */}
+      {/* Auto-shown on first visit for premium users; dismissible. */}
       <TribeOSWelcomeGuide
         enabled
         onReplayRef={(replay) => {
           replayWelcomeRef.current = replay;
         }}
       />
-    </main>
+    </div>
   );
 }
