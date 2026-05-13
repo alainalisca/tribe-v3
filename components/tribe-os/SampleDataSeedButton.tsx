@@ -24,7 +24,7 @@
  */
 
 import { useState } from 'react';
-import { Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Sparkles, AlertCircle, CheckCircle2, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/tribe-os/ui';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -38,6 +38,8 @@ type Result =
   | { kind: 'idle' }
   | { kind: 'running' }
   | { kind: 'done'; clients: number; sessions: number; attendance: number }
+  | { kind: 'cleaning' }
+  | { kind: 'cleaned'; clients: number; sessions: number; insights: number }
   | { kind: 'error'; message: string };
 
 // ES PENDING VERONICA REVIEW
@@ -62,7 +64,15 @@ const copy = {
     errorSeedDisabled: 'The seed endpoint is disabled on this environment.',
     errorOwnerOnly: 'Only the gym owner can run this.',
     errorGeneric: 'Something went wrong on the server. Check the Vercel logs.',
-    cleanupHint: "Cleanup later: in Supabase SQL editor, run DELETE FROM clients WHERE 'sample-data' = ANY(tags);",
+    cleanupButtonLabel: 'Remove sample data',
+    cleanupRunning: 'Removing…',
+    cleanupConfirmTitle: 'Remove all sample data?',
+    cleanupConfirmBody:
+      'This drops every client tagged "sample-data", their attendance + training-partner edges (via DB cascade), every seeded session, and any AI insights that referenced only sample clients. Real client data is never touched.',
+    cleanupConfirmYes: 'Yes, remove it',
+    cleanupDoneTitle: 'Sample data removed.',
+    cleanupDoneSummary: (c: number, s: number, i: number) => `Deleted ${c} clients, ${s} sessions, ${i} insights.`,
+    cleanupErrorTitle: 'Could not remove sample data.',
   },
   es: {
     sectionLabel: 'Herramientas de desarrollo',
@@ -86,8 +96,16 @@ const copy = {
     errorSeedDisabled: 'El endpoint del generador está deshabilitado en este entorno.',
     errorOwnerOnly: 'Solo el dueño del gym puede ejecutar esto.',
     errorGeneric: 'Algo falló en el servidor. Revisa los logs de Vercel.',
-    cleanupHint:
-      "Limpieza después: en el SQL editor de Supabase, ejecuta DELETE FROM clients WHERE 'sample-data' = ANY(tags);",
+    cleanupButtonLabel: 'Eliminar datos de muestra',
+    cleanupRunning: 'Eliminando…',
+    cleanupConfirmTitle: '¿Eliminar todos los datos de muestra?',
+    cleanupConfirmBody:
+      'Esto elimina cada cliente con la etiqueta "sample-data", sus asistencias y aristas de compañeros (vía cascada de la DB), cada sesión generada, y cualquier insight de IA que referenciara solo clientes de muestra. Los datos reales no se tocan.',
+    cleanupConfirmYes: 'Sí, eliminarlos',
+    cleanupDoneTitle: 'Datos de muestra eliminados.',
+    cleanupDoneSummary: (c: number, s: number, i: number) =>
+      `Se eliminaron ${c} clientes, ${s} sesiones, ${i} insights.`,
+    cleanupErrorTitle: 'No se pudieron eliminar los datos de muestra.',
   },
 } as const;
 
@@ -101,14 +119,18 @@ function isSeedEnabled(): boolean {
 export default function SampleDataSeedButton({ canEdit }: Props) {
   const { language } = useLanguage();
   const s = copy[language];
-  const [showConfirm, setShowConfirm] = useState(false);
+  // Single confirm state shared by seed + cleanup; discriminated by
+  // `kind` so the dialog knows which action to fire on confirmation.
+  const [confirm, setConfirm] = useState<{ kind: 'none' } | { kind: 'seed' } | { kind: 'cleanup' }>({
+    kind: 'none',
+  });
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 
   if (!isSeedEnabled()) return null;
   if (!canEdit) return null;
 
-  async function handleConfirm() {
-    setShowConfirm(false);
+  async function handleSeed() {
+    setConfirm({ kind: 'none' });
     setResult({ kind: 'running' });
     try {
       const res = await fetch('/api/tribe-os/dev/seed-sample-data', { method: 'POST' });
@@ -140,20 +162,55 @@ export default function SampleDataSeedButton({ canEdit }: Props) {
     }
   }
 
+  async function handleCleanup() {
+    setConfirm({ kind: 'none' });
+    setResult({ kind: 'cleaning' });
+    try {
+      const res = await fetch('/api/tribe-os/dev/cleanup-sample-data', { method: 'POST' });
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: { clients_deleted: number; sessions_deleted: number; insights_deleted: number };
+        error?: string;
+      };
+      if (!res.ok || !body.success) {
+        let message: string = s.errorGeneric;
+        if (body.error === 'seed_disabled') message = s.errorSeedDisabled;
+        else if (body.error === 'owner_only') message = s.errorOwnerOnly;
+        setResult({ kind: 'error', message });
+        return;
+      }
+      const data = body.data!;
+      setResult({
+        kind: 'cleaned',
+        clients: data.clients_deleted,
+        sessions: data.sessions_deleted,
+        insights: data.insights_deleted,
+      });
+    } catch {
+      setResult({ kind: 'error', message: s.errorGeneric });
+    }
+  }
+
+  const isBusy = result.kind === 'running' || result.kind === 'cleaning';
+
   return (
     <div className="pt-2 mt-4 border-t border-gray-200">
       <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-1">{s.sectionLabel}</h2>
       <p className="text-xs text-gray-500 mb-3 leading-relaxed">{s.sectionHint}</p>
 
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={() => setShowConfirm(true)}
-        disabled={result.kind === 'running'}
-      >
-        <Sparkles className="w-4 h-4 mr-1.5" />
-        {result.kind === 'running' ? s.running : s.buttonLabel}
-      </Button>
+      {/* Two side-by-side buttons. Seed runs first, cleanup undoes
+          the seed. Mutually exclusive — when one is running the
+          other is disabled to prevent overlapping requests. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="secondary" onClick={() => setConfirm({ kind: 'seed' })} disabled={isBusy}>
+          <Sparkles className="w-4 h-4 mr-1.5" />
+          {result.kind === 'running' ? s.running : s.buttonLabel}
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => setConfirm({ kind: 'cleanup' })} disabled={isBusy}>
+          <Trash2 className="w-4 h-4 mr-1.5 text-tribe-danger" />
+          {result.kind === 'cleaning' ? s.cleanupRunning : s.cleanupButtonLabel}
+        </Button>
+      </div>
       <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{s.buttonHint}</p>
 
       {/* Inline result panel — keeps the user on /os/gym instead of
@@ -168,7 +225,16 @@ export default function SampleDataSeedButton({ canEdit }: Props) {
               <p className="text-xs text-gray-600 mt-1">{s.doneNext}</p>
             </div>
           </div>
-          <p className="text-[11px] text-gray-500 font-mono break-all">{s.cleanupHint}</p>
+        </div>
+      ) : null}
+
+      {result.kind === 'cleaned' ? (
+        <div className="mt-3 p-3 bg-tribe-green/10 border border-tribe-green/30 rounded-lg flex items-start gap-2 text-tribe-dark">
+          <CheckCircle2 className="w-4 h-4 text-tribe-green-dark shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">{s.cleanupDoneTitle}</p>
+            <p>{s.cleanupDoneSummary(result.clients, result.sessions, result.insights)}</p>
+          </div>
         </div>
       ) : null}
 
@@ -182,16 +248,20 @@ export default function SampleDataSeedButton({ canEdit }: Props) {
         </div>
       ) : null}
 
-      <Dialog open={showConfirm} onOpenChange={(v) => !v && setShowConfirm(false)}>
+      <Dialog open={confirm.kind !== 'none'} onOpenChange={(v) => !v && setConfirm({ kind: 'none' })}>
         <DialogContent className="max-w-md rounded-tribe p-5 bg-white border border-tribe-dark-40 text-tribe-dark">
-          <DialogTitle className="text-base font-bold text-tribe-dark">{s.dialogTitle}</DialogTitle>
-          <p className="text-sm text-tribe-dark-80 mt-2 leading-relaxed">{s.dialogBody}</p>
+          <DialogTitle className="text-base font-bold text-tribe-dark">
+            {confirm.kind === 'cleanup' ? s.cleanupConfirmTitle : s.dialogTitle}
+          </DialogTitle>
+          <p className="text-sm text-tribe-dark-80 mt-2 leading-relaxed">
+            {confirm.kind === 'cleanup' ? s.cleanupConfirmBody : s.dialogBody}
+          </p>
           <div className="flex justify-end gap-2 mt-5">
-            <Button variant="secondary" type="button" onClick={() => setShowConfirm(false)}>
+            <Button variant="secondary" type="button" onClick={() => setConfirm({ kind: 'none' })}>
               {s.dialogCancel}
             </Button>
-            <Button type="button" onClick={handleConfirm}>
-              {s.dialogConfirm}
+            <Button type="button" onClick={confirm.kind === 'cleanup' ? handleCleanup : handleSeed}>
+              {confirm.kind === 'cleanup' ? s.cleanupConfirmYes : s.dialogConfirm}
             </Button>
           </div>
         </DialogContent>

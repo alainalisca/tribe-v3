@@ -47,6 +47,16 @@ export interface SeedSummary {
   skipped_reason?: 'existing_clients' | 'service_role_missing' | 'gym_owner_missing';
 }
 
+export interface CleanupSummary {
+  /** Number of sample clients deleted (cascades to attendance + partners). */
+  clients_deleted: number;
+  /** Number of sample sessions deleted. */
+  sessions_deleted: number;
+  /** Number of community_insights rows deleted (the ones referencing sample clients). */
+  insights_deleted: number;
+  skipped_reason?: 'service_role_missing';
+}
+
 const SAMPLE_TAG = 'sample-data';
 const SAMPLE_EMAIL_DOMAIN = 'sample.tribe.local';
 
@@ -449,5 +459,130 @@ export async function seedGymData(gymId: string, ownerUserId: string): Promise<S
     clients_created: insertedClients.length,
     sessions_created: insertedSessions.length,
     attendance_created: attendanceInserts.length,
+  };
+}
+
+/**
+ * Remove every sample-data row for a gym. Mirror of seedGymData —
+ * targets only rows the seeder created (identified by the
+ * `sample-data` tag on clients + the marker description on sessions)
+ * so we never collateral-damage real data even if the user manages
+ * to mix the two.
+ *
+ * Order matters:
+ *   1. Delete community_insights tied to sample-data clients (community_insight_members has ON DELETE CASCADE from clients, but the insight rows themselves don't reference clients directly — they reference gym_id. We filter to insights whose linked members are all sample-data).
+ *   2. Delete the sample clients — cascades client_attendance + training_partners + community_insight_members via ON DELETE.
+ *   3. Delete sample sessions — they're the seed's marker description.
+ */
+export async function cleanupGymSampleData(gymId: string): Promise<CleanupSummary> {
+  const service = buildServiceClient();
+  if (!service) {
+    return { clients_deleted: 0, sessions_deleted: 0, insights_deleted: 0, skipped_reason: 'service_role_missing' };
+  }
+
+  // 1. Find every sample-data client id in this gym. We need the ids
+  //    to scope the insight delete + to count what we removed.
+  const { data: sampleClients, error: clientsErr } = await service
+    .from('clients')
+    .select('id')
+    .eq('gym_id', gymId)
+    .contains('tags', [SAMPLE_TAG]);
+  if (clientsErr) {
+    logError(clientsErr, { action: 'cleanupGymSampleData.list_clients', gymId });
+    return { clients_deleted: 0, sessions_deleted: 0, insights_deleted: 0 };
+  }
+  const sampleClientIds = (sampleClients ?? []).map((r) => r.id as string);
+
+  // 2. Delete insights whose linked members are entirely sample-data.
+  //    For insights with no linked members (e.g. GROWTH cards which
+  //    are gym-level), match by data_payload-shape heuristic isn't
+  //    safe — better to leave gym-level insights alone here and let
+  //    the user dismiss them via the UI. So we ONLY drop insights
+  //    that reference at least one sample client.
+  let insightsDeleted = 0;
+  if (sampleClientIds.length > 0) {
+    const { data: insightLinks, error: linkErr } = await service
+      .from('community_insight_members')
+      .select('insight_id, client_id')
+      .in('client_id', sampleClientIds);
+    if (linkErr) {
+      logError(linkErr, { action: 'cleanupGymSampleData.find_insights', gymId });
+    } else {
+      // Group links by insight_id. If every linked client is a sample
+      // client, the insight is "purely sample" and safe to drop.
+      // (In practice the seeder doesn't share insights across real +
+      // sample members, but the check is cheap.)
+      const insightToClients = new Map<string, Set<string>>();
+      for (const row of insightLinks ?? []) {
+        const set = insightToClients.get(row.insight_id as string) ?? new Set();
+        set.add(row.client_id as string);
+        insightToClients.set(row.insight_id as string, set);
+      }
+      const sampleSet = new Set(sampleClientIds);
+      const dropIds: string[] = [];
+      for (const [insightId, linkedClients] of insightToClients) {
+        const everyLinkedIsSample = Array.from(linkedClients).every((c) => sampleSet.has(c));
+        if (everyLinkedIsSample) dropIds.push(insightId);
+      }
+      if (dropIds.length > 0) {
+        const { error: deleteErr, count } = await service
+          .from('community_insights')
+          .delete({ count: 'exact' })
+          .in('id', dropIds);
+        if (deleteErr) {
+          logError(deleteErr, { action: 'cleanupGymSampleData.delete_insights', gymId });
+        } else {
+          insightsDeleted = count ?? dropIds.length;
+        }
+      }
+    }
+  }
+
+  // 3. Delete sample clients. Cascades to client_attendance,
+  //    training_partners, community_insight_members.
+  let clientsDeleted = 0;
+  if (sampleClientIds.length > 0) {
+    const { error: deleteErr, count } = await service
+      .from('clients')
+      .delete({ count: 'exact' })
+      .in('id', sampleClientIds);
+    if (deleteErr) {
+      logError(deleteErr, { action: 'cleanupGymSampleData.delete_clients', gymId });
+    } else {
+      clientsDeleted = count ?? sampleClientIds.length;
+    }
+  }
+
+  // 4. Delete sample sessions. They're scoped by description marker;
+  //    we further filter to those created by the gym owner so a real
+  //    session that happens to have the same description (extremely
+  //    unlikely) doesn't get caught.
+  const { data: gymOwner } = await service.from('gyms').select('owner_user_id').eq('id', gymId).maybeSingle();
+  let sessionsDeleted = 0;
+  if (gymOwner?.owner_user_id) {
+    const { error: sessionDeleteErr, count } = await service
+      .from('sessions')
+      .delete({ count: 'exact' })
+      .eq('creator_id', gymOwner.owner_user_id)
+      .eq('description', 'Sample data — generated for demo purposes.');
+    if (sessionDeleteErr) {
+      logError(sessionDeleteErr, { action: 'cleanupGymSampleData.delete_sessions', gymId });
+    } else {
+      sessionsDeleted = count ?? 0;
+    }
+  }
+
+  log('info', 'cleanupGymSampleData.done', {
+    action: 'cleanupGymSampleData',
+    gymId,
+    clients_deleted: clientsDeleted,
+    sessions_deleted: sessionsDeleted,
+    insights_deleted: insightsDeleted,
+  });
+
+  return {
+    clients_deleted: clientsDeleted,
+    sessions_deleted: sessionsDeleted,
+    insights_deleted: insightsDeleted,
   };
 }

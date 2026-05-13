@@ -101,6 +101,12 @@ const copy = {
       `Scored ${n} ${n === 1 ? 'member' : 'members'} · ${atRisk} at risk · ${created} new ${created === 1 ? 'alert' : 'alerts'}`,
     waReachOutLabel: 'Reach out on WhatsApp',
     waReachOutCheckIn: (name: string) => `Hey ${name}! Haven't seen you at training in a bit — everything ok?`,
+    dismissAll: 'Dismiss all',
+    dismissAllConfirm: (n: number, severity: string) =>
+      `Dismiss all ${n} ${severity.toLowerCase()} insights? They'll move to History and can be reviewed there.`,
+    dismissAllRunning: 'Dismissing…',
+    dismissAllDoneToast: (n: number) => `Dismissed ${n} ${n === 1 ? 'alert' : 'alerts'}.`,
+    dismissAllError: "Couldn't dismiss those alerts. Try again.",
   },
   es: {
     redirectingLabel: 'Redirigiendo',
@@ -150,6 +156,12 @@ const copy = {
       `${n} ${n === 1 ? 'miembro evaluado' : 'miembros evaluados'} · ${atRisk} en riesgo · ${created} ${created === 1 ? 'alerta nueva' : 'alertas nuevas'}`,
     waReachOutLabel: 'Contactar por WhatsApp',
     waReachOutCheckIn: (name: string) => `¡Hola ${name}! No te he visto entrenando hace rato. ¿Todo bien?`,
+    dismissAll: 'Descartar todas',
+    dismissAllConfirm: (n: number, severity: string) =>
+      `¿Descartar las ${n} alertas ${severity.toLowerCase()}? Se mueven a Historial y se pueden revisar ahí.`,
+    dismissAllRunning: 'Descartando…',
+    dismissAllDoneToast: (n: number) => `Se descartaron ${n} ${n === 1 ? 'alerta' : 'alertas'}.`,
+    dismissAllError: 'No se pudieron descartar. Intenta de nuevo.',
   },
 } as const;
 
@@ -364,9 +376,24 @@ export default function IntelligencePage() {
               if (items.length === 0) return null;
               return (
                 <section key={sev} className="space-y-2">
-                  <h2 className="text-xs uppercase tracking-[0.1em] font-bold text-tribe-dark-80 px-1">
-                    {s.severity[sev]}
-                  </h2>
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <h2 className="text-xs uppercase tracking-[0.1em] font-bold text-tribe-dark-80">
+                      {s.severity[sev]}
+                    </h2>
+                    {/* Bulk dismiss surfaces only on the Active view
+                        (History items are already dismissed). We hide
+                        the button for CRITICAL so a coach can't one-
+                        click clear something that genuinely needs a
+                        per-card review — those they dismiss individually. */}
+                    {view === 'active' && sev !== 'CRITICAL' && items.length > 1 ? (
+                      <BulkDismissButton
+                        severity={sev}
+                        count={items.length}
+                        copy={s}
+                        onDismissed={() => setReloadKey((k) => k + 1)}
+                      />
+                    ) : null}
+                  </div>
                   <div className="space-y-3">
                     {items.map((i) => (
                       <InsightCard
@@ -615,5 +642,74 @@ function InsightCard({
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * Severity-section "Dismiss all" affordance. Confirms first (no
+ * accidental clears) then POSTs the bulk-dismiss endpoint. Disabled
+ * during the request so a double-click can't fire two updates.
+ */
+function BulkDismissButton({
+  severity,
+  count,
+  copy: s,
+  onDismissed,
+}: {
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  count: number;
+  copy: typeof copy.en | typeof copy.es;
+  onDismissed: () => void;
+}) {
+  const [dismissing, setDismissing] = useState(false);
+
+  async function handleClick() {
+    if (dismissing) return;
+    // Browser-native confirm keeps the surface light — a full
+    // Dialog would feel heavy for a per-section action and the
+    // confirmation copy is short.
+    const ok = typeof window !== 'undefined' && window.confirm(s.dismissAllConfirm(count, s.severity[severity]));
+    if (!ok) return;
+    setDismissing(true);
+    try {
+      const res = await fetch('/api/tribe-os/intelligence/bulk-dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ severity }),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: { dismissed: number };
+        error?: string;
+      };
+      if (res.ok && body.success) {
+        trackEvent('tribe_os_insight_dismissed', {
+          type: 'bulk',
+          severity,
+          count: body.data?.dismissed ?? 0,
+        });
+        onDismissed();
+      } else {
+        // Cheap error feedback — toast helpers exist elsewhere in
+        // the codebase; for this minor action a window.alert is
+        // adequate and keeps the component dep-light.
+        if (typeof window !== 'undefined') window.alert(s.dismissAllError);
+      }
+    } catch {
+      if (typeof window !== 'undefined') window.alert(s.dismissAllError);
+    } finally {
+      setDismissing(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={dismissing}
+      className="text-[11px] uppercase tracking-[0.06em] font-semibold text-tribe-dark-80 hover:text-tribe-dark px-2 py-1 rounded-tribe hover:bg-tribe-dark-40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {dismissing ? s.dismissAllRunning : s.dismissAll}
+    </button>
   );
 }
