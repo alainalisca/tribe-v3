@@ -107,13 +107,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // < 14 days of history → auto-HEALTHY without scoring.
+    // < 14 days of history → auto-HEALTHY without scoring. Still
+    // persist the counters fetchChurnSignals just computed so the
+    // members list / dashboard surfaces have fresh values for the
+    // member even when they don't have a meaningful churn score yet.
     if (!hasEnoughHistory(signalsResult.joinedAt)) {
       const data = newMemberDefault(parsed.client_id);
-      await persistMemberScore(parsed.client_id, {
-        churnRiskScore: data.churnRiskScore,
-        healthStatus: data.healthStatus,
-      });
+      await persistMemberScore(
+        parsed.client_id,
+        {
+          churnRiskScore: data.churnRiskScore,
+          healthStatus: data.healthStatus,
+        },
+        signalsResult.counters
+      );
       const meta = log.success({ inputTokens: 0, outputTokens: 0 });
       const body: AIResponse<ScoreOutput> = { success: true, data, meta };
       return NextResponse.json(body);
@@ -121,10 +128,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Score + persist.
     const data = scoreMember({ memberId: parsed.client_id, signals: signalsResult.signals });
-    const persistRes = await persistMemberScore(parsed.client_id, {
-      churnRiskScore: data.churnRiskScore,
-      healthStatus: data.healthStatus,
-    });
+    const persistRes = await persistMemberScore(
+      parsed.client_id,
+      {
+        churnRiskScore: data.churnRiskScore,
+        healthStatus: data.healthStatus,
+      },
+      signalsResult.counters
+    );
     if (!persistRes.success) {
       // Score still returned even if persistence failed — the UI
       // can show the live result and we'll catch up on the next run.

@@ -21,6 +21,18 @@ import type { ChurnSignals } from './types';
 export interface ChurnSignalsResult {
   joinedAt: string;
   signals: ChurnSignals;
+  /**
+   * Cached attendance counters computed alongside the signals.
+   * Surfaced so the scoring pipeline can persist them back onto
+   * the clients row without a second scan — keeps the
+   * sessions_last_30_days / current_streak_days columns fresh
+   * for non-scorer surfaces (members list, dashboard stats, etc.).
+   */
+  counters: {
+    totalSessions: number;
+    sessionsLast30Days: number;
+    currentStreakDays: number;
+  };
 }
 
 /**
@@ -76,6 +88,18 @@ export async function fetchChurnSignals(clientId: string, gymId: string): Promis
     const daysSinceLastAttendance = lastSeen
       ? Math.max(0, Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)))
       : 9999;
+
+    // 2b. Total attended count — separate head-only query so we
+    //     don't have to scan all attendance to derive it. Cheap.
+    const { count: totalCount, error: totalCountErr } = await service
+      .from('client_attendance')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .eq('attended', true);
+    if (totalCountErr) {
+      logError(totalCountErr, { action: 'fetchChurnSignals.total_count', clientId, gymId });
+    }
+    const totalSessions = totalCount ?? 0;
 
     // 3. Pull every attended session in the last 90 days. One round-
     //    trip powers signals 3 + 4. Capped at 200 rows to bound the
@@ -179,6 +203,11 @@ export async function fetchChurnSignals(clientId: string, gymId: string): Promis
         cancellationRate30d,
         communityEngagementDrop,
       },
+      counters: {
+        totalSessions,
+        sessionsLast30Days: sessions30,
+        currentStreakDays,
+      },
     };
   } catch (error) {
     logError(error, { action: 'fetchChurnSignals.exception', clientId, gymId });
@@ -191,27 +220,57 @@ export async function fetchChurnSignals(clientId: string, gymId: string): Promis
  * handler / cron job calls this after scoreMember() to update the
  * cached churn_risk_score, churn_risk_updated_at, and health_status
  * columns. Service-role only.
+ *
+ * When the optional `counters` arg is passed (typical caller path
+ * from runIntelligenceForGym), this also writes back the cached
+ * attendance counters that fetchChurnSignals just computed —
+ * keeping clients.sessions_last_30_days / current_streak_days /
+ * total_sessions fresh for surfaces that read these columns
+ * directly (members list, dashboard stats, etc.) without forcing
+ * each of them to recompute the same windows.
  */
 export async function persistMemberScore(
   clientId: string,
-  score: { churnRiskScore: number; healthStatus: 'HEALTHY' | 'WATCH' | 'AT_RISK' }
+  score: { churnRiskScore: number; healthStatus: 'HEALTHY' | 'WATCH' | 'AT_RISK' },
+  counters?: { totalSessions: number; sessionsLast30Days: number; currentStreakDays: number }
 ): Promise<{ success: boolean; error?: string }> {
   const service = buildServiceClient();
   if (!service) return { success: false, error: 'service_role_missing' };
 
   try {
-    const { error } = await service
-      .from('clients')
-      .update({
-        churn_risk_score: score.churnRiskScore,
-        churn_risk_updated_at: new Date().toISOString(),
-        health_status: score.healthStatus,
-      })
-      .eq('id', clientId);
+    const update: Record<string, unknown> = {
+      churn_risk_score: score.churnRiskScore,
+      churn_risk_updated_at: new Date().toISOString(),
+      health_status: score.healthStatus,
+    };
+    if (counters) {
+      update.total_sessions = counters.totalSessions;
+      update.sessions_last_30_days = counters.sessionsLast30Days;
+      update.current_streak_days = counters.currentStreakDays;
+      // longest_streak_days is monotonic — we only bump it via a
+      // separate UPDATE that uses GREATEST so a missed sync doesn't
+      // overwrite a higher historical value.
+    }
+
+    const { error } = await service.from('clients').update(update).eq('id', clientId);
     if (error) {
       logError(error, { action: 'persistMemberScore', clientId });
       return { success: false, error: error.message };
     }
+
+    // Bump longest_streak_days when the current run set a fresh high.
+    if (counters && counters.currentStreakDays > 0) {
+      const { error: longestErr } = await service.rpc('bump_longest_streak', {
+        p_client_id: clientId,
+        p_streak: counters.currentStreakDays,
+      });
+      if (longestErr) {
+        // Non-fatal — the SQL function might not exist yet on older
+        // DBs. The next migration that adds it will fix this silently.
+        logError(longestErr, { action: 'persistMemberScore.longest_streak', clientId });
+      }
+    }
+
     return { success: true };
   } catch (error) {
     logError(error, { action: 'persistMemberScore.exception', clientId });

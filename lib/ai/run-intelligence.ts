@@ -94,10 +94,14 @@ export async function runIntelligenceForGym(
       } else {
         scoreOutput = scoreMember({ memberId: member.id, signals: signals.signals });
       }
-      await persistMemberScore(member.id, {
-        churnRiskScore: scoreOutput.churnRiskScore,
-        healthStatus: scoreOutput.healthStatus,
-      });
+      await persistMemberScore(
+        member.id,
+        {
+          churnRiskScore: scoreOutput.churnRiskScore,
+          healthStatus: scoreOutput.healthStatus,
+        },
+        signals.counters
+      );
       scored += 1;
       if (scoreOutput.healthStatus === 'AT_RISK') {
         atRiskCount += 1;
