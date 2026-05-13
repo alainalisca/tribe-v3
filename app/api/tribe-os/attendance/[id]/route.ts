@@ -25,6 +25,7 @@ import { ZodError } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { updateAttendance, deleteAttendance } from '@/lib/dal/clients';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { UpdateAttendanceInputSchema } from '@/lib/validations/clients';
 
 function firstZodMessage(error: ZodError): string {
@@ -80,7 +81,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase } = gate;
+  const { supabase, userId } = gate;
 
   try {
     const { id: attendanceId } = await params;
@@ -92,6 +93,30 @@ export async function DELETE(
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'delete_failed' }, { status: 500 });
     }
+
+    // Forensic record — keeps a paper trail of attendance deletions
+    // because they erase recorded revenue when paid=true. The snapshot
+    // captures the money-relevant fields so the audit row stays
+    // self-describing even after the row + client are gone.
+    const snapshot = result.data;
+    if (snapshot && snapshot.gym_id) {
+      await writeAuditEntry(supabase, {
+        gymId: snapshot.gym_id,
+        actorUserId: userId,
+        action: 'attendance.delete',
+        targetType: 'attendance',
+        targetId: snapshot.id,
+        payload: {
+          client_id: snapshot.client_id,
+          session_id: snapshot.session_id,
+          attended: snapshot.attended,
+          paid: snapshot.paid,
+          amount_paid_cents: snapshot.amount_paid_cents,
+          currency: snapshot.currency,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logError(error, { route: 'DELETE /api/tribe-os/attendance/[id]' });

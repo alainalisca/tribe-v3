@@ -29,6 +29,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 
 const BulkDismissSchema = z
   .object({
@@ -89,7 +90,33 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: { dismissed: count ?? 0 } });
+    const dismissed = count ?? 0;
+
+    // Forensic record — bulk dismiss is sensitive in multi-coach gyms
+    // (one coach can hide problems from another by mass-dismissing
+    // their assigned-to insights). Only log when we actually changed
+    // something; a zero-count call is a no-op worth ignoring.
+    if (dismissed > 0 && gymId) {
+      await writeAuditEntry(supabase, {
+        gymId,
+        actorUserId: userId,
+        action: 'insight.bulk_dismiss',
+        targetType: 'insight',
+        // Bulk action has no single target; the payload describes
+        // the filter that was applied + how many rows it touched.
+        targetId: null,
+        payload: {
+          dismissed,
+          filter: {
+            severity: parsed.severity ?? null,
+            type: parsed.type ?? null,
+            ids: parsed.ids ?? null,
+          },
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true, data: { dismissed } });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/intelligence/bulk-dismiss' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });

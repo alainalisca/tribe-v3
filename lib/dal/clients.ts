@@ -710,20 +710,72 @@ export async function updateAttendance(
   }
 }
 
+/** Snapshot of an attendance row, captured during delete for forensics. */
+export interface DeletedAttendanceSnapshot {
+  id: string;
+  client_id: string;
+  session_id: string;
+  attended: boolean;
+  paid: boolean;
+  amount_paid_cents: number | null;
+  currency: string | null;
+  /** Gym id resolved via the joined client. Null if the client row was already gone. */
+  gym_id: string | null;
+}
+
 /**
  * Hard-delete an attendance row. The 079 counter trigger fires on
  * DELETE so the client's cached counters update automatically. Use
  * sparingly — usually editing the row is the right move; deletion
  * is for "this was recorded for the wrong client entirely."
+ *
+ * Returns a snapshot of the deleted row so the caller can write a
+ * forensic audit entry (action: 'attendance.delete') without a
+ * separate pre-delete fetch. The snapshot covers money-relevant
+ * fields (paid, amount_paid_cents, currency) because attendance
+ * deletion can erase recorded revenue and we want a paper trail.
  */
-export async function deleteAttendance(supabase: SupabaseClient, attendanceId: string): Promise<DalResult<null>> {
+export async function deleteAttendance(
+  supabase: SupabaseClient,
+  attendanceId: string
+): Promise<DalResult<DeletedAttendanceSnapshot | null>> {
   try {
-    const { error } = await supabase.from('client_attendance').delete().eq('id', attendanceId);
+    // .delete().select() returns the deleted rows (Postgres RETURNING).
+    // We also pull the parent client's gym_id in the same round trip
+    // so the route handler can call writeAuditEntry with the correct
+    // gymId without a follow-up query.
+    const { data, error } = await supabase
+      .from('client_attendance')
+      .delete()
+      .eq('id', attendanceId)
+      .select(
+        `
+          id, client_id, session_id, attended, paid, amount_paid_cents, currency,
+          client:clients(gym_id)
+        `
+      )
+      .maybeSingle();
     if (error) {
       logError(error, { action: 'deleteAttendance', attendanceId });
       return { success: false, error: error.message };
     }
-    return { success: true, data: null };
+    if (!data) {
+      // Row didn't exist (already deleted, or RLS hid it). Return success
+      // with null snapshot — the caller treats this as a no-op.
+      return { success: true, data: null };
+    }
+    const client = data.client as unknown as { gym_id: string | null } | null;
+    const snapshot: DeletedAttendanceSnapshot = {
+      id: data.id as string,
+      client_id: data.client_id as string,
+      session_id: data.session_id as string,
+      attended: data.attended as boolean,
+      paid: data.paid as boolean,
+      amount_paid_cents: (data.amount_paid_cents as number | null) ?? null,
+      currency: (data.currency as string | null) ?? null,
+      gym_id: client?.gym_id ?? null,
+    };
+    return { success: true, data: snapshot };
   } catch (error) {
     logError(error, { action: 'deleteAttendance.exception', attendanceId });
     return { success: false, error: 'Failed to delete attendance' };

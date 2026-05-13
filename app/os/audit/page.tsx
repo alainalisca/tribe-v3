@@ -115,6 +115,9 @@ const copy = {
 const ACTION_LABELS: Record<string, { en: string; es: string }> = {
   'client.archive': { en: 'Client archived', es: 'Cliente archivado' },
   'client.purge': { en: 'Client purged', es: 'Cliente eliminado (GDPR)' },
+  'attendance.delete': { en: 'Attendance deleted', es: 'Asistencia eliminada' },
+  'gym.settings_update': { en: 'Gym settings updated', es: 'Ajustes del gym actualizados' },
+  'insight.bulk_dismiss': { en: 'Insights bulk-dismissed', es: 'Insights descartados en lote' },
 };
 
 const TARGET_LABELS: Record<string, { en: string; es: string }> = {
