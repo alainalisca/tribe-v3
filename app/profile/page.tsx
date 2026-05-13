@@ -13,6 +13,7 @@ import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
 import AchievementBadges from '@/components/AchievementBadges';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
+import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 
 export default function ProfilePage() {
   const { language, t } = useLanguage();
@@ -181,6 +182,11 @@ export default function ProfilePage() {
               </span>
             </Link>
           )}
+
+          {/* My Coach — gym-side view of the user's training as
+              their coach records it. Auto-hides when the user isn't
+              a client of any gym, so non-gym users never see it. */}
+          {profile?.id && <MyCoachEntryCard />}
 
           {/* Instructor Dashboard (instructors only) */}
           {profile?.is_instructor && profile?.id && (
