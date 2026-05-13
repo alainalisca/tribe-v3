@@ -52,7 +52,10 @@ const copy = {
     dismissAria: 'Dismiss onboarding checklist',
     addClient: 'Add your first client',
     addClientDone: 'First client added',
-    addClientHint: 'Build your roster so attendance and revenue start tracking.',
+    addClientHint:
+      'Build your roster so attendance and revenue start tracking. Add manually or import from a CSV — works the same either way.',
+    addClientSecondaryLabel: 'Import CSV',
+    addClientSecondaryHref: '/os/members',
     recordAttendance: 'Record your first attendance',
     recordAttendanceDone: 'First attendance recorded',
     recordAttendanceHint: 'Open any client and tap "Record attendance" to mark a session.',
@@ -67,7 +70,10 @@ const copy = {
     dismissAria: 'Cerrar la lista de configuración',
     addClient: 'Agrega tu primer cliente',
     addClientDone: 'Primer cliente agregado',
-    addClientHint: 'Construye tu lista para empezar a registrar asistencia e ingresos.',
+    addClientHint:
+      'Construye tu lista para empezar a registrar asistencia e ingresos. Agrega manualmente o importa desde un CSV — ambos funcionan igual.',
+    addClientSecondaryLabel: 'Importar CSV',
+    addClientSecondaryHref: '/os/members',
     recordAttendance: 'Registra tu primera asistencia',
     recordAttendanceDone: 'Primera asistencia registrada',
     recordAttendanceHint: 'Abre cualquier cliente y toca "Registrar asistencia" para marcar una sesión.',
@@ -161,6 +167,13 @@ export default function OnboardingChecklist() {
           hint={s.addClientHint}
           href="/os/clients/new"
           eventName="onboarding_clients"
+          // When the client step is still pending, surface a second
+          // path: import from CSV. New coaches with an existing
+          // spreadsheet roster don't have to retype it client by
+          // client — they can land in the importer directly.
+          secondaryHref={state.data.has_client ? undefined : s.addClientSecondaryHref}
+          secondaryLabel={state.data.has_client ? undefined : s.addClientSecondaryLabel}
+          secondaryEventName="onboarding_clients_csv"
         />
         <ChecklistItem
           done={state.data.has_attendance}
@@ -193,6 +206,9 @@ function ChecklistItem({
   href,
   eventName,
   badge,
+  secondaryHref,
+  secondaryLabel,
+  secondaryEventName,
 }: {
   done: boolean;
   title: string;
@@ -200,7 +216,17 @@ function ChecklistItem({
   href: string;
   eventName: string;
   badge?: string;
+  /** Optional secondary action shown as a small chip under the hint
+   *  (e.g. "Import CSV" alongside "Add your first client"). Only
+   *  shown when the item is NOT done — completed items don't need
+   *  alternative paths. */
+  secondaryHref?: string;
+  secondaryLabel?: string;
+  secondaryEventName?: string;
 }) {
+  // The primary row stays clickable (covers the whole card). The
+  // secondary action sits inside the row but stops event propagation
+  // so it doesn't trigger the primary navigation when clicked.
   return (
     <li>
       <Link
@@ -227,6 +253,23 @@ function ChecklistItem({
             ) : null}
           </div>
           <p className={`text-xs mt-0.5 leading-relaxed ${done ? 'text-gray-400' : 'text-gray-600'}`}>{hint}</p>
+          {secondaryHref && secondaryLabel && !done ? (
+            <Link
+              href={secondaryHref}
+              onClick={(e) => {
+                // Stop propagation so the outer Link doesn't also
+                // fire. The inner navigation handles this click.
+                e.stopPropagation();
+                if (secondaryEventName) {
+                  trackEvent('tribe_os_onboarding_step_clicked', { step: secondaryEventName });
+                }
+              }}
+              className="inline-flex items-center gap-1 mt-2 px-2.5 py-1 bg-gray-100 hover:bg-tribe-green/10 text-gray-700 hover:text-tribe-green-dark text-xs font-semibold rounded-full transition-colors"
+            >
+              {secondaryLabel}
+              <ChevronRight className="w-3 h-3" />
+            </Link>
+          ) : null}
         </div>
         {!done ? <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 mt-1" /> : null}
       </Link>

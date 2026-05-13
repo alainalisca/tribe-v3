@@ -63,7 +63,8 @@ const copy = {
     retry: 'Retry',
     emptyTitleNew: 'No insights yet',
     emptyHintNew:
-      'The nightly intelligence engine writes alerts here when it spots churn risk, retention opportunities, revenue gaps, or growth signals. Check back tomorrow.',
+      'The nightly intelligence engine writes alerts here when it spots churn risk, retention opportunities, revenue gaps, or growth signals. If you’re brand new, add clients and record a few sessions first — the engine needs activity to spot patterns in.',
+    emptyAddMembersCta: 'Add members',
     emptyTitleClean: 'All clear',
     emptyHintClean: 'Every active alert has been actioned. Nice work.',
     severity: {
@@ -110,7 +111,8 @@ const copy = {
     retry: 'Reintentar',
     emptyTitleNew: 'Aún sin insights',
     emptyHintNew:
-      'El motor nocturno escribe alertas aquí cuando detecta riesgo de baja, oportunidades de retención, brechas de ingresos o señales de crecimiento. Vuelve mañana.',
+      'El motor nocturno escribe alertas aquí cuando detecta riesgo de baja, oportunidades de retención, brechas de ingresos o señales de crecimiento. Si recién empiezas, agrega clientes y registra algunas sesiones primero — el motor necesita actividad para detectar patrones.',
+    emptyAddMembersCta: 'Agregar miembros',
     emptyTitleClean: 'Todo en orden',
     emptyHintClean: 'Cada alerta activa fue atendida. Buen trabajo.',
     severity: {
@@ -397,6 +399,20 @@ function EmptyState({ copy: s, view }: { copy: typeof copy.en | typeof copy.es; 
         </div>
         <h2 className="text-lg font-semibold text-tribe-dark">{title}</h2>
         <p className="text-sm text-tribe-dark-80 max-w-md mx-auto leading-relaxed">{hint}</p>
+        {/* CTA on the "active" empty state nudges users toward the
+            prereq surface. History view doesn't need one — there's
+            no recovery path; the user just hasn't dismissed anything yet. */}
+        {view === 'active' ? (
+          <div className="pt-2">
+            <Link
+              href="/os/members"
+              className="inline-flex items-center gap-1 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full hover:shadow-tribe transition-shadow"
+            >
+              {s.emptyAddMembersCta}
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -34,13 +34,13 @@ import {
   MessageSquare,
   Brain,
   Settings as SettingsIcon,
-  Bell,
   HelpCircle,
   Home as HomeIcon,
   LogOut,
   Menu,
   X as XIcon,
 } from 'lucide-react';
+import OSShellBell from './OSShellBell';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -315,15 +315,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           >
             <HomeIcon className="w-5 h-5" />
           </Link>
-          <button
-            type="button"
-            aria-label={s.bellAria}
-            className="relative w-9 h-9 inline-flex items-center justify-center text-tribe-dark-80 hover:text-tribe-dark rounded-full hover:bg-tribe-dark-40 transition-colors"
-          >
-            <Bell className="w-5 h-5" />
-            {/* Static dot for now — backend hook in a later mission. */}
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-tribe-danger rounded-full" />
-          </button>
+          <OSShellBell ariaLabel={s.bellAria} />
           <Link
             href="/feedback"
             aria-label={s.helpAria}
