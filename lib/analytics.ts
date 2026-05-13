@@ -176,6 +176,9 @@ type EventName =
   | 'tribe_os_team_member_added' // POST /api/tribe-os/teams/[id]/members success
   | 'tribe_os_team_member_removed' // DELETE /api/tribe-os/teams/[id]/members success
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
+  | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
+  | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success
+  | 'tribe_os_insight_action_clicked' // user clicked the action button on an insight card
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)
