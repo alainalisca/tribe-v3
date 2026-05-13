@@ -1,377 +1,320 @@
 'use client';
 
 /**
- * Tribe.OS shell — persistent top navigation rendered on every
- * /os/* surface via app/os/layout.tsx.
+ * Tribe.OS shell — persistent dark sidebar + light top bar rendered
+ * on every `/os/*` surface via `app/os/layout.tsx`.
  *
- * Why this exists: pre-shell, every OS surface was an island. You
- * had to go back to the dashboard between every action — four taps
- * to move from /os/clients to /os/gym, no visible "where am I" or
- * "what else exists in Tribe.OS" affordance. The shell collapses
- * that to one tap and surfaces the whole feature set at a glance.
+ * Layout (desktop, lg+):
+ *   - Left dark sidebar (~224px wide):
+ *       Tribe. wordmark + OS tag
+ *       Vertical nav: Dashboard, Members, Teams, Programs, Schedule,
+ *                     Revenue, Messages, Intelligence, Settings
+ *       User card + Sign Out pinned to the bottom
+ *   - Right main column on a light-gray surface:
+ *       Sticky top bar with section title + notification bell + help
+ *       Page content below
  *
- * Structure:
- *   Left:   "Tribe.OS" wordmark, links back to /os/dashboard
- *   Center: four primary nav items (Panel, Clientes, Ingresos,
- *           Entrenadores), each highlighting when active
- *   Right:  account menu — gym settings, manage subscription,
- *           and a "back to Tribe" escape hatch
+ * Mobile: sidebar collapses to a slide-out drawer triggered from a
+ * hamburger button in the top bar.
  *
- * Mobile: the center nav becomes a horizontal-scrollable row of
- * pills; the account menu collapses into a single icon-button that
- * opens a small overlay menu. Both layouts share the same brand
- * tokens as the rest of Tribe.OS (`tribe-dark`, `tribe-green`,
- * `tribe-mid`, `tribe-surface`).
- *
- * The page-level subtitles each existing page renders are unchanged;
- * the shell sits ABOVE them, so the existing per-page H1 still
- * provides the "what page am I on" signal at scroll-top.
- *
- * The shell does NOT include the page header — pages keep their
- * own H1 + subtitle. This is intentional so each surface can keep
- * its own breathing room and per-page actions without the shell
- * dictating layout. The shell is purely navigation.
+ * Non-premium users see only the main column (no sidebar) — the page
+ * itself surfaces the upgrade flow.
  */
 
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Building2, ChevronDown, HelpCircle, Home, LogOut, Menu, TrendingUp, UserCog, Users } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  Users2,
+  ClipboardList,
+  Calendar,
+  DollarSign,
+  MessageSquare,
+  Brain,
+  Settings as SettingsIcon,
+  Bell,
+  HelpCircle,
+  LogOut,
+  Menu,
+  X as XIcon,
+} from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
-type PremiumProbe = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
+type PremiumProbe = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> & {
+  name?: string | null;
+  email?: string | null;
+};
+
+type PremiumStatus = 'unknown' | 'premium' | 'not_premium';
 
 // ES PENDING VERONICA REVIEW
 const copy = {
   en: {
-    wordmark: 'Tribe.OS',
+    wordmark: 'Tribe.',
+    wordmarkSub: 'OS',
+    topBarTitle: 'Dashboard',
     nav: {
       dashboard: 'Dashboard',
-      clients: 'Clients',
+      members: 'Members',
+      teams: 'Teams',
+      programs: 'Programs',
+      schedule: 'Schedule',
       revenue: 'Revenue',
-      coaches: 'Coaches',
+      messages: 'Messages',
+      intelligence: 'Intelligence',
+      settings: 'Settings',
     },
-    accountMenuLabel: 'Account',
-    accountMenu: {
-      gym: 'Gym settings',
-      help: 'Help & feedback',
-      backToTribe: 'Back to Tribe',
-    },
+    bellAria: 'Notifications',
+    helpAria: 'Help and feedback',
+    signOut: 'Sign Out',
+    userLabel: 'User',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
   },
   es: {
-    wordmark: 'Tribe.OS',
+    wordmark: 'Tribe.',
+    wordmarkSub: 'OS',
+    topBarTitle: 'Panel',
     nav: {
       dashboard: 'Panel',
-      clients: 'Clientes',
+      members: 'Miembros',
+      teams: 'Equipos',
+      programs: 'Programas',
+      schedule: 'Horario',
       revenue: 'Ingresos',
-      coaches: 'Entrenadores',
+      messages: 'Mensajes',
+      intelligence: 'Inteligencia',
+      settings: 'Ajustes',
     },
-    accountMenuLabel: 'Cuenta',
-    accountMenu: {
-      gym: 'Configuración del gym',
-      help: 'Ayuda y comentarios',
-      backToTribe: 'Volver a Tribe',
-    },
+    bellAria: 'Notificaciones',
+    helpAria: 'Ayuda y comentarios',
+    signOut: 'Cerrar sesión',
+    userLabel: 'Usuario',
+    openMenu: 'Abrir menú',
+    closeMenu: 'Cerrar menú',
   },
 } as const;
 
 interface NavItem {
   href: string;
   labelKey: keyof (typeof copy.en)['nav'];
-  Icon: typeof Home;
-  /**
-   * Path prefix this nav item is considered active for. The
-   * /os/clients item should be active when on /os/clients/*,
-   * including detail and edit pages.
-   */
+  Icon: typeof LayoutDashboard;
+  /** Path prefix this item is considered active for. */
   matchPrefix: string;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { href: '/os/dashboard', labelKey: 'dashboard', Icon: Home, matchPrefix: '/os/dashboard' },
-  { href: '/os/clients', labelKey: 'clients', Icon: Users, matchPrefix: '/os/clients' },
-  { href: '/os/revenue', labelKey: 'revenue', Icon: TrendingUp, matchPrefix: '/os/revenue' },
-  { href: '/os/coaches', labelKey: 'coaches', Icon: UserCog, matchPrefix: '/os/coaches' },
+  { href: '/os/dashboard', labelKey: 'dashboard', Icon: LayoutDashboard, matchPrefix: '/os/dashboard' },
+  { href: '/os/members', labelKey: 'members', Icon: Users, matchPrefix: '/os/members' },
+  { href: '/os/teams', labelKey: 'teams', Icon: Users2, matchPrefix: '/os/teams' },
+  { href: '/os/programs', labelKey: 'programs', Icon: ClipboardList, matchPrefix: '/os/programs' },
+  { href: '/os/schedule', labelKey: 'schedule', Icon: Calendar, matchPrefix: '/os/schedule' },
+  { href: '/os/revenue', labelKey: 'revenue', Icon: DollarSign, matchPrefix: '/os/revenue' },
+  { href: '/os/messages', labelKey: 'messages', Icon: MessageSquare, matchPrefix: '/os/messages' },
+  { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
+  { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;
 
 function isActive(pathname: string | null, prefix: string): boolean {
   if (!pathname) return false;
-  // Exact match OR child-route match (e.g. /os/clients/[id]/edit)
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
-
-/**
- * Tracks whether the signed-in user is on Tribe.OS premium so the
- * shell can hide nav links that would just bounce them via
- * useTribeOSPremiumGate. Without this, a non-premium user lands on
- * /os/dashboard, sees the four nav pills, clicks one → marketing
- * page redirect. Worse UX than no nav at all.
- *
- * Three states:
- *   - 'unknown': initial probe in progress; render nav defensively
- *     so we don't flash a no-nav state to premium users on every
- *     page load.
- *   - 'premium': render the full nav.
- *   - 'not_premium': render only the wordmark + account menu. The
- *     dashboard page itself surfaces the upgrade card.
- */
-type PremiumStatus = 'unknown' | 'premium' | 'not_premium';
 
 export default function OSShell({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const s = copy[language];
   const pathname = usePathname();
-  const [accountOpen, setAccountOpen] = useState(false);
   const [premiumStatus, setPremiumStatus] = useState<PremiumStatus>('unknown');
+  const [user, setUser] = useState<{ email: string | null; name: string | null } | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const supabase = createClient();
       const {
-        data: { user },
+        data: { user: authUser },
       } = await supabase.auth.getUser();
-      if (!user) {
-        if (!cancelled) setPremiumStatus('not_premium');
+      if (!authUser) {
+        if (!cancelled) {
+          setPremiumStatus('not_premium');
+          setUser(null);
+        }
         return;
       }
       const { data, error } = await supabase
         .from('users')
-        .select('tribe_os_tier, tribe_os_status')
-        .eq('id', user.id)
+        .select('tribe_os_tier, tribe_os_status, name, email')
+        .eq('id', authUser.id)
         .single();
       if (cancelled) return;
-      if (error) {
-        // Fail closed — treat lookup errors as not-premium so we
-        // don't accidentally surface nav to someone who'd just be
-        // bounced. The page-level gate does the actual gating.
+      if (error || !data) {
+        // Fail closed — non-premium gets the minimal shell.
         setPremiumStatus('not_premium');
+        setUser({ email: authUser.email ?? null, name: null });
         return;
       }
-      setPremiumStatus(isTribeOSPremiumActive(data as PremiumProbe | null) ? 'premium' : 'not_premium');
+      const row = data as PremiumProbe;
+      setPremiumStatus(isTribeOSPremiumActive(row) ? 'premium' : 'not_premium');
+      setUser({ email: row.email ?? authUser.email ?? null, name: row.name ?? null });
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const showNav = premiumStatus !== 'not_premium';
+  // Lock body scroll while the mobile drawer is open so the page
+  // behind doesn't scroll under it.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (mobileNavOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [mobileNavOpen]);
+
+  async function handleSignOut() {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      window.location.href = '/';
+    }
+  }
+
+  const showFullShell = premiumStatus !== 'not_premium';
+  const initial = (user?.name?.charAt(0) || user?.email?.charAt(0) || '?').toUpperCase();
+  const displayEmail = user?.email ?? '';
+
+  // Non-premium / unknown-and-not-yet-signed-in: render bare children
+  // with only the light surface. The page-level upgrade flow handles
+  // the rest. Avoids flashing a sidebar to users who can't use it.
+  if (premiumStatus === 'not_premium') {
+    return <div className="min-h-screen bg-gray-50 text-gray-900">{children}</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-tribe-dark">
-      {/* Sticky top bar. z-30 so it sits above page content but below
-          modals/dialogs. pt-[env(safe-area-inset-top)] adds room
-          for the iOS status bar / notch in Capacitor builds; the
-          inset evaluates to 0 on the web so desktop is unaffected. */}
-      <header className="sticky top-0 z-30 border-b border-tribe-mid/60 bg-tribe-dark/95 backdrop-blur supports-[backdrop-filter]:bg-tribe-dark/80 pt-[env(safe-area-inset-top)]">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 sm:gap-6">
-          {/* Wordmark */}
-          <Link
-            href="/os/dashboard"
-            className="flex items-center gap-1 text-sm font-black tracking-tight text-white shrink-0 hover:text-tribe-green transition-colors"
+    <div className="min-h-screen bg-gray-50 text-gray-900 lg:flex">
+      {/* Mobile scrim. Closes the drawer on tap. */}
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => setMobileNavOpen(false)}
+          className="lg:hidden fixed inset-0 z-40 bg-black/40"
+        />
+      ) : null}
+
+      {/* Sidebar. Dark surface so the lime accents pop and the
+          content-area light theme reads as the "canvas". */}
+      <aside
+        className={`fixed lg:sticky top-0 z-50 h-screen w-56 bg-tribe-dark text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {/* Wordmark + close-button on mobile */}
+        <div className="px-5 py-4 flex items-center gap-2">
+          <span className="text-xl font-black tracking-tight">{s.wordmark}</span>
+          <span className="text-[10px] font-bold tracking-[0.15em] text-white/40 uppercase">{s.wordmarkSub}</span>
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(false)}
+            aria-label={s.closeMenu}
+            className="lg:hidden ml-auto p-1 text-white/60 hover:text-white"
           >
-            <span>Tribe</span>
-            <span className="text-tribe-green">.OS</span>
-          </Link>
-
-          {/* Primary nav (desktop/tablet) — only rendered when the
-              user is premium (or while we're still probing, to avoid
-              a no-nav flash for premium users). Non-premium users
-              see just the wordmark and the account menu's "Back to
-              Tribe" escape.
-              Hidden on mobile (sm:hidden inverse → hidden sm:flex)
-              because the bottom tab bar at the foot of the screen
-              handles mobile navigation more thumb-reachably. */}
-          {showNav ? (
-            <nav
-              className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-none"
-              aria-label={s.accountMenuLabel}
-            >
-              <ul className="flex items-center gap-1 sm:gap-2">
-                {NAV_ITEMS.map((item) => {
-                  const active = isActive(pathname, item.matchPrefix);
-                  const label = s.nav[item.labelKey];
-                  const Icon = item.Icon;
-                  return (
-                    <li key={item.href} className="shrink-0">
-                      <Link
-                        href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full transition-colors whitespace-nowrap ${
-                          active
-                            ? 'bg-tribe-green text-tribe-dark'
-                            : 'text-white/70 hover:text-white hover:bg-tribe-surface'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5" />
-                        {label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          ) : (
-            <div className="hidden sm:block flex-1" />
-          )}
-          {/* Mobile spacer so the wordmark stays left-anchored and
-              the account menu stays right-anchored when the desktop
-              nav is hidden. */}
-          <div className="sm:hidden flex-1" />
-
-          {/* Account menu */}
-          <AccountMenu
-            open={accountOpen}
-            setOpen={setAccountOpen}
-            copy={s.accountMenu}
-            label={s.accountMenuLabel}
-            includeGymLink={premiumStatus === 'premium'}
-          />
+            <XIcon className="w-4 h-4" />
+          </button>
         </div>
-      </header>
 
-      {/* Page content. Pages render their own padding + max-width.
-          pb-20 sm:pb-0 reserves room for the mobile bottom tab bar
-          so content never gets hidden behind it. */}
-      <div className="pb-20 sm:pb-0">{children}</div>
-
-      {/* Mobile bottom tab bar — premium users only, same NAV_ITEMS
-          as the desktop top nav. Fixed at the foot of the viewport
-          with safe-area-inset-bottom so the iOS home-indicator gap
-          doesn't make tabs feel cramped. Hidden on sm+ where the
-          top nav takes over. */}
-      {showNav ? (
-        <nav
-          aria-label={s.accountMenuLabel}
-          className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-tribe-mid/60 bg-tribe-dark/95 backdrop-blur supports-[backdrop-filter]:bg-tribe-dark/80 pb-[env(safe-area-inset-bottom)]"
-        >
-          <ul className="grid grid-cols-4 h-16">
+        {/* Nav */}
+        <nav aria-label="Tribe.OS" className="flex-1 px-3 overflow-y-auto">
+          <ul className="space-y-1">
             {NAV_ITEMS.map((item) => {
               const active = isActive(pathname, item.matchPrefix);
               const label = s.nav[item.labelKey];
               const Icon = item.Icon;
               return (
-                <li key={item.href} className="flex">
+                <li key={item.href}>
                   <Link
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
-                    className={`flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
-                      active ? 'text-tribe-green' : 'text-white/60 hover:text-white'
+                    onClick={() => setMobileNavOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                      active ? 'bg-tribe-green text-tribe-dark' : 'text-white/70 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : ''}`} />
-                    <span>{label}</span>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{label}</span>
                   </Link>
                 </li>
               );
             })}
           </ul>
         </nav>
-      ) : null}
-    </div>
-  );
-}
 
-/**
- * The `copy` prop here is `(typeof copy)['en' | 'es']['accountMenu']`
- * — TypeScript's `as const` narrows each branch to its literal text,
- * so the union of EN and ES values is a wider type than either alone.
- * Spelled out as plain string shapes to avoid the narrowing collision.
- */
-function AccountMenu({
-  open,
-  setOpen,
-  copy: c,
-  label,
-  includeGymLink,
-}: {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  copy: { gym: string; help: string; backToTribe: string };
-  label: string;
-  /** Gym settings is a premium-only surface; hide for non-premium users. */
-  includeGymLink: boolean;
-}) {
-  // Close the menu on Escape. Without this, keyboard users have no
-  // way to dismiss the menu other than clicking the scrim.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, setOpen]);
-
-  return (
-    <div className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={label}
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs sm:text-sm font-semibold rounded-full text-white/70 hover:text-white hover:bg-tribe-surface transition-colors"
-      >
-        <Menu className="w-4 h-4" />
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open ? (
-        <>
-          {/* Click-outside scrim. Transparent; closes the menu. */}
+        {/* User card + Sign Out */}
+        <div className="px-3 pb-3 pt-3 border-t border-white/10 space-y-2">
+          <div className="flex items-center gap-2 px-2 py-1">
+            <div className="w-9 h-9 rounded-full bg-tribe-green text-tribe-dark font-black flex items-center justify-center text-sm shrink-0">
+              {initial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate">{user?.name || s.userLabel}</p>
+              <p className="text-[10px] text-white/50 truncate">{displayEmail}</p>
+            </div>
+          </div>
           <button
             type="button"
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={() => setOpen(false)}
-            className="fixed inset-0 z-40 cursor-default"
-          />
-          {/* Menu panel */}
-          <div
-            role="menu"
-            className="absolute right-0 top-full mt-1 z-50 min-w-[220px] bg-tribe-surface border border-tribe-mid rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] overflow-hidden"
+            onClick={handleSignOut}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-tribe-red bg-tribe-red/10 hover:bg-tribe-red/20 rounded-lg transition-colors"
           >
-            {includeGymLink ? (
-              <>
-                <MenuItem href="/os/gym" Icon={Building2} label={c.gym} onClick={() => setOpen(false)} />
-                <div className="h-px bg-tribe-mid/60" />
-              </>
-            ) : null}
-            <MenuItem href="/feedback" Icon={HelpCircle} label={c.help} onClick={() => setOpen(false)} />
-            <div className="h-px bg-tribe-mid/60" />
-            <MenuItem href="/" Icon={LogOut} label={c.backToTribe} onClick={() => setOpen(false)} />
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
+            <LogOut className="w-3.5 h-3.5" />
+            {s.signOut}
+          </button>
+        </div>
+      </aside>
 
-function MenuItem({
-  href,
-  Icon,
-  label,
-  onClick,
-  hint,
-}: {
-  href: string;
-  Icon: typeof Home;
-  label: string;
-  onClick: () => void;
-  hint?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      role="menuitem"
-      onClick={onClick}
-      className="flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-tribe-mid transition-colors"
-    >
-      <Icon className={`w-4 h-4 shrink-0 ${hint ? 'text-white/50' : 'text-white/70'}`} />
-      <span className={hint ? 'text-white/85' : ''}>{label}</span>
-    </Link>
+      {/* Main column */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 h-14 flex items-center gap-2 px-4 lg:px-8 pt-[env(safe-area-inset-top)]">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label={s.openMenu}
+            className="lg:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">{s.topBarTitle}</h1>
+          <div className="flex-1" />
+          <button
+            type="button"
+            aria-label={s.bellAria}
+            className="relative w-9 h-9 inline-flex items-center justify-center text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <Bell className="w-5 h-5" />
+            {/* Static dot for now — backend hook in a later mission. */}
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-tribe-red rounded-full" />
+          </button>
+          <Link
+            href="/feedback"
+            aria-label={s.helpAria}
+            className="w-9 h-9 inline-flex items-center justify-center bg-tribe-green/25 text-tribe-dark rounded-full hover:bg-tribe-green/45 transition-colors"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </Link>
+        </header>
+
+        <main className="flex-1">{children}</main>
+      </div>
+    </div>
   );
 }
