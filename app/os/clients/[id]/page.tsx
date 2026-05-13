@@ -27,6 +27,7 @@ import ChurnRiskPanel from '@/components/tribe-os/ChurnRiskPanel';
 import TrainingPartnersSection from '@/components/tribe-os/TrainingPartnersSection';
 import InsightHistorySection from '@/components/tribe-os/InsightHistorySection';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
+import AttendanceHeatmap from '@/components/tribe-os/AttendanceHeatmap';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -543,6 +544,12 @@ export default function ClientDetailPage() {
                 <p className="text-sm text-gray-500">{s.noHealth}</p>
               )}
             </section>
+
+            {/* Last-90-days attendance heatmap. Visual recall of
+                the rhythm — coaches spot a slipping streak or
+                accelerating cadence faster than reading numbers.
+                Hides itself when there's nothing to show. */}
+            <AttendanceHeatmap clientId={state.client.id} />
 
             {/* Community graph — top training partners. Hides itself
                 when this client hasn't co-attended any sessions yet

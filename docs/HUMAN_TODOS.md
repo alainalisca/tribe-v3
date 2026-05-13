@@ -4,6 +4,24 @@ Running list of items the autonomous build can't finish on its own.
 Grows as I keep working. Sorted by urgency — top items block the
 biggest unknowns.
 
+## ⚠️ When you're ready to fire the weekly summary manually
+
+The Vercel **Cron Jobs UI** only shows production crons, and Tribe.OS
+crons live on `feature/tribe-os` (preview), not `main` (production).
+You can't click "Run" from the UI yet.
+
+To fire it via curl:
+
+1. Vercel → **Settings → Environment Variables** → reveal `CRON_SECRET`
+2. Paste the secret in place of `PASTE_SECRET_HERE` below
+3. Run:
+
+```bash
+curl -H "Authorization: Bearer PASTE_SECRET_HERE" https://tribe-v3-git-feature-tribe-os-alain-aliscas-projects.vercel.app/api/cron/tribe-os/weekly-summary
+```
+
+You'll get JSON back. Then check your inbox.
+
 ## ⚠️ Cron jobs aren't scheduled until merge to main
 
 Vercel reads the cron schedule **only from the production deployment**.
@@ -217,7 +235,18 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
     on `/os/clients/[id]` and `/my-coach`. Coach sees it → cue to
     acknowledge; member sees their own → pride / motivation.
     Persistent (not toast) so it survives missed days and visits.
-12. ✅ **Weekly summary email** — shipped. New cron at `0 8 * * 1`
+12. ✅ **Attendance heatmap** — shipped. Last 90 days of attendance
+    as a 13×7 grid on /os/clients/[id]. Lime cells = paid sessions,
+    light green = attended (unpaid), gray = no record. Hides itself
+    when there's nothing in the window.
+13. ✅ **Insight template contract tests** — shipped. 37 new tests
+    that fail if anyone adds a template key without both en + es
+    translations, or if the rendered output has unresolved
+    `{placeholders}`. Catches bilingual drift before production.
+
+    Test totals: 85 passing across 5 files. Run with `npm test`.
+
+14. ✅ **Weekly summary email** — shipped. New cron at `0 8 * * 1`
     (Monday 8am UTC) sends a bilingual recap to each premium gym
     owner with last week's stats: sessions recorded, unique
     attenders, revenue, top attender, at-risk count, active alerts.
@@ -235,16 +264,16 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
 
     (Replace the URL with your actual deployment.)
 
-13. **"Sign up for Tribe" invite email** — when a coach adds a client
+15. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-14. **Stripe Connect rough-edge polish** — but this is hard to do
+16. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-15. **Per-attendance trigger optimization** — migration 079 recomputes
+17. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-16. **Generator feedback loop** — use the feedback data from #5 to:
+18. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
