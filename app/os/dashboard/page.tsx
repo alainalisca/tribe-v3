@@ -21,14 +21,16 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CreditCard, HelpCircle } from 'lucide-react';
+import { CreditCard, HelpCircle, Plus } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
+import DashboardStats from '@/components/tribe-os/DashboardStats';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -50,6 +52,7 @@ const copy = {
     portalLoading: 'Opening Stripe',
     portalError: 'Could not open Stripe portal. Please try again.',
     replayTour: 'Take the tour again',
+    createSessionCta: 'Create a paid session',
     backLabel: 'Back to Tribe',
     redirectingLabel: 'Redirecting',
     loadingLabel: 'Loading',
@@ -82,6 +85,7 @@ const copy = {
     portalLoading: 'Abriendo Stripe',
     portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
     replayTour: 'Ver el tour de nuevo',
+    createSessionCta: 'Crear sesión pagada',
     backLabel: 'Volver a Tribe',
     redirectingLabel: 'Redirigiendo',
     loadingLabel: 'Cargando',
@@ -221,17 +225,35 @@ export default function TribeOSDashboardPage() {
     <main className="px-4 py-8 sm:py-12">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-3">{s.welcome}</h1>
-        <p className="text-sm sm:text-base text-white/70 leading-relaxed mb-8">{s.placeholder}</p>
+        <p className="text-sm sm:text-base text-white/70 leading-relaxed mb-6">{s.placeholder}</p>
+
+        {/* Quick-stats row — active clients / sessions this month /
+            revenue this month. One round-trip; failures degrade
+            gracefully (silent hide vs blocking error). */}
+        <DashboardStats />
 
         {/* At-risk clients widget — the primary signal on this page. */}
         <AtRiskClientsWidget />
+
+        {/* Primary action — sessions are created via the regular
+            Tribe /create flow, so we link there. New instructors
+            wouldn't know to look outside /os/* for this. */}
+        <div className="mt-6">
+          <Link
+            href="/create"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-full shadow-[0_4px_20px_rgba(132,204,22,0.3)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            {s.createSessionCta}
+          </Link>
+        </div>
 
         {/* Secondary actions tucked at the bottom so they don't compete
             with the at-risk widget. Manage subscription is the only
             action not already in the shell nav or the account menu;
             "Take the tour again" lets a user re-open the welcome
             guide they may have skipped on first visit. */}
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
             onClick={handlePortal}

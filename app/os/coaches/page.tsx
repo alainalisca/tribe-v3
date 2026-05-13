@@ -19,18 +19,20 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import CoachesPageGuide from '@/components/tribe-os/CoachesPageGuide';
+import InviteCoachForm from '@/components/tribe-os/InviteCoachForm';
 import type { GymCoachWithUser } from '@/lib/dal/gymCoaches';
 
 interface RosterResponse {
   gym: { id: string; name: string; slug: string };
   coaches: GymCoachWithUser[];
+  is_owner: boolean;
 }
 
 type PageState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
   | { kind: 'no_gym' }
-  | { kind: 'ready'; gym: RosterResponse['gym']; coaches: GymCoachWithUser[] };
+  | { kind: 'ready'; gym: RosterResponse['gym']; coaches: GymCoachWithUser[]; isOwner: boolean };
 
 // ES PENDING VERONICA REVIEW
 const copy = {
@@ -46,12 +48,13 @@ const copy = {
     noGymHint:
       'A gym is created automatically when you subscribe to Tribe.OS premium. If you see this message, something is off — reach out and we will fix it.',
     onlyYouTitle: 'Only you for now',
-    onlyYouHint: 'You are the only coach in this gym. The invite flow is coming in a future update.',
+    onlyYouHint: 'You are the only coach in this gym. Use "Add a coach" below to bring on another instructor.',
+    onlyYouHintNonOwner: 'You are the only coach in this gym. The gym owner can add more coaches.',
     roleOwner: 'Owner',
     roleCoach: 'Coach',
     roleAssistant: 'Assistant',
     gymLabel: 'Gym',
-    inviteSoonNotice: 'Inviting additional coaches is coming in a future update.',
+    inviteSoonNotice: 'Only the gym owner can add or remove coaches.',
   },
   es: {
     backLabel: 'Volver al panel',
@@ -65,12 +68,13 @@ const copy = {
     noGymHint:
       'Se crea un gym automáticamente al suscribirte a Tribe.OS premium. Si ves este mensaje, algo está raro — escríbenos y lo arreglamos.',
     onlyYouTitle: 'Solo tú por ahora',
-    onlyYouHint: 'Eres el único entrenador en este gym. La función para invitar llegará en una próxima actualización.',
+    onlyYouHint: 'Eres el único entrenador en este gym. Usa "Agregar entrenador" abajo para sumar a otro instructor.',
+    onlyYouHintNonOwner: 'Eres el único entrenador en este gym. El propietario puede agregar más entrenadores.',
     roleOwner: 'Propietario',
     roleCoach: 'Entrenador',
     roleAssistant: 'Asistente',
     gymLabel: 'Gym',
-    inviteSoonNotice: 'Invitar a más entrenadores llegará en una próxima actualización.',
+    inviteSoonNotice: 'Solo el propietario del gym puede agregar o quitar entrenadores.',
   },
 } as const;
 
@@ -105,7 +109,12 @@ export default function CoachesPage() {
           setState({ kind: 'error', message: body.error || s.error });
           return;
         }
-        setState({ kind: 'ready', gym: body.data.gym, coaches: body.data.coaches });
+        setState({
+          kind: 'ready',
+          gym: body.data.gym,
+          coaches: body.data.coaches,
+          isOwner: body.data.is_owner ?? false,
+        });
         trackEvent('tribe_os_coaches_viewed', { coach_count: body.data.coaches.length });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.error });
@@ -166,19 +175,27 @@ export default function CoachesPage() {
             </section>
 
             {state.coaches.length === 0 || (state.coaches.length === 1 && state.coaches[0].role === 'owner') ? (
-              // Empty / solo case already says "invite flow coming
-              // in a future update" in its hint — no need for a
-              // second copy of the same message below.
-              <OnlyYouState copy={s} />
+              // Solo state. The owner sees a hint that points at
+              // the Add-a-coach form below; non-owners see a hint
+              // that explains why they can't add.
+              <OnlyYouState copy={s} isOwner={state.isOwner} />
             ) : (
-              <>
-                <ul className="space-y-2">
-                  {state.coaches.map((coach) => (
-                    <CoachRow key={`${coach.gym_id}:${coach.user_id}`} coach={coach} copy={s} />
-                  ))}
-                </ul>
-                <p className="text-xs text-white/40 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
-              </>
+              <ul className="space-y-2 mb-4">
+                {state.coaches.map((coach) => (
+                  <CoachRow key={`${coach.gym_id}:${coach.user_id}`} coach={coach} copy={s} />
+                ))}
+              </ul>
+            )}
+
+            {/* Invite form — owner-only. Non-owners see a small
+                explanatory note instead so the page doesn't feel
+                broken. */}
+            {state.isOwner ? (
+              <div className="mt-4">
+                <InviteCoachForm onInvited={() => setReloadKey((k) => k + 1)} />
+              </div>
+            ) : (
+              <p className="text-xs text-white/40 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
             )}
           </>
         )}
@@ -229,12 +246,16 @@ function CoachRow({ coach, copy: s }: { coach: GymCoachWithUser; copy: typeof co
   );
 }
 
-function OnlyYouState({ copy: s }: { copy: typeof copy.en | typeof copy.es }) {
+function OnlyYouState({ copy: s, isOwner }: { copy: typeof copy.en | typeof copy.es; isOwner: boolean }) {
+  // Owner sees the "use Add a coach below" hint; non-owner sees
+  // the explanatory variant since they don't have access to the
+  // invite form.
+  const hint = isOwner ? s.onlyYouHint : s.onlyYouHintNonOwner;
   return (
     <div className="py-12 text-center space-y-3">
       <Users className="w-10 h-10 text-tribe-green mx-auto" />
       <h2 className="text-lg font-bold text-white">{s.onlyYouTitle}</h2>
-      <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{s.onlyYouHint}</p>
+      <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{hint}</p>
     </div>
   );
 }

@@ -6,7 +6,11 @@
  * want to add coaches.
  *
  * Response (200):
- *   { success: true, data: { gym: { id, name, slug }, coaches: GymCoachWithUser[] } }
+ *   { success: true, data: { gym: { id, name, slug }, coaches: GymCoachWithUser[], is_owner: boolean } }
+ *
+ * is_owner: whether the caller is the gym owner. The UI uses this
+ * to gate the Add-coach affordance to the owner only (matches the
+ * server-side gate on POST /api/tribe-os/coaches/invite).
  *
  * Failure modes:
  *   401 not signed in
@@ -73,11 +77,19 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: coaches.error ?? 'list_failed' }, { status: 500 });
     }
 
+    // Derive owner from the roster. The owner is whichever row has
+    // role='owner' and matches the caller's user id. Cheaper than a
+    // separate gyms.owner_user_id read because we already have the
+    // coaches list — and post-list_gym_coaches (migration 073) the
+    // row is always there for the owner.
+    const isOwner = (coaches.data ?? []).some((c) => c.role === 'owner' && c.user_id === userId);
+
     return NextResponse.json({
       success: true,
       data: {
         gym: resolvedGymRow,
         coaches: coaches.data ?? [],
+        is_owner: isOwner,
       },
     });
   } catch (error) {

@@ -36,7 +36,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Building2, ChevronDown, Home, LogOut, Menu, TrendingUp, UserCog, Users } from 'lucide-react';
+import { Building2, ChevronDown, HelpCircle, Home, LogOut, Menu, TrendingUp, UserCog, Users } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -56,6 +56,7 @@ const copy = {
     accountMenuLabel: 'Account',
     accountMenu: {
       gym: 'Gym settings',
+      help: 'Help & feedback',
       backToTribe: 'Back to Tribe',
     },
   },
@@ -70,6 +71,7 @@ const copy = {
     accountMenuLabel: 'Cuenta',
     accountMenu: {
       gym: 'Configuración del gym',
+      help: 'Ayuda y comentarios',
       backToTribe: 'Volver a Tribe',
     },
   },
@@ -287,7 +289,7 @@ function AccountMenu({
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
-  copy: { gym: string; backToTribe: string };
+  copy: { gym: string; help: string; backToTribe: string };
   label: string;
   /** Gym settings is a premium-only surface; hide for non-premium users. */
   includeGymLink: boolean;
@@ -338,6 +340,8 @@ function AccountMenu({
                 <div className="h-px bg-tribe-mid/60" />
               </>
             ) : null}
+            <MenuItem href="/feedback" Icon={HelpCircle} label={c.help} onClick={() => setOpen(false)} />
+            <div className="h-px bg-tribe-mid/60" />
             <MenuItem href="/" Icon={LogOut} label={c.backToTribe} onClick={() => setOpen(false)} />
           </div>
         </>
