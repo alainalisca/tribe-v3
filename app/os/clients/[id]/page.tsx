@@ -122,6 +122,22 @@ const copy = {
     methodStripe: 'Stripe',
     methodOther: 'Other',
 
+    // Refund flow (migration 083)
+    refundCta: 'Refund',
+    refundTitle: 'Refund this attendance',
+    refundAmountLabel: 'Refund amount',
+    refundReasonLabel: 'Reason',
+    refundReasonPlaceholder: 'e.g. Member rescheduled, no charge agreed',
+    refundConfirm: 'Record refund',
+    refundConfirming: 'Recording…',
+    refundCancel: 'Cancel',
+    refundError: "Couldn't record refund. Try again.",
+    refundAmountTooLarge: "Refund can't exceed the amount paid.",
+    refundReasonRequired: 'Please add a reason for the refund.',
+    refundAlready: 'Already refunded',
+    refundedBadge: (amount: string, currency: string) => `Refunded ${amount} ${currency}`,
+    refundReasonShown: (reason: string) => `Reason: ${reason}`,
+
     // Delete confirmation
     purgeToggleLabel: 'Permanently delete all their data (GDPR request)',
     purgeWarning:
@@ -215,6 +231,22 @@ const copy = {
     methodTransfer: 'Transferencia',
     methodStripe: 'Stripe',
     methodOther: 'Otro',
+
+    // Refund flow (migración 083)
+    refundCta: 'Reembolsar',
+    refundTitle: 'Reembolsar esta asistencia',
+    refundAmountLabel: 'Monto a reembolsar',
+    refundReasonLabel: 'Razón',
+    refundReasonPlaceholder: 'p. ej. El miembro reprogramó, sin cobro acordado',
+    refundConfirm: 'Registrar reembolso',
+    refundConfirming: 'Registrando…',
+    refundCancel: 'Cancelar',
+    refundError: 'No se pudo registrar el reembolso. Intenta de nuevo.',
+    refundAmountTooLarge: 'El reembolso no puede ser mayor al monto pagado.',
+    refundReasonRequired: 'Por favor agrega una razón para el reembolso.',
+    refundAlready: 'Ya reembolsada',
+    refundedBadge: (amount: string, currency: string) => `Reembolsado ${amount} ${currency}`,
+    refundReasonShown: (reason: string) => `Razón: ${reason}`,
 
     deleteTitle: '¿Eliminar este cliente?',
     deleteDesc:
@@ -757,6 +789,15 @@ function AttendanceListItem({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Refund flow state. Separate from editing because the refund is a
+  // distinct forensic action (writes to gym_audit_log), and we don't
+  // want the cancel-edit button to also dismiss a half-typed refund.
+  const [refunding, setRefunding] = useState(false);
+  const [refundAmount, setRefundAmount] = useState<string>('');
+  const [refundReason, setRefundReason] = useState<string>('');
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
+
   // Draft state — initialized from the row, only used while editing.
   const [draftAttended, setDraftAttended] = useState(row.attended);
   const [draftPaid, setDraftPaid] = useState(row.paid);
@@ -856,6 +897,62 @@ function AttendanceListItem({
     }
   }
 
+  // Open the refund overlay with the amount pre-filled to the full
+  // paid amount — partial refunds are possible but the common case
+  // is "the whole session got refunded." Coach edits as needed.
+  function startRefund() {
+    setRefundError(null);
+    setRefundReason('');
+    setRefundAmount(row.amount_paid_cents != null ? (row.amount_paid_cents / 100).toString() : '');
+    setRefunding(true);
+  }
+
+  async function handleRefund() {
+    if (refundSubmitting) return;
+    setRefundError(null);
+    const parsed = parseFloat(refundAmount || '0');
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setRefundError(s.refundError);
+      return;
+    }
+    const cents = Math.round(parsed * 100);
+    if (row.amount_paid_cents != null && cents > row.amount_paid_cents) {
+      setRefundError(s.refundAmountTooLarge);
+      return;
+    }
+    const reason = refundReason.trim();
+    if (!reason) {
+      setRefundError(s.refundReasonRequired);
+      return;
+    }
+    setRefundSubmitting(true);
+    try {
+      const res = await fetch(`/api/tribe-os/attendance/${row.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refunded_amount_cents: cents, refund_reason: reason }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        // 409 already_refunded / not_paid → use specific copy when we
+        // get them, otherwise fall back to the generic error.
+        setRefundError(s.refundError);
+        setRefundSubmitting(false);
+        return;
+      }
+      trackEvent('tribe_os_attendance_refunded', {
+        refunded_amount_cents: cents,
+        currency: row.currency ?? null,
+      });
+      setRefundSubmitting(false);
+      setRefunding(false);
+      onChanged();
+    } catch {
+      setRefundError(s.refundError);
+      setRefundSubmitting(false);
+    }
+  }
+
   if (editing) {
     return (
       <li className="bg-white rounded-xl border border-tribe-green/40 ring-2 ring-tribe-green/20 p-4 space-y-3">
@@ -946,16 +1043,40 @@ function AttendanceListItem({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting || saving}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-tribe-red hover:bg-red-50 rounded-lg disabled:opacity-50"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            {deleting ? s.attEditDeleting : s.delete}
-          </button>
+        <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting || saving}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-tribe-red hover:bg-red-50 rounded-lg disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? s.attEditDeleting : s.delete}
+            </button>
+            {/* Refund affordance: only when the row is currently paid
+                with a positive amount and hasn't already been refunded.
+                Coaches doing routine edits don't need to think about
+                this button; it lives here because the refund flow is
+                an extension of the edit flow conceptually. */}
+            {row.paid && row.amount_paid_cents != null && row.amount_paid_cents > 0 ? (
+              row.refunded_amount_cents != null ? (
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-gray-500">
+                  {s.refundAlready}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRefund}
+                  disabled={saving || deleting}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-tribe-warning hover:bg-tribe-warning/10 rounded-lg disabled:opacity-50"
+                >
+                  <DollarSign className="w-3.5 h-3.5" />
+                  {s.refundCta}
+                </button>
+              )
+            ) : null}
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -975,6 +1096,66 @@ function AttendanceListItem({
             </button>
           </div>
         </div>
+
+        {/* Refund overlay panel — inline rather than a modal because
+            the page is already busy with the edit form, and a modal
+            over an inline form is too much z-index. Renders only
+            when refunding is true. */}
+        {refunding ? (
+          <div className="mt-2 p-3 bg-tribe-warning/5 border border-tribe-warning/40 rounded-lg space-y-3">
+            <p className="text-sm font-bold text-gray-900">{s.refundTitle}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="block text-xs font-semibold text-gray-700 mb-1">{s.refundAmountLabel}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-warning"
+                />
+              </label>
+              <div className="flex items-end text-xs text-gray-500 pb-1.5">{row.currency ?? ''}</div>
+            </div>
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-700 mb-1">{s.refundReasonLabel}</span>
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder={s.refundReasonPlaceholder}
+                rows={2}
+                maxLength={500}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-tribe-warning resize-none"
+              />
+            </label>
+            {refundError ? (
+              <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-tribe-red">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{refundError}</span>
+              </div>
+            ) : null}
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRefunding(false)}
+                disabled={refundSubmitting}
+                className="px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+              >
+                {s.refundCancel}
+              </button>
+              <button
+                type="button"
+                onClick={handleRefund}
+                disabled={refundSubmitting}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-tribe-warning text-white rounded-lg hover:bg-tribe-warning/90 disabled:opacity-50"
+              >
+                {refundSubmitting ? s.refundConfirming : s.refundConfirm}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </li>
     );
   }
@@ -1018,6 +1199,19 @@ function AttendanceListItem({
         </div>
       </div>
       {row.notes ? <p className="text-xs text-gray-600 mt-2 leading-relaxed whitespace-pre-wrap">{row.notes}</p> : null}
+      {/* Refunded badge — appears on rows where a refund was recorded
+          (migration 083). Shows the refunded amount and the coach's
+          reason so the history is self-explanatory at a glance. */}
+      {row.refunded_amount_cents != null && row.currency ? (
+        <div className="mt-2 px-2 py-1.5 bg-tribe-warning/10 border border-tribe-warning/30 rounded-lg text-xs">
+          <p className="font-semibold text-tribe-warning">
+            {s.refundedBadge(formatCents(row.refunded_amount_cents, row.currency, language), row.currency)}
+          </p>
+          {row.refund_reason ? (
+            <p className="text-gray-700 mt-0.5 leading-relaxed">{s.refundReasonShown(row.refund_reason)}</p>
+          ) : null}
+        </div>
+      ) : null}
     </li>
   );
 }

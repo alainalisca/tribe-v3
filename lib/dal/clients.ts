@@ -113,6 +113,16 @@ export interface AttendanceRow {
   currency: Currency | null;
   payment_method: PaymentMethod | null;
   notes: string | null;
+  /**
+   * Refund fields (migration 083). All three are NULL when the row
+   * has never been refunded; all three are non-null after a refund
+   * is recorded. Migration 083's CHECK constraint enforces both
+   * the all-or-nothing rule and the
+   * `refunded_amount_cents <= amount_paid_cents` upper bound.
+   */
+  refunded_amount_cents: number | null;
+  refunded_at: string | null;
+  refund_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -258,7 +268,7 @@ const CLIENT_SELECT =
   'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at, churn_risk_score, churn_risk_updated_at, health_status, total_sessions, sessions_last_30_days, current_streak_days, longest_streak_days';
 
 const ATTENDANCE_SELECT =
-  'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, created_at, updated_at';
+  'id, client_id, session_id, attended, paid, attended_at, amount_paid_cents, currency, payment_method, notes, refunded_amount_cents, refunded_at, refund_reason, created_at, updated_at';
 
 // ------------------------------------------------------------------
 // Clients CRUD
@@ -779,6 +789,133 @@ export async function deleteAttendance(
   } catch (error) {
     logError(error, { action: 'deleteAttendance.exception', attendanceId });
     return { success: false, error: 'Failed to delete attendance' };
+  }
+}
+
+export interface RefundAttendanceInput {
+  /** Refund amount in minor units. Must be > 0 and <= amount_paid_cents. */
+  refundedAmountCents: number;
+  /** Free-text reason, 1-500 chars. Recorded for accounting + audit. */
+  refundReason: string;
+}
+
+/** Snapshot returned after a successful refund. Drives the audit-log payload. */
+export interface RefundedAttendanceSnapshot {
+  id: string;
+  client_id: string;
+  session_id: string;
+  amount_paid_cents: number | null;
+  refunded_amount_cents: number;
+  currency: Currency | null;
+  refund_reason: string;
+  refunded_at: string;
+  /** Gym id, resolved via the joined client. Null when the parent client row is gone. */
+  gym_id: string | null;
+}
+
+/** Discriminated error codes from refundAttendance. Mapped to HTTP status in the route. */
+export type RefundAttendanceError =
+  | 'not_found' // attendance row doesn't exist (or RLS hid it)
+  | 'not_paid' // can't refund an attendance that was never paid
+  | 'already_refunded' // already has a refund recorded; this DAL is single-event today
+  | 'amount_invalid' // refundedAmountCents not in (0, amount_paid_cents]
+  | 'reason_invalid' // refund reason missing or too long
+  | 'db_error';
+
+const MAX_REFUND_REASON_LENGTH = 500;
+
+/**
+ * Record a refund against a previously-paid attendance row.
+ *
+ * Single-event-per-row by design: today we don't accept multiple
+ * partial refunds against the same attendance. A coach who needs
+ * to refund twice can delete and re-record, or we extend to a
+ * separate `attendance_refunds` table later. The simple shape
+ * covers ~99% of cases without the complexity.
+ *
+ * Validation runs in TS BEFORE hitting the DB so we can return
+ * clear error codes. The migration's CHECK constraint is the
+ * belt-and-suspenders backstop.
+ *
+ * On success, returns a snapshot suitable for writing an
+ * `attendance.refund` audit-log entry.
+ */
+export async function refundAttendance(
+  supabase: SupabaseClient,
+  attendanceId: string,
+  input: RefundAttendanceInput
+): Promise<DalResult<RefundedAttendanceSnapshot>> {
+  const reason = input.refundReason?.trim() ?? '';
+  if (reason.length === 0 || reason.length > MAX_REFUND_REASON_LENGTH) {
+    return { success: false, error: 'reason_invalid' satisfies RefundAttendanceError };
+  }
+  if (!Number.isFinite(input.refundedAmountCents) || input.refundedAmountCents <= 0) {
+    return { success: false, error: 'amount_invalid' satisfies RefundAttendanceError };
+  }
+  const refundedAmountCents = Math.round(input.refundedAmountCents);
+
+  try {
+    // Load the row first so we can validate the refund amount against
+    // amount_paid_cents and reject duplicate refunds early with a
+    // friendly error code. RLS still gates the read.
+    const { data: existing, error: existingErr } = await supabase
+      .from('client_attendance')
+      .select(
+        `
+          id, client_id, session_id, paid, amount_paid_cents, currency,
+          refunded_amount_cents,
+          client:clients(gym_id)
+        `
+      )
+      .eq('id', attendanceId)
+      .maybeSingle();
+    if (existingErr) {
+      logError(existingErr, { action: 'refundAttendance.lookup', attendanceId });
+      return { success: false, error: 'db_error' satisfies RefundAttendanceError };
+    }
+    if (!existing) {
+      return { success: false, error: 'not_found' satisfies RefundAttendanceError };
+    }
+    if (!existing.paid || existing.amount_paid_cents === null || existing.amount_paid_cents <= 0) {
+      return { success: false, error: 'not_paid' satisfies RefundAttendanceError };
+    }
+    if (existing.refunded_amount_cents !== null) {
+      return { success: false, error: 'already_refunded' satisfies RefundAttendanceError };
+    }
+    if (refundedAmountCents > (existing.amount_paid_cents as number)) {
+      return { success: false, error: 'amount_invalid' satisfies RefundAttendanceError };
+    }
+
+    const nowIso = new Date().toISOString();
+    const { error: updateErr } = await supabase
+      .from('client_attendance')
+      .update({
+        refunded_amount_cents: refundedAmountCents,
+        refunded_at: nowIso,
+        refund_reason: reason,
+      })
+      .eq('id', attendanceId);
+    if (updateErr) {
+      logError(updateErr, { action: 'refundAttendance.update', attendanceId });
+      return { success: false, error: 'db_error' satisfies RefundAttendanceError };
+    }
+
+    const client = existing.client as unknown as { gym_id: string | null } | null;
+    const snapshot: RefundedAttendanceSnapshot = {
+      id: existing.id as string,
+      client_id: existing.client_id as string,
+      session_id: existing.session_id as string,
+      amount_paid_cents: (existing.amount_paid_cents as number | null) ?? null,
+      refunded_amount_cents: refundedAmountCents,
+      currency: (existing.currency as Currency | null) ?? null,
+      refund_reason: reason,
+      refunded_at: nowIso,
+      gym_id: client?.gym_id ?? null,
+    };
+    return { success: true, data: snapshot };
+  } catch (error) {
+    logError(error, { action: 'refundAttendance.exception', attendanceId });
+    return { success: false, error: 'db_error' satisfies RefundAttendanceError };
   }
 }
 

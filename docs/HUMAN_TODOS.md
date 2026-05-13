@@ -18,6 +18,38 @@ ORDER BY created_at DESC
 LIMIT 5;
 ```
 
+## 🆕 New migration to run: 083 (client_attendance refund columns)
+
+Adds three nullable columns + one CHECK constraint to
+`client_attendance` so coaches can record refunds against manual
+(non-Stripe) paid attendance rows. Before this migration the only
+way to "undo" a paid attendance was to flip `paid` back to false,
+which dropped the historical fact that money had changed hands.
+
+Idempotent and safe — won't touch existing rows; all new columns
+default to NULL.
+
+Paste the full migration from
+`supabase/migrations/083_client_attendance_refunds.sql` into the
+Supabase SQL editor.
+
+Verify with:
+
+```sql
+SELECT COUNT(*) FROM client_attendance WHERE refunded_amount_cents IS NOT NULL;
+-- 0 expected on first run
+\d+ public.client_attendance
+-- should now show refunded_amount_cents / refunded_at / refund_reason
+```
+
+**Known follow-up**: the revenue dashboard (`gym_revenue_totals` from
+migration 071) only reads from `payments` (Stripe), not from
+`client_attendance`. So today's refunds recorded against manual
+attendance show up in the audit log + on `/os/clients/[id]` but
+don't yet subtract from revenue totals. A future migration could
+union the manual-attendance refunds into the gym revenue SQL — flagged
+for whoever picks up the revenue dashboard next.
+
 ## ⚠️ When you're ready to fire the weekly summary manually
 
 The Vercel **Cron Jobs UI** only shows production crons, and Tribe.OS
@@ -342,10 +374,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                        All three now render with friendly labels in the /os/audit
-                        viewer (English + Spanish). The pattern is reusable — adding
-                        new audit event types just means calling `writeAuditEntry` from
-                        the relevant route and adding a label entry.
+                            All three now render with friendly labels in the /os/audit
+                            viewer (English + Spanish). The pattern is reusable — adding
+                            new audit event types just means calling `writeAuditEntry` from
+                            the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -471,16 +503,55 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     own training. Visible immediately on /my-coach; no migration,
     no cron.
 
-24. **"Sign up for Tribe" invite email** — when a coach adds a client
+24. ✅ **Refund flow with proper tracking** — shipped. Coaches can
+    now record a refund against any previously-paid attendance row
+    from `/os/clients/[id]`. Workflow: click pencil to edit a row,
+    then a "Refund" button appears in the form footer (only when
+    `paid=true` AND not already refunded). Opens an inline panel
+    asking for refund amount (pre-filled to the full paid amount)
+    and a free-text reason (1–500 chars, required). On submit, the
+    row gets `refunded_amount_cents` / `refunded_at` /
+    `refund_reason` populated and the audit log gets an
+    `attendance.refund` entry with all the money-relevant fields
+    in the payload.
+
+    The row in the attendance list then shows a yellow "Refunded
+    $30.00 USD · Reason: Member rescheduled, no charge agreed"
+    badge underneath the notes, so the history is self-explanatory.
+    The original `paid=true` + `amount_paid_cents` stays intact —
+    we never lose the fact that money changed hands; we add the
+    fact that some of it came back.
+
+    New endpoint: `POST /api/tribe-os/attendance/[id]/refund`.
+    HTTP status mapping: 404 not_found / 409 already_refunded /
+    409 not_paid / 400 amount_invalid / 400 reason_invalid /
+    500 db_error. The `attendance.refund` action label renders
+    in `/os/audit` with `Attendance refunded` / `Asistencia
+reembolsada`.
+
+    **Requires migration 083 to be run** before the UI works
+    (otherwise the POST will fail at the CHECK constraint or
+    column-missing level). Migration is short, idempotent, and
+    safe — see the "Migration 083" section at the top of this file.
+
+    **Known limitation**: the revenue dashboard reads from the
+    `payments` table only, so refunds against manual attendance
+    are not yet subtracted from revenue totals. The data is there
+    in `client_attendance`; a future migration could union it
+    into `gym_revenue_totals`. Doesn't block this feature being
+    useful — the audit + per-row badge already give coaches what
+    they need for accounting reconciliation.
+
+25. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-25. **Stripe Connect rough-edge polish** — but this is hard to do
+26. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-26. **Per-attendance trigger optimization** — migration 079 recomputes
+27. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-27. **Generator feedback loop** — use the feedback data from #5 to:
+28. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

@@ -201,6 +201,7 @@ type EventName =
   | 'tribe_os_celebrate_wins_viewed' // /os/dashboard CelebrateWinsWidget rendered with N streakers
   | 'tribe_os_celebrate_row_clicked' // streaker row tapped → /os/clients/[id]
   | 'tribe_os_celebrate_whatsapp_clicked' // per-row WhatsApp congrats tapped on dashboard widget
+  | 'tribe_os_attendance_refunded' // refund recorded via POST /api/tribe-os/attendance/[id]/refund
   | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
