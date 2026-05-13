@@ -21,6 +21,18 @@ export type InsightType = 'CHURN_RISK' | 'RETENTION_OPP' | 'REVENUE' | 'GROWTH';
 export type InsightSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type InsightActionType = 'SEND_MESSAGE' | 'CREATE_SESSION' | 'CALL_MEMBER' | 'REVIEW_SCHEDULE';
 
+/**
+ * Member info embedded in an insight card. We pull just enough to
+ * power one-click follow-up actions (WhatsApp deep-link, member-
+ * detail nav) without forcing the UI to do a second roundtrip per
+ * card.
+ */
+export interface InsightMember {
+  id: string;
+  name: string;
+  phone: string | null;
+}
+
 export interface CommunityInsight {
   id: string;
   gym_id: string;
@@ -39,6 +51,8 @@ export interface CommunityInsight {
   updated_at: string;
   /** Clients referenced by this insight, joined via community_insight_members. */
   member_ids: string[];
+  /** Same set with name + phone for action-button rendering. */
+  members: InsightMember[];
 }
 
 export interface ListInsightsOptions {
@@ -61,6 +75,9 @@ export async function listInsightsForGym(
   const activeOnly = options.activeOnly ?? true;
 
   try {
+    // Embed client name + phone via a two-hop join so the UI can
+    // build wa.me deep-links + show avatar initials without a
+    // second roundtrip per insight card.
     let q = supabase
       .from('community_insights')
       .select(
@@ -69,7 +86,10 @@ export async function listInsightsForGym(
           headline, body, action_label, action_type,
           data_payload, predicted_revenue_cents, confidence_score,
           expires_at, created_at, updated_at,
-          members:community_insight_members(client_id)
+          members:community_insight_members(
+            client_id,
+            client:clients(id, name, phone)
+          )
         `
       )
       .eq('gym_id', gymId);
@@ -93,7 +113,23 @@ export async function listInsightsForGym(
       LOW: 3,
     };
     const rows = (data ?? []).map((row) => {
-      const memberRows = (row.members as unknown as Array<{ client_id: string }> | null) ?? [];
+      const memberRows =
+        (row.members as unknown as Array<{
+          client_id: string;
+          client: { id: string; name: string; phone: string | null } | null;
+        }> | null) ?? [];
+      const members: InsightMember[] = memberRows
+        .map((m) => {
+          // Prefer the embedded client row when present (it carries
+          // name + phone). Fall back to a minimal entry if the join
+          // returned only the link row (shouldn't happen with our
+          // schema but defensive).
+          if (m.client) {
+            return { id: m.client.id, name: m.client.name, phone: m.client.phone };
+          }
+          return { id: m.client_id, name: '', phone: null };
+        })
+        .filter((m) => !!m.id);
       return {
         id: row.id as string,
         gym_id: row.gym_id as string,
@@ -110,7 +146,8 @@ export async function listInsightsForGym(
         expires_at: row.expires_at as string,
         created_at: row.created_at as string,
         updated_at: row.updated_at as string,
-        member_ids: memberRows.map((m) => m.client_id),
+        member_ids: members.map((m) => m.id),
+        members,
       };
     });
 

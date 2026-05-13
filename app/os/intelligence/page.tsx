@@ -31,6 +31,7 @@ import {
   Brain,
   ChevronRight,
   CircleDollarSign,
+  MessageCircle,
   RefreshCw,
   Sparkles,
   TrendingUp,
@@ -41,6 +42,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
+import { buildWhatsAppUrl } from '@/lib/phone';
 import { Avatar, Badge, Button, Card, CardContent } from '@/components/tribe-os/ui';
 import type { CommunityInsight, InsightActionType, InsightSeverity, InsightType } from '@/lib/dal/communityInsights';
 
@@ -95,6 +97,8 @@ const copy = {
     runEngineError: 'Could not run the engine. Try again in a moment.',
     runEngineSummary: (n: number, atRisk: number, created: number) =>
       `Scored ${n} ${n === 1 ? 'member' : 'members'} · ${atRisk} at risk · ${created} new ${created === 1 ? 'alert' : 'alerts'}`,
+    waReachOutLabel: 'Reach out on WhatsApp',
+    waReachOutCheckIn: (name: string) => `Hey ${name}! Haven't seen you at training in a bit — everything ok?`,
   },
   es: {
     redirectingLabel: 'Redirigiendo',
@@ -141,6 +145,8 @@ const copy = {
     runEngineError: 'No se pudo ejecutar el motor. Intenta en un momento.',
     runEngineSummary: (n: number, atRisk: number, created: number) =>
       `${n} ${n === 1 ? 'miembro evaluado' : 'miembros evaluados'} · ${atRisk} en riesgo · ${created} ${created === 1 ? 'alerta nueva' : 'alertas nuevas'}`,
+    waReachOutLabel: 'Contactar por WhatsApp',
+    waReachOutCheckIn: (name: string) => `¡Hola ${name}! No te he visto entrenando hace rato. ¿Todo bien?`,
   },
 } as const;
 
@@ -409,10 +415,27 @@ function InsightCard({
   const [dismissing, setDismissing] = useState(false);
   const TypeIcon = TYPE_ICON[insight.type];
 
+  // When the action is SEND_MESSAGE and the insight references
+  // exactly one member, prefer a wa.me deep-link with a pre-composed
+  // check-in message. wa.me jumps the user straight to the
+  // conversation — saves a click vs landing on /os/clients/[id]
+  // and finding the WhatsApp button there. Falls back to the
+  // member-detail route when there's no phone on file or the
+  // insight covers multiple members.
+  const singleMember = insight.member_ids.length === 1 ? insight.members[0] : null;
+  const waUrl = useMemo(() => {
+    if (insight.action_type !== 'SEND_MESSAGE') return null;
+    if (!singleMember || !singleMember.phone) return null;
+    const firstName = (singleMember.name.split(' ')[0] || singleMember.name).trim();
+    return buildWhatsAppUrl(singleMember.phone, { message: s.waReachOutCheckIn(firstName) });
+  }, [insight.action_type, singleMember, s]);
+
   // Action button destination — derived from action_type. Each
   // type points at the surface where the action makes sense.
+  // Skipped (returns null) when waUrl is set, since the wa.me link
+  // takes over.
   const actionHref = useMemo(() => {
-    if (!insight.action_type) return null;
+    if (!insight.action_type || waUrl) return null;
     switch (insight.action_type) {
       case 'SEND_MESSAGE':
         return insight.member_ids.length === 1 ? `/os/clients/${insight.member_ids[0]}` : '/os/members';
@@ -425,7 +448,7 @@ function InsightCard({
       default:
         return null;
     }
-  }, [insight.action_type, insight.member_ids]);
+  }, [insight.action_type, insight.member_ids, waUrl]);
 
   const actionLabel =
     insight.action_label || (insight.action_type ? s.action[insight.action_type as InsightActionType] : null);
@@ -495,27 +518,52 @@ function InsightCard({
             ) : null}
           </div>
 
-          {/* Avatar preview when members are tied to the insight */}
-          {insight.member_ids.length > 0 ? (
+          {/* Avatar preview when members are tied to the insight.
+              Uses the embedded member name to seed initials so the
+              chips actually identify someone instead of all reading
+              "·". Tooltips show the full name on hover. */}
+          {insight.members.length > 0 ? (
             <div className="flex items-center -space-x-2 mb-4">
-              {insight.member_ids.slice(0, 5).map((id) => (
-                <Avatar key={id} initials="·" size="sm" className="border-2 border-white" />
-              ))}
-              {insight.member_ids.length > 5 ? (
+              {insight.members.slice(0, 5).map((m) => {
+                const initial = (m.name.charAt(0) || '?').toUpperCase();
+                return (
+                  <Avatar key={m.id} initials={initial} size="sm" className="border-2 border-white" title={m.name} />
+                );
+              })}
+              {insight.members.length > 5 ? (
                 <span className="h-8 w-8 rounded-full bg-tribe-dark-40 flex items-center justify-center border-2 border-white text-xs font-semibold text-tribe-dark-80">
-                  +{insight.member_ids.length - 5}
+                  +{insight.members.length - 5}
                 </span>
               ) : null}
             </div>
           ) : null}
 
-          {actionHref && actionLabel ? (
+          {waUrl ? (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                trackEvent('tribe_os_insight_action_clicked', {
+                  type: insight.type,
+                  action_type: insight.action_type,
+                  via: 'whatsapp',
+                });
+                trackEvent('tribe_os_whatsapp_clicked', { surface: 'intelligence_card' });
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-tribe hover:bg-tribe-green-dark transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              {s.waReachOutLabel}
+            </a>
+          ) : actionHref && actionLabel ? (
             <Link
               href={actionHref}
               onClick={() =>
                 trackEvent('tribe_os_insight_action_clicked', {
                   type: insight.type,
                   action_type: insight.action_type,
+                  via: 'route',
                 })
               }
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-tribe hover:bg-tribe-green-dark transition-colors"
