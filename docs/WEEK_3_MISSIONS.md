@@ -28,6 +28,7 @@ integration is complete and Al gives explicit ask.
 | I   | RecentActivityWidget + /create hint                                                 | ✅ done | `47b7681`                       |
 | J   | WhatsApp follow-up buttons (client detail + at-risk widget)                         | ✅ done | `24e8281`                       |
 | K   | Persistent onboarding checklist on /os/dashboard                                    | ✅ done | `7998813`                       |
+| L   | Bulk attendance recording for group sessions                                        | ✅ done | `51f7cc0`                       |
 
 ## What shipped
 
@@ -254,6 +255,31 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission L — Bulk attendance recording for group sessions
+
+The single-client `RecordAttendanceInline` flow was great for one-
+on-one training, but a group class with 10 attendees meant 60+
+clicks. New page at `/os/sessions/[id]/attendance` collapses that
+into a roster screen:
+
+- Page loads the active client list + any existing attendance for
+  the session in parallel. Each row pre-populates from prior data
+  so re-opening is idempotent.
+- Submit fires parallel POSTs to the existing single-client
+  `/api/tribe-os/clients/[id]/attendance` endpoint. Same RLS, same
+  Zod validation, no bespoke batch endpoint. Failed rows are
+  marked individually so the user can retry without losing the
+  successful writes.
+- Entry point: new `RecordGroupAttendanceButton` on `/os/dashboard`
+  next to the "Create paid session" CTA. Opens a modal listing the
+  user's 10 most recent sessions; clicking one navigates to its
+  bulk-attendance page. Sessions are lazy-loaded on first modal
+  open so dashboard first paint isn't slowed.
+- Three new analytics events:
+  `tribe_os_bulk_attendance_picker_opened`,
+  `tribe_os_bulk_attendance_viewed`,
+  `tribe_os_bulk_attendance_saved`.
 
 ## Mission J — WhatsApp follow-up buttons
 
