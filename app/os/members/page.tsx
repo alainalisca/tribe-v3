@@ -166,17 +166,29 @@ export default function MembersPage() {
         }
 
         let rows = body.data ?? [];
-        // Client-side filter for "At Risk" — DB status is 'active'
-        // but last_seen_at is older than 14 days (or null + created
-        // > 14 days ago).
+        // Client-side filter for "At Risk".
+        // Two paths to qualify:
+        //   1. AI scored health_status = 'AT_RISK' (primary path
+        //      once the intelligence engine has run)
+        //   2. Heuristic fallback: status = 'active' AND last_seen
+        //      older than 14 days (or never seen and created > 14d ago)
+        // The 'Watch' filter still uses status = 'lapsed' via the
+        // server-side filter — when health_status = 'WATCH' becomes
+        // common we'll add the same OR there.
         if (statusFilter === 'at_risk') {
           const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
           rows = rows.filter((r) => {
+            if (r.health_status === 'AT_RISK') return true;
             if (r.status !== 'active') return false;
             const seen = r.last_attendance_at ? new Date(r.last_attendance_at).getTime() : null;
             const created = new Date(r.created_at).getTime();
             return seen != null ? seen < cutoff : created < cutoff;
           });
+        } else if (statusFilter === 'watch') {
+          // Augment the server's `status = 'lapsed'` filter with the
+          // AI's WATCH label. Both surfaces represent the same
+          // semantic ("declining but not gone").
+          rows = rows.filter((r) => r.status === 'lapsed' || r.health_status === 'WATCH');
         }
 
         setList({ kind: 'ready', rows });
@@ -288,17 +300,30 @@ export default function MembersPage() {
   );
 }
 
+/**
+ * Map a UI filter pill to a server-side status filter.
+ *
+ * For pills whose semantics are AI-derived (Watch, At Risk) we
+ * intentionally return null so the server returns the FULL roster —
+ * the post-filter step on the client looks at both `status` and
+ * `health_status`. If we pushed `status='active'` to the server
+ * we'd miss any lapsed members the AI flagged as AT_RISK, and
+ * vice-versa.
+ *
+ * Active / Churned are still mapped 1:1 to a DB status because
+ * those are manual-only labels.
+ */
 function uiStatusToDbStatus(ui: StatusFilter): ClientStatus | null {
   switch (ui) {
     case 'active':
       return 'active';
-    case 'watch':
-      return 'lapsed';
     case 'churned':
       return 'inactive';
     case 'at_risk':
-      // Filter to active, then post-filter client-side.
-      return 'active';
+    case 'watch':
+      // No server-side status filter — the client-side filter combines
+      // health_status (AI) + status (manual) into a single bucket.
+      return null;
     case 'all':
     default:
       return null;
@@ -345,22 +370,34 @@ function MembersTable({ rows, copy: s }: { rows: ClientWithStats[]; copy: typeof
 
 function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.en | typeof copy.es }) {
   const initial = (row.name.charAt(0) || '?').toUpperCase();
-  // "At Risk" status badge is derived (no DB column for it yet). For
-  // display purposes, an 'active' member with last attendance > 14d
-  // ago shows as At Risk in the badge.
+  // Badge precedence:
+  //   1. AI-derived health_status when the scorer has run
+  //      (WATCH / AT_RISK take priority over the manual status)
+  //   2. Manual status overrides (lapsed → Watch, inactive → Churned,
+  //      lead → Lead) for rows the AI hasn't scored yet
+  //   3. Heuristic fallback (active + no attendance > 14d → AT_RISK)
+  //      for rows that have neither AI score nor a manual override
+  //   4. Default → Active
   const seenMs = row.last_attendance_at ? new Date(row.last_attendance_at).getTime() : null;
   const ageDays = seenMs ? Math.floor((Date.now() - seenMs) / (24 * 60 * 60 * 1000)) : null;
-  const isComputedAtRisk = row.status === 'active' && (ageDays == null || ageDays > 14);
-  const displayStatus: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead' =
-    row.status === 'lapsed'
-      ? 'watch'
-      : row.status === 'inactive'
-        ? 'churned'
-        : row.status === 'lead'
-          ? 'lead'
-          : isComputedAtRisk
-            ? 'atRisk'
-            : 'active';
+  const heuristicAtRisk = row.status === 'active' && (ageDays == null || ageDays > 14);
+
+  let displayStatus: 'active' | 'watch' | 'atRisk' | 'churned' | 'lead';
+  if (row.health_status === 'AT_RISK') {
+    displayStatus = 'atRisk';
+  } else if (row.health_status === 'WATCH') {
+    displayStatus = 'watch';
+  } else if (row.status === 'lapsed') {
+    displayStatus = 'watch';
+  } else if (row.status === 'inactive') {
+    displayStatus = 'churned';
+  } else if (row.status === 'lead') {
+    displayStatus = 'lead';
+  } else if (heuristicAtRisk) {
+    displayStatus = 'atRisk';
+  } else {
+    displayStatus = 'active';
+  }
 
   const firstName = row.name.split(' ')[0] || row.name;
   const waUrl = buildWhatsAppUrl(row.phone, {
