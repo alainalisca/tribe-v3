@@ -17,7 +17,6 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -29,6 +28,7 @@ import PeriodSelector from './_components/PeriodSelector';
 import RevenueChart from './_components/RevenueChart';
 import PaymentTable from './_components/PaymentTable';
 import ExportButton from './_components/ExportButton';
+import AttendanceExportButton from './_components/AttendanceExportButton';
 import { allTimePeriod, browserTimezone, thisMonthPeriod, type Period } from './_lib/periods';
 
 type FetchState =
@@ -111,10 +111,17 @@ export default function RevenueDashboardPage(): JSX.Element {
           <p className="text-sm text-gray-500 mt-1">{s.subtitle}</p>
         </header>
 
-        {/* Period selector + export */}
+        {/* Period selector + exports. Both exports share the same
+            date range so the resulting CSVs reconcile against each
+            other. Attendance export is always available even when
+            revenue is empty — a gym with sessions but no paid
+            sessions still has attendance worth exporting. */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <PeriodSelector value={period} onChange={setPeriod} timezone={timezone} />
-          {fetchState.kind === 'ready' && !isEmpty && <ExportButton period={period} />}
+          <div className="flex items-center gap-2 flex-wrap">
+            <AttendanceExportButton period={period} />
+            {fetchState.kind === 'ready' && !isEmpty && <ExportButton period={period} />}
+          </div>
         </div>
 
         {/* Content */}

@@ -34,7 +34,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Upload, Eye, MessageCircle, AlertCircle } from 'lucide-react';
+import { Search, Plus, Upload, Download, Eye, MessageCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -55,6 +55,7 @@ const copy = {
     searchPlaceholder: 'Search members by name or email…',
     addMember: 'Add Member',
     importCsv: 'Import CSV',
+    exportCsv: 'Export CSV',
     filter: { all: 'All', active: 'Active', watch: 'Watch', at_risk: 'At Risk', churned: 'Churned' },
     columns: {
       name: 'Name',
@@ -88,6 +89,7 @@ const copy = {
     searchPlaceholder: 'Buscar miembros por nombre o correo…',
     addMember: 'Agregar miembro',
     importCsv: 'Importar CSV',
+    exportCsv: 'Exportar CSV',
     filter: { all: 'Todos', active: 'Activos', watch: 'En seguimiento', at_risk: 'En riesgo', churned: 'Bajas' },
     columns: {
       name: 'Nombre',
@@ -237,6 +239,24 @@ export default function MembersPage() {
               className="w-full pl-10 pr-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20"
             />
           </div>
+          {/* Export CSV — downloads every non-archived client in a
+              format that round-trips with the importer. Uses a button
+              + programmatic navigation rather than a plain <a> so the
+              Next no-html-link-for-pages rule stays happy (the rule
+              is meant for in-app page navigation; an API download is
+              a legitimate exception but the button is cleaner than
+              an eslint-disable). */}
+          <button
+            type="button"
+            onClick={() => {
+              trackEvent('tribe_os_clients_exported');
+              window.location.href = '/api/tribe-os/clients/export';
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-tribe-dark text-sm font-semibold rounded-xl border border-gray-200 hover:border-tribe-green hover:bg-tribe-green/5 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            {s.exportCsv}
+          </button>
           {/* Import CSV — secondary action next to "Add Member" so
               coaches with an existing roster don't have to retype it
               client by client. Visible to every coach; RLS gates

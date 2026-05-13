@@ -179,6 +179,8 @@ type EventName =
   | 'tribe_os_team_outreach_opened' // bulk-reach-out modal per-member "Open chat" clicked
   | 'tribe_os_client_import_previewed' // CSV picked + parsed successfully; preview shown
   | 'tribe_os_client_import_completed' // POST /api/tribe-os/clients/import returned ok
+  | 'tribe_os_clients_exported' // GET /api/tribe-os/clients/export triggered (members CSV download)
+  | 'tribe_os_attendance_exported' // GET /api/tribe-os/attendance/export triggered
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
   | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success
