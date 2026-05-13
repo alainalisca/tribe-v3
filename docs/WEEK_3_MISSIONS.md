@@ -26,6 +26,8 @@ integration is complete and Al gives explicit ask.
 | G   | First-visit Quick Guides (5 guides + replay button)                                 | ✅ done | `6f7017f`, `307a195`            |
 | H   | DashboardStats + Coach invite/remove + UX glue                                      | ✅ done | `bb8c452`, `2e3d6d5`, `ffa1517` |
 | I   | RecentActivityWidget + /create hint                                                 | ✅ done | `47b7681`                       |
+| J   | WhatsApp follow-up buttons (client detail + at-risk widget)                         | ✅ done | `24e8281`                       |
+| K   | Persistent onboarding checklist on /os/dashboard                                    | ✅ done | `7998813`                       |
 
 ## What shipped
 
@@ -252,6 +254,50 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission J — WhatsApp follow-up buttons
+
+WhatsApp is the dominant comms channel for the Medellín market —
+the primary way an instructor follows up with a client. Added
+one-click affordances on the two surfaces with the highest follow-
+up intent:
+
+- **`/os/clients/[id]` contact section:** WhatsApp pill next to the
+  phone number when present. Pre-fills a friendly check-in message
+  keyed off the client's first name.
+- **At-risk widget rows on `/os/dashboard`:** small WhatsApp icon
+  button on each row (separate clickable from the row's link to
+  the detail page). Pre-fills a gentle "haven't seen you lately"
+  message. `phone` now flows through `AtRiskClient` → endpoint →
+  widget.
+
+New `lib/phone.ts` handles normalization for `wa.me/<digits>` with
+a default country code of 57 (CO). Two new analytics events:
+`tribe_os_whatsapp_clicked` carries a `surface` property so we can
+compare engagement between the two entry points.
+
+## Mission K — Persistent onboarding checklist on /os/dashboard
+
+New subscribers got the one-time `TribeOSWelcomeGuide` modal but
+nothing persistent to drive action. Three "0" stat cards + the
+"add your first client" AtRisk CTA + "no activity yet" recent-
+activity card together left the user to interpret what to do next.
+
+`OnboardingChecklist` consolidates that into one clear card with
+three concrete actions:
+
+1. Add your first client
+2. Record your first attendance
+3. Invite a coach (optional)
+
+Each item has its own data signal from
+`/api/tribe-os/dashboard/onboarding-state` (parallel head-only
+counts: non-archived clients, attendance rows, non-owner coaches).
+The card auto-hides once all three are done, or when the user
+dismisses it. Dismissal flag lives in `localStorage` so it doesn't
+reappear on every visit. `ReplayToursButton` on `/settings` also
+clears the dismissal flag so "see the intro again" brings back the
+checklist along with the welcome guides.
 
 ## Mission I — Recent Activity widget + Tribe.OS hint on /create
 
