@@ -192,16 +192,38 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
     gym owner hasn't finished Stripe Connect onboarding, a nudge
     banner explains why revenue is at zero + links to the existing
     /earnings/payout-settings flow. Hides itself when complete.
-11. **"Sign up for Tribe" invite email** — when a coach adds a client
+11. ✅ **Streak milestone chip** — shipped. 🔥 7/14/30/100-day chip
+    on `/os/clients/[id]` and `/my-coach`. Coach sees it → cue to
+    acknowledge; member sees their own → pride / motivation.
+    Persistent (not toast) so it survives missed days and visits.
+12. ✅ **Weekly summary email** — shipped. New cron at `0 8 * * 1`
+    (Monday 8am UTC) sends a bilingual recap to each premium gym
+    owner with last week's stats: sessions recorded, unique
+    attenders, revenue, top attender, at-risk count, active alerts.
+    Shares the existing intelligence_email_enabled opt-out flag —
+    one toggle for all proactive email.
+
+    **Reminder for you**: this fires AUTOMATICALLY on the next
+    Monday at 8am UTC after the deploy lands. If you want to test
+    sooner, run the cron manually:
+
+    ```
+    curl -H "Authorization: Bearer $CRON_SECRET" \
+      https://tribe-v3.vercel.app/api/cron/tribe-os/weekly-summary
+    ```
+
+    (Replace the URL with your actual deployment.)
+
+13. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-12. **Stripe Connect rough-edge polish** — but this is hard to do
+14. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-13. **Per-attendance trigger optimization** — migration 079 recomputes
+15. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-14. **Generator feedback loop** — use the feedback data from #5 to:
+16. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

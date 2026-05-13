@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/tribe-os/intelligence",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/tribe-os/weekly-summary",
+      "schedule": "0 8 * * 1"
     }
   ]
 }
