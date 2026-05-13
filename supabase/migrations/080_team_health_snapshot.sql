@@ -51,10 +51,15 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Caller must be a member of the gym.
+  -- Caller must be a member of the gym. Note `gc.gym_id` qualifier —
+  -- the unqualified column would shadow against the RETURNS TABLE
+  -- gym_id output variable, which Postgres rejects as ambiguous when
+  -- the function's signature is fresh (the previous 074 version
+  -- worked unqualified by coincidence of how the parser resolved
+  -- shadowing; the new shape made the conflict visible).
   IF NOT EXISTS (
-    SELECT 1 FROM public.gym_coaches
-    WHERE gym_id = p_gym_id AND user_id = auth.uid()
+    SELECT 1 FROM public.gym_coaches gc
+    WHERE gc.gym_id = p_gym_id AND gc.user_id = auth.uid()
   ) THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
