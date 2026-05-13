@@ -79,6 +79,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       search: url.searchParams.get('search') ?? undefined,
       tag: url.searchParams.get('tag') ?? undefined,
       status: url.searchParams.get('status') ?? undefined,
+      sort: url.searchParams.get('sort') ?? undefined,
     };
 
     let parsed;
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         searchQuery: parsed.search,
         tag: parsed.tag,
         status: parsed.status,
+        sort: parsed.sort,
       }
     );
 

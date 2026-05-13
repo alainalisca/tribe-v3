@@ -7,7 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatPaidTotal, formatShortDate } from '@/lib/format/currency';
 import ClientsPageGuide from '@/components/tribe-os/ClientsPageGuide';
-import type { ClientStatus, ClientWithStats } from '@/lib/dal/clients';
+import type { ClientListSort, ClientStatus, ClientWithStats } from '@/lib/dal/clients';
 
 type ListState =
   | { kind: 'loading' }
@@ -44,6 +44,10 @@ const copy = {
     clearFilter: 'Clear',
     emptyFilteredTitle: 'No clients match these filters',
     emptyFilteredHint: 'Try clearing a filter or use a different search.',
+    sortLabel: 'Sort',
+    sortByLastSeen: 'Last seen',
+    sortByName: 'Name (A–Z)',
+    sortByCreated: 'Newest added',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -75,6 +79,10 @@ const copy = {
     clearFilter: 'Limpiar',
     emptyFilteredTitle: 'Ningún cliente coincide con estos filtros',
     emptyFilteredHint: 'Prueba limpiar un filtro o usa otra búsqueda.',
+    sortLabel: 'Ordenar',
+    sortByLastSeen: 'Última visita',
+    sortByName: 'Nombre (A–Z)',
+    sortByCreated: 'Más recientes',
   },
 } as const;
 
@@ -87,6 +95,7 @@ export default function ClientsListPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [sort, setSort] = useState<ClientListSort>('last_seen_desc');
   const [list, setList] = useState<ListState>({ kind: 'loading' });
   // Keep a snapshot of the unfiltered roster (no status/tag filters,
   // no search) so the tag-pill row stays stable as the user filters —
@@ -111,6 +120,9 @@ export default function ClientsListPage() {
         if (debouncedSearch.length > 0) url.searchParams.set('search', debouncedSearch);
         if (tagFilter) url.searchParams.set('tag', tagFilter);
         if (statusFilter) url.searchParams.set('status', statusFilter);
+        // Only send sort when it's not the default — keeps the URL
+        // tidy and the cache key smaller.
+        if (sort !== 'last_seen_desc') url.searchParams.set('sort', sort);
 
         const res = await fetch(url.toString(), { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
@@ -144,7 +156,7 @@ export default function ClientsListPage() {
     return () => {
       cancelled = true;
     };
-  }, [gate.state, debouncedSearch, tagFilter, statusFilter, reloadKey, s.errorTitle]);
+  }, [gate.state, debouncedSearch, tagFilter, statusFilter, sort, reloadKey, s.errorTitle]);
 
   // True when any filter is active beyond the unfiltered default.
   const anyFilterActive = useMemo(
@@ -246,6 +258,24 @@ export default function ClientsListPage() {
                 ) : null}
               </div>
             ) : null}
+
+            {/* Sort selector — a single dropdown rather than a pill
+                row because the choice is exclusive (one sort at a
+                time) and we don't want to compete with the filter
+                pills above. Inline aria-label so screen readers
+                announce it as "Sort: <current>". */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] uppercase tracking-wider font-semibold text-white/50">{s.sortLabel}</label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as ClientListSort)}
+                className="bg-tribe-surface text-white text-xs font-semibold rounded-full border border-tribe-mid px-3 py-1 focus:border-tribe-green focus:outline-none"
+              >
+                <option value="last_seen_desc">{s.sortByLastSeen}</option>
+                <option value="name_asc">{s.sortByName}</option>
+                <option value="created_desc">{s.sortByCreated}</option>
+              </select>
+            </div>
           </div>
         ) : null}
 

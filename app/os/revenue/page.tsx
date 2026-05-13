@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import RevenuePageGuide from '@/components/tribe-os/RevenuePageGuide';
 import type { RevenueSummary } from '@/lib/dal/revenue';
 import SummaryCards from './_components/SummaryCards';
 import EmptyState from './_components/EmptyState';
@@ -156,6 +157,11 @@ export default function RevenueDashboardPage(): JSX.Element {
           </>
         )}
       </div>
+
+      {/* First-visit guide. Independent seen-flag from the other
+          Tribe.OS guides — a user who skipped the dashboard tour
+          still gets a chance to learn this page on first landing. */}
+      <RevenuePageGuide enabled />
     </main>
   );
 }

@@ -18,6 +18,7 @@ import { Users, Crown, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import CoachesPageGuide from '@/components/tribe-os/CoachesPageGuide';
 import type { GymCoachWithUser } from '@/lib/dal/gymCoaches';
 
 interface RosterResponse {
@@ -182,6 +183,10 @@ export default function CoachesPage() {
           </>
         )}
       </div>
+
+      {/* First-visit guide. Independent seen-flag from the other
+          Tribe.OS page guides. */}
+      <CoachesPageGuide enabled />
     </main>
   );
 }

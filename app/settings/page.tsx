@@ -21,6 +21,7 @@ import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
+import ReplayToursButton from '@/components/ReplayToursButton';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -108,6 +109,12 @@ export default function SettingsPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Replay welcome tours — clears the localStorage seen-flags
+            for every QuickGuide so they auto-popup again on next
+            visit. Useful for users who skipped the intro and now
+            want to see what they missed. */}
+        <ReplayToursButton />
 
         {/* Help & Feedback Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

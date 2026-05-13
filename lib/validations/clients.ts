@@ -150,6 +150,12 @@ export type RecordAttendanceInput = z.infer<typeof RecordAttendanceInputSchema>;
 // Query string filters for list endpoints
 // ------------------------------------------------------------------
 
+/**
+ * Sort options mirror the DAL's ClientListSort union. Bounded set
+ * so we can keep the comparator switch in the DAL exhaustive.
+ */
+const sortSchema = z.enum(['last_seen_desc', 'name_asc', 'created_desc']);
+
 export const ListClientsQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
   tag: z.string().trim().max(30).optional(),
@@ -158,5 +164,7 @@ export const ListClientsQuerySchema = z.object({
    * /os/clients. Mirrors the CHECK constraint on clients.status.
    */
   status: statusSchema.optional(),
+  /** Sort order. Defaults to last_seen_desc when omitted. */
+  sort: sortSchema.optional(),
 });
 export type ListClientsQuery = z.infer<typeof ListClientsQuerySchema>;

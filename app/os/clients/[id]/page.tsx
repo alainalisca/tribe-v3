@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/currency';
 import { isValidUuid } from '@/lib/validations/uuid';
+import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -68,6 +69,7 @@ const copy = {
     // History
     historyTitle: 'Attendance history',
     historyEmpty: 'No attendance recorded yet.',
+    historyEmptyHint: 'Tap "Record attendance" above to log the first session this client came to.',
     attended: 'Attended',
     notAttended: 'Did not attend',
     paid: 'Paid',
@@ -121,6 +123,7 @@ const copy = {
 
     historyTitle: 'Historial de asistencias',
     historyEmpty: 'Aún no hay asistencias registradas.',
+    historyEmptyHint: 'Toca "Registrar asistencia" arriba para registrar la primera sesión a la que vino este cliente.',
     attended: 'Asistió',
     notAttended: 'No asistió',
     paid: 'Pagado',
@@ -399,11 +402,19 @@ export default function ClientDetailPage() {
 
             {/* Attendance history */}
             <section className="mt-6">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.historyTitle}</h2>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold">{s.historyTitle}</h2>
+                {/* Quick attendance affordance — opens an inline form
+                    with a session picker + optional payment fields. On
+                    successful submit the parent's reloadKey bumps and
+                    the history below refreshes. */}
+                <RecordAttendanceInline clientId={state.client.id} onRecorded={() => setReloadKey((k) => k + 1)} />
+              </div>
               {state.attendance.length === 0 ? (
-                <p className="text-sm text-white/60 py-6 text-center bg-tribe-surface rounded-xl border border-tribe-mid">
-                  {s.historyEmpty}
-                </p>
+                <div className="py-8 text-center bg-tribe-surface rounded-xl border border-tribe-mid space-y-2">
+                  <p className="text-sm font-semibold text-white">{s.historyEmpty}</p>
+                  <p className="text-xs text-white/60 max-w-xs mx-auto leading-relaxed">{s.historyEmptyHint}</p>
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {state.attendance.map((a) => (

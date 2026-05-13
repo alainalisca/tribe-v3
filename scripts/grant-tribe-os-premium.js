@@ -4,17 +4,31 @@
  * Tribe.OS premium tier admin CLI.
  *
  * Usage from the tribe-v3 directory:
+ *   # Grant premium (creates a gym if none, adds user as owner)
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=solo
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=team_studio
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --tier=solo --welcome
- *     (also sends the bilingual beta welcome email)
+ *
+ *   # Revoke premium (also flips the gym status to canceled)
  *   node scripts/grant-tribe-os-premium.js --email=jane@studio.com --revoke
+ *
+ *   # Add a coach to an existing gym (does NOT grant them premium —
+ *   # the gym owner's subscription covers the whole roster)
+ *   node scripts/grant-tribe-os-premium.js --add-coach \
+ *     --gym-owner=jane@studio.com --coach-email=alex@studio.com [--role=coach|assistant]
+ *
+ *   # Remove a coach from a gym (cannot remove the owner)
+ *   node scripts/grant-tribe-os-premium.js --remove-coach \
+ *     --gym-owner=jane@studio.com --coach-email=alex@studio.com
+ *
+ *   # Print every premium user
  *   node scripts/grant-tribe-os-premium.js --list
  *
  * Optional flags:
  *   --welcome       send the beta welcome email after a successful grant
  *   --free-days=N   free runway communicated in the welcome email (default 90)
  *   --lang=en|es    welcome email language (default 'en')
+ *   --role=coach|assistant   role for --add-coach (default 'coach')
  *
  * Reads NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from
  * .env.local in the repo root. Hits Supabase directly with the service
@@ -33,6 +47,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 
 const VALID_TIERS = new Set(['solo', 'team_studio']);
+const VALID_COACH_ROLES = new Set(['coach', 'assistant']);
 const PREMIUM_SELECT =
   'tribe_os_tier, tribe_os_status, tribe_os_granted_at, tribe_os_granted_by, tribe_os_stripe_customer_id, tribe_os_stripe_subscription_id';
 
@@ -384,11 +399,124 @@ async function list(supabase) {
   }
 }
 
+/**
+ * Add a user (by email) to the gym owned by another user (by email)
+ * as a coach. Does NOT grant the new coach Tribe.OS premium —
+ * billing is scoped to the gym, and the owner's subscription covers
+ * the whole roster. The new coach must already have a Tribe account.
+ *
+ * RLS bypass is fine here because:
+ *   - We're using the service role
+ *   - The gym lookup is by owner_user_id, which is unambiguous
+ *   - The gym_coaches table has no policies that could block an
+ *     admin-driven INSERT
+ */
+async function addCoach(supabase, gymOwnerEmail, coachEmail, role) {
+  const owner = await findUserByEmail(supabase, gymOwnerEmail);
+  if (!owner) {
+    console.error(`error: gym owner not found with email "${gymOwnerEmail}"`);
+    process.exit(2);
+  }
+  const coach = await findUserByEmail(supabase, coachEmail);
+  if (!coach) {
+    console.error(`error: coach user not found with email "${coachEmail}"`);
+    console.error('(the user must already have a Tribe account before being added as a coach)');
+    process.exit(2);
+  }
+
+  // Find the owner's gym. If they have multiple, use the first
+  // active one (rare today — most owners have exactly one).
+  const { data: gym, error: gymErr } = await supabase
+    .from('gyms')
+    .select('id, name, slug')
+    .eq('owner_user_id', owner.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (gymErr) {
+    console.error('error: gym lookup failed:', gymErr.message);
+    process.exit(3);
+  }
+  if (!gym) {
+    console.error(`error: ${gymOwnerEmail} owns no active gym. Grant them premium first.`);
+    process.exit(2);
+  }
+
+  // Idempotent upsert. If the user is already a coach, the upsert
+  // returns the existing row instead of erroring on the PK conflict.
+  const { error: upsertErr } = await supabase
+    .from('gym_coaches')
+    .upsert({ gym_id: gym.id, user_id: coach.id, role }, { onConflict: 'gym_id,user_id' });
+  if (upsertErr) {
+    console.error('error: addCoach failed:', upsertErr.message);
+    process.exit(3);
+  }
+
+  console.log(`added ${coach.email} (${coach.name}) to gym ${gym.slug} as ${role}`);
+}
+
+/**
+ * Remove a user (by email) from the gym owned by another user (by
+ * email). Refuses to remove the owner themselves — every gym needs
+ * an owner. Same semantics as removeCoachFromGym in the DAL.
+ */
+async function removeCoach(supabase, gymOwnerEmail, coachEmail) {
+  const owner = await findUserByEmail(supabase, gymOwnerEmail);
+  if (!owner) {
+    console.error(`error: gym owner not found with email "${gymOwnerEmail}"`);
+    process.exit(2);
+  }
+  const coach = await findUserByEmail(supabase, coachEmail);
+  if (!coach) {
+    console.error(`error: coach user not found with email "${coachEmail}"`);
+    process.exit(2);
+  }
+
+  const { data: gym, error: gymErr } = await supabase
+    .from('gyms')
+    .select('id, name, slug, owner_user_id')
+    .eq('owner_user_id', owner.id)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (gymErr) {
+    console.error('error: gym lookup failed:', gymErr.message);
+    process.exit(3);
+  }
+  if (!gym) {
+    console.error(`error: ${gymOwnerEmail} owns no active gym.`);
+    process.exit(2);
+  }
+  if (gym.owner_user_id === coach.id) {
+    console.error('error: cannot remove the gym owner. Transfer ownership first.');
+    process.exit(2);
+  }
+
+  const { error: delErr, count } = await supabase
+    .from('gym_coaches')
+    .delete({ count: 'exact' })
+    .eq('gym_id', gym.id)
+    .eq('user_id', coach.id);
+  if (delErr) {
+    console.error('error: removeCoach failed:', delErr.message);
+    process.exit(3);
+  }
+  if (!count) {
+    console.log(`note: ${coach.email} was not a coach in ${gym.slug} (nothing to remove)`);
+    return;
+  }
+  console.log(`removed ${coach.email} from gym ${gym.slug}`);
+}
+
 function usage() {
   console.error('Usage:');
   console.error('  node scripts/grant-tribe-os-premium.js --email=<email> --tier=<solo|team_studio>');
   console.error('  node scripts/grant-tribe-os-premium.js --email=<email> --revoke');
   console.error('  node scripts/grant-tribe-os-premium.js --list');
+  console.error('  node scripts/grant-tribe-os-premium.js --add-coach --gym-owner=<email> --coach-email=<email> [--role=coach|assistant]');
+  console.error('  node scripts/grant-tribe-os-premium.js --remove-coach --gym-owner=<email> --coach-email=<email>');
   process.exit(1);
 }
 
@@ -411,6 +539,31 @@ async function main() {
     await list(supabase);
     return;
   }
+
+  // Coach management modes — handled before the --email gate
+  // because they use different args (--gym-owner + --coach-email).
+  if (args['add-coach'] === true || args['add-coach'] === 'true') {
+    const gymOwner = args['gym-owner'];
+    const coachEmail = args['coach-email'];
+    if (typeof gymOwner !== 'string' || typeof coachEmail !== 'string') {
+      console.error('error: --add-coach requires --gym-owner=<email> and --coach-email=<email>');
+      process.exit(1);
+    }
+    const role = typeof args.role === 'string' && VALID_COACH_ROLES.has(args.role) ? args.role : 'coach';
+    await addCoach(supabase, gymOwner, coachEmail, role);
+    return;
+  }
+  if (args['remove-coach'] === true || args['remove-coach'] === 'true') {
+    const gymOwner = args['gym-owner'];
+    const coachEmail = args['coach-email'];
+    if (typeof gymOwner !== 'string' || typeof coachEmail !== 'string') {
+      console.error('error: --remove-coach requires --gym-owner=<email> and --coach-email=<email>');
+      process.exit(1);
+    }
+    await removeCoach(supabase, gymOwner, coachEmail);
+    return;
+  }
+
   if (!args.email || typeof args.email !== 'string') {
     usage();
   }

@@ -198,11 +198,22 @@ export type RecordAttendanceInput = {
   notes?: string | null;
 } & PaymentFields;
 
+/**
+ * Sort options for the clients list. Defaults to `last_seen_desc`
+ * because "who haven't I seen lately" is the most-common scanning
+ * question. `name_asc` is for finding-a-specific-person mode.
+ * `created_desc` surfaces newly-added clients (e.g. just imported
+ * the WhatsApp roster, want to see who's there).
+ */
+export type ClientListSort = 'last_seen_desc' | 'name_asc' | 'created_desc';
+
 export interface ListClientsFilters {
   searchQuery?: string;
   tag?: string;
   /** Filter by engagement status. Omit for "any status". */
   status?: ClientStatus;
+  /** Sort order. Defaults to `last_seen_desc`. */
+  sort?: ClientListSort;
 }
 
 const CLIENT_SELECT =
@@ -423,15 +434,25 @@ export async function listClients(
       };
     });
 
+    const sortKey: ClientListSort = filters?.sort ?? 'last_seen_desc';
     enriched.sort((a, b) => {
-      // Most recent attendance first, NULLS last.
-      if (a.last_attendance_at && b.last_attendance_at) {
-        return b.last_attendance_at.localeCompare(a.last_attendance_at);
+      switch (sortKey) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        case 'created_desc':
+          return b.created_at.localeCompare(a.created_at);
+        case 'last_seen_desc':
+        default:
+          // Most recent attendance first, NULLS last. Tie-break
+          // by created_at desc so two clients who've never been
+          // marked attended sort by newest-added first.
+          if (a.last_attendance_at && b.last_attendance_at) {
+            return b.last_attendance_at.localeCompare(a.last_attendance_at);
+          }
+          if (a.last_attendance_at) return -1;
+          if (b.last_attendance_at) return 1;
+          return b.created_at.localeCompare(a.created_at);
       }
-      if (a.last_attendance_at) return -1;
-      if (b.last_attendance_at) return 1;
-      // Tie-break by created_at desc.
-      return b.created_at.localeCompare(a.created_at);
     });
 
     return { success: true, data: enriched };
