@@ -253,7 +253,7 @@ export default function ClientDetailPage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-600 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : ''}
         </p>
       </main>
@@ -261,31 +261,31 @@ export default function ClientDetailPage() {
   }
 
   return (
-    <main className="text-white px-4 py-8 sm:py-10 pb-24">
+    <main className="text-gray-900 px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/os/clients"
-          className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           {s.backToList}
         </Link>
 
         {state.kind === 'loading' ? (
-          <p className="py-12 text-center text-sm text-white/60">{s.loading}…</p>
+          <p className="py-12 text-center text-sm text-gray-500">{s.loading}…</p>
         ) : state.kind === 'not_found' ? (
           <div className="py-12 text-center space-y-3">
             <h2 className="text-lg font-bold">{s.notFoundTitle}</h2>
-            <p className="text-sm text-white/70">{s.notFoundHint}</p>
+            <p className="text-sm text-gray-600">{s.notFoundHint}</p>
           </div>
         ) : state.kind === 'error' ? (
           <div className="py-12 text-center space-y-4">
             <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
-            <p className="text-sm text-white/80">{state.message}</p>
+            <p className="text-sm text-gray-700">{state.message}</p>
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="px-4 py-2 bg-tribe-surface text-white text-sm font-semibold rounded-lg hover:bg-tribe-mid transition-colors"
+              className="px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors"
             >
               {s.retry}
             </button>
@@ -304,7 +304,7 @@ export default function ClientDetailPage() {
               <div className="flex gap-2 shrink-0">
                 <Link
                   href={`/os/clients/${state.client.id}/edit`}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-tribe-surface text-white text-xs font-semibold rounded-lg hover:bg-tribe-mid transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-gray-900 text-xs font-semibold rounded-lg hover:bg-gray-100 transition-colors"
                   aria-label={s.edit}
                 >
                   <Pencil className="w-4 h-4" />
@@ -313,7 +313,7 @@ export default function ClientDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowDelete(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-tribe-surface text-tribe-red text-xs font-semibold rounded-lg hover:bg-tribe-red/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-white text-tribe-red text-xs font-semibold rounded-lg hover:bg-tribe-red/20 transition-colors"
                   aria-label={s.delete}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -323,8 +323,8 @@ export default function ClientDetailPage() {
             </header>
 
             {/* Stats card */}
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.statsTitle}</h2>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.statsTitle}</h2>
               <div className="grid grid-cols-3 gap-3">
                 <Stat label={s.sessionsAttended} value={String(state.summary.total_attended_count)} />
                 <Stat
@@ -346,16 +346,16 @@ export default function ClientDetailPage() {
             </section>
 
             {/* Contact */}
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.contactTitle}</h2>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.contactTitle}</h2>
               {state.client.email || state.client.phone ? (
                 <ul className="space-y-2 text-sm">
                   {state.client.email ? (
                     <li className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-white/50 shrink-0" />
+                      <Mail className="w-4 h-4 text-gray-500 shrink-0" />
                       <a
                         href={`mailto:${state.client.email}`}
-                        className="text-white hover:text-tribe-green transition-colors break-all"
+                        className="text-gray-900 hover:text-tribe-green transition-colors break-all"
                       >
                         {state.client.email}
                       </a>
@@ -363,10 +363,10 @@ export default function ClientDetailPage() {
                   ) : null}
                   {state.client.phone ? (
                     <li className="flex items-center gap-2 flex-wrap">
-                      <Phone className="w-4 h-4 text-white/50 shrink-0" />
+                      <Phone className="w-4 h-4 text-gray-500 shrink-0" />
                       <a
                         href={`tel:${state.client.phone}`}
-                        className="text-white hover:text-tribe-green transition-colors"
+                        className="text-gray-900 hover:text-tribe-green transition-colors"
                       >
                         {state.client.phone}
                       </a>
@@ -400,21 +400,21 @@ export default function ClientDetailPage() {
                   ) : null}
                 </ul>
               ) : (
-                <p className="text-sm text-white/60">{s.noContact}</p>
+                <p className="text-sm text-gray-500">{s.noContact}</p>
               )}
             </section>
 
             {/* Tags */}
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.tagsTitle}</h2>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.tagsTitle}</h2>
               {state.client.tags.length === 0 ? (
-                <p className="text-sm text-white/60">{s.noTags}</p>
+                <p className="text-sm text-gray-500">{s.noTags}</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {state.client.tags.map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center px-2.5 py-1 bg-tribe-mid text-white text-xs font-medium rounded-full"
+                      className="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-900 text-xs font-medium rounded-full"
                     >
                       {t}
                     </span>
@@ -424,29 +424,29 @@ export default function ClientDetailPage() {
             </section>
 
             {/* Notes */}
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.notesTitle}</h2>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.notesTitle}</h2>
               {state.client.notes ? (
-                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{state.client.notes}</p>
+                <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{state.client.notes}</p>
               ) : (
-                <p className="text-sm text-white/60">{s.noNotes}</p>
+                <p className="text-sm text-gray-500">{s.noNotes}</p>
               )}
             </section>
 
             {/* Health notes (Week 2 Mission 4) */}
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-3">{s.healthTitle}</h2>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.healthTitle}</h2>
               {state.client.health_notes ? (
-                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{state.client.health_notes}</p>
+                <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{state.client.health_notes}</p>
               ) : (
-                <p className="text-sm text-white/60">{s.noHealth}</p>
+                <p className="text-sm text-gray-500">{s.noHealth}</p>
               )}
             </section>
 
             {/* Attendance history */}
             <section className="mt-6">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold">{s.historyTitle}</h2>
+                <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold">{s.historyTitle}</h2>
                 {/* Quick attendance affordance — opens an inline form
                     with a session picker + optional payment fields. On
                     successful submit the parent's reloadKey bumps and
@@ -454,9 +454,9 @@ export default function ClientDetailPage() {
                 <RecordAttendanceInline clientId={state.client.id} onRecorded={() => setReloadKey((k) => k + 1)} />
               </div>
               {state.attendance.length === 0 ? (
-                <div className="py-8 text-center bg-tribe-surface rounded-xl border border-tribe-mid space-y-2">
-                  <p className="text-sm font-semibold text-white">{s.historyEmpty}</p>
-                  <p className="text-xs text-white/60 max-w-xs mx-auto leading-relaxed">{s.historyEmptyHint}</p>
+                <div className="py-8 text-center bg-white rounded-xl border border-gray-200 space-y-2">
+                  <p className="text-sm font-semibold text-gray-900">{s.historyEmpty}</p>
+                  <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.historyEmptyHint}</p>
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -472,12 +472,12 @@ export default function ClientDetailPage() {
 
       {/* Delete confirmation dialog */}
       <Dialog open={showDelete} onOpenChange={(open) => !open && setShowDelete(false)}>
-        <DialogContent className="max-w-sm rounded-xl p-6 bg-tribe-surface border border-tribe-mid text-white">
+        <DialogContent className="max-w-sm rounded-xl p-6 bg-white border border-gray-200 text-gray-900">
           <DialogTitle className="text-lg font-bold text-tribe-red">{s.deleteTitle}</DialogTitle>
-          <p className="text-sm text-white/80 mt-2 leading-relaxed">{s.deleteDesc}</p>
+          <p className="text-sm text-gray-700 mt-2 leading-relaxed">{s.deleteDesc}</p>
           {deleteError ? (
             <div
-              className="flex items-start gap-2 mt-3 p-3 bg-tribe-red/10 border border-tribe-red/30 rounded-lg text-sm"
+              className="flex items-start gap-2 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
               role="alert"
             >
               <AlertCircle className="w-4 h-4 text-tribe-red shrink-0 mt-0.5" />
@@ -489,7 +489,7 @@ export default function ClientDetailPage() {
               type="button"
               onClick={() => setShowDelete(false)}
               disabled={deleting}
-              className="flex-1 px-4 py-2.5 bg-tribe-mid text-white text-sm font-bold rounded-lg hover:bg-tribe-card transition-colors disabled:opacity-60"
+              className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-card transition-colors disabled:opacity-60"
             >
               {s.cancel}
             </button>
@@ -497,7 +497,7 @@ export default function ClientDetailPage() {
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="flex-1 px-4 py-2.5 bg-tribe-red text-white text-sm font-bold rounded-lg hover:bg-tribe-red/80 transition-colors disabled:opacity-60"
+              className="flex-1 px-4 py-2.5 bg-tribe-red text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-red/80 transition-colors disabled:opacity-60"
             >
               {deleting ? `${s.deleting}…` : s.confirmDelete}
             </button>
@@ -511,8 +511,8 @@ export default function ClientDetailPage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-white/50 mb-1">{label}</p>
-      <p className="text-lg font-bold text-white truncate">{value}</p>
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
     </div>
   );
 }
@@ -528,8 +528,8 @@ function StatusBadge({ status, label }: { status: ClientRow['status']; label: st
     status === 'lapsed'
       ? 'bg-tribe-red/20 text-tribe-red border-tribe-red/40'
       : status === 'lead'
-        ? 'bg-tribe-amber/20 text-tribe-amber border-tribe-amber/40'
-        : 'bg-tribe-mid text-white/70 border-tribe-mid';
+        ? 'bg-tribe-amber/20 text-amber-700 border-tribe-amber/40'
+        : 'bg-gray-100 text-gray-600 border-gray-200';
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${tone}`}
@@ -557,31 +557,31 @@ function AttendanceListItem({
       : null;
 
   return (
-    <li className="bg-tribe-surface rounded-xl border border-tribe-mid p-4">
+    <li className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{sessionLabel}</p>
-          <p className="text-xs text-white/60 mt-0.5 flex items-center gap-1">
+          <p className="text-sm font-semibold text-gray-900 truncate">{sessionLabel}</p>
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             {dateLabel}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.attended ? 'text-tribe-green' : 'text-white/50'}`}
+            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.attended ? 'text-tribe-green' : 'text-gray-500'}`}
           >
             <CheckCircle className="w-3.5 h-3.5" />
             {row.attended ? s.attended : s.notAttended}
           </span>
           <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.paid ? 'text-tribe-green' : 'text-white/50'}`}
+            className={`inline-flex items-center gap-1 text-xs font-semibold ${row.paid ? 'text-tribe-green' : 'text-gray-500'}`}
           >
             <DollarSign className="w-3.5 h-3.5" />
             {paidLabel ?? (row.paid ? s.paid : s.notPaid)}
           </span>
         </div>
       </div>
-      {row.notes ? <p className="text-xs text-white/70 mt-2 leading-relaxed whitespace-pre-wrap">{row.notes}</p> : null}
+      {row.notes ? <p className="text-xs text-gray-600 mt-2 leading-relaxed whitespace-pre-wrap">{row.notes}</p> : null}
     </li>
   );
 }

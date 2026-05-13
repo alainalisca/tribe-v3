@@ -183,12 +183,12 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
   }
 
   return (
-    <main className="text-white px-4 py-8 sm:py-10 pb-24">
+    <main className="text-gray-900 px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <button
           type="button"
           onClick={() => router.push(cancelHref)}
-          className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           {s.cancel}
@@ -206,7 +206,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               maxLength={120}
               required
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
             />
           </Field>
 
@@ -218,7 +218,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               placeholder={s.emailPlaceholder}
               maxLength={254}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
             />
           </Field>
 
@@ -230,7 +230,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               placeholder={s.phonePlaceholder}
               maxLength={30}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
             />
           </Field>
 
@@ -239,7 +239,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               value={status}
               onChange={(e) => setStatus(e.target.value as ClientStatus)}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
             >
               <option value="active">{s.statusOptions.active}</option>
               <option value="inactive">{s.statusOptions.inactive}</option>
@@ -255,7 +255,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               onChange={(e) => setTags(e.target.value)}
               placeholder={s.tagsPlaceholder}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
             />
           </Field>
 
@@ -267,7 +267,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               maxLength={2000}
               rows={4}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
             />
           </Field>
 
@@ -279,13 +279,13 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
               maxLength={4000}
               rows={3}
               disabled={submitting}
-              className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
+              className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60 resize-y"
             />
           </Field>
 
           {error ? (
             <div
-              className="flex items-start gap-2 p-3 bg-tribe-red/10 border border-tribe-red/30 rounded-lg text-sm text-white"
+              className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-gray-900"
               role="alert"
             >
               <AlertCircle className="w-4 h-4 text-tribe-red shrink-0 mt-0.5" />
@@ -303,7 +303,7 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
             </button>
             <Link
               href={cancelHref}
-              className="inline-flex items-center justify-center px-6 py-3 bg-tribe-surface text-white text-sm font-bold rounded-lg hover:bg-tribe-mid transition-colors"
+              className="inline-flex items-center justify-center px-6 py-3 bg-white text-gray-900 text-sm font-bold rounded-lg hover:bg-gray-100 transition-colors"
             >
               {s.cancel}
             </Link>
@@ -317,9 +317,9 @@ export default function ClientForm({ initialValues, title, submitLabel, onSubmit
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold text-white mb-1.5">{label}</span>
+      <span className="block text-sm font-semibold text-gray-900 mb-1.5">{label}</span>
       {children}
-      {hint ? <span className="block text-xs text-white/50 mt-1">{hint}</span> : null}
+      {hint ? <span className="block text-xs text-gray-500 mt-1">{hint}</span> : null}
     </label>
   );
 }

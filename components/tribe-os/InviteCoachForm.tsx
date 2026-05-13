@@ -137,9 +137,9 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-white">{s.openCta}</h3>
+        <h3 className="text-sm font-bold text-gray-900">{s.openCta}</h3>
         <button
           type="button"
           onClick={() => {
@@ -148,14 +148,14 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
             setSuccess(null);
           }}
           aria-label={s.closeCta}
-          className="text-white/60 hover:text-white transition-colors"
+          className="text-gray-500 hover:text-gray-900 transition-colors"
         >
           <ChevronUp className="w-4 h-4" />
         </button>
       </div>
 
       <label className="block">
-        <span className="block text-xs font-semibold text-white/80 mb-1">{s.emailLabel}</span>
+        <span className="block text-xs font-semibold text-gray-700 mb-1">{s.emailLabel}</span>
         <input
           type="email"
           required
@@ -165,17 +165,17 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
           autoComplete="email"
           maxLength={254}
           disabled={submitting}
-          className="w-full px-3 py-2 bg-tribe-dark text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none disabled:opacity-60"
+          className="w-full px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none disabled:opacity-60"
         />
       </label>
 
       <label className="block">
-        <span className="block text-xs font-semibold text-white/80 mb-1">{s.roleLabel}</span>
+        <span className="block text-xs font-semibold text-gray-700 mb-1">{s.roleLabel}</span>
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as Role)}
           disabled={submitting}
-          className="w-full px-3 py-2 bg-tribe-dark text-white text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none disabled:opacity-60"
+          className="w-full px-3 py-2 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none disabled:opacity-60"
         >
           <option value="coach">{s.roleCoach}</option>
           <option value="assistant">{s.roleAssistant}</option>
@@ -184,7 +184,7 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
 
       {error ? (
         <div
-          className="flex items-start gap-2 p-2.5 bg-tribe-red/10 border border-tribe-red/30 rounded-lg text-xs text-white"
+          className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-gray-900"
           role="alert"
         >
           <AlertCircle className="w-3.5 h-3.5 text-tribe-red shrink-0 mt-0.5" />
@@ -197,7 +197,7 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
 
       {success ? (
         <div
-          className="flex items-start gap-2 p-2.5 bg-tribe-green/10 border border-tribe-green/40 rounded-lg text-xs text-white"
+          className="flex items-start gap-2 p-2.5 bg-tribe-green/10 border border-tribe-green/40 rounded-lg text-xs text-gray-900"
           role="status"
         >
           <CheckCircle2 className="w-3.5 h-3.5 text-tribe-green shrink-0 mt-0.5" />
@@ -210,7 +210,7 @@ export default function InviteCoachForm({ onInvited }: InviteCoachFormProps) {
           type="button"
           onClick={() => setOpen(false)}
           disabled={submitting}
-          className="px-3 py-1.5 bg-tribe-dark text-white/70 text-xs font-semibold rounded-full border border-tribe-mid hover:text-white transition-colors disabled:opacity-60"
+          className="px-3 py-1.5 bg-white text-gray-600 text-xs font-semibold rounded-full border border-gray-200 hover:text-gray-900 transition-colors disabled:opacity-60"
         >
           {s.closeCta}
         </button>

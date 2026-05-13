@@ -157,7 +157,7 @@ export default function GymSettingsPage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-600 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : s.loading}…
         </p>
       </main>
@@ -165,7 +165,7 @@ export default function GymSettingsPage() {
   }
 
   return (
-    <main className="text-white px-4 py-8 sm:py-10 pb-24">
+    <main className="text-gray-900 px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <header className="mb-6 flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-tribe-green/20 text-tribe-green flex items-center justify-center shrink-0">
@@ -173,25 +173,25 @@ export default function GymSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">{s.title}</h1>
-            <p className="text-sm text-white/70 mt-1">{s.subtitle}</p>
+            <p className="text-sm text-gray-600 mt-1">{s.subtitle}</p>
           </div>
         </header>
 
         {state.kind === 'loading' ? (
-          <p className="py-12 text-center text-sm text-white/60">{s.loading}…</p>
+          <p className="py-12 text-center text-sm text-gray-500">{s.loading}…</p>
         ) : state.kind === 'no_gym' ? (
           <div className="py-12 text-center space-y-3">
             <h2 className="text-lg font-bold">{s.noGymTitle}</h2>
-            <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{s.noGymHint}</p>
+            <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">{s.noGymHint}</p>
           </div>
         ) : state.kind === 'error' ? (
           <div className="py-12 text-center space-y-4">
             <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
-            <p className="text-sm text-white/80">{state.message}</p>
+            <p className="text-sm text-gray-700">{state.message}</p>
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="px-4 py-2 bg-tribe-surface text-white text-sm font-semibold rounded-lg hover:bg-tribe-mid transition-colors"
+              className="px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors"
             >
               {s.retry}
             </button>
@@ -285,10 +285,10 @@ function GymForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       {!canEdit ? (
         <div
-          className="flex items-start gap-2 p-3 bg-tribe-mid/40 border border-tribe-mid rounded-lg text-sm text-white/80"
+          className="flex items-start gap-2 p-3 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700"
           role="status"
         >
-          <AlertCircle className="w-4 h-4 text-white/60 shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-gray-500 shrink-0 mt-0.5" />
           <span>{s.readOnlyNotice}</span>
         </div>
       ) : null}
@@ -302,7 +302,7 @@ function GymForm({
           maxLength={255}
           required
           disabled={!canEdit || saving}
-          className="w-full px-4 py-2.5 bg-tribe-surface text-white placeholder:text-white/40 text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+          className="w-full px-4 py-2.5 bg-white text-gray-900 placeholder:text-gray-400 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
         />
       </Field>
 
@@ -312,7 +312,7 @@ function GymForm({
           value={initialGym.slug}
           readOnly
           disabled
-          className="w-full px-4 py-2.5 bg-tribe-mid/40 text-white/70 text-sm rounded-lg border border-tribe-mid font-mono"
+          className="w-full px-4 py-2.5 bg-gray-100 text-gray-600 text-sm rounded-lg border border-gray-200 font-mono"
         />
       </Field>
 
@@ -321,7 +321,7 @@ function GymForm({
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
           disabled={!canEdit || saving}
-          className="w-full px-4 py-2.5 bg-tribe-surface text-white text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+          className="w-full px-4 py-2.5 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
         >
           {/* Render the current value first in case it's outside our common list */}
           {!TIMEZONE_OPTIONS.includes(timezone as (typeof TIMEZONE_OPTIONS)[number]) ? (
@@ -340,7 +340,7 @@ function GymForm({
           value={currency}
           onChange={(e) => setCurrency(e.target.value as 'USD' | 'COP' | '')}
           disabled={!canEdit || saving}
-          className="w-full px-4 py-2.5 bg-tribe-surface text-white text-sm rounded-lg border border-tribe-mid focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
+          className="w-full px-4 py-2.5 bg-white text-gray-900 text-sm rounded-lg border border-gray-200 focus:border-tribe-green focus:outline-none transition-colors disabled:opacity-60"
         >
           <option value="">{s.currencyNoDefault}</option>
           <option value="USD">USD</option>
@@ -350,7 +350,7 @@ function GymForm({
 
       {error ? (
         <div
-          className="flex items-start gap-2 p-3 bg-tribe-red/10 border border-tribe-red/30 rounded-lg text-sm text-white"
+          className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-gray-900"
           role="alert"
         >
           <AlertCircle className="w-4 h-4 text-tribe-red shrink-0 mt-0.5" />
@@ -360,7 +360,7 @@ function GymForm({
 
       {success ? (
         <div
-          className="flex items-start gap-2 p-3 bg-tribe-green/10 border border-tribe-green/30 rounded-lg text-sm text-white"
+          className="flex items-start gap-2 p-3 bg-tribe-green/10 border border-tribe-green/30 rounded-lg text-sm text-gray-900"
           role="status"
         >
           <span>{success}</span>
@@ -383,9 +383,9 @@ function GymForm({
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-sm font-semibold text-white mb-1.5">{label}</span>
+      <span className="block text-sm font-semibold text-gray-900 mb-1.5">{label}</span>
       {children}
-      {hint ? <span className="block text-xs text-white/50 mt-1">{hint}</span> : null}
+      {hint ? <span className="block text-xs text-gray-500 mt-1">{hint}</span> : null}
     </label>
   );
 }

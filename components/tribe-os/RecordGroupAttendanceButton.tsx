@@ -110,26 +110,26 @@ export default function RecordGroupAttendanceButton() {
           setOpen(true);
           trackEvent('tribe_os_bulk_attendance_picker_opened');
         }}
-        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-tribe-surface text-white text-xs font-semibold rounded-full border border-tribe-mid hover:bg-tribe-mid transition-colors"
+        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-900 text-xs font-semibold rounded-full border border-gray-200 hover:bg-gray-100 transition-colors"
       >
         <ClipboardCheck className="w-3.5 h-3.5" />
         {s.cta}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md rounded-xl p-5 bg-tribe-surface border border-tribe-mid text-white">
-          <DialogTitle className="text-base font-bold text-white mb-1">{s.modalTitle}</DialogTitle>
-          <p className="text-xs text-white/60 mb-4 leading-relaxed">{s.modalHint}</p>
+        <DialogContent className="max-w-md rounded-xl p-5 bg-white border border-gray-200 text-gray-900">
+          <DialogTitle className="text-base font-bold text-gray-900 mb-1">{s.modalTitle}</DialogTitle>
+          <p className="text-xs text-gray-500 mb-4 leading-relaxed">{s.modalHint}</p>
 
           {sessions === null ? (
             <div className="py-6 space-y-2">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-12 bg-tribe-mid/40 rounded-lg animate-pulse" />
+                <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : sessions.length === 0 ? (
             <div className="py-6 text-center space-y-3">
-              <p className="text-sm text-white/70 leading-relaxed">{s.empty}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{s.empty}</p>
               <Link
                 href="/create"
                 onClick={() => setOpen(false)}
@@ -145,12 +145,14 @@ export default function RecordGroupAttendanceButton() {
                   <Link
                     href={`/os/sessions/${opt.id}/attendance`}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-tribe-mid bg-tribe-dark/40 hover:border-tribe-green/40 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50 hover:border-tribe-green/40 transition-colors"
                   >
                     <Calendar className="w-4 h-4 text-tribe-green shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{opt.title || opt.sport || 'Session'}</p>
-                      <p className="text-[11px] text-white/60 mt-0.5">{opt.date}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">
+                        {opt.title || opt.sport || 'Session'}
+                      </p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{opt.date}</p>
                     </div>
                   </Link>
                 </li>

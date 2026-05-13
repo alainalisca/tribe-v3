@@ -96,7 +96,7 @@ export default function EditClientPage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-600 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : ''}
         </p>
       </main>
@@ -105,24 +105,24 @@ export default function EditClientPage() {
 
   if (state.kind === 'loading') {
     return (
-      <main className="flex items-center justify-center px-4 py-24 text-white">
-        <p className="text-sm text-white/60">{s.loading}…</p>
+      <main className="flex items-center justify-center px-4 py-24 text-gray-900">
+        <p className="text-sm text-gray-500">{s.loading}…</p>
       </main>
     );
   }
 
   if (state.kind === 'not_found') {
     return (
-      <main className="flex items-center justify-center px-4 py-24 text-white">
-        <p className="text-sm text-white/60">{s.notFound}</p>
+      <main className="flex items-center justify-center px-4 py-24 text-gray-900">
+        <p className="text-sm text-gray-500">{s.notFound}</p>
       </main>
     );
   }
 
   if (state.kind === 'error') {
     return (
-      <main className="flex items-center justify-center px-4 py-24 text-white">
-        <p className="text-sm text-white/60">{state.message}</p>
+      <main className="flex items-center justify-center px-4 py-24 text-gray-900">
+        <p className="text-sm text-gray-500">{state.message}</p>
       </main>
     );
   }

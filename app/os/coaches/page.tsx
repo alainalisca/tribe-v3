@@ -178,7 +178,7 @@ export default function CoachesPage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-600 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : s.loading}…
         </p>
       </main>
@@ -186,41 +186,41 @@ export default function CoachesPage() {
   }
 
   return (
-    <main className="text-white px-4 py-8 sm:py-10 pb-24">
+    <main className="text-gray-900 px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <header className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">{s.title}</h1>
-          <p className="text-sm text-white/70 mt-1">{s.subtitle}</p>
+          <p className="text-sm text-gray-600 mt-1">{s.subtitle}</p>
         </header>
 
         {state.kind === 'loading' ? (
-          <p className="py-12 text-center text-sm text-white/60">{s.loading}…</p>
+          <p className="py-12 text-center text-sm text-gray-500">{s.loading}…</p>
         ) : state.kind === 'no_gym' ? (
           <div className="py-12 text-center space-y-3">
             <h2 className="text-lg font-bold">{s.noGymTitle}</h2>
-            <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{s.noGymHint}</p>
+            <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">{s.noGymHint}</p>
           </div>
         ) : state.kind === 'error' ? (
           <div className="py-12 text-center space-y-4">
             <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
-            <p className="text-sm text-white/80">{state.message}</p>
+            <p className="text-sm text-gray-700">{state.message}</p>
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="px-4 py-2 bg-tribe-surface text-white text-sm font-semibold rounded-lg hover:bg-tribe-mid transition-colors"
+              className="px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors"
             >
               {s.retry}
             </button>
           </div>
         ) : (
           <>
-            <section className="bg-tribe-surface rounded-xl border border-tribe-mid p-4 mb-4">
-              <p className="text-xs uppercase tracking-[0.1em] text-white/50 font-semibold mb-1">{s.gymLabel}</p>
-              <p className="text-base font-bold text-white truncate">{state.gym.name}</p>
+            <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+              <p className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-1">{s.gymLabel}</p>
+              <p className="text-base font-bold text-gray-900 truncate">{state.gym.name}</p>
               {/* Slug is technical metadata — useful for support /
                   shared-URL traceability, but de-emphasized until
                   there's an actual shared URL surface that uses it. */}
-              <p className="text-[10px] text-white/30 mt-1 font-mono tracking-wide">{state.gym.slug}</p>
+              <p className="text-[10px] text-gray-300 mt-1 font-mono tracking-wide">{state.gym.slug}</p>
             </section>
 
             {state.coaches.length === 0 || (state.coaches.length === 1 && state.coaches[0].role === 'owner') ? (
@@ -249,7 +249,7 @@ export default function CoachesPage() {
                 <InviteCoachForm onInvited={() => setReloadKey((k) => k + 1)} />
               </div>
             ) : (
-              <p className="text-xs text-white/40 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
+              <p className="text-xs text-gray-400 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
             )}
           </>
         )}
@@ -272,16 +272,16 @@ export default function CoachesPage() {
           }
         }}
       >
-        <DialogContent className="max-w-sm rounded-xl p-6 bg-tribe-surface border border-tribe-mid text-white">
+        <DialogContent className="max-w-sm rounded-xl p-6 bg-white border border-gray-200 text-gray-900">
           <DialogTitle className="text-lg font-bold text-tribe-red">{s.removeTitle}</DialogTitle>
-          <p className="text-sm text-white/80 mt-2 leading-relaxed">
+          <p className="text-sm text-gray-700 mt-2 leading-relaxed">
             {removeTarget
               ? s.removeDescription(removeTarget.user?.name ?? removeTarget.user?.email ?? removeTarget.user_id)
               : ''}
           </p>
           {removeErr ? (
             <div
-              className="flex items-start gap-2 mt-3 p-3 bg-tribe-red/10 border border-tribe-red/30 rounded-lg text-sm"
+              className="flex items-start gap-2 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm"
               role="alert"
             >
               <AlertCircle className="w-4 h-4 text-tribe-red shrink-0 mt-0.5" />
@@ -296,7 +296,7 @@ export default function CoachesPage() {
                 setRemoveErr(null);
               }}
               disabled={removing}
-              className="flex-1 px-4 py-2.5 bg-tribe-mid text-white text-sm font-bold rounded-lg hover:bg-tribe-card transition-colors disabled:opacity-60"
+              className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-card transition-colors disabled:opacity-60"
             >
               {s.removeCancel}
             </button>
@@ -304,7 +304,7 @@ export default function CoachesPage() {
               type="button"
               onClick={handleConfirmRemove}
               disabled={removing}
-              className="flex-1 px-4 py-2.5 bg-tribe-red text-white text-sm font-bold rounded-lg hover:bg-tribe-red/80 transition-colors disabled:opacity-60"
+              className="flex-1 px-4 py-2.5 bg-tribe-red text-gray-900 text-sm font-bold rounded-lg hover:bg-tribe-red/80 transition-colors disabled:opacity-60"
             >
               {removing ? `${s.removeLoading}…` : s.removeConfirm}
             </button>
@@ -343,26 +343,26 @@ function CoachRow({
   return (
     <li>
       <div
-        className={`flex items-center gap-3 p-4 bg-tribe-surface rounded-xl border ${
-          isOwner ? 'border-tribe-green/50' : 'border-tribe-mid'
+        className={`flex items-center gap-3 p-4 bg-white rounded-xl border ${
+          isOwner ? 'border-tribe-green/50' : 'border-gray-200'
         }`}
       >
         <div
           className={`w-10 h-10 rounded-full ${
-            isOwner ? 'bg-tribe-green text-tribe-dark' : 'bg-tribe-mid text-white'
+            isOwner ? 'bg-tribe-green text-tribe-dark' : 'bg-gray-100 text-gray-900'
           } flex items-center justify-center text-base font-bold shrink-0`}
         >
           {isOwner ? <Crown className="w-5 h-5" /> : initial}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-          {coach.user?.email ? <p className="text-xs text-white/60 mt-0.5 truncate">{coach.user.email}</p> : null}
+          <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+          {coach.user?.email ? <p className="text-xs text-gray-500 mt-0.5 truncate">{coach.user.email}</p> : null}
         </div>
         <span
           className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${
             isOwner
               ? 'bg-tribe-green/20 text-tribe-green border-tribe-green/40'
-              : 'bg-tribe-mid text-white/70 border-tribe-mid'
+              : 'bg-gray-100 text-gray-600 border-gray-200'
           }`}
         >
           {roleLabel}
@@ -372,7 +372,7 @@ function CoachRow({
             type="button"
             onClick={onRemove}
             aria-label={s.removeAria}
-            className="text-white/40 hover:text-tribe-red transition-colors shrink-0"
+            className="text-gray-400 hover:text-tribe-red transition-colors shrink-0"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -390,8 +390,8 @@ function OnlyYouState({ copy: s, isOwner }: { copy: typeof copy.en | typeof copy
   return (
     <div className="py-12 text-center space-y-3">
       <Users className="w-10 h-10 text-tribe-green mx-auto" />
-      <h2 className="text-lg font-bold text-white">{s.onlyYouTitle}</h2>
-      <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{hint}</p>
+      <h2 className="text-lg font-bold text-gray-900">{s.onlyYouTitle}</h2>
+      <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">{hint}</p>
     </div>
   );
 }

@@ -280,7 +280,7 @@ export default function BulkAttendancePage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-white/70 text-sm uppercase tracking-[0.1em]">
+        <p className="text-gray-600 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : s.loading}…
         </p>
       </main>
@@ -288,11 +288,11 @@ export default function BulkAttendancePage() {
   }
 
   return (
-    <main className="text-white px-4 py-8 sm:py-10 pb-24">
+    <main className="text-gray-900 px-4 py-8 sm:py-10 pb-24">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/os/dashboard"
-          className="inline-flex items-center gap-1 text-xs text-white/60 hover:text-white transition-colors mb-3"
+          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors mb-3"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           {s.backToDashboard}
@@ -301,7 +301,7 @@ export default function BulkAttendancePage() {
         <header className="mb-5">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">{s.title}</h1>
           {state.kind === 'ready' ? (
-            <p className="text-sm text-white/70 mt-1">
+            <p className="text-sm text-gray-600 mt-1">
               {state.session.title || state.session.sport || 'Session'} · {state.session.date}
               {state.session.start_time ? ` · ${state.session.start_time}` : ''}
             </p>
@@ -309,26 +309,26 @@ export default function BulkAttendancePage() {
         </header>
 
         {state.kind === 'loading' ? (
-          <p className="py-12 text-center text-sm text-white/60">{s.loading}…</p>
+          <p className="py-12 text-center text-sm text-gray-500">{s.loading}…</p>
         ) : state.kind === 'not_found' ? (
           <div className="py-12 text-center space-y-2">
             <h2 className="text-lg font-bold">{s.notFoundTitle}</h2>
-            <p className="text-sm text-white/70 max-w-sm mx-auto leading-relaxed">{s.notFoundHint}</p>
+            <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">{s.notFoundHint}</p>
           </div>
         ) : state.kind === 'error' ? (
           <div className="py-12 text-center space-y-4">
             <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
-            <p className="text-sm text-white/80">{state.message}</p>
+            <p className="text-sm text-gray-700">{state.message}</p>
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="px-4 py-2 bg-tribe-surface text-white text-sm font-semibold rounded-lg hover:bg-tribe-mid transition-colors"
+              className="px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors"
             >
               {s.retry}
             </button>
           </div>
         ) : state.rows.length === 0 ? (
-          <p className="py-12 text-center text-sm text-white/60 max-w-md mx-auto leading-relaxed">{s.noClients}</p>
+          <p className="py-12 text-center text-sm text-gray-500 max-w-md mx-auto leading-relaxed">{s.noClients}</p>
         ) : (
           <>
             <ul className="space-y-2 mb-4">
@@ -337,8 +337,8 @@ export default function BulkAttendancePage() {
               ))}
             </ul>
 
-            <div className="sticky bottom-20 sm:bottom-6 bg-tribe-dark/95 backdrop-blur rounded-2xl border border-tribe-mid p-3 flex items-center gap-3 mt-4">
-              <p className="text-xs text-white/60 flex-1">
+            <div className="sticky bottom-20 sm:bottom-6 bg-white backdrop-blur rounded-2xl border border-gray-200 p-3 flex items-center gap-3 mt-4">
+              <p className="text-xs text-gray-500 flex-1">
                 {dirtyCount === 0 ? s.nothingToSave : `${dirtyCount} ${dirtyCount === 1 ? 'change' : 'changes'}`}
               </p>
               <button
@@ -373,8 +373,8 @@ function AttendanceRow({
         row.saveStatus === 'ok'
           ? 'bg-tribe-green/5 border-tribe-green/30'
           : row.saveStatus === 'error'
-            ? 'bg-tribe-red/5 border-tribe-red/30'
-            : 'bg-tribe-surface border-tribe-mid'
+            ? 'bg-tribe-red/5 border-red-200'
+            : 'bg-white border-gray-200'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -385,7 +385,7 @@ function AttendanceRow({
             onChange={(e) => onChange({ attended: e.target.checked })}
             className="w-5 h-5 accent-tribe-green shrink-0"
           />
-          <span className="text-sm font-semibold text-white truncate">{row.client_name}</span>
+          <span className="text-sm font-semibold text-gray-900 truncate">{row.client_name}</span>
         </label>
         {row.saveStatus === 'ok' ? <CheckCircle2 className="w-4 h-4 text-tribe-green shrink-0" /> : null}
         {row.saveStatus === 'error' ? <AlertCircle className="w-4 h-4 text-tribe-red shrink-0" /> : null}
@@ -397,7 +397,7 @@ function AttendanceRow({
           then decide whether/how much they paid. */}
       {row.attended ? (
         <div className="mt-2 ml-7 flex items-center gap-2 flex-wrap">
-          <label className="flex items-center gap-1.5 text-xs text-white/70">
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
             <input
               type="checkbox"
               checked={row.paid}
@@ -408,8 +408,8 @@ function AttendanceRow({
           </label>
           {row.paid ? (
             <>
-              <div className="inline-flex items-center bg-tribe-dark rounded-lg border border-tribe-mid overflow-hidden">
-                <span className="px-2 text-white/50">
+              <div className="inline-flex items-center bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <span className="px-2 text-gray-500">
                   <DollarSign className="w-3 h-3" />
                 </span>
                 <input
@@ -420,13 +420,13 @@ function AttendanceRow({
                   value={row.amount}
                   onChange={(e) => onChange({ amount: e.target.value })}
                   placeholder={s.amountPlaceholder}
-                  className="w-20 bg-transparent text-sm text-white px-1 py-1 focus:outline-none"
+                  className="w-20 bg-transparent text-sm text-gray-900 px-1 py-1 focus:outline-none"
                 />
               </div>
               <select
                 value={row.currency}
                 onChange={(e) => onChange({ currency: e.target.value as Currency })}
-                className="bg-tribe-dark text-white text-xs rounded-lg border border-tribe-mid px-2 py-1 focus:outline-none focus:border-tribe-green"
+                className="bg-white text-gray-900 text-xs rounded-lg border border-gray-200 px-2 py-1 focus:outline-none focus:border-tribe-green"
               >
                 <option value="USD">USD</option>
                 <option value="COP">COP</option>
@@ -434,7 +434,7 @@ function AttendanceRow({
               <select
                 value={row.method}
                 onChange={(e) => onChange({ method: e.target.value as PaymentMethod })}
-                className="bg-tribe-dark text-white text-xs rounded-lg border border-tribe-mid px-2 py-1 focus:outline-none focus:border-tribe-green"
+                className="bg-white text-gray-900 text-xs rounded-lg border border-gray-200 px-2 py-1 focus:outline-none focus:border-tribe-green"
               >
                 <option value="cash">Cash</option>
                 <option value="transfer">Transfer</option>
