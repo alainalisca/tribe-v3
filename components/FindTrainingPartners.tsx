@@ -55,22 +55,15 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
 
     getUser();
 
-    // Get user's location — fallback to Medellin
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => {
-          setUserLocation({ lat: 6.2442, lng: -75.5812 });
-        }
-      );
-    } else {
-      setUserLocation({ lat: 6.2442, lng: -75.5812 });
-    }
+    // Get user's location — fallback to Medellin. Silent helper so
+    // we never auto-prompt on mount; if permission isn't already
+    // granted the page falls back to the city center and the user
+    // can opt in via an explicit "near me" affordance if/when added.
+    (async () => {
+      const { getUserLocation } = await import('@/lib/location');
+      const loc = await getUserLocation();
+      setUserLocation(loc ? { lat: loc.latitude, lng: loc.longitude } : { lat: 6.2442, lng: -75.5812 });
+    })();
   }, [supabase]);
 
   // Fetch nearby athletes

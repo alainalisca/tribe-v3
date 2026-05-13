@@ -49,7 +49,7 @@ import ExploreCitySection from '@/components/home/ExploreCitySection';
 import FeedPostPreview from '@/components/home/FeedPostPreview';
 import FirstMoverCTA from '@/components/FirstMoverCTA';
 import InstructorUpsellBanner from '@/components/InstructorUpsellBanner';
-import { getUserLocation } from '@/lib/location';
+import { requestUserLocation } from '@/lib/location';
 import { ACTIVE_CITY } from '@/lib/city-config';
 import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
@@ -161,7 +161,11 @@ export default function HomePage() {
           {f.user && !f.userLocation && !f.loading && (
             <button
               onClick={async () => {
-                const loc = await getUserLocation();
+                // User clicked "Enable location" — explicit intent,
+                // so we use the prompting variant. The background
+                // useHomeFeed flow uses the silent getUserLocation
+                // which never auto-prompts.
+                const loc = await requestUserLocation();
                 if (loc) f.setUserLocation(loc);
                 else {
                   const { Capacitor } = await import('@capacitor/core');

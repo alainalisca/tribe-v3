@@ -58,21 +58,15 @@ export default function TrainingPartnersPage() {
     };
     getUser();
 
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => {
-          setUserLocation({ lat: 6.2442, lng: -75.5812 });
-        }
-      );
-    } else {
-      setUserLocation({ lat: 6.2442, lng: -75.5812 });
-    }
+    // Silent location helper — falls back to Medellín when permission
+    // isn't already granted instead of prompting on page mount. If
+    // we add a "near me" button later we can wire it to
+    // requestUserLocation for explicit prompting.
+    (async () => {
+      const { getUserLocation } = await import('@/lib/location');
+      const loc = await getUserLocation();
+      setUserLocation(loc ? { lat: loc.latitude, lng: loc.longitude } : { lat: 6.2442, lng: -75.5812 });
+    })();
   }, [supabase]);
 
   useEffect(() => {

@@ -36,6 +36,7 @@ import {
   Settings as SettingsIcon,
   Bell,
   HelpCircle,
+  Home as HomeIcon,
   LogOut,
   Menu,
   X as XIcon,
@@ -70,6 +71,7 @@ const copy = {
     },
     bellAria: 'Notifications',
     helpAria: 'Help and feedback',
+    backToTribeAria: 'Back to Tribe',
     signOut: 'Sign Out',
     userLabel: 'User',
     openMenu: 'Open menu',
@@ -92,6 +94,7 @@ const copy = {
     },
     bellAria: 'Notificaciones',
     helpAria: 'Ayuda y comentarios',
+    backToTribeAria: 'Volver a Tribe',
     signOut: 'Cerrar sesión',
     userLabel: 'Usuario',
     openMenu: 'Abrir menú',
@@ -300,6 +303,18 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           </button>
           <h1 className="text-lg font-semibold text-tribe-dark">{s.topBarTitle}</h1>
           <div className="flex-1" />
+          {/* Quick switch back to the consumer Tribe app. Premium
+              owners flip between Tribe.OS and the community/training
+              surface many times a day — this is the reverse pair to
+              TribeOSQuickAccess that lives in the home FilterBar. */}
+          <Link
+            href="/"
+            aria-label={s.backToTribeAria}
+            title={s.backToTribeAria}
+            className="w-9 h-9 inline-flex items-center justify-center text-tribe-dark-80 hover:text-tribe-dark rounded-full hover:bg-tribe-dark-40 transition-colors"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </Link>
           <button
             type="button"
             aria-label={s.bellAria}
