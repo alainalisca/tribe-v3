@@ -18,6 +18,7 @@ import {
   deleteClient as dalDeleteClient,
   getClientAttendanceSummary,
 } from '@/lib/dal/clients';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { UpdateClientInputSchema } from '@/lib/validations/clients';
 
 function firstZodMessage(error: ZodError): string {
@@ -113,7 +114,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase } = gate;
+  const { supabase, userId } = gate;
 
   try {
     const { id: clientId } = await params;
@@ -121,10 +122,32 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'client_id_required' }, { status: 400 });
     }
 
+    // Snapshot the client BEFORE archiving so we can stash its name
+    // + gym_id in the audit payload. Once archived the row still
+    // exists, but pre-snapshot keeps the audit decoupled from the
+    // mutation's race conditions.
+    const snapshot = await getClient(supabase, clientId);
+    const targetName = snapshot.success && snapshot.data ? snapshot.data.name : null;
+    const targetGymId = snapshot.success && snapshot.data ? snapshot.data.gym_id : null;
+
     const result = await dalDeleteClient(supabase, clientId);
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'delete_failed' }, { status: 500 });
     }
+
+    // Append a forensic entry. Awaited so we get observability in
+    // Vercel logs but failures don't surface to the caller.
+    if (targetGymId) {
+      await writeAuditEntry(supabase, {
+        gymId: targetGymId,
+        actorUserId: userId,
+        action: 'client.archive',
+        targetType: 'client',
+        targetId: clientId,
+        payload: targetName ? { name: targetName } : undefined,
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logError(error, { route: 'DELETE /api/tribe-os/clients/[id]' });

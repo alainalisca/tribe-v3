@@ -4,6 +4,41 @@ Running list of items the autonomous build can't finish on its own.
 Grows as I keep working. Sorted by urgency — top items block the
 biggest unknowns.
 
+## 🆕 New migration to run: 082 (gym_audit_log)
+
+Append-only forensic log table for sensitive gym actions. Lands the
+foundation for the audit log feature — today it records soft-archive
+
+- hard-purge of clients; future destructive actions hook in via the
+  same `writeAuditEntry` helper without needing another migration.
+
+The migration is short and safe to run anytime. Contents:
+
+```sql
+-- See supabase/migrations/082_gym_audit_log.sql for the full file
+CREATE TABLE IF NOT EXISTS public.gym_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  gym_id uuid NOT NULL REFERENCES public.gyms(id) ON DELETE CASCADE,
+  actor_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  action text NOT NULL,
+  target_type text NOT NULL,
+  target_id uuid,
+  payload jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- + 2 indexes + RLS policies (select + insert for gym coaches,
+--   no update / delete — append-only)
+```
+
+After running, verify with:
+
+```sql
+SELECT COUNT(*) FROM public.gym_audit_log;  -- 0 rows expected on fresh table
+```
+
+The first row should appear when you archive or purge a test client
+from `/os/clients/[id]`.
+
 ## ⚠️ When you're ready to fire the weekly summary manually
 
 The Vercel **Cron Jobs UI** only shows production crons, and Tribe.OS

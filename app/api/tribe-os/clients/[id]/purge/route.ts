@@ -23,6 +23,7 @@ import { logError, log } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
 import { getClient, purgeClient } from '@/lib/dal/clients';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 
 export async function POST(
   _request: NextRequest,
@@ -62,6 +63,11 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'wrong_gym' }, { status: 403 });
     }
 
+    // Capture the name BEFORE we delete so the audit payload has
+    // something human-readable. After purge the client row is gone
+    // and a future audit-viewer can't join to recover it.
+    const targetName = clientRes.data.name;
+
     const result = await purgeClient(supabase, clientId);
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'purge_failed' }, { status: 500 });
@@ -72,6 +78,17 @@ export async function POST(
       clientId,
       gymId: gymRes.data.id,
       actorUserId: userId,
+    });
+
+    // Forensic record — survives the purge because gym_audit_log
+    // has no FK to clients (deliberate, see migration 082 comment).
+    await writeAuditEntry(supabase, {
+      gymId: gymRes.data.id,
+      actorUserId: userId,
+      action: 'client.purge',
+      targetType: 'client',
+      targetId: clientId,
+      payload: { name: targetName, reason: 'gdpr_or_manual' },
     });
 
     return NextResponse.json({ success: true });
