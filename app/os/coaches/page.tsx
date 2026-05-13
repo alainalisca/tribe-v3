@@ -259,7 +259,19 @@ export default function CoachesPage() {
           so a single dialog instance is shared across all coach
           rows. Open state is driven by removeTarget — null = closed,
           a coach row = open and targeted. */}
-      <Dialog open={removeTarget !== null} onOpenChange={(open) => !open && !removing && setRemoveTarget(null)}>
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !removing) {
+            // Clear both the target and any leftover error so the
+            // next "open" (a different coach row) starts fresh.
+            // Without this, dismissing via overlay-click instead
+            // of the Cancel button leaves removeErr stale.
+            setRemoveTarget(null);
+            setRemoveErr(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-sm rounded-xl p-6 bg-tribe-surface border border-tribe-mid text-white">
           <DialogTitle className="text-lg font-bold text-tribe-red">{s.removeTitle}</DialogTitle>
           <p className="text-sm text-white/80 mt-2 leading-relaxed">
