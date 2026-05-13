@@ -52,9 +52,14 @@ const copy = {
     // Stats
     statsTitle: 'Stats',
     sessionsAttended: 'Sessions attended',
+    sessions30d: 'Last 30 days',
+    streak: 'Current streak',
+    streakDays: (n: number) => (n === 1 ? '1 day' : `${n} days`),
+    streakLongest: (n: number) => `Longest: ${n}`,
     totalPaid: 'Total paid',
     lastAttendance: 'Last attendance',
     noAttendanceShort: 'None yet',
+    streakNone: '—',
 
     // Contact
     contactTitle: 'Contact',
@@ -114,9 +119,14 @@ const copy = {
 
     statsTitle: 'Estadísticas',
     sessionsAttended: 'Sesiones asistidas',
+    sessions30d: 'Últimos 30 días',
+    streak: 'Racha actual',
+    streakDays: (n: number) => (n === 1 ? '1 día' : `${n} días`),
+    streakLongest: (n: number) => `Mejor: ${n}`,
     totalPaid: 'Total pagado',
     lastAttendance: 'Última asistencia',
     noAttendanceShort: 'Ninguna aún',
+    streakNone: '—',
 
     contactTitle: 'Contacto',
     noContact: 'Sin información de contacto.',
@@ -337,7 +347,14 @@ export default function ClientDetailPage() {
               />
             </div>
 
-            {/* Stats card */}
+            {/* Stats card. Two rows:
+                  Row 1 (lifetime): Sessions attended | Total paid | Last attendance
+                  Row 2 (engagement): Last 30 days     | Current streak (+ longest)
+                Row 2 only renders when the AI scoring pipeline has
+                touched this client at least once (longest_streak_days
+                > 0 OR sessions_last_30_days > 0). Until then the
+                cached counters are all 0 and the row would just be
+                noise. */}
             <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
               <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.statsTitle}</h2>
               <div className="grid grid-cols-3 gap-3">
@@ -358,6 +375,24 @@ export default function ClientDetailPage() {
                   }
                 />
               </div>
+              {state.client.sessions_last_30_days > 0 || state.client.longest_streak_days > 0 ? (
+                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-100">
+                  <Stat label={s.sessions30d} value={String(state.client.sessions_last_30_days)} />
+                  <Stat
+                    label={s.streak}
+                    value={
+                      state.client.current_streak_days > 0
+                        ? s.streakDays(state.client.current_streak_days)
+                        : s.streakNone
+                    }
+                    sublabel={
+                      state.client.longest_streak_days > 0
+                        ? s.streakLongest(state.client.longest_streak_days)
+                        : undefined
+                    }
+                  />
+                </div>
+              ) : null}
             </section>
 
             {/* Contact */}
@@ -523,11 +558,12 @@ export default function ClientDetailPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
   return (
     <div>
       <p className="text-xs text-gray-500 mb-1">{label}</p>
       <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
+      {sublabel ? <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p> : null}
     </div>
   );
 }
