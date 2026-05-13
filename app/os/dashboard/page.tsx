@@ -31,6 +31,7 @@ import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
+import InsightsBanner from '@/components/tribe-os/InsightsBanner';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -216,6 +217,11 @@ export default function TribeOSDashboardPage() {
 
         {/* Onboarding checklist — auto-hides once graduated or dismissed. */}
         <OnboardingChecklist />
+
+        {/* Insights nudge — surfaces active community_insights so coaches
+            see "you have N alerts" before they scan stats/sessions.
+            Hides itself when zero insights so we don't add empty noise. */}
+        <InsightsBanner />
 
         {/* KPI strip */}
         <DashboardStats />
