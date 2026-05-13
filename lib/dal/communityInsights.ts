@@ -60,6 +60,14 @@ export interface ListInsightsOptions {
   unactionedOnly?: boolean;
   /** Hide expired cards (default true). */
   activeOnly?: boolean;
+  /**
+   * Restrict to insights whose linked members include at least one
+   * client in this team. Gym-level insights (no linked members,
+   * e.g. GROWTH cards) drop out of the result when this is set —
+   * they don't belong to any team. When unset, the filter doesn't
+   * apply and every insight in the gym comes back.
+   */
+  teamId?: string | null;
 }
 
 /**
@@ -73,6 +81,7 @@ export async function listInsightsForGym(
 ): Promise<DalResult<CommunityInsight[]>> {
   const unactionedOnly = options.unactionedOnly ?? true;
   const activeOnly = options.activeOnly ?? true;
+  const teamId = options.teamId ?? null;
 
   try {
     // Embed client name + phone via a two-hop join so the UI can
@@ -157,7 +166,27 @@ export async function listInsightsForGym(
       return b.created_at.localeCompare(a.created_at);
     });
 
-    return { success: true, data: rows };
+    // Optional team filter: one extra round-trip to fetch the team's
+    // member set, then keep only insights that reference at least one
+    // of those members. Gym-level insights (no linked members) fall
+    // out naturally — they don't intersect any team.
+    let filtered = rows;
+    if (teamId) {
+      const { data: memberRows, error: memberErr } = await supabase
+        .from('gym_team_members')
+        .select('client_id')
+        .eq('team_id', teamId);
+      if (memberErr) {
+        logError(memberErr, { action: 'listInsightsForGym.team_filter', gymId, teamId });
+        // Fail open: return the unfiltered list rather than nothing.
+        // Coach still gets useful data; observability picks up the issue.
+      } else {
+        const teamMemberSet = new Set((memberRows ?? []).map((r) => r.client_id as string));
+        filtered = rows.filter((r) => r.member_ids.some((id) => teamMemberSet.has(id)));
+      }
+    }
+
+    return { success: true, data: filtered };
   } catch (error) {
     logError(error, { action: 'listInsightsForGym.exception', gymId });
     return { success: false, error: 'Failed to load insights' };

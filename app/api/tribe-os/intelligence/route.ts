@@ -10,6 +10,8 @@
  * Query params:
  *   include_actioned=true  — include dismissed cards (history view)
  *   include_expired=true   — include expired cards
+ *   team_id=<uuid>         — restrict to insights touching members
+ *                            in that team (gym-level insights drop)
  *
  * Response (200): { success: true, data: { insights: CommunityInsight[] } }
  */
@@ -29,6 +31,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const url = new URL(request.url);
     const includeActioned = url.searchParams.get('include_actioned') === 'true';
     const includeExpired = url.searchParams.get('include_expired') === 'true';
+    // Optional team scope. When set, the DAL filters to insights
+    // touching at least one member in that team. Gym-level insights
+    // (no linked members) drop out — they don't belong to a team.
+    const teamId = url.searchParams.get('team_id');
 
     const gymRes = gymId ? await getGym(supabase, gymId) : await getGymForUser(supabase, userId);
     if (!gymRes.success) {
@@ -41,6 +47,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const result = await listInsightsForGym(supabase, gymRes.data.id, {
       unactionedOnly: !includeActioned,
       activeOnly: !includeExpired,
+      teamId: teamId || null,
     });
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'list_failed' }, { status: 500 });

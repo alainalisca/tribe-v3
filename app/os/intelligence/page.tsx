@@ -107,6 +107,8 @@ const copy = {
     dismissAllRunning: 'Dismissing…',
     dismissAllDoneToast: (n: number) => `Dismissed ${n} ${n === 1 ? 'alert' : 'alerts'}.`,
     dismissAllError: "Couldn't dismiss those alerts. Try again.",
+    teamFilterAllOption: 'All teams',
+    teamFilterAria: 'Filter insights by team',
   },
   es: {
     redirectingLabel: 'Redirigiendo',
@@ -162,6 +164,8 @@ const copy = {
     dismissAllRunning: 'Descartando…',
     dismissAllDoneToast: (n: number) => `Se descartaron ${n} ${n === 1 ? 'alerta' : 'alertas'}.`,
     dismissAllError: 'No se pudieron descartar. Intenta de nuevo.',
+    teamFilterAllOption: 'Todos los equipos',
+    teamFilterAria: 'Filtrar insights por equipo',
   },
 } as const;
 
@@ -197,6 +201,13 @@ export default function IntelligencePage() {
   // default), 'history' adds dismissed + expired so the user can
   // look back at what the engine flagged before.
   const [view, setView] = useState<'active' | 'history'>('active');
+  // Optional team scope. null = "all teams"; a uuid restricts insights
+  // to those touching at least one member in that team.
+  const [teamFilter, setTeamFilter] = useState<string | null>(null);
+  // Team roster for the selector. Loaded once on mount; the dropdown
+  // hides when the gym has fewer than 2 teams (filter wouldn't have
+  // a meaningful choice to make).
+  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
   // Bulk-rescore state: controls the "Run intelligence engine"
   // button + the small summary line under it after a run completes.
   const [rescoring, setRescoring] = useState(false);
@@ -241,6 +252,33 @@ export default function IntelligencePage() {
     }
   }
 
+  // Load the team roster once so the team selector can render. We
+  // deliberately don't refetch on reloadKey — teams change far less
+  // often than insights, and the dropdown's stale-by-a-few-minutes
+  // is acceptable. Errors silently hide the dropdown.
+  useEffect(() => {
+    if (gate.state !== 'allowed') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/tribe-os/teams/', { method: 'GET' });
+        const body = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          data?: { teams?: Array<{ id: string; name: string }> };
+        };
+        if (cancelled) return;
+        if (res.ok && body.success && body.data?.teams) {
+          setTeams(body.data.teams.map((t) => ({ id: t.id, name: t.name })));
+        }
+      } catch {
+        // Ignore — selector just won't render.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gate.state]);
+
   useEffect(() => {
     if (gate.state !== 'allowed') return;
     let cancelled = false;
@@ -252,6 +290,9 @@ export default function IntelligencePage() {
         if (view === 'history') {
           url.searchParams.set('include_actioned', 'true');
           url.searchParams.set('include_expired', 'true');
+        }
+        if (teamFilter) {
+          url.searchParams.set('team_id', teamFilter);
         }
         const res = await fetch(url.toString(), { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
@@ -274,7 +315,7 @@ export default function IntelligencePage() {
     return () => {
       cancelled = true;
     };
-  }, [gate.state, reloadKey, view, s.errorTitle]);
+  }, [gate.state, reloadKey, view, teamFilter, s.errorTitle]);
 
   // Group by severity for the section headers.
   const grouped = useMemo(() => {
@@ -313,7 +354,26 @@ export default function IntelligencePage() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* Team filter — only renders when the gym has 2+ teams.
+                  Empty value means "all teams"; selecting a team
+                  filters to insights touching at least one of its
+                  members (gym-level insights drop). */}
+              {teams.length >= 2 ? (
+                <select
+                  value={teamFilter ?? ''}
+                  onChange={(e) => setTeamFilter(e.target.value || null)}
+                  aria-label={s.teamFilterAria}
+                  className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-tribe-dark-40 rounded-tribe text-tribe-dark focus:outline-none focus:border-tribe-green"
+                >
+                  <option value="">{s.teamFilterAllOption}</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
               {/* Active / History view toggle. Lives in the header so
                   it's available even when the body is in loading or
                   empty state. */}
