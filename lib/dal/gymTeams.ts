@@ -46,6 +46,23 @@ export interface GymTeamRow {
   updated_at: string;
 }
 
+/** Client embedded in a team-member roster row. Minimal fields for the UI. */
+export interface TeamMemberClient {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  status: string | null;
+  health_status: string | null;
+  last_seen_at: string | null;
+}
+
+/** Team + full member roster (used by /os/teams/[id]). */
+export interface GymTeamWithMembers extends GymTeamRow {
+  coach_name: string | null;
+  members: Array<TeamMemberClient & { added_at: string }>;
+}
+
 export interface CreateTeamInput {
   gymId: string;
   name: string;
@@ -137,6 +154,86 @@ export async function createTeam(supabase: SupabaseClient, input: CreateTeamInpu
   } catch (error) {
     logError(error, { action: 'createTeam', gymId: input.gymId });
     return { success: false, error: 'Failed to create team' };
+  }
+}
+
+/**
+ * Fetch one team with its full member roster. Members come from
+ * gym_team_members joined with clients (non-archived rows only).
+ * Caller's gym_coaches membership is enforced by RLS on both tables.
+ */
+export async function getTeamWithMembers(
+  supabase: SupabaseClient,
+  teamId: string
+): Promise<DalResult<GymTeamWithMembers | null>> {
+  try {
+    const { data: teamRow, error: teamErr } = await supabase
+      .from('gym_teams')
+      .select(
+        `
+          id, gym_id, name, description, color, coach_user_id, created_at, updated_at,
+          coach:users!gym_teams_coach_user_id_fkey(name)
+        `
+      )
+      .eq('id', teamId)
+      .maybeSingle();
+    if (teamErr) {
+      logError(teamErr, { action: 'getTeamWithMembers.team_row', teamId });
+      return { success: false, error: teamErr.message };
+    }
+    if (!teamRow) return { success: true, data: null };
+
+    const { data: memberRows, error: memberErr } = await supabase
+      .from('gym_team_members')
+      .select(
+        `
+          added_at,
+          client:clients(id, name, email, phone, status, health_status, last_seen_at, archived)
+        `
+      )
+      .eq('team_id', teamId);
+    if (memberErr) {
+      logError(memberErr, { action: 'getTeamWithMembers.members', teamId });
+      return { success: false, error: memberErr.message };
+    }
+
+    const coach = (teamRow.coach as unknown as { name: string | null } | null) ?? null;
+    const members = (memberRows ?? [])
+      .map((r) => {
+        const client = r.client as unknown as (TeamMemberClient & { archived?: boolean }) | null;
+        if (!client || client.archived) return null;
+        return {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          status: client.status,
+          health_status: client.health_status,
+          last_seen_at: client.last_seen_at,
+          added_at: r.added_at as string,
+        };
+      })
+      .filter((m): m is TeamMemberClient & { added_at: string } => m !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return {
+      success: true,
+      data: {
+        id: teamRow.id as string,
+        gym_id: teamRow.gym_id as string,
+        name: teamRow.name as string,
+        description: (teamRow.description as string | null) ?? null,
+        color: teamRow.color as TeamColor,
+        coach_user_id: (teamRow.coach_user_id as string | null) ?? null,
+        created_at: teamRow.created_at as string,
+        updated_at: teamRow.updated_at as string,
+        coach_name: coach?.name ?? null,
+        members,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'getTeamWithMembers.exception', teamId });
+    return { success: false, error: 'Failed to load team' };
   }
 }
 

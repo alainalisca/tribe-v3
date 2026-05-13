@@ -170,6 +170,11 @@ type EventName =
   | 'tribe_os_members_viewed' // /os/members page rendered with the roster
   | 'tribe_os_teams_viewed' // /os/teams page rendered with the list
   | 'tribe_os_team_created' // POST /api/tribe-os/teams success
+  | 'tribe_os_team_detail_viewed' // /os/teams/[id] page rendered
+  | 'tribe_os_team_updated' // PATCH /api/tribe-os/teams/[id] success
+  | 'tribe_os_team_deleted' // DELETE /api/tribe-os/teams/[id] success
+  | 'tribe_os_team_member_added' // POST /api/tribe-os/teams/[id]/members success
+  | 'tribe_os_team_member_removed' // DELETE /api/tribe-os/teams/[id]/members success
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download

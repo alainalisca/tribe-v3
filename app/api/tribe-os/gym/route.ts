@@ -38,7 +38,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
   try {
     // Resolve the gym. Either via the gate's gymId or via the
-    // user-lookup fallback for legacy-path sessions.
+    // user-lookup fallback for legacy-path sessions. The response
+    // includes is_owner so client-side surfaces can gate owner-only
+    // affordances (edit / delete / add member / remove coach) without
+    // having to compare userIds on their own.
     if (gymId) {
       const res = await getGym(supabase, gymId);
       if (!res.success) {
@@ -46,7 +49,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ success: false, error: 'gym_lookup_failed' }, { status: 500 });
       }
       if (!res.data) return NextResponse.json({ success: false, error: 'no_gym' }, { status: 404 });
-      return NextResponse.json({ success: true, data: res.data });
+      return NextResponse.json({
+        success: true,
+        data: { ...res.data, is_owner: res.data.owner_user_id === userId },
+      });
     }
 
     const fallback = await getGymForUser(supabase, userId);
@@ -55,7 +61,10 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'gym_lookup_failed' }, { status: 500 });
     }
     if (!fallback.data) return NextResponse.json({ success: false, error: 'no_gym' }, { status: 404 });
-    return NextResponse.json({ success: true, data: fallback.data });
+    return NextResponse.json({
+      success: true,
+      data: { ...fallback.data, is_owner: fallback.data.owner_user_id === userId },
+    });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/gym' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
