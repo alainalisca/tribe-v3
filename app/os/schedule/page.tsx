@@ -20,6 +20,7 @@ import { Plus, ChevronLeft, ChevronRight, Calendar, List, AlertCircle } from 'lu
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import { Avatar, Badge } from '@/components/tribe-os/ui';
 
 interface ScheduleSession {
   id: string;
@@ -189,7 +190,7 @@ export default function SchedulePage() {
   if (gate.state !== 'allowed') {
     return (
       <main className="flex items-center justify-center px-4 py-24">
-        <p className="text-gray-500 text-sm uppercase tracking-[0.1em]">
+        <p className="text-tribe-dark-80 text-sm uppercase tracking-[0.1em]">
           {gate.state === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
         </p>
       </main>
@@ -204,20 +205,20 @@ export default function SchedulePage() {
     <div className="px-4 lg:px-8 py-6 lg:py-8">
       <div className="max-w-7xl mx-auto space-y-5">
         <header>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">{s.pageTitle}</h1>
-          <p className="text-sm text-gray-500 mt-1">{s.subtitle}</p>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-tribe-dark">{s.pageTitle}</h1>
+          <p className="text-sm text-tribe-dark-80 mt-1">{s.subtitle}</p>
         </header>
 
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <Link
             href="/create"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-tribe-green text-tribe-dark text-sm font-bold rounded-xl hover:shadow-[0_4px_20px_rgba(132,204,22,0.25)] hover:-translate-y-0.5 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-tribe-green text-tribe-dark text-sm font-bold rounded-tribe hover:shadow-[0_4px_20px_rgba(132,204,22,0.25)] hover:-translate-y-0.5 transition-all"
           >
             <Plus className="w-4 h-4" />
             {s.createSession}
           </Link>
 
-          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-white border border-tribe-dark-40 rounded-tribe p-1">
             <ViewToggleButton active={view === 'list'} onClick={() => setView('list')} Icon={List} label={s.viewList} />
             <ViewToggleButton
               active={view === 'calendar'}
@@ -229,28 +230,28 @@ export default function SchedulePage() {
         </div>
 
         {/* Week navigator */}
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+        <div className="bg-white rounded-tribe border border-tribe-dark-40 px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={() => setAnchor(shiftWeek(anchor, -1))}
               aria-label={s.prev}
-              className="w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="w-8 h-8 inline-flex items-center justify-center text-tribe-dark-80 hover:text-tribe-dark hover:bg-tribe-dark-40 rounded-tribe transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900">
+              <p className="text-sm font-bold text-tribe-dark">
                 {s.weekOf} {s.monthsShort[weekStartDate.getUTCMonth()]} {weekStartDate.getUTCDate()},{' '}
                 {weekStartDate.getUTCFullYear()}
               </p>
-              <p className="text-[11px] text-gray-500">{weekLabel}</p>
+              <p className="text-[11px] text-tribe-dark-80">{weekLabel}</p>
             </div>
             <button
               type="button"
               onClick={() => setAnchor(shiftWeek(anchor, 1))}
               aria-label={s.next}
-              className="w-8 h-8 inline-flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="w-8 h-8 inline-flex items-center justify-center text-tribe-dark-80 hover:text-tribe-dark hover:bg-tribe-dark-40 rounded-tribe transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -259,7 +260,7 @@ export default function SchedulePage() {
             type="button"
             onClick={() => setAnchor(weekStart(new Date()))}
             disabled={isCurrentWeek}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-default"
+            className="px-3 py-1.5 text-xs font-semibold rounded-tribe border border-tribe-dark-40 hover:bg-tribe-dark-40 disabled:opacity-60 disabled:cursor-default"
           >
             {s.thisWeek}
           </button>
@@ -269,17 +270,17 @@ export default function SchedulePage() {
         {state.kind === 'loading' ? (
           <div className="space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-24 bg-white rounded-xl border border-gray-200 animate-pulse" />
+              <div key={i} className="h-24 bg-white rounded-tribe border border-tribe-dark-40 animate-pulse" />
             ))}
           </div>
         ) : state.kind === 'error' ? (
           <div className="py-12 text-center space-y-3">
             <AlertCircle className="w-8 h-8 text-tribe-red mx-auto" />
-            <p className="text-sm text-gray-700">{state.message}</p>
+            <p className="text-sm text-tribe-dark">{state.message}</p>
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="px-4 py-2 bg-gray-100 text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-200"
+              className="px-4 py-2 bg-tribe-dark-40 text-tribe-dark text-sm font-semibold rounded-tribe hover:bg-tribe-dark-60"
             >
               {s.retry}
             </button>
@@ -308,8 +309,8 @@ function ViewToggleButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-        active ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-900'
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-tribe transition-colors ${
+        active ? 'bg-tribe-dark-40 text-tribe-dark' : 'text-tribe-dark-80 hover:text-tribe-dark'
       }`}
     >
       <Icon className="w-3.5 h-3.5" />
@@ -335,12 +336,12 @@ function DaysList({
         const monthLabel = s.monthsShort[date.getUTCMonth()];
         return (
           <section key={ymdStr}>
-            <h2 className="text-base font-bold text-gray-900 mb-3">
+            <h2 className="text-base font-bold text-tribe-dark mb-3">
               {dayName}, {monthLabel} {date.getUTCDate()}
             </h2>
             {sessions.length === 0 ? (
-              <div className="bg-white rounded-xl border border-dashed border-gray-200 px-5 py-6 text-center">
-                <p className="text-xs text-gray-400">{s.emptyDay}</p>
+              <div className="bg-white rounded-tribe border border-dashed border-tribe-dark-40 px-5 py-6 text-center">
+                <p className="text-xs text-tribe-dark-60">{s.emptyDay}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -369,39 +370,48 @@ function SessionCard({ session, copy: s }: { session: ScheduleSession; copy: typ
   const statusLabel =
     session.status && session.status in s.status ? s.status[session.status as keyof typeof s.status] : null;
 
+  // Map session status → Badge variant (matches the canonical
+  // tribe-os session-card semantics).
+  let badgeVariant: 'info' | 'success' | 'default' | 'danger' = 'info';
+  if (session.status === 'in_progress') badgeVariant = 'success';
+  else if (session.status === 'completed') badgeVariant = 'default';
+  else if (session.status === 'cancelled') badgeVariant = 'danger';
+
+  const coachInitial = (session.coach_name?.charAt(0) || '?').toUpperCase();
+
   return (
     <Link
       href={`/os/sessions/${session.id}/attendance`}
-      className="bg-white rounded-xl border border-gray-200 hover:border-tribe-green/40 hover:shadow-sm transition-all p-4 block"
+      className="bg-white rounded-tribe shadow-tribe p-4 transition-all hover:shadow-tribe-lg hover:scale-[1.01] border border-tribe-dark-40 hover:border-tribe-green block"
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-xs text-gray-500 font-medium">{timeRange}</p>
-        {statusLabel ? (
-          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-            {statusLabel}
-          </span>
-        ) : null}
+      {/* Header: time + status badge */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <span className="text-sm font-semibold text-tribe-dark">{timeRange}</span>
+        {statusLabel ? <Badge variant={badgeVariant}>{statusLabel}</Badge> : null}
       </div>
-      <p className="text-sm font-bold text-gray-900 mb-3 truncate">{name}</p>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-[10px] shrink-0">
-          {(session.coach_name?.charAt(0) || '?').toUpperCase()}
-        </div>
-        <p className="text-xs text-gray-700 truncate">
-          <span className="text-gray-400 mr-1">{s.coach}</span>
-          {coach}
-        </p>
+
+      {/* Session name */}
+      <h3 className="text-base font-semibold text-tribe-dark mb-2 truncate">{name}</h3>
+
+      {/* Coach */}
+      <div className="flex items-center gap-2 mb-4">
+        <Avatar initials={coachInitial} size="sm" />
+        <span className="text-sm text-tribe-dark-80 truncate">
+          {s.coach} {coach}
+        </span>
       </div>
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-[11px] text-gray-500">
-          <span>Enrollment</span>
-          <span className="font-semibold text-gray-900 tabular-nums">
+
+      {/* Enrollment */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-tribe-dark-80">Enrollment</span>
+          <span className="text-xs font-semibold text-tribe-dark tabular-nums">
             {enrolled}/{max || '—'} {s.spots}
           </span>
         </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-tribe-dark-40 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full ${pct >= 100 ? 'bg-tribe-red' : 'bg-tribe-green'}`}
+            className={`h-full transition-all ${pct >= 100 ? 'bg-tribe-danger' : 'bg-tribe-green'}`}
             style={{ width: `${pct}%` }}
           />
         </div>

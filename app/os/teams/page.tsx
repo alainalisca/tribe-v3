@@ -21,10 +21,11 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Plus, MessageSquare, Search, AlertCircle, X as XIcon } from 'lucide-react';
+import { Plus, MessageSquare, Search, AlertCircle, X as XIcon, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
+import { Avatar, Button, Card, CardContent } from '@/components/tribe-os/ui';
 import type { GymTeamWithStats, TeamColor } from '@/lib/dal/gymTeams';
 
 interface ListResponse {
@@ -286,70 +287,70 @@ function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy
   const overflow = Math.max(0, team.member_count - preview.length);
 
   return (
-    <article className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className={`h-1 ${STRIPE_COLOR[team.color]}`} aria-hidden="true" />
-      <div className="p-5 space-y-4">
-        <header className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-base font-bold text-gray-900 truncate">{team.name}</h3>
-            {team.description ? <p className="text-xs text-gray-500 mt-1 line-clamp-2">{team.description}</p> : null}
+    <Card className="overflow-hidden">
+      {/* Color stripe at top — matches the canonical tribe-os team-card. */}
+      <div className={`h-1.5 ${STRIPE_COLOR[team.color]}`} aria-hidden="true" />
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-tribe-dark truncate">{team.name}</h3>
+            {team.description ? (
+              <p className="text-sm text-tribe-dark-80 mt-1 line-clamp-2">{team.description}</p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            aria-label="Message team"
-            className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
-          >
-            <MessageSquare className="w-4 h-4" />
-          </button>
-        </header>
+          <div className="ml-4 shrink-0">
+            <Button variant="ghost" size="sm" title="Message team" aria-label="Message team">
+              <MessageSquare className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-        <div className="flex items-center gap-4 flex-wrap text-xs">
-          <span className="inline-flex items-center gap-1.5 font-semibold text-gray-900">
-            <span className="text-base font-black">{team.member_count}</span>
-            <span className="text-gray-500 font-medium">
+        {/* Stats row — large member count + inline active/at-risk dots */}
+        <div className="flex items-center gap-6 mb-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-tribe-dark">{team.member_count}</span>
+            <span className="text-sm text-tribe-dark-80">
               {team.member_count === 1
-                ? (s.members(1).split(' ')[1] ?? '')
-                : (s.members(team.member_count).split(' ')[1] ?? '')}
+                ? (s.members(1).split(' ').slice(1).join(' ') ?? '')
+                : (s.members(team.member_count).split(' ').slice(1).join(' ') ?? '')}
             </span>
-          </span>
+          </div>
           {team.active_count > 0 ? (
-            <span className="inline-flex items-center gap-1 text-tribe-green">
-              <span className="w-1.5 h-1.5 rounded-full bg-tribe-green" />
-              {s.activeShort(team.active_count)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-tribe-success" />
+              <span className="text-sm text-tribe-dark-80">{s.activeShort(team.active_count)}</span>
+            </div>
           ) : null}
           {team.at_risk_count > 0 ? (
-            <span className="inline-flex items-center gap-1 text-amber-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              {s.atRiskShort(team.at_risk_count)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-tribe-warning" />
+              <span className="text-sm text-tribe-dark-80">{s.atRiskShort(team.at_risk_count)}</span>
+            </div>
           ) : null}
         </div>
 
+        {/* Coach line + stacked member avatars */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
-              {coachInitial}
-            </div>
-            <p className="text-xs text-gray-600 truncate">
-              <span className="text-gray-400">{s.coachLabel}</span>{' '}
-              <span className="font-semibold text-gray-900">{team.coach_name || s.noCoach}</span>
+            <Avatar initials={coachInitial} size="sm" />
+            <p className="text-sm text-tribe-dark-80 truncate">
+              <span className="text-tribe-dark-60">{s.coachLabel}</span>{' '}
+              <span className="font-semibold text-tribe-dark">{team.coach_name || s.noCoach}</span>
             </p>
           </div>
-
           {preview.length > 0 ? (
             <div className="flex items-center -space-x-2 shrink-0">
               {preview.map((m) => (
-                <span
+                <Avatar
                   key={m.id}
+                  initials={(m.name.charAt(0) || '?').toUpperCase()}
+                  size="sm"
+                  className="border-2 border-white"
                   title={m.name}
-                  className="w-7 h-7 rounded-full bg-tribe-green/15 border-2 border-white text-tribe-dark font-bold flex items-center justify-center text-[10px]"
-                >
-                  {(m.name.charAt(0) || '?').toUpperCase()}
-                </span>
+                />
               ))}
               {overflow > 0 ? (
-                <span className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white text-gray-600 font-bold flex items-center justify-center text-[10px]">
+                <span className="h-8 w-8 rounded-full bg-tribe-dark-40 flex items-center justify-center border-2 border-white text-xs font-semibold text-tribe-dark-80">
                   +{overflow}
                 </span>
               ) : null}
@@ -357,15 +358,16 @@ function TeamCard({ team, copy: s }: { team: GymTeamWithStats; copy: typeof copy
           ) : null}
         </div>
 
+        {/* View Members link — links to the (future) detail page */}
         <Link
           href={`/os/teams/${team.id}`}
-          className="flex items-center justify-center gap-1 w-full py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors border-t border-gray-100 pt-3 -mx-5 -mb-5 px-5 pb-3 mt-1"
+          className="w-full mt-4 pt-4 border-t border-tribe-dark-40 flex items-center justify-center gap-2 text-sm text-tribe-dark-80 hover:text-tribe-green-dark transition-colors"
         >
           {s.viewMembers}
-          <span aria-hidden="true">↓</span>
+          <ChevronDown className="h-4 w-4" />
         </Link>
-      </div>
-    </article>
+      </CardContent>
+    </Card>
   );
 }
 
