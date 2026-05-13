@@ -198,6 +198,9 @@ type EventName =
   | 'tribe_os_unpaid_whatsapp_clicked' // per-row WhatsApp reminder tapped on /os/revenue/unpaid
   | 'tribe_member_streak_at_risk_shown' // /my-coach rendered with the at-risk banner visible
   | 'tribe_member_streak_milestone_shown' // /my-coach rendered with a milestone celebration banner (7/14/30/100)
+  | 'tribe_os_celebrate_wins_viewed' // /os/dashboard CelebrateWinsWidget rendered with N streakers
+  | 'tribe_os_celebrate_row_clicked' // streaker row tapped → /os/clients/[id]
+  | 'tribe_os_celebrate_whatsapp_clicked' // per-row WhatsApp congrats tapped on dashboard widget
   | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered

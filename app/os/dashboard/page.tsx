@@ -26,6 +26,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
+import CelebrateWinsWidget from '@/components/tribe-os/CelebrateWinsWidget';
 import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
@@ -236,6 +237,13 @@ export default function TribeOSDashboardPage() {
             <AtRiskClientsWidget />
           </div>
         </div>
+
+        {/* Celebrate-wins widget — mirror image of the at-risk widget.
+            Self-hides when no members are on an active streak so an
+            early-stage gym doesn't see a dead card. Sits before the
+            activity feed because acting on a streak ("send congrats")
+            is more time-sensitive than scanning historical events. */}
+        <CelebrateWinsWidget />
 
         {/* Recent activity feed */}
         <RecentActivityWidget />

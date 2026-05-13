@@ -342,10 +342,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                All three now render with friendly labels in the /os/audit
-                viewer (English + Spanish). The pattern is reusable — adding
-                new audit event types just means calling `writeAuditEntry` from
-                the relevant route and adding a label entry.
+                    All three now render with friendly labels in the /os/audit
+                    viewer (English + Spanish). The pattern is reusable — adding
+                    new audit event types just means calling `writeAuditEntry` from
+                    the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -421,16 +421,44 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     too, without push notifications, without a cron, just visual
     state on a page they already visit.
 
-22. **"Sign up for Tribe" invite email** — when a coach adds a client
+22. ✅ **"Celebrate these wins" dashboard widget** — shipped. New
+    widget on `/os/dashboard` lists clients currently on an active
+    streak of 7+ days (with a stale-streak guard requiring
+    `last_seen_at` within the last 7 days too). Sorted by
+    `current_streak_days` DESC so a 47-day streak surfaces before a
+    7-day one. Per-row WhatsApp deep link with a bilingual congrats
+    template: "Hey Carlos! Just saw you're on a 30-day streak —
+    that's not easy. Proud of you. Keep it going 🔥"
+
+    The widget **self-hides** when no members qualify — unlike the
+    at-risk widget (where "no one is at risk" is a meaningful
+    affirmation), an empty celebrate-wins state would just be
+    dashboard noise. Sits between the at-risk+upcoming grid and the
+    activity feed so it's visible without dominating the page.
+
+    DAL: new `listActiveStreakers(supabase, context, opts)` with
+    configurable `minStreakDays` / `staleAfterDays` / `limit`.
+    Three new analytics events:
+    `tribe_os_celebrate_wins_viewed`,
+    `tribe_os_celebrate_row_clicked`,
+    `tribe_os_celebrate_whatsapp_clicked`.
+
+    **What this buys you**: closes the coach side of the streak
+    loop. Member sees their milestone on /my-coach; coach sees the
+    same milestone surface up on their dashboard with a one-tap
+    way to acknowledge it. That two-sided recognition is what
+    turns a "tracking app" into "the gym that cares."
+
+23. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-23. **Stripe Connect rough-edge polish** — but this is hard to do
+24. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-24. **Per-attendance trigger optimization** — migration 079 recomputes
+25. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-25. **Generator feedback loop** — use the feedback data from #5 to:
+26. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

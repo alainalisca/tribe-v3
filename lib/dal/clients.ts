@@ -1165,6 +1165,125 @@ export async function listAtRiskClients(
 }
 
 // ------------------------------------------------------------------
+// Active-streakers roll-up ("Celebrate these wins" dashboard widget)
+// ------------------------------------------------------------------
+
+/**
+ * A client currently on a meaningful active streak. Surfaced on the
+ * /os/dashboard "Celebrate these wins" widget so the coach can fire
+ * a personal congratulations via WhatsApp — the mirror image of the
+ * at-risk widget, which surfaces members slipping away.
+ */
+export interface ActiveStreaker {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  current_streak_days: number;
+  longest_streak_days: number;
+  last_seen_at: string | null;
+}
+
+export interface ListActiveStreakersOptions {
+  /**
+   * Minimum streak in days to qualify. Defaults to 7 — a "Week
+   * strong" milestone is the floor for a "this is worth
+   * celebrating" moment. Coaches praising every 3-day streak
+   * turns into noise; 7+ is the meaningful threshold.
+   */
+  minStreakDays?: number;
+  /**
+   * Stale-streak guard. If a client's `current_streak_days` says 10
+   * but their `last_seen_at` is 14 days ago, the cached counter has
+   * drifted (typically because the nightly streak-decay job hasn't
+   * run yet). We exclude streakers whose last_seen_at is older than
+   * this many days. Defaults to 7 — "still actively training."
+   */
+  staleAfterDays?: number;
+  /** Max rows. Defaults to 10 — the widget renders cards, more than ~10 overflows. */
+  limit?: number;
+}
+
+const DEFAULT_MIN_STREAK_DAYS = 7;
+const DEFAULT_STALE_AFTER_DAYS = 7;
+const DEFAULT_STREAKERS_LIMIT = 10;
+
+/**
+ * Lists clients currently on an active streak of `minStreakDays` or
+ * more, ordered by `current_streak_days` DESC. The longest active
+ * streakers show first — coaches see "Carlos is on day 47" before
+ * "Ana is on day 7" so the most impressive wins get acknowledged.
+ *
+ * Stale-streak guard: filters out clients whose `last_seen_at` is
+ * older than `staleAfterDays`. The counter trigger from migration
+ * 079 keeps these accurate on every write, but if the database is
+ * in an inconsistent state (rare) we don't want to celebrate a
+ * streak that's actually broken.
+ *
+ * Archived clients are excluded. Status doesn't matter — a 'lead'
+ * client who's been showing up every day deserves the praise as
+ * much as an 'active' one.
+ */
+export async function listActiveStreakers(
+  supabase: SupabaseClient,
+  context: ClientTenantContext | string,
+  options: ListActiveStreakersOptions = {}
+): Promise<DalResult<ActiveStreaker[]>> {
+  const ctx: ClientTenantContext = typeof context === 'string' ? { gymId: null, instructorUserId: context } : context;
+  const instructorUserId = ctx.instructorUserId;
+  const gymId = ctx.gymId;
+
+  const minStreakDays = Math.max(1, Math.floor(options.minStreakDays ?? DEFAULT_MIN_STREAK_DAYS));
+  const staleAfterDays = Math.max(1, Math.floor(options.staleAfterDays ?? DEFAULT_STALE_AFTER_DAYS));
+  const limit = Math.max(1, Math.min(options.limit ?? DEFAULT_STREAKERS_LIMIT, 50));
+
+  try {
+    const staleCutoffIso = new Date(Date.now() - staleAfterDays * 24 * 60 * 60 * 1000).toISOString();
+
+    let q = supabase
+      .from('clients')
+      .select('id, name, email, phone, current_streak_days, longest_streak_days, last_seen_at')
+      .eq('archived', false)
+      .gte('current_streak_days', minStreakDays)
+      // last_seen_at must exist AND be recent enough. PostgREST's
+      // gte filter implicitly excludes nulls, so the not-null guard
+      // is redundant but kept explicit for clarity.
+      .not('last_seen_at', 'is', null)
+      .gte('last_seen_at', staleCutoffIso)
+      .order('current_streak_days', { ascending: false })
+      .order('last_seen_at', { ascending: false })
+      .limit(limit);
+
+    if (gymId) {
+      q = q.eq('gym_id', gymId);
+    } else {
+      q = q.eq('instructor_user_id', instructorUserId);
+    }
+
+    const { data, error } = await q;
+    if (error) {
+      logError(error, { action: 'listActiveStreakers', instructorUserId, gymId });
+      return { success: false, error: error.message };
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      current_streak_days: number;
+      longest_streak_days: number;
+      last_seen_at: string | null;
+    }>;
+
+    return { success: true, data: rows };
+  } catch (error) {
+    logError(error, { action: 'listActiveStreakers', instructorUserId, gymId });
+    return { success: false, error: 'Failed to list active streakers' };
+  }
+}
+
+// ------------------------------------------------------------------
 // Internal helpers
 // ------------------------------------------------------------------
 
