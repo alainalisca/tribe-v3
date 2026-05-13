@@ -5,6 +5,32 @@ import { createClient } from '@/lib/supabase/client';
 import { log, logError } from '@/lib/logger';
 import { updateUser } from '@/lib/dal';
 
+/**
+ * Registers the service worker on every page load. Only subscribes to
+ * push when the user has ALREADY granted notification permission
+ * elsewhere — never auto-prompts. The prior behavior called
+ * `Notification.requestPermission()` unconditionally if there was no
+ * subscription yet, which meant any user who closed the browser's
+ * permission dialog with the X (instead of Block / Allow) got
+ * re-prompted on every page load, since the permission state stayed
+ * at 'default'.
+ *
+ * The "ask the user nicely" flow now lives entirely in
+ * `components/NotificationPrompt.tsx` (in-app toast with Enable / Later
+ * buttons) and `lib/firebase-messaging.ts#registerForPushNotifications`.
+ * That path:
+ *   - Shows the in-app prompt at most once per device (localStorage
+ *     gates it)
+ *   - Only calls `requestPermission()` when the user clicks Enable
+ *   - Persists the choice so we never re-ask
+ *
+ * This component's job is just to be ready: register the SW, persist
+ * the subscription IF permission is granted. The very first time the
+ * user grants permission via NotificationPrompt, that flow saves the
+ * subscription itself; this component handles the second-visit case
+ * where permission was already granted but the SW hasn't picked up
+ * the existing subscription yet.
+ */
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if (!('serviceWorker' in navigator && 'PushManager' in window)) return;
@@ -22,9 +48,16 @@ export default function ServiceWorkerRegistration() {
       let subscription = await registration.pushManager.getSubscription();
 
       if (!subscription) {
-        const permission = await Notification.requestPermission();
+        // CRITICAL: don't auto-prompt. Only attempt to subscribe when
+        // the user has already granted permission through the in-app
+        // NotificationPrompt flow. Otherwise we exit silently and let
+        // that component own the ask.
+        const permission = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
         if (permission !== 'granted') {
-          log('debug', 'Notification permission denied', { action: 'registerAndSubscribe' });
+          log('debug', 'sw_skip_subscribe_no_permission', {
+            action: 'registerAndSubscribe',
+            permission,
+          });
           return;
         }
 
