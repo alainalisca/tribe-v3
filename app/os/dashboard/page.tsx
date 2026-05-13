@@ -38,9 +38,9 @@ type PageState = 'checking' | 'redirecting' | 'not_premium' | 'premium';
 const copy = {
   en: {
     // Premium dashboard
-    welcome: 'Welcome to Tribe.OS',
+    welcome: 'Your gym at a glance',
     placeholder:
-      'You are one of our first design partners. The full Tribe.OS dashboard with paid sessions and revenue analytics is being built right now based on what you and a small group of other instructors are telling us. Client management is live below.',
+      'Members below need a check-in. Use the nav above for the full client roster, revenue, coaches, or gym settings.',
     clientsCta: 'Manage clients',
     revenueCta: 'View revenue',
     coachesCta: 'Coaches',
@@ -69,9 +69,9 @@ const copy = {
   },
   // ES PENDING VERONICA REVIEW
   es: {
-    welcome: 'Bienvenido a Tribe.OS',
+    welcome: 'Tu gym de un vistazo',
     placeholder:
-      'Eres uno de nuestros primeros socios de diseño. El panel completo de Tribe.OS con sesiones de pago y analítica de ingresos se está construyendo ahora mismo con base en lo que tú y un grupo pequeño de instructores nos están diciendo. La gestión de clientes ya está disponible abajo.',
+      'Los miembros de abajo necesitan seguimiento. Usa la navegación arriba para ver la lista completa de clientes, ingresos, entrenadores o la configuración del gym.',
     clientsCta: 'Gestionar clientes',
     revenueCta: 'Ver ingresos',
     coachesCta: 'Entrenadores',

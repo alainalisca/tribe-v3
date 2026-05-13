@@ -35,9 +35,13 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Building2, ChevronDown, Home, LogOut, Menu, TrendingUp, UserCog, Users } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { createClient } from '@/lib/supabase/client';
+import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+
+type PremiumProbe = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
 
 // ES PENDING VERONICA REVIEW
 const copy = {
@@ -96,17 +100,70 @@ function isActive(pathname: string | null, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+/**
+ * Tracks whether the signed-in user is on Tribe.OS premium so the
+ * shell can hide nav links that would just bounce them via
+ * useTribeOSPremiumGate. Without this, a non-premium user lands on
+ * /os/dashboard, sees the four nav pills, clicks one → marketing
+ * page redirect. Worse UX than no nav at all.
+ *
+ * Three states:
+ *   - 'unknown': initial probe in progress; render nav defensively
+ *     so we don't flash a no-nav state to premium users on every
+ *     page load.
+ *   - 'premium': render the full nav.
+ *   - 'not_premium': render only the wordmark + account menu. The
+ *     dashboard page itself surfaces the upgrade card.
+ */
+type PremiumStatus = 'unknown' | 'premium' | 'not_premium';
+
 export default function OSShell({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage();
   const s = copy[language];
   const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [premiumStatus, setPremiumStatus] = useState<PremiumStatus>('unknown');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        if (!cancelled) setPremiumStatus('not_premium');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('tribe_os_tier, tribe_os_status')
+        .eq('id', user.id)
+        .single();
+      if (cancelled) return;
+      if (error) {
+        // Fail closed — treat lookup errors as not-premium so we
+        // don't accidentally surface nav to someone who'd just be
+        // bounced. The page-level gate does the actual gating.
+        setPremiumStatus('not_premium');
+        return;
+      }
+      setPremiumStatus(isTribeOSPremiumActive(data as PremiumProbe | null) ? 'premium' : 'not_premium');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const showNav = premiumStatus !== 'not_premium';
 
   return (
     <div className="min-h-screen bg-tribe-dark">
       {/* Sticky top bar. z-30 so it sits above page content but below
-          modals/dialogs. */}
-      <header className="sticky top-0 z-30 border-b border-tribe-mid/60 bg-tribe-dark/95 backdrop-blur supports-[backdrop-filter]:bg-tribe-dark/80">
+          modals/dialogs. pt-[env(safe-area-inset-top)] adds room
+          for the iOS status bar / notch in Capacitor builds; the
+          inset evaluates to 0 on the web so desktop is unaffected. */}
+      <header className="sticky top-0 z-30 border-b border-tribe-mid/60 bg-tribe-dark/95 backdrop-blur supports-[backdrop-filter]:bg-tribe-dark/80 pt-[env(safe-area-inset-top)]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 sm:gap-6">
           {/* Wordmark */}
           <Link
@@ -117,40 +174,100 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
             <span className="text-tribe-green">.OS</span>
           </Link>
 
-          {/* Primary nav — center on desktop, scroll-row on mobile */}
-          <nav className="flex-1 min-w-0 overflow-x-auto scrollbar-none" aria-label={s.accountMenuLabel}>
-            <ul className="flex items-center gap-1 sm:gap-2">
-              {NAV_ITEMS.map((item) => {
-                const active = isActive(pathname, item.matchPrefix);
-                const label = s.nav[item.labelKey];
-                const Icon = item.Icon;
-                return (
-                  <li key={item.href} className="shrink-0">
-                    <Link
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full transition-colors whitespace-nowrap ${
-                        active
-                          ? 'bg-tribe-green text-tribe-dark'
-                          : 'text-white/70 hover:text-white hover:bg-tribe-surface'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" />
-                      {label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+          {/* Primary nav (desktop/tablet) — only rendered when the
+              user is premium (or while we're still probing, to avoid
+              a no-nav flash for premium users). Non-premium users
+              see just the wordmark and the account menu's "Back to
+              Tribe" escape.
+              Hidden on mobile (sm:hidden inverse → hidden sm:flex)
+              because the bottom tab bar at the foot of the screen
+              handles mobile navigation more thumb-reachably. */}
+          {showNav ? (
+            <nav
+              className="hidden sm:flex flex-1 min-w-0 overflow-x-auto scrollbar-none"
+              aria-label={s.accountMenuLabel}
+            >
+              <ul className="flex items-center gap-1 sm:gap-2">
+                {NAV_ITEMS.map((item) => {
+                  const active = isActive(pathname, item.matchPrefix);
+                  const label = s.nav[item.labelKey];
+                  const Icon = item.Icon;
+                  return (
+                    <li key={item.href} className="shrink-0">
+                      <Link
+                        href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full transition-colors whitespace-nowrap ${
+                          active
+                            ? 'bg-tribe-green text-tribe-dark'
+                            : 'text-white/70 hover:text-white hover:bg-tribe-surface'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ) : (
+            <div className="hidden sm:block flex-1" />
+          )}
+          {/* Mobile spacer so the wordmark stays left-anchored and
+              the account menu stays right-anchored when the desktop
+              nav is hidden. */}
+          <div className="sm:hidden flex-1" />
 
           {/* Account menu */}
-          <AccountMenu open={accountOpen} setOpen={setAccountOpen} copy={s.accountMenu} label={s.accountMenuLabel} />
+          <AccountMenu
+            open={accountOpen}
+            setOpen={setAccountOpen}
+            copy={s.accountMenu}
+            label={s.accountMenuLabel}
+            includeGymLink={premiumStatus === 'premium'}
+          />
         </div>
       </header>
 
-      {/* Page content. Pages render their own padding + max-width. */}
-      {children}
+      {/* Page content. Pages render their own padding + max-width.
+          pb-20 sm:pb-0 reserves room for the mobile bottom tab bar
+          so content never gets hidden behind it. */}
+      <div className="pb-20 sm:pb-0">{children}</div>
+
+      {/* Mobile bottom tab bar — premium users only, same NAV_ITEMS
+          as the desktop top nav. Fixed at the foot of the viewport
+          with safe-area-inset-bottom so the iOS home-indicator gap
+          doesn't make tabs feel cramped. Hidden on sm+ where the
+          top nav takes over. */}
+      {showNav ? (
+        <nav
+          aria-label={s.accountMenuLabel}
+          className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-tribe-mid/60 bg-tribe-dark/95 backdrop-blur supports-[backdrop-filter]:bg-tribe-dark/80 pb-[env(safe-area-inset-bottom)]"
+        >
+          <ul className="grid grid-cols-4 h-16">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(pathname, item.matchPrefix);
+              const label = s.nav[item.labelKey];
+              const Icon = item.Icon;
+              return (
+                <li key={item.href} className="flex">
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
+                      active ? 'text-tribe-green' : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : ''}`} />
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      ) : null}
     </div>
   );
 }
@@ -166,11 +283,14 @@ function AccountMenu({
   setOpen,
   copy: c,
   label,
+  includeGymLink,
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
   copy: { gym: string; backToTribe: string };
   label: string;
+  /** Gym settings is a premium-only surface; hide for non-premium users. */
+  includeGymLink: boolean;
 }) {
   return (
     <div className="relative shrink-0">
@@ -201,8 +321,12 @@ function AccountMenu({
             role="menu"
             className="absolute right-0 top-full mt-1 z-50 min-w-[220px] bg-tribe-surface border border-tribe-mid rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.4)] overflow-hidden"
           >
-            <MenuItem href="/os/gym" Icon={Building2} label={c.gym} onClick={() => setOpen(false)} />
-            <div className="h-px bg-tribe-mid/60" />
+            {includeGymLink ? (
+              <>
+                <MenuItem href="/os/gym" Icon={Building2} label={c.gym} onClick={() => setOpen(false)} />
+                <div className="h-px bg-tribe-mid/60" />
+              </>
+            ) : null}
             <MenuItem href="/" Icon={LogOut} label={c.backToTribe} onClick={() => setOpen(false)} />
           </div>
         </>
