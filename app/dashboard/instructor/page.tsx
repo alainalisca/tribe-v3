@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
+import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
 import LeadsTab from '@/components/dashboard/LeadsTab';
@@ -129,6 +130,14 @@ export default function InstructorDashboardPage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4">
+        {/* Tribe.OS entry — instructors on this dashboard are the
+            target audience for Tribe.OS. Premium users see "Open
+            dashboard"; non-premium see "Try Tribe.OS". The card
+            auto-detects which to show. */}
+        <div className="mt-4">
+          <TribeOSEntryCard variant="inline" />
+        </div>
+
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
           {tabs.map((tab) => {

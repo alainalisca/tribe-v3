@@ -20,6 +20,7 @@ import { useUserCurrency } from '@/lib/useUserCurrency';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -84,6 +85,12 @@ export default function SettingsPage() {
             </Link>
           </div>
         )}
+
+        {/* Tribe.OS entry — auto-detects premium status. For premium
+            users this is the most-used surface to reach from the
+            account/settings area; for non-premium users it surfaces
+            the offering without forcing them through marketing copy. */}
+        <TribeOSEntryCard variant="inline" />
 
         {/* My Orders Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

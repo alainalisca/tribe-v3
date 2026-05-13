@@ -12,6 +12,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { sportTranslations } from '@/lib/translations';
 import { useProfile } from './useProfile';
 import AchievementBadges from '@/components/AchievementBadges';
+import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 
 export default function ProfilePage() {
   const { language, t } = useLanguage();
@@ -156,11 +157,23 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Tribe.OS entry point — surfaces for everyone. Premium
+              users see "Open dashboard"; non-premium see "Try
+              Tribe.OS". Both go to /os/dashboard which branches
+              between the dashboard surface and the upgrade card.
+              Placed above other CTAs because for a premium user it's
+              the most-frequented landing target. */}
+          {profile?.id && (
+            <div className="mt-6">
+              <TribeOSEntryCard />
+            </div>
+          )}
+
           {/* My Training — personal dashboard for every athlete */}
           {profile?.id && (
             <Link
               href="/my-training"
-              className="mt-6 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
+              className="mt-3 flex items-center justify-center gap-3 w-full px-5 py-5 bg-white dark:bg-tribe-surface rounded-2xl border border-tribe-mid text-tribe-gray-60 hover:border-tribe-green hover:text-tribe-green transition text-center"
             >
               <BarChart3 className="w-6 h-6 flex-shrink-0" />
               <span className="font-bold text-base text-center">
