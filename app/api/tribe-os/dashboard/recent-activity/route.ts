@@ -59,7 +59,13 @@ interface InsightActivityItem {
   id: string;
   insight_type: 'CHURN_RISK' | 'RETENTION_OPP' | 'REVENUE' | 'GROWTH';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  /** Persisted English headline — used as fallback when no i18n
+   * template is embedded in data_payload. */
   headline: string;
+  /** Raw data_payload — the client uses the embedded template (if
+   * present) to render headline copy in the caller's language at
+   * display time. Falls back to `headline` when missing. */
+  data_payload: unknown;
   /** Primary subject of the insight when it targets exactly one
    * client — lets the widget link directly into that member detail
    * instead of bouncing through /os/intelligence first. */
@@ -117,7 +123,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .from('community_insights')
         .select(
           `
-            id, type, severity, headline, created_at,
+            id, type, severity, headline, data_payload, created_at,
             members:community_insight_members(
               client:clients(id, name)
             )
@@ -175,6 +181,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         insight_type: row.type as InsightActivityItem['insight_type'],
         severity: row.severity as InsightActivityItem['severity'],
         headline: row.headline as string,
+        data_payload: row.data_payload ?? null,
         primary_member_id: primary?.id ?? null,
         primary_member_name: primary?.name ?? null,
         member_count: validMembers.length,

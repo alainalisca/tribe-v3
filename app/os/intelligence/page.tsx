@@ -44,6 +44,7 @@ import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { Avatar, Badge, Button, Card, CardContent } from '@/components/tribe-os/ui';
+import { extractTemplate, renderTemplate } from '@/lib/ai/insight-templates';
 import type { CommunityInsight, InsightActionType, InsightSeverity, InsightType } from '@/lib/dal/communityInsights';
 
 type WidgetState =
@@ -415,6 +416,29 @@ function InsightCard({
   const [dismissing, setDismissing] = useState(false);
   const TypeIcon = TYPE_ICON[insight.type];
 
+  // Resolve i18n templates from data_payload if present, falling
+  // back to the persisted English headline/body for older insights
+  // written before the templates layer landed. The renderer also
+  // localizes signal labels in the body (e.g. "attendance dropping
+  // off" → "asistencia bajando"), so a Spanish coach sees fully
+  // translated copy without us re-rendering on the server.
+  const displayHeadline = useMemo(() => {
+    const t = extractTemplate(insight.data_payload, 'headline');
+    if (t) {
+      const rendered = renderTemplate(t, language);
+      if (rendered) return rendered;
+    }
+    return insight.headline;
+  }, [insight.data_payload, insight.headline, language]);
+  const displayBody = useMemo(() => {
+    const t = extractTemplate(insight.data_payload, 'body');
+    if (t) {
+      const rendered = renderTemplate(t, language);
+      if (rendered) return rendered;
+    }
+    return insight.body;
+  }, [insight.data_payload, insight.body, language]);
+
   // When the action is SEND_MESSAGE and the insight references
   // exactly one member, prefer a wa.me deep-link with a pre-composed
   // check-in message. wa.me jumps the user straight to the
@@ -500,8 +524,8 @@ function InsightCard({
             </button>
           </div>
 
-          <h3 className="text-base font-semibold text-tribe-dark mb-1">{insight.headline}</h3>
-          <p className="text-sm text-tribe-dark-80 leading-relaxed mb-3">{insight.body}</p>
+          <h3 className="text-base font-semibold text-tribe-dark mb-1">{displayHeadline}</h3>
+          <p className="text-sm text-tribe-dark-80 leading-relaxed mb-3">{displayBody}</p>
 
           <div className="flex items-center gap-4 flex-wrap text-xs text-tribe-dark-80 mb-3">
             {insight.member_ids.length > 0 ? (

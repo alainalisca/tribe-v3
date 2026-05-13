@@ -27,6 +27,7 @@
 
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { renderTemplate, type InsightTemplate, type InsightTemplateArgs } from './insight-templates';
 import type { ScoreOutput } from './types';
 
 const INSIGHT_EXPIRY_DAYS = 14;
@@ -101,8 +102,18 @@ export async function generateChurnInsights(
       continue;
     }
 
-    const headline = `${member.name} is at risk of churning`;
-    const body = buildBody(score);
+    // Build templates for headline + body. We persist both the
+    // resolved English strings (so old readers without the template
+    // layer still display correctly) AND the templates themselves
+    // inside data_payload (so the UI can re-render in Spanish at
+    // display time without round-tripping through the DB).
+    const headlineTemplate: InsightTemplate = {
+      key: 'churn_risk.default.headline',
+      args: { name: member.name },
+    };
+    const bodyTemplate = buildBodyTemplate(score);
+    const headline = renderTemplate(headlineTemplate, 'en');
+    const body = renderTemplate(bodyTemplate, 'en');
 
     const insertRes = await service
       .from('community_insights')
@@ -119,6 +130,14 @@ export async function generateChurnInsights(
           score: score.churnRiskScore,
           health_status: score.healthStatus,
           signal_breakdown: score.signalBreakdown,
+          // Embedded i18n templates — the UI prefers these over the
+          // headline/body strings and renders in the caller's
+          // language. Older insights without this block fall back
+          // to the persisted English fields.
+          template: {
+            headline: headlineTemplate,
+            body: bodyTemplate,
+          },
         },
         predicted_revenue_cents: null,
         confidence_score: 0.7,
@@ -154,27 +173,40 @@ export async function generateChurnInsights(
 }
 
 /**
- * Build the body copy from the score breakdown. Picks the top
+ * Build a body template from the score breakdown. Picks the top
  * contributing signal to give the coach context for the alert.
+ *
+ * Returns a template (key + args) rather than a rendered string —
+ * the caller resolves it to en for persistence + the UI resolves it
+ * to whatever language the coach is in at display time.
+ *
+ * The body always carries the top signal NAME (not its translation)
+ * in args; the renderer looks up the localized label via the
+ * SIGNAL_LABEL map in insight-templates.ts. We pre-format the
+ * numerics here because the template substitution layer is dumb
+ * (no Intl.NumberFormat) — 0.72 becomes "0.72" exactly as written.
  */
-function buildBody(score: ScoreOutput): string {
+function buildBodyTemplate(score: ScoreOutput): InsightTemplate {
   const entries = Object.entries(score.signalBreakdown);
+  const scoreFmt = score.churnRiskScore.toFixed(2);
   if (entries.length === 0) {
-    return `Churn risk crossed the threshold (score ${score.churnRiskScore.toFixed(2)}). Reach out to keep them engaged.`;
+    return {
+      key: 'churn_risk.no_signals.body',
+      args: { score: scoreFmt } satisfies InsightTemplateArgs,
+    };
   }
-  // Find the largest signal contribution.
   entries.sort((a, b) => b[1] - a[1]);
   const [topSignal, topValue] = entries[0];
-  const topLabel = SIGNAL_HEADLINE[topSignal] ?? topSignal;
-  return `Score ${score.churnRiskScore.toFixed(2)}. Largest driver: ${topLabel} (${topValue.toFixed(2)} of the total). A short check-in message often pulls them back.`;
+  return {
+    key: 'churn_risk.default.body',
+    args: {
+      score: scoreFmt,
+      // The renderer will localize `topSignal` via SIGNAL_LABEL.
+      // We pass the raw key — it doubles as the lookup token in
+      // the renderer, which calls the translation table itself.
+      // (Falls back to the raw key if the signal isn't mapped.)
+      topSignal,
+      topValue: topValue.toFixed(2),
+    } satisfies InsightTemplateArgs,
+  };
 }
-
-const SIGNAL_HEADLINE: Record<string, string> = {
-  daysSinceLastAttendance: 'days since their last visit',
-  attendanceFrequencyDelta: 'attendance dropping off',
-  streakBroken: 'a streak that just broke',
-  communityGraphIsolation: 'no training partners',
-  paymentFailures: 'failed payments',
-  cancellationRate: 'a high cancellation rate',
-  communityEngagementDrop: 'a drop in community engagement',
-};

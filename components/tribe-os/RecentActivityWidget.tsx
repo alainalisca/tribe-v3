@@ -35,6 +35,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/tribe-os/ui';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
+import { extractTemplate, renderTemplate } from '@/lib/ai/insight-templates';
 import type { Currency } from '@/lib/payments/config';
 
 interface AttendanceActivityItem {
@@ -59,6 +60,7 @@ interface InsightActivityItem {
   insight_type: 'CHURN_RISK' | 'RETENTION_OPP' | 'REVENUE' | 'GROWTH';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   headline: string;
+  data_payload: unknown;
   primary_member_id: string | null;
   primary_member_name: string | null;
   member_count: number;
@@ -208,7 +210,7 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
               item.kind === 'attendance' ? (
                 <AttendanceRow key={`a-${item.id}`} item={item} copy={s} language={language} />
               ) : (
-                <InsightRow key={`i-${item.id}`} item={item} copy={s} />
+                <InsightRow key={`i-${item.id}`} item={item} copy={s} language={language} />
               )
             )}
           </div>
@@ -283,9 +285,24 @@ function AttendanceRow({
  * spans multiple members (the full breakdown lives there), or to the
  * member detail page when there's a clear single subject.
  */
-function InsightRow({ item, copy: s }: { item: InsightActivityItem; copy: typeof copy.en | typeof copy.es }) {
+function InsightRow({
+  item,
+  copy: s,
+  language,
+}: {
+  item: InsightActivityItem;
+  copy: typeof copy.en | typeof copy.es;
+  language: 'en' | 'es';
+}) {
   const when = relativeTimeLabel(item.created_at, s);
   const typeLabel = s.insightLabelByType[item.insight_type];
+  // Resolve the localized headline from the embedded template (if
+  // the insight was generated post-templates-layer). Falls back to
+  // the persisted English `headline` for older insights.
+  const headlineTemplate = extractTemplate(item.data_payload, 'headline');
+  const displayHeadline = headlineTemplate
+    ? renderTemplate(headlineTemplate, language) || item.headline
+    : item.headline;
   // Subject line: prefer the single primary member, fall back to the
   // generic "N members affected" copy when there's a group. Insights
   // with zero linked members show just the type label + headline.
@@ -324,7 +341,7 @@ function InsightRow({ item, copy: s }: { item: InsightActivityItem; copy: typeof
               </>
             ) : null}
           </p>
-          <p className="text-xs text-tribe-dark-80 mt-0.5 line-clamp-1">{item.headline}</p>
+          <p className="text-xs text-tribe-dark-80 mt-0.5 line-clamp-1">{displayHeadline}</p>
           <p className="text-xs text-tribe-dark-60 mt-0.5">{when}</p>
         </div>
       </Link>
