@@ -43,6 +43,7 @@ import { trackEvent } from '@/lib/analytics';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { Avatar, Badge, Button, Card, CardContent } from '@/components/tribe-os/ui';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import ReachOutToTeamModal from '@/components/tribe-os/ReachOutToTeamModal';
 import type { GymTeamWithMembers, TeamColor } from '@/lib/dal/gymTeams';
 import type { ClientWithStats } from '@/lib/dal/clients';
 
@@ -64,6 +65,7 @@ const copy = {
     activeCount: (n: number) => `${n} active`,
     atRiskCount: (n: number) => `${n} at risk`,
     addMember: 'Add Member',
+    reachOut: 'Reach out to all',
     edit: 'Edit',
     delete: 'Delete',
     membersTitle: 'Members',
@@ -121,6 +123,7 @@ const copy = {
     activeCount: (n: number) => `${n} activos`,
     atRiskCount: (n: number) => `${n} en riesgo`,
     addMember: 'Agregar miembro',
+    reachOut: 'Contactar a todos',
     edit: 'Editar',
     delete: 'Eliminar',
     membersTitle: 'Miembros',
@@ -206,6 +209,7 @@ export default function TeamDetailPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const [showReachOut, setShowReachOut] = useState(false);
 
   useEffect(() => {
     if (gate.state !== 'allowed') return;
@@ -372,12 +376,26 @@ export default function TeamDetailPage() {
               <CardContent className="p-0">
                 <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-tribe-dark-40">
                   <h2 className="text-base font-semibold text-tribe-dark">{s.membersTitle}</h2>
-                  {state.isOwner ? (
-                    <Button size="sm" onClick={() => setShowAdd(true)}>
-                      <UserPlus className="w-4 h-4 mr-1" />
-                      {s.addMember}
-                    </Button>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {/* Reach-out is available to every coach who can see
+                        the team (the RLS gate already ran), not just
+                        owners — pre-session check-ins are a coach-level
+                        action, not an admin one. Hidden when there are
+                        no members yet because the modal would just show
+                        an empty roster. */}
+                    {state.team.members.length > 0 ? (
+                      <Button size="sm" variant="secondary" onClick={() => setShowReachOut(true)}>
+                        <MessageCircle className="w-4 h-4 mr-1" />
+                        {s.reachOut}
+                      </Button>
+                    ) : null}
+                    {state.isOwner ? (
+                      <Button size="sm" onClick={() => setShowAdd(true)}>
+                        <UserPlus className="w-4 h-4 mr-1" />
+                        {s.addMember}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {state.team.members.length === 0 ? (
@@ -414,6 +432,8 @@ export default function TeamDetailPage() {
                 }}
               />
             ) : null}
+
+            {showReachOut ? <ReachOutToTeamModal team={state.team} onClose={() => setShowReachOut(false)} /> : null}
 
             {showEdit ? (
               <EditTeamModal
