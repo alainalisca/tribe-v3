@@ -68,6 +68,20 @@ export interface MyTrainingRecord {
    * query above.
    */
   trained_today: boolean;
+  /**
+   * Attended sessions in the last 7 days (rolling window — not
+   * calendar week, to avoid "your week just started" awkwardness on
+   * Mondays). Compared against sessions_prev_7d to surface a
+   * week-over-week delta on /my-coach.
+   *
+   * Why rolling vs calendar week: members care about momentum, not
+   * which Monday is which. A rolling window also handles gym TZ
+   * gracefully — no week-boundary edge cases when the gym is in
+   * Bogotá and the member is traveling.
+   */
+  sessions_last_7d: number;
+  /** Attended sessions in the 7 days BEFORE the last 7 (days 8–14 ago). */
+  sessions_prev_7d: number;
   /** Member's training partners in this gym, capped at MAX_PARTNERS, sorted by shared_sessions DESC. */
   partners: Array<{
     partner_id: string;
@@ -261,12 +275,19 @@ export async function getMyTrainingRecord(
 
     const gymToday = todayInTimezone(gym.timezone);
 
-    // 2. Partners + recent attendance + today's sessions in parallel.
-    //    All three are bounded so the total payload stays small.
-    //    today_sessions powers the self check-in UI — we still want
-    //    to query it even if the member has no attendance yet, so
-    //    the buttons surface on day one.
-    const [partnersRes, attendanceRes, todaySessionsRes] = await Promise.all([
+    // Cutoffs for the rolling 7-day comparison card. ISO timestamps
+    // so they slot cleanly into the timestamptz comparison. Three
+    // boundaries: now → 7d ago (last_7d window), 7d ago → 14d ago
+    // (prev_7d window). The 14d cutoff is the lower bound of the
+    // prev window.
+    const now = Date.now();
+    const sevenDaysAgoIso = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const fourteenDaysAgoIso = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    // 2. Partners + recent attendance + today's sessions + 7-day
+    //    counts in parallel. The two count queries use head:true so
+    //    Supabase returns only the count, not the rows.
+    const [partnersRes, attendanceRes, todaySessionsRes, last7dRes, prev7dRes] = await Promise.all([
       service
         .from('training_partners')
         .select(
@@ -299,6 +320,19 @@ export async function getMyTrainingRecord(
         .eq('status', 'active')
         .order('start_time', { ascending: true })
         .limit(MAX_TODAY_SESSIONS),
+      service
+        .from('client_attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId)
+        .eq('attended', true)
+        .gte('attended_at', sevenDaysAgoIso),
+      service
+        .from('client_attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', clientId)
+        .eq('attended', true)
+        .gte('attended_at', fourteenDaysAgoIso)
+        .lt('attended_at', sevenDaysAgoIso),
     ]);
 
     if (partnersRes.error) {
@@ -310,6 +344,16 @@ export async function getMyTrainingRecord(
     if (todaySessionsRes.error) {
       logError(todaySessionsRes.error, { action: 'getMyTrainingRecord.today_sessions', clientId });
     }
+    if (last7dRes.error) {
+      logError(last7dRes.error, { action: 'getMyTrainingRecord.last7d', clientId });
+    }
+    if (prev7dRes.error) {
+      logError(prev7dRes.error, { action: 'getMyTrainingRecord.prev7d', clientId });
+    }
+    // Fall back to 0 on query failure — the card just renders "0
+    // sessions this week" rather than blowing up the whole page.
+    const sessionsLast7d = last7dRes.count ?? 0;
+    const sessionsPrev7d = prev7dRes.count ?? 0;
 
     // Resolve "already checked in" per today's session by querying
     // client_attendance for the (client, session) pairs. Single round
@@ -416,6 +460,8 @@ export async function getMyTrainingRecord(
         longest_streak_days: (clientRow.longest_streak_days as number) ?? 0,
         last_seen_at: lastSeenAt,
         trained_today: trainedToday,
+        sessions_last_7d: sessionsLast7d,
+        sessions_prev_7d: sessionsPrev7d,
         partners,
         recent_attendance,
         today_sessions,

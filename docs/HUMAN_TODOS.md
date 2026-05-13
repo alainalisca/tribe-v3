@@ -342,10 +342,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                    All three now render with friendly labels in the /os/audit
-                    viewer (English + Spanish). The pattern is reusable — adding
-                    new audit event types just means calling `writeAuditEntry` from
-                    the relevant route and adding a label entry.
+                        All three now render with friendly labels in the /os/audit
+                        viewer (English + Spanish). The pattern is reusable — adding
+                        new audit event types just means calling `writeAuditEntry` from
+                        the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -449,16 +449,38 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     way to acknowledge it. That two-sided recognition is what
     turns a "tracking app" into "the gym that cares."
 
-23. **"Sign up for Tribe" invite email** — when a coach adds a client
+23. ✅ **Last-7-days vs prior-7-days momentum card** — shipped. New
+    full-width card on /my-coach sitting between today's sessions
+    and the stats grid. Shows "3 sessions" in big type with a
+    delta line: "+1 vs the week before" / "1 less than the week
+    before" / "Same as the week before" / "Your first week
+    tracked here." Self-hides for first-time members with zero
+    attendance in both windows.
+
+    Rolling 7-day windows (now → 7d ago vs 7d ago → 14d ago)
+    instead of calendar weeks. Two reasons: members care about
+    momentum, not which Monday is which; and a rolling window
+    sidesteps gym-timezone edge cases at week boundaries. The DAL
+    issues two `count: 'exact', head: true` queries so the
+    payload stays tiny.
+
+    **What this buys you**: a daily-relevant view of "am I keeping
+    pace?" without the weight of a calendar-week comparison.
+    Pairs with the streak banner and stats grid to give members
+    three different time scales (today / week / lifetime) of their
+    own training. Visible immediately on /my-coach; no migration,
+    no cron.
+
+24. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-24. **Stripe Connect rough-edge polish** — but this is hard to do
+25. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-25. **Per-attendance trigger optimization** — migration 079 recomputes
+26. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-26. **Generator feedback loop** — use the feedback data from #5 to:
+27. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

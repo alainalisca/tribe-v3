@@ -33,7 +33,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Flame, Users, Trophy, AlertCircle, Building2, Check, Hand, Download } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Flame,
+  Users,
+  Trophy,
+  AlertCircle,
+  Building2,
+  Check,
+  Hand,
+  Download,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/format/currency';
@@ -92,6 +106,10 @@ interface TrainingRecord {
   last_seen_at: string | null;
   /** Server-resolved (in gym TZ) "did this member train today?". Drives the streak-at-risk banner. */
   trained_today: boolean;
+  /** Attended sessions in the rolling last 7 days. Drives the week-over-week card. */
+  sessions_last_7d: number;
+  /** Attended sessions in the prior 7 days (8–14 ago). Compared against last_7d for delta. */
+  sessions_prev_7d: number;
   partners: Partner[];
   recent_attendance: AttendanceRow[];
   today_sessions: TodaySession[];
@@ -125,6 +143,12 @@ const copy = {
       'Once a coach adds you with the email you signed in with, your training data will show up here automatically. Ask your coach to use the email shown below.',
     yourEmail: 'Your email',
     gymPickerLabel: 'Gym',
+    weekCardTitle: 'Last 7 days',
+    weekCardSessions: (n: number) => (n === 1 ? '1 session' : `${n} sessions`),
+    weekCardDeltaUp: (n: number) => `+${n} vs the week before`,
+    weekCardDeltaDown: (n: number) => `${n} less than the week before`,
+    weekCardDeltaSame: 'Same as the week before',
+    weekCardFirstWeek: 'Your first week tracked here.',
     streakAtRiskTitle: (n: number) => `Your ${n}-day streak is at risk`,
     streakAtRiskHint: 'Show up today to keep it alive. One session is all it takes.',
     streakAtRiskTitleNoSessions: (n: number) => `Your ${n}-day streak is at risk — no sessions on the schedule today`,
@@ -180,6 +204,12 @@ const copy = {
       'Cuando un coach te agregue con el correo con el que iniciaste sesión, tus datos aparecerán aquí automáticamente. Pídele a tu coach que use el correo que ves abajo.',
     yourEmail: 'Tu correo',
     gymPickerLabel: 'Gimnasio',
+    weekCardTitle: 'Últimos 7 días',
+    weekCardSessions: (n: number) => (n === 1 ? '1 sesión' : `${n} sesiones`),
+    weekCardDeltaUp: (n: number) => `+${n} vs. la semana anterior`,
+    weekCardDeltaDown: (n: number) => `${n} menos que la semana anterior`,
+    weekCardDeltaSame: 'Igual que la semana anterior',
+    weekCardFirstWeek: 'Tu primera semana registrada aquí.',
     streakAtRiskTitle: (n: number) => `Tu racha de ${n} días está en riesgo`,
     streakAtRiskHint: 'Preséntate hoy para mantenerla viva. Una sesión basta.',
     streakAtRiskTitleNoSessions: (n: number) => `Tu racha de ${n} días está en riesgo — no hay sesiones hoy`,
@@ -649,6 +679,16 @@ function RecordBlocks({
         </section>
       ) : null}
 
+      {/* Week-over-week momentum card. Compares attended sessions
+          in the rolling last 7 days vs the prior 7 days. Sits
+          above the stats grid because momentum is a dynamic signal
+          (changes every session) whereas the stats below are
+          mostly static (total / streak). Renders nothing when the
+          member has no attendance in either window — first-week
+          members see the existing stats grid instead of a card
+          full of zeros. */}
+      <WeekComparisonCard record={record} copy={s} />
+
       {/* Stats grid */}
       <section>
         <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.statsTitle}</h2>
@@ -858,6 +898,70 @@ function StreakBanner({ record, copy: s }: { record: TrainingRecord; copy: typeo
   }
 
   return null;
+}
+
+/**
+ * Last-7-days vs prior-7-days momentum card.
+ *
+ * Hidden entirely when both windows are zero — first-week members
+ * see the standard stats grid below instead of a card full of
+ * zeros. Once they have at least one session in either window the
+ * card surfaces to give them something visible to track.
+ *
+ * The delta line picks one of four states:
+ *   - up    (last_7d > prev_7d)       green TrendingUp + "+N vs the week before"
+ *   - down  (last_7d < prev_7d)       muted TrendingDown + "N less than the week before"
+ *   - same  (both > 0, equal)         muted Minus + "Same as the week before"
+ *   - first (prev_7d === 0)           neutral + "Your first week tracked here"
+ *
+ * Why no big arrows or percentage figures: the audience is members,
+ * not analysts. "3 sessions this week, +1 vs the week before" reads
+ * directly; "+33%" makes them stop and think. We optimize for the
+ * read-and-feel pace, not the read-and-analyze pace.
+ */
+function WeekComparisonCard({ record, copy: s }: { record: TrainingRecord; copy: typeof copy.en | typeof copy.es }) {
+  const last = record.sessions_last_7d;
+  const prev = record.sessions_prev_7d;
+  // Hide on totally fresh accounts — the stats grid below covers the
+  // "total: 0" case adequately.
+  if (last === 0 && prev === 0) return null;
+
+  const delta = last - prev;
+  // Pick the delta visual + copy.
+  let deltaIcon: React.ReactNode;
+  let deltaText: string;
+  let deltaClass: string;
+  if (prev === 0 && last > 0) {
+    deltaIcon = <TrendingUp className="w-3.5 h-3.5" />;
+    deltaText = s.weekCardFirstWeek;
+    deltaClass = 'text-tribe-green-dark';
+  } else if (delta > 0) {
+    deltaIcon = <TrendingUp className="w-3.5 h-3.5" />;
+    deltaText = s.weekCardDeltaUp(delta);
+    deltaClass = 'text-tribe-green-dark';
+  } else if (delta < 0) {
+    deltaIcon = <TrendingDown className="w-3.5 h-3.5" />;
+    // delta is negative; the copy slot expects a signed integer
+    deltaText = s.weekCardDeltaDown(delta);
+    deltaClass = 'text-gray-600';
+  } else {
+    deltaIcon = <Minus className="w-3.5 h-3.5" />;
+    deltaText = s.weekCardDeltaSame;
+    deltaClass = 'text-gray-600';
+  }
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-[0.08em] text-gray-500 font-semibold">{s.weekCardTitle}</p>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{s.weekCardSessions(last)}</p>
+      </div>
+      <div className={`flex items-center gap-1.5 text-xs font-semibold ${deltaClass} text-right`}>
+        {deltaIcon}
+        <span>{deltaText}</span>
+      </div>
+    </section>
+  );
 }
 
 /**
