@@ -16,8 +16,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/tribe-os/ui';
 
 interface UpcomingSession {
   id: string;
@@ -97,51 +98,52 @@ export default function UpcomingSessionsCard() {
   }, []);
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 p-5">
-      <header className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="text-base font-bold text-gray-900">{s.title}</h2>
-      </header>
-
-      {state.kind === 'loading' ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : state.kind === 'error' ? (
-        <p className="text-sm text-gray-500 py-4 text-center">{s.error}</p>
-      ) : state.sessions.length === 0 ? (
-        <div className="py-8 text-center">
-          <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">{s.empty}</p>
-        </div>
-      ) : (
-        <>
-          {/* Table header — visible on lg+, hidden on mobile where rows go vertical. */}
-          <div className="hidden lg:grid grid-cols-[2fr_1.3fr_1.2fr_1.4fr_0.7fr] gap-3 px-2 pb-2 text-[10px] uppercase tracking-wider text-gray-400 font-semibold border-b border-gray-100">
-            <span>{s.columns.name}</span>
-            <span>{s.columns.time}</span>
-            <span>{s.columns.coach}</span>
-            <span>{s.columns.enrollment}</span>
-            <span className="text-right">{s.columns.status}</span>
-          </div>
-          <ul className="divide-y divide-gray-100">
-            {state.sessions.map((sess) => (
-              <SessionRow key={sess.id} session={sess} copy={s} />
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{s.title}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {state.kind === 'loading' ? (
+          <div className="px-6 py-4 space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-12 bg-tribe-dark-40 rounded-tribe animate-pulse" />
             ))}
-          </ul>
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <Link
-              href="/os/schedule"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80"
-            >
-              {s.viewAll}
-              <span aria-hidden="true">→</span>
-            </Link>
           </div>
-        </>
-      )}
-    </section>
+        ) : state.kind === 'error' ? (
+          <p className="text-sm text-tribe-dark-80 py-6 px-6 text-center">{s.error}</p>
+        ) : state.sessions.length === 0 ? (
+          <div className="py-8 px-6 text-center">
+            <Calendar className="w-8 h-8 text-tribe-dark-60 mx-auto mb-2" />
+            <p className="text-sm text-tribe-dark-80">{s.empty}</p>
+          </div>
+        ) : (
+          <>
+            {/* Table header — visible on lg+, hidden on mobile where rows go vertical. */}
+            <div className="hidden lg:grid grid-cols-[2fr_1.3fr_1.2fr_1.4fr_0.7fr] gap-3 px-6 py-2 text-[10px] uppercase tracking-wider text-tribe-dark-80 font-semibold border-b border-tribe-dark-40">
+              <span>{s.columns.name}</span>
+              <span>{s.columns.time}</span>
+              <span>{s.columns.coach}</span>
+              <span>{s.columns.enrollment}</span>
+              <span className="text-right">{s.columns.status}</span>
+            </div>
+            <div className="divide-y divide-tribe-dark-40">
+              {state.sessions.map((sess) => (
+                <SessionRow key={sess.id} session={sess} copy={s} />
+              ))}
+            </div>
+            <div className="px-6 py-4 border-t border-tribe-dark-40">
+              <Link
+                href="/os/schedule"
+                className="flex items-center gap-2 text-sm font-semibold text-tribe-green hover:text-tribe-green-dark transition-colors"
+              >
+                {s.viewAll}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -161,45 +163,47 @@ function SessionRow({ session, copy: s }: { session: UpcomingSession; copy: type
   const isLow = max > 0 && enrollmentPct < 40;
 
   return (
-    <li className="lg:grid lg:grid-cols-[2fr_1.3fr_1.2fr_1.4fr_0.7fr] lg:gap-3 lg:items-center py-3 px-2">
-      <p className="text-sm font-semibold text-gray-900 lg:truncate">{name}</p>
-      <p className="text-xs text-gray-500 mt-0.5 lg:mt-0">{time}</p>
-      <p className="text-xs text-gray-500 mt-0.5 lg:mt-0 lg:truncate">{coach}</p>
+    <div className="lg:grid lg:grid-cols-[2fr_1.3fr_1.2fr_1.4fr_0.7fr] lg:gap-3 lg:items-center px-6 py-4 hover:bg-tribe-dark-40 transition-colors">
+      <p className="text-sm font-semibold text-tribe-dark lg:truncate">{name}</p>
+      <p className="text-xs text-tribe-dark-80 mt-0.5 lg:mt-0">{time}</p>
+      <p className="text-xs text-tribe-dark-80 mt-0.5 lg:mt-0 lg:truncate">{coach}</p>
       <div className="mt-2 lg:mt-0 flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-tribe-dark-40 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full ${isFull ? 'bg-tribe-red' : isLow ? 'bg-tribe-amber' : 'bg-tribe-green'}`}
+            className={`h-full rounded-full ${isFull ? 'bg-tribe-danger' : isLow ? 'bg-tribe-warning' : 'bg-tribe-green'}`}
             style={{ width: `${enrollmentPct}%` }}
           />
         </div>
-        <span className="text-[11px] text-gray-500 font-medium shrink-0 tabular-nums">
+        <span className="text-[11px] text-tribe-dark-80 font-medium shrink-0 tabular-nums">
           {enrolled}/{max || '—'}
         </span>
       </div>
       <div className="mt-2 lg:mt-0 lg:text-right">
         <StatusBadge full={isFull} low={isLow} copy={s} />
       </div>
-    </li>
+    </div>
   );
 }
 
 function StatusBadge({ full, low, copy: s }: { full: boolean; low: boolean; copy: typeof copy.en | typeof copy.es }) {
+  // Inline rather than using <Badge /> so we keep the tracking-wider
+  // uppercase microtype that the mockup specifies for these.
   if (full) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-tribe-red/10 text-tribe-red border border-tribe-red/20">
+      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-red-100 text-tribe-danger">
         {s.statusFull}
       </span>
     );
   }
   if (low) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-tribe-amber/10 text-tribe-dark border border-tribe-amber/30">
+      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-tribe-peach text-tribe-warning">
         {s.statusOpen}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-tribe-sky text-tribe-info">
       {s.statusAvailable}
     </span>
   );

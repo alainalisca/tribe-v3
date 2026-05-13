@@ -23,6 +23,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/tribe-os/ui';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
 import type { Currency } from '@/lib/payments/config';
@@ -132,35 +133,36 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
   }, [limit]);
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 p-5">
-      <header className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Activity className="w-4 h-4 text-tribe-green shrink-0" />
-          <h2 className="text-base font-bold text-gray-900 truncate">{s.title}</h2>
-        </div>
-      </header>
-
-      {state.kind === 'loading' ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : state.kind === 'error' ? (
-        <p className="text-sm text-gray-500 py-4 text-center">{s.error}</p>
-      ) : state.items.length === 0 ? (
-        <div className="py-6 text-center space-y-1">
-          <p className="text-sm font-semibold text-gray-900">{s.emptyTitle}</p>
-          <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.emptyHint}</p>
-        </div>
-      ) : (
-        <ul className="divide-y divide-gray-100">
-          {state.items.map((item) => (
-            <ActivityRow key={item.id} item={item} copy={s} language={language} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Activity className="w-4 h-4 text-tribe-green-dark shrink-0" />
+          {s.title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {state.kind === 'loading' ? (
+          <div className="px-6 py-4 space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-10 bg-tribe-dark-40 rounded-tribe animate-pulse" />
+            ))}
+          </div>
+        ) : state.kind === 'error' ? (
+          <p className="text-sm text-tribe-dark-80 py-6 px-6 text-center">{s.error}</p>
+        ) : state.items.length === 0 ? (
+          <div className="py-6 px-6 text-center space-y-1">
+            <p className="text-sm font-semibold text-tribe-dark">{s.emptyTitle}</p>
+            <p className="text-xs text-tribe-dark-80 max-w-xs mx-auto leading-relaxed">{s.emptyHint}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-tribe-dark-40">
+            {state.items.map((item) => (
+              <ActivityRow key={item.id} item={item} copy={s} language={language} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -189,11 +191,11 @@ function ActivityRow({
   // Color dot encodes event type: green = paid attendance, blue =
   // attended (no payment), gray = no-show. Matches the colored dots
   // in the mockup's activity feed.
-  const dotColor = item.paid ? 'bg-tribe-green' : item.attended ? 'bg-blue-400' : 'bg-gray-300';
+  const dotColor = item.paid ? 'bg-tribe-green' : item.attended ? 'bg-tribe-info' : 'bg-tribe-dark-60';
   const verb = item.paid ? s.verbPaid : item.attended ? s.verbAttended : s.verbMissed;
 
   return (
-    <li>
+    <div>
       <Link
         href={`/os/clients/${item.client_id}`}
         onClick={() =>
@@ -202,24 +204,24 @@ function ActivityRow({
             paid: item.paid,
           })
         }
-        className="flex items-start gap-3 py-3 group"
+        className="flex items-start gap-3 px-6 py-3 hover:bg-tribe-dark-40 transition-colors"
       >
         <span className={`w-2 h-2 rounded-full ${dotColor} mt-1.5 shrink-0`} aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-gray-900 group-hover:text-tribe-dark">
-            <span className="font-semibold">{clientName}</span> <span className="text-gray-500">{verb}</span>{' '}
+          <p className="text-sm text-tribe-dark">
+            <span className="font-semibold">{clientName}</span> <span className="text-tribe-dark-80">{verb}</span>{' '}
             <span className="font-medium">{sessionTitle}</span>
             {showPaid ? (
-              <span className="text-tribe-green font-semibold">
+              <span className="text-tribe-green-dark font-semibold">
                 {' '}
                 · {formatCents(item.amount_paid_cents ?? 0, item.currency as Currency, language)}
               </span>
             ) : null}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">{when}</p>
+          <p className="text-xs text-tribe-dark-60 mt-0.5">{when}</p>
         </div>
       </Link>
-    </li>
+    </div>
   );
 }
 

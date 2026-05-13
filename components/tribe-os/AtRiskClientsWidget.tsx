@@ -17,10 +17,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ChevronRight, UserPlus, MessageCircle } from 'lucide-react';
+import { AlertCircle, ChevronRight, UserPlus, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
 import { buildWhatsAppUrl } from '@/lib/phone';
+import { Avatar, Button, Card, CardContent, CardHeader, CardTitle } from '@/components/tribe-os/ui';
 import type { AtRiskClient } from '@/lib/dal/clients';
 
 type WidgetState =
@@ -122,67 +123,83 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
   }, [thresholdDays, limit]);
 
   const atRiskCount = state.kind === 'ready' ? state.clients.length : null;
+  const hideViewAll = state.kind === 'ready' && state.totalClients === 0;
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 p-5">
-      <header className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <AlertTriangle className="w-4 h-4 text-tribe-red shrink-0" />
-          <h2 className="text-base font-bold text-gray-900 truncate">{s.title}</h2>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <span className="relative inline-block">
+              <AlertCircle className="h-5 w-5 text-tribe-danger" />
+              {atRiskCount != null && atRiskCount > 0 ? (
+                <span className="absolute top-0 right-0 h-2 w-2 bg-tribe-danger rounded-full animate-pulse" />
+              ) : null}
+            </span>
+            {s.title}
+          </CardTitle>
+          {atRiskCount != null && atRiskCount > 0 ? (
+            <span className="text-sm font-semibold bg-red-100 text-tribe-danger px-2 py-1 rounded-full">
+              {atRiskCount}
+            </span>
+          ) : null}
         </div>
-        {atRiskCount != null && atRiskCount > 0 ? (
-          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-tribe-red/10 text-tribe-red text-xs font-bold">
-            {atRiskCount}
-          </span>
+      </CardHeader>
+      <CardContent className="p-0">
+        {state.kind === 'loading' ? (
+          <div className="px-6 py-4 space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-12 bg-tribe-dark-40 rounded-tribe animate-pulse" />
+            ))}
+          </div>
+        ) : state.kind === 'error' ? (
+          <p className="text-sm text-tribe-dark-80 py-6 px-6 text-center">{s.error}</p>
+        ) : state.clients.length === 0 && state.totalClients === 0 ? (
+          <div className="py-6 px-6 text-center space-y-3">
+            <p className="text-sm font-semibold text-tribe-dark">{s.zeroClientsTitle}</p>
+            <p className="text-xs text-tribe-dark-80 max-w-xs mx-auto leading-relaxed">{s.zeroClientsHint}</p>
+            <Link
+              href="/os/clients/new"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-semibold rounded-tribe hover:bg-tribe-green-dark transition-colors"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              {s.zeroClientsCta}
+            </Link>
+          </div>
+        ) : state.clients.length === 0 ? (
+          <div className="py-6 px-6 text-center space-y-1">
+            <p className="text-sm font-semibold text-tribe-dark">{s.emptyTitle}</p>
+            <p className="text-xs text-tribe-dark-80">{s.emptyHint}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-tribe-dark-40">
+            {state.clients.map((c) => (
+              <AtRiskRow key={c.id} client={c} copy={s} />
+            ))}
+          </div>
+        )}
+
+        {!hideViewAll ? (
+          <div className="px-6 py-4 border-t border-tribe-dark-40">
+            <Link
+              href="/os/clients"
+              className="flex items-center gap-2 text-sm font-semibold text-tribe-green hover:text-tribe-green-dark transition-colors"
+            >
+              {s.viewAll}
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
         ) : null}
-      </header>
-
-      {state.kind === 'loading' ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : state.kind === 'error' ? (
-        <p className="text-sm text-gray-500 py-4 text-center">{s.error}</p>
-      ) : state.clients.length === 0 && state.totalClients === 0 ? (
-        <div className="py-6 text-center space-y-3">
-          <p className="text-sm font-semibold text-gray-900">{s.zeroClientsTitle}</p>
-          <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">{s.zeroClientsHint}</p>
-          <Link
-            href="/os/clients/new"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full hover:-translate-y-0.5 transition-transform"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            {s.zeroClientsCta}
-          </Link>
-        </div>
-      ) : state.clients.length === 0 ? (
-        <div className="py-6 text-center space-y-1">
-          <p className="text-sm font-semibold text-gray-900">{s.emptyTitle}</p>
-          <p className="text-xs text-gray-500">{s.emptyHint}</p>
-        </div>
-      ) : (
-        <ul className="space-y-1 -mx-1">
-          {state.clients.map((c) => (
-            <AtRiskRow key={c.id} client={c} copy={s} />
-          ))}
-        </ul>
-      )}
-
-      {!(state.kind === 'ready' && state.totalClients === 0) ? (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <Link
-            href="/os/clients"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-green hover:text-tribe-green/80 transition-colors"
-          >
-            {s.viewAll}
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      ) : null}
-    </section>
+      </CardContent>
+    </Card>
   );
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 }
 
 function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof copy.en | typeof copy.es }) {
@@ -208,41 +225,41 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
   // button can be its own clickable target (nested anchors are
   // invalid HTML and the inner click would otherwise bubble up
   // to the parent Link).
-  const initial = (client.name.charAt(0) || '?').toUpperCase();
+  const userInitials = initialsFromName(client.name);
   return (
-    <li>
-      <div className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors group">
-        <div className="w-8 h-8 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
-          {initial}
+    <div className="px-6 py-4 hover:bg-tribe-dark-40 transition-colors flex items-center justify-between gap-3">
+      <Link
+        href={`/os/clients/${client.id}`}
+        onClick={() =>
+          trackEvent('tribe_os_at_risk_clicked', {
+            status: client.status,
+            days_since_last_seen: client.days_since_last_seen,
+            has_email: client.email !== null,
+          })
+        }
+        className="flex items-center gap-3 flex-1 min-w-0"
+      >
+        <Avatar initials={userInitials} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-tribe-dark truncate">{client.name}</p>
+          <p className="text-xs text-tribe-dark-80 truncate">{subtitle}</p>
         </div>
-        <Link
-          href={`/os/clients/${client.id}`}
-          onClick={() =>
-            trackEvent('tribe_os_at_risk_clicked', {
-              status: client.status,
-              days_since_last_seen: client.days_since_last_seen,
-              has_email: client.email !== null,
-            })
-          }
-          className="flex-1 min-w-0"
+      </Link>
+      {waUrl ? (
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={s.whatsappAria}
+          onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'at_risk_widget' })}
+          className="shrink-0"
         >
-          <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-tribe-dark">{client.name}</p>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">{subtitle}</p>
-        </Link>
-        {waUrl ? (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={s.whatsappAria}
-            onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'at_risk_widget' })}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-tribe-dark hover:bg-tribe-green/15 rounded-full transition-colors shrink-0"
-          >
+          <Button variant="ghost" size="sm" className="gap-1.5">
             <MessageCircle className="w-3.5 h-3.5" />
             {s.reachOut}
-          </a>
-        ) : null}
-      </div>
-    </li>
+          </Button>
+        </a>
+      ) : null}
+    </div>
   );
 }
