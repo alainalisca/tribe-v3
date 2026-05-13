@@ -20,14 +20,15 @@
  * users hit the feed home not the marketing page).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, HelpCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
+import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -48,6 +49,7 @@ const copy = {
     portalCta: 'Manage subscription',
     portalLoading: 'Opening Stripe',
     portalError: 'Could not open Stripe portal. Please try again.',
+    replayTour: 'Take the tour again',
     backLabel: 'Back to Tribe',
     redirectingLabel: 'Redirecting',
     loadingLabel: 'Loading',
@@ -79,6 +81,7 @@ const copy = {
     portalCta: 'Gestionar suscripción',
     portalLoading: 'Abriendo Stripe',
     portalError: 'No se pudo abrir el portal de Stripe. Por favor intenta de nuevo.',
+    replayTour: 'Ver el tour de nuevo',
     backLabel: 'Volver a Tribe',
     redirectingLabel: 'Redirigiendo',
     loadingLabel: 'Cargando',
@@ -106,6 +109,10 @@ export default function TribeOSDashboardPage() {
 
   const [pageState, setPageState] = useState<PageState>('checking');
   const [openingPortal, setOpeningPortal] = useState(false);
+  // Replay-ref pattern: the TribeOSWelcomeGuide owns its open-state
+  // via useQuickGuide; this ref receives the `replay` function so a
+  // "Take the tour again" button on the dashboard can re-open it.
+  const replayWelcomeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,7 +228,9 @@ export default function TribeOSDashboardPage() {
 
         {/* Secondary actions tucked at the bottom so they don't compete
             with the at-risk widget. Manage subscription is the only
-            action not already in the shell nav or the account menu. */}
+            action not already in the shell nav or the account menu;
+            "Take the tour again" lets a user re-open the welcome
+            guide they may have skipped on first visit. */}
         <div className="mt-8 flex flex-wrap gap-3">
           <button
             type="button"
@@ -232,8 +241,26 @@ export default function TribeOSDashboardPage() {
             <CreditCard className="w-3.5 h-3.5" />
             {openingPortal ? `${s.portalLoading}…` : s.portalCta}
           </button>
+          <button
+            type="button"
+            onClick={() => replayWelcomeRef.current?.()}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-tribe-surface text-white/70 text-xs font-semibold rounded-full border border-tribe-mid hover:bg-tribe-mid hover:text-white transition-colors"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            {s.replayTour}
+          </button>
         </div>
       </div>
+
+      {/* Auto-shown on first visit for premium users; dismissible.
+          The ref lets the "Take the tour again" button above
+          re-trigger the guide without changing the seen flag. */}
+      <TribeOSWelcomeGuide
+        enabled
+        onReplayRef={(replay) => {
+          replayWelcomeRef.current = replay;
+        }}
+      />
     </main>
   );
 }
