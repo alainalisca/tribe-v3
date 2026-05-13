@@ -3,10 +3,12 @@
 /**
  * Dashboard widget surfacing recent gym activity.
  *
- * Fetches GET /api/tribe-os/dashboard/recent-activity and renders the
- * most recent attendance events: who showed up, for which session,
- * when, and whether they paid. Each row links to the client's detail
- * page for follow-up.
+ * Fetches GET /api/tribe-os/dashboard/recent-activity which returns a
+ * discriminated stream of two event kinds — attendance check-ins and
+ * AI insights — merged by created_at desc.
+ *
+ *   Attendance rows: "Anna attended Sunday CrossFit · 2 min ago"
+ *   Insight rows:    "AI flagged Carlos as at-risk · just now"
  *
  * Three states:
  *   - loading — three skeleton rows
@@ -16,19 +18,27 @@
  * Sister widget to AtRiskClientsWidget: same surface style, same
  * "loading / empty / ready" tri-state. Where at-risk surfaces the
  * negative signal ("who haven't I seen"), recent-activity surfaces
- * the positive one ("what's been happening").
+ * the chronological narrative ("what's been happening, both human
+ * and AI-derived").
+ *
+ * Why merge insights into this widget vs. building a parallel one:
+ * a single feed reads the way coaches actually think about their gym
+ * — temporal narrative trumps category. The insights banner above
+ * the KPI strip already covers "you have N alerts"; this widget
+ * threads them in alongside the rest of the day's events.
  */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Activity } from 'lucide-react';
+import { Activity, Brain } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/tribe-os/ui';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
 import type { Currency } from '@/lib/payments/config';
 
-interface RecentActivityItem {
+interface AttendanceActivityItem {
+  kind: 'attendance';
   id: string;
   client_id: string;
   client_name: string | null;
@@ -43,6 +53,20 @@ interface RecentActivityItem {
   created_at: string;
 }
 
+interface InsightActivityItem {
+  kind: 'insight';
+  id: string;
+  insight_type: 'CHURN_RISK' | 'RETENTION_OPP' | 'REVENUE' | 'GROWTH';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  headline: string;
+  primary_member_id: string | null;
+  primary_member_name: string | null;
+  member_count: number;
+  created_at: string;
+}
+
+type RecentActivityItem = AttendanceActivityItem | InsightActivityItem;
+
 type WidgetState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; items: RecentActivityItem[] };
 
 interface RecentActivityWidgetProps {
@@ -54,7 +78,7 @@ interface RecentActivityWidgetProps {
 const copy = {
   en: {
     title: 'Recent activity',
-    subtitle: 'The latest check-ins and payments in your gym.',
+    subtitle: 'The latest check-ins, payments, and AI signals.',
     loading: 'Loading',
     error: 'Could not load recent activity.',
     emptyTitle: 'No activity yet',
@@ -67,6 +91,13 @@ const copy = {
     verbAttended: 'attended',
     verbPaid: 'paid for',
     verbMissed: 'missed',
+    insightLabelByType: {
+      CHURN_RISK: 'AI flagged churn risk',
+      RETENTION_OPP: 'AI retention opportunity',
+      REVENUE: 'AI revenue signal',
+      GROWTH: 'AI growth signal',
+    },
+    insightSubjectMulti: (n: number) => `${n} members affected`,
     minutesAgo: (n: number) => (n === 1 ? '1 min ago' : `${n} min ago`),
     hoursAgo: (n: number) => (n === 1 ? '1 hr ago' : `${n} hr ago`),
     daysAgo: (n: number) => (n === 1 ? '1 day ago' : `${n} days ago`),
@@ -74,7 +105,7 @@ const copy = {
   },
   es: {
     title: 'Actividad reciente',
-    subtitle: 'Las últimas asistencias y pagos en tu gym.',
+    subtitle: 'Las últimas asistencias, pagos y señales de IA.',
     loading: 'Cargando',
     error: 'No se pudo cargar la actividad reciente.',
     emptyTitle: 'Aún sin actividad',
@@ -87,12 +118,29 @@ const copy = {
     verbAttended: 'asistió a',
     verbPaid: 'pagó por',
     verbMissed: 'faltó a',
+    insightLabelByType: {
+      CHURN_RISK: 'IA: riesgo de abandono',
+      RETENTION_OPP: 'IA: oportunidad de retención',
+      REVENUE: 'IA: señal de ingresos',
+      GROWTH: 'IA: señal de crecimiento',
+    },
+    insightSubjectMulti: (n: number) => `${n} miembros afectados`,
     minutesAgo: (n: number) => (n === 1 ? 'hace 1 min' : `hace ${n} min`),
     hoursAgo: (n: number) => (n === 1 ? 'hace 1 h' : `hace ${n} h`),
     daysAgo: (n: number) => (n === 1 ? 'hace 1 día' : `hace ${n} días`),
     justNow: 'Justo ahora',
   },
 } as const;
+
+// Severity → dot color. CRITICAL is red, HIGH is amber, MEDIUM is
+// info blue, LOW is muted gray. Matches the dot scheme used on the
+// dashboard insights banner so users build a consistent visual model.
+const SEVERITY_DOT: Record<InsightActivityItem['severity'], string> = {
+  CRITICAL: 'bg-tribe-danger',
+  HIGH: 'bg-tribe-warning',
+  MEDIUM: 'bg-tribe-info',
+  LOW: 'bg-tribe-dark-60',
+};
 
 export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidgetProps) {
   const { language } = useLanguage();
@@ -156,9 +204,13 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
           </div>
         ) : (
           <div className="divide-y divide-tribe-dark-40">
-            {state.items.map((item) => (
-              <ActivityRow key={item.id} item={item} copy={s} language={language} />
-            ))}
+            {state.items.map((item) =>
+              item.kind === 'attendance' ? (
+                <AttendanceRow key={`a-${item.id}`} item={item} copy={s} language={language} />
+              ) : (
+                <InsightRow key={`i-${item.id}`} item={item} copy={s} />
+              )
+            )}
           </div>
         )}
       </CardContent>
@@ -167,15 +219,15 @@ export default function RecentActivityWidget({ limit = 6 }: RecentActivityWidget
 }
 
 /**
- * Single row: clickable, links to the client detail page so the
- * instructor can drill into the attendance/payments history.
+ * Attendance row — green dot for paid, blue dot for attended-only,
+ * gray for no-show. Click links to the client detail page.
  */
-function ActivityRow({
+function AttendanceRow({
   item,
   copy: s,
   language,
 }: {
-  item: RecentActivityItem;
+  item: AttendanceActivityItem;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
 }) {
@@ -218,6 +270,61 @@ function ActivityRow({
               </span>
             ) : null}
           </p>
+          <p className="text-xs text-tribe-dark-60 mt-0.5">{when}</p>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Insight row — severity-colored dot, brain icon, type label,
+ * headline preview. Click links to /os/intelligence when the insight
+ * spans multiple members (the full breakdown lives there), or to the
+ * member detail page when there's a clear single subject.
+ */
+function InsightRow({ item, copy: s }: { item: InsightActivityItem; copy: typeof copy.en | typeof copy.es }) {
+  const when = relativeTimeLabel(item.created_at, s);
+  const typeLabel = s.insightLabelByType[item.insight_type];
+  // Subject line: prefer the single primary member, fall back to the
+  // generic "N members affected" copy when there's a group. Insights
+  // with zero linked members show just the type label + headline.
+  const subject = item.primary_member_id
+    ? item.primary_member_name?.trim() || s.unknownClient
+    : item.member_count > 1
+      ? s.insightSubjectMulti(item.member_count)
+      : null;
+  // Route: deep-link to the member when we have one clear subject,
+  // otherwise punt to /os/intelligence where the coach can see the
+  // full card + action button.
+  const href =
+    item.primary_member_id && item.member_count === 1 ? `/os/clients/${item.primary_member_id}` : '/os/intelligence';
+
+  return (
+    <div>
+      <Link
+        href={href}
+        onClick={() =>
+          trackEvent('tribe_os_recent_activity_clicked', {
+            kind: 'insight',
+            severity: item.severity,
+          })
+        }
+        className="flex items-start gap-3 px-6 py-3 hover:bg-tribe-dark-40 transition-colors"
+      >
+        <span className={`w-2 h-2 rounded-full ${SEVERITY_DOT[item.severity]} mt-1.5 shrink-0`} aria-hidden="true" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-tribe-dark flex items-center gap-1.5">
+            <Brain className="w-3.5 h-3.5 text-tribe-green-dark shrink-0" aria-hidden="true" />
+            <span className="font-semibold">{typeLabel}</span>
+            {subject ? (
+              <>
+                <span className="text-tribe-dark-80">·</span>
+                <span className="font-medium truncate">{subject}</span>
+              </>
+            ) : null}
+          </p>
+          <p className="text-xs text-tribe-dark-80 mt-0.5 line-clamp-1">{item.headline}</p>
           <p className="text-xs text-tribe-dark-60 mt-0.5">{when}</p>
         </div>
       </Link>
