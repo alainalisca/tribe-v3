@@ -162,11 +162,15 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
    severity section (CRITICAL excluded for safety).
 3. ✅ **Sample data cleanup button** — shipped. Pair to the seed button
    on /os/gym → drops every sample-tagged row in one click.
-4. **Insight feedback** — let coaches mark an insight as "false positive"
-   so we can later tune the heuristics. Schema already has `is_actioned`;
-   would add a `feedback_signal` column or a separate table.
-5. **Per-team insights filter** on /os/intelligence — "show me only
-   insights about team X."
+4. ✅ **Per-team insights filter** — shipped. Selector on /os/intelligence
+   when the gym has 2+ teams. Server-side filter via team_id param;
+   gym-level insights drop when scoped to a team.
+5. ✅ **Insight feedback** — shipped. 👍 Helpful / 👎 Not useful chips
+   on each insight card. Stored in `data_payload.feedback` (no
+   migration needed); both signals also dismiss the card. The data
+   is collected; **TODO for you**: review the rate of "Not useful"
+   per insight type after some real-world use → tune the generator
+   heuristics (threshold for AT_RISK, REVENUE unpaid count, etc.).
 6. **"Sign up for Tribe" invite email** — when a coach adds a client
    whose email DOESN'T match a Tribe user, send a different email
    inviting them to sign up + claim their training. Different value
@@ -176,6 +180,14 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
 8. **Per-attendance trigger optimization** — migration 079 recomputes
    counters from scratch on every write. Could switch to delta updates
    if perf ever becomes a concern at scale (>10k clients).
+9. **Generator feedback loop** — use the feedback data from #5 to:
+   - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
+     > 30% on CHURN_RISK cards
+   - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
+     rate dominates on REVENUE cards
+   - Skip re-emitting same-member insight types that were marked
+     'false_positive' within the last 60 days (currently 14)
+     Needs ~50+ real feedback signals before tuning is meaningful.
 
 I'll keep building down this list and updating this file as new items
 surface.

@@ -34,6 +34,8 @@ import {
   MessageCircle,
   RefreshCw,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   TrendingUp,
   Users,
   X as XIcon,
@@ -109,6 +111,9 @@ const copy = {
     dismissAllError: "Couldn't dismiss those alerts. Try again.",
     teamFilterAllOption: 'All teams',
     teamFilterAria: 'Filter insights by team',
+    feedbackPrompt: 'Was this useful?',
+    feedbackHelpful: 'Helpful',
+    feedbackFalsePositive: 'Not useful',
   },
   es: {
     redirectingLabel: 'Redirigiendo',
@@ -166,6 +171,9 @@ const copy = {
     dismissAllError: 'No se pudieron descartar. Intenta de nuevo.',
     teamFilterAllOption: 'Todos los equipos',
     teamFilterAria: 'Filtrar insights por equipo',
+    feedbackPrompt: '¿Fue útil?',
+    feedbackHelpful: 'Útil',
+    feedbackFalsePositive: 'No útil',
   },
 } as const;
 
@@ -597,6 +605,33 @@ function InsightCard({
     }
   }
 
+  // Feedback path: same dismiss outcome as the X button but records
+  // 'helpful' or 'false_positive' to data_payload.feedback so we can
+  // later tune the generator heuristics. Both signals end the
+  // insight's lifecycle — there's no "leave it on screen but rate
+  // it" workflow.
+  async function handleFeedback(signal: 'helpful' | 'false_positive') {
+    if (dismissing) return;
+    setDismissing(true);
+    try {
+      const res = await fetch(`/api/tribe-os/intelligence/${insight.id}/feedback/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signal }),
+      });
+      if (res.ok) {
+        trackEvent('tribe_os_insight_dismissed', {
+          type: insight.type,
+          severity: insight.severity,
+          feedback: signal,
+        });
+        onDismissed();
+      }
+    } finally {
+      setDismissing(false);
+    }
+  }
+
   const confidencePct = insight.confidence_score != null ? Math.round(insight.confidence_score * 100) : null;
   const impactCents = insight.predicted_revenue_cents;
 
@@ -699,6 +734,35 @@ function InsightCard({
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           ) : null}
+
+          {/* Feedback chips — both dismiss the insight; the signal
+              lands in data_payload.feedback so we can later tune
+              the generator heuristics. Visually quiet (text-only,
+              no buttons) so they don't compete with the primary
+              action above. */}
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-tribe-dark-40">
+            <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-tribe-dark-60">
+              {s.feedbackPrompt}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleFeedback('helpful')}
+              disabled={dismissing}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-dark-80 hover:text-tribe-green-dark transition-colors disabled:opacity-50"
+            >
+              <ThumbsUp className="w-3.5 h-3.5" />
+              {s.feedbackHelpful}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFeedback('false_positive')}
+              disabled={dismissing}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-tribe-dark-80 hover:text-tribe-danger transition-colors disabled:opacity-50"
+            >
+              <ThumbsDown className="w-3.5 h-3.5" />
+              {s.feedbackFalsePositive}
+            </button>
+          </div>
         </div>
       </div>
     </article>

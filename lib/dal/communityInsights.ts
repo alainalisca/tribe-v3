@@ -207,3 +207,54 @@ export async function actionInsight(supabase: SupabaseClient, insightId: string)
     return { success: false, error: 'Failed to dismiss insight' };
   }
 }
+
+export type InsightFeedbackSignal = 'helpful' | 'false_positive';
+
+/**
+ * Record coach feedback on an insight + dismiss it in one step. The
+ * feedback signal goes into data_payload.feedback (no schema
+ * migration needed) so we can later look at false-positive rates per
+ * insight type and tune the heuristics. Always sets is_actioned=true
+ * because both "helpful" and "false positive" mean the insight is
+ * done — there's no "leave it on screen but rate it" workflow.
+ *
+ * We fetch the current data_payload first so we don't blow away any
+ * other keys (template, score breakdown, signature, etc.) — partial
+ * jsonb updates aren't a Supabase primitive, so it's a read-merge-write.
+ */
+export async function actionInsightWithFeedback(
+  supabase: SupabaseClient,
+  insightId: string,
+  signal: InsightFeedbackSignal
+): Promise<DalResult<null>> {
+  try {
+    // 1. Read the existing payload so we can merge.
+    const { data: existing, error: readErr } = await supabase
+      .from('community_insights')
+      .select('data_payload')
+      .eq('id', insightId)
+      .maybeSingle();
+    if (readErr) {
+      logError(readErr, { action: 'actionInsightWithFeedback.read', insightId });
+      return { success: false, error: readErr.message };
+    }
+    const merged = {
+      ...((existing?.data_payload as Record<string, unknown> | null) ?? {}),
+      feedback: { signal, at: new Date().toISOString() },
+    };
+
+    // 2. Write back + dismiss in one update.
+    const { error: writeErr } = await supabase
+      .from('community_insights')
+      .update({ is_actioned: true, data_payload: merged })
+      .eq('id', insightId);
+    if (writeErr) {
+      logError(writeErr, { action: 'actionInsightWithFeedback.write', insightId });
+      return { success: false, error: writeErr.message };
+    }
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'actionInsightWithFeedback.exception', insightId });
+    return { success: false, error: 'Failed to record feedback' };
+  }
+}
