@@ -56,6 +56,8 @@ const copy = {
     addMember: 'Add Member',
     importCsv: 'Import CSV',
     exportCsv: 'Export CSV',
+    tagFilterAllOption: 'All tags',
+    tagFilterAria: 'Filter by tag',
     filter: { all: 'All', active: 'Active', watch: 'Watch', at_risk: 'At Risk', churned: 'Churned' },
     columns: {
       name: 'Name',
@@ -90,6 +92,8 @@ const copy = {
     addMember: 'Agregar miembro',
     importCsv: 'Importar CSV',
     exportCsv: 'Exportar CSV',
+    tagFilterAllOption: 'Todas las etiquetas',
+    tagFilterAria: 'Filtrar por etiqueta',
     filter: { all: 'Todos', active: 'Activos', watch: 'En seguimiento', at_risk: 'En riesgo', churned: 'Bajas' },
     columns: {
       name: 'Nombre',
@@ -132,6 +136,10 @@ export default function MembersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // Tag scope — null = all tags. Applied client-side after the
+  // status / search filters from the server response, so it
+  // composes cleanly with the AI-derived "At Risk" / "Watch" pills.
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [list, setList] = useState<ListState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
   const [showImport, setShowImport] = useState(false);
@@ -197,6 +205,13 @@ export default function MembersPage() {
           rows = rows.filter((r) => r.status === 'lapsed' || r.health_status === 'WATCH');
         }
 
+        // Tag filter (client-side) — applied after the AI-aware
+        // status filters so a coach can ask "show me at-risk VIP
+        // members" with one combined view.
+        if (tagFilter) {
+          rows = rows.filter((r) => r.tags.includes(tagFilter));
+        }
+
         setList({ kind: 'ready', rows });
         trackEvent('tribe_os_members_viewed', { row_count: rows.length, filter: statusFilter });
       } catch {
@@ -207,11 +222,21 @@ export default function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [gate.state, debouncedSearch, statusFilter, reloadKey, s.errorTitle]);
+  }, [gate.state, debouncedSearch, statusFilter, tagFilter, reloadKey, s.errorTitle]);
+
+  // Build the list of tag options for the dropdown from the
+  // currently-loaded rows. Composing this on a separate fetch (full
+  // tag universe per gym) would be more accurate when the status
+  // filter hides VIPs etc., but at the scale we ship to this is good
+  // enough — coaches typically scan within the filtered cohort.
+  const tagOptions = useMemo(() => {
+    if (list.kind !== 'ready') return [] as string[];
+    return Array.from(new Set(list.rows.flatMap((r) => r.tags))).sort();
+  }, [list]);
 
   const isFiltered = useMemo(
-    () => debouncedSearch.length > 0 || statusFilter !== 'all',
-    [debouncedSearch, statusFilter]
+    () => debouncedSearch.length > 0 || statusFilter !== 'all' || tagFilter !== null,
+    [debouncedSearch, statusFilter, tagFilter]
   );
 
   if (gate.state !== 'allowed') {
@@ -284,11 +309,30 @@ export default function MembersPage() {
             <h2 className="text-base font-bold text-gray-900">{s.pageTitle}</h2>
           </header>
 
-          {/* Filter pills */}
+          {/* Filter pills + tag select */}
           <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
             {(['all', 'active', 'watch', 'at_risk', 'churned'] as const).map((f) => (
               <FilterPill key={f} active={statusFilter === f} label={s.filter[f]} onClick={() => setStatusFilter(f)} />
             ))}
+            {/* Tag scope — only renders when the loaded set has at
+                least one tag to choose from. Empty value means "all
+                tags"; client-side filter composes with the status
+                pill so coaches can ask "show me at-risk VIPs". */}
+            {tagOptions.length > 0 ? (
+              <select
+                value={tagFilter ?? ''}
+                onChange={(e) => setTagFilter(e.target.value || null)}
+                aria-label={s.tagFilterAria}
+                className="text-xs font-semibold px-2.5 py-1.5 bg-white border border-gray-200 rounded-full text-gray-700 focus:outline-none focus:border-tribe-green"
+              >
+                <option value="">{s.tagFilterAllOption}</option>
+                {tagOptions.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+            ) : null}
           </div>
 
           {/* Body */}
