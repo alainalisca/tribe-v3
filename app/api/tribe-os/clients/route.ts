@@ -11,6 +11,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { createClient as dalCreateClient, listClients } from '@/lib/dal/clients';
 import { CreateClientInputSchema, ListClientsQuerySchema } from '@/lib/validations/clients';
+import { notifyClientAdded } from '@/lib/email/notifyClientAdded';
 import { ZodError } from 'zod';
 
 function firstZodMessage(error: ZodError): string {
@@ -61,6 +62,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'create_failed' }, { status: 500 });
     }
+
+    // Bridge to /my-coach: if the new client's email matches a Tribe
+    // user, send them a welcome email pointing at their training
+    // dashboard. Awaited so we get observability in Vercel logs, but
+    // the function swallows failures so a slow Resend never blocks
+    // the coach's create response. Bulk import deliberately skips
+    // this — 200 welcome emails on a CSV import is spam-territory.
+    if (result.data && gymId) {
+      await notifyClientAdded({
+        client: { name: result.data.name, email: result.data.email ?? null },
+        gymId,
+        actorUserId: userId,
+      });
+    }
+
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/clients' });

@@ -153,24 +153,29 @@ a fresh account. Things to verify when you can:
 
 ## 🛠 Features deferred to next autonomous round
 
-Ranked by my read on impact:
+Ranked by my read on impact (✅ = shipped since this doc was created):
 
-1. **Coach-added-you welcome email** — when a coach creates a client whose
-   email matches a Tribe user, send them an email pointing at /my-coach.
-   Closes the discoverability loop between the coach's "add member" action
-   and the member's surface.
-2. **Bulk dismiss on /os/intelligence** — "dismiss all LOW" / "dismiss all
-   in this section" → POST /api/tribe-os/intelligence/bulk-dismiss.
-3. **Insight feedback** — let coaches mark an insight as "false positive"
+1. ✅ **Coach-added-you welcome email** — shipped. When a coach creates a
+   client whose email matches a Tribe user, they get a bilingual email
+   pointing at /my-coach. Skips bulk imports (no spam).
+2. ✅ **Bulk dismiss on /os/intelligence** — shipped. "Dismiss all" per
+   severity section (CRITICAL excluded for safety).
+3. ✅ **Sample data cleanup button** — shipped. Pair to the seed button
+   on /os/gym → drops every sample-tagged row in one click.
+4. **Insight feedback** — let coaches mark an insight as "false positive"
    so we can later tune the heuristics. Schema already has `is_actioned`;
    would add a `feedback_signal` column or a separate table.
-4. **Sample data cleanup button** — companion to the seed button on
-   /os/gym, runs the cleanup SQL via the API instead of forcing the
-   user into the Supabase editor.
 5. **Per-team insights filter** on /os/intelligence — "show me only
    insights about team X."
-6. **Stripe Connect rough-edge polish** (above) — but this is hard to do
+6. **"Sign up for Tribe" invite email** — when a coach adds a client
+   whose email DOESN'T match a Tribe user, send a different email
+   inviting them to sign up + claim their training. Different value
+   calculation than the welcome — borders on cold outreach, so deferred.
+7. **Stripe Connect rough-edge polish** — but this is hard to do
    without an actual test account, so probably better as a human task.
+8. **Per-attendance trigger optimization** — migration 079 recomputes
+   counters from scratch on every write. Could switch to delta updates
+   if perf ever becomes a concern at scale (>10k clients).
 
 I'll keep building down this list and updating this file as new items
 surface.
