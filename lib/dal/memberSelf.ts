@@ -546,3 +546,251 @@ export async function recordSelfCheckIn(
     return { success: false, error: 'db_error' };
   }
 }
+
+/** Full per-membership data export (one entry per gym the member belongs to). */
+export interface MyDataExportMembership {
+  client_id: string;
+  member_name: string;
+  status: 'active' | 'inactive' | 'lead' | 'lapsed' | null;
+  gym: {
+    id: string;
+    name: string;
+    slug: string;
+    timezone: string;
+  };
+  cached_counters: {
+    total_sessions: number;
+    sessions_last_30_days: number;
+    current_streak_days: number;
+    longest_streak_days: number;
+    last_seen_at: string | null;
+  };
+  /**
+   * Full attendance history — NOT capped. Member data exports are
+   * meant to be complete (GDPR right to access). For a typical member
+   * with ~5 sessions/week this is a few hundred rows, which is small
+   * enough to ship in one response without paging.
+   */
+  attendance: Array<{
+    id: string;
+    attended: boolean;
+    paid: boolean;
+    amount_paid_cents: number | null;
+    currency: string | null;
+    attended_at: string | null;
+    created_at: string;
+    session: {
+      id: string;
+      title: string | null;
+      sport: string | null;
+      date: string | null;
+      start_time: string | null;
+    } | null;
+  }>;
+  /** Full partner list — also uncapped, but the table is naturally small (one row per pair). */
+  partners: Array<{
+    partner_id: string;
+    partner_name: string;
+    shared_sessions: number;
+    last_shared_at: string;
+  }>;
+}
+
+/** Top-level shape of the JSON download a member gets when they click "Download my data". */
+export interface MyDataExport {
+  /** ISO timestamp of when the export was generated. */
+  generated_at: string;
+  /** The authenticated user's email (the identity key for the export). */
+  user_email: string;
+  /** Schema version — lets future exports add fields without breaking older parsers. */
+  schema_version: 1;
+  memberships: MyDataExportMembership[];
+}
+
+/**
+ * Build the full data export for a member across every gym they
+ * belong to. Sister surface to `listMyMemberships` (which surfaces
+ * the lightweight per-membership row) — this one is the
+ * comprehensive "give me everything you have on me" payload that
+ * answers a GDPR right-to-access request.
+ *
+ * Why this lives next to listMyMemberships rather than in a separate
+ * module: shares the same identity-match contract + service-role
+ * pattern. Keeping it co-located makes that invariant easy to audit.
+ */
+export async function buildMyDataExport(userEmail: string): Promise<DalResult<MyDataExport>> {
+  const service = buildServiceClient();
+  if (!service) return { success: false, error: 'service_role_missing' };
+  const normalized = userEmail.trim().toLowerCase();
+  if (!normalized) return { success: false, error: 'no_email' };
+
+  try {
+    // 1. Resolve every client row that matches the user's email. We
+    //    keep archived rows here — the right-to-access covers data
+    //    we still hold about the member, including soft-archived rows
+    //    (which still exist physically).
+    const { data: clientRows, error: clientErr } = await service
+      .from('clients')
+      .select(
+        `
+          id, gym_id, name, email, status, archived,
+          total_sessions, sessions_last_30_days, current_streak_days,
+          longest_streak_days, last_seen_at,
+          gym:gyms(id, name, slug, timezone)
+        `
+      )
+      .ilike('email', normalized)
+      .not('gym_id', 'is', null);
+    if (clientErr) {
+      logError(clientErr, { action: 'buildMyDataExport.clients' });
+      return { success: false, error: clientErr.message };
+    }
+    const clients = clientRows ?? [];
+    if (clients.length === 0) {
+      return {
+        success: true,
+        data: {
+          generated_at: new Date().toISOString(),
+          user_email: normalized,
+          schema_version: 1,
+          memberships: [],
+        },
+      };
+    }
+
+    // 2. Per-client, fan out to attendance + partners. Done with
+    //    Promise.all to keep latency flat even for users belonging
+    //    to a handful of gyms.
+    const clientIds = clients.map((c) => c.id as string);
+
+    const [attendanceRes, partnersRes] = await Promise.all([
+      service
+        .from('client_attendance')
+        .select(
+          `
+            id, client_id, attended, paid, amount_paid_cents, currency,
+            attended_at, created_at,
+            session:sessions(id, title, sport, date, start_time)
+          `
+        )
+        .in('client_id', clientIds)
+        .order('attended_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false }),
+      service
+        .from('training_partners')
+        .select(
+          `
+            member_a_id, member_b_id, shared_sessions, last_shared_at,
+            client_a:clients!training_partners_member_a_id_fkey(id, name, archived),
+            client_b:clients!training_partners_member_b_id_fkey(id, name, archived)
+          `
+        )
+        .or(clientIds.map((id) => `member_a_id.eq.${id},member_b_id.eq.${id}`).join(',')),
+    ]);
+
+    if (attendanceRes.error) {
+      logError(attendanceRes.error, { action: 'buildMyDataExport.attendance' });
+    }
+    if (partnersRes.error) {
+      logError(partnersRes.error, { action: 'buildMyDataExport.partners' });
+    }
+
+    const attendanceByClient = new Map<string, MyDataExportMembership['attendance']>();
+    for (const row of attendanceRes.data ?? []) {
+      const clientId = row.client_id as string;
+      const session = row.session as unknown as MyDataExportMembership['attendance'][number]['session'];
+      const entry = {
+        id: row.id as string,
+        attended: row.attended as boolean,
+        paid: row.paid as boolean,
+        amount_paid_cents: (row.amount_paid_cents as number | null) ?? null,
+        currency: (row.currency as string | null) ?? null,
+        attended_at: (row.attended_at as string | null) ?? null,
+        created_at: row.created_at as string,
+        session: session ?? null,
+      };
+      const bucket = attendanceByClient.get(clientId) ?? [];
+      bucket.push(entry);
+      attendanceByClient.set(clientId, bucket);
+    }
+
+    const partnersByClient = new Map<string, MyDataExportMembership['partners']>();
+    for (const row of partnersRes.data ?? []) {
+      const a = row.member_a_id as string;
+      const b = row.member_b_id as string;
+      // Each pair shows up once. We attach it under whichever side
+      // is one of the caller's client_ids. If the member happens to
+      // belong to multiple gyms that share a partner — extremely
+      // unlikely — we'd attach to the first match; not worth solving.
+      const clientA = row.client_a as unknown as { id: string; name: string; archived: boolean } | null;
+      const clientB = row.client_b as unknown as { id: string; name: string; archived: boolean } | null;
+      const memberSet = new Set(clientIds);
+
+      if (memberSet.has(a) && clientB) {
+        const bucket = partnersByClient.get(a) ?? [];
+        bucket.push({
+          partner_id: clientB.id,
+          partner_name: clientB.name,
+          shared_sessions: (row.shared_sessions as number) ?? 0,
+          last_shared_at: row.last_shared_at as string,
+        });
+        partnersByClient.set(a, bucket);
+      } else if (memberSet.has(b) && clientA) {
+        const bucket = partnersByClient.get(b) ?? [];
+        bucket.push({
+          partner_id: clientA.id,
+          partner_name: clientA.name,
+          shared_sessions: (row.shared_sessions as number) ?? 0,
+          last_shared_at: row.last_shared_at as string,
+        });
+        partnersByClient.set(b, bucket);
+      }
+    }
+
+    const memberships: MyDataExportMembership[] = clients
+      .map((c) => {
+        const gym = c.gym as unknown as {
+          id: string;
+          name: string;
+          slug: string;
+          timezone: string;
+        } | null;
+        if (!gym) return null;
+        const clientId = c.id as string;
+        return {
+          client_id: clientId,
+          member_name: c.name as string,
+          status: (c.status as MyDataExportMembership['status']) ?? null,
+          gym: {
+            id: gym.id,
+            name: gym.name,
+            slug: gym.slug,
+            timezone: gym.timezone,
+          },
+          cached_counters: {
+            total_sessions: (c.total_sessions as number) ?? 0,
+            sessions_last_30_days: (c.sessions_last_30_days as number) ?? 0,
+            current_streak_days: (c.current_streak_days as number) ?? 0,
+            longest_streak_days: (c.longest_streak_days as number) ?? 0,
+            last_seen_at: (c.last_seen_at as string | null) ?? null,
+          },
+          attendance: attendanceByClient.get(clientId) ?? [],
+          partners: partnersByClient.get(clientId) ?? [],
+        };
+      })
+      .filter((m): m is MyDataExportMembership => m !== null);
+
+    return {
+      success: true,
+      data: {
+        generated_at: new Date().toISOString(),
+        user_email: normalized,
+        schema_version: 1,
+        memberships,
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'buildMyDataExport.exception' });
+    return { success: false, error: 'Failed to build data export' };
+  }
+}

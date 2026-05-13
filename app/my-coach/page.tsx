@@ -33,7 +33,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Flame, Users, Trophy, AlertCircle, Building2, Check, Hand } from 'lucide-react';
+import { ArrowLeft, Calendar, Flame, Users, Trophy, AlertCircle, Building2, Check, Hand, Download } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { formatShortDate } from '@/lib/format/currency';
@@ -150,6 +150,11 @@ const copy = {
     noShow: 'No show',
     unknownSession: 'Session',
     poweredBy: 'Powered by Tribe.OS',
+    downloadDataLabel: 'Download my training data',
+    downloadDataHint:
+      'Get a JSON file with everything Tribe.OS has on you across every gym you belong to. Useful if you want a backup or want to take your data somewhere else.',
+    downloadDataPending: 'Preparing your download…',
+    downloadDataError: "Couldn't prepare your data right now. Try again.",
   },
   es: {
     pageTitle: 'Mi entrenamiento',
@@ -191,6 +196,11 @@ const copy = {
     noShow: 'No vino',
     unknownSession: 'Sesión',
     poweredBy: 'Powered by Tribe.OS',
+    downloadDataLabel: 'Descargar mis datos de entrenamiento',
+    downloadDataHint:
+      'Obtén un archivo JSON con todo lo que Tribe.OS tiene sobre ti en cada gym del que eres miembro. Útil para hacer un respaldo o llevarte tus datos a otro lugar.',
+    downloadDataPending: 'Preparando tu descarga…',
+    downloadDataError: 'No se pudo preparar tu archivo ahora. Intenta de nuevo.',
   },
 } as const;
 
@@ -523,6 +533,12 @@ function ReadyView({
           />
         )}
 
+        {/* Privacy / data-rights footer — surfaces the right-to-access
+            half of GDPR. The right-to-erasure half is a coach-side
+            action (POST /api/tribe-os/clients/[id]/purge); members
+            request that by contacting their coach. */}
+        <DownloadDataButton copy={s} />
+
         {/* Subtle "powered by" footer — reinforces brand without
             interfering with the member-first feel of the page. */}
         <p className="text-xs text-gray-400 text-center pt-6">{s.poweredBy}</p>
@@ -748,4 +764,83 @@ function initialsFromName(name: string): string {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/**
+ * "Download my training data" button. Triggers the server endpoint
+ * via a fetch + blob save so we surface a loading state during the
+ * round trip (a plain anchor with the URL would just hang the UI
+ * for users on slow connections without any feedback).
+ *
+ * The endpoint sets Content-Disposition: attachment so the browser
+ * downloads rather than navigates. We use the same disposition path
+ * client-side by creating an object URL and clicking it through a
+ * hidden anchor — works on iOS Safari (which sometimes routes
+ * direct-link downloads to the share sheet).
+ */
+function DownloadDataButton({ copy: s }: { copy: typeof copy.en | typeof copy.es }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    trackEvent('tribe_member_data_export_clicked');
+    try {
+      const res = await fetch('/api/me/training/export', { method: 'GET' });
+      if (!res.ok) {
+        setError(s.downloadDataError);
+        setPending(false);
+        trackEvent('tribe_member_data_export_failed', { status: res.status });
+        return;
+      }
+      const blob = await res.blob();
+      // Pull the filename from Content-Disposition if present; fall
+      // back to a sensible default if a CDN strips the header.
+      const cd = res.headers.get('Content-Disposition') ?? '';
+      const match = cd.match(/filename="?([^";]+)"?/);
+      const filename = match?.[1] ?? `tribe-training-data-${new Date().toISOString().slice(0, 10)}.json`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setPending(false);
+      trackEvent('tribe_member_data_export_succeeded');
+    } catch {
+      setError(s.downloadDataError);
+      setPending(false);
+      trackEvent('tribe_member_data_export_failed', { status: 0 });
+    }
+  }
+
+  return (
+    <div className="pt-4 border-t border-gray-100">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={pending}
+        className="inline-flex items-start gap-2 group text-left disabled:opacity-60"
+      >
+        <Download className="w-4 h-4 text-tribe-green-dark mt-0.5 shrink-0" />
+        <span>
+          <span className="block text-sm font-semibold text-gray-900 group-hover:text-tribe-dark">
+            {pending ? s.downloadDataPending : s.downloadDataLabel}
+          </span>
+          <span className="block text-xs text-gray-500 mt-0.5">{s.downloadDataHint}</span>
+        </span>
+      </button>
+      {error ? (
+        <p className="mt-2 text-xs text-tribe-red flex items-center gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5" />
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
 }

@@ -218,39 +218,39 @@ ignore until the consumer-side surfaces are next on the roadmap.
 
 Ranked by my read on impact (✅ = shipped since this doc was created):
 
-1. ✅ **Coach-added-you welcome email** — shipped. When a coach creates a
-   client whose email matches a Tribe user, they get a bilingual email
-   pointing at /my-coach. Skips bulk imports (no spam).
-2. ✅ **Bulk dismiss on /os/intelligence** — shipped. "Dismiss all" per
-   severity section (CRITICAL excluded for safety).
-3. ✅ **Sample data cleanup button** — shipped. Pair to the seed button
-   on /os/gym → drops every sample-tagged row in one click.
-4. ✅ **Per-team insights filter** — shipped. Selector on /os/intelligence
-   when the gym has 2+ teams. Server-side filter via team_id param;
-   gym-level insights drop when scoped to a team.
-5. ✅ **Insight feedback** — shipped. 👍 Helpful / 👎 Not useful chips
-   on each insight card. Stored in `data_payload.feedback` (no
-   migration needed); both signals also dismiss the card. The data
-   is collected; **TODO for you**: review the rate of "Not useful"
-   per insight type after some real-world use → tune the generator
-   heuristics (threshold for AT_RISK, REVENUE unpaid count, etc.).
-6. ✅ **Per-client insight history** — shipped. New section on
-   /os/clients/[id] showing every insight that ever referenced this
-   member with status (Active / Dismissed / Expired) + feedback
-   chips when applicable. Helps coaches spot patterns over time
-   ("AI has flagged Carlos 4 times in the last 30 days → maybe call,
-   not message").
-7. ✅ **Edit + delete attendance** — shipped. Coaches can fix mistakes
-   (wrong attended, wrong amount, refund flips paid → false, wrong
-   client) without dropping into SQL. Pencil icon on each attendance
-   row opens an inline form. The 079 counter trigger re-fires on
-   UPDATE OF attended/attended_at + DELETE so cached counters stay
-   accurate.
-8. ✅ **Tag filter on /os/members** — shipped. Dropdown next to
-   status pills, composes with the status filter ("at-risk VIPs").
-9. ✅ **Unit tests for core lib** — shipped. 48 tests covering
-   CSV parser, CSV serializer, i18n templates renderer, and the
-   health classifier. Run via `npm test`.
+1.  ✅ **Coach-added-you welcome email** — shipped. When a coach creates a
+    client whose email matches a Tribe user, they get a bilingual email
+    pointing at /my-coach. Skips bulk imports (no spam).
+2.  ✅ **Bulk dismiss on /os/intelligence** — shipped. "Dismiss all" per
+    severity section (CRITICAL excluded for safety).
+3.  ✅ **Sample data cleanup button** — shipped. Pair to the seed button
+    on /os/gym → drops every sample-tagged row in one click.
+4.  ✅ **Per-team insights filter** — shipped. Selector on /os/intelligence
+    when the gym has 2+ teams. Server-side filter via team_id param;
+    gym-level insights drop when scoped to a team.
+5.  ✅ **Insight feedback** — shipped. 👍 Helpful / 👎 Not useful chips
+    on each insight card. Stored in `data_payload.feedback` (no
+    migration needed); both signals also dismiss the card. The data
+    is collected; **TODO for you**: review the rate of "Not useful"
+    per insight type after some real-world use → tune the generator
+    heuristics (threshold for AT_RISK, REVENUE unpaid count, etc.).
+6.  ✅ **Per-client insight history** — shipped. New section on
+    /os/clients/[id] showing every insight that ever referenced this
+    member with status (Active / Dismissed / Expired) + feedback
+    chips when applicable. Helps coaches spot patterns over time
+    ("AI has flagged Carlos 4 times in the last 30 days → maybe call,
+    not message").
+7.  ✅ **Edit + delete attendance** — shipped. Coaches can fix mistakes
+    (wrong attended, wrong amount, refund flips paid → false, wrong
+    client) without dropping into SQL. Pencil icon on each attendance
+    row opens an inline form. The 079 counter trigger re-fires on
+    UPDATE OF attended/attended_at + DELETE so cached counters stay
+    accurate.
+8.  ✅ **Tag filter on /os/members** — shipped. Dropdown next to
+    status pills, composes with the status filter ("at-risk VIPs").
+9.  ✅ **Unit tests for core lib** — shipped. 48 tests covering
+    CSV parser, CSV serializer, i18n templates renderer, and the
+    health classifier. Run via `npm test`.
 10. ✅ **Stripe Connect banner on /os/revenue** — shipped. When the
     gym owner hasn't finished Stripe Connect onboarding, a nudge
     banner explains why revenue is at zero + links to the existing
@@ -332,34 +332,51 @@ Ranked by my read on impact (✅ = shipped since this doc was created):
     that member last week?" in five seconds.
 
 18. ✅ **Audit log expansion: 3 new action types** — shipped. Three
-    new destructive actions now write to `gym_audit_log`:
-    - `attendance.delete` — payload captures `{ client_id,
+    new destructive actions now write to `gym_audit_log`: - `attendance.delete` — payload captures `{ client_id,
 session_id, attended, paid, amount_paid_cents, currency }` so
-      a deleted paid attendance leaves a money-traceable record.
-    - `gym.settings_update` — payload captures a per-field diff
-      (`{ changes: { timezone: { from: 'America/Bogota', to: 'UTC' } } }`).
-      Only fires when something actually changed; no-op PATCHes
-      skip the log. Captures intelligence_email_enabled flips too.
-    - `insight.bulk_dismiss` — payload captures `{ dismissed: <count>,
+    a deleted paid attendance leaves a money-traceable record. - `gym.settings_update` — payload captures a per-field diff
+    (`{ changes: { timezone: { from: 'America/Bogota', to: 'UTC' } } }`).
+    Only fires when something actually changed; no-op PATCHes
+    skip the log. Captures intelligence_email_enabled flips too. - `insight.bulk_dismiss` — payload captures `{ dismissed: <count>,
 filter: { severity, type, ids } }`. Single-card dismissals are
-      not audited (low impact); only bulk action is sensitive enough
-      to log in a multi-coach gym.
+    not audited (low impact); only bulk action is sensitive enough
+    to log in a multi-coach gym.
 
-    All three now render with friendly labels in the /os/audit
-    viewer (English + Spanish). The pattern is reusable — adding
-    new audit event types just means calling `writeAuditEntry` from
-    the relevant route and adding a label entry.
+        All three now render with friendly labels in the /os/audit
+        viewer (English + Spanish). The pattern is reusable — adding
+        new audit event types just means calling `writeAuditEntry` from
+        the relevant route and adding a label entry.
 
-19. **"Sign up for Tribe" invite email** — when a coach adds a client
+19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
+    The complement to the GDPR purge: a member can now download a
+    full JSON of everything Tribe.OS holds on them via a "Download
+    my training data" button at the bottom of `/my-coach`. The export
+    covers every gym they belong to: identity (name + status),
+    cached counters, full attendance history (uncapped — exports
+    are meant to be complete), and full partner list.
+
+    Endpoint: `GET /api/me/training/export` returns the JSON with
+    `Content-Disposition: attachment` so it saves rather than
+    renders. The client-side button uses a blob → object-URL flow
+    so the download works on iOS Safari (which sometimes routes
+    direct-link downloads to the share sheet). Three new analytics
+    events: `tribe_member_data_export_{clicked,succeeded,failed}`.
+
+    **What this buys you**: lets you tell members "you own your data
+    and can take it with you anytime" without it being aspirational
+    marketing copy. Real privacy/trust signal — important for
+    LATAM/EU members where data-portability is increasingly expected.
+
+20. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-20. **Stripe Connect rough-edge polish** — but this is hard to do
+21. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-21. **Per-attendance trigger optimization** — migration 079 recomputes
+22. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-22. **Generator feedback loop** — use the feedback data from #5 to:
+23. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
