@@ -34,11 +34,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Eye, MessageCircle, AlertCircle } from 'lucide-react';
+import { Search, Plus, Upload, Eye, MessageCircle, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
 import { buildWhatsAppUrl } from '@/lib/phone';
+import ImportClientsModal from '@/components/tribe-os/ImportClientsModal';
 import type { ClientStatus, ClientWithStats } from '@/lib/dal/clients';
 
 type StatusFilter = 'all' | 'active' | 'watch' | 'at_risk' | 'churned';
@@ -53,6 +54,7 @@ const copy = {
     pageTitle: 'All Members',
     searchPlaceholder: 'Search members by name or email…',
     addMember: 'Add Member',
+    importCsv: 'Import CSV',
     filter: { all: 'All', active: 'Active', watch: 'Watch', at_risk: 'At Risk', churned: 'Churned' },
     columns: {
       name: 'Name',
@@ -85,6 +87,7 @@ const copy = {
     pageTitle: 'Todos los miembros',
     searchPlaceholder: 'Buscar miembros por nombre o correo…',
     addMember: 'Agregar miembro',
+    importCsv: 'Importar CSV',
     filter: { all: 'Todos', active: 'Activos', watch: 'En seguimiento', at_risk: 'En riesgo', churned: 'Bajas' },
     columns: {
       name: 'Nombre',
@@ -129,6 +132,7 @@ export default function MembersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [list, setList] = useState<ListState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  const [showImport, setShowImport] = useState(false);
 
   // Debounce search.
   useEffect(() => {
@@ -233,6 +237,18 @@ export default function MembersPage() {
               className="w-full pl-10 pr-3 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20"
             />
           </div>
+          {/* Import CSV — secondary action next to "Add Member" so
+              coaches with an existing roster don't have to retype it
+              client by client. Visible to every coach; RLS gates
+              writes at the DB layer. */}
+          <button
+            type="button"
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-tribe-dark text-sm font-semibold rounded-xl border border-gray-200 hover:border-tribe-green hover:bg-tribe-green/5 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            {s.importCsv}
+          </button>
           <Link
             href="/os/clients/new"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-xl hover:shadow-[0_4px_20px_rgba(132,204,22,0.25)] hover:-translate-y-0.5 transition-all"
@@ -296,6 +312,18 @@ export default function MembersPage() {
           )}
         </section>
       </div>
+
+      {showImport ? (
+        <ImportClientsModal
+          onClose={() => setShowImport(false)}
+          onImported={() => {
+            // Refresh the list so newly-imported clients appear
+            // immediately. Modal stays open so the user can read
+            // the result; closing it later is their choice.
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

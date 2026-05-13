@@ -259,6 +259,51 @@ const ATTENDANCE_SELECT =
  * row with gym_id = null; that row is still queryable via the
  * legacy RLS branch.
  */
+/**
+ * Bulk-create clients. Used by the CSV import flow. Submits one
+ * Supabase INSERT with an array of rows so the round-trip cost is
+ * O(1) regardless of batch size. Caller is expected to have already
+ * validated each row's shape via the per-row Zod schema.
+ *
+ * Returns the inserted ClientRow array on success. If the bulk
+ * insert errors (e.g. a single bad row trips a CHECK constraint),
+ * the whole batch fails — Supabase doesn't surface per-row results
+ * for an array insert. UX wraps this with a clear "fix the bad row
+ * and retry" message rather than silent partial-success.
+ */
+export async function createClientsBulk(
+  supabase: SupabaseClient,
+  context: ClientTenantContext,
+  inputs: CreateClientInput[]
+): Promise<DalResult<ClientRow[]>> {
+  if (inputs.length === 0) return { success: true, data: [] };
+  const instructorUserId = context.instructorUserId;
+  const gymId = context.gymId;
+  try {
+    const payload = inputs.map((input) => ({
+      instructor_user_id: instructorUserId,
+      gym_id: gymId,
+      name: input.name,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      notes: input.notes ?? null,
+      tags: input.tags ?? [],
+      contact_info: input.contact_info ?? null,
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.health_notes !== undefined ? { health_notes: input.health_notes } : {}),
+    }));
+    const { data, error } = await supabase.from('clients').insert(payload).select(CLIENT_SELECT);
+    if (error) {
+      logError(error, { action: 'createClientsBulk', instructorUserId, gymId, count: inputs.length });
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: (data ?? []) as ClientRow[] };
+  } catch (error) {
+    logError(error, { action: 'createClientsBulk.exception', instructorUserId, gymId, count: inputs.length });
+    return { success: false, error: 'Failed to bulk-create clients' };
+  }
+}
+
 export async function createClient(
   supabase: SupabaseClient,
   context: ClientTenantContext | string,
