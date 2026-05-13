@@ -162,6 +162,8 @@ type EventName =
   | 'tribe_os_at_risk_clicked' // user clicked a row in the at-risk widget on /os/dashboard
   | 'tribe_os_recent_activity_clicked' // user clicked a row in the recent-activity widget on /os/dashboard
   | 'tribe_os_whatsapp_clicked' // instructor clicked the WhatsApp follow-up button on a client surface
+  | 'tribe_os_onboarding_step_clicked' // a checklist item on the OnboardingChecklist card was clicked
+  | 'tribe_os_onboarding_dismissed' // user explicitly dismissed the OnboardingChecklist card
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)

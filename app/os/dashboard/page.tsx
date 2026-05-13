@@ -32,6 +32,7 @@ import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
+import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -227,6 +228,11 @@ export default function TribeOSDashboardPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-[1.1] mb-3">{s.welcome}</h1>
         <p className="text-sm sm:text-base text-white/70 leading-relaxed mb-6">{s.placeholder}</p>
+
+        {/* Onboarding checklist — only renders for instructors who
+            haven't completed the three first-week actions yet (or
+            who haven't dismissed it). Self-hides once graduated. */}
+        <OnboardingChecklist />
 
         {/* Quick-stats row — active clients / sessions this month /
             revenue this month. One round-trip; failures degrade

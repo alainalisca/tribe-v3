@@ -35,6 +35,12 @@ const GUIDE_IDS = [
 
 const STORAGE_PREFIX = 'tribe_guide_seen_';
 
+// Onboarding checklist dismissal key — cleared here too so the user
+// gets back the full "see everything again" experience. The
+// checklist auto-graduates once items are done, so re-showing it
+// after a real reset is safe.
+const ONBOARDING_DISMISS_KEY = 'tribe_os_onboarding_dismissed_v1';
+
 // ES PENDING VERONICA REVIEW
 const copy = {
   en: {
@@ -60,6 +66,7 @@ export default function ReplayToursButton() {
       for (const id of GUIDE_IDS) {
         window.localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
       }
+      window.localStorage.removeItem(ONBOARDING_DISMISS_KEY);
     } catch {
       // localStorage can throw in private browsing; we just fail
       // silently — the worst case is the user has to skip a tour
