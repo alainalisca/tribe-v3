@@ -32,6 +32,8 @@ integration is complete and Al gives explicit ask.
 | M   | Tribe.OS redesign: light theme + new IA + Teams + Schedule                          | ✅ done | `b9f31b3`..`ae86d63`            |
 | N   | Reconciliation with sibling `tribe-os` codebase (Phases A/B/C)                      | ✅ done | `eb81a80`..`cdf0b3d`            |
 | O   | Phase D Round 1: training_partners trigger + /os/teams/[id] + /os/intelligence      | ✅ done | `3f82fe7`, `b334698`            |
+| P   | Phase D Round 2: ChurnRiskPanel + bulk rescore + coach picker + historical backfill | ✅ done | `5563131`..`ea53780`            |
+| Q   | Phase D Round 3: nightly cron + scoring accuracy + history view                     | ✅ done | `a690727`                       |
 
 ## What shipped
 
@@ -258,6 +260,149 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission Q — Phase D Round 3: nightly cron + scoring accuracy + history view
+
+Closes the loop on the intelligence engine so it runs autonomously
+and surfaces accurate scores.
+
+### Scoring accuracy fix (`lib/ai/data-access.ts`)
+
+The two attendance-cadence signals (`attendanceFrequencyDelta` and
+`streakBroken`) were reading from `clients.sessions_last_30_days`
+and `clients.current_streak_days` — columns added in migration 075
+but never maintained. They were always 0, which made:
+
+- `attendanceFrequencyDelta` always contribute its full 0.20 weight
+- `streakBroken` never trigger (0 = 0 = no recent break)
+
+Result: every member scored higher than they should. New members
+with no attendance were no different from members who had stopped
+showing up.
+
+**Fixed** by computing both signals live from `client_attendance`:
+
+- One round-trip pulls the last 90 days of `attended_at` timestamps.
+- `sessions30` (last 30 days) vs `sessions30To90` (prior 30-90d
+  window) → `attendanceFrequencyDelta` compares the two periods.
+- Falls back to a fixed 4/month baseline when < 60d of history.
+- `currentStreakDays` = consecutive days back from today with at
+  least one attended row (bounded to 60).
+- `streakBroken` requires (a) currentStreak=0, (b) last seen 3-14
+  days ago, AND (c) prior 30-90d had ≥ 4 sessions (so there was
+  a streak to break).
+
+### At-risk widget uses health_status (`lib/dal/clients.ts`)
+
+`listAtRiskClients` now adds `health_status = 'AT_RISK'` as a
+fourth OR branch alongside the existing heuristics. When the AI
+has scored someone AT_RISK they bubble to the top of the widget;
+unscored rows still get caught by the heuristic branches as a
+fallback. Ordering switched to `churn_risk_score DESC NULLS LAST`
+first so AI-flagged members rank above heuristic-only ones.
+
+### Nightly cron (`app/api/cron/tribe-os/intelligence`)
+
+`GET /api/cron/tribe-os/intelligence` iterates every premium-active
+gym and runs the full intelligence pipeline (rescore +
+insight-generate). Auth: Bearer `CRON_SECRET` matching the other
+Tribe cron jobs. Capped at `MAX_GYMS_PER_RUN` (50) per execution.
+
+Pipeline extracted into `lib/ai/run-intelligence.ts` —
+`runIntelligenceForGym(gymId)` is shared by the manual button
+endpoint (`POST /api/tribe-os/ai/rescore-all`) and the cron, so
+both paths use exactly the same logic.
+
+Scheduled at `0 7 * * *` UTC in `vercel.json` — 2 AM Medellín time
+(UTC-5). Per-gym timezone scheduling lands when Tribe.OS fans out
+beyond Colombia.
+
+### /os/intelligence history view
+
+New Active / History toggle in the page header. History adds
+`include_actioned=true` + `include_expired=true` to the API
+request so dismissed and expired cards surface for retrospection.
+Empty-state copy distinguishes 'no insights yet' (fresh gym) from
+'no past alerts' (history view). The
+`tribe_os_intelligence_viewed` analytics event now carries the
+view mode.
+
+### Pending follow-ups
+
+- Migration 077 still needs to be applied to the live DB before
+  the community-isolation churn signal reflects historical data.
+- `CRON_SECRET` must be set in Vercel project env vars (the other
+  Tribe crons already require it).
+- LLM-backed features (message drafter, workout generator, etc.)
+  still gated `enabled: false` in `lib/ai/config.ts`.
+- Cross-app signals (`paymentFailures90d`, `cancellationRate30d`,
+  `communityEngagementDrop`) still return 0 — wired in when the
+  Stripe-webhook payments table + community-app feed integration
+  lands.
+
+## Mission P — Phase D Round 2: AI surface + bulk rescore + coach picker
+
+### ChurnRiskPanel (`components/tribe-os/ChurnRiskPanel.tsx`)
+
+New intelligence card on `/os/clients/[id]`. Two visual states:
+
+1. **Never scored** (`churn_risk_score = NULL`): Brain icon + 'Not
+   scored yet' headline + 'Rescore now' button.
+2. **Scored**: big 2-decimal score tinted by health status
+   (green / amber / red), HEALTHY/WATCH/AT_RISK badge, health-
+   status shield icon, relative 'Last scored 3 hours ago' time,
+   collapsible per-signal breakdown.
+
+The breakdown auto-opens after a fresh rescore so the user can
+see what changed. Score updates in local state immediately for
+responsiveness; the DB columns (`churn_risk_score`,
+`churn_risk_updated_at`, `health_status`) get written inside the
+endpoint.
+
+### Bulk rescore + insight generator
+
+`lib/ai/insight-generator.ts`:
+
+- `generateChurnInsights(gymId, scoredMembers)` writes one
+  `CHURN_RISK` insight per AT_RISK member with severity
+  CRITICAL (score ≥ 0.8) or HIGH (≥ 0.6).
+- Dedupes against open (unactioned + unexpired) insights already
+  referencing the same client — re-running the engine won't spam.
+- 14-day expiry. `data_payload` carries the score breakdown for
+  auditability.
+
+`POST /api/tribe-os/ai/rescore-all`:
+
+- Owner-only. Iterates non-archived clients sequentially.
+- Persists scores, generates insights.
+- Returns scored / skipped / at_risk / insights_created /
+  duration_ms.
+
+`/os/intelligence` got a 'Run intelligence engine' button (owner-
+only server-side) that calls the bulk endpoint. After a run the
+page refreshes + shows 'Scored 47 members · 6 at risk · 4 new
+alerts' inline.
+
+### Coach picker in team Edit modal
+
+The team Edit modal previously omitted coach assignment, so saving
+Edit would null out `coach_user_id`. Fixed by:
+
+- Fetching the gym's coach list from `/api/tribe-os/coaches` on
+  modal open.
+- New select dropdown between Description and Color (Unassigned
+  default, owner tagged with '(owner)').
+- `coach_user_id` now included in the PATCH body.
+
+### Migration 077 — Historical training_partners backfill
+
+One-time SQL that runs the migration 076 trigger logic over
+existing `client_attendance` rows. Idempotent — `GREATEST` /
+`LEAST` on conflict keeps any trigger-built rows correct.
+
+After applying: the Community Isolation churn signal becomes
+retroactive, so rescore-all produces better-calibrated scores
+for gyms with attendance history pre-076.
 
 ## Mission O — Phase D Round 1: data pipelines + missing surfaces
 
