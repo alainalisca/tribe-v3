@@ -6,6 +6,7 @@ import { Plus, Search, AlertCircle, X } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatPaidTotal, formatShortDate } from '@/lib/format/currency';
+import ClientsPageGuide from '@/components/tribe-os/ClientsPageGuide';
 import type { ClientStatus, ClientWithStats } from '@/lib/dal/clients';
 
 type ListState =
@@ -267,6 +268,13 @@ export default function ClientsListPage() {
           </ul>
         )}
       </div>
+
+      {/* First-visit guide for this page. Auto-shows once per
+          device; the seen-flag is independent from the Tribe.OS
+          welcome guide on /os/dashboard so a user who skipped the
+          dashboard tour still gets a chance to learn the clients
+          page when they land here. */}
+      <ClientsPageGuide enabled />
     </main>
   );
 }

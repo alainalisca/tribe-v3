@@ -25,6 +25,11 @@ import { SkeletonCard } from '@/components/Skeleton';
 const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
 const EditSessionModal = dynamic(() => import('@/components/EditSessionModal'), { ssr: false });
 const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal'), { ssr: false });
+// Auto-shown welcome tour for signed-in users on first feed visit.
+// Distinct from OnboardingModal (which collects profile data); this
+// is feature discovery. Dynamic so the small chunk only loads when
+// the home page actually renders for an authed user.
+const TribeWelcomeGuide = dynamic(() => import('@/components/TribeWelcomeGuide'), { ssr: false });
 import StoriesRow from '@/components/StoriesRow';
 import FilterBar from '@/components/home/FilterBar';
 import CityGreeting from '@/components/home/CityGreeting';
@@ -91,6 +96,13 @@ export default function HomePage() {
           }}
         />
       )}
+
+      {/* Feature-discovery welcome guide. Auto-shows on first visit
+          for signed-in users; suppressed while OnboardingModal is up
+          so we don't stack two modals. Independent seen-flag from
+          the onboarding modal — this one is "have you seen the app
+          tour", not "have you completed your profile". */}
+      {f.user && !f.showOnboarding ? <TribeWelcomeGuide enabled /> : null}
 
       <FilterBar
         searchQuery={f.searchQuery}
