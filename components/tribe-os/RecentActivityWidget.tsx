@@ -23,6 +23,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, ChevronRight, Check, X as XIcon, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
 import type { Currency } from '@/lib/payments/config';
 
@@ -196,6 +197,12 @@ function ActivityRow({
     <li>
       <Link
         href={`/os/clients/${item.client_id}`}
+        onClick={() =>
+          trackEvent('tribe_os_recent_activity_clicked', {
+            attended: item.attended,
+            paid: item.paid,
+          })
+        }
         className="flex items-center gap-3 p-3 bg-tribe-dark/40 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 transition-colors"
       >
         {/* Attended badge — green check or muted X. The strongest

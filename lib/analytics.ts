@@ -160,6 +160,7 @@ type EventName =
   | 'tribe_os_client_status_changed' // status field on update differs from before — signal for engagement health
   | 'tribe_os_attendance_recorded' // POST /api/tribe-os/clients/[id]/attendance success
   | 'tribe_os_at_risk_clicked' // user clicked a row in the at-risk widget on /os/dashboard
+  | 'tribe_os_recent_activity_clicked' // user clicked a row in the recent-activity widget on /os/dashboard
   | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
   | 'tribe_os_revenue_exported' // CSV export download
   | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)
