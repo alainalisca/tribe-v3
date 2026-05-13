@@ -660,6 +660,12 @@ export interface AtRiskClient {
   id: string;
   name: string;
   email: string | null;
+  /**
+   * Phone (raw, as entered). The widget uses this to build a WhatsApp
+   * deep-link for one-click follow-up; nullable because not every
+   * client record has a phone on file.
+   */
+  phone: string | null;
   status: ClientStatus;
   last_seen_at: string | null;
   /**
@@ -718,7 +724,7 @@ export async function listAtRiskClients(
 
     let q = supabase
       .from('clients')
-      .select('id, name, email, status, last_seen_at, created_at')
+      .select('id, name, email, phone, status, last_seen_at, created_at')
       .eq('archived', false)
       .in('status', ['active', 'lapsed']);
 
@@ -750,6 +756,7 @@ export async function listAtRiskClients(
       id: string;
       name: string;
       email: string | null;
+      phone: string | null;
       status: ClientStatus;
       last_seen_at: string | null;
       created_at: string;
@@ -760,6 +767,7 @@ export async function listAtRiskClients(
       id: r.id,
       name: r.name,
       email: r.email,
+      phone: r.phone,
       status: r.status,
       last_seen_at: r.last_seen_at,
       days_since_last_seen: r.last_seen_at

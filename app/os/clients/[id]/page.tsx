@@ -3,12 +3,25 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, Trash2, Mail, Phone, AlertCircle, Calendar, CheckCircle, DollarSign } from 'lucide-react';
+import {
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  Mail,
+  Phone,
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  DollarSign,
+  MessageCircle,
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/currency';
 import { isValidUuid } from '@/lib/validations/uuid';
+import { buildWhatsAppUrl } from '@/lib/phone';
+import { trackEvent } from '@/lib/analytics';
 import RecordAttendanceInline from '@/components/tribe-os/RecordAttendanceInline';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
@@ -45,6 +58,8 @@ const copy = {
     // Contact
     contactTitle: 'Contact',
     noContact: 'No contact info recorded.',
+    whatsappLabel: 'WhatsApp',
+    whatsappCheckInMessage: (name: string) => `Hey ${name}! Just checking in — how's training going?`,
 
     // Tags
     tagsTitle: 'Tags',
@@ -104,6 +119,8 @@ const copy = {
 
     contactTitle: 'Contacto',
     noContact: 'Sin información de contacto.',
+    whatsappLabel: 'WhatsApp',
+    whatsappCheckInMessage: (name: string) => `¡Hola ${name}! Pasaba a saludarte. ¿Cómo va el entrenamiento?`,
 
     tagsTitle: 'Etiquetas',
     noTags: 'Sin etiquetas.',
@@ -345,7 +362,7 @@ export default function ClientDetailPage() {
                     </li>
                   ) : null}
                   {state.client.phone ? (
-                    <li className="flex items-center gap-2">
+                    <li className="flex items-center gap-2 flex-wrap">
                       <Phone className="w-4 h-4 text-white/50 shrink-0" />
                       <a
                         href={`tel:${state.client.phone}`}
@@ -353,6 +370,32 @@ export default function ClientDetailPage() {
                       >
                         {state.client.phone}
                       </a>
+                      {/* WhatsApp deep-link — primary follow-up
+                          channel for the Medellín market. Only
+                          renders when buildWhatsAppUrl produces
+                          something dialable (otherwise we'd just
+                          show a broken link). Pre-fills a friendly
+                          check-in message keyed off the client's
+                          first name. */}
+                      {(() => {
+                        const firstName = state.client.name.split(' ')[0] || state.client.name;
+                        const waUrl = buildWhatsAppUrl(state.client.phone, {
+                          message: s.whatsappCheckInMessage(firstName),
+                        });
+                        if (!waUrl) return null;
+                        return (
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'client_detail' })}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            {s.whatsappLabel}
+                          </a>
+                        );
+                      })()}
                     </li>
                   ) : null}
                 </ul>

@@ -17,9 +17,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ChevronRight, UserPlus } from 'lucide-react';
+import { AlertTriangle, ChevronRight, UserPlus, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { trackEvent } from '@/lib/analytics';
+import { buildWhatsAppUrl } from '@/lib/phone';
 import type { AtRiskClient } from '@/lib/dal/clients';
 
 type WidgetState =
@@ -51,6 +52,8 @@ const copy = {
     neverSeen: 'Never attended',
     statusLapsed: 'Lapsed',
     statusLead: 'Lead',
+    whatsappAria: 'Message on WhatsApp',
+    whatsappCheckInMessage: (name: string) => `Hey ${name}! Haven't seen you at training in a bit — everything ok?`,
   },
   es: {
     title: 'Miembros para hacer seguimiento',
@@ -68,6 +71,8 @@ const copy = {
     neverSeen: 'Nunca asistió',
     statusLapsed: 'Suspendido',
     statusLead: 'Prospecto',
+    whatsappAria: 'Enviar mensaje por WhatsApp',
+    whatsappCheckInMessage: (name: string) => `¡Hola ${name}! No te he visto entrenando hace rato. ¿Todo bien?`,
   },
 } as const;
 
@@ -188,25 +193,53 @@ function AtRiskRow({ client, copy: s }: { client: AtRiskClient; copy: typeof cop
           ? s.statusLead
           : s.neverSeen;
 
+  // WhatsApp deep-link with a pre-filled gentle check-in message
+  // keyed off the client's first name. Only rendered when we have
+  // a phone we can normalize — otherwise we silently skip the
+  // button so the row doesn't appear to lose an action.
+  const firstName = client.name.split(' ')[0] || client.name;
+  const waUrl = buildWhatsAppUrl(client.phone, {
+    message: s.whatsappCheckInMessage(firstName),
+  });
+
+  // Row uses a div instead of a wrapping Link so the WhatsApp
+  // button can be its own clickable target (nested anchors are
+  // invalid HTML and the inner click would otherwise bubble up
+  // to the parent Link). The chevron + label area remains a
+  // Link via the inner span.
   return (
     <li>
-      <Link
-        href={`/os/clients/${client.id}`}
-        onClick={() =>
-          trackEvent('tribe_os_at_risk_clicked', {
-            status: client.status,
-            days_since_last_seen: client.days_since_last_seen,
-            has_email: client.email !== null,
-          })
-        }
-        className="flex items-center gap-3 p-3 bg-tribe-dark/30 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 hover:bg-tribe-dark/50 transition-colors"
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{client.name}</p>
-          <p className="text-xs text-white/60 mt-0.5 truncate">{subtitle}</p>
-        </div>
-        <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
-      </Link>
+      <div className="flex items-center gap-2 bg-tribe-dark/30 rounded-lg border border-tribe-mid/60 hover:border-tribe-green/40 hover:bg-tribe-dark/50 transition-colors pr-2">
+        <Link
+          href={`/os/clients/${client.id}`}
+          onClick={() =>
+            trackEvent('tribe_os_at_risk_clicked', {
+              status: client.status,
+              days_since_last_seen: client.days_since_last_seen,
+              has_email: client.email !== null,
+            })
+          }
+          className="flex items-center gap-3 p-3 flex-1 min-w-0"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{client.name}</p>
+            <p className="text-xs text-white/60 mt-0.5 truncate">{subtitle}</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-white/40 shrink-0" />
+        </Link>
+        {waUrl ? (
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={s.whatsappAria}
+            onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'at_risk_widget' })}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-tribe-green/15 text-tribe-green hover:bg-tribe-green/25 border border-tribe-green/30 transition-colors shrink-0"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </a>
+        ) : null}
+      </div>
     </li>
   );
 }
