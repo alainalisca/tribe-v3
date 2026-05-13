@@ -34,6 +34,7 @@ integration is complete and Al gives explicit ask.
 | O   | Phase D Round 1: training_partners trigger + /os/teams/[id] + /os/intelligence      | ✅ done | `3f82fe7`, `b334698`            |
 | P   | Phase D Round 2: ChurnRiskPanel + bulk rescore + coach picker + historical backfill | ✅ done | `5563131`..`ea53780`            |
 | Q   | Phase D Round 3: nightly cron + scoring accuracy + history view                     | ✅ done | `a690727`                       |
+| R   | Phase D Round 4: members badges + counter persistence + insight WhatsApp deep-links | ✅ done | `efd7a31`..`f37afd5`            |
 
 ## What shipped
 
@@ -260,6 +261,101 @@ empty. Two batches of polish:
   a separate, not-yet-built flow).
 - Owner-only invite/remove — non-owners see explanatory copy
   instead of broken-looking forms.
+
+## Mission R — Phase D Round 4: AI surface coherence
+
+Four small but compounding improvements that make the AI engine
+visible across every surface that touches a member.
+
+### Members table badges (`efd7a31`)
+
+`/os/members` previously rendered status badges from the manual
+`status` column only — so an active member the AI scored AT_RISK
+could show up as 'Active' here while the at-risk widget on the
+dashboard already showed them as 'At Risk'. The two surfaces could
+disagree.
+
+Fixed badge precedence (top → bottom):
+
+1. `health_status = 'AT_RISK'` → At Risk
+2. `health_status = 'WATCH'` → Watch
+3. `status = 'lapsed'` → Watch (manual override)
+4. `status = 'inactive'` → Churned
+5. `status = 'lead'` → Lead
+6. `status = 'active'` + no attendance > 14d → At Risk (heuristic
+   fallback for unscored rows)
+7. → Active
+
+Watch + At Risk filter pills now query the full roster server-side
+and combine `status` + `health_status` client-side, so neither
+column-priority path misses members.
+
+### Counter persistence (`560109b` + migration 078)
+
+The four counter columns added in migration 075 (`total_sessions`,
+`sessions_last_30_days`, `current_streak_days`,
+`longest_streak_days`) were dead weight — nothing wrote to them
+and the scoring engine computed everything on demand.
+
+Now `fetchChurnSignals` returns the counters it computes anyway,
+and `persistMemberScore` writes them back to the clients row when
+called. Free side-effect of every rescore (manual button, cron,
+or single-member). `longest_streak_days` ratchets via the
+`bump_longest_streak(uuid, integer)` RPC added in migration 078
+so a partial run never overwrites a higher historical value.
+
+Other surfaces can now read these columns directly with at most
+24-hour staleness (refreshed every cron pass).
+
+### Stats card extension (`a3a87c9`)
+
+`/os/clients/[id]` Stats card grew a second row:
+
+- Last 30 days (`sessions_last_30_days`)
+- Current streak with 'Longest: N' sublabel (`current_streak_days`
+  - `longest_streak_days`)
+
+Second row only renders when at least one counter is non-zero —
+keeps the card visually quiet for un-scored gyms.
+
+### Insight WhatsApp deep-links (`f37afd5`)
+
+`/os/intelligence` insight cards with `action_type = 'SEND_MESSAGE'`
+that reference exactly one member now render the action button as
+a wa.me deep-link instead of an internal route. The link opens
+WhatsApp directly with a pre-composed check-in message keyed off
+the member's first name — one tap instead of three.
+
+DAL extended:
+
+- `listInsightsForGym` join now two-hops into clients to embed
+  `name` + `phone` per linked member.
+- New `members: InsightMember[]` field on `CommunityInsight` carries
+  the embedded data; legacy `member_ids: string[]` kept in sync.
+
+UI:
+
+- Avatar preview chips on each card now use the embedded member
+  name to seed initials (was always '·' before).
+- Two analytics events fire on click:
+  `tribe_os_insight_action_clicked` (with `via='whatsapp'`) +
+  `tribe_os_whatsapp_clicked` (surface=`intelligence_card`).
+- Falls back to the existing internal route when there's no phone
+  or the insight covers multiple members.
+
+### Pending follow-ups
+
+- LLM-backed features (message drafter, workout generator, etc.)
+  still gated `enabled: false`. Needs `ANTHROPIC_API_KEY` + budget
+  decision.
+- Cross-app churn signals (`paymentFailures90d`,
+  `cancellationRate30d`, `communityEngagementDrop`) still return 0.
+- Pre-composed messages could pull from a per-gym template later
+  (the current copy is hardcoded EN/ES).
+- Insight cards on the dashboard widget (At Risk widget) — same
+  WhatsApp deep-link pattern would help there too. Already partially
+  in place (whatsappCheckInMessage), but the dashboard widget
+  doesn't deep-link through to the insight system.
 
 ## Mission Q — Phase D Round 3: nightly cron + scoring accuracy + history view
 
