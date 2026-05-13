@@ -86,6 +86,10 @@ const copy = {
     confidence: (pct: number) => `${pct}% confidence`,
     dismiss: 'Dismiss',
     dismissAria: 'Dismiss insight',
+    viewActive: 'Active',
+    viewHistory: 'History',
+    emptyTitleHistory: 'No past alerts',
+    emptyHintHistory: 'Dismissed and expired alerts will appear here so you can look back at what the engine flagged.',
     runEngine: 'Run intelligence engine',
     runningEngine: 'Running',
     runEngineError: 'Could not run the engine. Try again in a moment.',
@@ -127,6 +131,11 @@ const copy = {
     confidence: (pct: number) => `${pct}% de confianza`,
     dismiss: 'Descartar',
     dismissAria: 'Descartar insight',
+    viewActive: 'Activas',
+    viewHistory: 'Historial',
+    emptyTitleHistory: 'Sin alertas pasadas',
+    emptyHintHistory:
+      'Las alertas descartadas y expiradas aparecerán aquí para que puedas revisar lo que el motor detectó.',
     runEngine: 'Ejecutar motor de inteligencia',
     runningEngine: 'Ejecutando',
     runEngineError: 'No se pudo ejecutar el motor. Intenta en un momento.',
@@ -163,6 +172,10 @@ export default function IntelligencePage() {
 
   const [state, setState] = useState<WidgetState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  // View mode — 'active' shows unactioned non-expired alerts (the
+  // default), 'history' adds dismissed + expired so the user can
+  // look back at what the engine flagged before.
+  const [view, setView] = useState<'active' | 'history'>('active');
   // Bulk-rescore state: controls the "Run intelligence engine"
   // button + the small summary line under it after a run completes.
   const [rescoring, setRescoring] = useState(false);
@@ -214,7 +227,12 @@ export default function IntelligencePage() {
 
     (async () => {
       try {
-        const res = await fetch('/api/tribe-os/intelligence/', { method: 'GET' });
+        const url = new URL('/api/tribe-os/intelligence/', window.location.origin);
+        if (view === 'history') {
+          url.searchParams.set('include_actioned', 'true');
+          url.searchParams.set('include_expired', 'true');
+        }
+        const res = await fetch(url.toString(), { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
           data?: { insights: CommunityInsight[] };
@@ -226,7 +244,7 @@ export default function IntelligencePage() {
           return;
         }
         setState({ kind: 'ready', insights: body.data.insights });
-        trackEvent('tribe_os_intelligence_viewed', { insight_count: body.data.insights.length });
+        trackEvent('tribe_os_intelligence_viewed', { insight_count: body.data.insights.length, view });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.errorTitle });
       }
@@ -235,7 +253,7 @@ export default function IntelligencePage() {
     return () => {
       cancelled = true;
     };
-  }, [gate.state, reloadKey, s.errorTitle]);
+  }, [gate.state, reloadKey, view, s.errorTitle]);
 
   // Group by severity for the section headers.
   const grouped = useMemo(() => {
@@ -273,11 +291,36 @@ export default function IntelligencePage() {
               <p className="text-sm text-tribe-dark-80 mt-1">{s.pageSubtitle}</p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <Button onClick={handleRescoreAll} loading={rescoring} variant="primary" size="sm">
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              {rescoring ? s.runningEngine : s.runEngine}
-            </Button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {/* Active / History view toggle. Lives in the header so
+                  it's available even when the body is in loading or
+                  empty state. */}
+              <div className="inline-flex items-center bg-white border border-tribe-dark-40 rounded-tribe p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setView('active')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-tribe transition-colors ${
+                    view === 'active' ? 'bg-tribe-green text-tribe-dark' : 'text-tribe-dark-80 hover:text-tribe-dark'
+                  }`}
+                >
+                  {s.viewActive}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('history')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-tribe transition-colors ${
+                    view === 'history' ? 'bg-tribe-green text-tribe-dark' : 'text-tribe-dark-80 hover:text-tribe-dark'
+                  }`}
+                >
+                  {s.viewHistory}
+                </button>
+              </div>
+              <Button onClick={handleRescoreAll} loading={rescoring} variant="primary" size="sm">
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                {rescoring ? s.runningEngine : s.runEngine}
+              </Button>
+            </div>
             {rescoreError ? <span className="text-xs text-tribe-danger">{rescoreError}</span> : null}
             {rescoreSummary ? <span className="text-xs text-tribe-dark-80">{rescoreSummary}</span> : null}
           </div>
@@ -304,7 +347,7 @@ export default function IntelligencePage() {
             </CardContent>
           </Card>
         ) : state.insights.length === 0 ? (
-          <EmptyState copy={s} />
+          <EmptyState copy={s} view={view} />
         ) : (
           <div className="space-y-6">
             {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) => {
@@ -336,15 +379,17 @@ export default function IntelligencePage() {
   );
 }
 
-function EmptyState({ copy: s }: { copy: typeof copy.en | typeof copy.es }) {
+function EmptyState({ copy: s, view }: { copy: typeof copy.en | typeof copy.es; view: 'active' | 'history' }) {
+  const title = view === 'history' ? s.emptyTitleHistory : s.emptyTitleNew;
+  const hint = view === 'history' ? s.emptyHintHistory : s.emptyHintNew;
   return (
     <Card>
       <CardContent className="py-16 text-center space-y-3">
         <div className="w-12 h-12 mx-auto rounded-tribe bg-tribe-green-50 flex items-center justify-center">
           <Sparkles className="w-6 h-6 text-tribe-green-dark" />
         </div>
-        <h2 className="text-lg font-semibold text-tribe-dark">{s.emptyTitleNew}</h2>
-        <p className="text-sm text-tribe-dark-80 max-w-md mx-auto leading-relaxed">{s.emptyHintNew}</p>
+        <h2 className="text-lg font-semibold text-tribe-dark">{title}</h2>
+        <p className="text-sm text-tribe-dark-80 max-w-md mx-auto leading-relaxed">{hint}</p>
       </CardContent>
     </Card>
   );

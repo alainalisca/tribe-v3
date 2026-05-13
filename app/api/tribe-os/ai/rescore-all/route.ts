@@ -39,23 +39,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
-import { scoreMember, hasEnoughHistory, newMemberDefault } from '@/lib/ai/churn-scoring';
-import { fetchChurnSignals, persistMemberScore } from '@/lib/ai/data-access';
 import { aiLogger } from '@/lib/ai/logger';
 import { AI_FEATURES } from '@/lib/ai/config';
-import { generateChurnInsights } from '@/lib/ai/insight-generator';
-import type { AIResponse, ScoreOutput } from '@/lib/ai/types';
+import { runIntelligenceForGym, type IntelligenceRunSummary } from '@/lib/ai/run-intelligence';
+import type { AIResponse } from '@/lib/ai/types';
 
 const MAX_MEMBERS = 200;
-
-interface RescoreAllOutput {
-  scored: number;
-  skipped_new_member: number;
-  at_risk_count: number;
-  insights_created: number;
-  insights_skipped_duplicate: number;
-  duration_ms: number;
-}
 
 export async function POST(_request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -71,8 +60,6 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       { status: 503 }
     );
   }
-
-  const startTime = Date.now();
 
   try {
     // Resolve gym + verify ownership. We restrict rescore-all to
@@ -99,75 +86,22 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     const log = aiLogger(AI_FEATURES.CHURN_PREDICTION.id, effectiveGymId);
     log.start('none');
 
-    // Pull every non-archived client in the gym.
-    const { data: clientRows, error: clientsErr } = await supabase
-      .from('clients')
-      .select('id, name, gym_id')
-      .eq('gym_id', effectiveGymId)
-      .eq('archived', false)
-      .limit(MAX_MEMBERS);
-    if (clientsErr) {
-      log.failure('CLIENT_LIST_FAILED');
-      logError(clientsErr, { action: 'rescore_all.list_clients', gymId: effectiveGymId });
+    const summary = await runIntelligenceForGym(effectiveGymId, { maxMembers: MAX_MEMBERS });
+    if (!summary) {
+      log.failure('SERVICE_ROLE_MISSING');
       return NextResponse.json(
-        { success: false, error: { code: 'CLIENT_LIST_FAILED', message: clientsErr.message, retryable: true } },
+        { success: false, error: { code: 'SERVER_MISCONFIGURED', message: 'service_role_missing', retryable: false } },
         { status: 500 }
       );
     }
 
-    const scoredMembers: Array<{ score: ScoreOutput; member: { id: string; name: string; gym_id: string } }> = [];
-    let scored = 0;
-    let skippedNewMember = 0;
-    let atRiskCount = 0;
-
-    // Score each member sequentially. Parallelizing is tempting but
-    // each scoreMember kicks off fetchChurnSignals which does its
-    // own subqueries (clients row + training_partners count); the
-    // serial path is ~30s for 100 members which is acceptable for
-    // a manual button and avoids hammering Supabase rate limits.
-    for (const c of clientRows ?? []) {
-      const member = { id: c.id as string, name: c.name as string, gym_id: c.gym_id as string };
-      const signals = await fetchChurnSignals(member.id, effectiveGymId);
-      if (!signals) continue;
-
-      let scoreOutput: ScoreOutput;
-      if (!hasEnoughHistory(signals.joinedAt)) {
-        scoreOutput = newMemberDefault(member.id);
-        skippedNewMember += 1;
-      } else {
-        scoreOutput = scoreMember({ memberId: member.id, signals: signals.signals });
-      }
-
-      await persistMemberScore(member.id, {
-        churnRiskScore: scoreOutput.churnRiskScore,
-        healthStatus: scoreOutput.healthStatus,
-      });
-      scored += 1;
-      if (scoreOutput.healthStatus === 'AT_RISK') {
-        atRiskCount += 1;
-        scoredMembers.push({ score: scoreOutput, member });
-      }
-    }
-
-    // Insight generation runs on the AT_RISK subset only.
-    const insightSummary = await generateChurnInsights(effectiveGymId, scoredMembers);
-
     const meta = log.success({ inputTokens: 0, outputTokens: 0 });
 
-    const data: RescoreAllOutput = {
-      scored,
-      skipped_new_member: skippedNewMember,
-      at_risk_count: atRiskCount,
-      insights_created: insightSummary.insights_created,
-      insights_skipped_duplicate: insightSummary.insights_skipped_duplicate,
-      duration_ms: Date.now() - startTime,
-    };
-
-    const body: AIResponse<RescoreAllOutput> = { success: true, data, meta };
+    const body: AIResponse<IntelligenceRunSummary> = { success: true, data: summary, meta };
     return NextResponse.json(body);
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/ai/rescore-all' });
-    const body: AIResponse<RescoreAllOutput> = {
+    const body: AIResponse<IntelligenceRunSummary> = {
       success: false,
       error: {
         code: 'INTERNAL_ERROR',

@@ -745,9 +745,8 @@ export async function listAtRiskClients(
 
     let q = supabase
       .from('clients')
-      .select('id, name, email, phone, status, last_seen_at, created_at')
-      .eq('archived', false)
-      .in('status', ['active', 'lapsed']);
+      .select('id, name, email, phone, status, health_status, churn_risk_score, last_seen_at, created_at')
+      .eq('archived', false);
 
     if (gymId) {
       q = q.eq('gym_id', gymId);
@@ -755,15 +754,24 @@ export async function listAtRiskClients(
       q = q.eq('instructor_user_id', instructorUserId);
     }
 
-    // Three OR branches: lapsed (any time), stale last_seen, or
-    // never-attended-but-old-enough. The Supabase JS `.or()` builder
-    // gives us this in a single round-trip.
-    q = q.or(`status.eq.lapsed,last_seen_at.lt.${cutoffIso},and(last_seen_at.is.null,created_at.lt.${cutoffIso})`);
+    // FOUR OR branches now that the AI scoring populates
+    // health_status:
+    //   1. health_status = 'AT_RISK' (AI flagged them) — primary path
+    //   2. status = 'lapsed' (instructor manual override)
+    //   3. status = 'active' AND stale last_seen
+    //   4. status = 'active' AND last_seen IS NULL AND created early enough
+    // Inactive members are intentionally excluded — that's a
+    // "stopped on purpose" state.
+    q = q.or(
+      `health_status.eq.AT_RISK,status.eq.lapsed,and(status.eq.active,last_seen_at.lt.${cutoffIso}),and(status.eq.active,last_seen_at.is.null,created_at.lt.${cutoffIso})`
+    );
 
-    // Order: oldest last_seen first (NULLS LAST), then oldest created.
-    q = q.order('last_seen_at', { ascending: true, nullsFirst: false }).order('created_at', {
-      ascending: true,
-    });
+    // Order: AI-scored AT_RISK first (highest churn_risk_score),
+    // then oldest last_seen, then oldest created.
+    q = q
+      .order('churn_risk_score', { ascending: false, nullsFirst: false })
+      .order('last_seen_at', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
 
     q = q.limit(limit);
 
@@ -779,6 +787,8 @@ export async function listAtRiskClients(
       email: string | null;
       phone: string | null;
       status: ClientStatus;
+      health_status: 'HEALTHY' | 'WATCH' | 'AT_RISK' | null;
+      churn_risk_score: number | null;
       last_seen_at: string | null;
       created_at: string;
     }>;

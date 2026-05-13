@@ -54,9 +54,14 @@ export async function fetchChurnSignals(clientId: string, gymId: string): Promis
 
   try {
     // 1. Base client row (verify gym membership + grab joinedAt).
+    //    We deliberately do NOT trust the cached
+    //    sessions_last_30_days / current_streak_days columns on the
+    //    clients row here — nothing currently maintains them, so
+    //    they're always 0. Computing the rolling stats live from
+    //    client_attendance is correct.
     const { data: clientRow, error: clientErr } = await service
       .from('clients')
-      .select('id, gym_id, created_at, last_seen_at, sessions_last_30_days, current_streak_days')
+      .select('id, gym_id, created_at, last_seen_at')
       .eq('id', clientId)
       .eq('gym_id', gymId)
       .maybeSingle();
@@ -72,25 +77,69 @@ export async function fetchChurnSignals(clientId: string, gymId: string): Promis
       ? Math.max(0, Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24)))
       : 9999;
 
-    // 3. Attendance frequency delta.
-    // Compute: (avg weekly attendance over last 90d) vs sessions
-    // last 30d. The 90d window is approximated via total_sessions
-    // on the row — we don't keep a true 90-day rolling counter yet,
-    // so this normalizes against last_30 / 90d_avg.
-    const sessions30 = (clientRow.sessions_last_30_days as number) ?? 0;
-    // Heuristic baseline: an active member does ~3 sessions/week
-    // = ~13/month. If sessions30 < baseline, treat the delta as
-    // (baseline - sessions30) / baseline.
-    const BASELINE_MONTHLY = 13;
+    // 3. Pull every attended session in the last 90 days. One round-
+    //    trip powers signals 3 + 4. Capped at 200 rows to bound the
+    //    response — a member doing more than 200 sessions in 90 days
+    //    is a special case the v1 heuristic happily over-counts.
+    const ninetyDaysAgoIso = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentRows, error: recentErr } = await service
+      .from('client_attendance')
+      .select('attended_at')
+      .eq('client_id', clientId)
+      .eq('attended', true)
+      .not('attended_at', 'is', null)
+      .gte('attended_at', ninetyDaysAgoIso)
+      .order('attended_at', { ascending: false })
+      .limit(200);
+    if (recentErr) {
+      logError(recentErr, { action: 'fetchChurnSignals.recent', clientId, gymId });
+    }
+    const recentDates: Date[] = (recentRows ?? [])
+      .map((r) => (r.attended_at ? new Date(r.attended_at as string) : null))
+      .filter((d): d is Date => d !== null);
+
+    // 3a. attendanceFrequencyDelta — last 30d count vs the prior
+    //     30–90d window average. Captures actual slowdown rather
+    //     than a fixed baseline that punishes casual members.
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const sessions30 = recentDates.filter((d) => d.getTime() >= thirtyDaysAgo).length;
+    const sessions30To90 = recentDates.filter((d) => d.getTime() < thirtyDaysAgo).length;
+    // Baseline = average sessions per 30 days in the prior 60-day
+    // window. If they only have <60 days of history we fall back to
+    // a fixed baseline of 4/month (conservative — anyone below this
+    // is genuinely low-engagement).
+    const FALLBACK_BASELINE_MONTHLY = 4;
+    const priorMonthlyAvg = sessions30To90 > 0 ? sessions30To90 / 2 : FALLBACK_BASELINE_MONTHLY;
     const attendanceFrequencyDelta =
-      sessions30 >= BASELINE_MONTHLY ? 0 : Math.min(1, (BASELINE_MONTHLY - sessions30) / BASELINE_MONTHLY);
+      priorMonthlyAvg <= 0 || sessions30 >= priorMonthlyAvg
+        ? 0
+        : Math.min(1, (priorMonthlyAvg - sessions30) / priorMonthlyAvg);
+
+    // 3b. Current streak — count consecutive days back from today
+    //     that have an attended row. Same query, no extra round trip.
+    const seenDayKeys = new Set<string>();
+    for (const d of recentDates) {
+      seenDayKeys.add(d.toISOString().slice(0, 10));
+    }
+    let currentStreakDays = 0;
+    const cursor = new Date();
+    // Walk back at most 60 days to bound this loop.
+    for (let i = 0; i < 60; i += 1) {
+      const key = cursor.toISOString().slice(0, 10);
+      if (seenDayKeys.has(key)) {
+        currentStreakDays += 1;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+      } else {
+        break;
+      }
+    }
 
     // 4. Streak broken: were they on a streak that just ended?
-    // Approximation: current_streak_days = 0 AND last_seen within
-    // last 14 days = a recent break. Without snapshots we can't
-    // know the prior streak length precisely; this is the v1 heuristic.
+    //    We treat 'streak just broke' as: currentStreakDays = 0,
+    //    they were seen in the last 3–14 days, AND prior 30 days
+    //    had at least 4 sessions (so there WAS a streak to break).
     const streakBroken =
-      (clientRow.current_streak_days as number) === 0 && daysSinceLastAttendance <= 14 && daysSinceLastAttendance >= 3;
+      currentStreakDays === 0 && daysSinceLastAttendance >= 3 && daysSinceLastAttendance <= 14 && sessions30To90 >= 4;
 
     // 5. Training partner count.
     const { count: partnerCount } = await service
