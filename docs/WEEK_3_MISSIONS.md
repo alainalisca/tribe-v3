@@ -11,12 +11,21 @@ integration is complete and Al gives explicit ask.
 
 ## Mission status
 
-| #   | Mission                                                                             | Status  | Commit        |
-| --- | ----------------------------------------------------------------------------------- | ------- | ------------- |
-| 1   | Extend leak test to cover gym SQL functions + gym/coach RLS                         | ✅ done | `b2bea6b`     |
-| 2   | Read-only `/os/coaches` roster page                                                 | ✅ done | `274d2b7`     |
-| 3   | Editable `/os/gym` settings page (owner-only PATCH)                                 | ✅ done | `9628877`     |
-| 4   | Update `SECURITY_AUDIT_2026-05-12.md` + `PRE_MERGE_CHECKLIST.md` to reflect 068–072 | ✅ done | (this commit) |
+| #   | Mission                                                                             | Status  | Commit                          |
+| --- | ----------------------------------------------------------------------------------- | ------- | ------------------------------- |
+| 1   | Extend leak test to cover gym SQL functions + gym/coach RLS                         | ✅ done | `b2bea6b`                       |
+| 2   | Read-only `/os/coaches` roster page                                                 | ✅ done | `274d2b7`                       |
+| 3   | Editable `/os/gym` settings page (owner-only PATCH)                                 | ✅ done | `9628877`                       |
+| 4   | Update `SECURITY_AUDIT_2026-05-12.md` + `PRE_MERGE_CHECKLIST.md` to reflect 068–072 | ✅ done | (this commit)                   |
+| A   | `list_gym_coaches` SECURITY DEFINER + DAL refactor                                  | ✅ done | (migration 073)                 |
+| B   | PostHog observability sweep (14 events + 4 funnels)                                 | ✅ done |                                 |
+| C   | Beta instructor playbook                                                            | ✅ done |                                 |
+| D   | Persistent OS shell + premium-aware nav + mobile + safe-area + filter pills         | ✅ done |                                 |
+| E   | Real-device polish from Vercel walkthrough (5 fixes)                                | ✅ done |                                 |
+| F   | Discoverability bridge (TribeOSEntryCard on Profile / Instructor / Settings)        | ✅ done | `ad5290c`                       |
+| G   | First-visit Quick Guides (5 guides + replay button)                                 | ✅ done | `6f7017f`, `307a195`            |
+| H   | DashboardStats + Coach invite/remove + UX glue                                      | ✅ done | `bb8c452`, `2e3d6d5`, `ffa1517` |
+| I   | RecentActivityWidget + /create hint                                                 | ✅ done | `47b7681`                       |
 
 ## What shipped
 
@@ -158,11 +167,117 @@ between "no roster yet" and "no rows match these filters". Server-
 side: `ListClientsQuerySchema` and the DAL accept the new `status`
 filter; the existing `tag` filter remains.
 
+## Mission F — Discoverability bridge from main Tribe to Tribe.OS
+
+Problem surfaced by Al on the Vercel preview: "how do I get from my
+normal Tribe account to the Tribe.OS platform? I don't understand the
+path." The OS surface was unreachable from the regular app unless you
+already knew the `/os/dashboard` URL.
+
+`components/tribe-os/TribeOSEntryCard.tsx` is a small premium-aware
+card that probes `users.tribe_os_tier/status` and renders one of:
+
+- **Active premium →** "Open Tribe.OS" link to `/os/dashboard`.
+- **Inactive / not premium →** explanatory pitch card with the same
+  link (the dashboard renders the upgrade flow inline for non-premium
+  users, so the link still works).
+
+Mounted on three high-traffic surfaces for instructors:
+
+1. `/profile` — under the bio block
+2. `/dashboard/instructor` — top of the Instructor dashboard
+3. `/settings` — under the account section
+
+Cards stay invisible to non-instructors. Cleanest path: anywhere an
+instructor lands in the regular app, they can see a one-click bridge
+to Tribe.OS.
+
+## Mission G — First-visit Quick Guides
+
+Followup from Al: "perhaps there need to be instructions for the
+first time when you log in after signing up. Quick guides that are
+optional."
+
+Built reusable infrastructure rather than one-off modals:
+
+- `components/QuickGuide.tsx` — generic multi-step modal with
+  back/next/skip + step counter. Brand-themed.
+- `hooks/useQuickGuide.ts` — persists a seen-flag in
+  `localStorage` keyed by guide name. Auto-opens on first visit;
+  exposes `replay()` so a "Take the tour again" button can re-open
+  without flipping the flag.
+
+Five guides shipped:
+
+1. `TribeWelcomeGuide` — first ever app visit (main Tribe app).
+2. `TribeOSWelcomeGuide` — first `/os/dashboard` visit. Replay
+   handle exposed to a "Take the tour again" pill on the dashboard.
+3. `ClientsPageGuide` — first `/os/clients` visit.
+4. `RevenuePageGuide` — first `/os/revenue` visit.
+5. `CoachesPageGuide` — first `/os/coaches` visit.
+
+`components/ReplayToursButton.tsx` clears all five seen-flags so a
+user can re-onboard from scratch (mounted on `/settings`).
+
+## Mission H — Dashboard stats + Coach invite/remove + UX glue
+
+After the basic shell + guides landed, the dashboard still felt
+empty. Two batches of polish:
+
+**Batch 1 — quick wins:**
+
+- `DashboardStats` (3 cards: active clients / sessions this month /
+  revenue this month) above the at-risk widget. One round-trip to
+  `/api/tribe-os/dashboard/stats`; failures degrade gracefully.
+- Create-session CTA (`Plus` icon → `/create`) on the dashboard so
+  new instructors aren't stuck wondering where sessions come from.
+- Manage-subscription pill + "Take the tour again" pill at the
+  bottom.
+- Help link added to the account menu in the OS shell.
+- Empty-attendance state on `/os/clients/[id]` no longer renders a
+  blank card — explicit "No attendance yet" message.
+- Coach-invite CLI commands added to `scripts/grant-tribe-os-premium.js`
+  (`--add-coach`, `--remove-coach`) for operator-side adjustments.
+- Client list sort options (name / recent / inactive longest).
+
+**Batch 2 — coach management UI:**
+
+- `InviteCoachForm` (owner-only) at the bottom of `/os/coaches` —
+  inline email + role form posting to
+  `/api/tribe-os/coaches/invite`. Distinguishes "user not on Tribe
+  yet" from generic errors with a friendly note.
+- Trash icon on non-owner coach rows opens a confirmation dialog
+  and posts to `/api/tribe-os/coaches/remove`. Refuses to remove
+  the gym owner (every gym needs an owner; ownership transfer is
+  a separate, not-yet-built flow).
+- Owner-only invite/remove — non-owners see explanatory copy
+  instead of broken-looking forms.
+
+## Mission I — Recent Activity widget + Tribe.OS hint on /create
+
+Final autonomous-build sweep before re-syncing with Al:
+
+- `RecentActivityWidget` mounts between the at-risk widget and the
+  create-session CTA on `/os/dashboard`. Sister widget to AtRisk:
+  positive signal (who showed + paid) vs negative (who haven't I
+  seen). New endpoint `/api/tribe-os/dashboard/recent-activity`
+  reads the last N attendance rows; RLS scopes to the caller's
+  gym automatically.
+- Small inline note on `/create` (inside the paid-session card)
+  pointing instructors at Tribe.OS for ongoing client + revenue
+  management. Closes a discoverability gap: instructors charging
+  for one-off sessions through the main app are the most likely
+  Tribe.OS converts.
+
 ## Deferred to Week 4+ (in LATER.md)
 
 - Beta launch resumption (Week 4 Missions 2–6 from the original
   pre-integration plan): real $1 USD refund test, mobile device
   verification, outreach, onboarding 1–3 instructors, retrospective.
+- Verónica review pass on the five Quick Guides + all
+  `ES PENDING VERONICA REVIEW`-marked components.
+- Ownership transfer flow (the only way to change a gym's
+  `owner_user_id` today is direct SQL).
 
 ## Verification gates
 
