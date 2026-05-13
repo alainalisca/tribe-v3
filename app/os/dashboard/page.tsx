@@ -33,6 +33,7 @@ import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
+import RecordGroupAttendanceButton from '@/components/tribe-os/RecordGroupAttendanceButton';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -248,10 +249,13 @@ export default function TribeOSDashboardPage() {
             been happening at a glance. */}
         <RecentActivityWidget />
 
-        {/* Primary action — sessions are created via the regular
-            Tribe /create flow, so we link there. New instructors
-            wouldn't know to look outside /os/* for this. */}
-        <div className="mt-6">
+        {/* Primary actions: create a new session OR record
+            attendance for an existing one. New instructors wouldn't
+            know /create is where sessions come from, and the bulk
+            attendance flow needs a discoverable entry point on the
+            dashboard since a group class is the canonical "I'm
+            done teaching, now record who showed up" moment. */}
+        <div className="mt-6 flex flex-wrap gap-3 items-center">
           <Link
             href="/create"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-full shadow-[0_4px_20px_rgba(132,204,22,0.3)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.45)] hover:-translate-y-0.5 transition-all"
@@ -259,6 +263,7 @@ export default function TribeOSDashboardPage() {
             <Plus className="w-4 h-4" />
             {s.createSessionCta}
           </Link>
+          <RecordGroupAttendanceButton />
         </div>
 
         {/* Secondary actions tucked at the bottom so they don't compete
