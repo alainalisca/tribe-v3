@@ -367,10 +367,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                                        All three now render with friendly labels in the /os/audit
-                                                        viewer (English + Spanish). The pattern is reusable — adding
-                                                        new audit event types just means calling `writeAuditEntry` from
-                                                        the relevant route and adding a label entry.
+                                                            All three now render with friendly labels in the /os/audit
+                                                            viewer (English + Spanish). The pattern is reusable — adding
+                                                            new audit event types just means calling `writeAuditEntry` from
+                                                            the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -768,12 +768,65 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     payload shape will fail in CI before reaching production.
     Clean stopping point for the test investment.
 
-32. **Stripe Connect rough-edge polish** — but this is hard to do
+32. ✅ **Polish + feature batch (10 commits, one autonomous run)** —
+    shipped. While you were in meetings:
+
+    **Coach surfaces**
+    - `/os/audit` got a CSV export button (+5000-row endpoint),
+      a Today / Last 7 days / All time quick filter, clickable
+      rows that expand to show full JSON payload, a "Clear
+      filters" CTA on the filtered-empty state, and a
+      "Refreshed N entries since you last looked" chip on
+      `/os/dashboard` (with localStorage-backed last-viewed
+      tracking that clears when the user opens `/os/audit`).
+    - `/os/dashboard` gained a `GymWeekRecapCard` showing this
+      week vs last week's attendances + unique members, paired
+      with the member-side last-7-days card so coaches and
+      members see the same time scale from different angles.
+    - `/os/sessions/[id]/attendance` gained "Mark everyone
+      attended" + "Clear all" buttons above the roster — most
+      group classes have most members showing up, so the
+      mark-then-uncheck pattern is faster than the converse.
+    - `/os/revenue/unpaid` empty state now offers a CTA back to
+      the revenue dashboard.
+
+    **Member surfaces**
+    - `/my-coach` "Checked in" pill is now tappable and undoes
+      a self check-in via the new `DELETE /api/me/check-in`.
+      Today-only, idempotent, same identity gate as the record
+      path. Coach can still see the original tap via the
+      existing attendance edit flow.
+    - First-visit welcome banner shows when arriving from the
+      coach-added-you email (`?welcome=1`). Strips the query
+      param so a refresh doesn't re-trigger; localStorage
+      dismissal so a second device also sees it once.
+
+    **DAL + tests**
+    - New `revokeSelfCheckIn` DAL function with full
+      discriminator coverage (15 new tests).
+    - New `generateAuditLogCsv` DAL function with RFC-4180
+      escape-rule contract tests (15 new tests).
+    - `listAuditEntries` extended to accept `fromIso`/`toIso`
+      for the date filter (existing tests still pass — the new
+      options are additive).
+    - Session-wide DAL test total now **177 across 11 files**.
+      All passing.
+
+    **Analytics events added**
+    - tribe_os_audit_exported / tribe_os_bulk_attendance_mass_toggle
+    - tribe_member_self_check_in_undone
+    - tribe_member_my_coach_welcome_shown / \_dismissed
+
+    No new migrations needed. No new env vars. The audit-watchdog
+    cron remains the only NEW cron added during this branch's
+    run (still pending main merge to fire).
+
+33. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-33. **Per-attendance trigger optimization** — migration 079 recomputes
+34. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-34. **Generator feedback loop** — use the feedback data from #5 to:
+35. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive

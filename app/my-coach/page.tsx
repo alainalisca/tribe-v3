@@ -143,6 +143,10 @@ const copy = {
       'Once a coach adds you with the email you signed in with, your training data will show up here automatically. Ask your coach to use the email shown below.',
     yourEmail: 'Your email',
     gymPickerLabel: 'Gym',
+    welcomeTitle: 'Welcome to your training record.',
+    welcomeBody:
+      'Your coach is tracking your attendance, sessions, and progress. Everything you see here is yours — your data, your view.',
+    welcomeDismiss: 'Got it',
     weekCardTitle: 'Last 7 days',
     weekCardSessions: (n: number) => (n === 1 ? '1 session' : `${n} sessions`),
     weekCardDeltaUp: (n: number) => `+${n} vs the week before`,
@@ -208,6 +212,10 @@ const copy = {
       'Cuando un coach te agregue con el correo con el que iniciaste sesión, tus datos aparecerán aquí automáticamente. Pídele a tu coach que use el correo que ves abajo.',
     yourEmail: 'Tu correo',
     gymPickerLabel: 'Gimnasio',
+    welcomeTitle: 'Bienvenido a tu registro de entrenamiento.',
+    welcomeBody:
+      'Tu coach está registrando tu asistencia, sesiones y progreso. Todo lo que ves aquí es tuyo — tus datos, tu vista.',
+    welcomeDismiss: 'Entendido',
     weekCardTitle: 'Últimos 7 días',
     weekCardSessions: (n: number) => (n === 1 ? '1 sesión' : `${n} sesiones`),
     weekCardDeltaUp: (n: number) => `+${n} vs. la semana anterior`,
@@ -269,6 +277,37 @@ export default function MyCoachPage() {
   const [state, setState] = useState<PageState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  // First-visit welcome banner. Set when the coach-added-you email
+  // CTA arrives with ?welcome=1. We surface a small banner once,
+  // clear the URL query param (so a refresh doesn't re-show it),
+  // and remember dismissal via localStorage so a different device
+  // visit shows it once as well.
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Welcome banner detection. Runs once on mount: if the page was
+  // opened via the coach-added-you email CTA (?welcome=1) AND the
+  // user hasn't dismissed it before, show the banner. We strip the
+  // query string from the URL so a refresh doesn't re-trigger.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const flag = url.searchParams.get('welcome');
+    if (flag !== '1') return;
+    url.searchParams.delete('welcome');
+    window.history.replaceState({}, '', url.toString());
+    const dismissed = window.localStorage.getItem('tribe_os_my_coach_welcome_dismissed');
+    if (dismissed === '1') return;
+    setShowWelcome(true);
+    trackEvent('tribe_member_my_coach_welcome_shown');
+  }, []);
+
+  function dismissWelcome() {
+    setShowWelcome(false);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('tribe_os_my_coach_welcome_dismissed', '1');
+    }
+    trackEvent('tribe_member_my_coach_welcome_dismissed');
+  }
 
   // Initial load: confirm auth, fetch memberships, pre-load the
   // first record. Re-runs when reloadKey bumps (retry after error).
@@ -600,6 +639,8 @@ export default function MyCoachPage() {
       onGymChange={handleGymChange}
       onCheckIn={handleCheckIn}
       onUndoCheckIn={handleUndoCheckIn}
+      showWelcome={showWelcome}
+      onDismissWelcome={dismissWelcome}
     />
   );
 }
@@ -611,6 +652,8 @@ function ReadyView({
   onGymChange,
   onCheckIn,
   onUndoCheckIn,
+  showWelcome,
+  onDismissWelcome,
 }: {
   state: Extract<PageState, { kind: 'ready' }>;
   copy: typeof copy.en | typeof copy.es;
@@ -618,6 +661,8 @@ function ReadyView({
   onGymChange: (clientId: string) => void;
   onCheckIn: (sessionId: string) => void;
   onUndoCheckIn: (sessionId: string) => void;
+  showWelcome: boolean;
+  onDismissWelcome: () => void;
 }) {
   const activeMembership = useMemo(
     () => state.memberships.find((m) => m.client_id === state.activeClientId),
@@ -631,6 +676,25 @@ function ReadyView({
           <ArrowLeft className="w-3.5 h-3.5" />
           {s.backToHome}
         </Link>
+
+        {/* First-visit welcome banner. Surfaces when the page was
+            opened from the coach-added-you email CTA (?welcome=1)
+            and the member hasn't dismissed it before. */}
+        {showWelcome ? (
+          <section className="bg-gradient-to-br from-tribe-green/20 to-tribe-green/5 border border-tribe-green/30 rounded-2xl p-4 flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-tribe-green-dark">{s.welcomeTitle}</p>
+              <p className="text-xs text-gray-700 mt-0.5 leading-relaxed">{s.welcomeBody}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onDismissWelcome}
+              className="shrink-0 inline-flex items-center px-3 py-1.5 bg-white border border-gray-200 text-xs font-semibold text-gray-700 rounded-full hover:bg-gray-50 transition-colors"
+            >
+              {s.welcomeDismiss}
+            </button>
+          </section>
+        ) : null}
 
         {/* Header */}
         <header className="space-y-1">

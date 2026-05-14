@@ -192,6 +192,8 @@ type EventName =
   | 'tribe_member_self_check_in_succeeded' // POST /api/me/check-in returned success
   | 'tribe_member_self_check_in_failed' // POST /api/me/check-in failed (reason in properties)
   | 'tribe_member_self_check_in_undone' // /my-coach "Undo" tapped on a Checked-in pill
+  | 'tribe_member_my_coach_welcome_shown' // first visit from email CTA — banner appeared
+  | 'tribe_member_my_coach_welcome_dismissed' // member tapped X on the welcome banner
   | 'tribe_member_data_export_clicked' // /my-coach "Download my data" tapped
   | 'tribe_member_data_export_succeeded' // GET /api/me/training/export returned + blob saved
   | 'tribe_member_data_export_failed' // export endpoint failed or blob write threw
