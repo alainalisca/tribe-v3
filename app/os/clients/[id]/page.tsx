@@ -73,6 +73,10 @@ const copy = {
     noContact: 'No contact info recorded.',
     whatsappLabel: 'WhatsApp',
     whatsappCheckInMessage: (name: string) => `Hey ${name}! Just checking in — how's training going?`,
+    whatsappStreakMessage: (name: string, days: number) =>
+      `Hey ${name}! Just saw you're on a ${days}-day streak — that's not easy. Proud of you. Keep it going 🔥`,
+    whatsappComeBackMessage: (name: string, days: number) =>
+      `Hey ${name}! Noticed it's been about ${days} days since your last session. Everything okay? Would love to see you back in class soon.`,
 
     // Tags
     tagsTitle: 'Tags',
@@ -184,6 +188,10 @@ const copy = {
     noContact: 'Sin información de contacto.',
     whatsappLabel: 'WhatsApp',
     whatsappCheckInMessage: (name: string) => `¡Hola ${name}! Pasaba a saludarte. ¿Cómo va el entrenamiento?`,
+    whatsappStreakMessage: (name: string, days: number) =>
+      `¡Hola ${name}! Acabo de ver que llevas ${days} días seguidos entrenando, eso no es fácil. Orgulloso de ti. Sigue así 🔥`,
+    whatsappComeBackMessage: (name: string, days: number) =>
+      `¡Hola ${name}! Vi que han pasado unos ${days} días desde tu última sesión. ¿Todo bien? Me encantaría verte de vuelta pronto en clase.`,
 
     tagsTitle: 'Etiquetas',
     noTags: 'Sin etiquetas.',
@@ -564,16 +572,49 @@ export default function ClientDetailPage() {
                           first name. */}
                       {(() => {
                         const firstName = state.client.name.split(' ')[0] || state.client.name;
-                        const waUrl = buildWhatsAppUrl(state.client.phone, {
-                          message: s.whatsappCheckInMessage(firstName),
-                        });
+                        // Context-aware template selection. Cheap heuristic,
+                        // no extra data — we only use what's already on the
+                        // page. Priority order is intentional:
+                        //   1. Streak congrats wins when there's a streak
+                        //      worth celebrating; if both apply, the
+                        //      positive frame leads.
+                        //   2. Come-back-soon when they're slipping but
+                        //      haven't earned a streak signal.
+                        //   3. Generic check-in as the fallback.
+                        // Coaches who want a different template can still
+                        // edit the WhatsApp draft before sending — wa.me
+                        // pre-fills, it doesn't auto-send.
+                        const streak = state.client.current_streak_days ?? 0;
+                        const lastSeenMs = state.client.last_seen_at
+                          ? new Date(state.client.last_seen_at).getTime()
+                          : null;
+                        const daysSinceLastSeen =
+                          lastSeenMs != null ? Math.floor((Date.now() - lastSeenMs) / 86_400_000) : null;
+                        let message: string;
+                        let template: 'streak' | 'come_back' | 'check_in';
+                        if (streak >= 7) {
+                          message = s.whatsappStreakMessage(firstName, streak);
+                          template = 'streak';
+                        } else if (daysSinceLastSeen != null && daysSinceLastSeen >= 14) {
+                          message = s.whatsappComeBackMessage(firstName, daysSinceLastSeen);
+                          template = 'come_back';
+                        } else {
+                          message = s.whatsappCheckInMessage(firstName);
+                          template = 'check_in';
+                        }
+                        const waUrl = buildWhatsAppUrl(state.client.phone, { message });
                         if (!waUrl) return null;
                         return (
                           <a
                             href={waUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={() => trackEvent('tribe_os_whatsapp_clicked', { surface: 'client_detail' })}
+                            onClick={() =>
+                              trackEvent('tribe_os_whatsapp_clicked', {
+                                surface: 'client_detail',
+                                template,
+                              })
+                            }
                             className="inline-flex items-center gap-1 px-2.5 py-1 bg-tribe-green/15 text-tribe-green text-[11px] font-bold rounded-full border border-tribe-green/30 hover:bg-tribe-green/25 transition-colors ml-1"
                           >
                             <MessageCircle className="w-3 h-3" />
