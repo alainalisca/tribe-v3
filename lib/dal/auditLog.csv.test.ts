@@ -281,6 +281,24 @@ describe('generateAuditLogCsv — filter passthrough', () => {
     expect(capture.lteCalls).toContainEqual({ col: 'created_at', val: '2026-12-31T23:59:59Z' });
   });
 
+  it('passes the actorUserId filter through ("Only mine" export)', async () => {
+    // Mirrors /os/audit's onlyMine toggle. When a coach exports their
+    // own activity, the CSV needs to apply the same actor_user_id
+    // .eq filter the in-app viewer does — otherwise the export would
+    // silently include everyone, defeating the toggle.
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await generateAuditLogCsv(supabase, 'gym-1', { actorUserId: 'user-coach-A' });
+    expect(capture.eqCalls).toContainEqual({ col: 'actor_user_id', val: 'user-coach-A' });
+  });
+
+  it('omits the actor_user_id filter when actorUserId is undefined', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await generateAuditLogCsv(supabase, 'gym-1');
+    expect(capture.eqCalls.some((c) => c.col === 'actor_user_id')).toBe(false);
+  });
+
   it('caps the limit at MAX_AUDIT_CSV_ROWS (5000)', async () => {
     const capture = newCapture();
     const supabase = buildSupabaseMock({ rows: [], capture });
