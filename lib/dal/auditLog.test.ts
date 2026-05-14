@@ -18,7 +18,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { listAuditEntries } from './auditLog';
+import { listAuditEntries, fetchLastActionByActor } from './auditLog';
 
 vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
@@ -40,12 +40,13 @@ interface CapturedQuery {
   eqCalls: Array<{ col: string; val: unknown }>;
   gteCalls: Array<{ col: string; val: unknown }>;
   lteCalls: Array<{ col: string; val: unknown }>;
+  neqCalls: Array<{ col: string; val: unknown }>;
   limit?: number;
   order?: { col: string; ascending: boolean };
 }
 
 function newCapture(): CapturedQuery {
-  return { eqCalls: [], gteCalls: [], lteCalls: [] };
+  return { eqCalls: [], gteCalls: [], lteCalls: [], neqCalls: [] };
 }
 
 function buildSupabaseMock(opts: {
@@ -69,6 +70,10 @@ function buildSupabaseMock(opts: {
       };
       chain.lte = (col: string, val: unknown) => {
         opts.capture?.lteCalls.push({ col, val });
+        return chain;
+      };
+      chain.neq = (col: string, val: unknown) => {
+        opts.capture?.neqCalls.push({ col, val });
         return chain;
       };
       chain.order = (col: string, options?: { ascending: boolean }) => {
@@ -317,6 +322,75 @@ describe('listAuditEntries — error path', () => {
   it('returns failure when the query errors out', async () => {
     const supabase = buildSupabaseMock({ error: { message: 'connection refused' } });
     const result = await listAuditEntries(supabase, 'gym-1');
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('connection refused');
+  });
+});
+
+describe('fetchLastActionByActor', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('scopes by gym_id and orders newest-first', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await fetchLastActionByActor(supabase, 'gym-1');
+    expect(capture.eqCalls).toContainEqual({ col: 'gym_id', val: 'gym-1' });
+    expect(capture.order).toEqual({ col: 'created_at', ascending: false });
+  });
+
+  it('excludes gym.alert_sent (system-written rows are not coach activity)', async () => {
+    // The watchdog writes gym.alert_sent rows when it fires alerts.
+    // Those have null actors and would be the newest row each
+    // watchdog tick — they MUST be filtered out or the indicator
+    // would always show "Last action: just now" for nobody.
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await fetchLastActionByActor(supabase, 'gym-1');
+    expect(capture.neqCalls).toContainEqual({ col: 'action', val: 'gym.alert_sent' });
+  });
+
+  it('returns the most-recent timestamp per actor (first-occurrence wins)', async () => {
+    // Rows arrive newest-first; the first time we see an actor is
+    // their most recent action. Subsequent rows for the same actor
+    // are older and should be ignored. The DAL selects 'actor_user_id,
+    // created_at' so we shape test rows with that flat schema (JS
+    // tolerates the extra fields the mock's RowFromQuery declares).
+    const supabase = buildSupabaseMock({
+      rows: [
+        // Cast through unknown — the DAL reads actor_user_id flat;
+        // the test mock's RowFromQuery type is for the join path.
+        { actor_user_id: 'coach-A', created_at: '2026-05-12T15:00:00Z' } as unknown as RowFromQuery,
+        { actor_user_id: 'coach-B', created_at: '2026-05-12T14:00:00Z' } as unknown as RowFromQuery,
+        { actor_user_id: 'coach-A', created_at: '2026-05-12T08:00:00Z' } as unknown as RowFromQuery,
+      ],
+    });
+    const result = await fetchLastActionByActor(supabase, 'gym-1');
+    expect(result.success).toBe(true);
+    expect(result.data?.size).toBe(2);
+    // coach-A's newer 15:00 entry wins over the 08:00 one.
+    expect(result.data?.get('coach-A')).toBe('2026-05-12T15:00:00Z');
+    expect(result.data?.get('coach-B')).toBe('2026-05-12T14:00:00Z');
+  });
+
+  it('skips rows with null actor_user_id (system-written rows that slipped through)', async () => {
+    // Defensive: even though we filter gym.alert_sent in the .neq,
+    // null actors can also come from manual data fixes. They
+    // shouldn't end up in the map.
+    const supabase = buildSupabaseMock({
+      rows: [
+        { actor_user_id: null, created_at: '2026-05-12T15:00:00Z' } as unknown as RowFromQuery,
+        { actor_user_id: 'coach-A', created_at: '2026-05-12T14:00:00Z' } as unknown as RowFromQuery,
+      ],
+    });
+    const result = await fetchLastActionByActor(supabase, 'gym-1');
+    expect(result.success).toBe(true);
+    expect(result.data?.size).toBe(1);
+    expect(result.data?.has('coach-A')).toBe(true);
+  });
+
+  it('returns failure when the query errors out', async () => {
+    const supabase = buildSupabaseMock({ error: { message: 'connection refused' } });
+    const result = await fetchLastActionByActor(supabase, 'gym-1');
     expect(result.success).toBe(false);
     expect(result.error).toBe('connection refused');
   });
