@@ -195,3 +195,77 @@ describe('computeTrainingPattern — time-of-day', () => {
     expect(Number.isFinite(result?.topBucketShare)).toBe(true);
   });
 });
+
+describe('computeTrainingPattern — sport preference', () => {
+  function rowWithSport(sport: string | null | undefined): AttendanceLike {
+    return {
+      attended: true,
+      attended_at: '2026-05-11T18:00:00.000Z',
+      session: { start_time: '18:00:00', sport: sport ?? null },
+    };
+  }
+
+  it('surfaces topSport when the dominant share crosses 50%', async () => {
+    // 4 yoga + 1 strength out of 5 = 80% yoga, well over the
+    // 50% threshold. topSport should be 'yoga'.
+    const rows: AttendanceLike[] = [
+      ...Array.from({ length: 4 }).map(() => rowWithSport('yoga')),
+      rowWithSport('strength'),
+    ];
+    const result = computeTrainingPattern(rows);
+    expect(result?.topSport).toBe('yoga');
+    expect(result?.topSportShare).toBe(80);
+  });
+
+  it('suppresses topSport when the leader is exactly 50% (boundary)', async () => {
+    // 3 yoga + 3 strength = 50/50 → the leader is NOT > 50%, so
+    // we render nothing. Calling a 50/50 member "mostly yoga"
+    // would be misleading.
+    const rows: AttendanceLike[] = [
+      ...Array.from({ length: 3 }).map(() => rowWithSport('yoga')),
+      ...Array.from({ length: 3 }).map(() => rowWithSport('strength')),
+    ];
+    const result = computeTrainingPattern(rows);
+    expect(result?.topSport).toBeNull();
+    expect(result?.topSportShare).toBe(0);
+  });
+
+  it('suppresses topSport for a 3-way split where no leader breaks 50%', async () => {
+    const rows: AttendanceLike[] = [
+      ...Array.from({ length: 2 }).map(() => rowWithSport('yoga')),
+      ...Array.from({ length: 2 }).map(() => rowWithSport('strength')),
+      ...Array.from({ length: 2 }).map(() => rowWithSport('hiit')),
+    ];
+    const result = computeTrainingPattern(rows);
+    expect(result?.topSport).toBeNull();
+  });
+
+  it('ignores rows with null or missing sport when computing the histogram', async () => {
+    // 4 yoga + 2 no-sport = topSport should be yoga at 4/6 = 67%.
+    // The no-sport rows still count toward the day-of-week and time
+    // buckets but they don't bias the sport histogram.
+    const rows: AttendanceLike[] = [
+      ...Array.from({ length: 4 }).map(() => rowWithSport('yoga')),
+      ...Array.from({ length: 2 }).map(() => rowWithSport(null)),
+    ];
+    const result = computeTrainingPattern(rows);
+    expect(result?.topSport).toBe('yoga');
+    // 4/6 = 67% (4/total, not 4/sport-having-rows). topSportShare
+    // is computed against total attended sessions, NOT against
+    // rows-with-sport. That's intentional — surfacing "67% yoga"
+    // when 33% of sessions have no recorded sport is more truthful
+    // than surfacing "100% yoga".
+    expect(result?.topSportShare).toBe(67);
+  });
+
+  it('returns null topSport when no row has a sport (all sessionless)', async () => {
+    const rows: AttendanceLike[] = Array.from({ length: 6 }).map(() => ({
+      attended: true,
+      attended_at: '2026-05-11T18:00:00.000Z',
+      session: null,
+    }));
+    const result = computeTrainingPattern(rows);
+    expect(result?.topSport).toBeNull();
+    expect(result?.topSportShare).toBe(0);
+  });
+});

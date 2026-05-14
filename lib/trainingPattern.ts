@@ -16,7 +16,7 @@ export type TimeBucket = 'morning' | 'midday' | 'evening' | 'night' | 'unknown';
 export interface AttendanceLike {
   attended: boolean;
   attended_at: string | null;
-  session?: { start_time: string | null } | null;
+  session?: { start_time: string | null; sport?: string | null } | null;
 }
 
 export interface TrainingPattern {
@@ -34,6 +34,16 @@ export interface TrainingPattern {
   topBucket: TimeBucket;
   /** Share for the dominant bucket as 0-100. */
   topBucketShare: number;
+  /**
+   * Sport string the member trains most often. Null when the
+   * attendance rows don't carry sport info (sessions with no sport
+   * join) OR when the dominant sport has fewer than 50% of the
+   * member's sessions — below that we'd be calling 'mostly X' on
+   * what's really a mixed-discipline member, which is misleading.
+   */
+  topSport: string | null;
+  /** Share for the dominant sport as 0-100. 0 when topSport is null. */
+  topSportShare: number;
 }
 
 /** Minimum attended sessions for a pattern to be meaningful. */
@@ -118,11 +128,38 @@ export function computeTrainingPattern(attendance: AttendanceLike[]): TrainingPa
   }
   const topBucketShare = topBucket === 'unknown' ? 0 : Math.round((topBucketCount / total) * 100);
 
+  // Sport histogram. Skip rows without a sport (session-less or
+  // session with null sport). We require the dominant sport to be
+  // > 50% of attended sessions to surface it — anything less is
+  // really a mixed-discipline member and "mostly yoga" would
+  // mislead a coach. Threshold tunable here; chosen so a member
+  // who's 60/40 between two sports still surfaces a primary, but
+  // a 40/35/25 three-way split renders nothing.
+  const sportCounts = new Map<string, number>();
+  for (const a of attended) {
+    const sport = a.session?.sport?.trim();
+    if (!sport) continue;
+    sportCounts.set(sport, (sportCounts.get(sport) ?? 0) + 1);
+  }
+  let topSport: string | null = null;
+  let topSportCount = 0;
+  for (const [sport, count] of sportCounts) {
+    if (count > topSportCount) {
+      topSport = sport;
+      topSportCount = count;
+    }
+  }
+  const topSportShare = topSport ? Math.round((topSportCount / total) * 100) : 0;
+  // Suppress when the leader is below half — see threshold note above.
+  const surfaceSport = topSport && topSportShare > 50 ? topSport : null;
+
   return {
     topDayIndex: topIdx,
     secondaryDayIndex: finalSecondary,
     topDayShare: finalShare,
     topBucket,
     topBucketShare,
+    topSport: surfaceSport,
+    topSportShare: surfaceSport ? topSportShare : 0,
   };
 }

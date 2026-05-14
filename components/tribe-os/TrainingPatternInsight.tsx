@@ -31,9 +31,10 @@
  */
 
 import { useMemo } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Dumbbell } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { AttendanceWithSession } from '@/lib/dal/clients';
+import { sportTranslations } from '@/lib/translations';
 import { computeTrainingPattern, type TimeBucket } from '@/lib/trainingPattern';
 
 interface TrainingPatternInsightProps {
@@ -46,6 +47,7 @@ const copy = {
     title: 'Training pattern',
     dayLabel: (days: string, pct: number) => `${days} · ${pct}% of sessions`,
     timeLabel: (bucket: string, pct: number) => `${bucket} · ${pct}% of sessions`,
+    sportLabel: (sport: string, pct: number) => `Mostly ${sport} · ${pct}%`,
     weekdayShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     bucketMorning: 'Morning',
     bucketMidday: 'Midday',
@@ -56,6 +58,7 @@ const copy = {
     title: 'Patrón de entrenamiento',
     dayLabel: (days: string, pct: number) => `${days} · ${pct}% de las sesiones`,
     timeLabel: (bucket: string, pct: number) => `${bucket} · ${pct}% de las sesiones`,
+    sportLabel: (sport: string, pct: number) => `Mayormente ${sport} · ${pct}%`,
     weekdayShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
     bucketMorning: 'Mañana',
     bucketMidday: 'Mediodía',
@@ -108,6 +111,19 @@ export default function TrainingPatternInsight({ attendance }: TrainingPatternIn
             </div>
             <p className="text-sm text-gray-900 leading-snug">
               {s.timeLabel(bucketLabel(pattern.topBucket, s), pattern.topBucketShare)}
+            </p>
+          </div>
+        ) : null}
+        {pattern.topSport ? (
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-tribe-green-50 flex items-center justify-center shrink-0">
+              <Dumbbell className="w-4 h-4 text-tribe-green-dark" />
+            </div>
+            <p className="text-sm text-gray-900 leading-snug">
+              {s.sportLabel(
+                sportTranslations[pattern.topSport as keyof typeof sportTranslations]?.[language] ?? pattern.topSport,
+                pattern.topSportShare
+              )}
             </p>
           </div>
         ) : null}
