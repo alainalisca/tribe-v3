@@ -53,23 +53,34 @@ function newCapture(table: string): CapturedQuery {
 }
 
 /**
- * Build a Supabase mock that routes by table. We have two queries:
+ * Build a Supabase mock that routes by table. We have three queries:
  *   - gym_coaches: returns { user_id } rows
  *   - sessions: returns the session rows under test
+ *   - client_attendance: returns { session_id } rows for the
+ *     "this session already has attendance recorded" filter
  */
 function buildSupabaseMock(opts: {
   coachesRows?: Array<{ user_id: string }>;
   coachesError?: { message: string } | null;
   sessionRows?: SessionRow[];
   sessionsError?: { message: string } | null;
+  attendanceRows?: Array<{ session_id: string }>;
+  attendanceError?: { message: string } | null;
   coachesCapture?: CapturedQuery;
   sessionsCapture?: CapturedQuery;
+  attendanceCapture?: CapturedQuery;
 }): SupabaseClient {
   return {
     from: (table: string) => {
       const chain: Record<string, unknown> = {};
       const capture =
-        table === 'gym_coaches' ? opts.coachesCapture : table === 'sessions' ? opts.sessionsCapture : undefined;
+        table === 'gym_coaches'
+          ? opts.coachesCapture
+          : table === 'sessions'
+            ? opts.sessionsCapture
+            : table === 'client_attendance'
+              ? opts.attendanceCapture
+              : undefined;
       chain.select = (s: string) => {
         if (capture) capture.selectString = s;
         return chain;
@@ -91,6 +102,8 @@ function buildSupabaseMock(opts: {
           resolve({ data: opts.coachesRows ?? [], error: opts.coachesError ?? null });
         } else if (table === 'sessions') {
           resolve({ data: opts.sessionRows ?? [], error: opts.sessionsError ?? null });
+        } else if (table === 'client_attendance') {
+          resolve({ data: opts.attendanceRows ?? [], error: opts.attendanceError ?? null });
         } else {
           resolve({ data: [], error: null });
         }
@@ -341,6 +354,80 @@ describe('fetchRecentlyEndedSessions — defensive hydration', () => {
       { limit: 3 }
     );
     expect(result.data).toHaveLength(3);
+  });
+});
+
+describe('fetchRecentlyEndedSessions — already-recorded filter', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FAKE_NOW);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('hides sessions that already have attendance recorded', async () => {
+    const supabase = buildSupabaseMock({
+      sessionRows: [makeRow({ id: 'recorded' }), makeRow({ id: 'pending' })],
+      // Only "recorded" has attendance rows → it should disappear.
+      attendanceRows: [{ session_id: 'recorded' }],
+    });
+    const result = await fetchRecentlyEndedSessions(supabase, { gymId: null, instructorUserId: 'instructor-1' });
+    expect(result.success).toBe(true);
+    expect(result.data?.map((s) => s.id)).toEqual(['pending']);
+  });
+
+  it('keeps a session when no attendance rows exist for it', async () => {
+    const supabase = buildSupabaseMock({
+      sessionRows: [makeRow({ id: 'pending' })],
+      attendanceRows: [], // no rows for any session
+    });
+    const result = await fetchRecentlyEndedSessions(supabase, { gymId: null, instructorUserId: 'instructor-1' });
+    expect(result.data?.map((s) => s.id)).toEqual(['pending']);
+  });
+
+  it('checks attendance only for candidate sessions (not all sessions)', async () => {
+    // The .in() call on client_attendance should be scoped to the
+    // candidate ids — otherwise we'd be doing a full table scan for
+    // every dashboard hit. We verify the scoping by inspecting the
+    // captured query.
+    const attendanceCapture = newCapture('client_attendance');
+    const supabase = buildSupabaseMock({
+      sessionRows: [makeRow({ id: 'a' }), makeRow({ id: 'b' })],
+      attendanceRows: [],
+      attendanceCapture,
+    });
+    await fetchRecentlyEndedSessions(supabase, { gymId: null, instructorUserId: 'instructor-1' });
+    expect(attendanceCapture.inCalls).toContainEqual({ col: 'session_id', vals: ['a', 'b'] });
+  });
+
+  it('skips the attendance check entirely when no candidate sessions exist', async () => {
+    // Empty session list (no recently-ended sessions at all). We
+    // shouldn't issue a wasted .in(...,[]) query on client_attendance.
+    const attendanceCapture = newCapture('client_attendance');
+    const supabase = buildSupabaseMock({
+      sessionRows: [], // no rows pass the window filter
+      attendanceRows: [],
+      attendanceCapture,
+    });
+    await fetchRecentlyEndedSessions(supabase, { gymId: null, instructorUserId: 'instructor-1' });
+    // Capture should record zero calls because the DAL didn't query
+    // client_attendance.
+    expect(attendanceCapture.inCalls).toHaveLength(0);
+    expect(attendanceCapture.selectString).toBeUndefined();
+  });
+
+  it('falls back to surfacing candidates if the attendance check errors', async () => {
+    // Graceful degradation: a transient attendance-table read error
+    // shouldn't blank the prompt. Coach lands on /attendance and
+    // sees what's recorded; the prompt being slightly less smart
+    // for a few seconds is the right trade-off vs hiding the nudge
+    // entirely.
+    const supabase = buildSupabaseMock({
+      sessionRows: [makeRow({ id: 'pending' })],
+      attendanceError: { message: 'attendance read failed' },
+    });
+    const result = await fetchRecentlyEndedSessions(supabase, { gymId: null, instructorUserId: 'instructor-1' });
+    expect(result.success).toBe(true);
+    expect(result.data?.map((s) => s.id)).toEqual(['pending']);
   });
 });
 

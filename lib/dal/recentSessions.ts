@@ -162,7 +162,7 @@ export async function fetchRecentlyEndedSessions(
     }
 
     const rows = data ?? [];
-    const hydrated: RecentlyEndedSession[] = [];
+    const candidates: RecentlyEndedSession[] = [];
     for (const row of rows) {
       const date = row.date as string;
       const startTime = row.start_time as string;
@@ -176,7 +176,7 @@ export async function fetchRecentlyEndedSessions(
       // Window: ended in [cutoffMs, now]. Sessions that haven't ended
       // yet are upcoming and don't belong here.
       if (endMs > now.getTime() || endMs < cutoffMs) continue;
-      hydrated.push({
+      candidates.push({
         id: row.id as string,
         title: (row.title as string | null) ?? null,
         sport: row.sport as string,
@@ -187,12 +187,37 @@ export async function fetchRecentlyEndedSessions(
         minutes_since_ended: Math.floor((now.getTime() - endMs) / 60000),
         current_participants: Number(row.current_participants ?? 0),
       });
-      if (hydrated.length >= limit) break;
+    }
+
+    // Hide sessions that already have attendance recorded — the
+    // prompt is a NUDGE, not a backlog tool, and badgering a coach
+    // about a class they've already started capturing for would
+    // erode trust in the surface. Single query, .in() over the
+    // candidate ids. We only ask for one column to keep payload
+    // tiny.
+    if (candidates.length > 0) {
+      const candidateIds = candidates.map((c) => c.id);
+      const { data: existingAttendance, error: attendanceError } = await supabase
+        .from('client_attendance')
+        .select('session_id')
+        .in('session_id', candidateIds);
+      if (attendanceError) {
+        // Don't fail the whole call on this lookup — the prompt is
+        // non-critical, and a transient error here would be more
+        // annoying than helpful. Log and surface everything; the
+        // coach landing on the attendance page will still see what's
+        // already recorded.
+        logError(attendanceError, { action: 'fetchRecentlyEndedSessions.attendance_check' });
+      } else {
+        const recordedSessionIds = new Set((existingAttendance ?? []).map((r) => r.session_id as string));
+        const filtered = candidates.filter((c) => !recordedSessionIds.has(c.id));
+        return { success: true, data: filtered.slice(0, limit) };
+      }
     }
 
     // Already ordered desc by (date, start_time) → newest-ended first
     // by construction. No re-sort needed.
-    return { success: true, data: hydrated };
+    return { success: true, data: candidates.slice(0, limit) };
   } catch (error) {
     logError(error, { action: 'fetchRecentlyEndedSessions.exception' });
     return { success: false, error: 'Failed to load recently-ended sessions' };
