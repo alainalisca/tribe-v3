@@ -89,6 +89,7 @@ const copy = {
     addFirstMember: 'Add your first member',
     noMatch: 'No members match these filters.',
     noMatchHint: 'Try clearing a filter or searching for a different name.',
+    clearFiltersCta: 'Clear filters',
     whatsappCheckIn: (name: string) => `Hey ${name}! Just checking in — how's training going?`,
   },
   es: {
@@ -138,6 +139,7 @@ const copy = {
     addFirstMember: 'Agregar el primer miembro',
     noMatch: 'Ningún miembro coincide con estos filtros.',
     noMatchHint: 'Intenta limpiar un filtro o buscar otro nombre.',
+    clearFiltersCta: 'Limpiar filtros',
     whatsappCheckIn: (name: string) => `¡Hola ${name}! Pasaba a saludarte. ¿Cómo va el entrenamiento?`,
   },
 } as const;
@@ -388,9 +390,26 @@ export default function MembersPage() {
               </Link>
             </div>
           ) : list.rows.length === 0 ? (
-            <div className="py-12 text-center space-y-2">
+            <div className="py-12 text-center space-y-3">
               <p className="text-sm font-semibold text-gray-900">{s.noMatch}</p>
               <p className="text-xs text-gray-500">{s.noMatchHint}</p>
+              {/* Clear-filters CTA — surfaces only when any filter is
+                  actually active. Reset all three (search + status +
+                  tag) in one tap so the coach doesn't have to
+                  hunt for which filter is the culprit. */}
+              {search.trim() || statusFilter !== 'all' || tagFilter ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setStatusFilter('all');
+                    setTagFilter(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tribe-green text-tribe-dark text-xs font-semibold rounded-full hover:bg-tribe-green-dark hover:text-white transition-colors"
+                >
+                  {s.clearFiltersCta}
+                </button>
+              ) : null}
             </div>
           ) : (
             <MembersTable rows={list.rows} copy={s} />
