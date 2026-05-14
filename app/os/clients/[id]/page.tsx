@@ -28,6 +28,7 @@ import TrainingPartnersSection from '@/components/tribe-os/TrainingPartnersSecti
 import InsightHistorySection from '@/components/tribe-os/InsightHistorySection';
 import StreakMilestoneChip from '@/components/tribe-os/StreakMilestoneChip';
 import AttendanceHeatmap from '@/components/tribe-os/AttendanceHeatmap';
+import TrainingPatternInsight from '@/components/tribe-os/TrainingPatternInsight';
 import type { AttendanceWithSession, ClientAttendanceSummary, ClientRow } from '@/lib/dal/clients';
 
 interface DetailResponse {
@@ -605,6 +606,14 @@ export default function ClientDetailPage() {
                 accelerating cadence faster than reading numbers.
                 Hides itself when there's nothing to show. */}
             <AttendanceHeatmap clientId={state.client.id} />
+
+            {/* Words to go with the heatmap visual — what day(s) and
+                what time-of-day this member trains. Gives the coach
+                the phrasing for a follow-up ("missed you at the
+                Friday class") without needing to scrub the timeline.
+                Hidden until the member has enough sessions for the
+                pattern to be meaningful (5+). */}
+            <TrainingPatternInsight attendance={state.attendance} />
 
             {/* Community graph — top training partners. Hides itself
                 when this client hasn't co-attended any sessions yet
