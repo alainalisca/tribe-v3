@@ -56,6 +56,8 @@ const copy = {
 
     // Stats
     statsTitle: 'Stats',
+    memberSince: (date: string, days: number) =>
+      days === 1 ? `Member since ${date} · 1 day with you` : `Member since ${date} · ${days} days with you`,
     sessionsAttended: 'Sessions attended',
     sessions30d: 'Last 30 days',
     streak: 'Current streak',
@@ -166,6 +168,8 @@ const copy = {
     retry: 'Reintentar',
 
     statsTitle: 'Estadísticas',
+    memberSince: (date: string, days: number) =>
+      days === 1 ? `Miembro desde ${date} · 1 día contigo` : `Miembro desde ${date} · ${days} días contigo`,
     sessionsAttended: 'Sesiones asistidas',
     sessions30d: 'Últimos 30 días',
     streak: 'Racha actual',
@@ -460,7 +464,30 @@ export default function ClientDetailPage() {
                 cached counters are all 0 and the row would just be
                 noise. */}
             <section className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-3">{s.statsTitle}</h2>
+              <h2 className="text-xs uppercase tracking-[0.1em] text-gray-500 font-semibold mb-1">{s.statsTitle}</h2>
+              {(() => {
+                // Compute first-seen date from the attendance history.
+                // We deliberately don't push this to the DAL or store
+                // it on the row — it's cheap to derive (we already
+                // have all attendance loaded) and the value is
+                // narrative, not analytical: "Member since May 12 ·
+                // 173 days with you" frames the relationship as a
+                // journey rather than a transaction count. Stickiness
+                // dividend per glance.
+                let earliestMs = Infinity;
+                for (const a of state.attendance) {
+                  if (!a.attended || !a.attended_at) continue;
+                  const t = new Date(a.attended_at).getTime();
+                  if (Number.isFinite(t) && t < earliestMs) earliestMs = t;
+                }
+                if (!Number.isFinite(earliestMs)) return null;
+                const daysWithYou = Math.max(1, Math.floor((Date.now() - earliestMs) / 86_400_000));
+                return (
+                  <p className="text-xs text-gray-500 mb-3">
+                    {s.memberSince(formatShortDate(new Date(earliestMs).toISOString(), language), daysWithYou)}
+                  </p>
+                );
+              })()}
               <div className="grid grid-cols-3 gap-3">
                 <Stat label={s.sessionsAttended} value={String(state.summary.total_attended_count)} />
                 <Stat
