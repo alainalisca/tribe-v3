@@ -42,6 +42,7 @@ interface CapturedQuery {
   notCalls: Array<{ col: string; op: string; val: unknown }>;
   orderCalls: Array<{ col: string; ascending: boolean }>;
   limit?: number;
+  selectString?: string;
 }
 
 function newCapture(): CapturedQuery {
@@ -58,7 +59,10 @@ function buildSupabaseMock(opts: {
       if (table !== 'clients') throw new Error(`unexpected table: ${table}`);
       const chain: Record<string, unknown> = {};
       const fn = () => chain;
-      chain.select = fn;
+      chain.select = (s: string) => {
+        if (opts.capture) opts.capture.selectString = s;
+        return chain;
+      };
       chain.eq = (col: string, val: unknown) => {
         opts.capture?.eqCalls.push({ col, val });
         return chain;
@@ -249,5 +253,41 @@ describe('listActiveStreakers — error path', () => {
     const result = await listActiveStreakers(supabase, 'instructor-1');
     expect(result.success).toBe(false);
     expect(result.error).toBe('connection refused');
+  });
+});
+
+describe('listActiveStreakers — team filter', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('uses the plain select string when no teamId is provided', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await listActiveStreakers(supabase, 'instructor-1');
+    // No team_membership join on the default path — keeps the query
+    // cheap when most callers don't filter by team.
+    expect(capture.selectString).not.toContain('team_membership');
+  });
+
+  it('switches to the inner-join select string when teamId is provided', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await listActiveStreakers(supabase, 'instructor-1', { teamId: 'team-42' });
+    // The dynamic select adds the join so PostgREST can apply
+    // .eq('team_membership.team_id', X) as a filter.
+    expect(capture.selectString).toContain('team_membership:gym_team_members!inner(team_id)');
+  });
+
+  it('emits a team_id .eq filter when teamId is provided', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await listActiveStreakers(supabase, 'instructor-1', { teamId: 'team-42' });
+    expect(capture.eqCalls).toContainEqual({ col: 'team_membership.team_id', val: 'team-42' });
+  });
+
+  it('does NOT emit a team_id .eq filter when teamId is omitted', async () => {
+    const capture = newCapture();
+    const supabase = buildSupabaseMock({ rows: [], capture });
+    await listActiveStreakers(supabase, 'instructor-1');
+    expect(capture.eqCalls.some((c) => c.col === 'team_membership.team_id')).toBe(false);
   });
 });
