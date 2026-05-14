@@ -66,6 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const rawTo = url.searchParams.get('to');
     const fromIso = parseIsoOrNull(rawFrom);
     const toIso = parseIsoOrNull(rawTo);
+    const actorUserId = url.searchParams.get('actor_user_id')?.trim() || undefined;
 
     if ((rawFrom && !fromIso) || (rawTo && !toIso)) {
       return NextResponse.json({ success: false, error: 'invalid_date_range' }, { status: 400 });
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       targetType,
       fromIso: fromIso ?? undefined,
       toIso: toIso ?? undefined,
+      actorUserId,
     });
     if (!result.success || !result.data) {
       logError(new Error(result.error ?? 'unknown'), {

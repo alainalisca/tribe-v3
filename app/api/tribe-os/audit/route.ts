@@ -66,6 +66,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // PostgREST will safely reject a bogus value at query time.
     const fromIso = parseIsoLoose(url.searchParams.get('from'));
     const toIso = parseIsoLoose(url.searchParams.get('to'));
+    const actorUserId = url.searchParams.get('actor_user_id')?.trim() || undefined;
 
     const result = await listAuditEntries(supabase, gymRes.data.id, {
       action,
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       limit: Number.isFinite(limit) ? limit : undefined,
       fromIso,
       toIso,
+      actorUserId,
     });
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'fetch_failed' }, { status: 500 });

@@ -59,6 +59,8 @@ const copy = {
     dateRangeAll: 'All time',
     dateRangeWeek: 'Last 7 days',
     dateRangeToday: 'Today',
+    onlyMine: 'Only mine',
+    onlyMineHint: 'Filter to entries you wrote yourself',
     filterAllActions: 'All actions',
     filterAllTargets: 'All target types',
     limitLabel: 'Show',
@@ -104,6 +106,8 @@ const copy = {
     dateRangeAll: 'Todo el tiempo',
     dateRangeWeek: 'Últimos 7 días',
     dateRangeToday: 'Hoy',
+    onlyMine: 'Solo mías',
+    onlyMineHint: 'Filtrar a las entradas que escribiste',
     filterAllActions: 'Todas las acciones',
     filterAllTargets: 'Todos los tipos',
     limitLabel: 'Mostrar',
@@ -172,6 +176,9 @@ export default function AuditPage() {
   // covering the three time windows that match the typical forensic
   // mental model ("what happened just now / this week / ever").
   const [dateRange, setDateRange] = useState<'all' | 'today' | 'week'>('all');
+  // When true, scope to entries the current user wrote. Useful in a
+  // multi-coach gym for "what did I do today?" review.
+  const [onlyMine, setOnlyMine] = useState(false);
   const [limit, setLimit] = useState<number>(50);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -189,6 +196,7 @@ export default function AuditPage() {
         params.set('limit', String(limit));
         const fromIso = computeFromIso(dateRange);
         if (fromIso) params.set('from', fromIso);
+        if (onlyMine && gate.userId) params.set('actor_user_id', gate.userId);
         const res = await fetch(`/api/tribe-os/audit?${params.toString()}`, { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
@@ -219,7 +227,7 @@ export default function AuditPage() {
     };
     // s.errorTitle dep refetches on language flip.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gate.state, actionFilter, targetFilter, limit, dateRange, reloadKey, s.errorTitle]);
+  }, [gate.state, gate.userId, actionFilter, targetFilter, limit, dateRange, onlyMine, reloadKey, s.errorTitle]);
 
   // Distinct action + target_type values from the currently-loaded
   // entries, used to populate the filter dropdowns. Sorted A-Z. We
@@ -268,7 +276,7 @@ export default function AuditPage() {
                 action. Anchor (not button) so right-click → Save
                 Link As works for power users. */}
             <a
-              href={buildExportUrl(actionFilter, targetFilter)}
+              href={buildExportUrl(actionFilter, targetFilter, dateRange, onlyMine ? gate.userId : null)}
               onClick={() =>
                 trackEvent('tribe_os_audit_exported', {
                   action_filter: actionFilter || null,
@@ -356,6 +364,21 @@ export default function AuditPage() {
               ))}
             </select>
           </label>
+          {/* "Only mine" toggle. Useful in multi-coach gyms for
+              answering 'what did I do today?' without scrolling
+              through everyone else's actions. */}
+          <label
+            className="inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none"
+            title={s.onlyMineHint}
+          >
+            <input
+              type="checkbox"
+              checked={onlyMine}
+              onChange={(e) => setOnlyMine(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green"
+            />
+            <span className="font-semibold text-gray-700">{s.onlyMine}</span>
+          </label>
           {state.kind === 'ready' && state.entries.length > 0 ? (
             <span className="text-xs text-gray-500 ml-auto">{s.rowSummary(state.entries.length)}</span>
           ) : null}
@@ -385,7 +408,7 @@ export default function AuditPage() {
             // these filters." The latter case is recoverable — show
             // a clear-filters CTA so the user doesn't conclude the
             // log is broken.
-            const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all');
+            const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all' || onlyMine);
             return (
               <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-3">
                 <ScrollText className="w-8 h-8 text-gray-400 mx-auto" />
@@ -402,6 +425,7 @@ export default function AuditPage() {
                       setActionFilter('');
                       setTargetFilter('');
                       setDateRange('all');
+                      setOnlyMine(false);
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-2 mt-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-lg hover:bg-tribe-green-dark hover:text-white transition-colors"
                   >
@@ -619,10 +643,18 @@ function formatRelativeAndExact(iso: string, language: 'en' | 'es'): string {
  * listing, so "filter to client.purge and export" produces a CSV
  * matching exactly what's on screen.
  */
-function buildExportUrl(actionFilter: string, targetFilter: string): string {
+function buildExportUrl(
+  actionFilter: string,
+  targetFilter: string,
+  dateRange: 'all' | 'today' | 'week',
+  actorUserId: string | null
+): string {
   const params = new URLSearchParams();
   if (actionFilter) params.set('action', actionFilter);
   if (targetFilter) params.set('target_type', targetFilter);
+  const fromIso = computeFromIso(dateRange);
+  if (fromIso) params.set('from', fromIso);
+  if (actorUserId) params.set('actor_user_id', actorUserId);
   const qs = params.toString();
   return qs ? `/api/tribe-os/audit/export?${qs}` : '/api/tribe-os/audit/export';
 }

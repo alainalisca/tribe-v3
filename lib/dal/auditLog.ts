@@ -116,6 +116,12 @@ export interface ListAuditOpts {
   fromIso?: string;
   /** Inclusive upper bound on created_at (ISO timestamp). */
   toIso?: string;
+  /**
+   * Filter to entries written by a single actor. Drives the
+   * "Only mine" toggle on /os/audit so a coach can pull up
+   * "what did I do?" without scanning everyone's activity.
+   */
+  actorUserId?: string;
 }
 
 /**
@@ -157,6 +163,7 @@ export async function listAuditEntries(
     if (opts.targetType) query = query.eq('target_type', opts.targetType);
     if (opts.fromIso) query = query.gte('created_at', opts.fromIso);
     if (opts.toIso) query = query.lte('created_at', opts.toIso);
+    if (opts.actorUserId) query = query.eq('actor_user_id', opts.actorUserId);
 
     const { data, error } = await query;
     if (error) {
@@ -199,6 +206,8 @@ export interface GenerateAuditCsvOpts {
   fromIso?: string;
   /** ISO upper bound on created_at (inclusive). */
   toIso?: string;
+  /** Filter to entries written by a single actor. */
+  actorUserId?: string;
 }
 
 /**
@@ -238,6 +247,7 @@ export async function generateAuditLogCsv(
     if (opts.targetType) query = query.eq('target_type', opts.targetType);
     if (opts.fromIso) query = query.gte('created_at', opts.fromIso);
     if (opts.toIso) query = query.lte('created_at', opts.toIso);
+    if (opts.actorUserId) query = query.eq('actor_user_id', opts.actorUserId);
 
     const { data, error } = await query;
     if (error) {
