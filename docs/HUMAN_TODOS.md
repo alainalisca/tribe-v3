@@ -365,10 +365,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                    All three now render with friendly labels in the /os/audit
-                                    viewer (English + Spanish). The pattern is reusable — adding
-                                    new audit event types just means calling `writeAuditEntry` from
-                                    the relevant route and adding a label entry.
+                                        All three now render with friendly labels in the /os/audit
+                                        viewer (English + Spanish). The pattern is reusable — adding
+                                        new audit event types just means calling `writeAuditEntry` from
+                                        the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -581,10 +581,42 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     migration 083 CHECK constraint can't get bypassed by a future
     DAL change without a test failing first.
 
-27. **"Sign up for Tribe" invite email** — when a coach adds a client
-    whose email DOESN'T match a Tribe user, send a different email
-    inviting them to sign up + claim their training. Different value
-    calculation than the welcome — borders on cold outreach, so deferred.
+27. ✅ **"Sign up for Tribe" invite email** — shipped. The
+    `notifyClientAdded` bridge now fires on BOTH paths after a coach
+    creates a client row:
+    - Email matches a Tribe user → existing welcome email, points
+      at `/my-coach` ("your data is here")
+    - Email does NOT match a Tribe user → new invite email, points
+      at `/auth` ("sign up with this exact email so your data
+      appears automatically")
+
+    The invite is bilingual and uses the **coach's** preferred_language
+    as the fallback (vs the recipient's, which doesn't exist yet for
+    a non-user). That mirrors however the coach is already
+    communicating with this person offline.
+
+    Framing is explicit about why it isn't cold outreach: "Your coach
+    added you using this email" + a soft closing ("if you didn't
+    expect this, you can safely ignore — it just means someone at
+    [Gym] typed your email by mistake"). Bulk CSV import still
+    suppresses both emails so a 200-row roster migration stays quiet.
+
+    Return shape extended: notifyClientAdded now also returns
+    `kind: 'welcome' | 'invite'` when a send happened, so analytics
+    can split adoption by path. The `skipped_reason: 'not_tribe_user'`
+    value was retired — that path is now a successful invite send,
+    not a skip.
+
+    New file: `lib/email/signUpInvite.ts`. No new env vars; reuses
+    `RESEND_API_KEY` + `NEXT_PUBLIC_SITE_URL`.
+
+    **What this buys you**: a proper acquisition funnel into Tribe.
+    A coach adding a member who isn't on Tribe used to be a dead
+    end (silent skip). Now the recipient gets a clean invite with
+    explicit instructions to sign up with the matching email —
+    after which their training data appears automatically without
+    the coach having to do anything else.
+
 28. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
 29. **Per-attendance trigger optimization** — migration 079 recomputes
