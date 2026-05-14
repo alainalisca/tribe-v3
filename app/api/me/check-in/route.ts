@@ -38,7 +38,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError, log } from '@/lib/logger';
-import { recordSelfCheckIn } from '@/lib/dal/memberSelf';
+import { recordSelfCheckIn, revokeSelfCheckIn } from '@/lib/dal/memberSelf';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
@@ -161,6 +161,81 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     logError(error, { route: 'POST /api/me/check-in' });
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/me/check-in
+ *
+ * Member-initiated undo of a check-in they made earlier today.
+ * Flips `attended` to false on the existing row (doesn't delete
+ * the row entirely — the coach may want to see the original tap
+ * in case of disputes). Today-only by design; historical
+ * corrections route through the coach.
+ *
+ * Body: { client_id: string, session_id: string }
+ * Response: { success: true, data: { reverted: boolean } }
+ *   - reverted:true means the attended flag was flipped
+ *   - reverted:false means the row was already attended:false
+ *     (idempotent no-op)
+ *
+ * Uses the same FORBIDDEN_ERRORS set as POST for HTTP mapping, plus
+ * not_attended (the row exists but was never attended:true) which
+ * comes back as 409 since it's a state conflict.
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  try {
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !user.email) {
+      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+    }
+
+    let body: CheckInBody;
+    try {
+      body = (await request.json()) as CheckInBody;
+    } catch {
+      return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 });
+    }
+
+    const clientId = typeof body.client_id === 'string' ? body.client_id.trim() : '';
+    const sessionId = typeof body.session_id === 'string' ? body.session_id.trim() : '';
+    if (!clientId || !sessionId) {
+      return NextResponse.json({ success: false, error: 'invalid_input' }, { status: 400 });
+    }
+
+    const result = await revokeSelfCheckIn(clientId, sessionId, user.email);
+    if (!result.success) {
+      const err = result.error ?? 'db_error';
+      if (err === 'not_found') {
+        return NextResponse.json({ success: false, error: 'not_found' }, { status: 404 });
+      }
+      if (err === 'not_attended') {
+        return NextResponse.json({ success: false, error: 'not_attended' }, { status: 409 });
+      }
+      if (FORBIDDEN_ERRORS.has(err)) {
+        return NextResponse.json({ success: false, error: err }, { status: 403 });
+      }
+      return NextResponse.json({ success: false, error: err }, { status: 500 });
+    }
+
+    log('info', 'tribe_member_self_check_in_undone', {
+      action: 'memberSelfCheckIn.revoked',
+      clientId,
+      sessionId,
+      reverted: result.data?.reverted ?? false,
+      actorUserId: user.id,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: { reverted: result.data?.reverted ?? false },
+    });
+  } catch (error) {
+    logError(error, { route: 'DELETE /api/me/check-in' });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
   }
 }

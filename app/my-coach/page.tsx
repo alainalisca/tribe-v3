@@ -163,6 +163,9 @@ const copy = {
     todayEmpty: 'Nothing on the schedule today.',
     checkInCta: "I'm here",
     checkInDone: 'Checked in',
+    checkInUndo: 'Undo',
+    checkInUndoHint: 'Tap to undo',
+    checkInUndoError: "Couldn't undo. Try again.",
     checkInPending: 'Saving…',
     checkInError: "Couldn't save check-in. Try again.",
     checkInRateLimited: "You're checking in too fast. Try again in a minute.",
@@ -225,6 +228,9 @@ const copy = {
     todayEmpty: 'No hay nada programado para hoy.',
     checkInCta: 'Estoy aquí',
     checkInDone: 'Registrado',
+    checkInUndo: 'Deshacer',
+    checkInUndoHint: 'Toca para deshacer',
+    checkInUndoError: 'No se pudo deshacer. Intenta de nuevo.',
     checkInPending: 'Guardando…',
     checkInError: 'No se pudo registrar tu llegada. Intenta de nuevo.',
     checkInRateLimited: 'Estás marcando demasiado rápido. Intenta de nuevo en un minuto.',
@@ -440,6 +446,72 @@ export default function MyCoachPage() {
     }
   }
 
+  /**
+   * Undo a check-in the member just made (or earlier today). Same
+   * optimistic-flip pattern as the check-in path but in reverse:
+   * we flip the pill back to "I'm here" immediately, then revert
+   * on server failure.
+   */
+  async function handleUndoCheckIn(sessionId: string) {
+    if (state.kind !== 'ready' || !state.record) return;
+    const record = state.record;
+    const target = record.today_sessions.find((s) => s.session_id === sessionId);
+    if (!target || !target.already_checked_in) return;
+
+    setState({
+      ...state,
+      record: {
+        ...record,
+        today_sessions: record.today_sessions.map((s) =>
+          s.session_id === sessionId ? { ...s, already_checked_in: false } : s
+        ),
+      },
+    });
+    trackEvent('tribe_member_self_check_in_undone', {
+      gym_id: record.gym_id,
+      session_id: sessionId,
+    });
+
+    try {
+      const res = await fetch('/api/me/check-in', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: record.client_id, session_id: sessionId }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      if (!res.ok || !body.success) {
+        // Revert optimistic flip back to checked-in.
+        setState((prev) => {
+          if (prev.kind !== 'ready' || !prev.record) return prev;
+          return {
+            ...prev,
+            record: {
+              ...prev.record,
+              today_sessions: prev.record.today_sessions.map((s) =>
+                s.session_id === sessionId ? { ...s, already_checked_in: true } : s
+              ),
+            },
+          };
+        });
+        showError(copy[language].checkInUndoError);
+      }
+    } catch {
+      setState((prev) => {
+        if (prev.kind !== 'ready' || !prev.record) return prev;
+        return {
+          ...prev,
+          record: {
+            ...prev.record,
+            today_sessions: prev.record.today_sessions.map((s) =>
+              s.session_id === sessionId ? { ...s, already_checked_in: true } : s
+            ),
+          },
+        };
+      });
+      showError(copy[language].checkInUndoError);
+    }
+  }
+
   // Switch active membership without a full reload.
   async function handleGymChange(clientId: string) {
     if (state.kind !== 'ready' || state.activeClientId === clientId) return;
@@ -521,7 +593,14 @@ export default function MyCoachPage() {
 
   // state.kind === 'ready'
   return (
-    <ReadyView state={state} copy={s} language={language} onGymChange={handleGymChange} onCheckIn={handleCheckIn} />
+    <ReadyView
+      state={state}
+      copy={s}
+      language={language}
+      onGymChange={handleGymChange}
+      onCheckIn={handleCheckIn}
+      onUndoCheckIn={handleUndoCheckIn}
+    />
   );
 }
 
@@ -531,12 +610,14 @@ function ReadyView({
   language,
   onGymChange,
   onCheckIn,
+  onUndoCheckIn,
 }: {
   state: Extract<PageState, { kind: 'ready' }>;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
   onGymChange: (clientId: string) => void;
   onCheckIn: (sessionId: string) => void;
+  onUndoCheckIn: (sessionId: string) => void;
 }) {
   const activeMembership = useMemo(
     () => state.memberships.find((m) => m.client_id === state.activeClientId),
@@ -594,6 +675,7 @@ function ReadyView({
             copy={s}
             language={language}
             onCheckIn={onCheckIn}
+            onUndoCheckIn={onUndoCheckIn}
           />
         )}
 
@@ -623,12 +705,14 @@ function RecordBlocks({
   copy: s,
   language,
   onCheckIn,
+  onUndoCheckIn,
 }: {
   record: TrainingRecord;
   membership: Membership | undefined;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
   onCheckIn: (sessionId: string) => void;
+  onUndoCheckIn: (sessionId: string) => void;
 }) {
   return (
     <>
@@ -673,10 +757,20 @@ function RecordBlocks({
                     </p>
                   </div>
                   {session.already_checked_in ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-tribe-green/15 text-tribe-green-dark text-xs font-semibold rounded-full whitespace-nowrap">
-                      <Check className="w-3.5 h-3.5" />
-                      {s.checkInDone}
-                    </span>
+                    // Clickable pill — taps it to undo. Hover state
+                    // hints "Undo" so members know it's actionable.
+                    // Coach can still see "this was tapped then
+                    // undone" via the existing attendance edit flow.
+                    <button
+                      type="button"
+                      onClick={() => onUndoCheckIn(session.session_id)}
+                      title={s.checkInUndoHint}
+                      className="group inline-flex items-center gap-1 px-3 py-1.5 bg-tribe-green/15 text-tribe-green-dark text-xs font-semibold rounded-full whitespace-nowrap hover:bg-tribe-warning/20 hover:text-tribe-warning transition-colors"
+                    >
+                      <Check className="w-3.5 h-3.5 group-hover:hidden" />
+                      <span className="group-hover:hidden">{s.checkInDone}</span>
+                      <span className="hidden group-hover:inline">{s.checkInUndo}</span>
+                    </button>
                   ) : (
                     <button
                       type="button"

@@ -630,6 +630,118 @@ export async function recordSelfCheckIn(
   }
 }
 
+export type RevokeSelfCheckInError =
+  | 'service_role_missing'
+  | 'no_email'
+  | 'not_found'
+  | 'identity_mismatch'
+  | 'wrong_gym'
+  | 'wrong_day'
+  | 'archived_member'
+  | 'not_attended'
+  | 'db_error';
+
+/**
+ * Undo a previously-recorded self check-in. Flips `attended` back
+ * to false on the existing (client, session) row — does NOT delete
+ * the row, because the coach may want to see "member tapped in
+ * then changed their mind" rather than the event vanishing.
+ *
+ * Constraints (mirror recordSelfCheckIn's gate model):
+ *   - The auth user's email must match clients.email
+ *   - The session must belong to this gym's owner (creator_id)
+ *   - The session date must equal today in the gym's timezone
+ *   - An existing attendance row with attended=true must exist
+ *
+ * The "today only" rule is intentional: members can undo a tap
+ * they just made, but they can't retroactively revoke historical
+ * attendance — that's a coach-side action (edit attendance flow).
+ *
+ * Idempotent: if the row already has attended=false, returns success
+ * without writing.
+ */
+export async function revokeSelfCheckIn(
+  clientId: string,
+  sessionId: string,
+  userEmail: string
+): Promise<DalResult<{ reverted: boolean }>> {
+  const service = buildServiceClient();
+  if (!service) return { success: false, error: 'service_role_missing' };
+  const normalized = userEmail.trim().toLowerCase();
+  if (!normalized) return { success: false, error: 'no_email' };
+
+  try {
+    // Same client + gym + identity guard as the record path.
+    const { data: clientRow, error: clientErr } = await service
+      .from('clients')
+      .select(
+        `
+          id, gym_id, email, archived,
+          gym:gyms(id, owner_user_id, timezone)
+        `
+      )
+      .eq('id', clientId)
+      .maybeSingle();
+    if (clientErr) {
+      logError(clientErr, { action: 'revokeSelfCheckIn.client', clientId, sessionId });
+      return { success: false, error: 'db_error' };
+    }
+    if (!clientRow) return { success: false, error: 'not_found' };
+    if (clientRow.archived) return { success: false, error: 'archived_member' };
+    const rowEmail = ((clientRow.email as string | null) ?? '').trim().toLowerCase();
+    if (rowEmail !== normalized) return { success: false, error: 'identity_mismatch' };
+    const gym = clientRow.gym as unknown as { id: string; owner_user_id: string; timezone: string } | null;
+    if (!gym) return { success: false, error: 'not_found' };
+
+    const { data: sessionRow, error: sessionErr } = await service
+      .from('sessions')
+      .select('id, creator_id, date')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (sessionErr) {
+      logError(sessionErr, { action: 'revokeSelfCheckIn.session', clientId, sessionId });
+      return { success: false, error: 'db_error' };
+    }
+    if (!sessionRow) return { success: false, error: 'not_found' };
+    if (sessionRow.creator_id !== gym.owner_user_id) return { success: false, error: 'wrong_gym' };
+    const gymToday = todayInTimezone(gym.timezone);
+    if (sessionRow.date !== gymToday) return { success: false, error: 'wrong_day' };
+
+    const { data: existing, error: existingErr } = await service
+      .from('client_attendance')
+      .select('id, attended')
+      .eq('client_id', clientId)
+      .eq('session_id', sessionId)
+      .maybeSingle();
+    if (existingErr) {
+      logError(existingErr, { action: 'revokeSelfCheckIn.existing', clientId, sessionId });
+      return { success: false, error: 'db_error' };
+    }
+    if (!existing) return { success: false, error: 'not_found' };
+    if (existing.attended !== true) {
+      // Idempotent — nothing to do, return success.
+      return { success: true, data: { reverted: false } };
+    }
+
+    // Flip attended back to false but leave attended_at as a
+    // historical record of "they tapped in at this time." Coaches
+    // who later edit the row can see the original timestamp and
+    // re-affirm or fully remove.
+    const { error: updateErr } = await service
+      .from('client_attendance')
+      .update({ attended: false })
+      .eq('id', existing.id as string);
+    if (updateErr) {
+      logError(updateErr, { action: 'revokeSelfCheckIn.update', clientId, sessionId });
+      return { success: false, error: 'db_error' };
+    }
+    return { success: true, data: { reverted: true } };
+  } catch (error) {
+    logError(error, { action: 'revokeSelfCheckIn.exception', clientId, sessionId });
+    return { success: false, error: 'db_error' };
+  }
+}
+
 /** Full per-membership data export (one entry per gym the member belongs to). */
 export interface MyDataExportMembership {
   client_id: string;
