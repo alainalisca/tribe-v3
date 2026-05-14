@@ -154,6 +154,12 @@ const copy = {
     deleteTitle: 'Delete this client?',
     deleteDesc:
       'This client will be archived. Their attendance history is preserved for your revenue records but they will no longer appear in your active client list. You can undo this from the database if needed.',
+    deleteSummaryLabel: 'You will be archiving:',
+    deleteSummaryStreakLine: (days: number) => (days === 1 ? '1-day active streak' : `${days}-day active streak`),
+    deleteSummarySessionsLine: (n: number) =>
+      n === 1 ? '1 attended session over your relationship' : `${n} attended sessions over your relationship`,
+    deleteSummaryRecentLine: (days: number) =>
+      days === 0 ? 'Last seen today' : days === 1 ? 'Last seen yesterday' : `Last seen ${days} days ago`,
     cancel: 'Cancel',
     confirmDelete: 'Yes, delete',
     deleting: 'Deleting',
@@ -264,6 +270,12 @@ const copy = {
     deleteTitle: '¿Eliminar este cliente?',
     deleteDesc:
       'Este cliente será archivado. Su historial de asistencias se conserva para tus registros de ingresos, pero ya no aparecerá en tu lista activa. Puedes deshacer esto desde la base de datos si es necesario.',
+    deleteSummaryLabel: 'Vas a archivar:',
+    deleteSummaryStreakLine: (days: number) => (days === 1 ? 'Racha activa de 1 día' : `Racha activa de ${days} días`),
+    deleteSummarySessionsLine: (n: number) =>
+      n === 1 ? '1 sesión asistida en toda su relación contigo' : `${n} sesiones asistidas en toda su relación contigo`,
+    deleteSummaryRecentLine: (days: number) =>
+      days === 0 ? 'Visto hoy' : days === 1 ? 'Visto ayer' : `Visto hace ${days} días`,
     cancel: 'Cancelar',
     confirmDelete: 'Sí, eliminar',
     deleting: 'Eliminando',
@@ -743,6 +755,39 @@ export default function ClientDetailPage() {
         <DialogContent className="max-w-sm rounded-xl p-6 bg-white border border-gray-200 text-gray-900">
           <DialogTitle className="text-lg font-bold text-tribe-red">{s.deleteTitle}</DialogTitle>
           <p className="text-sm text-gray-700 mt-2 leading-relaxed">{s.deleteDesc}</p>
+
+          {/* Relationship-cost summary. Shows the streak, total
+              sessions, and most-recent attendance so the coach sees
+              what they're about to set aside before pressing
+              archive. The lines are independently conditional — a
+              brand-new client with zero sessions sees no extra
+              block at all (which is the correct signal: there's
+              nothing to lose). Existing data on the page; no fetch. */}
+          {(() => {
+            const streak = state.client.current_streak_days ?? 0;
+            const total = state.summary.total_attended_count ?? 0;
+            const lastSeenMs = state.summary.last_attendance_at
+              ? new Date(state.summary.last_attendance_at).getTime()
+              : null;
+            const daysSinceLastSeen = lastSeenMs != null ? Math.floor((Date.now() - lastSeenMs) / 86_400_000) : null;
+            const lines: string[] = [];
+            if (streak >= 7) lines.push(s.deleteSummaryStreakLine(streak));
+            if (total >= 5) lines.push(s.deleteSummarySessionsLine(total));
+            if (daysSinceLastSeen != null && daysSinceLastSeen <= 7) {
+              lines.push(s.deleteSummaryRecentLine(daysSinceLastSeen));
+            }
+            if (lines.length === 0) return null;
+            return (
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs font-semibold text-gray-700 mb-1.5">{s.deleteSummaryLabel}</p>
+                <ul className="text-xs text-gray-700 space-y-0.5 list-disc list-inside leading-relaxed">
+                  {lines.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
           {/* GDPR toggle. Off by default — most deletes are
               archives. When checked, the confirm button label
