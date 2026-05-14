@@ -172,6 +172,7 @@ const ACTION_LABELS: Record<string, { en: string; es: string }> = {
   'team.delete': { en: 'Team deleted', es: 'Equipo eliminado' },
   'team.member_add': { en: 'Member added to team', es: 'Miembro agregado al equipo' },
   'team.member_remove': { en: 'Member removed from team', es: 'Miembro removido del equipo' },
+  'clients.bulk_import': { en: 'Clients bulk-imported', es: 'Clientes importados en lote' },
 };
 
 const TARGET_LABELS: Record<string, { en: string; es: string }> = {
@@ -245,6 +246,10 @@ const ACTION_DESCRIPTIONS: Record<string, { en: string; es: string }> = {
   'team.member_remove': {
     en: 'A client was removed from a team. The client’s data is untouched — only their team membership is. The audit row carries the team and client names at the time of removal.',
     es: 'Se quitó un cliente del equipo. Los datos del cliente no se tocan — solo su membresía al equipo. El registro guarda los nombres del equipo y del cliente al momento de la acción.',
+  },
+  'clients.bulk_import': {
+    en: 'Clients were added via the CSV importer. The payload records how many rows were created, how many were skipped due to validation errors, and the total submitted. No per-row audit — that would drown the log; this aggregate row is the trail.',
+    es: 'Se agregaron clientes con el importador CSV. El registro guarda cuántas filas se crearon, cuántas se omitieron por errores y cuántas se enviaron en total. No hay registro por fila — eso saturaría el log; este registro agregado es la huella.',
   },
 };
 

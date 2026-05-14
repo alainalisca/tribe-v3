@@ -29,6 +29,8 @@ import { ZodError, z } from 'zod';
 import { logError, log } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { createClientsBulk } from '@/lib/dal/clients';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
+import { getGym, getGymForUser } from '@/lib/dal/gyms';
 import { CreateClientInputSchema } from '@/lib/validations/clients';
 
 const MAX_IMPORT_ROWS = 500;
@@ -145,6 +147,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       created: result.data?.length ?? 0,
       skipped: rowErrors.length,
     });
+
+    // Audit log: bulk import is forensically interesting (a sudden
+    // 200-row import is the canary for either tool migration or a
+    // hostile actor copy-pasting a member list). We log the count
+    // aggregate rather than per-row entries — 200 audit rows for one
+    // import would drown the log. The target is the gym itself
+    // since there's no single client target for a bulk operation.
+    if ((result.data?.length ?? 0) > 0) {
+      const gymRes = gymId ? await getGym(supabase, gymId) : await getGymForUser(supabase, userId);
+      const auditGymId = gymRes.success && gymRes.data ? gymRes.data.id : null;
+      if (auditGymId) {
+        await writeAuditEntry(supabase, {
+          gymId: auditGymId,
+          actorUserId: userId,
+          action: 'clients.bulk_import',
+          targetType: 'gym',
+          targetId: auditGymId,
+          payload: {
+            created_count: result.data?.length ?? 0,
+            skipped_count: rowErrors.length,
+            total_rows_submitted: parsed.data.rows.length,
+          },
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

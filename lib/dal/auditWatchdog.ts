@@ -77,6 +77,13 @@ export const AUDIT_THRESHOLDS: readonly ThresholdRule[] = [
   // routine action; pairs with coach.remove as 'someone is
   // dismantling the gym structure' canary.
   { action: 'team.delete', count: 2, windowHours: 24 },
+  // ANY bulk import — the importer caps individual imports at 500
+  // rows but two back-to-back imports could fill a gym's whole
+  // roster from someone else's tool. We always want a notification
+  // for this, both as a courtesy (new tool migration is normal)
+  // and as a safety check (was that ME?). alertOnAny so the
+  // notification fires on a single occurrence.
+  { action: 'clients.bulk_import', count: 1, windowHours: 24, alertOnAny: true },
 ];
 
 /** One triggered alert ready to be sent. */

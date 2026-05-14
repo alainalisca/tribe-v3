@@ -20,6 +20,7 @@
  *   client.purge:      1 in 24h, alertOnAny
  *   coach.remove:      2 in 24h, per-actor
  *   team.delete:       2 in 24h, per-actor
+ *   clients.bulk_import: 1 in 24h, alertOnAny (any import notifies)
  *
  * Tests reference those numbers directly. If a threshold ever
  * changes, the matching test will fail and force a deliberate
@@ -216,6 +217,22 @@ describe('evaluateGymAuditThresholds — at-threshold per-actor alerts', () => {
     });
     const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
     expect(result.filter((r) => r.action === 'team.delete')).toHaveLength(0);
+  });
+
+  it('alerts on a single clients.bulk_import (alertOnAny, courtesy notification)', async () => {
+    // The bulk_import rule fires on any occurrence — both as a
+    // safety check ("was that me?") and because tool migration is
+    // genuinely worth surfacing even when intentional.
+    const supabase = buildSupabaseMock({
+      'clients.bulk_import': [row('owner-A')],
+    });
+    const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
+    const alert = result.find((r) => r.action === 'clients.bulk_import');
+    expect(alert).toMatchObject({
+      action: 'clients.bulk_import',
+      count: 1,
+      window_hours: 24,
+    });
   });
 
   it('captures earliest_at and latest_at across the cluster', async () => {
