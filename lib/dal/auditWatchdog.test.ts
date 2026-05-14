@@ -18,6 +18,8 @@
  *   attendance.delete: 10 in 24h, per-actor
  *   attendance.refund: 3 in 24h, per-actor
  *   client.purge:      1 in 24h, alertOnAny
+ *   coach.remove:      2 in 24h, per-actor
+ *   team.delete:       2 in 24h, per-actor
  *
  * Tests reference those numbers directly. If a threshold ever
  * changes, the matching test will fail and force a deliberate
@@ -161,6 +163,59 @@ describe('evaluateGymAuditThresholds — at-threshold per-actor alerts', () => {
     const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
     expect(result).toHaveLength(1);
     expect(result[0].action).toBe('attendance.refund');
+  });
+
+  it('does NOT alert when coach.remove count is 1 (under threshold of 2)', async () => {
+    // Single coach removal is normal turnover — alerting here would
+    // train the owner to dismiss the alert as noise. Threshold of 2
+    // catches the genuinely-unusual same-day double removal that
+    // suggests a hostile actor.
+    const supabase = buildSupabaseMock({
+      'coach.remove': [row('owner-A')],
+    });
+    const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
+    expect(result.filter((r) => r.action === 'coach.remove')).toHaveLength(0);
+  });
+
+  it('alerts at 2 coach.remove by one actor in 24h (hostile-takeover signature)', async () => {
+    const supabase = buildSupabaseMock({
+      'coach.remove': [row('owner-A'), row('owner-A')],
+    });
+    const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
+    const alert = result.find((r) => r.action === 'coach.remove');
+    expect(alert).toMatchObject({
+      action: 'coach.remove',
+      actor_user_id: 'owner-A',
+      count: 2,
+      window_hours: 24,
+      trigger_key: 'coach.remove:owner-A',
+    });
+  });
+
+  it('alerts at 2 team.delete by one actor in 24h', async () => {
+    const supabase = buildSupabaseMock({
+      'team.delete': [row('owner-A'), row('owner-A')],
+    });
+    const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
+    const alert = result.find((r) => r.action === 'team.delete');
+    expect(alert).toMatchObject({
+      action: 'team.delete',
+      actor_user_id: 'owner-A',
+      count: 2,
+      window_hours: 24,
+      trigger_key: 'team.delete:owner-A',
+    });
+  });
+
+  it('does NOT alert when team.delete is split between two actors (1+1)', async () => {
+    // Per-actor counting: two different owners (in the unusual case
+    // of an ownership transfer + cleanup) each deleting one team is
+    // not a takeover signal.
+    const supabase = buildSupabaseMock({
+      'team.delete': [row('owner-A'), row('owner-B')],
+    });
+    const result = await evaluateGymAuditThresholds(supabase, GYM_ID);
+    expect(result.filter((r) => r.action === 'team.delete')).toHaveLength(0);
   });
 
   it('captures earliest_at and latest_at across the cluster', async () => {

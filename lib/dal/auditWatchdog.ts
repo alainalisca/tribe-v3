@@ -66,6 +66,17 @@ export const AUDIT_THRESHOLDS: readonly ThresholdRule[] = [
   // by RLS so this is essentially "did I really do that?"
   // self-notification + paper trail.
   { action: 'client.purge', count: 1, windowHours: 24, alertOnAny: true },
+  // 2+ coach removals by one actor in 24h. Removing a coach is
+  // owner-only and normal turnover is rare (months apart). Two on
+  // the same day is the hostile-takeover signature we most want to
+  // surface — the audit log on its own is reactive forensics, this
+  // rule turns it into a proactive alert before the second-to-last
+  // coach gets booted.
+  { action: 'coach.remove', count: 2, windowHours: 24 },
+  // 2+ team deletions by one actor in 24h. Owner-only and not a
+  // routine action; pairs with coach.remove as 'someone is
+  // dismantling the gym structure' canary.
+  { action: 'team.delete', count: 2, windowHours: 24 },
 ];
 
 /** One triggered alert ready to be sent. */
