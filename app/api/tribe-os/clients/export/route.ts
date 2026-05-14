@@ -20,22 +20,32 @@
  *   500 server / DB
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { generateClientsCsv } from '@/lib/dal/clients';
 import { buildCsvResponse, buildExportFilename } from '@/lib/csv/serialize';
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
   const { supabase, userId, gymId } = gate;
 
   try {
-    const result = await generateClientsCsv(supabase, {
-      gymId: gymId ?? null,
-      instructorUserId: userId,
-    });
+    // Opt-in: ?include_teams=1 appends a 'teams' column with
+    // semicolon-separated team names per client. Off by default so
+    // the export stays round-trippable through the importer.
+    const url = new URL(request.url);
+    const includeTeams = url.searchParams.get('include_teams') === '1';
+
+    const result = await generateClientsCsv(
+      supabase,
+      {
+        gymId: gymId ?? null,
+        instructorUserId: userId,
+      },
+      { includeTeams }
+    );
     if (!result.success || !result.data) {
       logError(new Error(result.error ?? 'unknown'), {
         action: 'clients.export',

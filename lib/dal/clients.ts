@@ -1613,16 +1613,37 @@ const MAX_EXPORT_ROWS = 10_000;
  * Excludes archived clients (consistent with the in-app list view).
  * Caller is expected to wrap the result with buildCsvResponse.
  */
+export interface GenerateClientsCsvOptions {
+  /**
+   * When true, the export gains a `teams` column listing each
+   * client's team memberships (semicolon-separated). This breaks
+   * the round-trip property — the importer doesn't currently
+   * process team membership — but for owners doing roster audits
+   * or a year-end accountant handoff, knowing who belongs to
+   * which team is the question they're actually trying to answer.
+   * Opt-in so the default export stays round-trippable.
+   */
+  includeTeams?: boolean;
+}
+
 export async function generateClientsCsv(
   supabase: SupabaseClient,
-  context: ClientTenantContext
+  context: ClientTenantContext,
+  options: GenerateClientsCsvOptions = {}
 ): Promise<DalResult<string>> {
   try {
     const gymId = context.gymId;
     const instructorUserId = context.instructorUserId;
+    // Dynamic select: pull team membership join when requested. The
+    // join returns rows with embedded team name + id; we flatten in
+    // TS. We use a LEFT join (no `!inner`) so clients with no team
+    // memberships still surface as empty cells.
+    const selectString = options.includeTeams
+      ? `${CLIENT_SELECT}, team_memberships:gym_team_members(team:gym_teams(id, name))`
+      : CLIENT_SELECT;
     let query = supabase
       .from('clients')
-      .select(CLIENT_SELECT)
+      .select(selectString)
       .eq('archived', false)
       .order('created_at', { ascending: false })
       .limit(MAX_EXPORT_ROWS);
@@ -1636,9 +1657,19 @@ export async function generateClientsCsv(
       logError(error, { action: 'generateClientsCsv', gymId, instructorUserId });
       return { success: false, error: error.message };
     }
-    const rows = (data ?? []) as ClientRow[];
+    // Double-cast to defeat PostgREST's static parser when the
+    // dynamic select adds the team_memberships join — same pattern
+    // used by listAtRiskClients / listActiveStreakers.
+    const rows = (data ?? []) as unknown as Array<
+      ClientRow & {
+        team_memberships?: Array<{ team: { id: string; name: string } | null }>;
+      }
+    >;
     // Columns named to match the import parser's HEADER_ALIASES so a
-    // coach can edit + re-import without renaming anything.
+    // coach can edit + re-import without renaming anything. The
+    // optional `teams` column is appended at the end so consumers
+    // who don't care about it can ignore the last column without
+    // affecting earlier-column reads.
     const header = [
       'name',
       'email',
@@ -1656,23 +1687,34 @@ export async function generateClientsCsv(
       'churn_risk_score',
       'created_at',
     ];
-    const body = rows.map((r) => [
-      r.name ?? '',
-      r.email ?? '',
-      r.phone ?? '',
-      r.status ?? '',
-      r.tags?.join('; ') ?? '',
-      r.notes ?? '',
-      r.health_notes ?? '',
-      r.last_seen_at ?? '',
-      String(r.total_sessions ?? 0),
-      String(r.sessions_last_30_days ?? 0),
-      String(r.current_streak_days ?? 0),
-      String(r.longest_streak_days ?? 0),
-      r.health_status ?? '',
-      r.churn_risk_score != null ? r.churn_risk_score.toFixed(3) : '',
-      r.created_at ?? '',
-    ]);
+    if (options.includeTeams) header.push('teams');
+    const body = rows.map((r) => {
+      const base = [
+        r.name ?? '',
+        r.email ?? '',
+        r.phone ?? '',
+        r.status ?? '',
+        r.tags?.join('; ') ?? '',
+        r.notes ?? '',
+        r.health_notes ?? '',
+        r.last_seen_at ?? '',
+        String(r.total_sessions ?? 0),
+        String(r.sessions_last_30_days ?? 0),
+        String(r.current_streak_days ?? 0),
+        String(r.longest_streak_days ?? 0),
+        r.health_status ?? '',
+        r.churn_risk_score != null ? r.churn_risk_score.toFixed(3) : '',
+        r.created_at ?? '',
+      ];
+      if (options.includeTeams) {
+        const teamNames = (r.team_memberships ?? [])
+          .map((tm) => tm.team?.name)
+          .filter((n): n is string => !!n)
+          .join('; ');
+        base.push(teamNames);
+      }
+      return base;
+    });
     return { success: true, data: rowsToCsv([header, ...body]) };
   } catch (error) {
     logError(error, { action: 'generateClientsCsv.exception' });
