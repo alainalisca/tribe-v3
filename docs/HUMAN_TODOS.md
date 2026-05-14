@@ -365,10 +365,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                All three now render with friendly labels in the /os/audit
-                                viewer (English + Spanish). The pattern is reusable — adding
-                                new audit event types just means calling `writeAuditEntry` from
-                                the relevant route and adding a label entry.
+                                    All three now render with friendly labels in the /os/audit
+                                    viewer (English + Spanish). The pattern is reusable — adding
+                                    new audit event types just means calling `writeAuditEntry` from
+                                    the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -555,16 +555,42 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     compute the total before tapping WhatsApp; the reminder
     arrives at the member's phone with a concrete number to act on.
 
-26. **"Sign up for Tribe" invite email** — when a coach adds a client
+26. ✅ **Vitest coverage for the new DAL functions** — shipped. 48
+    new tests across 3 files hardening the money-touching and
+    identity-gating paths added this session:
+    - `lib/dal/clients.refund.test.ts` — 18 tests covering every
+      `RefundAttendanceError` discriminator + happy path
+    - `lib/dal/memberSelf.checkIn.test.ts` — 16 tests covering
+      `SelfCheckInError` paths: identity mismatch, archived member,
+      wrong gym, wrong day, idempotency on existing rows,
+      service-role-missing
+    - `lib/dal/clients.unpaid.test.ts` — 14 tests covering
+      grouping logic (count, date bounds, archived exclusion,
+      sort order), median computation (3-row sample-size floor,
+      lower-middle index, USD/COP independence), and graceful
+      degradation when the pricing query fails
+
+    All 48 pass. Full suite still has 12 pre-existing failures in
+    `SessionCard.test.tsx`, `FilterBar.test.tsx`, and
+    `connections.test.ts` (unrelated to this session's code).
+
+    **What this buys you**: a regression in refund or self-check-in
+    logic now surfaces in CI before it ships. The money paths in
+    particular (refund amount bounds, currency carry-over,
+    already-refunded guard) are now contract-tested, so the
+    migration 083 CHECK constraint can't get bypassed by a future
+    DAL change without a test failing first.
+
+27. **"Sign up for Tribe" invite email** — when a coach adds a client
     whose email DOESN'T match a Tribe user, send a different email
     inviting them to sign up + claim their training. Different value
     calculation than the welcome — borders on cold outreach, so deferred.
-27. **Stripe Connect rough-edge polish** — but this is hard to do
+28. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-28. **Per-attendance trigger optimization** — migration 079 recomputes
+29. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-29. **Generator feedback loop** — use the feedback data from #5 to:
+30. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
