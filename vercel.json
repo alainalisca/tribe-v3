@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/tribe-os/weekly-summary",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/tribe-os/audit-watchdog",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

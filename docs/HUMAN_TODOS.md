@@ -74,8 +74,10 @@ What this means:
   when you click "Run intelligence engine" on `/os/intelligence`.
 - The Monday weekly summary (`/api/cron/tribe-os/weekly-summary`,
   schedule `0 8 * * 1`) is **NOT** firing automatically.
-- Both routes work end-to-end when called manually (curl with the
-  CRON_SECRET to the preview URL).
+- The 6-hourly audit watchdog (`/api/cron/tribe-os/audit-watchdog`,
+  every 6 hours) is **NOT** firing automatically.
+- All three routes work end-to-end when called manually (curl with
+  the CRON_SECRET to the preview URL).
 
 To activate scheduled firing: merge `feature/tribe-os` → `main`. Per
 your branch-strategy note this should wait until testing is complete.
@@ -365,10 +367,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                        All three now render with friendly labels in the /os/audit
-                                        viewer (English + Spanish). The pattern is reusable — adding
-                                        new audit event types just means calling `writeAuditEntry` from
-                                        the relevant route and adding a label entry.
+                                            All three now render with friendly labels in the /os/audit
+                                            viewer (English + Spanish). The pattern is reusable — adding
+                                            new audit event types just means calling `writeAuditEntry` from
+                                            the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -617,12 +619,58 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     after which their training data appears automatically without
     the coach having to do anything else.
 
-28. **Stripe Connect rough-edge polish** — but this is hard to do
+28. ✅ **Audit watchdog cron + bilingual owner alert email** —
+    shipped. Every 6 hours `/api/cron/tribe-os/audit-watchdog`
+    scans `gym_audit_log` for destructive-action clusters across
+    every premium-active gym and emails the gym owner when
+    thresholds trip.
+
+    Threshold rules (`lib/dal/auditWatchdog.ts`, tuned conservatively):
+    - 5+ `client.archive` by one coach in 24h
+    - 10+ `attendance.delete` by one coach in 24h
+    - 3+ `attendance.refund` by one coach in 24h
+    - ANY `client.purge` in 24h (owner-only by RLS, so this is
+      essentially a "did I really do that?" self-receipt)
+
+    Per-actor counting unless the rule sets `alertOnAny: true`.
+    Suppression: when an alert fires, the watchdog writes a
+    `gym.alert_sent` audit row with the trigger key in the
+    payload. The next run skips that key if there's a matching
+    suppression row in the last 24h, so the owner never gets
+    spammed every 6h about the same incident.
+
+    Email framing is deliberately non-alarmist: most legitimate
+    clusters (a coach pruning the roster before a new season)
+    trip these the same way hostile bursts would. The body says
+    "we noticed this — take a look" with a deep-link to
+    `/os/audit` so the owner can see the events themselves.
+    Body lists each triggered alert with actor display name (or
+    "—" for any-actor rules), event count, window, and time range.
+
+    Cron is registered in `vercel.json` as
+    `/api/cron/tribe-os/audit-watchdog` on a 6-hour cadence.
+    **Doesn't fire until merge to main** (same caveat as the
+    other tribe-os crons — see the section above). Manually
+    testable via curl:
+
+    ```
+    curl -H "Authorization: Bearer $CRON_SECRET" https://tribe-v3-git-feature-tribe-os-alain-aliscas-projects.vercel.app/api/cron/tribe-os/audit-watchdog
+    ```
+
+    **What this buys you**: closes the safety loop on the audit
+    log infrastructure. Migration 082 captured what happens;
+    migration 083 added more events to capture; the viewer
+    surfaced everything for ad-hoc review; this watchdog now
+    pulls the most-likely-hostile patterns out automatically
+    so a multi-coach gym doesn't have to manually scan
+    `/os/audit` to catch problems.
+
+29. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-29. **Per-attendance trigger optimization** — migration 079 recomputes
+30. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-30. **Generator feedback loop** — use the feedback data from #5 to:
+31. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
