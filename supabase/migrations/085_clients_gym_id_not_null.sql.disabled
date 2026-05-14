@@ -1,0 +1,40 @@
+-- Migration 085 (DISABLED): make clients.gym_id NOT NULL
+--
+-- ⚠️  DO NOT APPLY until audit-legacy-auth-path.sql returns ZERO
+--    rows in the 'clients_on_legacy_only' bucket. Applying with
+--    legacy rows present will fail loudly (good — but the failure
+--    mode is "the migration aborts," not "the schema is now in a
+--    weird half-state," so you can iterate safely).
+--
+-- This is the SCHEMA half of the legacy-path retirement. The
+-- CODE half (removing the `else: scope by instructor_user_id`
+-- branches in lib/dal/clients.ts and across the routes) follows
+-- in a separate PR once this NOT NULL constraint is in place.
+--
+-- Rename this file to 085_clients_gym_id_not_null.sql when
+-- you're ready to apply.
+
+-- Step 1: make gym_id required on inserts going forward.
+ALTER TABLE public.clients
+  ALTER COLUMN gym_id SET NOT NULL;
+
+-- Step 2: drop the legacy RLS branch that allowed reads/writes
+-- via instructor_user_id matching auth.uid() without a gym.
+-- The remaining policy (gym_coaches membership) covers every
+-- legitimate path.
+--
+-- The policy names below match what migration 070 created.
+-- If your policy names differ, run:
+--   SELECT policyname FROM pg_policies WHERE tablename = 'clients';
+-- and adjust before applying.
+
+-- Example shape — uncomment + adjust based on the live policy
+-- definitions:
+--
+-- DROP POLICY IF EXISTS "clients_legacy_owner_select" ON public.clients;
+-- DROP POLICY IF EXISTS "clients_legacy_owner_insert" ON public.clients;
+-- DROP POLICY IF EXISTS "clients_legacy_owner_update" ON public.clients;
+-- DROP POLICY IF EXISTS "clients_legacy_owner_delete" ON public.clients;
+--
+-- The gym-scoped policies stay in place — they were created by
+-- migration 070 alongside the legacy ones for the dual-path window.
