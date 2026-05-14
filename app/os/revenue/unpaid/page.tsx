@@ -32,7 +32,7 @@ import Link from 'next/link';
 import { ArrowLeft, AlertCircle, DollarSign, Phone, MessageCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
-import { formatShortDate } from '@/lib/format/currency';
+import { formatCents, formatShortDate } from '@/lib/format/currency';
 import { buildWhatsAppUrl } from '@/lib/phone';
 import { trackEvent } from '@/lib/analytics';
 
@@ -46,7 +46,12 @@ interface UnpaidGroup {
   newest_unpaid_at: string;
 }
 
-type LoadState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; groups: UnpaidGroup[] };
+type SuggestedAmounts = Partial<Record<'USD' | 'COP', number>>;
+
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; groups: UnpaidGroup[]; suggestedAmounts: SuggestedAmounts };
 
 // ES PENDING VERONICA REVIEW
 const copy = {
@@ -81,6 +86,15 @@ const copy = {
       `about ${count} ${count === 1 ? 'training session' : 'training sessions'} ` +
       `since ${since} that we still need to settle up. ` +
       `Let me know how you'd like to handle it — thanks!`,
+    /** Variant of reminderTemplate that quotes a specific amount when we have one to suggest. */
+    reminderTemplateWithAmount: (name: string, count: number, since: string, amount: string) =>
+      `Hi ${name}, hope you're doing well! Just a friendly reminder ` +
+      `about ${count} ${count === 1 ? 'training session' : 'training sessions'} ` +
+      `since ${since} — that comes to about ${amount}. ` +
+      `Let me know how you'd like to handle it — thanks!`,
+    suggestedPriceHint: (price: string, currency: string) => `Typical session: ${price} ${currency}`,
+    suggestedPriceFooter: (entries: string) =>
+      `Reminder amounts are estimated from your gym's recent paid sessions (${entries}). Edit before sending.`,
   },
   es: {
     backLabel: 'Volver a ingresos',
@@ -113,6 +127,14 @@ const copy = {
       `${count} ${count === 1 ? 'sesión de entrenamiento' : 'sesiones de entrenamiento'} ` +
       `desde el ${since} que aún tenemos pendientes de pagar. ` +
       `Avísame cómo prefieres arreglarlo. ¡Gracias!`,
+    reminderTemplateWithAmount: (name: string, count: number, since: string, amount: string) =>
+      `Hola ${name}, ¡espero que estés bien! Solo te recuerdo amablemente ` +
+      `${count} ${count === 1 ? 'sesión de entrenamiento' : 'sesiones de entrenamiento'} ` +
+      `desde el ${since} — eso suma aproximadamente ${amount}. ` +
+      `Avísame cómo prefieres arreglarlo. ¡Gracias!`,
+    suggestedPriceHint: (price: string, currency: string) => `Sesión típica: ${price} ${currency}`,
+    suggestedPriceFooter: (entries: string) =>
+      `Los montos sugeridos se estiman a partir de las sesiones pagadas recientes de tu gym (${entries}). Edita antes de enviar.`,
   },
 } as const;
 
@@ -136,7 +158,7 @@ export default function UnpaidAttendancePage() {
         const res = await fetch(`/api/tribe-os/revenue/unpaid?window_days=${windowDays}`, { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
-          data?: { groups: UnpaidGroup[] };
+          data?: { groups: UnpaidGroup[]; suggested_amount_cents?: SuggestedAmounts };
           error?: string;
         };
         if (cancelled) return;
@@ -145,11 +167,14 @@ export default function UnpaidAttendancePage() {
           setRefreshing(false);
           return;
         }
-        setState({ kind: 'ready', groups: body.data.groups });
+        const suggestedAmounts = body.data.suggested_amount_cents ?? {};
+        setState({ kind: 'ready', groups: body.data.groups, suggestedAmounts });
         setRefreshing(false);
         trackEvent('tribe_os_unpaid_attendance_viewed', {
           window_days: windowDays,
           group_count: body.data.groups.length,
+          has_usd_suggestion: typeof suggestedAmounts.USD === 'number',
+          has_cop_suggestion: typeof suggestedAmounts.COP === 'number',
         });
       } catch {
         if (!cancelled) {
@@ -257,28 +282,102 @@ export default function UnpaidAttendancePage() {
             <p className="text-sm text-gray-600 max-w-md mx-auto">{s.emptyHint}</p>
           </div>
         ) : (
-          <UnpaidList groups={state.groups} copy={s} language={language} />
+          <>
+            <SuggestedPriceHint suggestedAmounts={state.suggestedAmounts} copy={s} language={language} />
+            <UnpaidList groups={state.groups} suggestedAmounts={state.suggestedAmounts} copy={s} language={language} />
+          </>
         )}
       </div>
     </div>
   );
 }
 
+/**
+ * Pick which currency to quote in the WhatsApp reminder. Right now
+ * we don't know which currency THIS client typically pays in, so we
+ * fall back to a gym-wide preference: USD if we have a suggestion
+ * there, otherwise COP. Coach edits before sending if it's wrong.
+ *
+ * Returns null when we have no suggested amount in either currency —
+ * the caller then uses the no-amount template.
+ */
+function pickCurrencyForReminder(suggested: SuggestedAmounts): 'USD' | 'COP' | null {
+  if (typeof suggested.USD === 'number') return 'USD';
+  if (typeof suggested.COP === 'number') return 'COP';
+  return null;
+}
+
+function SuggestedPriceHint({
+  suggestedAmounts,
+  copy: s,
+  language,
+}: {
+  suggestedAmounts: SuggestedAmounts;
+  copy: typeof copy.en | typeof copy.es;
+  language: 'en' | 'es';
+}) {
+  // Build one chip per currency we have a suggestion for, plus a
+  // single explanatory footer. Hidden entirely when no suggestions
+  // are available (low-volume gym with < 3 paid sessions per currency).
+  const chips: string[] = [];
+  if (typeof suggestedAmounts.USD === 'number') {
+    chips.push(s.suggestedPriceHint(formatCents(suggestedAmounts.USD, 'USD', language), 'USD'));
+  }
+  if (typeof suggestedAmounts.COP === 'number') {
+    chips.push(s.suggestedPriceHint(formatCents(suggestedAmounts.COP, 'COP', language), 'COP'));
+  }
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="bg-tribe-green/5 border border-tribe-green/30 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        {chips.map((label) => (
+          <span
+            key={label}
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-tribe-green/40 text-xs font-semibold text-tribe-green-dark rounded-full"
+          >
+            <DollarSign className="w-3 h-3" />
+            {label}
+          </span>
+        ))}
+      </div>
+      <p className="text-xs text-gray-600 mt-2 leading-relaxed">{s.suggestedPriceFooter(chips.join(' · '))}</p>
+    </div>
+  );
+}
+
 function UnpaidList({
   groups,
+  suggestedAmounts,
   copy: s,
   language,
 }: {
   groups: UnpaidGroup[];
+  suggestedAmounts: SuggestedAmounts;
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
 }) {
+  const suggestedCurrency = pickCurrencyForReminder(suggestedAmounts);
+  const suggestedUnitCents = suggestedCurrency ? suggestedAmounts[suggestedCurrency] : undefined;
+
   return (
     <ul className="space-y-2">
       {groups.map((g) => {
         const oldestDate = formatShortDate(g.oldest_unpaid_at, language);
         const newestDate = formatShortDate(g.newest_unpaid_at, language);
-        const message = s.reminderTemplate(g.client_name, g.unpaid_count, oldestDate);
+        // Build the WhatsApp message. When we have a suggested unit
+        // price, multiply by the unpaid count to give the coach a
+        // concrete number to quote ("that comes to about $60 USD").
+        // Coach can edit before sending if the actual rate differs
+        // for this member.
+        let message: string;
+        if (suggestedCurrency && suggestedUnitCents) {
+          const totalCents = suggestedUnitCents * g.unpaid_count;
+          const totalLabel = `${formatCents(totalCents, suggestedCurrency, language)} ${suggestedCurrency}`;
+          message = s.reminderTemplateWithAmount(g.client_name, g.unpaid_count, oldestDate, totalLabel);
+        } else {
+          message = s.reminderTemplate(g.client_name, g.unpaid_count, oldestDate);
+        }
         const waUrl = buildWhatsAppUrl(g.client_phone, { message });
 
         return (

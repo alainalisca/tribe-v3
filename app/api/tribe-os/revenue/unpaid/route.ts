@@ -37,9 +37,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: result.error ?? 'fetch_failed' }, { status: 500 });
     }
 
+    // Pass through both groups and the inferred typical-session price
+    // per currency. Frontend uses the suggested amount to render a
+    // hint chip and pre-fill the WhatsApp reminder with a concrete
+    // number when one is available.
     return NextResponse.json({
       success: true,
-      data: { groups: result.data ?? [] },
+      data: {
+        groups: result.data?.groups ?? [],
+        suggested_amount_cents: result.data?.suggested_amount_cents ?? {},
+      },
     });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/revenue/unpaid' });

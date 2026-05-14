@@ -1069,15 +1069,61 @@ export interface ListUnpaidAttendanceOptions {
    * monthly billing without surfacing year-old debt.
    */
   windowDays?: number;
+  /**
+   * Look-back window for the "typical session price" inference.
+   * Defaults to 180 days — wide enough to get a meaningful sample
+   * from a low-volume gym while still excluding ancient prices that
+   * may no longer reflect current rates.
+   */
+  pricingWindowDays?: number;
 }
 
 const DEFAULT_UNPAID_WINDOW_DAYS = 60;
+const DEFAULT_PRICING_WINDOW_DAYS = 180;
+const MIN_PRICING_SAMPLE_SIZE = 3;
+
+/**
+ * Result of `listUnpaidAttendance` — the grouped unpaid rows alongside
+ * inferred "typical session price" per currency.
+ */
+export interface UnpaidAttendanceResult {
+  groups: UnpaidClientGroup[];
+  /**
+   * Median paid amount per currency in cents, computed from this gym's
+   * own historical paid attendance in the pricing window. Powers a
+   * "Typical session: $20 USD" hint on /os/revenue/unpaid + lets the
+   * WhatsApp template include a specific number instead of vague
+   * "let's settle up" copy.
+   *
+   * A currency key is present only when we have at least
+   * MIN_PRICING_SAMPLE_SIZE paid rows in that currency. Smaller samples
+   * produce noisy medians ("your typical session is $1.50 because the
+   * only paid row in COP was a typo last March") — better to surface
+   * nothing than to surface garbage.
+   */
+  suggested_amount_cents: Partial<Record<Currency, number>>;
+}
+
+/**
+ * Compute the median of an integer array. Empty input → null.
+ * Uses the lower-middle for even-length arrays — we want a value
+ * that exists in the data, not an interpolated one, so the figure
+ * we surface reflects a real paid session.
+ */
+function medianCentsLowerMiddle(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  // Lower-middle index: for [10, 20, 30, 40] returns sorted[1] = 20.
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
 
 /**
  * Group every unpaid (attended, !paid) attendance row in the gym
  * into one entry per client, ordered by most-recent unpaid first
  * (the assumption being: a client with a fresh unpaid session is
- * the most likely to pay if nudged today).
+ * the most likely to pay if nudged today). Also computes a
+ * gym-wide typical session price per currency from the same gym's
+ * paid history.
  *
  * Scoping comes through RLS — the client_attendance policy already
  * scopes to the caller's clients via the parent client row.
@@ -1085,29 +1131,48 @@ const DEFAULT_UNPAID_WINDOW_DAYS = 60;
 export async function listUnpaidAttendance(
   supabase: SupabaseClient,
   opts: ListUnpaidAttendanceOptions = {}
-): Promise<DalResult<UnpaidClientGroup[]>> {
+): Promise<DalResult<UnpaidAttendanceResult>> {
   const windowDays = Math.max(1, Math.floor(opts.windowDays ?? DEFAULT_UNPAID_WINDOW_DAYS));
+  const pricingWindowDays = Math.max(1, Math.floor(opts.pricingWindowDays ?? DEFAULT_PRICING_WINDOW_DAYS));
   // Build a cutoff ISO string for the SQL filter. attended_at is the
   // event time; we keep created_at out of the filter so a freshly
   // RECORDED-but-backdated row still shows up.
   const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
+  const pricingCutoff = new Date(Date.now() - pricingWindowDays * 24 * 60 * 60 * 1000).toISOString();
 
   try {
-    const { data, error } = await supabase
-      .from('client_attendance')
-      .select(
-        `
-          attended_at, attended, paid, client_id,
-          client:clients(id, name, email, phone, archived)
-        `
-      )
-      .eq('attended', true)
-      .eq('paid', false)
-      .gte('attended_at', cutoff)
-      .order('attended_at', { ascending: false, nullsFirst: false });
+    // Parallel: unpaid rows for grouping + paid rows for price
+    // inference. RLS scopes both reads to the caller's clients.
+    const [unpaidRes, pricingRes] = await Promise.all([
+      supabase
+        .from('client_attendance')
+        .select(
+          `
+            attended_at, attended, paid, client_id,
+            client:clients(id, name, email, phone, archived)
+          `
+        )
+        .eq('attended', true)
+        .eq('paid', false)
+        .gte('attended_at', cutoff)
+        .order('attended_at', { ascending: false, nullsFirst: false }),
+      supabase
+        .from('client_attendance')
+        .select('amount_paid_cents, currency')
+        .eq('paid', true)
+        .gte('attended_at', pricingCutoff)
+        .not('amount_paid_cents', 'is', null)
+        .not('currency', 'is', null),
+    ]);
+    const { data, error } = unpaidRes;
     if (error) {
       logError(error, { action: 'listUnpaidAttendance' });
       return { success: false, error: error.message };
+    }
+    if (pricingRes.error) {
+      // Don't fail the whole request over a pricing read; the page
+      // still renders without the typical-price hint.
+      logError(pricingRes.error, { action: 'listUnpaidAttendance.pricing' });
     }
 
     // Group client-side. Could push this into a SQL view, but the
@@ -1153,7 +1218,29 @@ export async function listUnpaidAttendance(
       b.newest_unpaid_at.localeCompare(a.newest_unpaid_at)
     );
 
-    return { success: true, data: result };
+    // Bucket paid amounts by currency, then take the median per
+    // bucket if we have a meaningful sample. The MIN_PRICING_SAMPLE_SIZE
+    // floor protects against absurd values from a one-off price typo.
+    const byCurrency = new Map<Currency, number[]>();
+    for (const row of pricingRes.data ?? []) {
+      const cents = row.amount_paid_cents as number | null;
+      const currency = row.currency as Currency | null;
+      if (!cents || !currency || cents <= 0) continue;
+      const bucket = byCurrency.get(currency) ?? [];
+      bucket.push(cents);
+      byCurrency.set(currency, bucket);
+    }
+    const suggestedAmounts: Partial<Record<Currency, number>> = {};
+    for (const [currency, values] of byCurrency.entries()) {
+      if (values.length < MIN_PRICING_SAMPLE_SIZE) continue;
+      const median = medianCentsLowerMiddle(values);
+      if (median !== null) suggestedAmounts[currency] = median;
+    }
+
+    return {
+      success: true,
+      data: { groups: result, suggested_amount_cents: suggestedAmounts },
+    };
   } catch (error) {
     logError(error, { action: 'listUnpaidAttendance.exception' });
     return { success: false, error: 'Failed to load unpaid attendance' };
