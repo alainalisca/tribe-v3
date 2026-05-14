@@ -80,6 +80,10 @@ const copy = {
     emptyTitle: 'No entries yet',
     emptyHint:
       'Audit entries are written when someone archives or purges a client. As soon as that happens here, this list fills up — newest first.',
+    emptyFilteredTitle: 'No entries match these filters',
+    emptyFilteredHint:
+      "Try widening the time range or clearing one of the filters. There's likely more activity outside the current selection.",
+    clearFiltersCta: 'Clear filters',
     actorDeleted: 'Deleted user',
     unknownActor: 'Unknown',
     noPayload: '—',
@@ -121,6 +125,10 @@ const copy = {
     emptyTitle: 'Aún sin registros',
     emptyHint:
       'Las entradas se generan cuando alguien archiva o elimina un cliente. En cuanto eso pase aquí, esta lista se llenará — las más recientes primero.',
+    emptyFilteredTitle: 'No hay entradas con estos filtros',
+    emptyFilteredHint:
+      'Prueba ampliar el rango de fechas o quitar uno de los filtros. Seguramente hay más actividad fuera de la selección actual.',
+    clearFiltersCta: 'Limpiar filtros',
     actorDeleted: 'Usuario eliminado',
     unknownActor: 'Desconocido',
     noPayload: '—',
@@ -372,11 +380,37 @@ export default function AuditPage() {
             </button>
           </div>
         ) : state.entries.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-2">
-            <ScrollText className="w-8 h-8 text-gray-400 mx-auto" />
-            <h2 className="text-base font-bold text-gray-900">{s.emptyTitle}</h2>
-            <p className="text-sm text-gray-600 max-w-md mx-auto">{s.emptyHint}</p>
-          </div>
+          (() => {
+            // Differentiate "no events ever" from "no events matching
+            // these filters." The latter case is recoverable — show
+            // a clear-filters CTA so the user doesn't conclude the
+            // log is broken.
+            const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all');
+            return (
+              <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-3">
+                <ScrollText className="w-8 h-8 text-gray-400 mx-auto" />
+                <h2 className="text-base font-bold text-gray-900">
+                  {hasFilters ? s.emptyFilteredTitle : s.emptyTitle}
+                </h2>
+                <p className="text-sm text-gray-600 max-w-md mx-auto">
+                  {hasFilters ? s.emptyFilteredHint : s.emptyHint}
+                </p>
+                {hasFilters ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionFilter('');
+                      setTargetFilter('');
+                      setDateRange('all');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 mt-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-lg hover:bg-tribe-green-dark hover:text-white transition-colors"
+                  >
+                    {s.clearFiltersCta}
+                  </button>
+                ) : null}
+              </div>
+            );
+          })()
         ) : (
           <AuditTable entries={state.entries} copy={s} language={language} />
         )}
