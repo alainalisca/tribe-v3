@@ -178,3 +178,95 @@ export async function listAuditEntries(
     return { success: false, error: 'Failed to load audit log' };
   }
 }
+
+// ------------------------------------------------------------------
+// CSV export
+// ------------------------------------------------------------------
+
+/** Hard cap on rows in a single audit export. */
+const MAX_AUDIT_CSV_ROWS = 5000;
+
+export interface GenerateAuditCsvOpts {
+  action?: string;
+  targetType?: string;
+  /** ISO lower bound on created_at (inclusive). */
+  fromIso?: string;
+  /** ISO upper bound on created_at (inclusive). */
+  toIso?: string;
+}
+
+/**
+ * Generate a CSV body for the gym's audit log. Columns:
+ *   created_at | action | target_type | target_id |
+ *   actor_name | actor_email | payload (JSON-stringified)
+ *
+ * Joins to users for actor display fields — same as listAuditEntries.
+ * Rows where the actor was deleted (ON DELETE SET NULL fired)
+ * render as empty actor_name / actor_email cells; we never invent
+ * "Deleted user" text in the export because the file is a record
+ * for auditors, not a UI.
+ *
+ * Caps at MAX_AUDIT_CSV_ROWS. Past that the file gets unwieldy for
+ * Excel; if a gym genuinely needs more, the date-range filter is
+ * the right escape hatch.
+ */
+export async function generateAuditLogCsv(
+  supabase: SupabaseClient,
+  gymId: string,
+  opts: GenerateAuditCsvOpts = {}
+): Promise<DalResult<string>> {
+  try {
+    let query = supabase
+      .from('gym_audit_log')
+      .select(
+        `
+          created_at, action, target_type, target_id, payload,
+          actor:users!actor_user_id(name, email)
+        `
+      )
+      .eq('gym_id', gymId)
+      .order('created_at', { ascending: false })
+      .limit(MAX_AUDIT_CSV_ROWS);
+
+    if (opts.action) query = query.eq('action', opts.action);
+    if (opts.targetType) query = query.eq('target_type', opts.targetType);
+    if (opts.fromIso) query = query.gte('created_at', opts.fromIso);
+    if (opts.toIso) query = query.lte('created_at', opts.toIso);
+
+    const { data, error } = await query;
+    if (error) {
+      logError(error, { action: 'generateAuditLogCsv', gymId });
+      return { success: false, error: error.message };
+    }
+
+    // Build the CSV body in-process. The rows-to-CSV helper lives in
+    // lib/csv/serialize.ts but we don't import it here to keep the
+    // DAL free of NextResponse / view-layer dependencies. We inline
+    // the same escape rules.
+    const headers = ['created_at', 'action', 'target_type', 'target_id', 'actor_name', 'actor_email', 'payload'];
+    const escape = (val: string): string => (/["\,\n\r]/.test(val) ? `"${val.replace(/"/g, '""')}"` : val);
+    const rowToLine = (cells: string[]) => cells.map(escape).join(',');
+
+    const lines: string[] = [rowToLine(headers)];
+    for (const row of data ?? []) {
+      const actor = row.actor as unknown as { name: string | null; email: string | null } | null;
+      const payload = row.payload as Record<string, unknown> | null;
+      lines.push(
+        rowToLine([
+          (row.created_at as string) ?? '',
+          (row.action as string) ?? '',
+          (row.target_type as string) ?? '',
+          (row.target_id as string | null) ?? '',
+          actor?.name ?? '',
+          actor?.email ?? '',
+          payload ? JSON.stringify(payload) : '',
+        ])
+      );
+    }
+
+    return { success: true, data: lines.join('\r\n') };
+  } catch (error) {
+    logError(error, { action: 'generateAuditLogCsv.exception', gymId });
+    return { success: false, error: 'Failed to generate audit CSV' };
+  }
+}

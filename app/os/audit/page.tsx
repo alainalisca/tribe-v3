@@ -22,10 +22,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, ScrollText, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ScrollText, RefreshCw, Download } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatShortDate } from '@/lib/format/currency';
+import { trackEvent } from '@/lib/analytics';
 
 interface AuditRow {
   id: string;
@@ -52,6 +53,7 @@ const copy = {
     errorRetry: 'Retry',
     refresh: 'Refresh',
     refreshing: 'Refreshing',
+    exportCsv: 'Export CSV',
     filterAllActions: 'All actions',
     filterAllTargets: 'All target types',
     limitLabel: 'Show',
@@ -83,6 +85,7 @@ const copy = {
     errorRetry: 'Reintentar',
     refresh: 'Actualizar',
     refreshing: 'Actualizando',
+    exportCsv: 'Exportar CSV',
     filterAllActions: 'Todas las acciones',
     filterAllTargets: 'Todos los tipos',
     limitLabel: 'Mostrar',
@@ -222,15 +225,34 @@ export default function AuditPage() {
               <p className="text-sm text-tribe-dark-80 mt-1">{s.pageSubtitle}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setReloadKey((k) => k + 1)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? s.refreshing : s.refresh}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* CSV export — preserves the current filter state so
+                "filter to client.purge and export" works as one
+                action. Anchor (not button) so right-click → Save
+                Link As works for power users. */}
+            <a
+              href={buildExportUrl(actionFilter, targetFilter)}
+              onClick={() =>
+                trackEvent('tribe_os_audit_exported', {
+                  action_filter: actionFilter || null,
+                  target_filter: targetFilter || null,
+                })
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              {s.exportCsv}
+            </a>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-sm font-semibold text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? s.refreshing : s.refresh}
+            </button>
+          </div>
         </header>
 
         {/* Filters bar */}
@@ -407,6 +429,20 @@ function formatRelativeAndExact(iso: string, language: 'en' | 'es'): string {
     minute: '2-digit',
   });
   return `${datePart} · ${timePart}`;
+}
+
+/**
+ * Build the audit CSV export URL with the current filter state.
+ * The export endpoint accepts the same params as the in-page
+ * listing, so "filter to client.purge and export" produces a CSV
+ * matching exactly what's on screen.
+ */
+function buildExportUrl(actionFilter: string, targetFilter: string): string {
+  const params = new URLSearchParams();
+  if (actionFilter) params.set('action', actionFilter);
+  if (targetFilter) params.set('target_type', targetFilter);
+  const qs = params.toString();
+  return qs ? `/api/tribe-os/audit/export?${qs}` : '/api/tribe-os/audit/export';
 }
 
 /**
