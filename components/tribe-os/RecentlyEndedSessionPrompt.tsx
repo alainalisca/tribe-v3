@@ -142,54 +142,50 @@ export default function RecentlyEndedSessionPrompt() {
         <p className="text-xs text-tribe-dark-80 mt-1">{s.subtitle}</p>
       </CardHeader>
       <CardContent className="p-0">
-        {state.kind === 'loading' ? (
-          <div className="px-6 py-4 space-y-2">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-14 bg-tribe-dark-40 rounded-tribe animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <ul className="divide-y divide-tribe-dark-40">
-            {state.sessions.map((sess) => {
-              const sportLabel =
-                sportTranslations[sess.sport as keyof typeof sportTranslations]?.[language] ?? sess.sport;
-              const title = sess.title || sportLabel || s.untitled;
-              return (
-                <li key={sess.id}>
-                  <Link
-                    href={`/os/sessions/${sess.id}/attendance`}
-                    onClick={() =>
-                      trackEvent('tribe_os_recently_ended_prompt_clicked', {
-                        session_id: sess.id,
-                        minutes_since_ended: sess.minutes_since_ended,
-                      })
-                    }
-                    aria-label={s.ctaAria}
-                    className="flex items-center justify-between gap-3 px-6 py-3 hover:bg-tribe-green/5 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-tribe-dark truncate">{title}</p>
-                      <p className="text-xs text-tribe-dark-80 mt-0.5 inline-flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" aria-hidden="true" />
-                        {s.minutesAgoLabel(sess.minutes_since_ended)}
-                        {sess.current_participants > 0 ? (
-                          <>
-                            <span aria-hidden="true">·</span>
-                            <span>{s.sessionCountLabel(sess.current_participants)}</span>
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-tribe-green-dark whitespace-nowrap">
-                      {s.ctaLabel}
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        {/* The three early-returns above this Card narrow state.kind
+            to 'ready' by elimination. The loading-skeleton branch
+            stayed in the JSX after the early-return fix and tsc now
+            (correctly) flags it as unreachable. Render only the list. */}
+        <ul className="divide-y divide-tribe-dark-40">
+          {state.sessions.map((sess) => {
+            const sportLabel =
+              sportTranslations[sess.sport as keyof typeof sportTranslations]?.[language] ?? sess.sport;
+            const title = sess.title || sportLabel || s.untitled;
+            return (
+              <li key={sess.id}>
+                <Link
+                  href={`/os/sessions/${sess.id}/attendance`}
+                  onClick={() =>
+                    trackEvent('tribe_os_recently_ended_prompt_clicked', {
+                      session_id: sess.id,
+                      minutes_since_ended: sess.minutes_since_ended,
+                    })
+                  }
+                  aria-label={s.ctaAria}
+                  className="flex items-center justify-between gap-3 px-6 py-3 hover:bg-tribe-green/5 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-tribe-dark truncate">{title}</p>
+                    <p className="text-xs text-tribe-dark-80 mt-0.5 inline-flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" aria-hidden="true" />
+                      {s.minutesAgoLabel(sess.minutes_since_ended)}
+                      {sess.current_participants > 0 ? (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span>{s.sessionCountLabel(sess.current_participants)}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-tribe-green-dark whitespace-nowrap">
+                    {s.ctaLabel}
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </CardContent>
     </Card>
   );
