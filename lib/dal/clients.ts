@@ -262,7 +262,29 @@ export interface ListClientsFilters {
   status?: ClientStatus;
   /** Sort order. Defaults to `last_seen_desc`. */
   sort?: ClientListSort;
+  /**
+   * Pagination: when set, scopes the result to a window of clients
+   * ordered by created_at DESC (stable, db-side). The TS-side
+   * complex sort (last_seen_desc) is bypassed in this mode because
+   * paginating an in-memory sort would need the full dataset
+   * loaded — defeating the point.
+   *
+   * Use the `meta.hasMore` flag in the response to drive a
+   * 'load more' UI without an extra count query.
+   */
+  limit?: number;
+  /** 0-indexed offset for the page. Combined with limit. */
+  offset?: number;
 }
+
+export interface ListClientsResult {
+  items: ClientWithStats[];
+  /** Always present when limit/offset were supplied; useful for 'load more' buttons. */
+  hasMore: boolean;
+}
+
+const MAX_LIST_LIMIT = 200;
+const DEFAULT_LIST_LIMIT = 100;
 
 const CLIENT_SELECT =
   'id, instructor_user_id, gym_id, name, email, phone, contact_info, notes, tags, status, health_notes, last_seen_at, archived, archived_at, created_at, updated_at, churn_risk_score, churn_risk_updated_at, health_status, total_sessions, sessions_last_30_days, current_streak_days, longest_streak_days';
@@ -454,6 +476,18 @@ export async function listClients(
   const ctx: ClientTenantContext = typeof context === 'string' ? { gymId: null, instructorUserId: context } : context;
   const instructorUserId = ctx.instructorUserId;
   const gymId = ctx.gymId;
+
+  // Pagination mode: when limit/offset are set, we paginate
+  // server-side. The DB-side order is fixed to created_at DESC
+  // (stable, indexed). The TS-side last_seen_desc/name_asc/etc
+  // sort is bypassed because applying it in-memory would need
+  // the full dataset loaded, which defeats the point of paging.
+  const isPaginated = filters?.limit !== undefined || filters?.offset !== undefined;
+  const limit = isPaginated
+    ? Math.min(MAX_LIST_LIMIT, Math.max(1, Math.floor(filters?.limit ?? DEFAULT_LIST_LIMIT)))
+    : undefined;
+  const offset = isPaginated ? Math.max(0, Math.floor(filters?.offset ?? 0)) : undefined;
+
   try {
     // Filter strategy: when we have a gymId, scope by gym (preferred,
     // catches rows owned by any coach in the gym). When we only have
@@ -481,6 +515,17 @@ export async function listClients(
       // filter-pill UI on /os/clients). The status column has a CHECK
       // constraint so the value space is bounded.
       q = q.eq('status', filters.status);
+    }
+
+    // Pagination mode: db-side order + range. Stable order by
+    // created_at DESC, id DESC. The route can detect end-of-set by
+    // checking whether the returned row count equals the requested
+    // limit — if it's less, the next page would be empty.
+    if (isPaginated && limit !== undefined && offset !== undefined) {
+      q = q
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(offset, offset + limit - 1);
     }
 
     const { data: clients, error: clientsErr } = await q;
@@ -528,25 +573,31 @@ export async function listClients(
     });
 
     const sortKey: ClientListSort = filters?.sort ?? 'last_seen_desc';
-    enriched.sort((a, b) => {
-      switch (sortKey) {
-        case 'name_asc':
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        case 'created_desc':
-          return b.created_at.localeCompare(a.created_at);
-        case 'last_seen_desc':
-        default:
-          // Most recent attendance first, NULLS last. Tie-break
-          // by created_at desc so two clients who've never been
-          // marked attended sort by newest-added first.
-          if (a.last_attendance_at && b.last_attendance_at) {
-            return b.last_attendance_at.localeCompare(a.last_attendance_at);
-          }
-          if (a.last_attendance_at) return -1;
-          if (b.last_attendance_at) return 1;
-          return b.created_at.localeCompare(a.created_at);
-      }
-    });
+    // Skip the in-TS sort in pagination mode — the rows are
+    // already ordered by created_at DESC at the DB layer, and
+    // reordering them in-memory would break the page boundary
+    // semantics (page 2's "first row" would shift around).
+    if (!isPaginated) {
+      enriched.sort((a, b) => {
+        switch (sortKey) {
+          case 'name_asc':
+            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+          case 'created_desc':
+            return b.created_at.localeCompare(a.created_at);
+          case 'last_seen_desc':
+          default:
+            // Most recent attendance first, NULLS last. Tie-break
+            // by created_at desc so two clients who've never been
+            // marked attended sort by newest-added first.
+            if (a.last_attendance_at && b.last_attendance_at) {
+              return b.last_attendance_at.localeCompare(a.last_attendance_at);
+            }
+            if (a.last_attendance_at) return -1;
+            if (b.last_attendance_at) return 1;
+            return b.created_at.localeCompare(a.created_at);
+        }
+      });
+    }
 
     return { success: true, data: enriched };
   } catch (error) {

@@ -212,5 +212,13 @@ export const ListClientsQuerySchema = z.object({
   status: statusSchema.optional(),
   /** Sort order. Defaults to last_seen_desc when omitted. */
   sort: sortSchema.optional(),
+  /**
+   * Pagination. Both honored together — passing one without the
+   * other still triggers pagination mode (offset defaults to 0).
+   * The DAL hard-caps limit at 200; values beyond that are clamped
+   * rather than rejected so a UI bug can't 400 the page.
+   */
+  limit: z.coerce.number().int().positive().max(200).optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 export type ListClientsQuery = z.infer<typeof ListClientsQuerySchema>;

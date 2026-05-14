@@ -96,6 +96,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       tag: url.searchParams.get('tag') ?? undefined,
       status: url.searchParams.get('status') ?? undefined,
       sort: url.searchParams.get('sort') ?? undefined,
+      limit: url.searchParams.get('limit') ?? undefined,
+      offset: url.searchParams.get('offset') ?? undefined,
     };
 
     let parsed;
@@ -108,6 +110,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw error;
     }
 
+    // Detect pagination mode (?limit= or ?offset= present). When paged,
+    // we add a `meta.hasMore` field so the UI can render a 'load more'
+    // affordance without an extra count query. Detection trick: ask the
+    // DAL for `limit + 1` rows; if we get more than `limit` back, the
+    // next page exists. The extra row is sliced off before returning.
+    const isPaginated = parsed.limit !== undefined || parsed.offset !== undefined;
+    const pageSize = parsed.limit ?? 100;
+    const pageOffset = parsed.offset ?? 0;
+
     // Prefer gym context when available — listClients scopes by gym_id
     // for multi-coach correctness. Without a gym, fall through to the
     // legacy instructor_user_id path.
@@ -119,12 +130,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         tag: parsed.tag,
         status: parsed.status,
         sort: parsed.sort,
+        ...(isPaginated ? { limit: pageSize + 1, offset: pageOffset } : {}),
       }
     );
 
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'list_failed' }, { status: 500 });
     }
+
+    if (isPaginated) {
+      const fetched = result.data ?? [];
+      const hasMore = fetched.length > pageSize;
+      const items = hasMore ? fetched.slice(0, pageSize) : fetched;
+      return NextResponse.json({
+        success: true,
+        data: items,
+        meta: { hasMore, offset: pageOffset, limit: pageSize, returned: items.length },
+      });
+    }
+
     return NextResponse.json({ success: true, data: result.data ?? [] });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/clients' });
