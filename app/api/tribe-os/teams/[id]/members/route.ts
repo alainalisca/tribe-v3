@@ -20,6 +20,7 @@ import { ZodError } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { TeamMembershipInputSchema } from '@/lib/validations/teams';
 
 function firstZodMessage(error: ZodError): string {
@@ -132,12 +133,47 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
     }
 
+    // Detect whether this is a true add (vs an idempotent no-op
+    // re-add). The audit log should only carry state changes, not
+    // syntactic calls. Check membership BEFORE the upsert.
+    const { data: existing } = await service
+      .from('gym_team_members')
+      .select('client_id')
+      .eq('team_id', teamId)
+      .eq('client_id', parsed.client_id)
+      .maybeSingle();
+    const wasAlreadyMember = !!existing;
+
     const { error: insertErr } = await service
       .from('gym_team_members')
       .upsert({ team_id: teamId, client_id: parsed.client_id }, { onConflict: 'team_id,client_id' });
     if (insertErr) {
       logError(insertErr, { action: 'teams.members.add', teamId, clientId: parsed.client_id });
       return NextResponse.json({ success: false, error: insertErr.message }, { status: 500 });
+    }
+
+    if (!wasAlreadyMember) {
+      // Capture team name + client name from earlier queries so the
+      // audit payload reads cleanly without forcing the reader to
+      // resolve UUIDs back to names.
+      const { data: teamName } = await service.from('gym_teams').select('name').eq('id', teamId).maybeSingle();
+      const { data: clientName } = await service
+        .from('clients')
+        .select('name')
+        .eq('id', parsed.client_id)
+        .maybeSingle();
+      await writeAuditEntry(supabase, {
+        gymId: auth.gymId,
+        actorUserId: userId,
+        action: 'team.member_add',
+        targetType: 'team',
+        targetId: teamId,
+        payload: {
+          client_id: parsed.client_id,
+          client_name: (clientName as { name?: string } | null)?.name ?? null,
+          team_name: (teamName as { name?: string } | null)?.name ?? null,
+        },
+      });
     }
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -174,6 +210,11 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'server_misconfigured' }, { status: 500 });
     }
 
+    // Snapshot names BEFORE the delete so the audit row carries
+    // human-readable context. Cheap, single-column queries.
+    const { data: teamName } = await service.from('gym_teams').select('name').eq('id', teamId).maybeSingle();
+    const { data: clientName } = await service.from('clients').select('name').eq('id', clientId).maybeSingle();
+
     const { error: delErr, count } = await service
       .from('gym_team_members')
       .delete({ count: 'exact' })
@@ -183,6 +224,25 @@ export async function DELETE(
       logError(delErr, { action: 'teams.members.remove', teamId, clientId });
       return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
     }
+
+    // Only audit on real removal (count > 0). Matches the discipline
+    // established in coach.remove: a no-op delete shouldn't muddy the
+    // log.
+    if ((count ?? 0) > 0) {
+      await writeAuditEntry(supabase, {
+        gymId: auth.gymId,
+        actorUserId: userId,
+        action: 'team.member_remove',
+        targetType: 'team',
+        targetId: teamId,
+        payload: {
+          client_id: clientId,
+          client_name: (clientName as { name?: string } | null)?.name ?? null,
+          team_name: (teamName as { name?: string } | null)?.name ?? null,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true, data: { removed_count: count ?? 0 } });
   } catch (error) {
     logError(error, { route: 'DELETE /api/tribe-os/teams/[id]/members' });

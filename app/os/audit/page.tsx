@@ -170,6 +170,8 @@ const ACTION_LABELS: Record<string, { en: string; es: string }> = {
   'team.create': { en: 'Team created', es: 'Equipo creado' },
   'team.update': { en: 'Team updated', es: 'Equipo actualizado' },
   'team.delete': { en: 'Team deleted', es: 'Equipo eliminado' },
+  'team.member_add': { en: 'Member added to team', es: 'Miembro agregado al equipo' },
+  'team.member_remove': { en: 'Member removed from team', es: 'Miembro removido del equipo' },
 };
 
 const TARGET_LABELS: Record<string, { en: string; es: string }> = {
@@ -235,6 +237,14 @@ const ACTION_DESCRIPTIONS: Record<string, { en: string; es: string }> = {
   'team.delete': {
     en: 'A team was deleted. Its members keep all their data — only the team grouping is removed. The payload records how many members were in the team at delete time.',
     es: 'Se eliminó un equipo. Sus miembros conservan toda su información — solo se elimina la agrupación. El registro guarda cuántos miembros tenía al borrar.',
+  },
+  'team.member_add': {
+    en: 'A client was added to a team. The audit row captures both the team name and the client name so a forensic reader doesn’t have to resolve UUIDs.',
+    es: 'Se agregó un cliente al equipo. El registro guarda tanto el nombre del equipo como del cliente para no tener que resolver UUIDs.',
+  },
+  'team.member_remove': {
+    en: 'A client was removed from a team. The client’s data is untouched — only their team membership is. The audit row carries the team and client names at the time of removal.',
+    es: 'Se quitó un cliente del equipo. Los datos del cliente no se tocan — solo su membresía al equipo. El registro guarda los nombres del equipo y del cliente al momento de la acción.',
   },
 };
 
