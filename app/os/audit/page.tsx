@@ -20,9 +20,9 @@
  * speed-to-answer matters more than rich visualization.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, ScrollText, RefreshCw, Download } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ScrollText, RefreshCw, Download, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatShortDate } from '@/lib/format/currency';
@@ -72,6 +72,11 @@ const copy = {
     columnTarget: 'Target',
     columnActor: 'Actor',
     columnDetails: 'Details',
+    toggleDetails: 'Toggle details',
+    detailEventTime: 'Event time (UTC)',
+    detailTargetId: 'Target ID',
+    detailActorEmail: 'Actor email',
+    detailPayload: 'Payload',
     emptyTitle: 'No entries yet',
     emptyHint:
       'Audit entries are written when someone archives or purges a client. As soon as that happens here, this list fills up — newest first.',
@@ -108,6 +113,11 @@ const copy = {
     columnTarget: 'Objetivo',
     columnActor: 'Actor',
     columnDetails: 'Detalles',
+    toggleDetails: 'Ver detalles',
+    detailEventTime: 'Hora del evento (UTC)',
+    detailTargetId: 'ID del objetivo',
+    detailActorEmail: 'Correo del actor',
+    detailPayload: 'Datos',
     emptyTitle: 'Aún sin registros',
     emptyHint:
       'Las entradas se generan cuando alguien archiva o elimina un cliente. En cuanto eso pase aquí, esta lista se llenará — las más recientes primero.',
@@ -384,12 +394,27 @@ function AuditTable({
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
 }) {
+  // Track which rows are expanded so the user can read the full
+  // payload. Click anywhere on the row to toggle. Multiple rows
+  // can be expanded at once — forensic work often involves
+  // comparing two events side by side.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  function toggle(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       {/* Desktop table */}
       <table className="hidden md:table w-full text-sm">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr className="text-left text-xs font-semibold uppercase tracking-[0.06em] text-gray-500">
+            <th className="px-4 py-3 w-6" aria-label={s.toggleDetails}></th>
             <th className="px-4 py-3">{s.columnWhen}</th>
             <th className="px-4 py-3">{s.columnAction}</th>
             <th className="px-4 py-3">{s.columnTarget}</th>
@@ -398,61 +423,141 @@ function AuditTable({
           </tr>
         </thead>
         <tbody>
-          {entries.map((row) => (
-            <tr key={row.id} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                {formatRelativeAndExact(row.created_at, language)}
-              </td>
-              <td className="px-4 py-3 font-semibold text-gray-900">
-                {ACTION_LABELS[row.action]?.[language] ?? row.action}
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                <span className="inline-flex items-center gap-1.5">
-                  <span>{TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}</span>
-                  {row.target_id ? (
-                    <code className="text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
-                  ) : null}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                {row.actor ? row.actor.name || row.actor.email || s.unknownActor : s.actorDeleted}
-              </td>
-              <td className="px-4 py-3 text-gray-600 max-w-md">
-                {row.payload ? (
-                  <code className="text-xs font-mono text-gray-700 block truncate">{formatPayload(row.payload)}</code>
-                ) : (
-                  <span className="text-gray-400">{s.noPayload}</span>
-                )}
-              </td>
-            </tr>
-          ))}
+          {entries.map((row) => {
+            const isOpen = expanded.has(row.id);
+            return (
+              <Fragment key={row.id}>
+                <tr
+                  className={`border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer ${
+                    isOpen ? 'bg-gray-50' : ''
+                  }`}
+                  onClick={() => toggle(row.id)}
+                  aria-expanded={isOpen}
+                >
+                  <td className="px-4 py-3 text-gray-400">
+                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {formatRelativeAndExact(row.created_at, language)}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-gray-900">
+                    {ACTION_LABELS[row.action]?.[language] ?? row.action}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}</span>
+                      {row.target_id ? (
+                        <code className="text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
+                      ) : null}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {row.actor ? row.actor.name || row.actor.email || s.unknownActor : s.actorDeleted}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 max-w-md">
+                    {row.payload ? (
+                      <code className="text-xs font-mono text-gray-700 block truncate">
+                        {formatPayload(row.payload)}
+                      </code>
+                    ) : (
+                      <span className="text-gray-400">{s.noPayload}</span>
+                    )}
+                  </td>
+                </tr>
+                {isOpen ? (
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <td colSpan={6} className="px-4 py-3">
+                      <ExpandedDetail row={row} copy={s} />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
 
       {/* Mobile stacked list — the table doesn't fit on phones. */}
       <ul className="md:hidden divide-y divide-gray-100">
-        {entries.map((row) => (
-          <li key={row.id} className="p-4 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-gray-900">{ACTION_LABELS[row.action]?.[language] ?? row.action}</p>
-              <p className="text-xs text-gray-500 whitespace-nowrap">
-                {formatRelativeAndExact(row.created_at, language)}
-              </p>
-            </div>
-            <p className="text-xs text-gray-600">
-              {TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}
-              {row.target_id ? (
-                <code className="ml-1.5 text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
+        {entries.map((row) => {
+          const isOpen = expanded.has(row.id);
+          return (
+            <li key={row.id} className={`p-4 space-y-1 ${isOpen ? 'bg-gray-50' : ''}`}>
+              <button type="button" onClick={() => toggle(row.id)} aria-expanded={isOpen} className="w-full text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-gray-900 inline-flex items-center gap-1.5">
+                    <ChevronRight
+                      className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                    />
+                    {ACTION_LABELS[row.action]?.[language] ?? row.action}
+                  </p>
+                  <p className="text-xs text-gray-500 whitespace-nowrap">
+                    {formatRelativeAndExact(row.created_at, language)}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-600 pl-5">
+                  {TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}
+                  {row.target_id ? (
+                    <code className="ml-1.5 text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
+                  ) : null}
+                  {' · '}
+                  {row.actor ? row.actor.name || row.actor.email || s.unknownActor : s.actorDeleted}
+                </p>
+                {row.payload && !isOpen ? (
+                  <code className="block pl-5 text-xs font-mono text-gray-700 break-all">
+                    {formatPayload(row.payload)}
+                  </code>
+                ) : null}
+              </button>
+              {isOpen ? (
+                <div className="pl-5 pt-2">
+                  <ExpandedDetail row={row} copy={s} />
+                </div>
               ) : null}
-              {' · '}
-              {row.actor ? row.actor.name || row.actor.email || s.unknownActor : s.actorDeleted}
-            </p>
-            {row.payload ? (
-              <code className="block text-xs font-mono text-gray-700 break-all">{formatPayload(row.payload)}</code>
-            ) : null}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Expanded detail panel for one audit row. Shows the full payload
+ * as pretty-printed JSON plus the rarely-needed metadata (full
+ * target_id, exact ISO timestamp) that the summary line truncates.
+ */
+function ExpandedDetail({ row, copy: s }: { row: AuditRow; copy: typeof copy.en | typeof copy.es }) {
+  return (
+    <div className="space-y-2">
+      <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+        <div>
+          <dt className="text-gray-500 font-semibold">{s.detailEventTime}</dt>
+          <dd className="text-gray-900 font-mono">{row.created_at}</dd>
+        </div>
+        {row.target_id ? (
+          <div>
+            <dt className="text-gray-500 font-semibold">{s.detailTargetId}</dt>
+            <dd className="text-gray-900 font-mono break-all">{row.target_id}</dd>
+          </div>
+        ) : null}
+        {row.actor?.email ? (
+          <div>
+            <dt className="text-gray-500 font-semibold">{s.detailActorEmail}</dt>
+            <dd className="text-gray-900 font-mono break-all">{row.actor.email}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <div>
+        <p className="text-xs text-gray-500 font-semibold mb-1">{s.detailPayload}</p>
+        {row.payload ? (
+          <pre className="text-xs font-mono text-gray-800 bg-white border border-gray-200 rounded-lg p-3 overflow-auto whitespace-pre-wrap break-all max-h-72">
+            {JSON.stringify(row.payload, null, 2)}
+          </pre>
+        ) : (
+          <p className="text-xs text-gray-400 italic">{s.noPayload}</p>
+        )}
+      </div>
     </div>
   );
 }
