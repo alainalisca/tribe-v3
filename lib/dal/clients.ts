@@ -1279,6 +1279,14 @@ export interface ListAtRiskClientsOptions {
   thresholdDays?: number;
   /** Max rows to return. Defaults to 25. */
   limit?: number;
+  /**
+   * Filter to members of one team only. Multi-team gyms (Morning
+   * Crew, Evening Crew, Competition Squad) use this to scope the
+   * widget per coach's responsibility. When omitted, returns
+   * everyone in the gym/instructor scope regardless of team
+   * membership — preserves the original behavior.
+   */
+  teamId?: string;
 }
 
 /**
@@ -1318,15 +1326,27 @@ export async function listAtRiskClients(
     cutoff.setUTCDate(cutoff.getUTCDate() - thresholdDays);
     const cutoffIso = cutoff.toISOString();
 
-    let q = supabase
-      .from('clients')
-      .select('id, name, email, phone, status, health_status, churn_risk_score, last_seen_at, created_at')
-      .eq('archived', false);
+    // When a team filter is in play, INNER-JOIN through
+    // gym_team_members so PostgREST acts as a filter that drops
+    // any client without a matching team membership. The selected
+    // shape `team_membership:gym_team_members!inner(team_id)`
+    // lets us subsequently `.eq('team_membership.team_id', teamId)`
+    // to scope the join. Without a team filter we use the plain
+    // SELECT — no extra cost on the common path.
+    const baseSelect = options.teamId
+      ? 'id, name, email, phone, status, health_status, churn_risk_score, last_seen_at, created_at, team_membership:gym_team_members!inner(team_id)'
+      : 'id, name, email, phone, status, health_status, churn_risk_score, last_seen_at, created_at';
+
+    let q = supabase.from('clients').select(baseSelect).eq('archived', false);
 
     if (gymId) {
       q = q.eq('gym_id', gymId);
     } else {
       q = q.eq('instructor_user_id', instructorUserId);
+    }
+
+    if (options.teamId) {
+      q = q.eq('team_membership.team_id', options.teamId);
     }
 
     // FOUR OR branches now that the AI scoring populates
@@ -1356,7 +1376,12 @@ export async function listAtRiskClients(
       return { success: false, error: error.message };
     }
 
-    const rows = (data ?? []) as Array<{
+    // The dynamic select string defeats PostgREST's static parser
+    // when teamId is set (it can't statically know the join shape).
+    // Double-cast through unknown to take responsibility for the row
+    // shape ourselves — the AS contract is still enforced by the
+    // explicit interface below.
+    const rows = (data ?? []) as unknown as Array<{
       id: string;
       name: string;
       email: string | null;
@@ -1426,6 +1451,12 @@ export interface ListActiveStreakersOptions {
   staleAfterDays?: number;
   /** Max rows. Defaults to 10 — the widget renders cards, more than ~10 overflows. */
   limit?: number;
+  /**
+   * Filter to members of one team only. Mirrors ListAtRiskClientsOptions.teamId —
+   * multi-team gyms scope the celebrate-wins widget per coach's
+   * responsibility.
+   */
+  teamId?: string;
 }
 
 const DEFAULT_MIN_STREAK_DAYS = 7;
@@ -1464,9 +1495,15 @@ export async function listActiveStreakers(
   try {
     const staleCutoffIso = new Date(Date.now() - staleAfterDays * 24 * 60 * 60 * 1000).toISOString();
 
+    // Team filter via INNER JOIN through gym_team_members. Same
+    // pattern as listAtRiskClients — see the comment there.
+    const baseSelect = options.teamId
+      ? 'id, name, email, phone, current_streak_days, longest_streak_days, last_seen_at, team_membership:gym_team_members!inner(team_id)'
+      : 'id, name, email, phone, current_streak_days, longest_streak_days, last_seen_at';
+
     let q = supabase
       .from('clients')
-      .select('id, name, email, phone, current_streak_days, longest_streak_days, last_seen_at')
+      .select(baseSelect)
       .eq('archived', false)
       .gte('current_streak_days', minStreakDays)
       // last_seen_at must exist AND be recent enough. PostgREST's
@@ -1477,6 +1514,10 @@ export async function listActiveStreakers(
       .order('current_streak_days', { ascending: false })
       .order('last_seen_at', { ascending: false })
       .limit(limit);
+
+    if (options.teamId) {
+      q = q.eq('team_membership.team_id', options.teamId);
+    }
 
     if (gymId) {
       q = q.eq('gym_id', gymId);
@@ -1490,7 +1531,8 @@ export async function listActiveStreakers(
       return { success: false, error: error.message };
     }
 
-    const rows = (data ?? []) as Array<{
+    // Same dynamic-select cast rationale as listAtRiskClients above.
+    const rows = (data ?? []) as unknown as Array<{
       id: string;
       name: string;
       email: string | null;

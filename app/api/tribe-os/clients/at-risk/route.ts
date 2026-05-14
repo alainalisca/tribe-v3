@@ -38,6 +38,9 @@ const querySchema = z.object({
     .refine((v) => v === undefined || (Number.isFinite(v) && v >= 1 && v <= 100), {
       message: 'limit must be an integer between 1 and 100',
     }),
+  // team_id scoped to a single team's members. UUID-ish shape is
+  // good enough — the DAL passes it to PostgREST which validates.
+  team_id: z.string().uuid().optional(),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -50,6 +53,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const parsed = querySchema.safeParse({
       thresholdDays: searchParams.get('thresholdDays') ?? undefined,
       limit: searchParams.get('limit') ?? undefined,
+      team_id: searchParams.get('team_id') ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -76,6 +80,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         {
           thresholdDays: parsed.data.thresholdDays,
           limit: parsed.data.limit,
+          teamId: parsed.data.team_id,
         }
       ),
       countQuery,

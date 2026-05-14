@@ -58,7 +58,16 @@ const copy = {
   },
 } as const;
 
-export default function CelebrateWinsWidget() {
+interface CelebrateWinsWidgetProps {
+  /**
+   * Scope to one team's members. Driven by the dashboard's team
+   * selector — paired with AtRiskClientsWidget so both widgets
+   * always render the same scope.
+   */
+  teamId?: string | null;
+}
+
+export default function CelebrateWinsWidget({ teamId = null }: CelebrateWinsWidgetProps = {}) {
   const { language } = useLanguage();
   const s = copy[language];
   const [state, setState] = useState<WidgetState>({ kind: 'loading' });
@@ -69,7 +78,9 @@ export default function CelebrateWinsWidget() {
 
     (async () => {
       try {
-        const res = await fetch('/api/tribe-os/dashboard/milestones/', { method: 'GET' });
+        const url = new URL('/api/tribe-os/dashboard/milestones/', window.location.origin);
+        if (teamId) url.searchParams.set('team_id', teamId);
+        const res = await fetch(url.toString(), { method: 'GET' });
         if (cancelled) return;
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
@@ -94,7 +105,7 @@ export default function CelebrateWinsWidget() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [teamId]);
 
   // Hide entirely when there's nothing to celebrate. Unlike the
   // at-risk widget (where "no one is at risk" is a meaningful

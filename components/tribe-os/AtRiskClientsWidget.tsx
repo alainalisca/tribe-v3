@@ -34,6 +34,12 @@ interface AtRiskClientsWidgetProps {
   thresholdDays?: number;
   /** Max rows to show. Defaults to 5 (dashboard surface is narrow). */
   limit?: number;
+  /**
+   * Scope to one team's members. When null, returns everyone in
+   * the gym. Driven by the dashboard's team selector — both
+   * at-risk and celebrate-wins share the same scope.
+   */
+  teamId?: string | null;
 }
 
 // ES PENDING VERONICA REVIEW
@@ -79,7 +85,11 @@ const copy = {
   },
 } as const;
 
-export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: AtRiskClientsWidgetProps) {
+export default function AtRiskClientsWidget({
+  thresholdDays = 14,
+  limit = 5,
+  teamId = null,
+}: AtRiskClientsWidgetProps) {
   const { language } = useLanguage();
   const s = copy[language];
 
@@ -94,6 +104,7 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
         const url = new URL('/api/tribe-os/clients/at-risk/', window.location.origin);
         url.searchParams.set('thresholdDays', String(thresholdDays));
         url.searchParams.set('limit', String(limit));
+        if (teamId) url.searchParams.set('team_id', teamId);
 
         const res = await fetch(url.toString(), { method: 'GET' });
         if (cancelled) return;
@@ -120,7 +131,7 @@ export default function AtRiskClientsWidget({ thresholdDays = 14, limit = 5 }: A
     return () => {
       cancelled = true;
     };
-  }, [thresholdDays, limit]);
+  }, [thresholdDays, limit, teamId]);
 
   const atRiskCount = state.kind === 'ready' ? state.clients.length : null;
   const hideViewAll = state.kind === 'ready' && state.totalClients === 0;

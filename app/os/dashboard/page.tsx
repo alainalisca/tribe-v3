@@ -32,6 +32,7 @@ import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
 import AuditActivityChip from '@/components/tribe-os/AuditActivityChip';
+import DashboardTeamFilter from '@/components/tribe-os/DashboardTeamFilter';
 import GymWeekRecapCard from '@/components/tribe-os/GymWeekRecapCard';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
@@ -117,6 +118,11 @@ export default function TribeOSDashboardPage() {
   const router = useRouter();
 
   const [pageState, setPageState] = useState<PageState>({ kind: 'checking' });
+  // Team scope shared by the at-risk + celebrate-wins widgets. The
+  // DashboardTeamFilter component owns the picker; we hold the
+  // selected id at the page level and thread it down so both widgets
+  // always show the same scope.
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   // Replay-ref pattern: TribeOSWelcomeGuide owns its open-state via
   // useQuickGuide; this ref receives the `replay` function so a
   // "Take the tour again" affordance (in Settings or elsewhere) can
@@ -221,6 +227,10 @@ export default function TribeOSDashboardPage() {
             <p className="text-sm text-gray-500 mt-1">{s.subhead}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap pt-1.5">
+            {/* Team picker self-hides on single-team gyms — won't
+                appear on most setups. When present, scopes both the
+                at-risk widget and the celebrate-wins widget. */}
+            <DashboardTeamFilter onChange={setSelectedTeamId} />
             <AuditActivityChip />
           </div>
         </header>
@@ -250,7 +260,7 @@ export default function TribeOSDashboardPage() {
             <UpcomingSessionsCard />
           </div>
           <div>
-            <AtRiskClientsWidget />
+            <AtRiskClientsWidget teamId={selectedTeamId} />
           </div>
         </div>
 
@@ -259,7 +269,7 @@ export default function TribeOSDashboardPage() {
             early-stage gym doesn't see a dead card. Sits before the
             activity feed because acting on a streak ("send congrats")
             is more time-sensitive than scanning historical events. */}
-        <CelebrateWinsWidget />
+        <CelebrateWinsWidget teamId={selectedTeamId} />
 
         {/* Recent activity feed */}
         <RecentActivityWidget />

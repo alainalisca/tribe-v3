@@ -207,6 +207,7 @@ type EventName =
   | 'tribe_os_attendance_refunded' // refund recorded via POST /api/tribe-os/attendance/[id]/refund
   | 'tribe_os_audit_exported' // /os/audit CSV download triggered (filters in properties)
   | 'tribe_os_bulk_attendance_mass_toggle' // bulk "mark all attended" or "clear all" tapped
+  | 'tribe_os_dashboard_team_filter_changed' // /os/dashboard team picker changed (all_teams | specific_team)
   | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
   | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
   | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
