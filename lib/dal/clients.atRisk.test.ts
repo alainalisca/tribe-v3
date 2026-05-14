@@ -59,7 +59,6 @@ function buildSupabaseMock(opts: {
     from: (table: string) => {
       if (table !== 'clients') throw new Error(`unexpected table: ${table}`);
       const chain: Record<string, unknown> = {};
-      const fn = () => chain;
       chain.select = (s: string) => {
         if (opts.capture) opts.capture.selectString = s;
         return chain;
@@ -81,7 +80,11 @@ function buildSupabaseMock(opts: {
         return chain;
       };
       chain.then = (resolve: (v: unknown) => void) => resolve({ data: opts.rows ?? [], error: opts.error ?? null });
-      return fn() as SupabaseClient['from'] extends infer T ? T : never;
+      // The conditional-type cast was clever but tripped tsc on
+      // strict mode — chain shape is correct, the outer cast on the
+      // returned object already erases the type. Match the streakers
+      // test pattern.
+      return chain;
     },
   } as unknown as SupabaseClient;
 }

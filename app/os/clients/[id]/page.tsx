@@ -764,6 +764,12 @@ export default function ClientDetailPage() {
               block at all (which is the correct signal: there's
               nothing to lose). Existing data on the page; no fetch. */}
           {(() => {
+            // The dialog is rendered outside the state.kind==='ready'
+            // narrowing block (so it can animate cleanly on close).
+            // Re-narrow here defensively — in practice the delete
+            // button only mounts when state is ready, but TypeScript
+            // doesn't know that and we'd rather guard than cast.
+            if (state.kind !== 'ready') return null;
             const streak = state.client.current_streak_days ?? 0;
             const total = state.summary.total_attended_count ?? 0;
             const lastSeenMs = state.summary.last_attendance_at

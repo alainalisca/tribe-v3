@@ -167,7 +167,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           payload: {
             created_count: result.data?.length ?? 0,
             skipped_count: rowErrors.length,
-            total_rows_submitted: parsed.data.rows.length,
+            total_rows_submitted: parsed.rows.length,
           },
         });
       }
