@@ -31,6 +31,7 @@ import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
 import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
+import AuditActivityChip from '@/components/tribe-os/AuditActivityChip';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -208,12 +209,19 @@ export default function TribeOSDashboardPage() {
   return (
     <div className="px-4 lg:px-8 py-6 lg:py-8">
       <div className="max-w-7xl mx-auto space-y-5">
-        {/* Greeting */}
-        <header>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
-            {pickGreeting(s, pageState.firstName)}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">{s.subhead}</p>
+        {/* Greeting + chip rail: chips render to the right of (or
+            below on mobile) the greeting. Quiet by default — the
+            audit chip self-hides when there's no new activity. */}
+        <header className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900">
+              {pickGreeting(s, pageState.firstName)}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">{s.subhead}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap pt-1.5">
+            <AuditActivityChip />
+          </div>
         </header>
 
         {/* Onboarding checklist — auto-hides once graduated or dismissed. */}

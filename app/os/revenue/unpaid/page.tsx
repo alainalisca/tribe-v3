@@ -75,6 +75,7 @@ const copy = {
       `${clients} ${clients === 1 ? 'client' : 'clients'} · ${sessions} unpaid ${sessions === 1 ? 'session' : 'sessions'}`,
     emptyTitle: "You're all caught up",
     emptyHint: 'No unpaid attended sessions in this window. Either everyone has paid or there is nothing to chase yet.',
+    emptyCta: 'Back to revenue dashboard',
     sinceLabel: 'Since',
     lastUnpaidLabel: 'Last',
     unpaidSessions: (n: number) => (n === 1 ? '1 unpaid session' : `${n} unpaid sessions`),
@@ -116,6 +117,7 @@ const copy = {
       `${clients} ${clients === 1 ? 'cliente' : 'clientes'} · ${sessions} ${sessions === 1 ? 'sesión sin pagar' : 'sesiones sin pagar'}`,
     emptyTitle: 'Estás al día',
     emptyHint: 'No hay sesiones asistidas sin pagar en esta ventana. O todos pagaron o aún no hay nada que cobrar.',
+    emptyCta: 'Volver al panel de ingresos',
     sinceLabel: 'Desde',
     lastUnpaidLabel: 'Última',
     unpaidSessions: (n: number) => (n === 1 ? '1 sesión sin pagar' : `${n} sesiones sin pagar`),
@@ -276,10 +278,22 @@ export default function UnpaidAttendancePage() {
             </button>
           </div>
         ) : state.groups.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-2">
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-3">
             <DollarSign className="w-8 h-8 text-tribe-green-dark mx-auto" />
             <h2 className="text-base font-bold text-gray-900">{s.emptyTitle}</h2>
             <p className="text-sm text-gray-600 max-w-md mx-auto">{s.emptyHint}</p>
+            {/* CTA back to the revenue dashboard. A coach landing on
+                "nothing to collect" is in a good state — the natural
+                next stop is the revenue dashboard to see actual
+                inflows, not stay on a page about money they don't
+                need to chase. */}
+            <Link
+              href="/os/revenue"
+              className="inline-flex items-center gap-1.5 px-3 py-2 mt-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-lg hover:bg-tribe-green-dark hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              {s.emptyCta}
+            </Link>
           </div>
         ) : (
           <>

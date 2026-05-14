@@ -27,6 +27,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatShortDate } from '@/lib/format/currency';
 import { trackEvent } from '@/lib/analytics';
+import { markAuditViewed } from '@/components/tribe-os/AuditActivityChip';
 
 interface AuditRow {
   id: string;
@@ -169,6 +170,9 @@ export default function AuditPage() {
         }
         setState({ kind: 'ready', entries: body.data.entries });
         setRefreshing(false);
+        // Stamp the last-viewed timestamp so the dashboard chip
+        // clears. Idempotent and cheap.
+        markAuditViewed();
       } catch {
         if (!cancelled) {
           setState({ kind: 'error', message: s.errorTitle });
