@@ -69,6 +69,9 @@ const copy = {
     emptyAddMembersCta: 'Add members',
     emptyTitleClean: 'All clear',
     emptyHintClean: 'Every active alert has been actioned. Nice work.',
+    emptyFilteredTitle: 'No insights match these filters',
+    emptyFilteredHint: 'Try widening the type or team filter — there are insights outside the current selection.',
+    clearFiltersCta: 'Clear filters',
     severity: {
       CRITICAL: 'Critical',
       HIGH: 'High',
@@ -130,6 +133,9 @@ const copy = {
     emptyAddMembersCta: 'Agregar miembros',
     emptyTitleClean: 'Todo en orden',
     emptyHintClean: 'Cada alerta activa fue atendida. Buen trabajo.',
+    emptyFilteredTitle: 'No hay insights con estos filtros',
+    emptyFilteredHint: 'Prueba ampliar el filtro de tipo o de equipo — hay insights fuera de la selección actual.',
+    clearFiltersCta: 'Limpiar filtros',
     severity: {
       CRITICAL: 'Crítico',
       HIGH: 'Alto',
@@ -476,6 +482,29 @@ export default function IntelligencePage() {
           </Card>
         ) : state.insights.length === 0 ? (
           <EmptyState copy={s} view={view} />
+        ) : isFilteredEmpty ? (
+          // We HAVE insights, but the current filter combo (type +
+          // team) hides all of them. Distinct copy + a Clear filters
+          // CTA so the coach doesn't conclude the engine is broken.
+          <Card>
+            <CardContent className="py-12 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-tribe bg-tribe-dark-40 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-tribe-dark-80" />
+              </div>
+              <h2 className="text-lg font-semibold text-tribe-dark">{s.emptyFilteredTitle}</h2>
+              <p className="text-sm text-tribe-dark-80 max-w-md mx-auto leading-relaxed">{s.emptyFilteredHint}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTypeFilter(null);
+                  setTeamFilter(null);
+                }}
+                className="inline-flex items-center gap-1 px-4 py-2 bg-tribe-green text-tribe-dark text-xs font-bold rounded-full hover:shadow-tribe transition-shadow"
+              >
+                {s.clearFiltersCta}
+              </button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-6">
             {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((sev) => {
