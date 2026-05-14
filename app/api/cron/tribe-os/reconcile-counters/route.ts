@@ -31,6 +31,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { log, logError } from '@/lib/logger';
 import { reconcileGymCounters } from '@/lib/dal/clients.reconcile';
+import { withCronLock } from '@/lib/cron/lockGuard';
 
 const MAX_GYMS_PER_RUN = 200;
 
@@ -58,56 +59,63 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const autoCorrect = process.env.RECONCILE_AUTO_CORRECT === '1';
 
-    // Pull every gym that has at least one non-archived client. We
-    // skip gyms with zero clients to avoid wasted no-op queries —
-    // most newly-created gyms in the table fall into that bucket.
-    const { data: gyms, error: gymsErr } = await service.from('gyms').select('id').limit(MAX_GYMS_PER_RUN);
-    if (gymsErr) {
-      logError(gymsErr, { route, action: 'list_gyms' });
-      return NextResponse.json({ error: gymsErr.message }, { status: 500 });
-    }
-
-    let total_clients_checked = 0;
-    let total_drifted = 0;
-    let total_corrected = 0;
-    const drifted_gyms: Array<{ gym_id: string; drifted_count: number }> = [];
-
-    for (const gym of gyms ?? []) {
-      const gymId = gym.id as string;
-      const res = await reconcileGymCounters(service, gymId, { autoCorrect });
-      if (!res.success || !res.data) {
-        // Don't fail the whole run for one gym's error — log and
-        // continue. The cron is best-effort.
-        logError(new Error(res.error ?? 'unknown'), { route, action: 'reconcile_gym', gymId });
-        continue;
+    // Guard against duplicate concurrent invocations (manual fire
+    // while a scheduled one is running, or Vercel's rare duplicate-
+    // delivery edge case). The work block runs only when we hold
+    // the lock; lockGuard falls back to no-lock execution if the
+    // migration hasn't been applied yet so the cron still runs.
+    const guarded = await withCronLock(service, 'reconcile-counters', async () => {
+      // Pull every gym that has at least one non-archived client.
+      // We skip gyms with zero clients to avoid wasted no-op
+      // queries — most newly-created gyms fall into that bucket.
+      const { data: gyms, error: gymsErr } = await service.from('gyms').select('id').limit(MAX_GYMS_PER_RUN);
+      if (gymsErr) {
+        logError(gymsErr, { route, action: 'list_gyms' });
+        throw gymsErr;
       }
-      total_clients_checked += res.data.clients_checked;
-      total_corrected += res.data.corrected_count;
-      if (res.data.drifted.length > 0) {
-        total_drifted += res.data.drifted.length;
-        drifted_gyms.push({ gym_id: gymId, drifted_count: res.data.drifted.length });
-        // Log each drift case at WARN level so it surfaces in
-        // monitoring without firing email alerts. The first
-        // observation will tell us how often this happens; if
-        // it's once a month we leave the cron in report-only
-        // mode; if it's daily, auto-correct gets flipped on.
-        log('warn', 'counter_drift', {
-          action: 'counter_drift',
-          route,
-          gymId,
-          drifted: res.data.drifted,
-          auto_corrected: autoCorrect ? res.data.corrected_count : 0,
-        });
-      }
-    }
 
+      let total_clients_checked = 0;
+      let total_drifted = 0;
+      let total_corrected = 0;
+      const drifted_gyms: Array<{ gym_id: string; drifted_count: number }> = [];
+
+      for (const gym of gyms ?? []) {
+        const gymId = gym.id as string;
+        const res = await reconcileGymCounters(service, gymId, { autoCorrect });
+        if (!res.success || !res.data) {
+          logError(new Error(res.error ?? 'unknown'), { route, action: 'reconcile_gym', gymId });
+          continue;
+        }
+        total_clients_checked += res.data.clients_checked;
+        total_corrected += res.data.corrected_count;
+        if (res.data.drifted.length > 0) {
+          total_drifted += res.data.drifted.length;
+          drifted_gyms.push({ gym_id: gymId, drifted_count: res.data.drifted.length });
+          log('warn', 'counter_drift', {
+            action: 'counter_drift',
+            route,
+            gymId,
+            drifted: res.data.drifted,
+            auto_corrected: autoCorrect ? res.data.corrected_count : 0,
+          });
+        }
+      }
+
+      return {
+        gyms_checked: gyms?.length ?? 0,
+        clients_checked: total_clients_checked,
+        drifted: total_drifted,
+        corrected: total_corrected,
+        drifted_gyms,
+      };
+    });
+
+    if (!guarded.acquired) {
+      return NextResponse.json({ success: true, skipped: 'lock_held' });
+    }
     const summary = {
-      gyms_checked: gyms?.length ?? 0,
-      clients_checked: total_clients_checked,
-      drifted: total_drifted,
-      corrected: total_corrected,
+      ...guarded.result,
       auto_correct_enabled: autoCorrect,
-      drifted_gyms,
       duration_ms: Date.now() - startedAt,
     };
     log('info', 'cron_done', { action: 'cron_done', route, ...summary });
