@@ -61,6 +61,9 @@ const copy = {
     dateRangeToday: 'Today',
     onlyMine: 'Only mine',
     onlyMineHint: 'Filter to entries you wrote yourself',
+    actorLabel: 'Actor',
+    actorAll: 'Everyone',
+    actorMe: 'Only me',
     filterAllActions: 'All actions',
     filterAllTargets: 'All target types',
     limitLabel: 'Show',
@@ -108,6 +111,9 @@ const copy = {
     dateRangeToday: 'Hoy',
     onlyMine: 'Solo mías',
     onlyMineHint: 'Filtrar a las entradas que escribiste',
+    actorLabel: 'Actor',
+    actorAll: 'Todos',
+    actorMe: 'Solo yo',
     filterAllActions: 'Todas las acciones',
     filterAllTargets: 'Todos los tipos',
     limitLabel: 'Mostrar',
@@ -237,9 +243,48 @@ export default function AuditPage() {
   // When true, scope to entries the current user wrote. Useful in a
   // multi-coach gym for "what did I do today?" review.
   const [onlyMine, setOnlyMine] = useState(false);
+  // Per-coach actor filter. Empty string = no filter beyond what
+  // onlyMine specifies. Set to a coach's user_id to narrow to "what
+  // did Veronica do?" — the multi-coach forensic case. Mutually
+  // exclusive with onlyMine in the UI: enabling one resets the other.
+  const [actorFilter, setActorFilter] = useState<string>('');
+  const [coaches, setCoaches] = useState<Array<{ user_id: string; name: string }> | null>(null);
   const [limit, setLimit] = useState<number>(50);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Lazy-fetch the coach roster ONCE on first allowed render. We
+  // only need name + user_id to populate the dropdown options; the
+  // gym-coaches endpoint already gates on the same premium check.
+  // Failing this fetch silently is fine — the dropdown will just
+  // not show specific coaches, falling back to the all/me toggle.
+  useEffect(() => {
+    if (gate.state !== 'allowed' || coaches !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/tribe-os/coaches/', { method: 'GET' });
+        if (cancelled) return;
+        const body = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          data?: { coaches?: Array<{ user_id: string; user?: { name?: string | null } | null }> };
+        };
+        if (!body.success || !body.data) {
+          setCoaches([]);
+          return;
+        }
+        const list = (body.data.coaches ?? [])
+          .map((c) => ({ user_id: c.user_id, name: c.user?.name?.trim() || 'Unknown' }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setCoaches(list);
+      } catch {
+        if (!cancelled) setCoaches([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [gate.state, coaches]);
 
   useEffect(() => {
     if (gate.state !== 'allowed') return;
@@ -254,7 +299,14 @@ export default function AuditPage() {
         params.set('limit', String(limit));
         const fromIso = computeFromIso(dateRange);
         if (fromIso) params.set('from', fromIso);
-        if (onlyMine && gate.userId) params.set('actor_user_id', gate.userId);
+        // Actor scoping: explicit coach pick takes precedence over
+        // the "only mine" checkbox. They're UI-exclusive but we
+        // still guard the precedence here for safety.
+        if (actorFilter) {
+          params.set('actor_user_id', actorFilter);
+        } else if (onlyMine && gate.userId) {
+          params.set('actor_user_id', gate.userId);
+        }
         const res = await fetch(`/api/tribe-os/audit?${params.toString()}`, { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
@@ -285,7 +337,18 @@ export default function AuditPage() {
     };
     // s.errorTitle dep refetches on language flip.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gate.state, gate.userId, actionFilter, targetFilter, limit, dateRange, onlyMine, reloadKey, s.errorTitle]);
+  }, [
+    gate.state,
+    gate.userId,
+    actionFilter,
+    targetFilter,
+    limit,
+    dateRange,
+    onlyMine,
+    actorFilter,
+    reloadKey,
+    s.errorTitle,
+  ]);
 
   // Distinct action + target_type values from the currently-loaded
   // entries, used to populate the filter dropdowns. Sorted A-Z. We
@@ -334,7 +397,12 @@ export default function AuditPage() {
                 action. Anchor (not button) so right-click → Save
                 Link As works for power users. */}
             <a
-              href={buildExportUrl(actionFilter, targetFilter, dateRange, onlyMine ? gate.userId : null)}
+              href={buildExportUrl(
+                actionFilter,
+                targetFilter,
+                dateRange,
+                actorFilter || (onlyMine ? gate.userId : null)
+              )}
               onClick={() =>
                 trackEvent('tribe_os_audit_exported', {
                   action_filter: actionFilter || null,
@@ -424,7 +492,10 @@ export default function AuditPage() {
           </label>
           {/* "Only mine" toggle. Useful in multi-coach gyms for
               answering 'what did I do today?' without scrolling
-              through everyone else's actions. */}
+              through everyone else's actions. Mutually exclusive
+              with the per-coach actor dropdown — enabling one
+              resets the other so the URL only ever carries one
+              actor_user_id value. */}
           <label
             className="inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none"
             title={s.onlyMineHint}
@@ -432,11 +503,42 @@ export default function AuditPage() {
             <input
               type="checkbox"
               checked={onlyMine}
-              onChange={(e) => setOnlyMine(e.target.checked)}
+              onChange={(e) => {
+                setOnlyMine(e.target.checked);
+                if (e.target.checked) setActorFilter('');
+              }}
               className="h-4 w-4 rounded border-gray-300 text-tribe-green focus:ring-tribe-green"
             />
             <span className="font-semibold text-gray-700">{s.onlyMine}</span>
           </label>
+          {/* Per-coach actor dropdown. Only renders when there's
+              more than one coach in the gym — a single-coach gym
+              would offer the user a dropdown with just themselves
+              in it, which is identical to "Only mine" and feels
+              broken. Filtering out the current user from the list
+              would have been a nicer pattern but the audit-viewer
+              often wants to scope to themselves WITH another filter
+              applied, so we leave the user in the list. */}
+          {coaches && coaches.length > 1 ? (
+            <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+              <span className="font-semibold text-gray-700">{s.actorLabel}</span>
+              <select
+                value={actorFilter}
+                onChange={(e) => {
+                  setActorFilter(e.target.value);
+                  if (e.target.value) setOnlyMine(false);
+                }}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-tribe-green focus:ring-2 focus:ring-tribe-green/20"
+              >
+                <option value="">{s.actorAll}</option>
+                {coaches.map((c) => (
+                  <option key={c.user_id} value={c.user_id}>
+                    {c.user_id === gate.userId ? s.actorMe : c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {state.kind === 'ready' && state.entries.length > 0 ? (
             <span className="text-xs text-gray-500 ml-auto">{s.rowSummary(state.entries.length)}</span>
           ) : null}
@@ -466,7 +568,7 @@ export default function AuditPage() {
             // these filters." The latter case is recoverable — show
             // a clear-filters CTA so the user doesn't conclude the
             // log is broken.
-            const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all' || onlyMine);
+            const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all' || onlyMine || actorFilter);
             return (
               <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-3">
                 <ScrollText className="w-8 h-8 text-gray-400 mx-auto" />
@@ -484,6 +586,7 @@ export default function AuditPage() {
                       setTargetFilter('');
                       setDateRange('all');
                       setOnlyMine(false);
+                      setActorFilter('');
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-2 mt-2 bg-tribe-green text-tribe-dark text-sm font-semibold rounded-lg hover:bg-tribe-green-dark hover:text-white transition-colors"
                   >
