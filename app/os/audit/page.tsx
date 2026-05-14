@@ -165,6 +165,7 @@ const ACTION_LABELS: Record<string, { en: string; es: string }> = {
   'attendance.refund': { en: 'Attendance refunded', es: 'Asistencia reembolsada' },
   'gym.settings_update': { en: 'Gym settings updated', es: 'Ajustes del gym actualizados' },
   'insight.bulk_dismiss': { en: 'Insights bulk-dismissed', es: 'Insights descartados en lote' },
+  'coach.invite': { en: 'Coach invited', es: 'Entrenador invitado' },
   'coach.remove': { en: 'Coach removed', es: 'Entrenador removido' },
   'team.create': { en: 'Team created', es: 'Equipo creado' },
   'team.update': { en: 'Team updated', es: 'Equipo actualizado' },
@@ -214,6 +215,10 @@ const ACTION_DESCRIPTIONS: Record<string, { en: string; es: string }> = {
   'insight.bulk_dismiss': {
     en: 'Multiple coaching insights were dismissed in one action. The underlying signals still exist; they just were hidden from the dashboard.',
     es: 'Se descartaron varios insights de coaching en una sola acción. Las señales subyacentes existen; solo se ocultaron del panel.',
+  },
+  'coach.invite': {
+    en: 'A coach or assistant was added to this gym. When this entry shows a prior_role in the payload, it was a role change rather than a brand new invite.',
+    es: 'Se agregó un entrenador o asistente al gym. Si el registro muestra prior_role en el payload, fue un cambio de rol y no una invitación nueva.',
   },
   'coach.remove': {
     en: 'A coach was removed from this gym. They no longer have access to gym data or the ability to record attendance. The owner can re-invite them at any time.',

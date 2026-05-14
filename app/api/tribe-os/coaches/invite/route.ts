@@ -37,6 +37,7 @@ import { ZodError } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { InviteCoachInputSchema } from '@/lib/validations/coaches';
 
 function firstZodMessage(error: ZodError): string {
@@ -116,6 +117,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Idempotent: re-inviting the same person updates their role
     // (or no-ops if the role matches) rather than erroring on the
     // PK conflict.
+    // Capture the prior role (if any) BEFORE the upsert so the
+    // audit payload can carry "was X, now Y" for the re-invite-as-
+    // upgrade case. Cheap single query, worth it for the forensic
+    // clarity.
+    const { data: existing } = await service
+      .from('gym_coaches')
+      .select('role')
+      .eq('gym_id', gymRes.data.id)
+      .eq('user_id', invitee.id)
+      .maybeSingle();
+    const priorRole = (existing as { role?: string } | null)?.role ?? null;
+
     const { error: upsertErr } = await service
       .from('gym_coaches')
       .upsert({ gym_id: gymRes.data.id, user_id: invitee.id, role }, { onConflict: 'gym_id,user_id' });
@@ -127,6 +140,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         invitee: invitee.id,
       });
       return NextResponse.json({ success: false, error: upsertErr.message }, { status: 500 });
+    }
+
+    // Audit log: only when the row state actually changes. Re-
+    // inviting someone at the same role is a no-op and shouldn't
+    // generate noise; the forensic value is in additions and role
+    // changes, not re-asserts.
+    if (priorRole !== role) {
+      await writeAuditEntry(supabase, {
+        gymId: gymRes.data.id,
+        actorUserId: userId,
+        action: 'coach.invite',
+        targetType: 'coach',
+        targetId: invitee.id,
+        payload: {
+          name: invitee.name ?? null,
+          email: invitee.email ?? null,
+          role,
+          prior_role: priorRole, // null = brand new invite, string = role change
+        },
+      });
     }
 
     return NextResponse.json({
