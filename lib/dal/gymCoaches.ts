@@ -28,6 +28,13 @@ export interface GymCoachWithUser extends GymCoachRow {
     email: string;
     avatar_url: string | null;
   } | null;
+  /**
+   * Most recent audit-log timestamp for this coach (ISO). Decorated
+   * by GET /api/tribe-os/coaches from fetchLastActionByActor. Null
+   * when the coach has never written an audit row (brand new, or
+   * just signed up and hasn't done a forensic action yet).
+   */
+  last_action_at?: string | null;
 }
 
 const COACH_SELECT = 'gym_id, user_id, role, created_at';

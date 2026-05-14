@@ -25,6 +25,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGymForUser } from '@/lib/dal/gyms';
 import { listCoachesForGym } from '@/lib/dal/gymCoaches';
+import { fetchLastActionByActor } from '@/lib/dal/auditLog';
 
 export async function GET(_request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
@@ -84,11 +85,21 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     // row is always there for the owner.
     const isOwner = (coaches.data ?? []).some((c) => c.role === 'owner' && c.user_id === userId);
 
+    // Decorate each coach with their last forensic-action timestamp.
+    // Best-effort — if the audit lookup fails we still return the
+    // coach roster (a missing 'Last action' field degrades to "—"
+    // on the UI, which is better than blocking the whole page).
+    const lastByActor = await fetchLastActionByActor(supabase, resolvedGymId);
+    const decorated = (coaches.data ?? []).map((c) => ({
+      ...c,
+      last_action_at: lastByActor.success ? (lastByActor.data?.get(c.user_id) ?? null) : null,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
         gym: resolvedGymRow,
-        coaches: coaches.data ?? [],
+        coaches: decorated,
         is_owner: isOwner,
       },
     });

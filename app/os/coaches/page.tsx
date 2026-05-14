@@ -64,6 +64,12 @@ const copy = {
     removeCancel: 'Cancel',
     removeLoading: 'Removing',
     removeError: 'Could not remove coach.',
+    lastActionNever: 'No recorded actions yet',
+    lastActionPrefix: 'Last action:',
+    relativeNow: 'just now',
+    relativeMinutes: (n: number) => `${n}m ago`,
+    relativeHours: (n: number) => `${n}h ago`,
+    relativeDays: (n: number) => (n === 1 ? '1 day ago' : `${n} days ago`),
   },
   es: {
     backLabel: 'Volver al panel',
@@ -92,6 +98,12 @@ const copy = {
     removeCancel: 'Cancelar',
     removeLoading: 'Quitando',
     removeError: 'No se pudo quitar al entrenador.',
+    lastActionNever: 'Aún sin acciones registradas',
+    lastActionPrefix: 'Última acción:',
+    relativeNow: 'ahora mismo',
+    relativeMinutes: (n: number) => `hace ${n}m`,
+    relativeHours: (n: number) => `hace ${n}h`,
+    relativeDays: (n: number) => (n === 1 ? 'hace 1 día' : `hace ${n} días`),
   },
 } as const;
 
@@ -319,6 +331,30 @@ export default function CoachesPage() {
   );
 }
 
+/**
+ * Format an ISO timestamp as a coarse relative time. Buckets:
+ *   < 1 min → "just now"
+ *   < 60 min → "Nm ago"
+ *   < 24h → "Nh ago"
+ *   ≥ 24h → "N days ago"
+ *
+ * Coarse on purpose — for a roster glance we want "3 days ago" not
+ * "3 days, 4 hours ago". Power users can open /os/audit and filter
+ * by actor for the exact timestamps.
+ */
+function formatRelativeAction(iso: string, s: typeof copy.en | typeof copy.es): string {
+  const now = Date.now();
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return s.lastActionNever;
+  const diffMin = Math.max(0, Math.floor((now - then) / 60000));
+  if (diffMin < 1) return s.relativeNow;
+  if (diffMin < 60) return s.relativeMinutes(diffMin);
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return s.relativeHours(diffHours);
+  const diffDays = Math.floor(diffHours / 24);
+  return s.relativeDays(diffDays);
+}
+
 function CoachRow({
   coach,
   copy: s,
@@ -339,6 +375,14 @@ function CoachRow({
   const roleLabel = coach.role === 'owner' ? s.roleOwner : coach.role === 'assistant' ? s.roleAssistant : s.roleCoach;
   const isOwner = coach.role === 'owner';
   const showRemove = !!onRemove && !isOwner;
+  // Surface the last forensic action time so owners can spot a
+  // coach who's gone quiet. The roster fetches this server-side
+  // from the audit log (last 100 entries) — coaches who don't
+  // appear in that window read as "no recorded actions yet,"
+  // which is the truthful signal here.
+  const lastActionLabel = coach.last_action_at
+    ? `${s.lastActionPrefix} ${formatRelativeAction(coach.last_action_at, s)}`
+    : s.lastActionNever;
 
   return (
     <li>
@@ -357,6 +401,7 @@ function CoachRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
           {coach.user?.email ? <p className="text-xs text-gray-500 mt-0.5 truncate">{coach.user.email}</p> : null}
+          <p className="text-[11px] text-gray-400 mt-0.5 truncate">{lastActionLabel}</p>
         </div>
         <span
           className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${

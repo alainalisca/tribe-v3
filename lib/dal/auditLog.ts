@@ -192,6 +192,58 @@ export async function listAuditEntries(
   }
 }
 
+/**
+ * Returns the most recent audit timestamp per actor in a gym, as a
+ * Map<actor_user_id, ISO timestamp>. Powers the /os/coaches roster's
+ * "Last action: 3 days ago" indicator so an owner can spot a
+ * dormant coach at a glance.
+ *
+ * Implementation note: we fetch the last MAX_AUDIT_PAGE_SIZE entries
+ * (newest first) and reduce in TS. That's not the same as a proper
+ * SQL `select actor_user_id, max(created_at) group by actor_user_id`,
+ * but for the typical multi-coach gym (3-10 coaches) the most-recent
+ * 100 audit rows cover every active actor with massive headroom. A
+ * coach who hasn't appeared in the last 100 entries is effectively
+ * dormant for our purposes; we surface that as "Last action: > 1
+ * week ago" on the consuming side.
+ *
+ * If the gym ever scales past where 100 rows is insufficient we'd
+ * add a SQL view that does the real group-by — until then this is
+ * O(100 rows + tiny TS reduce) and we save a migration.
+ */
+export async function fetchLastActionByActor(
+  supabase: SupabaseClient,
+  gymId: string
+): Promise<DalResult<Map<string, string>>> {
+  try {
+    const { data, error } = await supabase
+      .from('gym_audit_log')
+      .select('actor_user_id, created_at')
+      .eq('gym_id', gymId)
+      // Exclude system-written rows — the watchdog's gym.alert_sent
+      // entries have null actors but they'd still be the newest row
+      // each time the watchdog fires. We want USER actions only.
+      .neq('action', 'gym.alert_sent')
+      .order('created_at', { ascending: false })
+      .limit(MAX_AUDIT_PAGE_SIZE);
+    if (error) {
+      logError(error, { action: 'fetchLastActionByActor', gymId });
+      return { success: false, error: error.message };
+    }
+    const map = new Map<string, string>();
+    for (const row of data ?? []) {
+      const actor = row.actor_user_id as string | null;
+      if (!actor) continue;
+      // First occurrence wins because rows arrive newest-first.
+      if (!map.has(actor)) map.set(actor, row.created_at as string);
+    }
+    return { success: true, data: map };
+  } catch (error) {
+    logError(error, { action: 'fetchLastActionByActor.exception', gymId });
+    return { success: false, error: 'Failed to fetch last actions' };
+  }
+}
+
 // ------------------------------------------------------------------
 // CSV export
 // ------------------------------------------------------------------
