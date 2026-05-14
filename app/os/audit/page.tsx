@@ -55,6 +55,10 @@ const copy = {
     refresh: 'Refresh',
     refreshing: 'Refreshing',
     exportCsv: 'Export CSV',
+    dateRangeLabel: 'Time range',
+    dateRangeAll: 'All time',
+    dateRangeWeek: 'Last 7 days',
+    dateRangeToday: 'Today',
     filterAllActions: 'All actions',
     filterAllTargets: 'All target types',
     limitLabel: 'Show',
@@ -87,6 +91,10 @@ const copy = {
     refresh: 'Actualizar',
     refreshing: 'Actualizando',
     exportCsv: 'Exportar CSV',
+    dateRangeLabel: 'Rango',
+    dateRangeAll: 'Todo el tiempo',
+    dateRangeWeek: 'Últimos 7 días',
+    dateRangeToday: 'Hoy',
     filterAllActions: 'Todas las acciones',
     filterAllTargets: 'Todos los tipos',
     limitLabel: 'Mostrar',
@@ -141,6 +149,11 @@ export default function AuditPage() {
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [actionFilter, setActionFilter] = useState<string>('');
   const [targetFilter, setTargetFilter] = useState<string>('');
+  // 'all' = no filter, 'today' = midnight UTC today, 'week' = 7 days back.
+  // Keeping the buckets fixed avoids a date-picker control while still
+  // covering the three time windows that match the typical forensic
+  // mental model ("what happened just now / this week / ever").
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week'>('all');
   const [limit, setLimit] = useState<number>(50);
   const [reloadKey, setReloadKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -156,6 +169,8 @@ export default function AuditPage() {
         if (actionFilter) params.set('action', actionFilter);
         if (targetFilter) params.set('target_type', targetFilter);
         params.set('limit', String(limit));
+        const fromIso = computeFromIso(dateRange);
+        if (fromIso) params.set('from', fromIso);
         const res = await fetch(`/api/tribe-os/audit?${params.toString()}`, { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
@@ -186,7 +201,7 @@ export default function AuditPage() {
     };
     // s.errorTitle dep refetches on language flip.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gate.state, actionFilter, targetFilter, limit, reloadKey, s.errorTitle]);
+  }, [gate.state, actionFilter, targetFilter, limit, dateRange, reloadKey, s.errorTitle]);
 
   // Distinct action + target_type values from the currently-loaded
   // entries, used to populate the filter dropdowns. Sorted A-Z. We
@@ -261,6 +276,30 @@ export default function AuditPage() {
 
         {/* Filters bar */}
         <div className="flex items-center gap-2 flex-wrap bg-white border border-gray-200 rounded-xl p-3">
+          {/* Date-range quick filter. Three buckets matching the
+              forensic mental model — Today, last 7 days, all time.
+              A picker would be more flexible but adds chrome the
+              80% case doesn't need. */}
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs">
+            {(
+              [
+                { val: 'today', label: s.dateRangeToday },
+                { val: 'week', label: s.dateRangeWeek },
+                { val: 'all', label: s.dateRangeAll },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.val}
+                type="button"
+                onClick={() => setDateRange(opt.val)}
+                className={`px-3 py-1.5 rounded-md font-semibold transition-colors ${
+                  dateRange === opt.val ? 'bg-white text-tribe-dark shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
@@ -447,6 +486,26 @@ function buildExportUrl(actionFilter: string, targetFilter: string): string {
   if (targetFilter) params.set('target_type', targetFilter);
   const qs = params.toString();
   return qs ? `/api/tribe-os/audit/export?${qs}` : '/api/tribe-os/audit/export';
+}
+
+/**
+ * Map the date-range bucket to an ISO `from` bound. Returns null
+ * for the 'all' bucket so the URL stays clean.
+ *
+ * 'today' uses local midnight (browser tz) instead of UTC midnight —
+ * matches what the coach reads as "today on the wall clock." A
+ * coach in Bogotá at 11pm checking "today" should see the day's
+ * events, not yesterday's UTC bucket.
+ */
+function computeFromIso(range: 'all' | 'today' | 'week'): string | null {
+  if (range === 'all') return null;
+  if (range === 'week') {
+    return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  // 'today' = local midnight
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
 }
 
 /**

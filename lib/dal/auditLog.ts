@@ -112,6 +112,10 @@ export interface ListAuditOpts {
    * the surface is "scan the last week of activity."
    */
   limit?: number;
+  /** Inclusive lower bound on created_at (ISO timestamp). */
+  fromIso?: string;
+  /** Inclusive upper bound on created_at (ISO timestamp). */
+  toIso?: string;
 }
 
 /**
@@ -151,6 +155,8 @@ export async function listAuditEntries(
 
     if (opts.action) query = query.eq('action', opts.action);
     if (opts.targetType) query = query.eq('target_type', opts.targetType);
+    if (opts.fromIso) query = query.gte('created_at', opts.fromIso);
+    if (opts.toIso) query = query.lte('created_at', opts.toIso);
 
     const { data, error } = await query;
     if (error) {
