@@ -22,7 +22,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, ScrollText, RefreshCw, Download, ChevronRight } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ScrollText, RefreshCw, Download, ChevronRight, Info } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { formatShortDate } from '@/lib/format/currency';
@@ -161,6 +161,43 @@ const TARGET_LABELS: Record<string, { en: string; es: string }> = {
   team: { en: 'Team', es: 'Equipo' },
   gym: { en: 'Gym', es: 'Gym' },
   insight: { en: 'Insight', es: 'Insight' },
+};
+
+/**
+ * Plain-language descriptions of each action code, rendered as a
+ * native tooltip (`title=`) on the action label. Owners and external
+ * auditors don't always know what e.g. "Insights bulk-dismissed"
+ * means in practice — the tooltip closes that gap without bloating
+ * the table layout.
+ *
+ * Bilingual; falls back to the action code when no description is
+ * defined (same fallback model as ACTION_LABELS).
+ */
+const ACTION_DESCRIPTIONS: Record<string, { en: string; es: string }> = {
+  'client.archive': {
+    en: 'Client was hidden from the active roster. Their data is retained for re-activation later.',
+    es: 'El cliente fue ocultado del listado activo. Sus datos se conservan para reactivación más adelante.',
+  },
+  'client.purge': {
+    en: 'Client and all associated data were permanently deleted, typically for a GDPR request.',
+    es: 'El cliente y todos sus datos fueron eliminados permanentemente, normalmente por una solicitud GDPR.',
+  },
+  'attendance.delete': {
+    en: "An attendance record was removed. The check-in no longer counts toward the member's streak or class history.",
+    es: 'Se eliminó un registro de asistencia. El check-in deja de contar en la racha o el historial del miembro.',
+  },
+  'attendance.refund': {
+    en: "An attendance record was kept but marked as refunded — the member's session credit was returned.",
+    es: 'Se conservó el registro pero se marcó como reembolsado — el crédito de la sesión volvió al miembro.',
+  },
+  'gym.settings_update': {
+    en: 'A gym-wide setting changed (name, branding, integrations, payout details, etc.).',
+    es: 'Se cambió un ajuste del gym (nombre, marca, integraciones, datos de pago, etc.).',
+  },
+  'insight.bulk_dismiss': {
+    en: 'Multiple coaching insights were dismissed in one action. The underlying signals still exist; they just were hidden from the dashboard.',
+    es: 'Se descartaron varios insights de coaching en una sola acción. Las señales subyacentes existen; solo se ocultaron del panel.',
+  },
 };
 
 export default function AuditPage() {
@@ -499,7 +536,19 @@ function AuditTable({
                     {formatRelativeAndExact(row.created_at, language)}
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-900">
-                    {ACTION_LABELS[row.action]?.[language] ?? row.action}
+                    <span
+                      className="inline-flex items-center gap-1"
+                      // Native title gives us a free, accessible
+                      // tooltip everywhere — desktop hover, screen
+                      // readers, and even mobile long-press. Anything
+                      // richer is wasted polish here.
+                      title={ACTION_DESCRIPTIONS[row.action]?.[language]}
+                    >
+                      {ACTION_LABELS[row.action]?.[language] ?? row.action}
+                      {ACTION_DESCRIPTIONS[row.action] ? (
+                        <Info className="w-3 h-3 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                      ) : null}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-gray-700">
                     <span className="inline-flex items-center gap-1.5">
@@ -543,11 +592,19 @@ function AuditTable({
             <li key={row.id} className={`p-4 space-y-1 ${isOpen ? 'bg-gray-50' : ''}`}>
               <button type="button" onClick={() => toggle(row.id)} aria-expanded={isOpen} className="w-full text-left">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-gray-900 inline-flex items-center gap-1.5">
+                  <p
+                    className="text-sm font-bold text-gray-900 inline-flex items-center gap-1.5"
+                    // Same native-title tooltip pattern as the desktop
+                    // table. On phones it surfaces via tap-and-hold.
+                    title={ACTION_DESCRIPTIONS[row.action]?.[language]}
+                  >
                     <ChevronRight
                       className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     />
                     {ACTION_LABELS[row.action]?.[language] ?? row.action}
+                    {ACTION_DESCRIPTIONS[row.action] ? (
+                      <Info className="w-3 h-3 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                    ) : null}
                   </p>
                   <p className="text-xs text-gray-500 whitespace-nowrap">
                     {formatRelativeAndExact(row.created_at, language)}
