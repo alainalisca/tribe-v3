@@ -91,6 +91,9 @@ const copy = {
     savedSome: (n: number) => (n === 1 ? '1 row saved' : `${n} rows saved`),
     failedSome: (n: number) => (n === 1 ? '1 row failed' : `${n} rows failed`),
     saveError: 'Could not save this row.',
+    markAllAttended: 'Mark everyone attended',
+    clearAllAttended: 'Clear all',
+    bulkHint: 'Flip every row in one tap. You can still uncheck individuals before saving.',
   },
   es: {
     backToDashboard: 'Volver al panel',
@@ -111,6 +114,9 @@ const copy = {
     savedSome: (n: number) => (n === 1 ? '1 fila guardada' : `${n} filas guardadas`),
     failedSome: (n: number) => (n === 1 ? '1 fila falló' : `${n} filas fallaron`),
     saveError: 'No se pudo guardar esta fila.',
+    markAllAttended: 'Marcar a todos como asistieron',
+    clearAllAttended: 'Limpiar todos',
+    bulkHint: 'Cambia toda la lista de una vez. Puedes desmarcar a alguien antes de guardar.',
   },
 } as const;
 
@@ -210,6 +216,23 @@ export default function BulkAttendancePage() {
         rows: prev.rows.map((r) => (r.client_id === clientId ? { ...r, ...patch, dirty: true } : r)),
       };
     });
+  }
+
+  /**
+   * Flip every row's attended flag in one click. Only marks rows
+   * as dirty whose attended state actually changed — a row that
+   * was already true stays unmodified. This keeps the "X changes"
+   * counter honest and avoids unnecessary POSTs on save.
+   */
+  function bulkSetAttended(attended: boolean) {
+    setState((prev) => {
+      if (prev.kind !== 'ready') return prev;
+      return {
+        ...prev,
+        rows: prev.rows.map((r) => (r.attended === attended ? r : { ...r, attended, dirty: true })),
+      };
+    });
+    trackEvent('tribe_os_bulk_attendance_mass_toggle', { to: attended ? 'attended' : 'cleared' });
   }
 
   const dirtyCount = useMemo(() => (state.kind === 'ready' ? state.rows.filter((r) => r.dirty).length : 0), [state]);
@@ -331,6 +354,30 @@ export default function BulkAttendancePage() {
           <p className="py-12 text-center text-sm text-gray-500 max-w-md mx-auto leading-relaxed">{s.noClients}</p>
         ) : (
           <>
+            {/* Bulk-attendance shortcut. Most group classes have most
+                members showing up, so "mark everyone, then uncheck
+                the no-shows" is faster than the converse. The Clear
+                button is a quick undo for accidental taps. Neither
+                button auto-saves — coach reviews the list and hits
+                Save like normal. */}
+            <div className="mb-3 flex items-center gap-2 flex-wrap bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+              <p className="text-xs text-gray-600 flex-1 min-w-0">{s.bulkHint}</p>
+              <button
+                type="button"
+                onClick={() => bulkSetAttended(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tribe-green text-tribe-dark text-xs font-semibold rounded-full hover:bg-tribe-green-dark hover:text-white transition-colors"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {s.markAllAttended}
+              </button>
+              <button
+                type="button"
+                onClick={() => bulkSetAttended(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-xs font-semibold text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                {s.clearAllAttended}
+              </button>
+            </div>
             <ul className="space-y-2 mb-4">
               {state.rows.map((row) => (
                 <AttendanceRow key={row.client_id} row={row} onChange={(p) => updateRow(row.client_id, p)} copy={s} />
