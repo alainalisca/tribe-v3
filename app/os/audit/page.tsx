@@ -82,6 +82,9 @@ const copy = {
     detailTargetId: 'Target ID',
     detailActorEmail: 'Actor email',
     detailPayload: 'Payload',
+    jumpToClient: 'Open client →',
+    jumpToTeam: 'Open team →',
+    jumpToCoaches: 'Manage coaches →',
     emptyTitle: 'No entries yet',
     emptyHint:
       'Audit entries are written when someone archives or purges a client. As soon as that happens here, this list fills up — newest first.',
@@ -132,6 +135,9 @@ const copy = {
     detailTargetId: 'ID del objetivo',
     detailActorEmail: 'Correo del actor',
     detailPayload: 'Datos',
+    jumpToClient: 'Abrir cliente →',
+    jumpToTeam: 'Abrir equipo →',
+    jumpToCoaches: 'Administrar entrenadores →',
     emptyTitle: 'Aún sin registros',
     emptyHint:
       'Las entradas se generan cuando alguien archiva o elimina un cliente. En cuanto eso pase aquí, esta lista se llenará — las más recientes primero.',
@@ -767,6 +773,26 @@ function AuditTable({
  * target_id, exact ISO timestamp) that the summary line truncates.
  */
 function ExpandedDetail({ row, copy: s }: { row: AuditRow; copy: typeof copy.en | typeof copy.es }) {
+  // Build a "jump to target" deep-link when the audit row references
+  // something we have a page for. Defensive: we don't try to verify
+  // the target still exists (a purged client would 404 the link) —
+  // the audit log is the source of truth even when the entity is
+  // gone, and a forensic reader expects to see the dead link.
+  let jumpHref: string | null = null;
+  let jumpLabel: string | null = null;
+  if (row.target_id && row.target_type === 'client') {
+    jumpHref = `/os/clients/${row.target_id}`;
+    jumpLabel = s.jumpToClient;
+  } else if (row.target_id && row.target_type === 'team') {
+    jumpHref = `/os/teams/${row.target_id}`;
+    jumpLabel = s.jumpToTeam;
+  } else if (row.target_type === 'coach') {
+    // No per-coach detail page exists yet; deep-link to the roster
+    // instead so the reader can verify the row is gone.
+    jumpHref = '/os/coaches';
+    jumpLabel = s.jumpToCoaches;
+  }
+
   return (
     <div className="space-y-2">
       <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
@@ -787,6 +813,14 @@ function ExpandedDetail({ row, copy: s }: { row: AuditRow; copy: typeof copy.en 
           </div>
         ) : null}
       </dl>
+      {jumpHref && jumpLabel ? (
+        <Link
+          href={jumpHref}
+          className="inline-flex items-center text-xs font-semibold text-tribe-green-dark hover:underline"
+        >
+          {jumpLabel}
+        </Link>
+      ) : null}
       <div>
         <p className="text-xs text-gray-500 font-semibold mb-1">{s.detailPayload}</p>
         {row.payload ? (
