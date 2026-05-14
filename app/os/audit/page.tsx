@@ -153,6 +153,10 @@ const ACTION_LABELS: Record<string, { en: string; es: string }> = {
   'attendance.refund': { en: 'Attendance refunded', es: 'Asistencia reembolsada' },
   'gym.settings_update': { en: 'Gym settings updated', es: 'Ajustes del gym actualizados' },
   'insight.bulk_dismiss': { en: 'Insights bulk-dismissed', es: 'Insights descartados en lote' },
+  'coach.remove': { en: 'Coach removed', es: 'Entrenador removido' },
+  'team.create': { en: 'Team created', es: 'Equipo creado' },
+  'team.update': { en: 'Team updated', es: 'Equipo actualizado' },
+  'team.delete': { en: 'Team deleted', es: 'Equipo eliminado' },
 };
 
 const TARGET_LABELS: Record<string, { en: string; es: string }> = {
@@ -161,6 +165,7 @@ const TARGET_LABELS: Record<string, { en: string; es: string }> = {
   team: { en: 'Team', es: 'Equipo' },
   gym: { en: 'Gym', es: 'Gym' },
   insight: { en: 'Insight', es: 'Insight' },
+  coach: { en: 'Coach', es: 'Entrenador' },
 };
 
 /**
@@ -197,6 +202,22 @@ const ACTION_DESCRIPTIONS: Record<string, { en: string; es: string }> = {
   'insight.bulk_dismiss': {
     en: 'Multiple coaching insights were dismissed in one action. The underlying signals still exist; they just were hidden from the dashboard.',
     es: 'Se descartaron varios insights de coaching en una sola acción. Las señales subyacentes existen; solo se ocultaron del panel.',
+  },
+  'coach.remove': {
+    en: 'A coach was removed from this gym. They no longer have access to gym data or the ability to record attendance. The owner can re-invite them at any time.',
+    es: 'Se removió un entrenador del gym. Ya no tiene acceso a los datos ni puede registrar asistencia. El propietario puede volver a invitarlo cuando quiera.',
+  },
+  'team.create': {
+    en: 'A new team was created. Teams group members together for the dashboard filter and member-list pills; they do not affect access controls.',
+    es: 'Se creó un nuevo equipo. Los equipos agrupan miembros para el filtro del panel y las pestañas de la lista; no afectan permisos.',
+  },
+  'team.update': {
+    en: 'A team’s name, color, or assigned coach was changed. Existing members remain in the team.',
+    es: 'Cambió el nombre, color o entrenador asignado al equipo. Los miembros existentes permanecen en el equipo.',
+  },
+  'team.delete': {
+    en: 'A team was deleted. Its members keep all their data — only the team grouping is removed. The payload records how many members were in the team at delete time.',
+    es: 'Se eliminó un equipo. Sus miembros conservan toda su información — solo se elimina la agrupación. El registro guarda cuántos miembros tenía al borrar.',
   },
 };
 

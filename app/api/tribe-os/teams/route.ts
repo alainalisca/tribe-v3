@@ -14,6 +14,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
 import { listTeamsForGym, createTeam } from '@/lib/dal/gymTeams';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { CreateTeamInputSchema } from '@/lib/validations/teams';
 
 function firstZodMessage(error: ZodError): string {
@@ -97,6 +98,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: isUnique ? 400 : 500 }
       );
     }
+
+    // Audit: team creation is a coach-facing change (it shows up as
+    // a filter pill on the dashboard and member list). Worth logging
+    // so a non-owner coach can trace "where did this team come from?"
+    if (result.data) {
+      await writeAuditEntry(supabase, {
+        gymId: gymRes.data.id,
+        actorUserId: userId,
+        action: 'team.create',
+        targetType: 'team',
+        targetId: result.data.id,
+        payload: {
+          name: result.data.name,
+          color: result.data.color,
+          coach_user_id: result.data.coach_user_id,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (error) {
     logError(error, { route: 'POST /api/tribe-os/teams' });

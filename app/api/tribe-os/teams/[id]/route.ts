@@ -16,6 +16,7 @@ import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
 import { deleteTeam, getTeamWithMembers, updateTeam } from '@/lib/dal/gymTeams';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { UpdateTeamInputSchema } from '@/lib/validations/teams';
 
 function firstZodMessage(error: ZodError): string {
@@ -109,6 +110,26 @@ export async function PATCH(
         { status: isUnique ? 400 : 500 }
       );
     }
+
+    // Audit: log the new state. We don't snapshot the previous state
+    // (would require an extra read) — the audit log shows a stream of
+    // "team set to X" entries which lets a reader replay change history
+    // from the sequence without each entry being a diff.
+    if (result.data) {
+      await writeAuditEntry(supabase, {
+        gymId: owner.gymId,
+        actorUserId: userId,
+        action: 'team.update',
+        targetType: 'team',
+        targetId: result.data.id,
+        payload: {
+          name: result.data.name,
+          color: result.data.color,
+          coach_user_id: result.data.coach_user_id,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
     logError(error, { route: 'PATCH /api/tribe-os/teams/[id]' });
@@ -133,10 +154,36 @@ export async function DELETE(
     const owner = await ensureOwner(supabase, userId, gymId);
     if (!owner.ok) return NextResponse.json({ success: false, error: owner.error }, { status: owner.status });
 
+    // Snapshot name+color BEFORE delete so the audit payload carries
+    // what existed. Once delete cascades to gym_team_members there's
+    // no way to reconstruct membership; we deliberately don't try to
+    // log every member-id (could be 100+) — name is enough to know
+    // what was removed.
+    const teamSnapshot = await getTeamWithMembers(supabase, teamId);
+    const snapshotName = teamSnapshot.success && teamSnapshot.data ? teamSnapshot.data.name : null;
+    const snapshotMemberCount = teamSnapshot.success && teamSnapshot.data ? teamSnapshot.data.members.length : null;
+
     const result = await deleteTeam(supabase, teamId);
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'delete_failed' }, { status: 500 });
     }
+
+    // Audit: team deletion cascades to gym_team_members. This is the
+    // single most "where did everyone go?" forensic moment a non-
+    // owner coach might experience, so the entry carries the
+    // member_count_at_delete so they can verify nothing's lost.
+    await writeAuditEntry(supabase, {
+      gymId: owner.gymId,
+      actorUserId: userId,
+      action: 'team.delete',
+      targetType: 'team',
+      targetId: teamId,
+      payload: {
+        name: snapshotName,
+        member_count_at_delete: snapshotMemberCount,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logError(error, { route: 'DELETE /api/tribe-os/teams/[id]' });

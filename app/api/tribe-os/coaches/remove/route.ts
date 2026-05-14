@@ -25,6 +25,7 @@ import { ZodError } from 'zod';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
+import { writeAuditEntry } from '@/lib/dal/auditLog';
 import { RemoveCoachInputSchema } from '@/lib/validations/coaches';
 
 function firstZodMessage(error: ZodError): string {
@@ -84,6 +85,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Snapshot the coach's name + role BEFORE deleting so the audit
+    // payload carries what we removed. Once the gym_coaches row is
+    // gone we can't reconstruct the role they had, and if the user
+    // row later gets hard-deleted we lose the name too. Cheap query,
+    // worth it for the forensic value.
+    const { data: snapshot } = await service
+      .from('gym_coaches')
+      .select('role, user:users!gym_coaches_user_id_fkey(id, name, email)')
+      .eq('gym_id', gymRes.data.id)
+      .eq('user_id', parsed.user_id)
+      .maybeSingle();
+    const snapshotUser = (snapshot as { role?: string; user?: { name?: string | null; email?: string | null } } | null)
+      ?.user;
+    const snapshotRole = (snapshot as { role?: string } | null)?.role ?? null;
+
     const { error: delErr, count } = await service
       .from('gym_coaches')
       .delete({ count: 'exact' })
@@ -97,6 +113,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         targetUserId: parsed.user_id,
       });
       return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
+    }
+
+    // Audit log: only on a real removal (count > 0). A no-op delete
+    // shouldn't leave a forensic trail — that would muddy the log
+    // with "removed user X" entries for users who weren't on the
+    // gym in the first place.
+    if ((count ?? 0) > 0) {
+      await writeAuditEntry(supabase, {
+        gymId: gymRes.data.id,
+        actorUserId: userId,
+        action: 'coach.remove',
+        targetType: 'coach',
+        targetId: parsed.user_id,
+        payload: {
+          name: snapshotUser?.name ?? null,
+          email: snapshotUser?.email ?? null,
+          role: snapshotRole,
+        },
+      });
     }
 
     return NextResponse.json({ success: true, data: { removed_count: count ?? 0 } });
