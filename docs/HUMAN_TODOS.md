@@ -367,10 +367,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                            All three now render with friendly labels in the /os/audit
-                                            viewer (English + Spanish). The pattern is reusable — adding
-                                            new audit event types just means calling `writeAuditEntry` from
-                                            the relevant route and adding a label entry.
+                                                All three now render with friendly labels in the /os/audit
+                                                viewer (English + Spanish). The pattern is reusable — adding
+                                                new audit event types just means calling `writeAuditEntry` from
+                                                the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -665,12 +665,46 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     so a multi-coach gym doesn't have to manually scan
     `/os/audit` to catch problems.
 
-29. **Stripe Connect rough-edge polish** — but this is hard to do
+29. ✅ **Watchdog test coverage** — shipped. 21 tests across
+    `lib/dal/auditWatchdog.test.ts` covering the four classes of
+    behavior that matter for the audit watchdog:
+    - **Threshold math** — under/at/over for each rule, with the
+      exact constants from `AUDIT_THRESHOLDS` baked into the
+      assertions so a future threshold change forces a deliberate
+      test update.
+    - **Per-actor independence** — two actors splitting a count
+      under threshold doesn't alert; both crossing produces two
+      separate alerts; null `actor_user_id` is its own bucket.
+    - **alertOnAny rules** — `client.purge` pools all actors into
+      one bucket, emits `trigger_key: 'client.purge:any'`, and
+      counts across the pool.
+    - **Suppression** — matching trigger_key in a recent
+      `gym.alert_sent` row blocks the alert; mismatched trigger
+      keys, missing payload fields, and malformed payloads all
+      fail open (alert still fires).
+
+    Plus combined-scenario tests (multiple rule types tripping in
+    one run produce the right number of alerts) and shape stability
+    tests (every alert has trigger_key + count + window_hours +
+    earliest_at + latest_at).
+
+    Total new DAL tests this session: 69 across 4 files
+    (refund 18 + check-in 16 + unpaid 14 + watchdog 21). All
+    passing. Full suite's pre-existing 12 failures in
+    SessionCard / FilterBar / connections remain (unrelated).
+
+    **What this buys you**: a regression in the suppression logic
+    (the most failure-prone part — silently re-spamming owners
+    every 6h would erode trust fast) now fails a test. Same for
+    threshold-off-by-one mistakes and accidental loss of
+    per-actor counting if someone refactors the grouping.
+
+30. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-30. **Per-attendance trigger optimization** — migration 079 recomputes
+31. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-31. **Generator feedback loop** — use the feedback data from #5 to:
+32. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
