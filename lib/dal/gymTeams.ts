@@ -59,6 +59,12 @@ export interface TeamMemberClient {
   status: string | null;
   health_status: string | null;
   last_seen_at: string | null;
+  /**
+   * Current streak from the cached counter on clients (079 trigger).
+   * Drives the team-level "members on a streak" rollup. Null when
+   * the AI scoring pipeline hasn't touched this client yet.
+   */
+  current_streak_days: number | null;
 }
 
 /** Team + full member roster (used by /os/teams/[id]). */
@@ -199,7 +205,7 @@ export async function getTeamWithMembers(
       .select(
         `
           added_at,
-          client:clients(id, name, email, phone, status, health_status, last_seen_at, archived)
+          client:clients(id, name, email, phone, status, health_status, last_seen_at, archived, current_streak_days)
         `
       )
       .eq('team_id', teamId);
@@ -221,6 +227,7 @@ export async function getTeamWithMembers(
           status: client.status,
           health_status: client.health_status,
           last_seen_at: client.last_seen_at,
+          current_streak_days: (client.current_streak_days as number | null) ?? null,
           added_at: r.added_at as string,
         };
       })

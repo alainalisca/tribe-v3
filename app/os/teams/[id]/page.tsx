@@ -35,6 +35,7 @@ import {
   MessageCircle,
   X as XIcon,
   Search,
+  Flame,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
@@ -67,6 +68,8 @@ const copy = {
     atRiskCount: (n: number) => `${n} at risk`,
     watchCount: (n: number) => `${n} watch`,
     healthyCount: (n: number) => `${n} healthy`,
+    streakersCount: (n: number) => (n === 1 ? '1 on a streak' : `${n} on a streak`),
+    streakersHint: (topName: string, topDays: number) => `Top: ${topName.split(' ')[0]} (${topDays}-day)`,
     healthAllClear: 'All healthy',
     addMember: 'Add Member',
     reachOut: 'Reach out to all',
@@ -128,6 +131,8 @@ const copy = {
     atRiskCount: (n: number) => `${n} en riesgo`,
     watchCount: (n: number) => `${n} en seguimiento`,
     healthyCount: (n: number) => `${n} saludables`,
+    streakersCount: (n: number) => (n === 1 ? '1 con racha' : `${n} con racha`),
+    streakersHint: (topName: string, topDays: number) => `Top: ${topName.split(' ')[0]} (${topDays} días)`,
     healthAllClear: 'Todos saludables',
     addMember: 'Agregar miembro',
     reachOut: 'Contactar a todos',
@@ -392,6 +397,33 @@ export default function TeamDetailPage() {
                     <span className="font-semibold text-tribe-dark">{state.team.coach_name || s.noCoach}</span>
                   </p>
                 </div>
+
+                {/* Team-level streak rollup. Counts members with an
+                    active streak ≥ 7 days (same threshold as the
+                    Celebrate Wins dashboard widget so the language
+                    is consistent across surfaces). Hidden when no one
+                    qualifies — a quiet team shouldn't trumpet "0
+                    members on a streak". */}
+                {(() => {
+                  const streakers = state.team.members.filter((m) => (m.current_streak_days ?? 0) >= 7);
+                  if (streakers.length === 0) return null;
+                  // Top streaker for the inline highlight. Caps at the
+                  // longest current streak in the team.
+                  const top = streakers.reduce((acc, m) =>
+                    (m.current_streak_days ?? 0) > (acc.current_streak_days ?? 0) ? m : acc
+                  );
+                  return (
+                    <div className="flex items-center gap-2 pt-2 border-t border-tribe-dark-40">
+                      <Flame className="h-4 w-4 text-tribe-green-dark shrink-0" />
+                      <p className="text-sm text-tribe-dark-80">
+                        <span className="font-semibold text-tribe-dark">{s.streakersCount(streakers.length)}</span>{' '}
+                        <span className="text-tribe-dark-60">
+                          {s.streakersHint(top.name, top.current_streak_days ?? 0)}
+                        </span>
+                      </p>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
