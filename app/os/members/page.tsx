@@ -42,7 +42,7 @@ import { buildWhatsAppUrl } from '@/lib/phone';
 import ImportClientsModal from '@/components/tribe-os/ImportClientsModal';
 import type { ClientStatus, ClientWithStats } from '@/lib/dal/clients';
 
-type StatusFilter = 'all' | 'active' | 'watch' | 'at_risk' | 'churned';
+type StatusFilter = 'all' | 'active' | 'watch' | 'at_risk' | 'churned' | 'streaking';
 
 type ListState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; rows: ClientWithStats[] };
 
@@ -58,7 +58,14 @@ const copy = {
     exportCsv: 'Export CSV',
     tagFilterAllOption: 'All tags',
     tagFilterAria: 'Filter by tag',
-    filter: { all: 'All', active: 'Active', watch: 'Watch', at_risk: 'At Risk', churned: 'Churned' },
+    filter: {
+      all: 'All',
+      active: 'Active',
+      watch: 'Watch',
+      at_risk: 'At Risk',
+      churned: 'Churned',
+      streaking: 'On a streak',
+    },
     columns: {
       name: 'Name',
       status: 'Status',
@@ -94,7 +101,14 @@ const copy = {
     exportCsv: 'Exportar CSV',
     tagFilterAllOption: 'Todas las etiquetas',
     tagFilterAria: 'Filtrar por etiqueta',
-    filter: { all: 'Todos', active: 'Activos', watch: 'En seguimiento', at_risk: 'En riesgo', churned: 'Bajas' },
+    filter: {
+      all: 'Todos',
+      active: 'Activos',
+      watch: 'En seguimiento',
+      at_risk: 'En riesgo',
+      churned: 'Bajas',
+      streaking: 'En racha',
+    },
     columns: {
       name: 'Nombre',
       status: 'Estado',
@@ -203,6 +217,13 @@ export default function MembersPage() {
           // AI's WATCH label. Both surfaces represent the same
           // semantic ("declining but not gone").
           rows = rows.filter((r) => r.status === 'lapsed' || r.health_status === 'WATCH');
+        } else if (statusFilter === 'streaking') {
+          // "Streaking" mirrors the dashboard Celebrate-Wins widget's
+          // threshold (7+ day active streak). Lets a coach pull up
+          // the whole list of members worth a quick congrats — useful
+          // for batch outreach when the widget's 10-row cap isn't
+          // enough.
+          rows = rows.filter((r) => (r.current_streak_days ?? 0) >= 7);
         }
 
         // Tag filter (client-side) — applied after the AI-aware
@@ -311,7 +332,7 @@ export default function MembersPage() {
 
           {/* Filter pills + tag select */}
           <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
-            {(['all', 'active', 'watch', 'at_risk', 'churned'] as const).map((f) => (
+            {(['all', 'active', 'streaking', 'watch', 'at_risk', 'churned'] as const).map((f) => (
               <FilterPill key={f} active={statusFilter === f} label={s.filter[f]} onClick={() => setStatusFilter(f)} />
             ))}
             {/* Tag scope — only renders when the loaded set has at
@@ -413,8 +434,11 @@ function uiStatusToDbStatus(ui: StatusFilter): ClientStatus | null {
       return 'inactive';
     case 'at_risk':
     case 'watch':
+    case 'streaking':
       // No server-side status filter — the client-side filter combines
-      // health_status (AI) + status (manual) into a single bucket.
+      // health_status (AI) + status (manual) into a single bucket. Same
+      // pattern for 'streaking', which is a current_streak_days >= 7
+      // filter applied after the basic list comes back.
       return null;
     case 'all':
     default:
