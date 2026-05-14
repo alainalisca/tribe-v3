@@ -367,10 +367,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                                    All three now render with friendly labels in the /os/audit
-                                                    viewer (English + Spanish). The pattern is reusable — adding
-                                                    new audit event types just means calling `writeAuditEntry` from
-                                                    the relevant route and adding a label entry.
+                                                        All three now render with friendly labels in the /os/audit
+                                                        viewer (English + Spanish). The pattern is reusable — adding
+                                                        new audit event types just means calling `writeAuditEntry` from
+                                                        the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -733,12 +733,47 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     new infra needed (rate_limits table already exists from
     migration 049), no migration, no cron.
 
-31. **Stripe Connect rough-edge polish** — but this is hard to do
+31. ✅ **DAL test coverage round-out** — shipped. 48 more tests
+    across 3 files, completing contract coverage for every new
+    DAL function introduced this session:
+    - `lib/dal/auditLog.test.ts` — 17 tests for `listAuditEntries`:
+      gym scoping, optional action + target_type filters, limit
+      clamping (default 50, upper bound 100, lower bound 1,
+      fractional flooring), actor hydration (including the
+      ON-DELETE-SET-NULL → null path), null target_id, error path.
+    - `lib/dal/clients.streakers.test.ts` — 17 tests for
+      `listActiveStreakers`: gym-id vs instructor-user-id scoping
+      (including the bare-string shorthand), default options
+      (minStreakDays=7, staleAfterDays=7, limit=10), option
+      overrides, limit clamping (1 ≤ limit ≤ 50), ordering
+      (current_streak DESC, last_seen DESC tiebreaker), row
+      hydration, error path.
+    - `lib/dal/memberSelf.export.test.ts` — 14 tests for
+      `buildMyDataExport`: env-var guards (no_email,
+      service_role_missing), email lowercasing, empty case,
+      single-membership hydration, multi-gym member, attendance
+      grouping by client_id (no cross-bleed), partner attachment
+      via member_a_id vs member_b_id, partner skip when neither
+      side matches, schema shape stability (schema_version: 1,
+      ISO generated_at, lowercased user_email).
+
+    Session-wide DAL test total now **117 across 7 files**:
+    refund (18) + check-in (16) + unpaid (14) + watchdog (21) +
+    audit-list (17) + streakers (17) + data-export (14). All
+    passing.
+
+    **What this buys you**: every new DAL function this session is
+    now contract-tested. A future refactor that changes any
+    threshold, scope rule, identity guard, grouping logic, or
+    payload shape will fail in CI before reaching production.
+    Clean stopping point for the test investment.
+
+32. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-32. **Per-attendance trigger optimization** — migration 079 recomputes
+33. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-33. **Generator feedback loop** — use the feedback data from #5 to:
+34. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
