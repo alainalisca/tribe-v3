@@ -36,8 +36,29 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError, log } from '@/lib/logger';
 import { recordSelfCheckIn } from '@/lib/dal/memberSelf';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+/**
+ * Rate-limit configuration for self check-in. 30 per hour gives a
+ * comfortable ceiling above any plausible legitimate usage — a
+ * member at a busy gym with sessions every 90 minutes maxes out
+ * at ~10 check-ins a day, so 30/hour is 3x headroom on a
+ * theoretical worst-case-legitimate burst. Catches scripted abuse
+ * (spam-tapping to inflate streak across every session the gym
+ * owner created today) without inconveniencing real members.
+ *
+ * The DAL already gates damage scope: even if rate-limit fails open,
+ * the member can only mark today's sessions from their own gym, and
+ * each (client, session) row is unique. So the worst-case impact of
+ * a rate-limit bypass is "every session today gets a self check-in"
+ * — annoying but bounded, and the coach can delete the spurious rows
+ * via the existing attendance edit flow.
+ */
+const CHECK_IN_RATE_MAX = 30;
+const CHECK_IN_RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
 interface CheckInBody {
   client_id?: unknown;
@@ -56,6 +77,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } = await supabase.auth.getUser();
     if (!user || !user.email) {
       return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
+    }
+
+    // Rate-limit per authenticated user (not per IP, not per device).
+    // A member with two devices doesn't accidentally share their
+    // bucket with anyone else, and an attacker rotating IPs can't
+    // bypass the limit without compromising another auth token.
+    // Run BEFORE body parsing so spam doesn't even get to JSON parse.
+    //
+    // Uses a dedicated service-role client because the rate_limits
+    // table from migration 049 has RLS enabled with no policies —
+    // only service-role can write to it. Matches the pattern in
+    // /api/auth/signup. Falls open if env vars are missing (logged).
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      // Rate limiting unavailable. Log it but allow through — the
+      // DAL's existing identity + scope guards still contain the
+      // damage envelope.
+      log('warn', 'tribe_member_check_in_rate_limit_unavailable', {
+        action: 'memberSelfCheckIn.rate_limit_misconfigured',
+      });
+    } else {
+      const rateLimitClient = createServiceClient(supabaseUrl, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const rateKey = `checkin:${user.id}`;
+      const rate = await checkRateLimit(rateLimitClient, rateKey, CHECK_IN_RATE_MAX, CHECK_IN_RATE_WINDOW_MS);
+      if (!rate.allowed) {
+        // Retry-After header in seconds — standard 429 contract.
+        const retryAfterSeconds = Math.max(1, Math.ceil((rate.resetAt.getTime() - Date.now()) / 1000));
+        log('warn', 'tribe_member_check_in_rate_limited', {
+          action: 'memberSelfCheckIn.rate_limited',
+          actorUserId: user.id,
+          retry_after_seconds: retryAfterSeconds,
+        });
+        return NextResponse.json(
+          { success: false, error: 'rate_limited', retry_after_seconds: retryAfterSeconds },
+          { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
+        );
+      }
     }
 
     let body: CheckInBody;

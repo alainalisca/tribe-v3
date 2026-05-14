@@ -165,6 +165,7 @@ const copy = {
     checkInDone: 'Checked in',
     checkInPending: 'Saving…',
     checkInError: "Couldn't save check-in. Try again.",
+    checkInRateLimited: "You're checking in too fast. Try again in a minute.",
     sessionFallbackTitle: 'Session',
     sessionDurationMinutes: (n: number) => `${n} min`,
     statsTitle: 'Your stats',
@@ -226,6 +227,7 @@ const copy = {
     checkInDone: 'Registrado',
     checkInPending: 'Guardando…',
     checkInError: 'No se pudo registrar tu llegada. Intenta de nuevo.',
+    checkInRateLimited: 'Estás marcando demasiado rápido. Intenta de nuevo en un minuto.',
     sessionFallbackTitle: 'Sesión',
     sessionDurationMinutes: (n: number) => `${n} min`,
     statsTitle: 'Tus estadísticas',
@@ -376,7 +378,11 @@ export default function MyCoachPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: record.client_id, session_id: sessionId }),
       });
-      const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+      const body = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        retry_after_seconds?: number;
+      };
       if (!res.ok || !body.success) {
         // Revert optimistic flip.
         setState((prev) => {
@@ -391,11 +397,19 @@ export default function MyCoachPage() {
             },
           };
         });
-        showError(copy[language].checkInError);
+        // Distinguish the rate-limit case so the toast tells the
+        // member to slow down instead of "couldn't save" (which
+        // they'd interpret as a server issue and keep tapping).
+        const errorCopy =
+          res.status === 429 || body.error === 'rate_limited'
+            ? copy[language].checkInRateLimited
+            : copy[language].checkInError;
+        showError(errorCopy);
         trackEvent('tribe_member_self_check_in_failed', {
           gym_id: record.gym_id,
           session_id: sessionId,
           reason: body.error ?? 'unknown',
+          rate_limited: res.status === 429,
         });
         return;
       }

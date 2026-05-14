@@ -367,10 +367,10 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     not audited (low impact); only bulk action is sensitive enough
     to log in a multi-coach gym.
 
-                                                All three now render with friendly labels in the /os/audit
-                                                viewer (English + Spanish). The pattern is reusable — adding
-                                                new audit event types just means calling `writeAuditEntry` from
-                                                the relevant route and adding a label entry.
+                                                    All three now render with friendly labels in the /os/audit
+                                                    viewer (English + Spanish). The pattern is reusable — adding
+                                                    new audit event types just means calling `writeAuditEntry` from
+                                                    the relevant route and adding a label entry.
 
 19. ✅ **Member-side data export (GDPR right-to-access)** — shipped.
     The complement to the GDPR purge: a member can now download a
@@ -699,12 +699,46 @@ filter: { severity, type, ids } }`. Single-card dismissals are
     threshold-off-by-one mistakes and accidental loss of
     per-actor counting if someone refactors the grouping.
 
-30. **Stripe Connect rough-edge polish** — but this is hard to do
+30. ✅ **Rate limiting on member self check-in** — shipped.
+    `POST /api/me/check-in` is now wrapped with `checkRateLimit`
+    at 30 requests/hour per authenticated user. Hits 429 with a
+    `Retry-After` header (and `retry_after_seconds` in the JSON
+    body) when exceeded.
+
+    Rationale on the limit: a member at a busy gym with sessions
+    every 90 minutes maxes out at ~10 check-ins/day. 30/hour is
+    3x headroom on the worst-case-legitimate burst while easily
+    catching scripted spam (which would hit 100+/hour). The key
+    is `checkin:<user.id>` so a member with two devices never
+    accidentally shares their bucket and an attacker rotating
+    IPs can't bypass without compromising another auth token.
+
+    Uses a dedicated service-role client for the rate_limits
+    write (RLS on migration 049 blocks authenticated role).
+    Matches the pattern in `/api/auth/signup`. Falls open if env
+    vars are missing — the DAL's existing identity + scope guards
+    still contain the damage envelope (member can only check in
+    to today's sessions from their own gym).
+
+    `/my-coach` recognizes the 429 specifically and shows a
+    "You're checking in too fast. Try again in a minute." toast
+    (bilingual), separate from the generic "couldn't save"
+    message so members don't keep tapping. Analytics event
+    `tribe_member_self_check_in_failed` now carries
+    `rate_limited: boolean` so adoption math can split true
+    failures from rate-limit hits.
+
+    **What this buys you**: closes the only member-facing write
+    endpoint against scripted abuse. Bounded by design — no
+    new infra needed (rate_limits table already exists from
+    migration 049), no migration, no cron.
+
+31. **Stripe Connect rough-edge polish** — but this is hard to do
     without an actual test account, so probably better as a human task.
-31. **Per-attendance trigger optimization** — migration 079 recomputes
+32. **Per-attendance trigger optimization** — migration 079 recomputes
     counters from scratch on every write. Could switch to delta updates
     if perf ever becomes a concern at scale (>10k clients).
-32. **Generator feedback loop** — use the feedback data from #5 to:
+33. **Generator feedback loop** — use the feedback data from #5 to:
     - Raise CHURN_RISK threshold from 0.6 → 0.7 if false-positive rate
       > 30% on CHURN_RISK cards
     - Increase REVENUE unpaid-count threshold from 3 → 4 if false-positive
