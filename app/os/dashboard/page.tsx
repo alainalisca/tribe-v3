@@ -32,6 +32,7 @@ import TribeOSWelcomeGuide from '@/components/tribe-os/TribeOSWelcomeGuide';
 import DashboardStats from '@/components/tribe-os/DashboardStats';
 import OnboardingChecklist from '@/components/tribe-os/OnboardingChecklist';
 import AuditActivityChip from '@/components/tribe-os/AuditActivityChip';
+import GymWeekRecapCard from '@/components/tribe-os/GymWeekRecapCard';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
@@ -231,6 +232,13 @@ export default function TribeOSDashboardPage() {
             see "you have N alerts" before they scan stats/sessions.
             Hides itself when zero insights so we don't add empty noise. */}
         <InsightsBanner />
+
+        {/* This-week vs last-week recap. Sits between the insights
+            nudge and the monthly KPI strip because it's a faster-
+            decaying signal — coaches scan it daily, the KPIs are
+            "where are we for the month" cadence. Self-hides for
+            brand-new gyms with zero attendance in both windows. */}
+        <GymWeekRecapCard />
 
         {/* KPI strip */}
         <DashboardStats />
