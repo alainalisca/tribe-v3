@@ -36,6 +36,7 @@ import DashboardTeamFilter from '@/components/tribe-os/DashboardTeamFilter';
 import GymWeekRecapCard from '@/components/tribe-os/GymWeekRecapCard';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
+import RecentlyEndedSessionPrompt from '@/components/tribe-os/RecentlyEndedSessionPrompt';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
 
@@ -237,6 +238,14 @@ export default function TribeOSDashboardPage() {
 
         {/* Onboarding checklist — auto-hides once graduated or dismissed. */}
         <OnboardingChecklist />
+
+        {/* Time-critical prompt: a class just ended in the last few
+            hours and the coach landed on the dashboard. Surface
+            attendance recording BEFORE everything else because the
+            window for accurate recall (and member-perception of the
+            class as "tracked") shrinks fast. Self-hides when no
+            session ended recently — so most pageloads don't see it. */}
+        <RecentlyEndedSessionPrompt />
 
         {/* Insights nudge — surfaces active community_insights so coaches
             see "you have N alerts" before they scan stats/sessions.
