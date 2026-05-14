@@ -121,9 +121,14 @@ export default function RecentlyEndedSessionPrompt() {
     };
   }, []);
 
-  // Quiet on empty + quiet on error. The widget is a nudge; if it
-  // fails to load we'd rather hide than throw a "could not load"
-  // card on the dashboard.
+  // Quiet on empty + quiet on error AND quiet during loading. The
+  // dominant case is no sessions to surface (most dashboard loads
+  // aren't right after a class), so rendering a skeleton on every
+  // pageload would flash on screen and immediately vanish. Hiding
+  // during loading lets the card appear only when there's actually
+  // something to act on — also matches the documented design
+  // philosophy in the header comment.
+  if (state.kind === 'loading') return null;
   if (state.kind === 'ready' && state.sessions.length === 0) return null;
   if (state.kind === 'error') return null;
 
