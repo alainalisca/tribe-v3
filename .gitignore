@@ -30,3 +30,8 @@ supabase/.temp/
 tribe-*.json
 *.csv
 tribe_v3_skills.zip
+
+# Playwright artifacts (browsers + run output)
+/test-results/
+/playwright-report/
+/playwright/.cache/
