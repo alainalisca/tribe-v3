@@ -166,9 +166,14 @@ export default function RecentlyEndedSessionPrompt() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-tribe-dark truncate">{title}</p>
-                    <p className="text-xs text-tribe-dark-80 mt-0.5 inline-flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" aria-hidden="true" />
-                      {s.minutesAgoLabel(sess.minutes_since_ended)}
+                    {/* flex-wrap so the metadata row wraps gracefully
+                        on narrow phones rather than overflowing. The
+                        Clock icon + minutes label always stay
+                        together; the participant-count chunk wraps
+                        below them if it doesn't fit. */}
+                    <p className="text-xs text-tribe-dark-80 mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span>{s.minutesAgoLabel(sess.minutes_since_ended)}</span>
                       {sess.current_participants > 0 ? (
                         <>
                           <span aria-hidden="true">·</span>
