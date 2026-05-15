@@ -149,4 +149,9 @@ select '083_client_attendance_refunds',
          where table_schema = 'public' and table_name = 'client_attendance'
            and column_name = 'refunded_amount_cents'
        ) then 'applied' else 'MISSING' end
+union all
+select '084_cron_advisory_lock',
+       case when (select to_regprocedure('public.cron_try_lock(text)')) is not null
+              and (select to_regprocedure('public.cron_release_lock(text)')) is not null
+            then 'applied' else 'MISSING' end
 order by migration;
