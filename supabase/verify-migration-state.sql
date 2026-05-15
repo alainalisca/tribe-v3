@@ -35,7 +35,7 @@ select '062_clients_and_attendance',
             then 'applied' else 'MISSING' end
 union all
 select '063_revenue_dashboard',
-       case when (select to_regprocedure('public.instructor_revenue_totals(uuid,timestamptz,timestamptz)')) is not null
+       case when (select to_regprocedure('public.instructor_revenue_totals(uuid,date,date,text)')) is not null
             then 'applied' else 'MISSING' end
 union all
 select '064_revenue_function_auth_assertion',
@@ -43,7 +43,7 @@ select '064_revenue_function_auth_assertion',
        -- it as applied when 063 is applied (no way to distinguish in
        -- isolation). Run \df on instructor_revenue_totals to verify
        -- the SECURITY DEFINER flag if forensically interested.
-       case when (select to_regprocedure('public.instructor_revenue_totals(uuid,timestamptz,timestamptz)')) is not null
+       case when (select to_regprocedure('public.instructor_revenue_totals(uuid,date,date,text)')) is not null
             then 'applied (assumed via 063)' else 'MISSING' end
 union all
 select '065_users_sensitive_columns_revoke',
@@ -74,7 +74,7 @@ select '070_dual_path_rls',
        'cannot verify automatically'
 union all
 select '071_gym_revenue_functions',
-       case when (select to_regprocedure('public.gym_revenue_totals(uuid,timestamptz,timestamptz)')) is not null
+       case when (select to_regprocedure('public.gym_revenue_totals(uuid,date,date,text)')) is not null
             then 'applied' else 'MISSING' end
 union all
 select '072_clients_member_enrichment',
@@ -135,7 +135,7 @@ union all
 select '081_intelligence_email_preference',
        case when exists (
          select 1 from information_schema.columns
-         where table_schema = 'public' and table_name = 'users'
+         where table_schema = 'public' and table_name = 'gyms'
            and column_name = 'intelligence_email_enabled'
        ) then 'applied' else 'MISSING' end
 union all
