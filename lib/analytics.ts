@@ -149,6 +149,83 @@ type EventName =
   | 'instructor_onboarding_completed'
   | 'account_deleted'
 
+  // Tribe.OS (Weeks 1-3 of the gym-tenant integration)
+  // Fires from the OS routes once a user has premium. Properties
+  // intentionally lean — keep PII out, prefer enums (tier, status,
+  // role, currency) over free-form strings. Build dashboards on the
+  // counts; reach into the user via posthog identity if you need who.
+  | 'tribe_os_dashboard_viewed' // every load of /os/dashboard (premium-gated)
+  | 'tribe_os_client_created' // POST /api/tribe-os/clients success
+  | 'tribe_os_client_updated' // PATCH /api/tribe-os/clients/[id] success
+  | 'tribe_os_client_status_changed' // status field on update differs from before — signal for engagement health
+  | 'tribe_os_attendance_recorded' // POST /api/tribe-os/clients/[id]/attendance success (also fires on edit save)
+  | 'tribe_os_attendance_deleted' // DELETE /api/tribe-os/attendance/[id] success
+  | 'tribe_os_at_risk_clicked' // user clicked a row in the at-risk widget on /os/dashboard
+  | 'tribe_os_recent_activity_clicked' // user clicked a row in the recent-activity widget on /os/dashboard
+  | 'tribe_os_whatsapp_clicked' // instructor clicked the WhatsApp follow-up button on a client surface
+  | 'tribe_os_onboarding_step_clicked' // a checklist item on the OnboardingChecklist card was clicked
+  | 'tribe_os_onboarding_dismissed' // user explicitly dismissed the OnboardingChecklist card
+  | 'tribe_os_bulk_attendance_viewed' // /os/sessions/[id]/attendance page rendered with a roster
+  | 'tribe_os_bulk_attendance_saved' // bulk attendance form submitted
+  | 'tribe_os_bulk_attendance_picker_opened' // dashboard session-picker modal opened
+  | 'tribe_os_members_viewed' // /os/members page rendered with the roster
+  | 'tribe_os_teams_viewed' // /os/teams page rendered with the list
+  | 'tribe_os_team_created' // POST /api/tribe-os/teams success
+  | 'tribe_os_team_detail_viewed' // /os/teams/[id] page rendered
+  | 'tribe_os_team_updated' // PATCH /api/tribe-os/teams/[id] success
+  | 'tribe_os_team_deleted' // DELETE /api/tribe-os/teams/[id] success
+  | 'tribe_os_team_member_added' // POST /api/tribe-os/teams/[id]/members success
+  | 'tribe_os_team_member_removed' // DELETE /api/tribe-os/teams/[id]/members success
+  | 'tribe_os_team_outreach_copied' // bulk-reach-out modal "Copy message" clicked
+  | 'tribe_os_team_outreach_opened' // bulk-reach-out modal per-member "Open chat" clicked
+  | 'tribe_os_client_import_previewed' // CSV picked + parsed successfully; preview shown
+  | 'tribe_os_client_import_completed' // POST /api/tribe-os/clients/import returned ok
+  | 'tribe_os_clients_exported' // GET /api/tribe-os/clients/export triggered (members CSV download)
+  | 'tribe_os_attendance_exported' // GET /api/tribe-os/attendance/export triggered
+  | 'tribe_os_my_coach_viewed' // /my-coach rendered with at least one membership
+  | 'tribe_os_my_coach_no_records' // /my-coach rendered but no client rows match the user's email
+  | 'tribe_os_my_coach_gym_switched' // user picked a different gym in the multi-gym selector
+  | 'tribe_pwa_install_prompt_clicked' // user clicked Install on the PWA install banner
+  | 'tribe_pwa_install_prompt_dismissed' // user clicked Not now / X on the PWA install banner
+  | 'tribe_pwa_installed' // browser confirmed the PWA install completed
+  | 'tribe_member_self_check_in_clicked' // /my-coach "I'm here" tapped (optimistic flip fired)
+  | 'tribe_member_self_check_in_succeeded' // POST /api/me/check-in returned success
+  | 'tribe_member_self_check_in_failed' // POST /api/me/check-in failed (reason in properties)
+  | 'tribe_member_self_check_in_undone' // /my-coach "Undo" tapped on a Checked-in pill
+  | 'tribe_member_my_coach_welcome_shown' // first visit from email CTA — banner appeared
+  | 'tribe_member_my_coach_welcome_dismissed' // member tapped X on the welcome banner
+  | 'tribe_member_data_export_clicked' // /my-coach "Download my data" tapped
+  | 'tribe_member_data_export_succeeded' // GET /api/me/training/export returned + blob saved
+  | 'tribe_member_data_export_failed' // export endpoint failed or blob write threw
+  | 'tribe_os_unpaid_attendance_viewed' // /os/revenue/unpaid rendered with N unpaid groups
+  | 'tribe_os_unpaid_whatsapp_clicked' // per-row WhatsApp reminder tapped on /os/revenue/unpaid
+  | 'tribe_member_streak_at_risk_shown' // /my-coach rendered with the at-risk banner visible
+  | 'tribe_member_streak_milestone_shown' // /my-coach rendered with a milestone celebration banner (7/14/30/100)
+  | 'tribe_os_celebrate_wins_viewed' // /os/dashboard CelebrateWinsWidget rendered with N streakers
+  | 'tribe_os_celebrate_row_clicked' // streaker row tapped → /os/clients/[id]
+  | 'tribe_os_celebrate_whatsapp_clicked' // per-row WhatsApp congrats tapped on dashboard widget
+  | 'tribe_os_attendance_refunded' // refund recorded via POST /api/tribe-os/attendance/[id]/refund
+  | 'tribe_os_audit_exported' // /os/audit CSV download triggered (filters in properties)
+  | 'tribe_os_recently_ended_prompt_viewed' // dashboard 'just finished class' card rendered with N sessions
+  | 'tribe_os_recently_ended_prompt_clicked' // per-row tap in the recently-ended prompt → /os/sessions/[id]/attendance
+  | 'tribe_os_bulk_attendance_mass_toggle' // bulk "mark all attended" or "clear all" tapped
+  | 'tribe_os_dashboard_team_filter_changed' // /os/dashboard team picker changed (all_teams | specific_team)
+  | 'tribe_os_client_purged' // soft-archive OR hard-purge of a client (mode in properties)
+  | 'tribe_os_schedule_viewed' // /os/schedule page rendered with a week of sessions
+  | 'tribe_os_intelligence_viewed' // /os/intelligence page rendered
+  | 'tribe_os_insight_dismissed' // POST /api/tribe-os/intelligence/[id]/dismiss success
+  | 'tribe_os_insight_action_clicked' // user clicked the action button on an insight card
+  | 'tribe_os_member_rescored' // /os/clients/[id] ChurnRiskPanel "Rescore now" button
+  | 'tribe_os_rescore_all_run' // POST /api/tribe-os/ai/rescore-all success
+  | 'tribe_os_revenue_viewed' // /os/revenue first render with successful summary fetch
+  | 'tribe_os_revenue_exported' // CSV export download
+  | 'tribe_os_coaches_viewed' // /os/coaches page rendered (coach roster surface)
+  | 'tribe_os_gym_settings_viewed' // /os/gym page rendered
+  | 'tribe_os_gym_settings_saved' // PATCH /api/tribe-os/gym success
+  | 'tribe_os_checkout_started' // user clicked the checkout button
+  | 'tribe_os_checkout_succeeded' // Stripe checkout returned ?subscribed=true
+  | 'tribe_os_portal_opened' // user clicked manage subscription -> Stripe portal
+
   // Errors
   | 'error_occurred'
   | 'api_error';

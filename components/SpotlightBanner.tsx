@@ -59,6 +59,7 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
           <Image
             src={instructor.storefront_banner_url}
             alt=""
+            aria-hidden="true"
             fill
             sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover opacity-70"

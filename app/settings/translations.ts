@@ -22,6 +22,8 @@ export function getSettingsTranslations(language: 'en' | 'es') {
     terms: language === 'es' ? 'Términos de Servicio' : 'Terms of Service',
     privacy: language === 'es' ? 'Política de Privacidad' : 'Privacy Policy',
     safety: language === 'es' ? 'Guías de Seguridad' : 'Safety Guidelines',
+    privacySection: language === 'es' ? 'Privacidad' : 'Privacy',
+    blockedUsers: language === 'es' ? 'Usuarios Bloqueados' : 'Blocked Users',
     admin: language === 'es' ? 'Administrador' : 'Admin',
     adminPanel: language === 'es' ? 'Panel de Administrador' : 'Admin Panel',
     help: language === 'es' ? 'Ayuda y Comentarios' : 'Help & Feedback',

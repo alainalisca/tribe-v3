@@ -52,20 +52,16 @@ export default function PopularVenuesSection({ language }: PopularVenuesSectionP
     // Kick off the spot fetch immediately around the city centre.
     fetchVenues(ACTIVE_CITY.center.lat, ACTIVE_CITY.center.lng);
 
-    // In parallel, ask the browser for the user's location so distance
-    // labels can show. If they deny or the API isn't available, we just
-    // skip distance — the section still renders.
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (cancelled) return;
-          setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        },
-        () => {
-          /* user denied; distance just won't render */
-        }
-      );
-    }
+    // In parallel, ask for the user's location so distance labels can
+    // show. Use the silent helper so we never auto-prompt on home-page
+    // mount — if permission isn't already granted we just skip the
+    // distance pill and render the section without it.
+    (async () => {
+      const { getUserLocation } = await import('@/lib/location');
+      const loc = await getUserLocation();
+      if (cancelled || !loc) return;
+      setUserLocation({ lat: loc.latitude, lng: loc.longitude });
+    })();
 
     return () => {
       cancelled = true;

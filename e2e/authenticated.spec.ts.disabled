@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+
+/**
+ * Authenticated end-to-end flows.
+ *
+ * DISABLED until a staging Supabase instance with a known test
+ * account is wired up. Rename this file to authenticated.spec.ts
+ * to enable, AND set the env vars in your shell or CI:
+ *
+ *   PLAYWRIGHT_TEST_USER_EMAIL=tribe-os-e2e@aplusfitnessllc.com
+ *   PLAYWRIGHT_TEST_USER_PASSWORD=<staging password>
+ *
+ * The test account should:
+ *   - Have Tribe.OS premium granted
+ *   - Own at least one gym with 2+ clients seeded
+ *   - Have one attendance row recorded for one client (drives the
+ *     streak + Celebrate Wins assertions)
+ *
+ * Manual seed SQL lives at supabase/seed/e2e-fixtures.sql (not yet
+ * committed — TODO).
+ */
+
+const TEST_EMAIL = process.env.PLAYWRIGHT_TEST_USER_EMAIL;
+const TEST_PASSWORD = process.env.PLAYWRIGHT_TEST_USER_PASSWORD;
+
+test.skip(!TEST_EMAIL || !TEST_PASSWORD, 'Set PLAYWRIGHT_TEST_USER_EMAIL/PASSWORD to enable');
+
+async function signIn(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto('/auth');
+  await page.fill('input[type="email"]', TEST_EMAIL!);
+  await page.fill('input[type="password"]', TEST_PASSWORD!);
+  await page.click('button[type="submit"]');
+  // The sign-in flow redirects to /home for consumer users or
+  // /os/dashboard for Tribe.OS premium. We wait for either.
+  await page.waitForURL(/\/(home|os\/dashboard)/, { timeout: 15_000 });
+}
+
+test.describe('Tribe.OS premium dashboard', () => {
+  test('dashboard renders for a premium user', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/os/dashboard');
+    await expect(page.getByRole('heading', { name: /dashboard|panel/i }).first()).toBeVisible();
+  });
+
+  test('clients list renders', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/os/members');
+    // The page should show either a member list or an empty-state.
+    // We check for the page title rather than count rows because
+    // the seed data state can vary.
+    await expect(page.locator('h1, h2').first()).toBeVisible();
+  });
+
+  test('audit log renders', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/os/audit');
+    // The forensic log has a distinctive heading and filter bar.
+    await expect(page.getByText(/forensic|registro/i).first()).toBeVisible();
+  });
+});
+
+test.describe('Member-facing /my-coach', () => {
+  test('member view loads for a signed-in client', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/my-coach');
+    // Either shows the training record or the no-records state.
+    await page.waitForLoadState('networkidle');
+    // Both states render something other than a 404.
+    await expect(page.locator('body')).not.toHaveText(/404|page could not be found/i);
+  });
+});

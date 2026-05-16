@@ -290,7 +290,7 @@ export default function PostComposer({ open, onClose, instructorId, language, on
             <div className="relative rounded-lg overflow-hidden aspect-video bg-black">
               <Image
                 src={imagePreview}
-                alt=""
+                alt="Image preview"
                 fill
                 sizes="(max-width: 640px) 100vw, 400px"
                 className="object-cover"

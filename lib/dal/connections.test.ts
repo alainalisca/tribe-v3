@@ -38,11 +38,6 @@ interface Scenario {
 }
 
 function mockSupabase(s: Scenario) {
-  // blocked_users.select().or().maybeSingle() → data/error
-  const blockedMaybeSingle = vi.fn().mockResolvedValue({
-    data: s.blockedExists ? { id: 'block-1' } : null,
-    error: null,
-  });
   // connections.select('id, status, requester_id').or().maybeSingle() → existingConnection
   const connectionsSelectMaybeSingle = vi.fn().mockResolvedValue({
     data: s.existingConnection ?? null,
@@ -57,13 +52,6 @@ function mockSupabase(s: Scenario) {
   });
 
   const from = vi.fn((table: string) => {
-    if (table === 'blocked_users') {
-      return {
-        select: () => ({
-          or: () => ({ maybeSingle: blockedMaybeSingle }),
-        }),
-      };
-    }
     if (table === 'connections') {
       return {
         select: () => ({
@@ -76,7 +64,15 @@ function mockSupabase(s: Scenario) {
     return {};
   });
 
+  // Block check is now done via the is_user_blocked() RPC (migration
+  // 061) rather than a direct blocked_users table read. RLS on
+  // blocked_users limits SELECT to the blocker only, so a SECURITY
+  // DEFINER RPC is the only way to check 'recipient blocked
+  // requester' rows from the requester's session.
   const rpc = vi.fn((name: string) => {
+    if (name === 'is_user_blocked') {
+      return Promise.resolve({ data: !!s.blockedExists, error: null });
+    }
     if (name === 'have_shared_session') {
       return Promise.resolve(s.hasSharedResult ?? { data: true, error: null });
     }

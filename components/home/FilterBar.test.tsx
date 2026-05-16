@@ -29,6 +29,21 @@ vi.mock('@/components/NotificationBell', () => ({
   default: () => <div data-testid="notification-bell" />,
 }));
 
+// TribeOSQuickAccess is a child that calls useLanguage at mount.
+// FilterBar renders it; without the mock we'd need a LanguageProvider
+// wrapper for every test. Stubbing it out keeps the suite focused on
+// FilterBar's own behavior (search input, filter pills, clear-all)
+// rather than transitively exercising a sibling component's hooks.
+vi.mock('@/components/TribeOSQuickAccess', () => ({
+  default: () => <div data-testid="tribe-os-quick-access" />,
+}));
+
+// Some FilterBar paths call useLanguage directly for ES vs EN copy.
+// Mock the hook so the tests don't need a provider.
+vi.mock('@/lib/LanguageContext', () => ({
+  useLanguage: () => ({ language: 'en', setLanguage: vi.fn() }),
+}));
+
 vi.mock('@/lib/translations', () => ({
   sportTranslations: {
     Running: { es: 'Correr' },

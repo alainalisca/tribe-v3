@@ -31,6 +31,22 @@
     {
       "path": "/api/cron/behavioral-nudges",
       "schedule": "23 */3 * * *"
+    },
+    {
+      "path": "/api/cron/tribe-os/intelligence",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/tribe-os/weekly-summary",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/tribe-os/audit-watchdog",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/tribe-os/reconcile-counters",
+      "schedule": "0 6 * * *"
     }
   ]
 }

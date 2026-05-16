@@ -1,10 +1,14 @@
 name: CI
 
+# Run on EVERY push (any branch) and EVERY pull request. The old
+# 'only main' filter meant feature branches accumulated commits
+# without checks — that's how 12 failing tests were able to sit
+# red on feature/tribe-os for weeks. Branch-scoped runs catch
+# regressions before they pile up.
 on:
   push:
-    branches: [main]
+    branches-ignore: []
   pull_request:
-    branches: [main]
 
 jobs:
   build-and-test:
@@ -22,22 +26,28 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # Warning budget breakdown (2026-04-21):
-        #   ~ 200 legacy warnings (unused vars, explicit any, etc.)
-        #   ~1500 i18n-backlog warnings (no-restricted-syntax rule flagging
+        # Warning budget breakdown (2026-05-15 update):
+        #   ~ 250 legacy warnings (unused vars, explicit any, etc.)
+        #   ~1550 i18n-backlog warnings (no-restricted-syntax rule flagging
         #         every surviving `language === 'es'` ternary that hasn't
         #         been migrated to useTranslations yet — see UI-I01/I02).
+        # Budget raised from 1750 → 1850 to accommodate the feature/tribe-os
+        # sprint (new components were built with the inline-copy pattern
+        # since the i18n hook had no message-key infrastructure for the new
+        # surfaces yet). Migration of those surfaces to useTranslations is
+        # planned for Phase 2 of the spec.
         # Each migrated file drops the count. Target: cut by 200/week.
         # Do NOT raise this ceiling without a PR comment explaining why.
-        run: npx eslint app/ lib/ components/ hooks/ --max-warnings 1750
+        run: npx eslint app/ lib/ components/ hooks/ --max-warnings 1850
 
       - name: Type check
         run: npx tsc --noEmit
 
       - name: Test
-        # Tests are blocking. 8 test files with stale fixtures are excluded in
-        # vitest.config.ts — each entry is annotated with the refactor that
-        # orphaned it. The remaining suite (120 tests) must pass.
+        # Tests are blocking. The full suite (currently 577) must pass.
+        # vitest.config.ts no longer excludes any test files — the 12
+        # stale fixtures that used to be excluded were fixed in
+        # d6ecab5 + follow-ups.
         run: npx vitest run
 
       - name: Build
@@ -51,19 +61,25 @@ jobs:
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'placeholder'
 
       - name: Bundle size budget
-        # Baseline (2026-04-21 on fix/a-grade-polish after Server Component
-        # migration + dynamic() of home modals): 5772 KB uncompressed.
-        # Budget set at 6000 KB to catch regressions while leaving ~230 KB
-        # of headroom for in-flight work. This is a CEILING, not a target —
-        # ratchet DOWN as heavy deps are trimmed:
-        #   - Framer Motion (largest contributor, ~60KB gz per consumer)
-        #     — candidate for LazyMotion + domAnimation split
-        #   - Leaflet (already lazy via import() in useLocationPickerMap)
-        #   - Supabase client bundle on every 'use client' page
-        # Raising this ceiling without a clear explanation in the PR
-        # description is a red flag in review.
+        # Baseline (2026-05-15): 7308 KB on feature/tribe-os after the
+        # Tribe.OS sprint added the full owner overlay (~25 pages +
+        # ~30 components: dashboard widgets, audit log + filter bar,
+        # training-pattern insight, recently-ended prompt, etc).
+        # Budget set at 7600 KB to catch regressions while leaving
+        # ~290 KB of headroom for the immediate post-merge work.
+        # This is a CEILING, not a target — ratchet DOWN as the
+        # follow-up code-split lands:
+        #   - Lazy-load /os/* routes via dynamic() (biggest win,
+        #     ~1.5 MB potential reduction)
+        #   - Framer Motion -> LazyMotion + domAnimation split
+        #     (~60 KB gz per consumer)
+        #   - Leaflet stays lazy via useLocationPickerMap
+        #   - Trim unused lucide-react icons (per-component imports
+        #     should already tree-shake; verify no barrel imports)
+        # Raising this ceiling further without a clear explanation
+        # in the PR description is a red flag in review.
         run: |
-          BUDGET_KB=6000
+          BUDGET_KB=7600
           TOTAL_KB=$(du -sk .next/static/chunks 2>/dev/null | awk '{print $1}')
           echo "client bundle: ${TOTAL_KB} KB (budget: ${BUDGET_KB} KB)"
           if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then

@@ -70,6 +70,11 @@ vi.mock('@/components/ShareButton', () => ({
 }));
 
 function baseSession(overrides: Partial<SessionWithRelations> = {}): SessionWithRelations {
+  // Default to a future date + valid start_time/duration so
+  // computeSessionStatus(...).isPast is false. Without this, badges
+  // gated on !isPast (Full, Starting Soon) never render and the
+  // tests silently lose coverage. The field is `start_time`, not
+  // `time` — a 2026 rename that left old test fixtures stale.
   return {
     id: 'session-1',
     creator_id: 'creator-1',
@@ -77,8 +82,9 @@ function baseSession(overrides: Partial<SessionWithRelations> = {}): SessionWith
     location: 'Medellín Park',
     location_lat: null,
     location_lng: null,
-    date: '2026-04-25',
-    time: '18:00',
+    date: '2099-04-25',
+    start_time: '18:00',
+    duration: 60,
     max_participants: 10,
     current_participants: 3,
     status: 'active',
@@ -86,7 +92,7 @@ function baseSession(overrides: Partial<SessionWithRelations> = {}): SessionWith
     currency: 'USD',
     description: 'Weekly 5k run',
     photos: [],
-    session_participants: [],
+    participants: [],
     creator: {
       id: 'creator-1',
       name: 'Al',

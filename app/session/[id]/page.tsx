@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AttendanceTracker from '@/components/AttendanceTracker';
+import SessionAttendanceSection from '@/components/tribe-os/SessionAttendanceSection';
 import StoryUpload from '@/components/StoryUpload';
 import StoryViewer from '@/components/StoryViewer';
 import { markStoriesSeen } from '@/components/StoriesRow';
@@ -387,6 +388,10 @@ export default function SessionDetailPage() {
             sessionDate={d.session.date}
           />
         )}
+
+        {/* Tribe.OS premium-only: per-client attendance + payment tracking. */}
+        {/* Renders silently for non-creators or non-premium instructors. */}
+        {d.user ? <SessionAttendanceSection sessionId={params.id as string} isCreator={isCreator} /> : null}
       </div>
 
       {d.sessionActions.showGuestModal && (

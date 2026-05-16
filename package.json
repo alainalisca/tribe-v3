@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint app/ lib/ components/",
@@ -12,6 +12,8 @@
     "format:check": "prettier --check 'app/**/*.{ts,tsx}' 'lib/**/*.{ts,tsx}' 'components/**/*.{ts,tsx}'",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "prepare": "husky"
   },
   "dependencies": {
@@ -54,6 +56,7 @@
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.8.1",
     "resend": "^6.5.2",
     "stripe": "^22.0.0",
     "tailwind-merge": "^3.5.0",
@@ -62,6 +65,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

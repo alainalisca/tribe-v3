@@ -7,7 +7,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env*.local
-.env*.local.bak
+.env*.local.bak*
 .env
 .claude/
 .superpowers/
@@ -30,3 +30,8 @@ supabase/.temp/
 tribe-*.json
 *.csv
 tribe_v3_skills.zip
+
+# Playwright artifacts (browsers + run output)
+/test-results/
+/playwright-report/
+/playwright/.cache/

@@ -118,13 +118,16 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
         // 2. Fetch external Eventbrite events (wrapped in try/catch so missing API key doesn't block)
         const externalPromise = (async (): Promise<ExternalEvent[]> => {
           try {
-            if (!navigator.geolocation) return [];
+            // Use the silent location helper so this background fetch
+            // doesn't trigger a permission prompt on every home-page
+            // mount. If permission isn't already granted, the
+            // external-events fetch falls back to an empty array and
+            // the section renders without the third-party events.
+            const { getUserLocation } = await import('@/lib/location');
+            const loc = await getUserLocation();
+            if (!loc) return [];
 
-            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
-            });
-
-            const { latitude, longitude } = position.coords;
+            const { latitude, longitude } = loc;
             const params = new URLSearchParams({
               lat: latitude.toString(),
               lng: longitude.toString(),

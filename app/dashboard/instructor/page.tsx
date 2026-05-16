@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
+import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
 import LeadsTab from '@/components/dashboard/LeadsTab';
@@ -23,6 +24,7 @@ import {
   type InstructorStats,
   type ServicePackageRow,
 } from '@/lib/dal/instructorDashboard';
+import { fetchUserProfile } from '@/lib/dal/users';
 import type { User } from '@/lib/database.types';
 
 type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages' | 'leads';
@@ -69,13 +71,17 @@ export default function InstructorDashboardPage() {
         return;
       }
 
-      const { data: userRow, error } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-
-      if (error || !userRow?.is_instructor) {
+      // Use the DAL helper rather than select('*') so we get an explicit
+      // safe-column list. Migration 065 revoked SELECT on sensitive
+      // tribe_os_* columns from the authenticated role; select('*')
+      // would now fail with permission denied. fetchUserProfile selects
+      // a vetted column set that excludes the revoked columns.
+      const profileResult = await fetchUserProfile(supabase, authUser.id);
+      if (!profileResult.success || !profileResult.data?.is_instructor) {
         router.replace('/profile');
         return;
       }
-      setProfile(userRow as User);
+      setProfile(profileResult.data as unknown as User);
 
       // Load all data in parallel
       const [sessResult, statsResult, pkgResult, leadsResult] = await Promise.all([
@@ -124,6 +130,14 @@ export default function InstructorDashboardPage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto px-4">
+        {/* Tribe.OS entry — instructors on this dashboard are the
+            target audience for Tribe.OS. Premium users see "Open
+            dashboard"; non-premium see "Try Tribe.OS". The card
+            auto-detects which to show. */}
+        <div className="mt-4">
+          <TribeOSEntryCard variant="inline" />
+        </div>
+
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
           {tabs.map((tab) => {

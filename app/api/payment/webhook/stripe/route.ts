@@ -8,6 +8,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyStripeWebhookSignature, mapStripeStatus, getStripePaymentIntent } from '@/lib/payments/stripe';
 import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
+import { syncFromStripeSubscription, clearTribeOSSubscription } from '@/lib/dal/tribeOSSubscription';
+import { recordPaymentRefund } from '@/lib/dal/payments';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -168,6 +170,141 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         return NextResponse.json({ success: true, ready });
+      }
+
+      // ----------------------------------------------------------------
+      // Tribe.OS subscription billing (Mission 2)
+      // ----------------------------------------------------------------
+      // Distinct from the Connect events above: these are events about
+      // the platform charging instructors directly for the Tribe.OS
+      // premium tier. Both flows arrive at this same endpoint; routing
+      // is by event.type. Idempotency is already guaranteed by the
+      // event-id dedup at the top of this handler.
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as unknown as {
+          id: string;
+          customer: string;
+          status: string;
+          items: { data: Array<{ price: { id: string } }> };
+        };
+
+        const result = await syncFromStripeSubscription(supabase, {
+          id: subscription.id,
+          customer: subscription.customer,
+          status: subscription.status,
+          items: { data: subscription.items.data.map((i) => ({ price: { id: i.price.id } })) },
+        });
+
+        if (!result.success) {
+          // user_not_found_for_stripe_customer means the subscription is
+          // for a customer we never tagged with a tribe user. Treat as
+          // benign (not our subscription) — return 200 so Stripe doesn't
+          // retry forever. All other errors get a 500 so Stripe retries.
+          if (result.error === 'user_not_found_for_stripe_customer') {
+            return NextResponse.json({ success: true, ignored: true });
+          }
+          logError(new Error(`tribe_os_subscription_sync_failed: ${result.error ?? 'unknown'}`), {
+            action: 'stripe_webhook_subscription_sync',
+            subscriptionId: subscription.id,
+            eventType: event.type,
+          });
+          return NextResponse.json({ error: 'subscription_sync_failed' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, userId: result.data?.userId });
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as unknown as { id: string; customer: string };
+        const result = await clearTribeOSSubscription(supabase, subscription.customer);
+
+        if (!result.success) {
+          if (result.error === 'user_not_found_for_stripe_customer') {
+            return NextResponse.json({ success: true, ignored: true });
+          }
+          logError(new Error(`tribe_os_subscription_clear_failed: ${result.error ?? 'unknown'}`), {
+            action: 'stripe_webhook_subscription_clear',
+            customerId: subscription.customer,
+            subscriptionId: subscription.id,
+          });
+          return NextResponse.json({ error: 'subscription_clear_failed' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, userId: result.data?.userId });
+      }
+
+      case 'invoice.paid':
+      case 'invoice.payment_failed': {
+        // Stripe fires customer.subscription.updated alongside these
+        // with the resulting subscription state, and that handler is
+        // the canonical state-sync path. We acknowledge invoice events
+        // with 200 so Stripe stops retrying. Future: hook user-facing
+        // emails (receipt on paid, dunning on failed) here.
+        return NextResponse.json({ success: true });
+      }
+
+      // ----------------------------------------------------------------
+      // Refund tracking (Week 3 revenue dashboard)
+      // ----------------------------------------------------------------
+      // Stripe fires charge.refunded whenever a refund is created against
+      // a charge (full or partial). The event payload's amount_refunded
+      // is the cumulative refund total on the charge — re-running with
+      // the same value is a no-op, so this branch is idempotent w.r.t.
+      // Stripe replays.
+
+      case 'charge.refunded': {
+        const charge = event.data.object as unknown as {
+          id: string;
+          payment_intent: string | null;
+          amount_refunded: number;
+          currency: string;
+          created: number; // unix seconds
+        };
+
+        if (!charge.payment_intent) {
+          // Charge with no payment intent (legacy Charges API). Not
+          // something our flow produces. Acknowledge so Stripe doesn't
+          // retry.
+          logError(new Error('charge_refunded_missing_payment_intent'), {
+            action: 'stripe_webhook_charge_refunded',
+            chargeId: charge.id,
+          });
+          return NextResponse.json({ success: true, ignored: true });
+        }
+
+        // Use the event creation time as the refund timestamp. Stripe
+        // gives us the event's `created` (top-level on the event), not
+        // the charge object — fall back to the charge.created if for
+        // some reason event.created isn't available.
+        const eventCreatedSec =
+          (event as { created?: number }).created ?? charge.created ?? Math.floor(Date.now() / 1000);
+        const refundedAt = new Date(eventCreatedSec * 1000).toISOString();
+
+        const result = await recordPaymentRefund(supabase, charge.payment_intent, charge.amount_refunded, refundedAt);
+
+        if (!result.success) {
+          // payment_not_found means this refund is for a charge we
+          // never recorded — treat as benign (200) so Stripe stops
+          // retrying. invalid_refund_amount and missing_payment_intent_id
+          // are bad-shape events — also 200 (we logged them).
+          if (
+            result.error === 'payment_not_found' ||
+            result.error === 'invalid_refund_amount' ||
+            result.error === 'missing_payment_intent_id'
+          ) {
+            return NextResponse.json({ success: true, ignored: true, reason: result.error });
+          }
+          // Anything else is a real failure — return 500 so Stripe retries.
+          logError(new Error(`charge_refunded_record_failed: ${result.error ?? 'unknown'}`), {
+            action: 'stripe_webhook_charge_refunded',
+            chargeId: charge.id,
+            paymentIntentId: charge.payment_intent,
+            amountRefunded: charge.amount_refunded,
+          });
+          return NextResponse.json({ error: 'refund_record_failed' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, paymentId: result.data?.paymentId });
       }
 
       default:

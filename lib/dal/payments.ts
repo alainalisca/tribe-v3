@@ -165,3 +165,68 @@ export async function fetchInstructorPayouts(
     return { success: false, error: 'Failed to fetch instructor payouts' };
   }
 }
+
+/**
+ * Record a refund on a payment. Called by the Stripe charge.refunded
+ * webhook branch (app/api/payment/webhook/stripe/route.ts).
+ *
+ * `cumulativeRefundCents` mirrors Stripe's charge.amount_refunded:
+ * it is the TOTAL refunded so far on the charge, not a per-event delta.
+ * That means re-running this with the same value is idempotent — webhook
+ * replays will not double-count.
+ *
+ * Lookup is by stripe_payment_intent_id, matching the column populated
+ * at payment creation by /api/payment/create.
+ *
+ * Fails closed: if the lookup or update fails, we return an error and
+ * the webhook returns 500 so Stripe retries. Better to get a duplicate
+ * delivery than to drop a refund.
+ */
+export async function recordPaymentRefund(
+  supabase: SupabaseClient,
+  stripePaymentIntentId: string,
+  cumulativeRefundCents: number,
+  refundedAt: string
+): Promise<DalResult<{ paymentId: string }>> {
+  try {
+    if (!stripePaymentIntentId) {
+      return { success: false, error: 'missing_payment_intent_id' };
+    }
+    if (!Number.isFinite(cumulativeRefundCents) || cumulativeRefundCents <= 0) {
+      // A zero or negative refund is meaningless — Stripe shouldn't send
+      // it. Reject loudly so we notice if it ever appears.
+      return { success: false, error: 'invalid_refund_amount' };
+    }
+
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        refunded_at: refundedAt,
+        refunded_amount_cents: cumulativeRefundCents,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_payment_intent_id', stripePaymentIntentId)
+      .select('id')
+      .single();
+
+    if (error) {
+      logError(error, { action: 'recordPaymentRefund', stripePaymentIntentId });
+      return { success: false, error: error.message };
+    }
+    if (!data) {
+      // No matching payment row. Could be a charge from outside our
+      // platform, or a payment we never recorded. Treat as benign so
+      // Stripe doesn't retry forever, but log so we notice patterns.
+      logError(new Error('payment_not_found_for_refund'), {
+        action: 'recordPaymentRefund',
+        stripePaymentIntentId,
+      });
+      return { success: false, error: 'payment_not_found' };
+    }
+
+    return { success: true, data: { paymentId: (data as { id: string }).id } };
+  } catch (error) {
+    logError(error, { action: 'recordPaymentRefund', stripePaymentIntentId });
+    return { success: false, error: 'Failed to record refund' };
+  }
+}

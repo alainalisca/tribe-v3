@@ -3,6 +3,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { fuzzLocation } from '@/lib/location';
 import type { DalResult } from './types';
 
 /** Full instructor profile for Browse Instructors page */
@@ -82,23 +83,31 @@ export async function fetchInstructors(
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
 
-    const instructors: InstructorProfile[] = (data || []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      avatar_url: row.avatar_url,
-      tagline: row.storefront_tagline ?? null,
-      location: row.location ?? null,
-      specialties: (row.specialties as string[]) || [],
-      verified: row.is_verified_instructor ?? false,
-      average_rating: row.average_rating ?? 0,
-      total_reviews: row.total_reviews ?? 0,
-      total_sessions: row.total_sessions_hosted ?? 0,
-      is_instructor: true,
-      created_at: row.created_at,
-      location_lat: row.location_lat ?? null,
-      location_lng: row.location_lng ?? null,
-      years_experience: row.years_experience ?? 0,
-    }));
+    const instructors: InstructorProfile[] = (data || []).map((row) => {
+      // Fuzz user coords to ~500m before sending to client. Browse Instructors
+      // is a public-facing listing; raw coords would let anyone reverse-
+      // geocode an instructor's home address. 500m precision is plenty for
+      // map markers and "instructors near me" sorting.
+      const fuzzed =
+        row.location_lat != null && row.location_lng != null ? fuzzLocation(row.location_lat, row.location_lng) : null;
+      return {
+        id: row.id,
+        name: row.name,
+        avatar_url: row.avatar_url,
+        tagline: row.storefront_tagline ?? null,
+        location: row.location ?? null,
+        specialties: (row.specialties as string[]) || [],
+        verified: row.is_verified_instructor ?? false,
+        average_rating: row.average_rating ?? 0,
+        total_reviews: row.total_reviews ?? 0,
+        total_sessions: row.total_sessions_hosted ?? 0,
+        is_instructor: true,
+        created_at: row.created_at,
+        location_lat: fuzzed?.lat ?? null,
+        location_lng: fuzzed?.lng ?? null,
+        years_experience: row.years_experience ?? 0,
+      };
+    });
 
     return { success: true, data: instructors };
   } catch (error) {

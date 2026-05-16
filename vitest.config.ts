@@ -25,6 +25,10 @@ export default defineConfig({
       '**/dist/**',
       '**/.next/**',
       '**/.git/**',
+      // Playwright e2e suite runs via `npm run test:e2e`, not vitest.
+      // Excluded here so vitest doesn't try to import @playwright/test
+      // and choke when the package isn't installed.
+      'e2e/**',
       // All LOGIC-04 webhook fixtures (stripe, wompi, payment/create) were
       // rewritten 2026-04-21 against the current contracts and are no
       // longer excluded. Kept this header block for future refactor

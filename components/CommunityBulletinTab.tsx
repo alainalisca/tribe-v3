@@ -318,7 +318,7 @@ export default function CommunityBulletinTab() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={form.image_url}
-                  alt=""
+                  alt="Bulletin image preview"
                   className="w-16 h-16 rounded-lg object-cover border border-stone-200 dark:border-tribe-mid"
                 />
                 <button

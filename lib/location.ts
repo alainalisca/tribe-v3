@@ -5,14 +5,84 @@ export interface Location {
   longitude: number;
 }
 
+/**
+ * Silent variant: returns the user's location only if permission was
+ * previously granted. Never prompts. Use this from background flows
+ * (home feed, recommendations, distance-sort widgets) so the browser
+ * permission dialog doesn't pop on every page load.
+ *
+ * Why: the prior implementation called `getCurrentPosition()`
+ * unconditionally, which prompts when permission state is 'default'
+ * or 'prompt'. If the user dismissed the dialog with the X (rather
+ * than picking Allow / Block), the state stays 'prompt' and the
+ * dialog reappears on every navigation. Pure noise.
+ *
+ * Call `requestUserLocation()` from explicit user-intent flows
+ * (button clicks, "find nearby" toggles) where prompting is expected.
+ */
 export async function getUserLocation(): Promise<Location | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      log('error', 'Geolocation not supported', { action: 'getUserLocation' });
-      resolve(null);
-      return;
-    }
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    log('debug', 'Geolocation not supported', { action: 'getUserLocation' });
+    return null;
+  }
 
+  // Permission API is widely supported now (Chrome, Edge, Firefox,
+  // Safari 16+). When available, gate on 'granted' so we never trigger
+  // the OS prompt from a background context. When unavailable (older
+  // Safari, some embedded webviews), fall back to a localStorage flag
+  // so we ask at most once per device.
+  if (typeof navigator.permissions?.query === 'function') {
+    try {
+      const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      if (status.state !== 'granted') {
+        log('debug', 'location_skip_no_permission', {
+          action: 'getUserLocation',
+          state: status.state,
+        });
+        return null;
+      }
+    } catch (error) {
+      // Permissions.query can throw on unusual configurations
+      // (e.g. iframe sandboxes). Fall through to the localStorage gate.
+      logError(error, { action: 'getUserLocation.permissions_query' });
+    }
+  } else {
+    // Older browser without Permissions API. Use a localStorage gate
+    // to ensure we don't auto-prompt on every page load — the user
+    // gets at most one ask per device, ever (until they clear data).
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const asked = localStorage.getItem('location-auto-ask-done');
+        if (asked) return null;
+        localStorage.setItem('location-auto-ask-done', String(Date.now()));
+      }
+    } catch {
+      // localStorage can throw in private-mode iframes; degrade
+      // silently and proceed (still better than infinite-loop).
+    }
+  }
+
+  return getCurrentPosition();
+}
+
+/**
+ * Explicit-intent variant: always attempts to fetch location,
+ * prompting the user if necessary. Use only from button-driven flows
+ * where the user has signalled they want their location used right
+ * now (e.g. "find nearby" toggle, location picker, training-partner
+ * search).
+ */
+export async function requestUserLocation(): Promise<Location | null> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    log('debug', 'Geolocation not supported', { action: 'requestUserLocation' });
+    return null;
+  }
+  return getCurrentPosition();
+}
+
+/** Shared underlying getCurrentPosition wrapper with consistent options. */
+function getCurrentPosition(): Promise<Location | null> {
+  return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
@@ -21,7 +91,7 @@ export async function getUserLocation(): Promise<Location | null> {
         });
       },
       (error) => {
-        logError(error, { action: 'getUserLocation' });
+        logError(error, { action: 'getCurrentPosition' });
         resolve(null);
       },
       {

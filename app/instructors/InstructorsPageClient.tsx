@@ -9,7 +9,7 @@ import FeaturedInstructorCarousel from '@/components/FeaturedInstructorCarousel'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, List, Navigation, Loader2 } from 'lucide-react';
-import { getUserLocation } from '@/lib/location';
+import { requestUserLocation } from '@/lib/location';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { type InstructorProfile } from '@/lib/dal/instructors';
 import { sportTranslations } from '@/lib/translations';
@@ -140,7 +140,10 @@ export default function InstructorsPageClient({ initialInstructors }: Instructor
       return;
     }
     setGettingLocation(true);
-    const loc = await getUserLocation();
+    // "Near me" button click — explicit user intent, so prompt if
+    // permission isn't already granted. The home feed's background
+    // location read uses the silent getUserLocation variant.
+    const loc = await requestUserLocation();
     setGettingLocation(false);
     if (loc) {
       setUserLat(loc.latitude);

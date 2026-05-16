@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
+import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
 
@@ -110,6 +111,10 @@ export default function FilterBar({
           </h1>
         </Link>
         <div className="flex items-center gap-2">
+          {/* Premium-only shortcut to /os/dashboard. Renders nothing
+              for non-premium users so the header stays clean for the
+              consumer app's main audience. */}
+          <TribeOSQuickAccess />
           <NotificationBell />
           <LanguageToggle />
         </div>

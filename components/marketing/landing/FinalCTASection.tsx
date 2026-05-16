@@ -38,7 +38,7 @@ export default function FinalCTASection() {
     <section ref={ref} className="relative py-24 px-4 overflow-hidden">
       {/* Background photo with overlay */}
       <div className="absolute inset-0">
-        <Image src={BG_PHOTO} alt="" fill className="object-cover" sizes="100vw" />
+        <Image src={BG_PHOTO} alt="" aria-hidden="true" fill className="object-cover" sizes="100vw" />
         <div className="absolute inset-0 bg-tribe-dark/85 backdrop-blur-[2px]" />
         {/* Green glow */}
         <div className="absolute w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(192,232,99,0.08)_0%,transparent_70%)] -bottom-40 right-0 rounded-full animate-[pulseGlow_6s_ease-in-out_infinite]" />

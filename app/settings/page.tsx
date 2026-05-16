@@ -20,6 +20,8 @@ import { useUserCurrency } from '@/lib/useUserCurrency';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
+import ReplayToursButton from '@/components/ReplayToursButton';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -85,6 +87,12 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* Tribe.OS entry — auto-detects premium status. For premium
+            users this is the most-used surface to reach from the
+            account/settings area; for non-premium users it surfaces
+            the offering without forcing them through marketing copy. */}
+        <TribeOSEntryCard variant="inline" />
+
         {/* My Orders Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
@@ -101,6 +109,12 @@ export default function SettingsPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Replay welcome tours — clears the localStorage seen-flags
+            for every QuickGuide so they auto-popup again on next
+            visit. Useful for users who skipped the intro and now
+            want to see what they missed. */}
+        <ReplayToursButton />
 
         {/* Help & Feedback Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
@@ -333,6 +347,19 @@ export default function SettingsPage() {
               </Button>
             </Link>
           </div>
+        </div>
+
+        {/* Privacy Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.privacySection}</h2>
+          <Link href="/settings/blocked">
+            <Button
+              variant="ghost"
+              className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid"
+            >
+              {txt.blockedUsers}
+            </Button>
+          </Link>
         </div>
 
         {/* Account Section */}

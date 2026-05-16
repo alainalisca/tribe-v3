@@ -57,7 +57,7 @@ export default function VideoIntro({
         >
           {posterUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={posterUrl} alt="" className="w-full h-full object-cover" />
+            <img src={posterUrl} alt="" aria-hidden="true" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-[#3D4349] to-[#272D34]" />
           )}
