@@ -68,11 +68,11 @@
   }
 
   /* Dark-mode shadcn primitives, retuned May 2026 to the same WCAG
-     targets as the .bg-theme-*/
-  .text-theme-* layer above so ui/* cards,
-     dialogs, popovers, and inputs match the rest of the app. Background
-     #1E2328, surface #272D34, card #2E343B, elevated/popover #353C44;
-     foreground #F0F0F0; muted-foreground bumped to #C5CBD3 (clears AAA). */
+     targets as the semantic theme layer below, so the ui primitives
+     (cards, dialogs, popovers, inputs) match the rest of the app.
+     Background #1E2328, surface #272D34, card #2E343B,
+     elevated and popover #353C44, foreground #F0F0F0; muted-foreground
+     bumped to #C5CBD3 so it clears AAA. */
   .dark {
     --background: 210 14% 14%;
     --foreground: 0 0% 94%;
