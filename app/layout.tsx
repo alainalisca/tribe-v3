@@ -51,6 +51,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={jakartaSans.variable} suppressHydrationWarning>
       <head>
+        {/* Theme FOUC guard — runs before paint/hydration. Reads the
+            saved preference (default light), resolves "system", and sets
+            the html class so there's no flash of the wrong theme. Must
+            stay in sync with applyThemeClass() in contexts/ThemeContext. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('tribe-theme')||'light';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var c=document.documentElement.classList;c.remove('light','dark');c.add(t==='dark'?'dark':'light');}catch(e){}})();`,
+          }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

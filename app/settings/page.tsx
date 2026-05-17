@@ -15,10 +15,13 @@ import {
   Dumbbell,
   HeartHandshake,
   ShoppingBag,
+  Palette,
 } from 'lucide-react';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { haptic } from '@/lib/haptics';
 import BottomNav from '@/components/BottomNav';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import ReplayToursButton from '@/components/ReplayToursButton';
@@ -31,8 +34,15 @@ import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const { currency: userCurrency, setCurrency: setUserCurrency } = useUserCurrency();
   const router = useRouter();
+
+  const themeOptions: Array<{ value: 'light' | 'dark' | 'system'; en: string; es: string }> = [
+    { value: 'light', en: 'Light', es: 'Claro' },
+    { value: 'dark', en: 'Dark', es: 'Oscuro' },
+    { value: 'system', en: 'System', es: 'Sistema' },
+  ];
 
   useEffect(() => {
     trackEvent('settings_opened');
@@ -254,6 +264,38 @@ export default function SettingsPage() {
             )}
           </div>
         )}
+
+        {/* Appearance Section */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-2">
+            <Palette className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{language === 'es' ? 'Apariencia' : 'Appearance'}</h2>
+          </div>
+          <p className="text-xs text-theme-secondary mb-4">
+            {language === 'es'
+              ? 'Claro es el predeterminado. Oscuro está disponible. Sistema sigue tu dispositivo.'
+              : 'Light is the default. Dark is available. System follows your device.'}
+          </p>
+
+          <div className="space-y-2">
+            {themeOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  haptic('light');
+                  setTheme(opt.value);
+                }}
+                className={`w-full p-4 rounded-xl text-left transition ${
+                  theme === opt.value
+                    ? 'bg-tribe-green text-slate-900 font-semibold'
+                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+                }`}
+              >
+                {language === 'es' ? opt.es : opt.en}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Language Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

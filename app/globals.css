@@ -67,24 +67,30 @@
     --chart-5: 27 87% 67%;
   }
 
+  /* Dark-mode shadcn primitives, retuned May 2026 to the same WCAG
+     targets as the .bg-theme-*/
+  .text-theme-* layer above so ui/* cards,
+     dialogs, popovers, and inputs match the rest of the app. Background
+     #1E2328, surface #272D34, card #2E343B, elevated/popover #353C44;
+     foreground #F0F0F0; muted-foreground bumped to #C5CBD3 (clears AAA). */
   .dark {
-    --background: 210 14% 17%;
-    --foreground: 0 0% 100%;
-    --card: 210 10% 27%;
-    --card-foreground: 0 0% 100%;
-    --popover: 210 10% 27%;
-    --popover-foreground: 0 0% 100%;
+    --background: 210 14% 14%;
+    --foreground: 0 0% 94%;
+    --card: 212 13% 21%;
+    --card-foreground: 0 0% 94%;
+    --popover: 212 13% 24%;
+    --popover-foreground: 0 0% 94%;
     --primary: 84 68% 65%;
-    --primary-foreground: 210 14% 17%;
-    --secondary: 210 7% 34%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 7% 34%;
-    --muted-foreground: 210 4% 70%;
-    --accent: 210 7% 34%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 6 78% 55%;
-    --border: 210 7% 34%;
-    --input: 210 7% 34%;
+    --primary-foreground: 210 14% 12%;
+    --secondary: 210 14% 18%;
+    --secondary-foreground: 0 0% 94%;
+    --muted: 210 14% 18%;
+    --muted-foreground: 214 14% 80%;
+    --accent: 212 13% 24%;
+    --accent-foreground: 0 0% 94%;
+    --destructive: 0 91% 71%;
+    --border: 214 14% 28%;
+    --input: 210 14% 12%;
     --ring: 84 68% 65%;
     --chart-1: 84 68% 65%;
     --chart-2: 160 60% 45%;
@@ -119,32 +125,79 @@ body {
 }
 
 @layer components {
+  /* ─── Semantic theme tokens ───────────────────────────────────────────
+   * Light is the default. Dark-mode values were retuned (May 2026) to the
+   * WCAG targets in the theme spec: backgrounds get a wider brightness
+   * spread so page/surface/card layers are visibly distinct, and text
+   * tiers were brightened so secondary/tertiary/muted all clear AA (and
+   * secondary clears AAA) against the surface. The old dark values
+   * (page #52575D, card #404549, secondary text gray-300) were the
+   * low-contrast offenders Al could not read outdoors.
+   *
+   * Layering, dark:  page #1E2328 < inset #1A1F24 recessed
+   *                  surface/header #272D34 < card #2E343B < elevated #353C44
+   * ──────────────────────────────────────────────────────────────────── */
   .bg-theme-page {
-    @apply bg-stone-50 dark:bg-[#52575D];
+    @apply bg-[#F8F9FA] dark:bg-[#1E2328];
   }
 
   .bg-theme-header {
-    @apply bg-stone-200 dark:bg-[#272D34];
+    @apply bg-white dark:bg-[#272D34];
+  }
+
+  .bg-theme-surface {
+    @apply bg-white dark:bg-[#272D34];
   }
 
   .bg-theme-card {
-    @apply bg-white dark:bg-[#404549];
+    @apply bg-white dark:bg-[#2E343B];
+  }
+
+  .bg-theme-elevated {
+    @apply bg-white dark:bg-[#353C44];
+  }
+
+  .bg-theme-inset {
+    @apply bg-[#F0F1F3] dark:bg-[#1A1F24];
   }
 
   .bg-theme-input {
-    @apply bg-white dark:bg-[#404549];
+    @apply bg-white dark:bg-[#1A1F24];
   }
 
   .text-theme-primary {
-    @apply text-stone-900 dark:text-white;
+    @apply text-[#111827] dark:text-[#F0F0F0];
   }
 
   .text-theme-secondary {
-    @apply text-stone-600 dark:text-gray-300;
+    @apply text-[#4B5563] dark:text-[#C5CBD3];
+  }
+
+  .text-theme-tertiary {
+    /* light value darkened #6B7280 -> #5B616B: the spec's #6B7280 only
+       reached 4.83:1 on white and FAILED AA on the inset bg. #5B616B
+       clears AA on white/inset/page with margin. */
+    @apply text-[#5B616B] dark:text-[#A0A8B4];
+  }
+
+  .text-theme-muted {
+    /* light value darkened #9CA3AF -> #636B77: the spec's #9CA3AF was
+       2.54:1 on white (fails AA badly — the classic unreadable
+       gray-on-white). dark value nudged #8B939E -> #959EAA: spec's
+       #8B939E was 4.48:1 on surface (just under AA). Both new values
+       clear AA on every surface they touch while staying dimmer than
+       text-theme-tertiary so the hierarchy holds. (Spec's own light
+       muted/tertiary table conflicts with its Part 1B AA requirement;
+       readability wins.) */
+    @apply text-[#636B77] dark:text-[#959EAA];
   }
 
   .border-theme {
-    @apply border-stone-300 dark:border-[#52575D];
+    @apply border-[#E5E7EB] dark:border-[#3D4550];
+  }
+
+  .border-theme-strong {
+    @apply border-[#D1D5DB] dark:border-[#4B535C];
   }
 
   /* Safe area utilities for iOS notch/home indicator */

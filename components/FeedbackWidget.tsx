@@ -129,9 +129,9 @@ export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: Feedba
 /** Inner component — only rendered after mount, so useTheme() is safe. */
 function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetProps) {
   const supabase = createClient();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const t = useWidgetTranslations();
-  const isDark = theme === 'dark';
+  const isDark = resolvedTheme === 'dark';
 
   // State
   const [isOpen, setIsOpen] = useState(false);
