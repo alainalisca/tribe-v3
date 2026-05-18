@@ -9,6 +9,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import PageTransition from '@/components/PageTransition';
+import { ConfirmProvider } from '@/components/ConfirmProvider';
 import './globals.css';
 import type { Metadata } from 'next';
 
@@ -86,7 +87,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <AppStoreBanner />
               <BackButtonHandler />
               <InAppNotificationToast />
-              <PageTransition>{children}</PageTransition>
+              <ConfirmProvider>
+                <PageTransition>{children}</PageTransition>
+              </ConfirmProvider>
               <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
             </LanguageProvider>
           </ThemeProvider>

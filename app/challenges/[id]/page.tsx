@@ -17,6 +17,7 @@ import {
 import { sportTranslations } from '@/lib/translations';
 import { ArrowLeft, Calendar, Users, Trophy, Loader, Heart } from 'lucide-react';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmProvider';
 import BottomNav from '@/components/BottomNav';
 
 const CHALLENGE_TYPE_LABELS = {
@@ -37,6 +38,7 @@ export default function ChallengePage() {
   const router = useRouter();
   const params = useParams();
   const { language } = useLanguage();
+  const confirm = useConfirm();
   const supabase = createClient();
 
   const challengeId = params.id as string;
@@ -158,7 +160,19 @@ export default function ChallengePage() {
   const handleLeaveChallenge = async () => {
     if (!currentUserId) return;
 
-    if (!confirm(language === 'es' ? '¿Estás seguro?' : 'Are you sure?')) return;
+    if (
+      !(await confirm({
+        title: language === 'es' ? 'Salir del reto' : 'Leave challenge',
+        message:
+          language === 'es'
+            ? '¿Seguro que quieres salir de este reto? Perderás tu progreso.'
+            : "Are you sure you want to leave this challenge? You'll lose your progress.",
+        confirmLabel: language === 'es' ? 'Salir' : 'Leave',
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     setActionLoading(true);
     try {

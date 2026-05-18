@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTrialStatus, isFeatureFree } from '@/lib/trial';
 import TrialBanner from '@/components/TrialBanner';
@@ -247,7 +248,7 @@ export default function BoostsPage() {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          alert(i18n.errorAuth);
+          showError(i18n.errorAuth);
           return;
         }
 
@@ -261,7 +262,7 @@ export default function BoostsPage() {
           .single();
 
         if (!profile?.is_instructor) {
-          alert(i18n.errorAuth);
+          showError(i18n.errorAuth);
           return;
         }
 
@@ -272,7 +273,7 @@ export default function BoostsPage() {
         await fetchPosts(user.id);
       } catch (error) {
         console.error('Auth check error:', error);
-        alert(i18n.errorAuth);
+        showError(i18n.errorAuth);
       } finally {
         setLoading(false);
       }
@@ -293,7 +294,7 @@ export default function BoostsPage() {
       setCampaigns(data || []);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
-      alert(i18n.errorFetch);
+      showError(i18n.errorFetch);
     }
   };
 
@@ -409,7 +410,7 @@ export default function BoostsPage() {
 
       if (isFree) {
         // Free trial — campaign is immediately active
-        alert(i18n.successCreate);
+        showSuccess(i18n.successCreate);
       } else {
         // Payment required — redirect to checkout
         const totalBudget = getTotalBudget();
@@ -452,7 +453,7 @@ export default function BoostsPage() {
       await fetchCampaigns(userId);
     } catch (error) {
       console.error('Error creating boost:', error);
-      alert(i18n.errorCreate);
+      showError(i18n.errorCreate);
     } finally {
       setIsSubmitting(false);
     }
@@ -471,7 +472,7 @@ export default function BoostsPage() {
         .update({ status: 'active' })
         .eq('id', campaignId)
         .then(() => {
-          alert(i18n.successCreate);
+          showSuccess(i18n.successCreate);
           // Clean URL
           window.history.replaceState({}, '', '/promote/boosts');
           if (userId) fetchCampaigns(userId);
@@ -498,7 +499,7 @@ export default function BoostsPage() {
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
       console.error('Error pausing campaign:', error);
-      alert('Error pausing campaign');
+      showError('Error pausing campaign');
     }
   };
 
@@ -510,7 +511,7 @@ export default function BoostsPage() {
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
       console.error('Error cancelling campaign:', error);
-      alert('Error cancelling campaign');
+      showError('Error cancelling campaign');
     }
   };
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createChallenge, ChallengeType } from '@/lib/dal/challenges';
 import { sportTranslations } from '@/lib/translations';
@@ -130,12 +131,12 @@ export default function CreateChallengePage() {
     e.preventDefault();
 
     if (!form.title.trim()) {
-      alert(strings.requiredField);
+      showError(strings.requiredField);
       return;
     }
 
     if (new Date(form.endDate) <= new Date(form.startDate)) {
-      alert(strings.dateRange);
+      showError(strings.dateRange);
       return;
     }
 
@@ -159,11 +160,11 @@ export default function CreateChallengePage() {
       if (result.success && result.data) {
         router.push(`/challenges/${result.data.id}`);
       } else {
-        alert(strings.error);
+        showError(strings.error);
       }
     } catch (error) {
       console.error('Error creating challenge:', error);
-      alert(strings.error);
+      showError(strings.error);
     } finally {
       setSubmitting(false);
     }

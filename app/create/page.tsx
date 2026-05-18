@@ -2,6 +2,7 @@
 'use client';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { haptic } from '@/lib/haptics';
 import { celebrateSessionCreated } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
@@ -57,6 +58,7 @@ function CreateSessionPageInner() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const { t, language } = useLanguage();
+  const confirm = useConfirm();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInstructor, setIsInstructor] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -209,7 +211,12 @@ function CreateSessionPageInner() {
         language === 'es'
           ? 'Las sesiones con fotos reciben más reservas. ¿Continuar sin agregar una foto?'
           : 'Sessions with photos get more bookings. Continue without adding one?';
-      const proceed = window.confirm(msg);
+      const proceed = await confirm({
+        title: language === 'es' ? 'Sin foto' : 'No photo',
+        message: msg,
+        confirmLabel: language === 'es' ? 'Continuar' : 'Continue',
+        cancelLabel: language === 'es' ? 'Agregar foto' : 'Add a photo',
+      });
       if (!proceed) {
         // Scroll the photo section into view to make the upload button obvious
         document.querySelector('[data-photo-section]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
   Plus,
@@ -485,7 +486,7 @@ export default function PromoCodesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page p-4 flex items-center justify-center">
-        <p className="text-lg text-theme-secondary">Loading...</p>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

@@ -18,6 +18,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/currency';
 import { isValidUuid } from '@/lib/validations/uuid';
 import { buildWhatsAppUrl } from '@/lib/phone';
@@ -916,6 +917,7 @@ function AttendanceListItem({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   // Refund flow state. Separate from editing because the refund is a
   // distinct forensic action (writes to gym_audit_log), and we don't
@@ -1006,7 +1008,16 @@ function AttendanceListItem({
 
   async function handleDelete() {
     if (deleting) return;
-    if (typeof window !== 'undefined' && !window.confirm(s.attEditConfirmDelete)) return;
+    if (
+      !(await confirm({
+        title: s.attDeleteAria,
+        message: s.attEditConfirmDelete,
+        confirmLabel: language === 'es' ? 'Eliminar' : 'Delete',
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
     setDeleting(true);
     setError(null);
     try {

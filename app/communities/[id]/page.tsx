@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
 import { showSuccess, showError } from '@/lib/toast';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { haptic } from '@/lib/haptics';
 import BottomNav from '@/components/BottomNav';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -83,6 +84,7 @@ export default function CommunityDetailPage() {
   const params = useParams();
   const supabase = createClient();
   const { language } = useLanguage();
+  const confirm = useConfirm();
   const t = getTranslations(language);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -229,7 +231,16 @@ export default function CommunityDetailPage() {
   }
 
   async function handleDeletePost(postId: string) {
-    if (!confirm(t.deleteConfirm)) return;
+    if (
+      !(await confirm({
+        title: t.delete,
+        message: t.deleteConfirm,
+        confirmLabel: t.delete,
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
     try {
       const result = await deleteCommunityPost(supabase, postId);
       if (result.success) {
@@ -270,7 +281,15 @@ export default function CommunityDetailPage() {
 
   async function handleReportPost(postId: string) {
     if (!userId) return;
-    if (!confirm(t.reportConfirm)) return;
+    if (
+      !(await confirm({
+        title: t.report,
+        message: t.reportConfirm,
+        confirmLabel: t.report,
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+      }))
+    )
+      return;
     try {
       const result = await reportCommunityPost(supabase, { post_id: postId, reporter_id: userId });
       if (result.success) {

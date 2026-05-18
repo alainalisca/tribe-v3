@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { trackEvent } from '@/lib/analytics';
 import { formatCents } from '@/lib/format/currency';
 import { buildWhatsAppUrl } from '@/lib/phone';
@@ -854,13 +855,18 @@ function BulkDismissButton({
   onDismissed: () => void;
 }) {
   const [dismissing, setDismissing] = useState(false);
+  const confirm = useConfirm();
+  const es = s.dismissAll === 'Descartar todas';
 
   async function handleClick() {
     if (dismissing) return;
-    // Browser-native confirm keeps the surface light — a full
-    // Dialog would feel heavy for a per-section action and the
-    // confirmation copy is short.
-    const ok = typeof window !== 'undefined' && window.confirm(s.dismissAllConfirm(count, s.severity[severity]));
+    const ok = await confirm({
+      title: s.dismissAll,
+      message: s.dismissAllConfirm(count, s.severity[severity]),
+      confirmLabel: s.dismissAll,
+      cancelLabel: es ? 'Cancelar' : 'Cancel',
+      variant: 'danger',
+    });
     if (!ok) return;
     setDismissing(true);
     try {
