@@ -216,7 +216,7 @@ function PaymentRowItem({
     <tr
       className={
         isRefunded
-          ? 'border-t border-gray-100 text-gray-400'
+          ? 'border-t border-gray-100 text-theme-tertiary'
           : 'border-t border-gray-100 text-gray-900 hover:bg-gray-50'
       }
     >

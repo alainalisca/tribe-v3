@@ -94,9 +94,9 @@ export default function BlockedUsersPage() {
         <p className="text-sm text-stone-600 dark:text-gray-400 leading-relaxed">{t.explainer}</p>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : !rows || rows.length === 0 ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.empty}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.empty}</p>
         ) : (
           <ul className="space-y-2">
             {rows.map((row) => {

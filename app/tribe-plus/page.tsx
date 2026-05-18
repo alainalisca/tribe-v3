@@ -113,7 +113,7 @@ export default function TribePlusPage() {
           <div className="pt-2">
             <p className="text-4xl font-extrabold">
               {formatAmount(effectiveCents, currency)}
-              <span className="text-base font-medium text-gray-400 ml-1">
+              <span className="text-base font-medium text-theme-tertiary ml-1">
                 {cycle === 'annual' ? t.annualLabel : t.per}
               </span>
             </p>
@@ -137,7 +137,7 @@ export default function TribePlusPage() {
             <div key={title} className="bg-[#3D4349] rounded-2xl p-4">
               <Icon className="w-5 h-5 text-[#A3E635] mb-2" />
               <h3 className="text-sm font-bold">{title}</h3>
-              <p className="text-xs text-gray-400 mt-1">{desc}</p>
+              <p className="text-xs text-theme-tertiary mt-1">{desc}</p>
             </div>
           ))}
         </div>
@@ -149,7 +149,7 @@ export default function TribePlusPage() {
             {t.faqs.map(({ q, a }) => (
               <li key={q} className="bg-[#3D4349] rounded-xl p-4">
                 <p className="text-sm font-semibold mb-1">{q}</p>
-                <p className="text-xs text-gray-400">{a}</p>
+                <p className="text-xs text-theme-tertiary">{a}</p>
               </li>
             ))}
           </ul>
@@ -157,7 +157,7 @@ export default function TribePlusPage() {
 
         <Link
           href="/settings/subscription"
-          className="block text-center text-sm text-gray-400 hover:text-white underline"
+          className="block text-center text-sm text-theme-tertiary hover:text-white underline"
         >
           {language === 'es' ? 'Ya eres miembro? Administrar suscripción' : 'Already a member? Manage subscription'}
         </Link>

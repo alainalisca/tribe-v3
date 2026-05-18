@@ -116,13 +116,13 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
           </div>
           <div>
             <h3 className="font-semibold text-white">{athlete.name}</h3>
-            <p className="text-sm text-gray-400">{isEs ? 'Invitar a una sesion' : 'Invite to a session'}</p>
+            <p className="text-sm text-theme-tertiary">{isEs ? 'Invitar a una sesion' : 'Invite to a session'}</p>
           </div>
         </div>
 
         {/* Sessions list */}
         <div className="p-5 space-y-3 max-h-80 overflow-y-auto">
-          <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+          <h4 className="text-sm font-semibold text-theme-tertiary uppercase tracking-wide">
             {isEs ? 'Tus proximas sesiones' : 'Your upcoming sessions'}
           </h4>
 
@@ -132,7 +132,7 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
             </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-6">
-              <p className="text-sm text-gray-400 mb-2">
+              <p className="text-sm text-theme-tertiary mb-2">
                 {isEs ? 'No tienes sesiones proximas' : 'No upcoming sessions'}
               </p>
               <p className="text-xs text-gray-500">{isEs ? 'Crea una sesion primero' : 'Create a session first'}</p>
@@ -148,13 +148,13 @@ export default function InviteToSessionSheet({ open, onClose, athlete, language 
                     <span className="inline-block bg-tribe-green-light text-stone-900 text-xs font-semibold px-2 py-0.5 rounded-full">
                       {sportLabel}
                     </span>
-                    <div className="flex items-center gap-1 text-xs text-gray-300">
+                    <div className="flex items-center gap-1 text-xs text-theme-secondary">
                       <CalendarDays className="w-3 h-3" />
                       <span>
                         {session.date} {session.start_time}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-400 truncate">
+                    <div className="flex items-center gap-1 text-xs text-theme-tertiary truncate">
                       <MapPin className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{session.location}</span>
                     </div>

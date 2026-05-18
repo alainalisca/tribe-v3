@@ -35,7 +35,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
         </p>
       ) : messages.length === 0 ? (
         <div className="p-6 text-center">
-          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+          <MessageSquare className="w-12 h-12 text-theme-secondary mx-auto mb-2" />
           <p className="text-sm text-gray-500">{language === 'es' ? 'Sin mensajes aun' : 'No messages yet'}</p>
         </div>
       ) : (

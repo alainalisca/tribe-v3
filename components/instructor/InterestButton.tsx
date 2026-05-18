@@ -142,11 +142,11 @@ export default function InterestButton({
           <Dumbbell className="w-4 h-4 text-[#A3E635]" />
           <h3 className="text-sm font-semibold text-white">{t.title}</h3>
         </div>
-        <p className="text-xs text-gray-400 mb-3">{t.subtext}</p>
+        <p className="text-xs text-theme-tertiary mb-3">{t.subtext}</p>
 
         {hasInterest ? (
           <div className="space-y-1">
-            <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-[#272D34] text-gray-400 text-sm font-semibold">
+            <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-theme-surface text-theme-tertiary text-sm font-semibold">
               <Check className="w-4 h-4" /> {t.interestSent}
             </div>
             <button
@@ -182,7 +182,7 @@ export default function InterestButton({
           >
             <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>
 
-            <label className="block text-xs text-gray-400 mb-1" htmlFor="interest-sport">
+            <label className="block text-xs text-theme-tertiary mb-1" htmlFor="interest-sport">
               {t.sportLabel}
             </label>
             <select
@@ -205,7 +205,7 @@ export default function InterestButton({
                   ))}
             </select>
 
-            <label className="block text-xs text-gray-400 mb-1" htmlFor="interest-message">
+            <label className="block text-xs text-theme-tertiary mb-1" htmlFor="interest-message">
               {t.messageLabel}
             </label>
             <textarea
@@ -225,7 +225,7 @@ export default function InterestButton({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={saving}
-                className="flex-1 py-2 rounded-lg bg-[#272D34] text-gray-300 text-sm hover:bg-[#404549] disabled:opacity-50"
+                className="flex-1 py-2 rounded-lg bg-theme-surface text-theme-secondary text-sm hover:opacity-90 disabled:opacity-50"
               >
                 {t.cancel}
               </button>

@@ -149,7 +149,7 @@ export default function OnboardingChecklist() {
         type="button"
         onClick={handleDismiss}
         aria-label={s.dismissAria}
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 transition-colors"
+        className="absolute top-3 right-3 text-theme-tertiary hover:text-gray-700 transition-colors"
       >
         <X className="w-4 h-4" />
       </button>
@@ -239,7 +239,7 @@ function ChecklistItem({
         {done ? (
           <CheckCircle2 className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
         ) : (
-          <Circle className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+          <Circle className="w-5 h-5 text-theme-tertiary shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -271,7 +271,7 @@ function ChecklistItem({
             </Link>
           ) : null}
         </div>
-        {!done ? <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 mt-1" /> : null}
+        {!done ? <ChevronRight className="w-4 h-4 text-theme-tertiary shrink-0 mt-1" /> : null}
       </Link>
     </li>
   );

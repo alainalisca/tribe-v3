@@ -871,7 +871,7 @@ function Stat({
         <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
         {badge}
       </div>
-      {sublabel ? <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p> : null}
+      {sublabel ? <p className="text-[10px] text-theme-tertiary mt-0.5">{sublabel}</p> : null}
     </div>
   );
 }
@@ -1320,7 +1320,7 @@ function AttendanceListItem({
             onClick={startEdit}
             aria-label={s.attEditAria}
             title={s.attEditAria}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+            className="p-1.5 text-theme-tertiary hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>

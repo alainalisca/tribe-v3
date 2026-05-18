@@ -79,10 +79,10 @@ export default function FeedV2Page() {
         <h1 className="text-2xl font-extrabold">{t.title}</h1>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : posts.length === 0 ? (
           <div className="py-10 text-center space-y-3">
-            <p className="text-sm text-gray-400">{t.empty}</p>
+            <p className="text-sm text-theme-tertiary">{t.empty}</p>
             <Link
               href="/instructors"
               className="inline-block px-4 py-2 rounded-lg bg-[#84cc16] text-slate-900 text-sm font-bold"

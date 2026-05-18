@@ -68,7 +68,7 @@ export default function SmartMatchBanner({ userId }: Props) {
                   ? 'Configura tus preferencias de entrenamiento'
                   : 'Set your training preferences to find partners'}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-theme-tertiary mt-1">
                 {isEs
                   ? 'Encuentra atletas cerca de ti con intereses similares'
                   : 'Find athletes near you with similar interests'}
@@ -109,7 +109,7 @@ export default function SmartMatchBanner({ userId }: Props) {
             </p>
             {/* Show top match preview */}
             {matches[0]?.matched_user && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-theme-tertiary mt-1">
                 {matches[0].matched_user.name}
                 {matches[0].distance_km != null && ` - ${matches[0].distance_km} km`}
               </p>

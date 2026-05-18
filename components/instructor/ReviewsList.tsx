@@ -73,11 +73,11 @@ function DistributionBar({ stars, count, total }: { stars: number; count: number
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="w-5 text-gray-400">{stars}★</span>
+      <span className="w-5 text-theme-tertiary">{stars}★</span>
       <div className="flex-1 h-2 bg-[#272D34] rounded-full overflow-hidden">
         <div className="h-full bg-[#F59E0B] transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <span className="w-8 text-right text-gray-400">{count}</span>
+      <span className="w-8 text-right text-theme-tertiary">{count}</span>
     </div>
   );
 }
@@ -156,7 +156,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
   };
 
   if (loading) {
-    return <div className="py-8 text-center text-sm text-gray-400">{t.loading}</div>;
+    return <div className="py-8 text-center text-sm text-theme-tertiary">{t.loading}</div>;
   }
 
   if (error) {
@@ -174,7 +174,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
     return (
       <div className="py-10 text-center">
         <Star size={28} className="mx-auto mb-2 text-gray-600" />
-        <p className="text-sm font-medium text-gray-300">{t.noReviews}</p>
+        <p className="text-sm font-medium text-theme-secondary">{t.noReviews}</p>
         <p className="mt-1 text-xs text-gray-500">{t.beTheFirst}</p>
       </div>
     );
@@ -191,12 +191,12 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-white">{average.toFixed(1)}</span>
-              <span className="text-sm text-gray-400">/ 5</span>
+              <span className="text-sm text-theme-tertiary">/ 5</span>
             </div>
             <div className="mt-1">
               <StarRow rating={Math.round(average)} />
             </div>
-            <p className="mt-1 text-xs text-gray-400">{t.reviewsCount(totalReviews)}</p>
+            <p className="mt-1 text-xs text-theme-tertiary">{t.reviewsCount(totalReviews)}</p>
           </div>
 
           {showDistribution && distribution && (
@@ -237,7 +237,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                    <div className="w-full h-full flex items-center justify-center text-xs text-theme-tertiary">
                       {(review.reviewer?.name || '?').charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -254,14 +254,16 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
                   <div className="mt-0.5 flex items-center gap-2">
                     <StarRow rating={review.rating} />
                     {sportLabel && (
-                      <span className="text-xs text-gray-400 px-2 py-0.5 bg-[#272D34] rounded-full">{sportLabel}</span>
+                      <span className="text-xs text-theme-tertiary px-2 py-0.5 bg-theme-surface rounded-full">
+                        {sportLabel}
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
 
               {review.comment ? (
-                <p className="mt-3 text-sm text-gray-300 whitespace-pre-wrap break-words">{review.comment}</p>
+                <p className="mt-3 text-sm text-theme-secondary whitespace-pre-wrap break-words">{review.comment}</p>
               ) : (
                 <p className="mt-3 text-xs text-gray-500 italic">
                   {t.rated} {review.rating} {t.stars}

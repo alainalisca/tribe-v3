@@ -154,7 +154,7 @@ export default function TipButton({
       </div>
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1" htmlFor="tip-custom">
+        <label className="block text-xs text-theme-tertiary mb-1" htmlFor="tip-custom">
           {t.customLabel}
         </label>
         <input
@@ -172,7 +172,7 @@ export default function TipButton({
       </div>
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1" htmlFor="tip-note">
+        <label className="block text-xs text-theme-tertiary mb-1" htmlFor="tip-note">
           {t.noteLabel}
         </label>
         <textarea
@@ -196,7 +196,7 @@ export default function TipButton({
             type="button"
             onClick={() => setOpen(false)}
             disabled={saving}
-            className="flex-1 py-2.5 rounded-lg bg-[#272D34] text-gray-300 text-sm disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-lg bg-theme-surface text-theme-secondary text-sm disabled:opacity-50"
           >
             {t.cancel}
           </button>

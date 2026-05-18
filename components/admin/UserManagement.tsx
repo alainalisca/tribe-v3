@@ -58,7 +58,7 @@ export default function UserManagement({
     <div className="bg-white dark:bg-tribe-surface rounded shadow">
       <div className="p-3 border-b">
         <div className="relative">
-          <Search className="absolute left-2 top-2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-2 top-2 text-theme-tertiary w-4 h-4" />
           <input
             type="text"
             placeholder={language === 'es' ? 'Buscar por nombre o correo...' : 'Search by name or email...'}

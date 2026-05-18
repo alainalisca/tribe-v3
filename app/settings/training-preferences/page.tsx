@@ -165,7 +165,7 @@ export default function TrainingPreferencesPage() {
         </div>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : (
           <>
             <div className="bg-[#3D4349] rounded-xl p-4">
@@ -187,7 +187,7 @@ export default function TrainingPreferencesPage() {
                   />
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-2">{t.subtitle}</p>
+              <p className="text-xs text-theme-tertiary mt-2">{t.subtitle}</p>
             </div>
 
             <section>

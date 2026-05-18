@@ -406,7 +406,7 @@ function UnpaidList({
                 {oldestDate !== newestDate ? ` · ${s.lastUnpaidLabel} ${newestDate}` : ''}
               </p>
               {!g.client_phone ? (
-                <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                <p className="text-xs text-theme-tertiary mt-1 flex items-center gap-1">
                   <Phone className="w-3 h-3" />
                   {s.noPhone}
                 </p>

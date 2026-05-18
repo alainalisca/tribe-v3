@@ -94,7 +94,7 @@ export default function InstructorShareClient() {
           <h1 className="text-2xl font-bold text-white mb-2">
             Tribe<span className="text-tribe-green">.</span>
           </h1>
-          <p className="text-gray-400 mt-4">
+          <p className="text-theme-tertiary mt-4">
             {language === 'es' ? 'Instructor no encontrado' : 'Instructor not found'}
           </p>
           <Link href="/" className="mt-6 inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg">
@@ -117,7 +117,7 @@ export default function InstructorShareClient() {
         <h1 className="text-2xl font-bold text-white">
           Tribe<span className="text-tribe-green">.</span>
         </h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <p className="text-sm text-theme-tertiary mt-1">
           {language === 'es' ? 'Entrena con tu tribu' : 'Train with your tribe'}
         </p>
       </div>
@@ -136,7 +136,7 @@ export default function InstructorShareClient() {
             </div>
             <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
             {profile.city && (
-              <div className="flex items-center gap-1 mt-1 text-sm text-gray-400">
+              <div className="flex items-center gap-1 mt-1 text-sm text-theme-tertiary">
                 <MapPin className="w-3.5 h-3.5" />
                 {profile.city}
               </div>
@@ -146,12 +146,12 @@ export default function InstructorShareClient() {
           {/* Rating + sessions */}
           <div className="flex justify-center gap-6 mt-5">
             {rating != null && rating > 0 && (
-              <div className="flex items-center gap-1.5 text-sm text-gray-300">
+              <div className="flex items-center gap-1.5 text-sm text-theme-secondary">
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 <span className="font-semibold text-white">{rating.toFixed(1)}</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 text-sm text-gray-300">
+            <div className="flex items-center gap-1.5 text-sm text-theme-secondary">
               <Award className="w-4 h-4 text-tribe-green" />
               <span>
                 {sessionCount} {language === 'es' ? 'sesiones' : 'sessions'}
@@ -160,7 +160,9 @@ export default function InstructorShareClient() {
           </div>
 
           {/* Bio */}
-          {profile.bio && <p className="mt-5 text-sm text-gray-300 leading-relaxed text-center">{profile.bio}</p>}
+          {profile.bio && (
+            <p className="mt-5 text-sm text-theme-secondary leading-relaxed text-center">{profile.bio}</p>
+          )}
 
           {/* Sports tags */}
           {sports.length > 0 && (
@@ -214,7 +216,7 @@ export default function InstructorShareClient() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-white font-semibold text-sm">{s.title}</p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-theme-tertiary">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" /> {d}
                           </span>

@@ -187,7 +187,7 @@ function StoryCard({
       {/* Bottom info */}
       <div className="absolute bottom-0 left-0 right-0 p-2">
         <p className="text-xs font-semibold text-white line-clamp-1">{firstStory.user_name}</p>
-        <p className="text-[10px] text-gray-300">{timeAgo(firstStory.created_at, lang)}</p>
+        <p className="text-[10px] text-theme-secondary">{timeAgo(firstStory.created_at, lang)}</p>
       </div>
     </button>
   );

@@ -242,7 +242,7 @@ export default function NearbyEvents({ language }: NearbyEventsProps) {
           🎯 {lang === 'es' ? `Sucediendo en ${ACTIVE_CITY.name}` : `Happening in ${ACTIVE_CITY.name}`}
         </h2>
         <div className="text-center py-8">
-          <p className="text-gray-400 mb-4">
+          <p className="text-theme-tertiary mb-4">
             {lang === 'es' ? 'No hay sesiones cercanas en este momento' : 'No upcoming sessions nearby'}
           </p>
           <Link href="/create">
@@ -377,7 +377,7 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
           </h3>
 
           {/* Date and Time */}
-          <div className="text-xs text-gray-300">
+          <div className="text-xs text-theme-secondary">
             <div>📅 {formattedDate}</div>
             <div>
               🕐 {formattedTime} — {session.duration} min
@@ -385,10 +385,10 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
           </div>
 
           {/* Location */}
-          <div className="text-xs text-gray-300 line-clamp-1">📍 {session.location}</div>
+          <div className="text-xs text-theme-secondary line-clamp-1">📍 {session.location}</div>
 
           {/* Participant Count */}
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-theme-tertiary">
             👥 {confirmed}/{session.max_participants} {lang === 'es' ? 'atletas' : 'athletes'}
             {spotsLeft > 0 && (
               <span className="ml-1 text-tribe-green">
@@ -399,7 +399,7 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
 
           {/* Instructor */}
           {session.creator && (
-            <div className="text-xs text-gray-400 line-clamp-1">
+            <div className="text-xs text-theme-tertiary line-clamp-1">
               🎯 {lang === 'es' ? 'Por' : 'By'} {session.creator.name}
             </div>
           )}

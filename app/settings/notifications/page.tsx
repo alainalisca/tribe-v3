@@ -141,7 +141,7 @@ export default function NotificationPreferencesPage() {
         </div>
 
         {loading || !prefs ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : (
           <>
             <ul className="space-y-2">
@@ -149,14 +149,14 @@ export default function NotificationPreferencesPage() {
                 <li key={cat.key} className="bg-[#3D4349] rounded-xl p-4 flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">{cat.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
+                    <p className="text-xs text-theme-tertiary mt-0.5">{cat.desc}</p>
                   </div>
                   <Toggle checked={!!prefs[cat.key]} onChange={() => toggle(cat.key)} />
                 </li>
               ))}
             </ul>
 
-            <h2 className="text-sm font-semibold text-gray-300 uppercase tracking-wide pt-2">{t.delivery}</h2>
+            <h2 className="text-sm font-semibold text-theme-secondary uppercase tracking-wide pt-2">{t.delivery}</h2>
             <ul className="space-y-2">
               <li className="bg-[#3D4349] rounded-xl p-4 flex items-center gap-3">
                 <span className="flex-1 text-sm font-semibold">{t.push}</span>

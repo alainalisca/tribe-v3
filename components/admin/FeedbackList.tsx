@@ -29,7 +29,7 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
   if (feedback.length === 0) {
     return (
       <div className="bg-white dark:bg-tribe-surface rounded p-6 text-center shadow">
-        <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+        <MessageSquare className="w-12 h-12 text-theme-secondary mx-auto mb-2" />
         <p className="text-sm text-gray-500">{language === 'es' ? 'Sin comentarios aun' : 'No feedback yet'}</p>
       </div>
     );

@@ -28,7 +28,7 @@ export default function BugReports({ bugs, loading, language, onUpdateStatus }: 
   if (bugs.length === 0) {
     return (
       <div className="bg-white dark:bg-tribe-surface rounded p-6 text-center shadow">
-        <Bug className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+        <Bug className="w-12 h-12 text-theme-secondary mx-auto mb-2" />
         <p className="text-sm text-gray-500">
           {language === 'es' ? 'Sin reportes de errores aun' : 'No bug reports yet'}
         </p>

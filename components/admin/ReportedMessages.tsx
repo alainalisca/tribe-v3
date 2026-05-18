@@ -38,7 +38,7 @@ export default function ReportedMessages({
   if (reports.length === 0) {
     return (
       <div className="bg-white dark:bg-tribe-surface rounded p-6 text-center shadow">
-        <Flag className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+        <Flag className="w-12 h-12 text-theme-secondary mx-auto mb-2" />
         <p className="text-sm text-gray-500">{language === 'es' ? 'Sin reportes aun' : 'No reports yet'}</p>
       </div>
     );
@@ -59,11 +59,15 @@ export default function ReportedMessages({
                   <p className="text-sm font-bold text-tribe-dark">{report.reported?.name}</p>
                   <p className="text-xs text-stone-600">{report.reported?.email}</p>
                 </div>
-                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs rounded">{report.reason}</span>
+                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs rounded">
+                  {report.reason}
+                </span>
               </div>
 
               {report.description && (
-                <p className="text-xs text-stone-700 dark:text-gray-300 mb-2 p-2 bg-stone-50 dark:bg-tribe-dark rounded">{report.description}</p>
+                <p className="text-xs text-stone-700 dark:text-gray-300 mb-2 p-2 bg-stone-50 dark:bg-tribe-dark rounded">
+                  {report.description}
+                </p>
               )}
 
               <div className="flex items-center justify-between text-xs text-stone-500 mb-3">

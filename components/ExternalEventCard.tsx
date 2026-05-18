@@ -105,26 +105,28 @@ export default function ExternalEventCard({ event, language }: ExternalEventCard
         </a>
 
         {/* Date and Time */}
-        <div className="text-xs text-gray-300">
+        <div className="text-xs text-theme-secondary">
           <div>📅 {formattedDate}</div>
           <div>🕐 {formattedTime}</div>
         </div>
 
         {/* Location */}
-        <div className="text-xs text-gray-300 line-clamp-1">📍 {event.location_name}</div>
+        <div className="text-xs text-theme-secondary line-clamp-1">📍 {event.location_name}</div>
 
         {/* Athlete Count */}
         {event.participant_count && (
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-theme-tertiary">
             👥 {event.participant_count} {lang === 'es' ? 'interesados' : 'interested'}
           </div>
         )}
 
         {/* Organizer */}
-        {event.organizer_name && <div className="text-xs text-gray-400 line-clamp-1">🎯 {event.organizer_name}</div>}
+        {event.organizer_name && (
+          <div className="text-xs text-theme-tertiary line-clamp-1">🎯 {event.organizer_name}</div>
+        )}
 
         {/* Description Preview */}
-        {event.description && <p className="text-xs text-gray-400 line-clamp-2">{event.description}</p>}
+        {event.description && <p className="text-xs text-theme-tertiary line-clamp-2">{event.description}</p>}
 
         {/* Buttons */}
         <div className="flex gap-2 pt-2">

@@ -597,7 +597,7 @@ export default function AuditPage() {
             const hasFilters = !!(actionFilter || targetFilter || dateRange !== 'all' || onlyMine || actorFilter);
             return (
               <div className="bg-white border border-gray-200 rounded-xl p-8 text-center space-y-3">
-                <ScrollText className="w-8 h-8 text-gray-400 mx-auto" />
+                <ScrollText className="w-8 h-8 text-theme-tertiary mx-auto" />
                 <h2 className="text-base font-bold text-gray-900">
                   {hasFilters ? s.emptyFilteredTitle : s.emptyTitle}
                 </h2>
@@ -679,7 +679,7 @@ function AuditTable({
                   onClick={() => toggle(row.id)}
                   aria-expanded={isOpen}
                 >
-                  <td className="px-4 py-3 text-gray-400">
+                  <td className="px-4 py-3 text-theme-tertiary">
                     <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                   </td>
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
@@ -696,7 +696,7 @@ function AuditTable({
                     >
                       {ACTION_LABELS[row.action]?.[language] ?? row.action}
                       {ACTION_DESCRIPTIONS[row.action] ? (
-                        <Info className="w-3 h-3 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                        <Info className="w-3 h-3 text-theme-tertiary flex-shrink-0" aria-hidden="true" />
                       ) : null}
                     </span>
                   </td>
@@ -704,7 +704,7 @@ function AuditTable({
                     <span className="inline-flex items-center gap-1.5">
                       <span>{TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}</span>
                       {row.target_id ? (
-                        <code className="text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
+                        <code className="text-[10px] font-mono text-theme-tertiary">{row.target_id.slice(0, 8)}</code>
                       ) : null}
                     </span>
                   </td>
@@ -717,7 +717,7 @@ function AuditTable({
                         {formatPayload(row.payload)}
                       </code>
                     ) : (
-                      <span className="text-gray-400">{s.noPayload}</span>
+                      <span className="text-theme-tertiary">{s.noPayload}</span>
                     )}
                   </td>
                 </tr>
@@ -749,11 +749,11 @@ function AuditTable({
                     title={ACTION_DESCRIPTIONS[row.action]?.[language]}
                   >
                     <ChevronRight
-                      className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                      className={`w-3.5 h-3.5 text-theme-tertiary transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     />
                     {ACTION_LABELS[row.action]?.[language] ?? row.action}
                     {ACTION_DESCRIPTIONS[row.action] ? (
-                      <Info className="w-3 h-3 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                      <Info className="w-3 h-3 text-theme-tertiary flex-shrink-0" aria-hidden="true" />
                     ) : null}
                   </p>
                   <p className="text-xs text-gray-500 whitespace-nowrap">
@@ -763,7 +763,9 @@ function AuditTable({
                 <p className="text-xs text-gray-600 pl-5">
                   {TARGET_LABELS[row.target_type]?.[language] ?? row.target_type}
                   {row.target_id ? (
-                    <code className="ml-1.5 text-[10px] font-mono text-gray-400">{row.target_id.slice(0, 8)}</code>
+                    <code className="ml-1.5 text-[10px] font-mono text-theme-tertiary">
+                      {row.target_id.slice(0, 8)}
+                    </code>
                   ) : null}
                   {' · '}
                   {row.actor ? row.actor.name || row.actor.email || s.unknownActor : s.actorDeleted}
@@ -848,7 +850,7 @@ function ExpandedDetail({ row, copy: s }: { row: AuditRow; copy: typeof copy.en 
             {JSON.stringify(row.payload, null, 2)}
           </pre>
         ) : (
-          <p className="text-xs text-gray-400 italic">{s.noPayload}</p>
+          <p className="text-xs text-theme-tertiary italic">{s.noPayload}</p>
         )}
       </div>
     </div>

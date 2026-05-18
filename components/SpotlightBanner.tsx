@@ -85,7 +85,7 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
           </div>
           <div className="flex-1 min-w-0 pb-1">
             <h3 className="text-lg font-bold text-white truncate">{instructor.name}</h3>
-            <p className="text-xs text-gray-300 flex items-center gap-1 flex-wrap">
+            <p className="text-xs text-theme-secondary flex items-center gap-1 flex-wrap">
               {instructor.total_reviews != null && instructor.total_reviews > 0 && (
                 <>
                   <Star className="w-3 h-3 fill-[#F59E0B] text-[#F59E0B]" />

@@ -157,7 +157,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
           {post.author?.avatar_url ? (
             <Image src={post.author.avatar_url} alt={post.author.name} fill sizes="40px" className="object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+            <div className="w-full h-full flex items-center justify-center text-sm text-theme-tertiary">
               {(post.author?.name || '?').charAt(0).toUpperCase()}
             </div>
           )}
@@ -214,7 +214,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
           href={`/session/${post.linked_session.id}`}
           className="mt-3 block bg-[#272D34] rounded-xl p-3 border border-[#404549] hover:border-[#84cc16]"
         >
-          <p className="text-xs text-gray-400">{post.linked_session.date}</p>
+          <p className="text-xs text-theme-tertiary">{post.linked_session.date}</p>
           <p className="text-sm font-semibold text-white mt-0.5">
             {post.linked_session.title ||
               (post.linked_session.sport
@@ -230,7 +230,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
       )}
 
       {/* Interactions */}
-      <footer className="mt-4 flex items-center gap-4 text-xs text-gray-400 pt-3 border-t border-[#272D34]">
+      <footer className="mt-4 flex items-center gap-4 text-xs text-theme-tertiary pt-3 border-t border-[#272D34]">
         <button
           type="button"
           onClick={handleLike}
@@ -263,7 +263,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
                 <div className="flex-1 min-w-0">
                   <p className="text-xs">
                     <span className="font-semibold text-white">{c.user?.name || ''}</span>{' '}
-                    <span className="text-gray-300">{c.body}</span>
+                    <span className="text-theme-secondary">{c.body}</span>
                   </p>
                   <p className="text-[10px] text-gray-500">{formatRelative(c.created_at, language)}</p>
                 </div>

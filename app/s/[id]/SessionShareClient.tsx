@@ -101,7 +101,7 @@ export default function SessionShareClient() {
           <h1 className="text-2xl font-bold text-white mb-2">
             Tribe<span className="text-tribe-green">.</span>
           </h1>
-          <p className="text-gray-400 mt-4">{language === 'es' ? 'Sesion no encontrada' : 'Session not found'}</p>
+          <p className="text-theme-tertiary mt-4">{language === 'es' ? 'Sesion no encontrada' : 'Session not found'}</p>
           <Link href="/" className="mt-6 inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg">
             {language === 'es' ? 'Ir a Tribe' : 'Go to Tribe'}
           </Link>
@@ -157,7 +157,7 @@ export default function SessionShareClient() {
         <h1 className="text-2xl font-bold text-white">
           Tribe<span className="text-tribe-green">.</span>
         </h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <p className="text-sm text-theme-tertiary mt-1">
           {language === 'es' ? 'Entrena con tu tribu' : 'Train with your tribe'}
         </p>
       </div>
@@ -174,7 +174,7 @@ export default function SessionShareClient() {
           </div>
 
           {/* Date & time */}
-          <div className="flex flex-wrap gap-4 text-sm text-gray-300">
+          <div className="flex flex-wrap gap-4 text-sm text-theme-secondary">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-tribe-green" />
               <span className="capitalize">{dateFormatted}</span>
@@ -189,11 +189,11 @@ export default function SessionShareClient() {
 
           {/* Location */}
           {(session.location_name || neighborhood) && (
-            <div className="flex items-start gap-2 text-sm text-gray-300">
+            <div className="flex items-start gap-2 text-sm text-theme-secondary">
               <MapPin className="w-4 h-4 text-tribe-green mt-0.5 flex-shrink-0" />
               <span>
                 {session.location_name}
-                {neighborhood && <span className="text-gray-400"> — {neighborhood.name}</span>}
+                {neighborhood && <span className="text-theme-tertiary"> — {neighborhood.name}</span>}
               </span>
             </div>
           )}
@@ -204,7 +204,7 @@ export default function SessionShareClient() {
               <DollarSign className="w-4 h-4 text-tribe-green" />
               {priceDisplay}
             </div>
-            <div className="flex items-center gap-2 text-gray-300">
+            <div className="flex items-center gap-2 text-theme-secondary">
               <Users className="w-4 h-4 text-tribe-green" />
               {spotsLeft > 0
                 ? language === 'es'
@@ -233,7 +233,7 @@ export default function SessionShareClient() {
               <div>
                 <p className="text-white font-semibold text-sm">{session.creator.name}</p>
                 {rating != null && rating > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                  <div className="flex items-center gap-1 text-xs text-theme-tertiary">
                     <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                     {rating.toFixed(1)}
                   </div>

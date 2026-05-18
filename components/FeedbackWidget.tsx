@@ -319,7 +319,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                         isActive
                           ? 'border border-tribe-green bg-tribe-green/15 text-tribe-green'
                           : isDark
-                            ? 'border border-transparent bg-tribe-dark text-gray-400 hover:text-gray-300'
+                            ? 'border border-transparent bg-tribe-dark text-theme-tertiary hover:text-gray-300'
                             : 'border border-transparent bg-stone-100 text-gray-500 hover:text-gray-700'
                       }`}
                   >
