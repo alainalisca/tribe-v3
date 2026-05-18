@@ -37,18 +37,14 @@ import GymWeekRecapCard from '@/components/tribe-os/GymWeekRecapCard';
 import UpcomingSessionsCard from '@/components/tribe-os/UpcomingSessionsCard';
 import InsightsBanner from '@/components/tribe-os/InsightsBanner';
 import RecentlyEndedSessionPrompt from '@/components/tribe-os/RecentlyEndedSessionPrompt';
-import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 import { trackEvent } from '@/lib/analytics';
-
-type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> & {
-  name?: string | null;
-  email?: string | null;
-};
 
 type PageState =
   | { kind: 'checking' }
   | { kind: 'redirecting' }
   | { kind: 'not_premium' }
+  | { kind: 'error' }
   | { kind: 'premium'; firstName: string };
 
 // ES PENDING VERONICA REVIEW
@@ -62,6 +58,9 @@ const copy = {
     subhead: "Here's what's happening with your gym today.",
     redirectingLabel: 'Redirecting',
     loadingLabel: 'Loading',
+    errorTitle: 'Something went wrong',
+    errorBody: "We couldn't load your dashboard. Please try again.",
+    retryLabel: 'Retry',
     // Upgrade flow (signed-in, not premium)
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
@@ -87,6 +86,9 @@ const copy = {
     subhead: 'Esto es lo que está pasando en tu gym hoy.',
     redirectingLabel: 'Redirigiendo',
     loadingLabel: 'Cargando',
+    errorTitle: 'Algo salió mal',
+    errorBody: 'No pudimos cargar tu panel. Por favor intenta de nuevo.',
+    retryLabel: 'Reintentar',
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
       'Aún no tienes Tribe.OS premium. Actívalo para acceder a gestión de clientes, seguimiento de asistencia y cero comisiones por sesión.',
@@ -144,31 +146,30 @@ export default function TribeOSDashboardPage() {
         }
         return;
       }
-      const { data, error } = await supabase
-        .from('users')
-        .select('tribe_os_tier, tribe_os_status, name, email')
-        .eq('id', user.id)
-        .single();
+      // Premium decision via the gym-aware resolver (owned gym ->
+      // coached gym -> legacy users row) — same source of truth as the
+      // server gate and useTribeOSPremiumGate. Fails CLOSED: a
+      // transient error shows a retry, never the paywall.
+      const premium = await getTribeOSPremiumStatusForUser(supabase, user.id);
       if (cancelled) return;
-      if (error) {
-        // Fail-open to upgrade flow.
+      if (!premium.success) {
+        setPageState({ kind: 'error' });
+        return;
+      }
+      if (!premium.data?.active) {
         setPageState({ kind: 'not_premium' });
         return;
       }
-      const row = data as PremiumRow;
-      const isPremium = isTribeOSPremiumActive(row);
-      if (isPremium) {
-        // First-name extraction — used for the greeting. Fall back to
-        // email local-part, then "there" if nothing else.
-        const rawName = row.name ?? row.email?.split('@')[0] ?? 'there';
-        const firstName = rawName.trim().split(/\s+/)[0] || rawName;
-        setPageState({ kind: 'premium', firstName });
-        trackEvent('tribe_os_dashboard_viewed');
-        if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
-          trackEvent('tribe_os_checkout_succeeded');
-        }
-      } else {
-        setPageState({ kind: 'not_premium' });
+      // Display-only name/email for the greeting. A failure here is
+      // non-blocking — fall back to email local-part, then "there".
+      const { data: profile } = await supabase.from('users').select('name, email').eq('id', user.id).single();
+      if (cancelled) return;
+      const rawName = profile?.name ?? profile?.email?.split('@')[0] ?? 'there';
+      const firstName = rawName.trim().split(/\s+/)[0] || rawName;
+      setPageState({ kind: 'premium', firstName });
+      trackEvent('tribe_os_dashboard_viewed');
+      if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
+        trackEvent('tribe_os_checkout_succeeded');
       }
     })();
     return () => {
@@ -182,6 +183,23 @@ export default function TribeOSDashboardPage() {
         <p className="text-gray-500 text-sm uppercase tracking-[0.1em]">
           {pageState.kind === 'redirecting' ? s.redirectingLabel : s.loadingLabel}…
         </p>
+      </main>
+    );
+  }
+
+  if (pageState.kind === 'error') {
+    return (
+      <main className="flex items-center justify-center px-4 py-24">
+        <div className="text-center max-w-sm">
+          <p className="text-lg font-bold text-gray-900 mb-1">{s.errorTitle}</p>
+          <p className="text-sm text-gray-600 mb-5">{s.errorBody}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm hover:opacity-90 transition"
+          >
+            {s.retryLabel}
+          </button>
+        </div>
       </main>
     );
   }

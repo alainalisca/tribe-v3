@@ -44,9 +44,9 @@ import OSShellBell from './OSShellBell';
 import PwaInstallPrompt from './PwaInstallPrompt';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
-import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 
-type PremiumProbe = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> & {
+type ProfileProbe = {
   name?: string | null;
   email?: string | null;
 };
@@ -150,21 +150,17 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
         }
         return;
       }
-      const { data, error } = await supabase
-        .from('users')
-        .select('tribe_os_tier, tribe_os_status, name, email')
-        .eq('id', authUser.id)
-        .single();
+      // Premium decision via the gym-aware resolver (owned -> coached
+      // -> legacy) so a non-owner coach at a premium gym gets the full
+      // shell. Fails CLOSED to the minimal shell on a transient error;
+      // page-level gates make the authoritative per-route decision.
+      const premium = await getTribeOSPremiumStatusForUser(supabase, authUser.id);
       if (cancelled) return;
-      if (error || !data) {
-        // Fail closed — non-premium gets the minimal shell.
-        setPremiumStatus('not_premium');
-        setUser({ email: authUser.email ?? null, name: null });
-        return;
-      }
-      const row = data as PremiumProbe;
-      setPremiumStatus(isTribeOSPremiumActive(row) ? 'premium' : 'not_premium');
-      setUser({ email: row.email ?? authUser.email ?? null, name: row.name ?? null });
+      const { data: profile } = await supabase.from('users').select('name, email').eq('id', authUser.id).single();
+      if (cancelled) return;
+      const p = (profile ?? null) as ProfileProbe | null;
+      setPremiumStatus(premium.success && premium.data?.active ? 'premium' : 'not_premium');
+      setUser({ email: p?.email ?? authUser.email ?? null, name: p?.name ?? null });
     })();
     return () => {
       cancelled = true;

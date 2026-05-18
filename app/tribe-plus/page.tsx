@@ -6,6 +6,8 @@ import { Sparkles, Zap, BarChart3, Shield } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useLanguage } from '@/lib/LanguageContext';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscription/config';
+import { trackEvent } from '@/lib/analytics';
+import { showInfo } from '@/lib/toast';
 
 type BillingCycle = 'monthly' | 'annual';
 
@@ -18,6 +20,7 @@ export default function TribePlusPage() {
   const { language } = useLanguage();
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [currency] = useState<'COP' | 'USD'>('COP');
+  const [notified, setNotified] = useState(false);
 
   const plus = SUBSCRIPTION_TIERS.plus;
   const monthlyCents = plus.price[currency];
@@ -119,15 +122,24 @@ export default function TribePlusPage() {
             </p>
           </div>
 
+          {/* Billing isn't live yet. Rather than a fake checkout or a
+              native alert, capture genuine demand (analytics) and tell
+              the user the honest truth via a styled toast. */}
           <button
             type="button"
-            className="mt-4 w-full py-3 rounded-xl bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold"
+            disabled={notified}
+            className="mt-4 w-full py-3 rounded-xl bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold disabled:opacity-70"
             onClick={() => {
-              // Payment flow to be wired once instructor approves
-              alert(language === 'es' ? 'Próximamente: flujo de pago' : 'Coming soon: payment flow');
+              trackEvent('tribe_plus_interest', { cycle, currency });
+              setNotified(true);
+              showInfo(
+                language === 'es'
+                  ? 'Tribe+ llega pronto. Te avisaremos en cuanto esté disponible.'
+                  : "Tribe+ is coming soon. We'll let you know the moment it's available."
+              );
             }}
           >
-            {t.cta}
+            {notified ? (language === 'es' ? 'Te avisaremos ✓' : "We'll notify you ✓") : t.cta}
           </button>
         </div>
 

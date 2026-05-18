@@ -8,6 +8,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
+import { togglePostLike } from '@/lib/dal/instructorPosts';
+import { useLanguage } from '@/lib/LanguageContext';
+import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 
 export interface Instructor {
   id: string;
@@ -86,6 +90,7 @@ export interface FollowState {
 
 export function useStorefrontData(instructorId: string) {
   const supabase = createClient();
+  const { language } = useLanguage();
 
   const [instructor, setInstructor] = useState<Instructor | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -160,7 +165,7 @@ export function useStorefrontData(instructorId: string) {
           if (iResult.success && iResult.data) setPartnerInstructors(iResult.data);
         }
       } catch (err) {
-        console.error('Error fetching instructor:', err);
+        logError(err, { action: 'useStorefrontData.fetchInstructor', instructorId });
       }
     };
     if (instructorId) fetchInstructor();
@@ -240,40 +245,110 @@ export function useStorefrontData(instructorId: string) {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching storefront data:', err);
+        logError(err, { action: 'useStorefrontData.fetchStorefrontData', instructorId });
+        showError(
+          language === 'es'
+            ? 'No se pudo cargar la tienda. Intenta de nuevo.'
+            : 'Could not load the storefront. Please try again.'
+        );
         setLoading(false);
       }
     };
     if (instructorId) fetchStorefrontData();
   }, [instructorId, supabase]);
 
+  // Resolve the *actual* follow state for the signed-in viewer. Runs
+  // whenever the current user resolves (decoupled from the follower
+  // count fetch, which races user resolution). Previously isFollowing
+  // was hardcoded false so the button never reflected reality.
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('follower_id', currentUserId)
+        .eq('following_id', instructorId)
+        .maybeSingle();
+      if (cancelled || error) return;
+      setFollowState((prev) => ({ ...prev, isFollowing: !!data }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUserId, instructorId, supabase]);
+
   const handleFollowToggle = async () => {
+    if (!currentUserId) {
+      showError(language === 'es' ? 'Inicia sesión para seguir.' : 'Sign in to follow.');
+      return;
+    }
+    const wasFollowing = followState.isFollowing;
+    setFollowState((prev) => ({
+      ...prev,
+      isFollowing: !wasFollowing,
+      followerCount: Math.max(0, prev.followerCount + (wasFollowing ? -1 : 1)),
+    }));
     try {
-      if (followState.isFollowing) {
-        await supabase
+      if (wasFollowing) {
+        const { error } = await supabase
           .from('user_follows')
           .delete()
-          .eq('follower_id', 'current_user_id')
+          .eq('follower_id', currentUserId)
           .eq('following_id', instructorId);
-        setFollowState((prev) => ({ ...prev, isFollowing: false, followerCount: prev.followerCount - 1 }));
+        if (error) throw error;
       } else {
-        await supabase.from('user_follows').insert({ follower_id: 'current_user_id', following_id: instructorId });
-        setFollowState((prev) => ({ ...prev, isFollowing: true, followerCount: prev.followerCount + 1 }));
+        const { error } = await supabase
+          .from('user_follows')
+          .insert({ follower_id: currentUserId, following_id: instructorId });
+        if (error) throw error;
       }
     } catch (err) {
-      console.error('Error toggling follow:', err);
+      // Roll back the optimistic update.
+      setFollowState((prev) => ({
+        ...prev,
+        isFollowing: wasFollowing,
+        followerCount: Math.max(0, prev.followerCount + (wasFollowing ? 1 : -1)),
+      }));
+      logError(err, { action: 'useStorefrontData.handleFollowToggle', instructorId });
+      showError(language === 'es' ? 'No se pudo actualizar el seguimiento.' : 'Could not update follow.');
     }
   };
 
   const handlePostLike = async (postId: string) => {
-    try {
-      const next = new Set(likedPosts);
-      if (next.has(postId)) next.delete(postId);
-      else next.add(postId);
-      setLikedPosts(next);
-    } catch (err) {
-      console.error('Error liking post:', err);
+    if (!currentUserId) {
+      showError(language === 'es' ? 'Inicia sesión para reaccionar.' : 'Sign in to like.');
+      return;
     }
+    const wasLiked = likedPosts.has(postId);
+    const bump = (delta: number) =>
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, likes_count: Math.max(0, p.likes_count + delta) } : p))
+      );
+    const setLiked = (liked: boolean) =>
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (liked) next.add(postId);
+        else next.delete(postId);
+        return next;
+      });
+
+    // Optimistic.
+    setLiked(!wasLiked);
+    bump(wasLiked ? -1 : 1);
+
+    const res = await togglePostLike(supabase, postId, currentUserId);
+    if (!res.success) {
+      setLiked(wasLiked);
+      bump(wasLiked ? 1 : -1);
+      logError(res.error, { action: 'useStorefrontData.handlePostLike', postId });
+      showError(language === 'es' ? 'No se pudo reaccionar a la publicación.' : 'Could not like the post.');
+      return;
+    }
+    // Reconcile with the server's authoritative values.
+    setLiked(res.data!.liked);
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likes_count: res.data!.likeCount } : p)));
   };
 
   return {
