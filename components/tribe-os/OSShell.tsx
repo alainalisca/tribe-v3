@@ -28,10 +28,8 @@ import {
   LayoutDashboard,
   Users,
   Users2,
-  ClipboardList,
   Calendar,
   DollarSign,
-  MessageSquare,
   Brain,
   Settings as SettingsIcon,
   HelpCircle,
@@ -111,14 +109,16 @@ interface NavItem {
   matchPrefix: string;
 }
 
+// Programs + Messages are intentionally NOT listed: their routes are
+// ComingSoonPage placeholders. Promising unbuilt features in the
+// primary nav of a paid tier erodes trust on day one. Re-add here when
+// the real surfaces ship (routes still exist for any deep links).
 const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/dashboard', labelKey: 'dashboard', Icon: LayoutDashboard, matchPrefix: '/os/dashboard' },
   { href: '/os/members', labelKey: 'members', Icon: Users, matchPrefix: '/os/members' },
   { href: '/os/teams', labelKey: 'teams', Icon: Users2, matchPrefix: '/os/teams' },
-  { href: '/os/programs', labelKey: 'programs', Icon: ClipboardList, matchPrefix: '/os/programs' },
   { href: '/os/schedule', labelKey: 'schedule', Icon: Calendar, matchPrefix: '/os/schedule' },
   { href: '/os/revenue', labelKey: 'revenue', Icon: DollarSign, matchPrefix: '/os/revenue' },
-  { href: '/os/messages', labelKey: 'messages', Icon: MessageSquare, matchPrefix: '/os/messages' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
   { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;

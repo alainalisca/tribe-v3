@@ -72,7 +72,7 @@ const copy = {
       teams: 'Teams',
       tags: 'Tags',
       daysSinceLogin: 'Days Since Login',
-      sessions30d: 'Sessions (30d)',
+      sessions30d: 'Sessions',
       actions: 'Actions',
     },
     badge: { active: 'Active', watch: 'Watch', atRisk: 'At Risk', churned: 'Churned', lead: 'Lead' },
@@ -116,7 +116,7 @@ const copy = {
       teams: 'Equipos',
       tags: 'Etiquetas',
       daysSinceLogin: 'Días sin actividad',
-      sessions30d: 'Sesiones (30d)',
+      sessions30d: 'Sesiones',
       actions: 'Acciones',
     },
     badge: {
@@ -484,10 +484,9 @@ function MembersTable({ rows, copy: s }: { rows: ClientWithStats[]; copy: typeof
   return (
     <div className="overflow-x-auto border-t border-gray-100">
       {/* Header — visible on lg+ */}
-      <div className="hidden lg:grid grid-cols-[2fr_1fr_1.2fr_1.4fr_1fr_1fr_0.8fr] gap-3 px-5 py-3 text-[10px] uppercase tracking-wider text-theme-tertiary font-semibold border-b border-gray-100">
+      <div className="hidden lg:grid grid-cols-[2fr_1fr_1.4fr_1fr_1fr_0.8fr] gap-3 px-5 py-3 text-[10px] uppercase tracking-wider text-theme-tertiary font-semibold border-b border-gray-100">
         <span>{s.columns.name}</span>
         <span>{s.columns.status}</span>
-        <span>{s.columns.teams}</span>
         <span>{s.columns.tags}</span>
         <span>{s.columns.daysSinceLogin}</span>
         <span>{s.columns.sessions30d}</span>
@@ -540,7 +539,7 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
   });
 
   return (
-    <li className="lg:grid lg:grid-cols-[2fr_1fr_1.2fr_1.4fr_1fr_1fr_0.8fr] lg:gap-3 lg:items-center px-5 py-3 hover:bg-gray-50 transition-colors">
+    <li className="lg:grid lg:grid-cols-[2fr_1fr_1.4fr_1fr_1fr_0.8fr] lg:gap-3 lg:items-center px-5 py-3 hover:bg-gray-50 transition-colors">
       {/* Name + email */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-9 h-9 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
@@ -557,11 +556,6 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
       {/* Status — uses computed display value */}
       <div className="mt-2 lg:mt-0">
         <StatusBadge kind={displayStatus} copy={s} />
-      </div>
-
-      {/* Teams — placeholder until Teams data model ships */}
-      <div className="mt-1 lg:mt-0">
-        <span className="text-xs text-theme-tertiary">{s.noTeams}</span>
       </div>
 
       {/* Tags */}
@@ -585,8 +579,9 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
         <DaysSince days={ageDays} copy={s} />
       </div>
 
-      {/* Sessions 30d — placeholder using total_attended_count until
-          a 30-day rolling window is computed server-side. */}
+      {/* Lifetime sessions attended. Column is now labeled honestly
+          ("Sessions"), not "(30d)" — a rolling-window count is a
+          future enhancement, not a relabel. */}
       <div className="mt-1 lg:mt-0">
         <span className="text-xs font-semibold text-gray-700 tabular-nums">{row.total_attended_count}</span>
       </div>

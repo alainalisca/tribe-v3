@@ -21,6 +21,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
@@ -61,6 +62,7 @@ const copy = {
     errorTitle: 'Something went wrong',
     errorBody: "We couldn't load your dashboard. Please try again.",
     retryLabel: 'Retry',
+    backToTribe: '← Back to Tribe',
     // Upgrade flow (signed-in, not premium)
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
@@ -89,6 +91,7 @@ const copy = {
     errorTitle: 'Algo salió mal',
     errorBody: 'No pudimos cargar tu panel. Por favor intenta de nuevo.',
     retryLabel: 'Reintentar',
+    backToTribe: '← Volver a Tribe',
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
       'Aún no tienes Tribe.OS premium. Actívalo para acceder a gestión de clientes, seguimiento de asistencia y cero comisiones por sesión.',
@@ -199,6 +202,11 @@ export default function TribeOSDashboardPage() {
           >
             {s.retryLabel}
           </button>
+          <div className="mt-5">
+            <Link href="/" className="text-sm font-semibold text-gray-500 hover:text-tribe-dark transition-colors">
+              {s.backToTribe}
+            </Link>
+          </div>
         </div>
       </main>
     );
@@ -208,6 +216,12 @@ export default function TribeOSDashboardPage() {
     return (
       <main className="px-4 py-12 sm:py-20">
         <div className="max-w-2xl mx-auto">
+          <Link
+            href="/"
+            className="inline-block text-sm font-semibold text-gray-500 hover:text-tribe-dark mb-8 transition-colors"
+          >
+            {s.backToTribe}
+          </Link>
           <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.upgradeEyebrow}</p>
           <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-[1.1] mb-4">
             {s.upgradeTitle}
