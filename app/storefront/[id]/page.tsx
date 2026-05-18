@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { SkeletonProfile, SkeletonCard } from '@/components/Skeleton';
 import { haptic } from '@/lib/haptics';
+import { goBack } from '@/lib/navigation';
 import StorefrontProfileColumn from '@/components/storefront/StorefrontProfileColumn';
 import StorefrontHero from '@/components/storefront/StorefrontHero';
 import StorefrontTrustBar from '@/components/storefront/StorefrontTrustBar';
@@ -96,10 +97,7 @@ export default function StorefrontPage() {
       <div className="min-h-screen bg-theme-page pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
           <div className="max-w-5xl mx-auto h-14 flex items-center gap-3 px-4">
-            <button
-              onClick={() => window.history.back()}
-              className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center"
-            >
+            <button onClick={() => goBack()} className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center">
               <ArrowLeft className="w-6 h-6 text-theme-primary hover:opacity-70" />
             </button>
             <h1 className="text-lg font-bold text-theme-primary">
@@ -119,7 +117,7 @@ export default function StorefrontPage() {
                 : "This profile doesn't exist or is not available."}
             </p>
             <button
-              onClick={() => window.history.back()}
+              onClick={() => goBack()}
               className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:opacity-90 transition"
             >
               {lang === 'es' ? 'Volver' : 'Go Back'}
@@ -155,10 +153,7 @@ export default function StorefrontPage() {
     <div className="min-h-screen bg-theme-page pb-32 lg:pb-12">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
         <div className="max-w-5xl mx-auto h-14 flex items-center px-4">
-          <button
-            onClick={() => window.history.back()}
-            className="text-theme-primary hover:text-tribe-green transition-colors"
-          >
+          <button onClick={() => goBack()} className="text-theme-primary hover:text-tribe-green transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h2 className="flex-1 text-center text-theme-primary font-semibold truncate px-2">{instructor.name}</h2>
