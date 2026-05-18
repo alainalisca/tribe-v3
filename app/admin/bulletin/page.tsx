@@ -32,7 +32,7 @@ export default function AdminBulletinPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const t = {
-    title: language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin',
+    title: language === 'es' ? 'Gestionar Tablón' : 'Manage Bulletin',
     back: language === 'es' ? 'Volver' : 'Back',
     pending: language === 'es' ? 'Pendientes' : 'Pending',
     approved: language === 'es' ? 'Aprobados' : 'Approved',

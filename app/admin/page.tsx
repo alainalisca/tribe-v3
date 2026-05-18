@@ -202,7 +202,7 @@ export default function AdminPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-bold text-tribe-dark dark:text-white">
-                      {language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin'}
+                      {language === 'es' ? 'Gestionar Tablón' : 'Manage Bulletin'}
                     </p>
                     {pendingBulletinCount > 0 && (
                       <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold">
