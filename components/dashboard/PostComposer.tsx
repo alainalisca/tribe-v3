@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { X, Image as ImageIcon, Loader } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { createPost, type PostType } from '@/lib/dal/instructorPosts';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
@@ -59,6 +60,8 @@ export default function PostComposer({ open, onClose, instructorId, language, on
   const [linkedSessionId, setLinkedSessionId] = useState<string>('');
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSessionLite[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEscapeKey(() => onClose(), open && !saving);
 
   // Load the instructor's upcoming sessions once so the "link a session" dropdown
   // can populate. Intentionally narrow select to keep payload small.

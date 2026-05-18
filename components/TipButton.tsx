@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { createTip, createNotification } from '@/lib/dal';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
@@ -53,6 +54,8 @@ export default function TipButton({
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEscapeKey(() => setOpen(false), open && !saving);
 
   const t = {
     sayThanks: language === 'es' ? `Dale las gracias a ${instructorName}` : `Say thanks to ${instructorName}`,

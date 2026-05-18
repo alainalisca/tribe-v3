@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Dumbbell, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { expressInterest, withdrawInterest, hasExpressedInterest, createNotification } from '@/lib/dal';
@@ -32,6 +33,8 @@ export default function InterestButton({
   const [sport, setSport] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [saving, setSaving] = useState(false);
+
+  useEscapeKey(() => setOpen(false), open && !saving);
 
   useEffect(() => {
     let cancelled = false;
