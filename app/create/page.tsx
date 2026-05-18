@@ -369,8 +369,7 @@ function CreateSessionPageInner() {
                   }
                 }}
                 className="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
-                  bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-gray-300
-                  hover:bg-stone-200 dark:hover:bg-stone-700
+                  bg-theme-inset text-theme-secondary hover:opacity-90
                   flex items-center justify-center gap-2"
               >
                 <Copy className="w-4 h-4" />
@@ -389,7 +388,7 @@ function CreateSessionPageInner() {
               {/* Go home */}
               <Link
                 href="/"
-                className="block w-full py-2.5 text-sm font-medium text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-gray-300 transition-colors text-center"
+                className="block w-full py-2.5 text-sm font-medium text-theme-tertiary hover:text-theme-secondary transition-colors text-center"
               >
                 {language === 'es' ? 'Ir al inicio' : 'Go Home'}
               </Link>
@@ -721,10 +720,10 @@ function CreateSessionPageInner() {
                                 return (
                                   <>
                                     <div className="flex justify-between text-sm">
-                                      <span className="text-stone-500 dark:text-gray-400">
+                                      <span className="text-theme-tertiary">
                                         {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
                                       </span>
-                                      <span className="text-stone-500 dark:text-gray-400">
+                                      <span className="text-theme-tertiary">
                                         -{formatDisplayAmount(platformFeeCents / 100, formData.currency as Currency)}{' '}
                                         {formData.currency}
                                       </span>

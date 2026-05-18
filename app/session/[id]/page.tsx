@@ -105,17 +105,17 @@ export default function SessionDetailPage() {
 
   if (d.loading)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid">
+      <div className="min-h-screen bg-theme-page">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
   if (!d.session)
     return (
-      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
-        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-white dark:bg-tribe-card border-b border-gray-200 dark:border-gray-700">
+      <div className="min-h-screen bg-theme-page pb-32">
+        <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
           <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center gap-3 px-4">
             <Link href="/" className="p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
-              <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
+              <ArrowLeft className="w-6 h-6 text-theme-primary hover:opacity-70" />
             </Link>
             <h1 className="text-lg font-bold text-theme-primary leading-tight">
               Tribe<span className="text-tribe-green">.</span>
@@ -125,8 +125,8 @@ export default function SessionDetailPage() {
         <div className="pt-header flex items-center justify-center min-h-[60vh]">
           <div className="text-center p-6">
             <div className="text-4xl mb-4">🔍</div>
-            <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('sessionNotFound')}</p>
-            <p className="text-sm text-stone-500 dark:text-gray-400 mb-6">{t('checkConnectionRetry')}</p>
+            <p className="text-lg font-semibold text-theme-primary mb-2">{t('sessionNotFound')}</p>
+            <p className="text-sm text-theme-tertiary mb-6">{t('checkConnectionRetry')}</p>
             <Link
               href="/"
               className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
@@ -166,7 +166,7 @@ export default function SessionDetailPage() {
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid pb-32">
+    <div className="min-h-screen bg-theme-page pb-32">
       {d.lightboxOpen && currentPhotos && (
         <PhotoLightbox photos={currentPhotos} initialIndex={d.currentPhotoIndex} onClose={() => history.back()} />
       )}
@@ -195,7 +195,7 @@ export default function SessionDetailPage() {
         <div className="flex justify-end">
           <button
             onClick={shareSession}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tribe-surface dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-surface border border-theme text-theme-primary hover:opacity-90 transition text-sm font-medium"
           >
             <Share2 className="w-4 h-4" />
             {language === 'es' ? 'Compartir' : 'Share'}
@@ -253,10 +253,10 @@ export default function SessionDetailPage() {
         {/* Calendar Integration — shown when user has joined and session is upcoming */}
         {d.hasJoined && !isPast && d.session && (
           <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
-            <p className="text-sm font-semibold text-stone-900 dark:text-white">
+            <p className="text-sm font-semibold text-theme-primary">
               {language === 'es' ? '¡Estás inscrito!' : "You're in!"}
             </p>
-            <p className="text-xs text-stone-500 dark:text-gray-400">
+            <p className="text-xs text-theme-tertiary">
               {language === 'es'
                 ? 'Agrega a tu calendario para no olvidar'
                 : "Add to your calendar so you don't forget"}
@@ -275,7 +275,7 @@ export default function SessionDetailPage() {
                   });
                   trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'ics' });
                 }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-theme-surface text-theme-primary text-sm font-semibold rounded-lg border border-theme hover:opacity-90 transition"
               >
                 <CalendarIcon className="w-4 h-4" />
                 Apple Calendar
@@ -291,7 +291,7 @@ export default function SessionDetailPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('session_calendar_added', { session_id: d.session!.id, method: 'google' })}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-theme-surface text-theme-primary text-sm font-semibold rounded-lg border border-theme hover:opacity-90 transition"
               >
                 <CalendarIcon className="w-4 h-4" />
                 Google
