@@ -38,14 +38,14 @@ export default function CredentialsBadges({
       {certs.map((cert, idx) => (
         <span
           key={`${cert}-${idx}`}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#3D4349] text-gray-200 text-xs whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-card text-theme-secondary text-xs whitespace-nowrap"
         >
           <GraduationCap className="w-3.5 h-3.5 text-[#A3E635]" />
           {cert}
         </span>
       ))}
       {yearsExperience > 0 && (
-        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#3D4349] text-gray-200 text-xs whitespace-nowrap">
+        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-card text-theme-secondary text-xs whitespace-nowrap">
           <Clock className="w-3.5 h-3.5 text-[#A3E635]" />
           {yearsLabel}
         </span>

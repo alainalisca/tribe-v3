@@ -52,7 +52,7 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
   };
 
   return (
-    <section className="relative rounded-2xl overflow-hidden bg-[#3D4349] border border-[#84cc16]/30">
+    <section className="relative rounded-2xl overflow-hidden bg-theme-card border border-[#84cc16]/30">
       {/* Banner background */}
       <div className="relative h-40 w-full bg-gradient-to-br from-[#3D4349] to-[#272D34]">
         {instructor.storefront_banner_url ? (
@@ -74,7 +74,7 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
 
       <div className="px-5 pb-5 -mt-10 relative">
         <div className="flex items-end gap-3">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#84cc16] bg-[#272D34] relative flex-shrink-0">
+          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#84cc16] bg-theme-surface relative flex-shrink-0">
             {instructor.avatar_url ? (
               <Image src={instructor.avatar_url} alt={instructor.name} fill sizes="80px" className="object-cover" />
             ) : (
@@ -111,7 +111,7 @@ export default function SpotlightBanner({ language }: SpotlightBannerProps) {
           <Link
             href={`/storefront/${instructor.id}?tab=sessions`}
             onClick={onClick}
-            className="flex-1 py-2 rounded-lg bg-[#272D34] text-gray-200 hover:text-white text-sm font-semibold text-center"
+            className="flex-1 py-2 rounded-lg bg-theme-surface text-theme-secondary hover:text-theme-primary text-sm font-semibold text-center"
           >
             {language === 'es' ? 'Reservar Sesión' : 'Book Session'}
           </Link>

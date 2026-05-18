@@ -83,7 +83,7 @@ export default function TribePlusPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-8 space-y-8">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#84cc16] text-slate-900 text-xs font-bold tracking-widest">
@@ -92,7 +92,7 @@ export default function TribePlusPage() {
           <h1 className="text-3xl font-extrabold">{t.headline}</h1>
 
           {/* Cycle toggle */}
-          <div className="inline-flex rounded-xl bg-[#3D4349] p-1">
+          <div className="inline-flex rounded-xl bg-theme-card p-1">
             {(['monthly', 'annual'] as const).map((c) => (
               <button
                 key={c}
@@ -134,7 +134,7 @@ export default function TribePlusPage() {
         {/* Benefits grid */}
         <div className="grid grid-cols-2 gap-3">
           {t.features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-[#3D4349] rounded-2xl p-4">
+            <div key={title} className="bg-theme-card rounded-2xl p-4">
               <Icon className="w-5 h-5 text-[#A3E635] mb-2" />
               <h3 className="text-sm font-bold">{title}</h3>
               <p className="text-xs text-theme-tertiary mt-1">{desc}</p>
@@ -147,7 +147,7 @@ export default function TribePlusPage() {
           <h2 className="text-lg font-bold mb-3">{t.faqTitle}</h2>
           <ul className="space-y-3">
             {t.faqs.map(({ q, a }) => (
-              <li key={q} className="bg-[#3D4349] rounded-xl p-4">
+              <li key={q} className="bg-theme-card rounded-xl p-4">
                 <p className="text-sm font-semibold mb-1">{q}</p>
                 <p className="text-xs text-theme-tertiary">{a}</p>
               </li>

@@ -144,7 +144,7 @@ export default function TipButton({
               className={`py-2 px-2 rounded-lg text-sm font-semibold transition-colors ${
                 selected === amt && !customAmount
                   ? 'bg-[#84cc16] text-slate-900'
-                  : 'bg-[#272D34] text-gray-200 hover:bg-[#404549]'
+                  : 'bg-theme-surface text-theme-secondary hover:opacity-90'
               }`}
             >
               {formatAmount(amt, currency, language)}
@@ -167,7 +167,7 @@ export default function TipButton({
             setSelected(null);
           }}
           placeholder={currency === 'COP' ? '15000' : '7.50'}
-          className="w-full px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm"
+          className="w-full px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm"
         />
       </div>
 
@@ -181,7 +181,7 @@ export default function TipButton({
           onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE))}
           rows={2}
           placeholder={t.placeholder}
-          className="w-full px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm resize-none"
+          className="w-full px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm resize-none"
         />
         <p className="text-[10px] text-gray-500 text-right">
           {message.length}/{MAX_MESSAGE}
@@ -218,7 +218,7 @@ export default function TipButton({
   );
 
   if (inline) {
-    return <div className="bg-[#3D4349] rounded-2xl p-4">{renderPanel()}</div>;
+    return <div className="bg-theme-card rounded-2xl p-4">{renderPanel()}</div>;
   }
 
   return (
@@ -226,7 +226,7 @@ export default function TipButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#3D4349] hover:bg-[#404549] text-white text-sm font-semibold"
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-theme-card hover:opacity-90 text-theme-primary text-sm font-semibold"
       >
         <Heart className="w-4 h-4 text-[#A3E635]" />
         {t.tip} {instructorName}
@@ -239,7 +239,7 @@ export default function TipButton({
           aria-modal="true"
           onClick={() => !saving && setOpen(false)}
         >
-          <div className="w-full max-w-md bg-[#3D4349] rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-theme-card rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
             {renderPanel()}
           </div>
         </div>

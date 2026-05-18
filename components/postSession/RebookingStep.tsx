@@ -77,7 +77,7 @@ function SessionCard({
   return (
     <div
       className={`rounded-xl p-3 border ${
-        variant === 'primary' ? 'bg-[#3D4349] border-[#84cc16]/30' : 'bg-[#272D34] border-[#3D4349]'
+        variant === 'primary' ? 'bg-theme-card border-[#84cc16]/30' : 'bg-theme-surface border-theme'
       }`}
     >
       <p className="text-xs text-theme-tertiary">

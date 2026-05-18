@@ -133,7 +133,7 @@ export default function NotificationPreferencesPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-[#A3E635]" />
@@ -146,7 +146,7 @@ export default function NotificationPreferencesPage() {
           <>
             <ul className="space-y-2">
               {t.categories.map((cat) => (
-                <li key={cat.key} className="bg-[#3D4349] rounded-xl p-4 flex items-start gap-3">
+                <li key={cat.key} className="bg-theme-card rounded-xl p-4 flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">{cat.title}</p>
                     <p className="text-xs text-theme-tertiary mt-0.5">{cat.desc}</p>
@@ -158,11 +158,11 @@ export default function NotificationPreferencesPage() {
 
             <h2 className="text-sm font-semibold text-theme-secondary uppercase tracking-wide pt-2">{t.delivery}</h2>
             <ul className="space-y-2">
-              <li className="bg-[#3D4349] rounded-xl p-4 flex items-center gap-3">
+              <li className="bg-theme-card rounded-xl p-4 flex items-center gap-3">
                 <span className="flex-1 text-sm font-semibold">{t.push}</span>
                 <Toggle checked={prefs.push_enabled} onChange={() => toggle('push_enabled')} />
               </li>
-              <li className="bg-[#3D4349] rounded-xl p-4 flex items-center gap-3">
+              <li className="bg-theme-card rounded-xl p-4 flex items-center gap-3">
                 <span className="flex-1 text-sm font-semibold">{t.email}</span>
                 <Toggle checked={prefs.email_enabled} onChange={() => toggle('email_enabled')} />
               </li>
@@ -193,7 +193,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
       aria-checked={checked}
       onClick={onChange}
       className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-        checked ? 'bg-[#84cc16]' : 'bg-[#272D34]'
+        checked ? 'bg-[#84cc16]' : 'bg-theme-surface'
       }`}
     >
       <span

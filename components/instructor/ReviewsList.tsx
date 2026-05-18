@@ -74,7 +74,7 @@ function DistributionBar({ stars, count, total }: { stars: number; count: number
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="w-5 text-theme-tertiary">{stars}★</span>
-      <div className="flex-1 h-2 bg-[#272D34] rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-theme-surface rounded-full overflow-hidden">
         <div className="h-full bg-[#F59E0B] transition-all" style={{ width: `${pct}%` }} />
       </div>
       <span className="w-8 text-right text-theme-tertiary">{count}</span>
@@ -186,7 +186,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
   return (
     <div className="space-y-4">
       {/* Aggregate header */}
-      <div className="bg-[#3D4349] rounded-xl p-4">
+      <div className="bg-theme-card rounded-xl p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-2">
@@ -225,9 +225,9 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
             : null;
 
           return (
-            <li key={review.id} className="bg-[#3D4349] rounded-xl p-4 border border-transparent">
+            <li key={review.id} className="bg-theme-card rounded-xl p-4 border border-transparent">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-[#272D34] flex-shrink-0 relative">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-theme-surface flex-shrink-0 relative">
                   {review.reviewer?.avatar_url ? (
                     <Image
                       src={review.reviewer.avatar_url}
@@ -281,7 +281,7 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="px-4 py-2 rounded-lg bg-[#3D4349] hover:bg-[#404549] text-sm text-gray-200 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-theme-card hover:opacity-90 text-sm text-theme-secondary disabled:opacity-50"
               >
                 {loadingMore ? t.loading : t.loadMore}
               </button>

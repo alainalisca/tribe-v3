@@ -137,7 +137,7 @@ export default function InterestButton({
 
   return (
     <>
-      <div className="bg-[#3D4349] rounded-2xl p-4">
+      <div className="bg-theme-card rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <Dumbbell className="w-4 h-4 text-[#A3E635]" />
           <h3 className="text-sm font-semibold text-white">{t.title}</h3>
@@ -177,7 +177,7 @@ export default function InterestButton({
           aria-modal="true"
         >
           <div
-            className="w-full max-w-md bg-[#3D4349] rounded-2xl p-5 border border-[#404549]"
+            className="w-full max-w-md bg-theme-card rounded-2xl p-5 border border-theme"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>
@@ -189,7 +189,7 @@ export default function InterestButton({
               id="interest-sport"
               value={sport}
               onChange={(e) => setSport(e.target.value)}
-              className="w-full mb-4 px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm"
+              className="w-full mb-4 px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm"
             >
               <option value="">{t.sportPlaceholder}</option>
               {specialties.length > 0
@@ -214,7 +214,7 @@ export default function InterestButton({
               onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE))}
               rows={3}
               placeholder={t.messagePlaceholder}
-              className="w-full mb-1 px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm resize-none"
+              className="w-full mb-1 px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm resize-none"
             />
             <p className="text-[10px] text-gray-500 text-right mb-4">
               {message.length}/{MAX_MESSAGE}

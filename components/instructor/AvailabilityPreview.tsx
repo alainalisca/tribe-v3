@@ -89,14 +89,14 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
 
   if (loading) {
     return (
-      <div className="bg-[#3D4349] rounded-xl p-4">
+      <div className="bg-theme-card rounded-xl p-4">
         <p className="text-xs text-theme-tertiary">{t.loading}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#3D4349] rounded-xl p-4">
+    <div className="bg-theme-card rounded-xl p-4">
       <h3 className="text-sm font-semibold text-white mb-3">{t.heading}</h3>
       {sessions.length === 0 ? (
         <p className="text-xs text-theme-tertiary">{t.noSessions}</p>
