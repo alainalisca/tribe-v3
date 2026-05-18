@@ -29,14 +29,28 @@ const config: Config = {
         'tribe-green-hover': '#6FA300', // legacy alias for -dark
 
         // Dark / charcoal scale.
+        //
+        // The dark-surface values (surface/mid/card) were retuned May
+        // 2026 to the readability-driven theme spec. They had a ~10-12
+        // point spread that made dark-mode layers indistinguishable and
+        // sat too light for good text contrast; the new values match the
+        // spec's layering (page #1E2328 < surface #272D34 < card #2E343B)
+        // and clear WCAG AA/AAA against the brightened text tiers. This
+        // is a deliberate update to the cross-repo source of truth (same
+        // class as the May 2026 brand-green change), tracked for the
+        // sibling tribe-os codebase to sync — see THEME_TOKEN_SYNC.md.
+        //
+        // tribe-dark is intentionally NOT changed: it is dual-use
+        // ("primary text on light" / "page bg on dark") and #272D34 is
+        // already exactly the spec's dark surface, correct for both.
         'tribe-dark': '#272D34', // Darkgrey 100 — primary text on light / page bg on dark
         'tribe-dark-40': '#F2F2F2', // page bg on light layouts
         'tribe-dark-60': '#B1B3B6', // muted text
         'tribe-dark-80': '#52575D', // secondary text
-        'tribe-surface': '#3D4349',
-        'tribe-surface-hover': '#4A5056',
-        'tribe-mid': '#52575D',
-        'tribe-card': '#6B7178',
+        'tribe-surface': '#272D34', // spec dark surface (was #3D4349)
+        'tribe-surface-hover': '#323941', // subtle lighten of surface
+        'tribe-mid': '#1E2328', // spec dark page/inset (was #52575D)
+        'tribe-card': '#2E343B', // spec dark card (was #6B7178)
 
         // Legacy gray aliases — kept so existing call sites still
         // compile. New code should prefer the `tribe-dark-*` names
