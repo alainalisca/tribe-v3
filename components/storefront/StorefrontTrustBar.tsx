@@ -1,6 +1,6 @@
 'use client';
 
-import { Star, Users, Calendar } from 'lucide-react';
+import { Star, Clock, Calendar } from 'lucide-react';
 import type { Instructor, Session } from '@/app/storefront/[id]/useStorefrontData';
 
 interface StorefrontTrustBarProps {
@@ -38,9 +38,9 @@ export default function StorefrontTrustBar({
       label: language === 'es' ? 'Sesiones dirigidas' : 'Sessions led',
     },
     {
-      icon: Users,
+      icon: Clock,
       value: years > 0 ? String(years) : '—',
-      label: language === 'es' ? 'Años en Tribe' : 'Years on Tribe',
+      label: language === 'es' ? 'Años de experiencia' : 'Years of experience',
     },
   ];
 

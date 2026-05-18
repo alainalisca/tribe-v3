@@ -2,24 +2,17 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Share2, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, CalendarCheck } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { SkeletonProfile, SkeletonCard } from '@/components/Skeleton';
-import { getInstructorShareUrl, copyToClipboard } from '@/lib/share';
-import { showSuccess } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
-import CredentialsBadges from '@/components/instructor/CredentialsBadges';
-import VideoIntro from '@/components/instructor/VideoIntro';
-import AvailabilityPreview from '@/components/instructor/AvailabilityPreview';
-import InterestButton from '@/components/instructor/InterestButton';
-import TipButton from '@/components/TipButton';
-import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
-import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
+import StorefrontProfileColumn from '@/components/storefront/StorefrontProfileColumn';
 import StorefrontHero from '@/components/storefront/StorefrontHero';
 import StorefrontTrustBar from '@/components/storefront/StorefrontTrustBar';
 import StorefrontTabs, { type StorefrontTab } from '@/components/storefront/StorefrontTabs';
 import StorefrontTabPanels from '@/components/storefront/StorefrontTabPanels';
+import StorefrontEmpty from '@/components/storefront/StorefrontEmpty';
 import { useStorefrontData } from './useStorefrontData';
 
 export default function StorefrontPage() {
@@ -81,6 +74,7 @@ export default function StorefrontPage() {
   const isOwn = d.currentUserId === instructorId;
   const isAthleteViewer = !!d.currentUserId && !isOwn;
   const canBook = tabs.some((t) => t.id === 'sessions');
+  const hasContent = tabs.length > 0;
 
   if (d.loading) {
     return (
@@ -141,83 +135,24 @@ export default function StorefrontPage() {
 
   // Profile column — shared by the mobile stack and the desktop sidebar.
   const profileColumn = (
-    <div className="space-y-4">
-      {d.partnerData && <PartnerStorefrontBadge partner={d.partnerData} language={language} />}
-      {instructor.bio && (
-        <div className="bg-theme-card rounded-2xl p-4 border border-theme">
-          <p className="text-theme-secondary text-sm leading-relaxed">{instructor.bio}</p>
-        </div>
-      )}
-      <CredentialsBadges
-        certifications={instructor.certifications || []}
-        isVerified={!!instructor.verified}
-        yearsExperience={instructor.years_experience || 0}
-        language={lang}
-      />
-      <VideoIntro
-        videoUrl={instructor.storefront_video_url}
-        posterUrl={instructor.storefront_banner_url}
-        isOwnStorefront={isOwn}
-        language={lang}
-      />
-      <AvailabilityPreview instructorId={instructorId} language={lang} />
-      {isAthleteViewer && (
-        <InterestButton
-          athleteId={d.currentUserId!}
-          instructorId={instructorId}
-          instructorName={instructor.name}
-          specialties={instructor.specialties || []}
-          language={lang}
-        />
-      )}
-      {isAthleteViewer && (
-        <TipButton
-          tipperId={d.currentUserId!}
-          instructorId={instructorId}
-          instructorName={instructor.name}
-          currency={lang === 'en' ? 'USD' : 'COP'}
-          language={lang}
-        />
-      )}
-      <button
-        onClick={d.handleFollowToggle}
-        className={`w-full px-3 py-2 rounded-xl font-semibold transition-all text-sm ${
-          d.followState.isFollowing
-            ? 'bg-tribe-green/20 text-tribe-green border border-tribe-green'
-            : 'bg-tribe-green text-slate-900 hover:opacity-90'
-        }`}
-      >
-        {d.followState.isFollowing ? (lang === 'es' ? 'Siguiendo' : 'Following') : lang === 'es' ? 'Seguir' : 'Follow'}
-      </button>
-      {isOwn && (
-        <button
-          onClick={async () => {
-            const copied = await copyToClipboard(getInstructorShareUrl(instructorId));
-            if (copied) showSuccess(lang === 'es' ? 'Enlace de perfil copiado!' : 'Profile link copied!');
-          }}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold bg-theme-surface text-theme-secondary hover:text-theme-primary border border-theme transition-colors"
-        >
-          <Share2 className="w-4 h-4" />
-          {lang === 'es' ? 'Compartir Perfil' : 'Share Profile'}
-        </button>
-      )}
-      {d.partnerData && d.partnerInstructors.length > 0 && (
-        <PartnerInstructorRoster instructors={d.partnerInstructors} language={language} />
-      )}
-      {canBook && (
-        <button
-          onClick={goToSessions}
-          className="hidden md:flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm hover:opacity-90 transition"
-        >
-          <CalendarCheck className="w-4 h-4" />
-          {lang === 'es' ? 'Reservar una sesión' : 'Book a session'}
-        </button>
-      )}
-    </div>
+    <StorefrontProfileColumn
+      instructor={instructor}
+      lang={lang}
+      instructorId={instructorId}
+      currentUserId={d.currentUserId}
+      isOwn={isOwn}
+      isAthleteViewer={isAthleteViewer}
+      partnerData={d.partnerData}
+      partnerInstructors={d.partnerInstructors}
+      followState={d.followState}
+      onFollowToggle={d.handleFollowToggle}
+      canBook={canBook}
+      onBook={goToSessions}
+    />
   );
 
   return (
-    <div className="min-h-screen bg-theme-page pb-32 md:pb-12">
+    <div className="min-h-screen bg-theme-page pb-32 lg:pb-12">
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
         <div className="max-w-5xl mx-auto h-14 flex items-center px-4">
           <button
@@ -234,55 +169,75 @@ export default function StorefrontPage() {
       <main className="pt-header max-w-5xl mx-auto">
         <StorefrontHero instructor={instructor} language={lang} />
 
-        <div className="px-4 md:px-6 mt-4 md:hidden">
-          <StorefrontTrustBar instructor={instructor} sessions={d.sessions} language={lang} orientation="horizontal" />
-        </div>
-
-        <div className="md:grid md:grid-cols-[280px_1fr] md:gap-6 px-4 md:px-6 mt-4">
-          {/* Sidebar (desktop) / stacked profile (mobile) */}
-          <aside className="md:sticky md:top-20 md:self-start space-y-4">
-            <div className="hidden md:block">
+        {!hasContent ? (
+          // No offerings yet — single centered column, no empty void.
+          <div className="px-4 md:px-6 mt-4 max-w-xl mx-auto space-y-4">
+            <StorefrontTrustBar
+              instructor={instructor}
+              sessions={d.sessions}
+              language={lang}
+              orientation="horizontal"
+            />
+            {profileColumn}
+            <StorefrontEmpty language={lang} />
+          </div>
+        ) : (
+          <>
+            {/* Below lg: single centered column. lg+: two-column. */}
+            <div className="px-4 md:px-6 mt-4 lg:hidden max-w-xl mx-auto">
               <StorefrontTrustBar
                 instructor={instructor}
                 sessions={d.sessions}
                 language={lang}
-                orientation="vertical"
+                orientation="horizontal"
               />
             </div>
-            {profileColumn}
-          </aside>
 
-          {/* Content */}
-          <section className="mt-4 md:mt-0">
-            <div
-              id="storefront-tabs"
-              className="sticky top-[calc(env(safe-area-inset-top,0px)+3.5rem)] z-30 bg-theme-page py-2"
-            >
-              {tabs.length > 0 && <StorefrontTabs tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />}
+            <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-8 px-4 md:px-6 mt-4">
+              <aside className="lg:sticky lg:top-20 lg:self-start space-y-4 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
+                <div className="hidden lg:block">
+                  <StorefrontTrustBar
+                    instructor={instructor}
+                    sessions={d.sessions}
+                    language={lang}
+                    orientation="vertical"
+                  />
+                </div>
+                {profileColumn}
+              </aside>
+
+              <section className="mt-4 lg:mt-0 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
+                <div
+                  id="storefront-tabs"
+                  className="sticky top-[calc(env(safe-area-inset-top,0px)+3.5rem)] z-30 bg-theme-page py-2"
+                >
+                  <StorefrontTabs tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
+                </div>
+                <div className="mt-2">
+                  <StorefrontTabPanels
+                    activeTab={activeTab}
+                    language={lang}
+                    instructorId={instructorId}
+                    currentUserId={d.currentUserId}
+                    sessions={d.sessions}
+                    packages={d.packages}
+                    media={d.media}
+                    posts={d.posts}
+                    likedPosts={d.likedPosts}
+                    joinedSessionIds={d.joinedSessionIds}
+                    onSessionJoined={d.handleSessionJoined}
+                    onPostLike={d.handlePostLike}
+                  />
+                </div>
+              </section>
             </div>
-            <div className="mt-2">
-              <StorefrontTabPanels
-                activeTab={activeTab}
-                language={lang}
-                instructorId={instructorId}
-                currentUserId={d.currentUserId}
-                sessions={d.sessions}
-                packages={d.packages}
-                media={d.media}
-                posts={d.posts}
-                likedPosts={d.likedPosts}
-                joinedSessionIds={d.joinedSessionIds}
-                onSessionJoined={d.handleSessionJoined}
-                onPostLike={d.handlePostLike}
-              />
-            </div>
-          </section>
-        </div>
+          </>
+        )}
       </main>
 
       {/* Sticky bottom CTA (mobile only) */}
       {canBook && (
-        <div className="md:hidden fixed bottom-16 left-0 right-0 z-30 px-4 pb-2 safe-area-bottom pointer-events-none">
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 pb-2 safe-area-bottom pointer-events-none">
           <button
             onClick={goToSessions}
             className="pointer-events-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm shadow-tribe-green hover:opacity-90 transition"
