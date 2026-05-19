@@ -68,7 +68,7 @@ interface CreateStripeCheckoutSessionParams {
    * receipt readability.
    */
   productName?: string;
-  paymentType?: 'session_participation_fee' | 'boost_campaign' | 'pro_storefront';
+  paymentType?: 'session_participation_fee' | 'boost_campaign' | 'pro_storefront' | 'tip';
 }
 
 /**

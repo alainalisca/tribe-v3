@@ -173,6 +173,35 @@ function makeServiceClient(existingPayment: { status: string } | null = null) {
   };
 }
 
+// Service client for the tip branch: an instructor Connect lookup
+// (users), the createTip insert (tips), and the gateway-id update (tips).
+function makeTipServiceClient(
+  instructorConnect: { stripe_account_id: string | null; stripe_onboarding_complete: boolean } | null = {
+    stripe_account_id: 'acct_instructor',
+    stripe_onboarding_complete: true,
+  }
+) {
+  const usersMaybeSingle = vi.fn().mockResolvedValue({ data: instructorConnect, error: null });
+  const tipInsertSingle = vi.fn().mockResolvedValue({ data: { id: 'tip-1' }, error: null });
+  const tipUpdateEq = vi.fn().mockResolvedValue({ error: null });
+  return {
+    __tipInsertSingle: tipInsertSingle,
+    __tipUpdateEq: tipUpdateEq,
+    from: vi.fn((table: string) => {
+      if (table === 'users') {
+        return { select: () => ({ eq: () => ({ maybeSingle: usersMaybeSingle }) }) };
+      }
+      if (table === 'tips') {
+        return {
+          insert: () => ({ select: () => ({ single: tipInsertSingle }) }),
+          update: () => ({ eq: tipUpdateEq }),
+        };
+      }
+      return {};
+    }),
+  };
+}
+
 function request(body: Record<string, unknown>) {
   return new NextRequest('http://localhost/api/payment/create', {
     method: 'POST',
@@ -290,6 +319,83 @@ describe('POST /api/payment/create', () => {
     expect(body.success).toBe(true);
     expect(body.data.gateway).toBe('stripe');
     expect(createStripeCheckoutSession).toHaveBeenCalled();
+  });
+
+  // ── Tip flow (payment_type: 'tip') ────────────────────────────────
+
+  it('rejects a self-tip (instructor_id === user.id)', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    vi.mocked(createServiceClient).mockReturnValue(makeTipServiceClient() as never);
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: AUTH_USER.id, currency: 'USD', amount_cents: 500 })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('Cannot tip yourself');
+  });
+
+  it('rejects a tip below the per-currency floor', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    vi.mocked(createServiceClient).mockReturnValue(makeTipServiceClient() as never);
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: CREATOR_ID, currency: 'USD', amount_cents: 50 })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/Tip must be between/);
+  });
+
+  it('tip (COP → Wompi) creates a tip and returns redirect URL', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    const svc = makeTipServiceClient();
+    vi.mocked(createServiceClient).mockReturnValue(svc as never);
+    vi.mocked(getPaymentGateway).mockReturnValue('wompi' as never);
+    vi.mocked(createWompiTransaction).mockResolvedValue({
+      redirect_url: 'https://checkout.wompi.co/p/tip',
+      transaction_id: 'txn_tip_1',
+    } as never);
+
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: CREATOR_ID, currency: 'COP', amount_cents: 1_000_000 })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.gateway).toBe('wompi');
+    expect(body.data.tip_id).toBe('tip-1');
+    expect(svc.__tipInsertSingle).toHaveBeenCalled();
+    expect(createWompiTransaction).toHaveBeenCalled();
+  });
+
+  it('rejects a USD tip when the instructor has no Connect onboarding', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    vi.mocked(createServiceClient).mockReturnValue(makeTipServiceClient(null) as never);
+    vi.mocked(getPaymentGateway).mockReturnValue('stripe' as never);
+
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: CREATOR_ID, currency: 'USD', amount_cents: 500 })
+    );
+    expect(res.status).toBe(409);
+  });
+
+  it('tip (USD → Stripe) creates a tip and returns checkout URL', async () => {
+    vi.mocked(createServerClient).mockResolvedValue(makeAuthClient(true) as never);
+    const svc = makeTipServiceClient();
+    vi.mocked(createServiceClient).mockReturnValue(svc as never);
+    vi.mocked(getPaymentGateway).mockReturnValue('stripe' as never);
+    vi.mocked(createStripeCheckoutSession).mockResolvedValue({
+      url: 'https://checkout.stripe.com/pay/cs_tip',
+      sessionId: 'cs_tip_1',
+    } as never);
+
+    const res = await POST(
+      request({ payment_type: 'tip', instructor_id: CREATOR_ID, currency: 'USD', amount_cents: 1000 })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.gateway).toBe('stripe');
+    expect(createStripeCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({ applicationFeeCents: 0, paymentType: 'tip' })
+    );
   });
 
   it('happy path (COP → Wompi) returns redirect URL', async () => {

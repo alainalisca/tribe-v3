@@ -173,4 +173,14 @@ select '087_session_participant_count_trigger',
                 where tgname = 'trg_sync_session_participant_count'
               )
             then 'applied' else 'MISSING' end
+union all
+select '088_finalize_payment_tip_fallback',
+       -- 088 redefines finalize_payment to add a `tips`-table fallback so
+       -- tip charges finalize without a payments row. Detect by the marker
+       -- comment baked into the function body — 086/047 do not contain it.
+       case when exists (
+         select 1 from pg_proc p
+         where p.proname = 'finalize_payment'
+           and pg_get_functiondef(p.oid) like '%088: tip finalization fallback%'
+       ) then 'applied' else 'MISSING' end
 order by migration;

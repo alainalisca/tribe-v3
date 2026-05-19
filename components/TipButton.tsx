@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { showError, showInfo } from '@/lib/toast';
+import { showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
+import { formatPrice } from '@/lib/formatCurrency';
 import { type Currency } from '@/lib/payments/config';
 
 interface TipButtonProps {
@@ -21,17 +22,14 @@ interface TipButtonProps {
   onTipped?: () => void;
 }
 
+// Amounts are stored in the canonical minor-unit convention used across
+// payments/sessions and by both gateways (USD cents, COP pesos × 100), so
+// formatPrice() renders them correctly and Wompi/Stripe charge the right
+// figure.
 const PRESETS: Record<Currency, number[]> = {
-  COP: [5000, 10000, 20000],
-  USD: [200, 500, 1000], // cents
+  COP: [500000, 1000000, 2000000], // $5,000 / $10,000 / $20,000 COP
+  USD: [200, 500, 1000], // $2 / $5 / $10
 };
-
-function formatAmount(cents: number, currency: Currency, language: 'en' | 'es'): string {
-  if (currency === 'COP') {
-    return `$${Math.round(cents).toLocaleString(language === 'es' ? 'es-CO' : 'en-US')} COP`;
-  }
-  return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)} USD`;
-}
 
 const MAX_MESSAGE = 140;
 
@@ -48,7 +46,7 @@ export default function TipButton({
   const [selected, setSelected] = useState<number | null>(PRESETS[currency][1] ?? null);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [message, setMessage] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEscapeKey(() => setOpen(false), open);
 
@@ -60,21 +58,19 @@ export default function TipButton({
     send: language === 'es' ? 'Enviar Propina' : 'Send Tip',
     cancel: language === 'es' ? 'Cancelar' : 'Cancel',
     tip: language === 'es' ? 'Dar Propina' : 'Tip',
-    thanks:
-      language === 'es'
-        ? 'Te avisaremos cuando las propinas estén disponibles.'
-        : "We'll let you know when tips go live.",
-    comingSoon: language === 'es' ? 'Las propinas llegan pronto.' : 'Tips are coming soon.',
+    redirecting: language === 'es' ? 'Abriendo el pago seguro...' : 'Opening secure checkout...',
     error: language === 'es' ? 'No se pudo enviar la propina' : 'Could not send tip',
     invalid: language === 'es' ? 'Monto no válido' : 'Invalid amount',
     placeholder: language === 'es' ? 'Gran sesión 🙌' : 'Great session! 🙌',
   };
 
+  // Custom-amount input is in major units (dollars / pesos); convert to the
+  // canonical minor-unit amount the API and gateways expect.
   const effectiveAmount = (() => {
     if (customAmount) {
       const parsed = Number(customAmount.replace(/[^0-9.]/g, ''));
       if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-      return currency === 'USD' ? Math.round(parsed * 100) : Math.round(parsed);
+      return currency === 'USD' ? Math.round(parsed * 100) : Math.round(parsed) * 100;
     }
     return selected ?? 0;
   })();
@@ -84,20 +80,48 @@ export default function TipButton({
       showError(t.invalid);
       return;
     }
-    // Tips are NOT wired to a real charge yet. Never fake a sent tip or
-    // notify the instructor of money that did not move (see Tier-1 audit
-    // fix). Capture genuine demand and tell the user the honest truth;
-    // real tip charging is tracked as a separate follow-up.
-    trackEvent('tip_interest', {
-      amount_cents: effectiveAmount,
-      currency,
-      tipper_id: tipperId,
-      instructor_id: instructorId,
-      session_id: sessionId ?? null,
-    });
-    await haptic('light');
-    showInfo(t.comingSoon);
-    setSuccess(true);
+    try {
+      setSubmitting(true);
+      trackEvent('tip_initiated', {
+        amount_cents: effectiveAmount,
+        currency,
+        tipper_id: tipperId,
+        instructor_id: instructorId,
+        session_id: sessionId ?? null,
+      });
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_type: 'tip',
+          instructor_id: instructorId,
+          currency,
+          amount_cents: effectiveAmount,
+          session_id: sessionId,
+          message: message.trim() || undefined,
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        error?: string;
+        data?: { redirect_url?: string };
+      } | null;
+
+      if (!res.ok || !json?.success || !json.data?.redirect_url) {
+        showError(json?.error || t.error);
+        setSubmitting(false);
+        return;
+      }
+
+      await haptic('light');
+      // Hand off to the gateway-hosted checkout. The tip finalizes via the
+      // webhook → finalize_payment tips fallback; there is no in-app
+      // "sent!" state because the charge has not settled yet.
+      window.location.href = json.data.redirect_url;
+    } catch {
+      showError(t.error);
+      setSubmitting(false);
+    }
   };
 
   const renderPanel = () => (
@@ -119,7 +143,7 @@ export default function TipButton({
                   : 'bg-theme-surface text-theme-secondary hover:opacity-90'
               }`}
             >
-              {formatAmount(amt, currency, language)}
+              {formatPrice(amt, currency)}
             </button>
           ))}
         </div>
@@ -175,16 +199,12 @@ export default function TipButton({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={success}
-          className={`flex-1 py-2.5 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors disabled:opacity-50 ${
-            inline ? '' : ''
-          }`}
+          disabled={submitting}
+          className="flex-1 py-2.5 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors disabled:opacity-50"
         >
-          {success ? '✓' : t.send}
+          {submitting ? t.redirecting : t.send}
         </button>
       </div>
-
-      {success && <p className="text-center text-sm text-[#A3E635] font-semibold animate-pulse">{t.thanks}</p>}
     </div>
   );
 

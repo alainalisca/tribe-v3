@@ -85,3 +85,51 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
     logError(err, { action: 'notifyAfterFinalize', paymentId });
   }
 }
+
+/**
+ * "You received a tip" notification for the instructor. Tips have no
+ * payments row (they finalize via the tips-table fallback in
+ * finalize_payment), so they get their own notifier keyed by tip id.
+ *
+ * Same fire-and-forget contract as notifyAfterFinalize: a failure here must
+ * never make the gateway retry an already-settled tip.
+ */
+export async function notifyTipReceived(supabase: SupabaseClient, tipId: string): Promise<void> {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const cronSecret = process.env.CRON_SECRET;
+    if (!siteUrl || !cronSecret) return;
+
+    const { data: tip } = await supabase
+      .from('tips')
+      .select('instructor_id, amount_cents, currency, tipper:tipper_id(name)')
+      .eq('id', tipId)
+      .single();
+
+    if (!tip?.instructor_id) return;
+
+    const tipperRel = tip.tipper as unknown as { name?: string } | { name?: string }[] | null;
+    const tipperName = (Array.isArray(tipperRel) ? tipperRel[0]?.name : tipperRel?.name) || 'Someone';
+    const amount =
+      tip.currency === 'USD'
+        ? `$${((tip.amount_cents as number) / 100).toFixed(2)}`
+        : `$${Math.round((tip.amount_cents as number) / 100).toLocaleString()} COP`;
+
+    fetch(`${siteUrl}/api/notifications/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cronSecret}`,
+      },
+      body: JSON.stringify({
+        user_id: tip.instructor_id,
+        title: 'You received a tip!',
+        body: `${tipperName} sent you a ${amount} tip. Thank you note in the app.`,
+        type: 'tip_received',
+        data: { tip_id: tipId },
+      }),
+    }).catch((err) => logError(err, { action: 'notifyTipReceived.send', tipId }));
+  } catch (err) {
+    logError(err, { action: 'notifyTipReceived', tipId });
+  }
+}

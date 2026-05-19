@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyStripeWebhookSignature, mapStripeStatus, getStripePaymentIntent } from '@/lib/payments/stripe';
-import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
+import { notifyAfterFinalize, notifyTipReceived } from '@/lib/payments/notifyAfterFinalize';
 import { syncFromStripeSubscription, clearTribeOSSubscription } from '@/lib/dal/tribeOSSubscription';
 import { recordPaymentRefund } from '@/lib/dal/payments';
 
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         expected?: number;
         received?: number;
         payment_id?: string;
+        tip_id?: string;
         participant_added?: boolean;
         fulfillment_applied?: boolean;
         was_duplicate?: boolean;
@@ -86,6 +87,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // (skip duplicates so a Stripe replay doesn't spam the user).
       if (status === 'approved' && !result.was_duplicate && result.payment_id) {
         notifyAfterFinalize(supabase, result.payment_id).catch(() => undefined);
+      }
+      // Tip finalized via the tips-table fallback (no payments row).
+      if (status === 'approved' && !result.was_duplicate && result.tip_id) {
+        notifyTipReceived(supabase, result.tip_id).catch(() => undefined);
       }
 
       return NextResponse.json({ success: true, result });
@@ -121,6 +126,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           .update({ stripe_payment_intent_id: paymentIntentId })
           .eq('gateway_payment_id', session.id as string)
           .is('stripe_payment_intent_id', null);
+        // Same backfill for a tip checkout: the tip row was created with the
+        // Checkout Session id (cs_...) as gateway_payment_id. Rewrite it to
+        // the PaymentIntent id (pi_...) so the duplicate
+        // `payment_intent.succeeded` event (keyed by pi_) resolves the tip
+        // cleanly instead of 404→retry. Matching on the cs_ id makes this a
+        // no-op once already rewritten, and a no-op for non-tip checkouts.
+        await supabase
+          .from('tips')
+          .update({ gateway_payment_id: paymentIntentId })
+          .eq('gateway_payment_id', session.id as string);
         return resp;
       }
 
