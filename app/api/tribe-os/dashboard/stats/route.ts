@@ -8,8 +8,9 @@
  *                              (active + lead + lapsed + watch, etc.)
  *   - active_sessions_today — sessions on the schedule for today's
  *                              local date (any time)
- *   - monthly_revenue       — gross in the current calendar month
- *                              (USD + COP collapsed into one card UI-side)
+ *   - monthly_revenue       — NET in the current calendar month
+ *                              (gross minus platform fees and refunds;
+ *                              USD + COP collapsed into one card UI-side)
  *   - retention_rate        — share of last-month-active clients who
  *                              are still active this month, expressed
  *                              as a percentage
@@ -36,6 +37,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getRevenueSummary, getRevenueSummaryForGym } from '@/lib/dal/revenue';
+import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
 
 interface DashboardStats {
   total_members: { current: number; prior: number } | null;
@@ -54,8 +56,19 @@ function monthRange(year: number, month: number): { from: string; to: string } {
   return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
 }
 
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Today's date (YYYY-MM-DD) in the market timezone. Tribe is
+ * Colombia-first (America/Bogota, fixed UTC-5, no DST) and
+ * sessions.date is a local date — using UTC dropped evening Medellín
+ * classes off "sessions today" after 7pm local.
+ */
+function todayLocal(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 }
 
 export async function GET(_request: NextRequest): Promise<NextResponse> {
@@ -67,7 +80,7 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     const now = new Date();
     const thisMonth = monthRange(now.getUTCFullYear(), now.getUTCMonth());
     const lastMonth = monthRange(now.getUTCFullYear(), now.getUTCMonth() - 1);
-    const today = todayUtc();
+    const today = todayLocal();
 
     // Total members (non-archived). Build a base query so we can
     // also derive "active last month" + "active this month" for
@@ -85,12 +98,21 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
     const lastMonthEndIso = `${lastMonth.to}T23:59:59.999Z`;
     const priorMonthMembersPromise = baseMembersQuery().eq('archived', false).lte('created_at', lastMonthEndIso);
 
-    // Sessions today.
-    const sessionsTodayQuery = supabase
-      .from('sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('creator_id', userId)
-      .eq('date', today);
+    // Sessions today. `sessions` has no gym_id, so a gym's sessions =
+    // sessions created by any gym member (owner + coaches). Filtering by
+    // the caller's own creator_id (the old behaviour) showed a
+    // non-owner coach an empty "0 today" and hid co-coaches' classes
+    // from the owner. Falls back to caller-scoped if member resolution
+    // fails (degraded, never throws).
+    let sessionsTodayQuery = supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('date', today);
+    if (gymId) {
+      const membersRes = await listGymMemberUserIds(supabase, gymId);
+      const creatorIds =
+        membersRes.success && membersRes.data && membersRes.data.length > 0 ? membersRes.data : [userId];
+      sessionsTodayQuery = sessionsTodayQuery.in('creator_id', creatorIds);
+    } else {
+      sessionsTodayQuery = sessionsTodayQuery.eq('creator_id', userId);
+    }
 
     // Revenue this month + last month, in parallel.
     const revenueThisPromise = gymId
@@ -134,14 +156,17 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
       const priorRows = (priorMembersResult.data ?? []) as Row[];
       const currentRows = (allMembersResult.data ?? []) as Row[];
 
+      // "Active last month" = a real member (not a 'lead') seen within
+      // last month. The prior code filtered on 'watch'/'at_risk', which
+      // are health_status values — never status (ClientStatus is
+      // active|inactive|lead|lapsed). Those branches never matched, so
+      // the denominator was always empty and the headline retention
+      // KPI was a fabricated number.
       const wasActiveLastMonth = priorRows.filter((r) => {
-        if (r.status === 'active' || r.status === 'watch' || r.status === 'at_risk') {
-          // Status-based: counts unless they were explicitly inactive/lapsed/churned.
-          const seen = r.last_seen_at ? new Date(r.last_seen_at).getTime() : null;
-          if (seen == null) return false;
-          return seen >= lastMonthStart && seen <= lastMonthEnd;
-        }
-        return false;
+        if (r.status === 'lead') return false;
+        const seen = r.last_seen_at ? new Date(r.last_seen_at).getTime() : null;
+        if (seen == null) return false;
+        return seen >= lastMonthStart && seen <= lastMonthEnd;
       });
 
       const stillActiveSet = new Set(
@@ -181,18 +206,18 @@ export async function GET(_request: NextRequest): Promise<NextResponse> {
 
     if (revenueThisResult.success && revenueThisResult.data && data.monthly_revenue) {
       if (revenueThisResult.data.totals.USD) {
-        data.monthly_revenue.current.USD = revenueThisResult.data.totals.USD.gross_cents;
+        data.monthly_revenue.current.USD = revenueThisResult.data.totals.USD.net_cents;
       }
       if (revenueThisResult.data.totals.COP) {
-        data.monthly_revenue.current.COP = revenueThisResult.data.totals.COP.gross_cents;
+        data.monthly_revenue.current.COP = revenueThisResult.data.totals.COP.net_cents;
       }
     }
     if (revenueLastResult.success && revenueLastResult.data && data.monthly_revenue) {
       if (revenueLastResult.data.totals.USD) {
-        data.monthly_revenue.prior.USD = revenueLastResult.data.totals.USD.gross_cents;
+        data.monthly_revenue.prior.USD = revenueLastResult.data.totals.USD.net_cents;
       }
       if (revenueLastResult.data.totals.COP) {
-        data.monthly_revenue.prior.COP = revenueLastResult.data.totals.COP.gross_cents;
+        data.monthly_revenue.prior.COP = revenueLastResult.data.totals.COP.net_cents;
       }
     }
     if (!revenueThisResult.success) {

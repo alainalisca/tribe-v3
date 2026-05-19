@@ -213,3 +213,49 @@ export async function isCoachInGym(
     return { success: false, error: 'Failed to check coach membership' };
   }
 }
+
+/**
+ * Every user_id that "belongs to" a gym: the owner (gyms.owner_user_id)
+ * plus every gym_coaches.user_id. Deduped.
+ *
+ * Used to gym-scope tables that key off the session/record CREATOR
+ * rather than gym_id (notably `sessions`, which has no gym_id column).
+ * Without this, /os/schedule and the dashboard "sessions today" KPI
+ * filter by the caller's own creator_id — so a non-owner coach sees an
+ * empty schedule while the rest of their OS populates, and a
+ * multi-coach owner never sees co-coaches' classes.
+ */
+export async function listGymMemberUserIds(supabase: SupabaseClient, gymId: string): Promise<DalResult<string[]>> {
+  try {
+    const ids = new Set<string>();
+
+    const { data: gymRow, error: gymErr } = await supabase
+      .from('gyms')
+      .select('owner_user_id')
+      .eq('id', gymId)
+      .maybeSingle();
+    if (gymErr) {
+      logError(gymErr, { action: 'listGymMemberUserIds.owner', gymId });
+      return { success: false, error: gymErr.message };
+    }
+    const ownerId = (gymRow as { owner_user_id: string } | null)?.owner_user_id;
+    if (ownerId) ids.add(ownerId);
+
+    const { data: coachRows, error: coachErr } = await supabase
+      .from('gym_coaches')
+      .select('user_id')
+      .eq('gym_id', gymId);
+    if (coachErr) {
+      logError(coachErr, { action: 'listGymMemberUserIds.coaches', gymId });
+      return { success: false, error: coachErr.message };
+    }
+    for (const r of (coachRows ?? []) as Array<{ user_id: string }>) {
+      if (r.user_id) ids.add(r.user_id);
+    }
+
+    return { success: true, data: Array.from(ids) };
+  } catch (error) {
+    logError(error, { action: 'listGymMemberUserIds', gymId });
+    return { success: false, error: 'Failed to list gym member user ids' };
+  }
+}

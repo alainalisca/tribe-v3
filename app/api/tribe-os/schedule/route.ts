@@ -8,10 +8,13 @@
  *
  * Defaults to "current week, Mon–Sun" if either bound is missing.
  *
- * Sessions are world-readable but we scope by creator_id so the
- * schedule shows only the caller's classes — the gym/multi-coach
- * view of "every class scheduled in this gym" lands when we promote
- * sessions to be gym-tenant aware.
+ * Scoping: `sessions` has no gym_id, so a gym's schedule = sessions
+ * created by any gym member (owner + coaches, via
+ * listGymMemberUserIds). Scoping by the caller's own creator_id (the
+ * old behaviour) showed a non-owner coach an empty schedule while the
+ * rest of their OS populated, and hid co-coaches' classes from the
+ * owner. Falls back to caller-scoped (legacy/solo, or if member
+ * resolution fails — degraded, never throws).
  *
  * Response (200):
  *   { success: true, data: { sessions: ScheduleSession[] } }
@@ -20,6 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { listGymMemberUserIds } from '@/lib/dal/gymCoaches';
 
 interface ScheduleSession {
   id: string;
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       end = ymd(endDate);
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('sessions')
       .select(
         `
@@ -84,11 +88,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           creator:users!sessions_creator_id_fkey(name)
         `
       )
-      .eq('creator_id', userId)
       .gte('date', start)
-      .lte('date', end)
-      .order('date', { ascending: true })
-      .order('start_time', { ascending: true });
+      .lte('date', end);
+
+    if (gymId) {
+      const membersRes = await listGymMemberUserIds(supabase, gymId);
+      const creatorIds =
+        membersRes.success && membersRes.data && membersRes.data.length > 0 ? membersRes.data : [userId];
+      query = query.in('creator_id', creatorIds);
+    } else {
+      query = query.eq('creator_id', userId);
+    }
+
+    const { data, error } = await query.order('date', { ascending: true }).order('start_time', { ascending: true });
 
     if (error) {
       logError(error, { action: 'schedule.list', userId, gymId, from: start, to: end });
