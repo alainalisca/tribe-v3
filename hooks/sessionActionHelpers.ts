@@ -4,7 +4,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import {
   fetchConfirmedCount,
   insertParticipantReturning,
-  updateParticipantCount,
   deleteGuestParticipant,
   fetchGuestParticipant,
   deleteParticipantBySessionAndUser,
@@ -36,9 +35,8 @@ export async function insertGuestParticipant(
   if (!result.success) throw new Error(result.error);
   const data = result.data as unknown as { id: string; guest_token: string | null };
 
-  const newCount = (session.current_participants ?? 0) + 1;
-  await updateParticipantCount(supabase, session.id, newCount);
-
+  // No manual count write: the 087 trigger recomputes
+  // sessions.current_participants from the confirmed rows on the insert above.
   return data;
 }
 
@@ -117,9 +115,7 @@ export async function removeGuestParticipant(
   const deleteResult = await deleteGuestParticipant(deleteClient, sessionId, filter);
   if (!deleteResult.success) throw new Error(deleteResult.error);
 
-  const newCount = Math.max(0, (session.current_participants ?? 0) - 1);
-  await updateParticipantCount(supabase, session.id, newCount);
-
+  // The 087 trigger recomputes the count from the delete above.
   localStorage.removeItem(`guest_phone_${sessionId}`);
   localStorage.removeItem(`guest_email_${sessionId}`);
   localStorage.removeItem(`guest_token_${sessionId}`);
@@ -168,9 +164,7 @@ export async function removeUserFromSession(
   const deleteResult = await deleteParticipantBySessionAndUser(supabase, session.id, userId);
   if (!deleteResult.success) throw new Error(deleteResult.error);
 
-  const newCount = (session.current_participants ?? 0) - 1;
-  await updateParticipantCount(supabase, session.id, newCount);
-
+  // The 087 trigger recomputes the count from the delete above.
   showSuccess(language === 'es' ? 'Has salido de la sesion' : 'You have left the session');
   onNavigate('/sessions');
 }

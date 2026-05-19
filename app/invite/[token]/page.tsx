@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchInviteWithSession, fetchUsersByIds, insertParticipant, updateSession } from '@/lib/dal';
+import { fetchInviteWithSession, fetchUsersByIds, insertParticipant } from '@/lib/dal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -116,10 +116,12 @@ export default function InvitePage() {
 
       if (!result.success) throw new Error(result.error);
 
-      // Update athlete count
-      await updateSession(supabase, session.id, {
-        current_participants: (session.current_participants ?? 0) + 1,
-      });
+      // No manual count bump: the 087 AFTER trigger
+      // (trg_sync_session_participant_count) recomputes
+      // sessions.current_participants from the confirmed rows on the
+      // insertParticipant write above. A hand-rolled +1 here would race
+      // that authoritative recompute (and read a possibly-stale cached
+      // value), so it is intentionally gone.
 
       showSuccess(t('confirmedSeeYou'));
 

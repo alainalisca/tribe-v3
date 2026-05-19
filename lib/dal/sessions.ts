@@ -303,28 +303,6 @@ export async function deleteSession(supabase: SupabaseClient, sessionId: string)
   }
 }
 
-/**
- * Updates the participant count for a session.
- */
-export async function updateParticipantCount(
-  supabase: SupabaseClient,
-  sessionId: string,
-  count: number
-): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase
-      .from('sessions')
-      .update({ current_participants: Math.max(0, count) })
-      .eq('id', sessionId);
-
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'updateParticipantCount', sessionId });
-    return { success: false, error: 'Failed to update participant count' };
-  }
-}
-
 /** Updates a session with arbitrary fields. */
 export async function updateSession(
   supabase: SupabaseClient,
