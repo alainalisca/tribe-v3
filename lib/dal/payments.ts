@@ -206,7 +206,7 @@ export async function recordPaymentRefund(
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_payment_intent_id', stripePaymentIntentId)
-      .select('id')
+      .select('id, amount_cents, session_id, participant_user_id')
       .single();
 
     if (error) {
@@ -224,7 +224,52 @@ export async function recordPaymentRefund(
       return { success: false, error: 'payment_not_found' };
     }
 
-    return { success: true, data: { paymentId: (data as { id: string }).id } };
+    const payment = data as {
+      id: string;
+      amount_cents: number | null;
+      session_id: string | null;
+      participant_user_id: string | null;
+    };
+
+    // Seat release on a FULL refund only. A full refund means the buyer
+    // got all their money back, so they must not keep a confirmed seat
+    // (free access) or hold capacity. A partial refund keeps the seat.
+    // Only session-participation payments carry a session_id +
+    // participant_user_id; boost/pro refunds naturally no-op here.
+    //
+    // We just delete the participant row — the 087 AFTER trigger
+    // (trg_sync_session_participant_count) recomputes
+    // sessions.current_participants from the real confirmed rows, so the
+    // capacity count stays a single source of truth (Tier-3). Deleting an
+    // already-removed row matches zero rows and is a safe no-op, so this
+    // stays idempotent under Stripe's cumulative charge.refunded replays.
+    const isFullRefund =
+      typeof payment.amount_cents === 'number' &&
+      payment.amount_cents > 0 &&
+      cumulativeRefundCents >= payment.amount_cents;
+
+    if (isFullRefund && payment.session_id && payment.participant_user_id) {
+      const { error: seatError } = await supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', payment.session_id)
+        .eq('user_id', payment.participant_user_id);
+
+      if (seatError) {
+        // The refund itself IS recorded. A failed seat release is a
+        // capacity-accuracy issue, not a money-integrity one, so log it
+        // loudly but don't fail the whole refund (which would make Stripe
+        // retry — harmless but noisy, and the retry would re-attempt this
+        // delete anyway).
+        logError(seatError, {
+          action: 'recordPaymentRefund.releaseSeat',
+          paymentId: payment.id,
+          sessionId: payment.session_id,
+        });
+      }
+    }
+
+    return { success: true, data: { paymentId: payment.id } };
   } catch (error) {
     logError(error, { action: 'recordPaymentRefund', stripePaymentIntentId });
     return { success: false, error: 'Failed to record refund' };

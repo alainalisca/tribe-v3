@@ -34,6 +34,41 @@ function buildSupabaseMock(opts: { data?: { id: string } | null; error?: { messa
   return { from: () => chain } as unknown as SupabaseClient;
 }
 
+/**
+ * Richer mock for the seat-release path: a payments chain
+ * (update→eq→select→single) plus a session_participants chain
+ * (delete→eq→eq) whose call is recorded so tests can assert whether the
+ * seat was released.
+ */
+function buildSeatMock(opts: {
+  payment: { id: string; amount_cents: number | null; session_id: string | null; participant_user_id: string | null };
+  seatDeleteError?: { message: string } | null;
+}) {
+  const calls = { deleteArgs: [] as Array<[string, unknown]>, deleteCalled: false };
+  const paymentsChain = {
+    update: () => paymentsChain,
+    eq: () => paymentsChain,
+    select: () => paymentsChain,
+    single: async () => ({ data: opts.payment, error: null }),
+  };
+  // recordPaymentRefund does: .delete().eq('session_id',…).eq('user_id',…)
+  // and awaits the result, so the last .eq() must resolve to { error }.
+  const spChain = {
+    delete: () => {
+      calls.deleteCalled = true;
+      return spChain;
+    },
+    eq: (col: string, val: unknown) => {
+      calls.deleteArgs.push([col, val]);
+      return calls.deleteArgs.length >= 2 ? Promise.resolve({ error: opts.seatDeleteError ?? null }) : spChain;
+    },
+  };
+  const supabase = {
+    from: (table: string) => (table === 'session_participants' ? spChain : paymentsChain),
+  } as unknown as SupabaseClient;
+  return { supabase, calls };
+}
+
 const PI = 'pi_test_123';
 const AT = '2026-05-19T12:00:00.000Z';
 
@@ -77,5 +112,46 @@ describe('recordPaymentRefund', () => {
     const supabase = buildSupabaseMock({ data: { id: 'pay_abc' } });
     const res = await recordPaymentRefund(supabase, PI, 1500, AT);
     expect(res).toEqual({ success: true, data: { paymentId: 'pay_abc' } });
+  });
+
+  it('releases the session seat on a FULL refund', async () => {
+    const { supabase, calls } = buildSeatMock({
+      payment: { id: 'pay_full', amount_cents: 2500, session_id: 'sess-9', participant_user_id: 'buyer-9' },
+    });
+    const res = await recordPaymentRefund(supabase, PI, 2500, AT);
+    expect(res).toEqual({ success: true, data: { paymentId: 'pay_full' } });
+    expect(calls.deleteCalled).toBe(true);
+    expect(calls.deleteArgs).toEqual([
+      ['session_id', 'sess-9'],
+      ['user_id', 'buyer-9'],
+    ]);
+  });
+
+  it('keeps the seat on a PARTIAL refund', async () => {
+    const { supabase, calls } = buildSeatMock({
+      payment: { id: 'pay_part', amount_cents: 2500, session_id: 'sess-9', participant_user_id: 'buyer-9' },
+    });
+    const res = await recordPaymentRefund(supabase, PI, 1000, AT);
+    expect(res).toEqual({ success: true, data: { paymentId: 'pay_part' } });
+    expect(calls.deleteCalled).toBe(false);
+  });
+
+  it('no-ops the seat release for a non-session (boost/pro) payment', async () => {
+    const { supabase, calls } = buildSeatMock({
+      payment: { id: 'pay_boost', amount_cents: 9900, session_id: null, participant_user_id: null },
+    });
+    const res = await recordPaymentRefund(supabase, PI, 9900, AT);
+    expect(res).toEqual({ success: true, data: { paymentId: 'pay_boost' } });
+    expect(calls.deleteCalled).toBe(false);
+  });
+
+  it('still records the refund when the seat release fails', async () => {
+    const { supabase } = buildSeatMock({
+      payment: { id: 'pay_seaterr', amount_cents: 2500, session_id: 'sess-9', participant_user_id: 'buyer-9' },
+      seatDeleteError: { message: 'rls denied' },
+    });
+    const res = await recordPaymentRefund(supabase, PI, 2500, AT);
+    // The refund itself is recorded; a failed seat delete must not fail it.
+    expect(res).toEqual({ success: true, data: { paymentId: 'pay_seaterr' } });
   });
 });
