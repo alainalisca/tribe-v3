@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { createTip, createNotification } from '@/lib/dal';
-import { showSuccess, showError } from '@/lib/toast';
+import { showError, showInfo } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
-import { getPaymentGateway, type Currency } from '@/lib/payments/config';
+import { type Currency } from '@/lib/payments/config';
 
 interface TipButtonProps {
   tipperId: string;
@@ -45,17 +43,14 @@ export default function TipButton({
   currency,
   language,
   inline = false,
-  onTipped,
 }: TipButtonProps) {
-  const supabase = createClient();
   const [open, setOpen] = useState(inline);
   const [selected, setSelected] = useState<number | null>(PRESETS[currency][1] ?? null);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [message, setMessage] = useState('');
-  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  useEscapeKey(() => setOpen(false), open && !saving);
+  useEscapeKey(() => setOpen(false), open);
 
   const t = {
     sayThanks: language === 'es' ? `Dale las gracias a ${instructorName}` : `Say thanks to ${instructorName}`,
@@ -65,8 +60,11 @@ export default function TipButton({
     send: language === 'es' ? 'Enviar Propina' : 'Send Tip',
     cancel: language === 'es' ? 'Cancelar' : 'Cancel',
     tip: language === 'es' ? 'Dar Propina' : 'Tip',
-    thanks: language === 'es' ? `¡Alegraste el día de ${instructorName}!` : `You made ${instructorName}'s day!`,
-    success: language === 'es' ? 'Propina enviada' : 'Tip sent',
+    thanks:
+      language === 'es'
+        ? 'Te avisaremos cuando las propinas estén disponibles.'
+        : "We'll let you know when tips go live.",
+    comingSoon: language === 'es' ? 'Las propinas llegan pronto.' : 'Tips are coming soon.',
     error: language === 'es' ? 'No se pudo enviar la propina' : 'Could not send tip',
     invalid: language === 'es' ? 'Monto no válido' : 'Invalid amount',
     placeholder: language === 'es' ? 'Gran sesión 🙌' : 'Great session! 🙌',
@@ -86,49 +84,20 @@ export default function TipButton({
       showError(t.invalid);
       return;
     }
-    setSaving(true);
-    const gateway = getPaymentGateway(currency);
-    const res = await createTip(
-      supabase,
-      tipperId,
-      instructorId,
-      effectiveAmount,
-      currency,
-      gateway,
-      sessionId,
-      message.trim() || undefined
-    );
-    if (!res.success) {
-      setSaving(false);
-      showError(res.error || t.error);
-      return;
-    }
-
-    // Fire-and-forget notification to instructor.
-    const notifMsg =
-      language === 'es'
-        ? `Recibiste una propina de ${formatAmount(effectiveAmount, currency, 'es')}`
-        : `You received a tip of ${formatAmount(effectiveAmount, currency, 'en')}`;
-    await createNotification(supabase, {
-      recipient_id: instructorId,
-      actor_id: tipperId,
-      type: 'tip_received',
-      entity_type: 'tip',
-      entity_id: res.data?.id ?? null,
-      message: notifMsg,
-    });
-
-    trackEvent('tip_sent', {
+    // Tips are NOT wired to a real charge yet. Never fake a sent tip or
+    // notify the instructor of money that did not move (see Tier-1 audit
+    // fix). Capture genuine demand and tell the user the honest truth;
+    // real tip charging is tracked as a separate follow-up.
+    trackEvent('tip_interest', {
       amount_cents: effectiveAmount,
       currency,
+      tipper_id: tipperId,
       instructor_id: instructorId,
       session_id: sessionId ?? null,
     });
-    await haptic('success');
-    showSuccess(t.success);
+    await haptic('light');
+    showInfo(t.comingSoon);
     setSuccess(true);
-    setSaving(false);
-    onTipped?.();
   };
 
   const renderPanel = () => (
@@ -198,7 +167,6 @@ export default function TipButton({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            disabled={saving}
             className="flex-1 py-2.5 rounded-lg bg-theme-surface text-theme-secondary text-sm disabled:opacity-50"
           >
             {t.cancel}
@@ -207,12 +175,12 @@ export default function TipButton({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={saving || success}
+          disabled={success}
           className={`flex-1 py-2.5 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors disabled:opacity-50 ${
             inline ? '' : ''
           }`}
         >
-          {saving ? '…' : success ? '✓' : t.send}
+          {success ? '✓' : t.send}
         </button>
       </div>
 
@@ -240,7 +208,7 @@ export default function TipButton({
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
           role="dialog"
           aria-modal="true"
-          onClick={() => !saving && setOpen(false)}
+          onClick={() => setOpen(false)}
         >
           <div className="w-full max-w-md bg-theme-card rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
             {renderPanel()}

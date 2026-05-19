@@ -109,7 +109,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           (paymentIntent as unknown as { amount?: number }).amount ??
           null;
 
-        return finalize(session.id as string, webhookAmount, paymentStatus);
+        const resp = await finalize(session.id as string, webhookAmount, paymentStatus);
+        // Backfill the real PaymentIntent id. The payment row was created
+        // with only the Checkout Session id (cs_...) as gateway_payment_id;
+        // charge.refunded events are keyed by payment_intent (pi_...), so
+        // without this, recordPaymentRefund never finds the row and refunds
+        // are silently dropped (revenue/payouts overstated). Guarded by
+        // is-null so webhook replays don't churn the column.
+        await supabase
+          .from('payments')
+          .update({ stripe_payment_intent_id: paymentIntentId })
+          .eq('gateway_payment_id', session.id as string)
+          .is('stripe_payment_intent_id', null);
+        return resp;
       }
 
       case 'payment_intent.succeeded': {

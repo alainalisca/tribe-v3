@@ -154,4 +154,15 @@ select '084_cron_advisory_lock',
        case when (select to_regprocedure('public.cron_try_lock(text)')) is not null
               and (select to_regprocedure('public.cron_release_lock(text)')) is not null
             then 'applied' else 'MISSING' end
+union all
+select '086_finalize_payment_allow_voided',
+       -- 086 redefines finalize_payment to accept the 'voided' status
+       -- (Wompi VOIDED). Detect by the 'voided' literal in the function
+       -- body — 047's body does not contain it, so this distinguishes
+       -- applied (086) from not-yet-applied (047 only).
+       case when exists (
+         select 1 from pg_proc p
+         where p.proname = 'finalize_payment'
+           and pg_get_functiondef(p.oid) like '%''voided''%'
+       ) then 'applied' else 'MISSING' end
 order by migration;

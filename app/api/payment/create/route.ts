@@ -503,12 +503,18 @@ export async function POST(request: NextRequest) {
 
       redirectUrl = stripeResult.url;
 
-      // Store Stripe session ID
+      // Store the Stripe Checkout Session id as the gateway handle.
+      // NOTE: we intentionally do NOT set stripe_payment_intent_id here —
+      // at create-time the PaymentIntent (pi_...) does not exist yet; only
+      // the Checkout Session (cs_...) does. Writing the cs_ id into a
+      // column named stripe_payment_intent_id was the root cause of
+      // refunds never being matched (charge.refunded is keyed by pi_).
+      // The real pi_ is backfilled by the checkout.session.completed
+      // webhook handler.
       await serviceSupabase
         .from('payments')
         .update({
           gateway_payment_id: stripeResult.sessionId,
-          stripe_payment_intent_id: stripeResult.sessionId,
           status: 'processing',
         })
         .eq('id', paymentId);
