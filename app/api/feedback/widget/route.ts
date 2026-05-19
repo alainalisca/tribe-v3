@@ -197,6 +197,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       logError(smsError, { action: 'widget-feedback-sms', feedbackId: feedback.id });
     }
 
+    // Post to a Discord channel via an incoming webhook (non-blocking).
+    // Same env-gated pattern as the email/SMS above: does nothing until
+    // DISCORD_FEEDBACK_WEBHOOK_URL is set, so it is safe to ship dark.
+    // This is the fast-feedback loop — feedback lands in Discord the
+    // moment a user submits it. No bot, no extra deps: just an HTTP POST
+    // to the webhook URL Discord generates for a channel.
+    try {
+      const discordWebhookUrl = process.env.DISCORD_FEEDBACK_WEBHOOK_URL;
+      if (discordWebhookUrl) {
+        const colorByCategory: Record<FeedbackCategory, number> = {
+          bug: 0xef4444, // red
+          feature_request: 0x84cc16, // tribe lime
+          general: 0x60a5fa, // light blue
+        };
+        await fetch(discordWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: 'Tribe Feedback',
+            embeds: [
+              {
+                title: `${CATEGORY_LABELS[body.category]} from ${user.email ?? user.id}`,
+                description: trimmedMessage.slice(0, 4000),
+                color: colorByCategory[body.category],
+                fields: [
+                  { name: 'Platform', value: platformInfo, inline: true },
+                  { name: 'App Version', value: versionInfo, inline: true },
+                ],
+                footer: { text: `Feedback ID: ${feedback.id}` },
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          }),
+        });
+      }
+    } catch (discordError) {
+      // Non-blocking: feedback is already saved.
+      logError(discordError, { action: 'widget-feedback-discord', feedbackId: feedback.id });
+    }
+
     // 6. Return success
     return NextResponse.json({
       success: true,
