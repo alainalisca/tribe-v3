@@ -49,15 +49,15 @@ export function storeGuestLocally(sessionId: string, guestData: GuestData, guest
 
 /** Fire-and-forget notification to session host about a guest join */
 export function notifyHostOfGuestJoin(session: Session, guestName: string): void {
-  fetch('/api/notifications/send', {
+  // Via the narrow notify-join route (recipient + copy derived
+  // server-side); /api/notifications/send is internal-only now.
+  fetch('/api/sessions/notify-join', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      userId: session.creator_id,
-      title: 'New Training Partner!',
-      body: `${guestName} (guest) joined your ${session.sport} session`,
-      url: `/session/${session.id}`,
-      data: { sessionId: session.id, type: 'guest_join' },
+      session_id: session.id,
+      joiner_name: guestName,
+      kind: 'guest',
     }),
   }).catch((err) => logError(err, { action: 'handleGuestJoin', sessionId: session.id }));
 }
