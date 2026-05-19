@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { ACTIVE_CITY, getPopularNeighborhoods } from '@/lib/city-config';
 import { createClient } from '@/lib/supabase/client';
 import { fetchNeighborhoodStats, type NeighborhoodStats } from '@/lib/dal/neighborhoods';
 
 export default function ExploreCitySection() {
   const { language } = useLanguage();
+  const t = useTranslations('home');
   const [stats, setStats] = useState<Record<string, NeighborhoodStats>>({});
 
   useEffect(() => {
@@ -30,11 +32,9 @@ export default function ExploreCitySection() {
   return (
     <div className="px-4 py-3">
       <h2 className="text-base font-bold text-stone-900 dark:text-white mb-0.5">
-        {language === 'es' ? `Explora ${ACTIVE_CITY.name}` : `Explore ${ACTIVE_CITY.name}`}
+        {t('exploreCity', { city: ACTIVE_CITY.name })}
       </h2>
-      <p className="text-[11px] text-stone-500 dark:text-gray-500 mb-3">
-        {language === 'es' ? 'Toca un barrio para ver qué está pasando' : "Tap a neighborhood to see what's happening"}
-      </p>
+      <p className="text-[11px] text-stone-500 dark:text-gray-500 mb-3">{t('exploreHint')}</p>
 
       <div className="space-y-2.5">
         {hoods.map((hood) => {
@@ -69,15 +69,11 @@ export default function ExploreCitySection() {
                 <div className="flex gap-4">
                   <div className="text-center">
                     <div className="text-base font-extrabold text-blue-400">{s.sessionCount}</div>
-                    <div className="text-[9px] text-stone-500 dark:text-gray-500">
-                      {language === 'es' ? 'Sesiones' : 'Sessions'}
-                    </div>
+                    <div className="text-[9px] text-stone-500 dark:text-gray-500">{t('sessions')}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-base font-extrabold text-blue-400">{s.instructorCount}</div>
-                    <div className="text-[9px] text-stone-500 dark:text-gray-500">
-                      {language === 'es' ? 'Instructores' : 'Instructors'}
-                    </div>
+                    <div className="text-[9px] text-stone-500 dark:text-gray-500">{t('instructors')}</div>
                   </div>
                 </div>
               )}

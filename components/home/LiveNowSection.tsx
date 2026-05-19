@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { SessionWithRelations } from '@/lib/dal';
 
 interface LiveNowSectionProps {
@@ -14,6 +15,7 @@ interface LiveNowSectionProps {
 
 export default function LiveNowSection({ liveNowSessions, userLocation, language }: LiveNowSectionProps) {
   const { t } = useLanguage();
+  const tr = useTranslations('home');
   if (liveNowSessions.length === 0) return null;
 
   return (
@@ -38,7 +40,7 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
 
           let statusText = '';
           if (diffMins > 0) {
-            statusText = `${language === 'es' ? 'Empieza en' : 'Starting in'} ${diffMins} ${t('min')}`;
+            statusText = `${tr('startingIn')} ${diffMins} ${t('min')}`;
           } else {
             statusText = `${minsLeft} ${t('minLeft')}`;
           }

@@ -9,6 +9,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
 
 interface FilterBarProps {
@@ -57,6 +58,7 @@ export default function FilterBar({
   onNeighborhoodChange,
 }: FilterBarProps) {
   const fixedAreaRef = useRef<HTMLDivElement>(null);
+  const tr = useTranslations('home');
   const sports = Object.keys(sportTranslations);
 
   const measureFixed = useCallback(() => {
@@ -184,9 +186,9 @@ export default function FilterBar({
               onChange={(e) => setPricingFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
-              <option value="free">{language === 'es' ? 'Gratis' : 'Free'}</option>
-              <option value="paid">{language === 'es' ? 'De pago' : 'Paid'}</option>
+              <option value="all">{tr('filterAll')}</option>
+              <option value="free">{tr('filterFree')}</option>
+              <option value="paid">{tr('filterPaid')}</option>
             </select>
           </div>
 

@@ -30,7 +30,20 @@
     "morePlayers": "more players",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "noSessions": "No sessions available yet. Create the first one!"
+    "noSessions": "No sessions available yet. Create the first one!",
+    "inCity": "In {city}",
+    "exploreCity": "Explore {city}",
+    "exploreHint": "Tap a neighborhood to see what's happening",
+    "sessions": "Sessions",
+    "instructors": "Instructors",
+    "filterAll": "All",
+    "filterFree": "Free",
+    "filterPaid": "Paid",
+    "viewInFeed": "View in Feed",
+    "minsAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago",
+    "startingIn": "Starting in"
   },
   "weather": {
     "clear": "Perfect day for outdoor training",
