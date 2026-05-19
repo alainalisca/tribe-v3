@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         // Send push notification
         await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/notifications/send`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({
             userId: user.id,
             title: content.title,

@@ -33,14 +33,20 @@ const VALID_USER_ID = '11111111-1111-4111-a111-111111111111';
 const VALID_USER_ID_2 = '22222222-2222-4222-a222-222222222222';
 const AUTH_USER_ID = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 
-function createMockRequest(body: Record<string, unknown>, method: 'POST' | 'PUT' = 'POST'): NextRequest {
+function createMockRequest(
+  body: Record<string, unknown>,
+  method: 'POST' | 'PUT' = 'POST',
+  authHeader?: string
+): NextRequest {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-forwarded-for': '127.0.0.1',
+  };
+  if (authHeader) headers.Authorization = authHeader;
   return new NextRequest('http://localhost/api/notifications/send', {
     method,
     body: JSON.stringify(body),
-    headers: new Headers({
-      'Content-Type': 'application/json',
-      'x-forwarded-for': '127.0.0.1',
-    }),
+    headers: new Headers(headers),
   });
 }
 
@@ -68,6 +74,7 @@ describe('POST /api/notifications/send', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
 
     vi.mocked(checkRateLimit).mockReturnValue({ allowed: true } as never);
+    delete process.env.CRON_SECRET;
   });
 
   // ── 1. Unauthenticated POST -> 401 ──────────────────────────────
@@ -143,6 +150,42 @@ describe('POST /api/notifications/send', () => {
       expect.objectContaining({ url: '/' })
     );
   });
+
+  // ── Internal-secret path: trusted server-to-server caller ───────
+
+  it('accepts a valid internal CRON_SECRET bearer without a user session', async () => {
+    process.env.CRON_SECRET = 'test-cron-secret';
+    // Prove the user-session path is NOT consulted for internal callers:
+    // createClient would resolve to an unauthenticated client.
+    vi.mocked(createClient).mockResolvedValue(createMockAuthClient(false) as never);
+    vi.mocked(createServiceClient).mockReturnValue({} as never);
+    vi.mocked(fetchUserProfileMaybe).mockResolvedValue({
+      success: true,
+      data: { push_subscription: null, fcm_token: 'fcm-int', fcm_platform: 'ios' },
+    } as never);
+    vi.mocked(sendFcmNotification).mockResolvedValue({ success: true } as never);
+
+    const req = createMockRequest(
+      { userId: VALID_USER_ID, title: 'Booking Confirmed!', body: 'See you there!' },
+      'POST',
+      'Bearer test-cron-secret'
+    );
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    expect(createClient).not.toHaveBeenCalled();
+    expect(checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it('rejects a wrong bearer and falls back to the (failing) user path → 401', async () => {
+    process.env.CRON_SECRET = 'test-cron-secret';
+    vi.mocked(createClient).mockResolvedValue(createMockAuthClient(false) as never);
+
+    const req = createMockRequest({ userId: VALID_USER_ID, title: 'x', body: 'y' }, 'POST', 'Bearer not-the-secret');
+    const res = await POST(req);
+
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('PUT /api/notifications/send (batch)', () => {
@@ -153,6 +196,7 @@ describe('PUT /api/notifications/send (batch)', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
 
     vi.mocked(checkRateLimit).mockReturnValue({ allowed: true } as never);
+    delete process.env.CRON_SECRET;
   });
 
   // ── 4. Valid PUT batch send -> 200 with results object ──────────

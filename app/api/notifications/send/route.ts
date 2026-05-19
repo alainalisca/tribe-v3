@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
 
@@ -33,19 +34,31 @@ const batchNotificationSchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    // AUTH: verify the caller is authenticated
-    const supabaseAuth = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // AUTH. Two accepted callers:
+    //  - Trusted server-to-server (cron jobs, payment/booking webhooks,
+    //    nearby alerts): a valid internal CRON_SECRET bearer. These
+    //    legitimately push to arbitrary users and skip the per-user rate
+    //    limit (they fan out to many recipients in one job).
+    //  - A logged-in user session (the in-app join-host notify). Kept for
+    //    now; this is the spoofable path scheduled to be removed once the
+    //    client caller is moved server-side (see notifications-send authz
+    //    follow-up). It stays rate-limited per user.
+    const isInternal = isValidCronAuth(request.headers.get('authorization'));
 
-    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-send:${authUser.id}`, 30, 60_000);
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    if (!isInternal) {
+      const supabaseAuth = await createClient();
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
+      if (authError || !authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-send:${authUser.id}`, 30, 60_000);
+      if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+      }
     }
 
     const raw = await request.json();
@@ -157,19 +170,25 @@ export async function POST(request: Request) {
 // Batch send notifications to multiple users
 export async function PUT(request: Request) {
   try {
-    // AUTH: verify the caller is authenticated
-    const supabaseAuth = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // AUTH: same two-caller model as POST. Batch send is used by
+    // notify-nearby (server-to-server) — internal secret bypasses the
+    // per-user rate limit; a user session stays rate-limited.
+    const isInternal = isValidCronAuth(request.headers.get('authorization'));
 
-    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-batch:${authUser.id}`, 10, 60_000);
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    if (!isInternal) {
+      const supabaseAuth = await createClient();
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabaseAuth.auth.getUser();
+      if (authError || !authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-batch:${authUser.id}`, 10, 60_000);
+      if (!allowed) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+      }
     }
 
     const raw = await request.json();

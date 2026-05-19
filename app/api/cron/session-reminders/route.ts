@@ -161,7 +161,7 @@ export async function GET(request: Request) {
 
               return fetch(`${SITE_URL}/api/notifications/send`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
                 body: JSON.stringify({
                   userId: userInfo.id,
                   title,

@@ -32,10 +32,9 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
           Authorization: `Bearer ${cronSecret}`,
         },
         body: JSON.stringify({
-          user_id: payment.participant_user_id,
+          userId: payment.participant_user_id,
           title: 'Booking Confirmed!',
           body: 'Your session has been booked. See you there!',
-          type: 'payment_confirmed',
           data: { session_id: payment.session_id },
         }),
       }).catch((err) => logError(err, { action: 'notifyAfterFinalize.booking', paymentId }));
@@ -58,10 +57,9 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
           Authorization: `Bearer ${cronSecret}`,
         },
         body: JSON.stringify({
-          user_id: order.buyer_id,
+          userId: order.buyer_id,
           title: 'Purchase Confirmed!',
           body: 'Your product order has been confirmed.',
-          type: 'product_order_confirmed',
           data: { product_order_id: order.id, product_id: order.product_id },
         }),
       }).catch((err) => logError(err, { action: 'notifyAfterFinalize.productBuyer', paymentId }));
@@ -73,10 +71,9 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
           Authorization: `Bearer ${cronSecret}`,
         },
         body: JSON.stringify({
-          user_id: order.instructor_id,
+          userId: order.instructor_id,
           title: 'New Sale!',
           body: 'You have a new product order.',
-          type: 'product_order_received',
           data: { product_order_id: order.id, product_id: order.product_id },
         }),
       }).catch((err) => logError(err, { action: 'notifyAfterFinalize.productInstructor', paymentId }));
@@ -122,10 +119,9 @@ export async function notifyTipReceived(supabase: SupabaseClient, tipId: string)
         Authorization: `Bearer ${cronSecret}`,
       },
       body: JSON.stringify({
-        user_id: tip.instructor_id,
+        userId: tip.instructor_id,
         title: 'You received a tip!',
         body: `${tipperName} sent you a ${amount} tip. Thank you note in the app.`,
-        type: 'tip_received',
         data: { tip_id: tipId },
       }),
     }).catch((err) => logError(err, { action: 'notifyTipReceived.send', tipId }));

@@ -105,7 +105,7 @@ export async function GET(request: Request) {
 
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: session.creator.id,
               title: hostTitle,
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
 
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: participant.user_id,
               title: pTitle,
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
           try {
             await fetch(`${SITE_URL}/api/notifications/send`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
                 userId: user.id,
                 title: content.title,

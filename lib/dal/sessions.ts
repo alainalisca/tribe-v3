@@ -270,10 +270,9 @@ export async function cancelSession(
             Authorization: `Bearer ${process.env.CRON_SECRET}`,
           },
           body: JSON.stringify({
-            user_id: p.user_id,
+            userId: p.user_id,
             title: 'Session Cancelled',
             body: `"${session.title}" was cancelled.${refundNote}`,
-            type: 'session_cancelled',
             data: { session_id: sessionId },
           }),
         });

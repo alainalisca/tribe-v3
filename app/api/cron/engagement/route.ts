@@ -144,7 +144,7 @@ export async function GET(request: Request) {
           try {
             await fetch(`${SITE_URL}/api/notifications/send`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
                 userId: user.id,
                 title: content.title,
@@ -225,7 +225,7 @@ export async function GET(request: Request) {
         batch.map(async (item) => {
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: item.userId,
               title: item.title,
