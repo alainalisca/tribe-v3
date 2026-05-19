@@ -136,5 +136,30 @@
   "auth": {
     "invitedBy": "🎉 Invited by {name}",
     "or": "or"
+  },
+  "tribe-plus": {
+    "trainSmarterSaveMoreGet": "Train smarter. Save more. Get priority.",
+    "startFreeTrial7Days": "Start Free Trial — 7 Days",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "savePct": "Save {pct}%",
+    "month": "/month",
+    "year": "/year",
+    "zeroBookingFees": "Zero Booking Fees",
+    "saveOnEveryPaidSession": "Save on every paid session you book",
+    "24HourEarlyAccess": "24-Hour Early Access",
+    "seeAndBookNewSessions": "See and book new sessions before anyone else",
+    "advancedTrainingStats": "Advanced Training Stats",
+    "deepTrainingAnalyticsOnMy": "Deep training analytics on My Training",
+    "tribeBadge": "Tribe+ Badge",
+    "standOutInTheCommunity": "Stand out in the community with your ✦ badge",
+    "faq": "FAQ",
+    "canICancelAnytime": "Can I cancel anytime?",
+    "yesYouKeepAccessUntil": "Yes. You keep access until the end of your billing period.",
+    "whatHappensToMyBookings": "What happens to my bookings if I cancel?",
+    "youKeepAllExistingBookings": "You keep all existing bookings.",
+    "tribeIsComingSoonWe": "Tribe+ is coming soon. We'll let you know the moment it's available.",
+    "weLlNotifyYou": "We'll notify you ✓",
+    "alreadyAMemberManageSubscription": "Already a member? Manage subscription"
   }
 }

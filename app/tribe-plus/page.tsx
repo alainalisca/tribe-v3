@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Zap, BarChart3, Shield } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
-import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscription/config';
 import { trackEvent } from '@/lib/analytics';
 import { showInfo } from '@/lib/toast';
@@ -17,7 +17,7 @@ function formatAmount(cents: number, currency: 'COP' | 'USD'): string {
 }
 
 export default function TribePlusPage() {
-  const { language } = useLanguage();
+  const tI18n = useTranslations('tribe-plus');
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [currency] = useState<'COP' | 'USD'>('COP');
   const [notified, setNotified] = useState(false);
@@ -30,57 +30,44 @@ export default function TribePlusPage() {
     annualCents > 0 && monthlyCents > 0 ? Math.max(0, Math.round(100 - (annualCents / (monthlyCents * 12)) * 100)) : 0;
 
   const t = {
-    headline:
-      language === 'es' ? 'Entrena mejor. Ahorra más. Ten prioridad.' : 'Train smarter. Save more. Get priority.',
-    cta: language === 'es' ? 'Empezar Prueba Gratis — 7 días' : 'Start Free Trial — 7 Days',
-    monthly: language === 'es' ? 'Mensual' : 'Monthly',
-    annual: language === 'es' ? 'Anual' : 'Annual',
-    save: (pct: number) => (language === 'es' ? `Ahorra ${pct}%` : `Save ${pct}%`),
-    per: language === 'es' ? '/mes' : '/month',
-    annualLabel: language === 'es' ? '/año' : '/year',
+    headline: tI18n('trainSmarterSaveMoreGet'),
+    cta: tI18n('startFreeTrial7Days'),
+    monthly: tI18n('monthly'),
+    annual: tI18n('annual'),
+    save: (pct: number) => tI18n('savePct', { pct: pct }),
+    per: tI18n('month'),
+    annualLabel: tI18n('year'),
     features: [
       {
         icon: Zap,
-        title: language === 'es' ? 'Cero Cargos por Reserva' : 'Zero Booking Fees',
-        desc: language === 'es' ? 'Ahorra en cada sesión pagada que reserves' : 'Save on every paid session you book',
+        title: tI18n('zeroBookingFees'),
+        desc: tI18n('saveOnEveryPaidSession'),
       },
       {
         icon: Sparkles,
-        title: language === 'es' ? '24h de Acceso Anticipado' : '24-Hour Early Access',
-        desc:
-          language === 'es'
-            ? 'Ve y reserva nuevas sesiones antes que nadie'
-            : 'See and book new sessions before anyone else',
+        title: tI18n('24HourEarlyAccess'),
+        desc: tI18n('seeAndBookNewSessions'),
       },
       {
         icon: BarChart3,
-        title: language === 'es' ? 'Estadísticas Avanzadas' : 'Advanced Training Stats',
-        desc:
-          language === 'es'
-            ? 'Análisis de entrenamiento a profundidad en Mi Entrenamiento'
-            : 'Deep training analytics on My Training',
+        title: tI18n('advancedTrainingStats'),
+        desc: tI18n('deepTrainingAnalyticsOnMy'),
       },
       {
         icon: Shield,
-        title: language === 'es' ? 'Insignia Tribe+' : 'Tribe+ Badge',
-        desc:
-          language === 'es'
-            ? 'Destaca en la comunidad con tu insignia ✦'
-            : 'Stand out in the community with your ✦ badge',
+        title: tI18n('tribeBadge'),
+        desc: tI18n('standOutInTheCommunity'),
       },
     ],
-    faqTitle: language === 'es' ? 'Preguntas Frecuentes' : 'FAQ',
+    faqTitle: tI18n('faq'),
     faqs: [
       {
-        q: language === 'es' ? '¿Puedo cancelar en cualquier momento?' : 'Can I cancel anytime?',
-        a:
-          language === 'es'
-            ? 'Sí. Mantienes el acceso hasta el final de tu período.'
-            : 'Yes. You keep access until the end of your billing period.',
+        q: tI18n('canICancelAnytime'),
+        a: tI18n('yesYouKeepAccessUntil'),
       },
       {
-        q: language === 'es' ? '¿Qué pasa con mis reservas si cancelo?' : 'What happens to my bookings if I cancel?',
-        a: language === 'es' ? 'Mantienes todas las reservas existentes.' : 'You keep all existing bookings.',
+        q: tI18n('whatHappensToMyBookings'),
+        a: tI18n('youKeepAllExistingBookings'),
       },
     ],
   };
@@ -132,14 +119,10 @@ export default function TribePlusPage() {
             onClick={() => {
               trackEvent('tribe_plus_interest', { cycle, currency });
               setNotified(true);
-              showInfo(
-                language === 'es'
-                  ? 'Tribe+ llega pronto. Te avisaremos en cuanto esté disponible.'
-                  : "Tribe+ is coming soon. We'll let you know the moment it's available."
-              );
+              showInfo(tI18n('tribeIsComingSoonWe'));
             }}
           >
-            {notified ? (language === 'es' ? 'Te avisaremos ✓' : "We'll notify you ✓") : t.cta}
+            {notified ? tI18n('weLlNotifyYou') : t.cta}
           </button>
         </div>
 
@@ -171,7 +154,7 @@ export default function TribePlusPage() {
           href="/settings/subscription"
           className="block text-center text-sm text-theme-tertiary hover:text-white underline"
         >
-          {language === 'es' ? 'Ya eres miembro? Administrar suscripción' : 'Already a member? Manage subscription'}
+          {tI18n('alreadyAMemberManageSubscription')}
         </Link>
       </div>
 
