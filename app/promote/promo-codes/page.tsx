@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { copyToClipboard } from '@/lib/share';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
@@ -115,6 +116,7 @@ const translations = {
     sessionNotFound: 'Session not found',
     packageNotFound: 'Package not found',
     copySuccess: 'Code copied to clipboard',
+    copyFailed: 'Could not copy the code',
     percentOff: '% off',
     off: 'off',
     formPanel: 'New Promo Code',
@@ -173,6 +175,7 @@ const translations = {
     sessionNotFound: 'Sesión no encontrada',
     packageNotFound: 'Paquete no encontrado',
     copySuccess: 'Código copiado al portapapeles',
+    copyFailed: 'No se pudo copiar el código',
     percentOff: '% de descuento',
     off: 'de descuento',
     formPanel: 'Nuevo Código Promocional',
@@ -437,10 +440,17 @@ export default function PromoCodesPage() {
     }
   };
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setSuccess(t.copySuccess);
-    setTimeout(() => setSuccess(null), 2000);
+  const handleCopyCode = async (code: string) => {
+    // Was an unconditional success even when the clipboard write
+    // failed. Only claim success when it actually copied.
+    const ok = await copyToClipboard(code);
+    if (ok) {
+      setSuccess(t.copySuccess);
+      setTimeout(() => setSuccess(null), 2000);
+    } else {
+      setError(t.copyFailed);
+      setTimeout(() => setError(null), 2000);
+    }
   };
 
   const getPromoStatus = (promo: PromoCode) => {

@@ -126,7 +126,7 @@ export default function SmartMatchBanner({ userId }: Props) {
       </div>
 
       <div className="flex gap-2 mt-3">
-        <Link href="/smart-matches" className="flex-1">
+        <Link href="/matches" className="flex-1">
           <button className="w-full py-2 rounded-xl bg-tribe-green text-slate-900 font-semibold text-sm hover:bg-tribe-green-hover transition">
             {isEs ? 'Ver coincidencias' : 'View Matches'}
           </button>

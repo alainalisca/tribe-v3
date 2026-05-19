@@ -5,6 +5,8 @@ import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
+import { copyToClipboard } from '@/lib/share';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface InviteIncentiveModalProps {
@@ -30,6 +32,7 @@ export default function InviteIncentiveModal({
       incentive: 'If your friend joins, you both get 10% off your next paid session',
       copyLink: 'Copy Link',
       codeCopied: 'Copied!',
+      copyFailed: 'Could not copy the link',
       shareWhatsApp: 'Share via WhatsApp',
       share: 'Share',
     },
@@ -39,6 +42,7 @@ export default function InviteIncentiveModal({
       incentive: 'Si tu amigo se une, ambos obtienen 10% de descuento en tu próxima sesión pagada',
       copyLink: 'Copiar Enlace',
       codeCopied: '¡Copiado!',
+      copyFailed: 'No se pudo copiar el enlace',
       shareWhatsApp: 'Compartir por WhatsApp',
       share: 'Compartir',
     },
@@ -50,9 +54,15 @@ export default function InviteIncentiveModal({
     typeof window !== 'undefined' ? `${window.location.origin}/session/${sessionId}?invite=true` : `${sessionId}`;
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Was an unguarded await — a blocked clipboard threw an unhandled
+    // rejection and the user got no feedback. Gate on the result.
+    const ok = await copyToClipboard(inviteLink);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      showError(t.copyFailed);
+    }
   };
 
   const handleShareWhatsApp = () => {
