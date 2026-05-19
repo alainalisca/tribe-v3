@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { AuthTranslations } from './translations';
 
 interface OAuthButtonsProps {
@@ -9,7 +10,6 @@ interface OAuthButtonsProps {
   appleLoading: boolean;
   googleLoading: boolean;
   loading: boolean;
-  language: 'en' | 'es';
   onAppleSignIn: () => void;
   onGoogleSignIn: () => void;
 }
@@ -19,10 +19,10 @@ export default function OAuthButtons({
   appleLoading,
   googleLoading,
   loading,
-  language,
   onAppleSignIn,
   onGoogleSignIn,
 }: OAuthButtonsProps) {
+  const tr = useTranslations('auth');
   const [showApple, setShowApple] = useState(true);
   useEffect(() => {
     import('@capacitor/core')
@@ -78,9 +78,7 @@ export default function OAuthButtons({
 
       <div className="relative flex items-center my-6">
         <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
-        <span className="px-4 text-xs uppercase tracking-wider text-stone-400 dark:text-gray-500">
-          {language === 'es' ? 'o' : 'or'}
-        </span>
+        <span className="px-4 text-xs uppercase tracking-wider text-stone-400 dark:text-gray-500">{tr('or')}</span>
         <div className="flex-1 h-px bg-stone-200 dark:bg-tribe-mid" />
       </div>
     </>

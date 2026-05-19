@@ -116,5 +116,9 @@
     "currentPlan": "Plan actual",
     "manageSubscription": "Gestionar suscripción",
     "cancelAnytime": "Cancela cuando quieras"
+  },
+  "auth": {
+    "invitedBy": "🎉 Invitado por {name}",
+    "or": "o"
   }
 }

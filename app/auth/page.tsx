@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LanguageToggle from '@/components/LanguageToggle';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +20,7 @@ import { useAuthHandlers } from './useAuthHandlers';
 
 export default function AuthPage() {
   const { language } = useLanguage();
+  const t = useTranslations('auth');
   const h = useAuthHandlers(language);
   const searchParams = useSearchParams();
   const [referrerName, setReferrerName] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export default function AuthPage() {
                   className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-3 text-center mb-4"
                 >
                   <p className="text-sm text-stone-900 dark:text-white">
-                    {language === 'es' ? `🎉 Invitado por ${referrerName}` : `🎉 Invited by ${referrerName}`}
+                    {t('invitedBy', { name: referrerName ?? '' })}
                   </p>
                 </motion.div>
               )}
@@ -118,7 +120,6 @@ export default function AuthPage() {
                 appleLoading={h.appleLoading}
                 googleLoading={h.googleLoading}
                 loading={h.loading}
-                language={language}
                 onAppleSignIn={h.handleAppleSignIn}
                 onGoogleSignIn={h.handleGoogleSignIn}
               />
