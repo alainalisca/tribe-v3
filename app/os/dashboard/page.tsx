@@ -46,6 +46,12 @@ type PageState =
   | { kind: 'redirecting' }
   | { kind: 'not_premium' }
   | { kind: 'error' }
+  // Premium but not linked to a gym (legacy/CLI-granted owner). Checkout
+  // always creates a gym now, so this is the legacy edge path. Without
+  // this state the dashboard renders real-looking zeros (0 members, $0,
+  // —% retention) which reads as "your gym is empty" rather than the
+  // truth: there is no gym yet.
+  | { kind: 'premium_no_gym'; firstName: string }
   | { kind: 'premium'; firstName: string };
 
 // ES PENDING VERONICA REVIEW
@@ -63,6 +69,11 @@ const copy = {
     errorBody: "We couldn't load your dashboard. Please try again.",
     retryLabel: 'Retry',
     backToTribe: '← Back to Tribe',
+    // Premium but no gym yet (legacy path)
+    noGymTitle: 'Set up your gym',
+    noGymBody:
+      "Your account has Tribe.OS premium, but it isn't linked to a gym yet. Set up your gym to start tracking members, attendance, and revenue.",
+    noGymCta: 'Set up my gym',
     // Upgrade flow (signed-in, not premium)
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
@@ -92,6 +103,10 @@ const copy = {
     errorBody: 'No pudimos cargar tu panel. Por favor intenta de nuevo.',
     retryLabel: 'Reintentar',
     backToTribe: '← Volver a Tribe',
+    noGymTitle: 'Configura tu gym',
+    noGymBody:
+      'Tu cuenta tiene Tribe.OS premium, pero aún no está vinculada a un gym. Configura tu gym para empezar a ver miembros, asistencia e ingresos.',
+    noGymCta: 'Configurar mi gym',
     upgradeEyebrow: 'Tribe.OS',
     upgradeIntro:
       'Aún no tienes Tribe.OS premium. Actívalo para acceder a gestión de clientes, seguimiento de asistencia y cero comisiones por sesión.',
@@ -169,6 +184,13 @@ export default function TribeOSDashboardPage() {
       if (cancelled) return;
       const rawName = profile?.name ?? profile?.email?.split('@')[0] ?? 'there';
       const firstName = rawName.trim().split(/\s+/)[0] || rawName;
+      // Premium via the legacy users.tribe_os_* path resolves with no
+      // gym. Show a "set up your gym" prompt instead of misleading zeros.
+      if (!premium.data.gymId) {
+        setPageState({ kind: 'premium_no_gym', firstName });
+        trackEvent('tribe_os_dashboard_viewed');
+        return;
+      }
       setPageState({ kind: 'premium', firstName });
       trackEvent('tribe_os_dashboard_viewed');
       if (typeof window !== 'undefined' && window.location.search.includes('subscribed=true')) {
@@ -240,6 +262,32 @@ export default function TribeOSDashboardPage() {
               }}
             />
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (pageState.kind === 'premium_no_gym') {
+    return (
+      <main className="px-4 py-12 sm:py-20">
+        <div className="max-w-2xl mx-auto">
+          <Link
+            href="/"
+            className="inline-block text-sm font-semibold text-gray-500 hover:text-tribe-dark mb-8 transition-colors"
+          >
+            {s.backToTribe}
+          </Link>
+          <p className="text-tribe-green uppercase tracking-[0.1em] text-sm font-semibold mb-4">{s.upgradeEyebrow}</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-[1.1] mb-4">
+            {s.noGymTitle}
+          </h1>
+          <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-8">{s.noGymBody}</p>
+          <Link
+            href="/os/gym"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm hover:opacity-90 transition"
+          >
+            {s.noGymCta}
+          </Link>
         </div>
       </main>
     );
