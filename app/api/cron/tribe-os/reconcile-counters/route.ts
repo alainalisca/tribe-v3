@@ -29,6 +29,7 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { reconcileGymCounters } from '@/lib/dal/clients.reconcile';
 import { withCronLock } from '@/lib/cron/lockGuard';
@@ -42,7 +43,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   try {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isValidCronAuth(authHeader)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
