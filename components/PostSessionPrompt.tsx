@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import StarRating from '@/components/StarRating';
 import { logError } from '@/lib/logger';
-import { showSuccess } from '@/lib/toast';
+import { showSuccess, showError } from '@/lib/toast';
 import { shareSession, type SessionShareData } from '@/lib/share';
 import { trackEvent } from '@/lib/analytics';
 
@@ -130,8 +130,16 @@ export default function PostSessionPrompt({
   const handleFollowToggle = async () => {
     setFollowState((prev) => ({ ...prev, isLoading: true }));
     try {
+      // Supabase returns the error on the result — it does NOT throw — so
+      // the state below must only change on a confirmed write, otherwise
+      // the button would show "Following" while the DB has no row.
       if (followState.isFollowing) {
-        await supabase.from('user_follows').delete().eq('follower_id', userId).eq('following_id', instructorId);
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', userId)
+          .eq('following_id', instructorId);
+        if (error) throw error;
 
         setFollowState((prev) => ({
           ...prev,
@@ -139,10 +147,11 @@ export default function PostSessionPrompt({
           isLoading: false,
         }));
       } else {
-        await supabase.from('user_follows').insert({
+        const { error } = await supabase.from('user_follows').insert({
           follower_id: userId,
           following_id: instructorId,
         });
+        if (error) throw error;
 
         setFollowState((prev) => ({
           ...prev,
@@ -153,6 +162,7 @@ export default function PostSessionPrompt({
     } catch (err) {
       logError(err, { action: 'toggleFollow' });
       setFollowState((prev) => ({ ...prev, isLoading: false }));
+      showError(translations.followError);
     }
   };
 
