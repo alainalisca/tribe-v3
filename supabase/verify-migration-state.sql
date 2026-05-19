@@ -165,4 +165,12 @@ select '086_finalize_payment_allow_voided',
          where p.proname = 'finalize_payment'
            and pg_get_functiondef(p.oid) like '%''voided''%'
        ) then 'applied' else 'MISSING' end
+union all
+select '087_session_participant_count_trigger',
+       case when (select to_regprocedure('public.sync_session_participant_count()')) is not null
+              and exists (
+                select 1 from pg_trigger
+                where tgname = 'trg_sync_session_participant_count'
+              )
+            then 'applied' else 'MISSING' end
 order by migration;
