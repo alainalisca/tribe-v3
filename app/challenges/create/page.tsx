@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { showError } from '@/lib/toast';
@@ -163,7 +164,7 @@ export default function CreateChallengePage() {
         showError(strings.error);
       }
     } catch (error) {
-      console.error('Error creating challenge:', error);
+      logError(error, { action: 'Error creating challenge' });
       showError(strings.error);
     } finally {
       setSubmitting(false);

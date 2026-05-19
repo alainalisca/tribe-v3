@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -242,7 +243,7 @@ export default function FeedPage() {
           setHasMore(false);
         }
       } catch (error) {
-        console.error('Error loading feed:', error);
+        logError(error, { action: 'Error loading feed' });
       } finally {
         setLoading(false);
       }
@@ -276,7 +277,7 @@ export default function FeedPage() {
         });
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
+      logError(error, { action: 'Error toggling like' });
       // Revert optimistic update
       setLikedPosts(likedPosts);
     }
@@ -293,7 +294,7 @@ export default function FeedPage() {
       setShareMessage(postId);
       setTimeout(() => setShareMessage(''), 2000);
     } catch (error) {
-      console.error('Error copying to clipboard:', error);
+      logError(error, { action: 'Error copying to clipboard' });
     }
   };
 

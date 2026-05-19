@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -151,7 +152,7 @@ export default function SearchPage() {
           sessions: sessionsData?.map((s) => ({ ...s, type: 'session' })) || [],
         });
       } catch (error) {
-        console.error('Search error:', error);
+        logError(error, { action: 'Search error' });
       } finally {
         setLoading(false);
       }
@@ -324,7 +325,7 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
       setIsFollowing(!isFollowing);
       onFollowChange();
     } catch (error) {
-      console.error('Error toggling follow:', error);
+      logError(error, { action: 'Error toggling follow' });
     } finally {
       setActionLoading(false);
     }

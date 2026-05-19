@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import { logError } from '@/lib/logger';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -96,7 +97,7 @@ export default function ReferralPage() {
         }
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      logError(error, { action: 'Error loading user data' });
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export default function ReferralPage() {
         });
       } catch (err) {
         if (!(err instanceof Error && err.name === 'AbortError')) {
-          console.error('Share failed:', err);
+          logError(err, { action: 'Share failed' });
         }
       }
     }

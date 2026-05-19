@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -92,7 +93,7 @@ export default function PromotePage() {
           .single();
 
         if (profileError) {
-          console.error('Profile error:', profileError);
+          logError(profileError, { action: 'Profile error' });
           setError('Failed to load profile');
           setLoading(false);
           return;
@@ -131,7 +132,7 @@ export default function PromotePage() {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error loading stats:', err);
+        logError(err, { action: 'Error loading stats' });
         setError('Failed to load data');
         setLoading(false);
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -284,7 +285,7 @@ export default function PromoCodesPage() {
       if (error) throw error;
       setSessions(data || []);
     } catch (err) {
-      console.error('Failed to fetch sessions:', err);
+      logError(err, { action: 'Failed to fetch sessions' });
     }
   };
 
@@ -300,7 +301,7 @@ export default function PromoCodesPage() {
       if (error) throw error;
       setPackages(data || []);
     } catch (err) {
-      console.error('Failed to fetch packages:', err);
+      logError(err, { action: 'Failed to fetch packages' });
     }
   };
 
@@ -342,7 +343,7 @@ export default function PromoCodesPage() {
         revenue_generated: revenueGenerated,
       });
     } catch (err) {
-      console.error('Failed to calculate stats:', err);
+      logError(err, { action: 'Failed to calculate stats' });
     }
   };
 

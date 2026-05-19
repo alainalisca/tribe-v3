@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, Clock, MapPin, User, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -125,7 +126,7 @@ export default function SubscriptionsPage() {
 
       setSubscriptions(formattedData);
     } catch (err) {
-      console.error('Error fetching subscriptions:', err);
+      logError(err, { action: 'Error fetching subscriptions' });
       setError(language === 'es' ? 'Error al cargar suscripciones' : 'Failed to load subscriptions');
     } finally {
       setLoading(false);
@@ -154,7 +155,7 @@ export default function SubscriptionsPage() {
       setUnsubscribeModal({ isOpen: false, sessionId: null });
       showSuccess(language === 'es' ? 'Suscripción cancelada' : 'Unsubscribed successfully');
     } catch (err) {
-      console.error('Error unsubscribing:', err);
+      logError(err, { action: 'Error unsubscribing' });
       showError(language === 'es' ? 'Error al desuscribirse' : 'Failed to unsubscribe');
     } finally {
       setUnsubscribing(false);

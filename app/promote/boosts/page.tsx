@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
@@ -272,7 +273,7 @@ export default function BoostsPage() {
         await fetchSessions(user.id);
         await fetchPosts(user.id);
       } catch (error) {
-        console.error('Auth check error:', error);
+        logError(error, { action: 'Auth check error' });
         showError(i18n.errorAuth);
       } finally {
         setLoading(false);
@@ -293,7 +294,7 @@ export default function BoostsPage() {
       if (error) throw error;
       setCampaigns(data || []);
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
+      logError(error, { action: 'Error fetching campaigns' });
       showError(i18n.errorFetch);
     }
   };
@@ -311,7 +312,7 @@ export default function BoostsPage() {
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      logError(error, { action: 'Error fetching sessions' });
     }
   };
 
@@ -327,7 +328,7 @@ export default function BoostsPage() {
       if (error) throw error;
       setPosts(data || []);
     } catch (error) {
-      console.error('Error fetching posts:', error);
+      logError(error, { action: 'Error fetching posts' });
     }
   };
 
@@ -452,7 +453,7 @@ export default function BoostsPage() {
       setCurrency('USD');
       await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error creating boost:', error);
+      logError(error, { action: 'Error creating boost' });
       showError(i18n.errorCreate);
     } finally {
       setIsSubmitting(false);
@@ -498,7 +499,7 @@ export default function BoostsPage() {
       if (error) throw error;
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error pausing campaign:', error);
+      logError(error, { action: 'Error pausing campaign' });
       showError('Error pausing campaign');
     }
   };
@@ -510,7 +511,7 @@ export default function BoostsPage() {
       if (error) throw error;
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error cancelling campaign:', error);
+      logError(error, { action: 'Error cancelling campaign' });
       showError('Error cancelling campaign');
     }
   };

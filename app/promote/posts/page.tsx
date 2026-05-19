@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -222,7 +223,7 @@ export default function PromotePostsPage() {
           setPostStats(stats);
         }
       } catch (error) {
-        console.error('Error initializing:', error);
+        logError(error, { action: 'Error initializing' });
       } finally {
         setLoading(false);
       }
@@ -284,7 +285,7 @@ export default function PromotePostsPage() {
 
       showSuccess(strings.successCreated);
     } catch (error) {
-      console.error('Error creating post:', error);
+      logError(error, { action: 'Error creating post' });
       showError(strings.errorCreating);
     } finally {
       setSubmitting(false);
@@ -307,7 +308,7 @@ export default function PromotePostsPage() {
       setDeleteConfirm(null);
       showSuccess(strings.successDeleted);
     } catch (error) {
-      console.error('Error deleting post:', error);
+      logError(error, { action: 'Error deleting post' });
       showError(strings.errorDeleting);
     }
   };
@@ -369,7 +370,7 @@ export default function PromotePostsPage() {
       setEditingPostId(null);
       showSuccess(strings.successUpdated);
     } catch (error) {
-      console.error('Error updating post:', error);
+      logError(error, { action: 'Error updating post' });
       showError(strings.errorUpdating);
     } finally {
       setSubmitting(false);

@@ -17,6 +17,7 @@
  */
 
 import { useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 
@@ -25,7 +26,7 @@ export default function InstructorsError({ error, reset }: { error: Error & { di
     // Client-side logging. Next.js' `error.digest` is a server-generated
     // correlation id; include it so server logs can be joined with this
     // client error.
-    console.error('[InstructorsError]', { message: error.message, digest: error.digest });
+    logError(error, { action: 'InstructorsError', digest: error.digest });
   }, [error]);
 
   return (
