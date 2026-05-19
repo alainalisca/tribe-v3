@@ -60,9 +60,7 @@ export default function ExploreCitySection() {
                   href={createHref}
                   className="inline-flex items-center gap-1 text-[12px] font-semibold text-tribe-green hover:underline"
                 >
-                  {language === 'es'
-                    ? `Sé el primero en organizar en ${hood.name}`
-                    : `Be the first to host in ${hood.name}`}
+                  {t('beFirstToHost', { hood: hood.name })}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               ) : (

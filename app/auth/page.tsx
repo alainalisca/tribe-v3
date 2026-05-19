@@ -147,7 +147,6 @@ export default function AuthPage() {
                 acceptedTos={h.acceptedTos}
                 loading={h.loading}
                 message={h.message}
-                language={language}
                 needsVerification={h.needsVerification}
                 resendCooldown={h.resendCooldown}
                 onEmailChange={h.setEmail}

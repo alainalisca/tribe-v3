@@ -43,7 +43,10 @@
     "minsAgo": "{n}m ago",
     "hoursAgo": "{n}h ago",
     "daysAgo": "{n}d ago",
-    "startingIn": "Starting in"
+    "startingIn": "Starting in",
+    "beFirstToHost": "Be the first to host in {hood}",
+    "sessionsToday": "{count} sessions today",
+    "beFirstHere": "Be the first to create a session here"
   },
   "weather": {
     "clear": "Perfect day for outdoor training",

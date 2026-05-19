@@ -16,7 +16,6 @@ interface EmailAuthFormProps {
   acceptedTos: boolean;
   loading: boolean;
   message: string;
-  language: 'en' | 'es';
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
   onNameChange: (v: string) => void;
@@ -39,7 +38,6 @@ export default function EmailAuthForm({
   acceptedTos,
   loading,
   message,
-  language,
   onEmailChange,
   onPasswordChange,
   onNameChange,
@@ -154,16 +152,10 @@ export default function EmailAuthForm({
               }`}
             >
               {password.length < 6
-                ? language === 'es'
-                  ? 'Muy corta'
-                  : 'Too short'
+                ? t.pwTooShort
                 : password.length < 8 || !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
-                  ? language === 'es'
-                    ? 'Débil'
-                    : 'Weak'
-                  : language === 'es'
-                    ? 'Fuerte'
-                    : 'Strong'}
+                  ? t.pwWeak
+                  : t.pwStrong}
             </p>
           </div>
         )}

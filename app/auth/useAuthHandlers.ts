@@ -72,7 +72,7 @@ export function useAuthHandlers(language: 'en' | 'es') {
       const decoded = decodeURIComponent(errorParam);
       const isTransient = transientErrors.some((e) => decoded.toLowerCase().includes(e));
       if (!isTransient) {
-        setMessage(language === 'es' ? `❌ Error de autenticación: ${decoded}` : `❌ Authentication error: ${decoded}`);
+        setMessage(t.authError(decoded));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only

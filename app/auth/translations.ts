@@ -56,6 +56,11 @@ export function getAuthTranslations(language: 'en' | 'es') {
     resendVerification: language === 'es' ? 'Reenviar correo de verificación' : 'Resend verification email',
     verificationSent: language === 'es' ? '✅ ¡Correo de verificación enviado!' : '✅ Verification email sent!',
     resendIn: language === 'es' ? 'Reenviar en' : 'Resend in',
+    pwTooShort: language === 'es' ? 'Muy corta' : 'Too short',
+    pwWeak: language === 'es' ? 'Débil' : 'Weak',
+    pwStrong: language === 'es' ? 'Fuerte' : 'Strong',
+    authError: (msg: string) =>
+      language === 'es' ? `❌ Error de autenticación: ${msg}` : `❌ Authentication error: ${msg}`,
   };
 }
 

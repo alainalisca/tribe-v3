@@ -43,7 +43,10 @@
     "minsAgo": "hace {n}m",
     "hoursAgo": "hace {n}h",
     "daysAgo": "hace {n}d",
-    "startingIn": "Empieza en"
+    "startingIn": "Empieza en",
+    "beFirstToHost": "Sé el primero en organizar en {hood}",
+    "sessionsToday": "{count} sesiones hoy",
+    "beFirstHere": "Sé el primero en crear una sesión aquí"
   },
   "weather": {
     "clear": "Día perfecto para entrenar al aire libre",
