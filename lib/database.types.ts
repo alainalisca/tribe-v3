@@ -1437,6 +1437,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           average_rating?: number | null
+          deleted_at?: string | null
+          is_active?: boolean | null
           banned?: boolean | null
           banner_url?: string | null
           bio?: string | null
@@ -1509,6 +1511,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           average_rating?: number | null
+          deleted_at?: string | null
+          is_active?: boolean | null
           banned?: boolean | null
           banner_url?: string | null
           bio?: string | null

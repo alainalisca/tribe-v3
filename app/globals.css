@@ -67,30 +67,32 @@
     --chart-5: 27 87% 67%;
   }
 
-  /* Dark-mode shadcn primitives, retuned May 2026 to the same WCAG
-     targets as the semantic theme layer below, so the ui primitives
-     (cards, dialogs, popovers, inputs) match the rest of the app.
-     Background #1E2328, surface #272D34, card #2E343B,
-     elevated and popover #353C44, foreground #F0F0F0; muted-foreground
-     bumped to #C5CBD3 so it clears AAA. */
+  /* Dark-mode shadcn primitives, kept in sync with the semantic theme
+     layer below so ui primitives (cards, dialogs, popovers, inputs)
+     match the rest of the app. Lightened May 2026 (Al: the near-black
+     dark mode was "basically black, hard to see") from a near-black
+     scale to a comfortable charcoal: background #2A2F37, surface
+     #333944, card #3C434F, elevated/popover #454D5A, foreground
+     #F2F3F5. All text/bg pairs still pass WCAG — see
+     scripts/check-theme-contrast.mjs. */
   .dark {
-    --background: 210 14% 14%;
-    --foreground: 0 0% 94%;
-    --card: 212 13% 21%;
-    --card-foreground: 0 0% 94%;
-    --popover: 212 13% 24%;
-    --popover-foreground: 0 0% 94%;
+    --background: 218 14% 19%;
+    --foreground: 0 0% 96%;
+    --card: 216 14% 27%;
+    --card-foreground: 0 0% 96%;
+    --popover: 218 13% 31%;
+    --popover-foreground: 0 0% 96%;
     --primary: 84 68% 65%;
     --primary-foreground: 210 14% 12%;
-    --secondary: 210 14% 18%;
-    --secondary-foreground: 0 0% 94%;
-    --muted: 210 14% 18%;
-    --muted-foreground: 214 14% 80%;
-    --accent: 212 13% 24%;
-    --accent-foreground: 0 0% 94%;
+    --secondary: 218 14% 23%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 218 14% 23%;
+    --muted-foreground: 216 14% 86%;
+    --accent: 218 13% 31%;
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 91% 71%;
-    --border: 214 14% 28%;
-    --input: 210 14% 12%;
+    --border: 216 14% 34%;
+    --input: 220 13% 16%;
     --ring: 84 68% 65%;
     --chart-1: 84 68% 65%;
     --chart-2: 160 60% 45%;
@@ -134,50 +136,52 @@ body {
    * (page #52575D, card #404549, secondary text gray-300) were the
    * low-contrast offenders Al could not read outdoors.
    *
-   * Layering, dark:  page #1E2328 < inset #1A1F24 recessed
-   *                  surface/header #272D34 < card #2E343B < elevated #353C44
+   * Lightened May 2026 from near-black to a comfortable charcoal per
+   * Al's readability feedback (re-validated, all pairs still pass).
+   * Layering, dark:  inset #23272E recessed < page #2A2F37
+   *                  < surface/header #333944 < card #3C434F < elevated #454D5A
    * ──────────────────────────────────────────────────────────────────── */
   .bg-theme-page {
-    @apply bg-[#F8F9FA] dark:bg-[#1E2328];
+    @apply bg-[#F8F9FA] dark:bg-[#2A2F37];
   }
 
   .bg-theme-header {
-    @apply bg-white dark:bg-[#272D34];
+    @apply bg-white dark:bg-[#333944];
   }
 
   .bg-theme-surface {
-    @apply bg-white dark:bg-[#272D34];
+    @apply bg-white dark:bg-[#333944];
   }
 
   .bg-theme-card {
-    @apply bg-white dark:bg-[#2E343B];
+    @apply bg-white dark:bg-[#3C434F];
   }
 
   .bg-theme-elevated {
-    @apply bg-white dark:bg-[#353C44];
+    @apply bg-white dark:bg-[#454D5A];
   }
 
   .bg-theme-inset {
-    @apply bg-[#F0F1F3] dark:bg-[#1A1F24];
+    @apply bg-[#F0F1F3] dark:bg-[#23272E];
   }
 
   .bg-theme-input {
-    @apply bg-white dark:bg-[#1A1F24];
+    @apply bg-white dark:bg-[#23272E];
   }
 
   .text-theme-primary {
-    @apply text-[#111827] dark:text-[#F0F0F0];
+    @apply text-[#111827] dark:text-[#F2F3F5];
   }
 
   .text-theme-secondary {
-    @apply text-[#4B5563] dark:text-[#C5CBD3];
+    @apply text-[#4B5563] dark:text-[#D4D9E0];
   }
 
   .text-theme-tertiary {
     /* light value darkened #6B7280 -> #5B616B: the spec's #6B7280 only
        reached 4.83:1 on white and FAILED AA on the inset bg. #5B616B
        clears AA on white/inset/page with margin. */
-    @apply text-[#5B616B] dark:text-[#A0A8B4];
+    @apply text-[#5B616B] dark:text-[#B2BAC6];
   }
 
   .text-theme-muted {
@@ -189,15 +193,15 @@ body {
        text-theme-tertiary so the hierarchy holds. (Spec's own light
        muted/tertiary table conflicts with its Part 1B AA requirement;
        readability wins.) */
-    @apply text-[#636B77] dark:text-[#959EAA];
+    @apply text-[#636B77] dark:text-[#A0A8B4];
   }
 
   .border-theme {
-    @apply border-[#E5E7EB] dark:border-[#3D4550];
+    @apply border-[#E5E7EB] dark:border-[#4C5563];
   }
 
   .border-theme-strong {
-    @apply border-[#D1D5DB] dark:border-[#4B535C];
+    @apply border-[#D1D5DB] dark:border-[#5A6472];
   }
 
   /* Safe area utilities for iOS notch/home indicator */

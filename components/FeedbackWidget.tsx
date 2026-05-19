@@ -202,12 +202,17 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
         appVersion,
       };
 
-      // In dev, use the Next.js API route; in production (static export),
-      // use the Supabase Edge Function.
-      const isDev = process.env.NODE_ENV === 'development';
-      const feedbackUrl = isDev
-        ? '/api/feedback/widget'
-        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/feedback-widget`;
+      // The app runs on Vercel's Node runtime (NOT static export), so the
+      // Next.js API route works in production web too. Only the Capacitor
+      // NATIVE build has no Next server and must use the Supabase Edge
+      // Function. The old `NODE_ENV === 'development'` split sent ALL
+      // production web traffic to an Edge Function that isn't deployed —
+      // every web feedback submit failed with "Network error".
+      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+      const isNativeApp = typeof cap?.isNativePlatform === 'function' && cap.isNativePlatform();
+      const feedbackUrl = isNativeApp
+        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/feedback-widget`
+        : '/api/feedback/widget';
 
       const response = await fetch(feedbackUrl, {
         method: 'POST',
