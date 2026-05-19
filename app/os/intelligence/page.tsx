@@ -53,7 +53,7 @@ import type { CommunityInsight, InsightActionType, InsightSeverity, InsightType 
 type WidgetState =
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; insights: CommunityInsight[] };
+  | { kind: 'ready'; insights: CommunityInsight[]; currencyDefault: 'USD' | 'COP' };
 
 // ES PENDING VERONICA REVIEW
 const copy = {
@@ -320,7 +320,7 @@ export default function IntelligencePage() {
         const res = await fetch(url.toString(), { method: 'GET' });
         const body = (await res.json().catch(() => ({}))) as {
           success?: boolean;
-          data?: { insights: CommunityInsight[] };
+          data?: { insights: CommunityInsight[]; currency_default?: 'USD' | 'COP' };
           error?: string;
         };
         if (cancelled) return;
@@ -328,7 +328,11 @@ export default function IntelligencePage() {
           setState({ kind: 'error', message: body.error || s.errorTitle });
           return;
         }
-        setState({ kind: 'ready', insights: body.data.insights });
+        setState({
+          kind: 'ready',
+          insights: body.data.insights,
+          currencyDefault: body.data.currency_default ?? 'USD',
+        });
         trackEvent('tribe_os_intelligence_viewed', { insight_count: body.data.insights.length, view });
       } catch {
         if (!cancelled) setState({ kind: 'error', message: s.errorTitle });
@@ -539,6 +543,7 @@ export default function IntelligencePage() {
                         copy={s}
                         onDismissed={() => setReloadKey((k) => k + 1)}
                         language={language}
+                        currencyDefault={state.kind === 'ready' ? state.currencyDefault : 'USD'}
                       />
                     ))}
                   </div>
@@ -587,11 +592,13 @@ function InsightCard({
   copy: s,
   onDismissed,
   language,
+  currencyDefault,
 }: {
   insight: CommunityInsight;
   copy: typeof copy.en | typeof copy.es;
   onDismissed: () => void;
   language: 'en' | 'es';
+  currencyDefault: 'USD' | 'COP';
 }) {
   const [dismissing, setDismissing] = useState(false);
   const TypeIcon = TYPE_ICON[insight.type];
@@ -744,7 +751,7 @@ function InsightCard({
             {impactCents != null && impactCents > 0 ? (
               <span className="inline-flex items-center gap-1 text-tribe-green-dark font-semibold">
                 <CircleDollarSign className="w-3.5 h-3.5" />
-                {s.estImpact}: {formatCents(impactCents, 'USD', language)}
+                {s.estImpact}: {formatCents(impactCents, currencyDefault, language)}
               </span>
             ) : null}
           </div>
