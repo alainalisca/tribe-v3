@@ -125,7 +125,13 @@ export default function NewPostPage() {
         } catch (uploadErr) {
           logError(uploadErr, { action: 'uploadCommunityPostImage' });
           await haptic('error');
-          showError(t.uploadFailed);
+          // Surface the underlying Supabase message so storage RLS / bucket /
+          // size issues are diagnosable. Matches the StorefrontEditor pattern.
+          const detail =
+            uploadErr instanceof Error && uploadErr.message
+              ? `${t.uploadFailed}: ${uploadErr.message}`
+              : t.uploadFailed;
+          showError(detail);
           setLoading(false);
           return;
         }
