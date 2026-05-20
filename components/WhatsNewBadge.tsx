@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -181,79 +182,86 @@ export default function WhatsNewBadge() {
         />
       </button>
 
-      {sheetOpen && (
-        <div
-          className={`fixed inset-0 z-[80] flex items-end justify-center transition-opacity ${
-            closing ? 'opacity-0' : 'opacity-100'
-          }`}
-          style={{ transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms` }}
-          onClick={dismiss}
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby="whats-new-title"
-        >
-          <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
-
+      {sheetOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          // Portaled to document.body so the sheet escapes FilterBar's
+          // stacking context (FilterBar is fixed top-0 z-40, BottomNav is
+          // fixed bottom-0 z-50, so a sheet inside FilterBar can never
+          // visually beat BottomNav no matter how high its z-index is).
           <div
-            ref={sheetRef}
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            className={`relative w-full max-w-md bg-theme-card rounded-t-2xl shadow-xl px-6 py-4 max-h-[70vh] overflow-y-auto ${
-              closing ? 'translate-y-full' : 'translate-y-0'
-            } transition-transform`}
-            style={{
-              transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms`,
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
-            }}
+            className={`fixed inset-0 z-[100] flex items-end justify-center transition-opacity ${
+              closing ? 'opacity-0' : 'opacity-100'
+            }`}
+            style={{ transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms` }}
+            onClick={dismiss}
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="whats-new-title"
           >
-            {/* Drag handle */}
-            <div className="flex justify-center -mt-1 mb-3">
-              <div className="w-10 h-1 rounded-full bg-stone-300 dark:bg-tribe-mid" aria-hidden="true" />
-            </div>
+            <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
 
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <h2 id="whats-new-title" className="text-lg font-bold text-theme-primary">
-                {title}
-              </h2>
+            <div
+              ref={sheetRef}
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              className={`relative w-full max-w-md bg-theme-card rounded-t-2xl shadow-xl px-6 py-4 max-h-[80vh] overflow-y-auto ${
+                closing ? 'translate-y-full' : 'translate-y-0'
+              } transition-transform`}
+              style={{
+                transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms`,
+                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+              }}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center -mt-1 mb-3">
+                <div className="w-10 h-1 rounded-full bg-stone-300 dark:bg-tribe-mid" aria-hidden="true" />
+              </div>
+
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h2 id="whats-new-title" className="text-lg font-bold text-theme-primary">
+                  {title}
+                </h2>
+                <button
+                  type="button"
+                  onClick={dismiss}
+                  aria-label={closeAria}
+                  className="p-1 -m-1 rounded-full text-theme-secondary hover:text-theme-primary transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {note.image_url && (
+                <div className="relative w-full aspect-video mb-4 rounded-xl overflow-hidden bg-stone-100 dark:bg-tribe-mid">
+                  <Image src={note.image_url} alt="" fill className="object-cover" unoptimized />
+                </div>
+              )}
+
+              <ul className="space-y-2.5 mb-5">
+                {bullets.map((b, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-theme-secondary">
+                    <span className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-tribe-green/20 flex items-center justify-center">
+                      <Check className="w-3 h-3 text-tribe-green" strokeWidth={3} />
+                    </span>
+                    <span className="flex-1">{b}</span>
+                  </li>
+                ))}
+              </ul>
+
               <button
                 type="button"
                 onClick={dismiss}
-                aria-label={closeAria}
-                className="p-1 -m-1 rounded-full text-theme-secondary hover:text-theme-primary transition"
+                className="w-full py-3 rounded-xl bg-tribe-green text-slate-900 font-bold hover:bg-lime-500 transition"
               >
-                <X className="w-5 h-5" />
+                {dismissLabel}
               </button>
             </div>
-
-            {note.image_url && (
-              <div className="relative w-full aspect-video mb-4 rounded-xl overflow-hidden bg-stone-100 dark:bg-tribe-mid">
-                <Image src={note.image_url} alt="" fill className="object-cover" unoptimized />
-              </div>
-            )}
-
-            <ul className="space-y-2.5 mb-5">
-              {bullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-theme-secondary">
-                  <span className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full bg-tribe-green/20 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-tribe-green" strokeWidth={3} />
-                  </span>
-                  <span className="flex-1">{b}</span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              type="button"
-              onClick={dismiss}
-              className="w-full py-3 rounded-xl bg-tribe-green text-slate-900 font-bold hover:bg-lime-500 transition"
-            >
-              {dismissLabel}
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
