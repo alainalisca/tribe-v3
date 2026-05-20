@@ -16,6 +16,10 @@ Updated per fix. Items grouped by what they need from you.
 
 _(none yet)_
 
+## Static assets to populate later (low priority)
+
+- `public/images/sports/*.jpg` — real category photos for running/yoga/crossfit/cycling/boxing/pilates/etc. I disabled the sport-image map so missing images stop spamming 404s; cards render the sport gradient instead. When real photos exist, re-enable in `lib/sport-images.ts:getSessionHeroImage` (the SPORT_IMAGES map is still in the file, just unused).
+
 ## Design decisions I deferred to you
 
 _(none yet)_

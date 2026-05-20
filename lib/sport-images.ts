@@ -31,7 +31,13 @@ export function getSessionHeroImage(
 ): string {
   if (sessionPhotos && sessionPhotos.length > 0) return sessionPhotos[0];
   if (instructorBannerUrl) return instructorBannerUrl;
-  return SPORT_IMAGES[sport.toLowerCase()] || DEFAULT_SPORT_IMAGE;
+  // public/images/sports/*.jpg aren't shipped yet — returning the path
+  // made every card trigger a console 404 before falling back to the
+  // gradient. Return '' so callers skip the <img> and render the
+  // gradient directly. Re-enable the sport map once real photos exist.
+  void SPORT_IMAGES;
+  void DEFAULT_SPORT_IMAGE;
+  return '';
 }
 
 export function getSportGradient(sport: string): string {
