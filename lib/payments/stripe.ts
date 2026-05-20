@@ -200,7 +200,7 @@ export function verifyStripeWebhookSignature(body: string, signature: string): S
 export async function createStripeConnectAccount(
   email: string,
   country: string = 'US'
-): Promise<{ accountId: string } | null> {
+): Promise<{ accountId: string } | { error: string }> {
   try {
     const stripe = getStripeInstance();
 
@@ -221,11 +221,12 @@ export async function createStripeConnectAccount(
       accountId: account.id,
     };
   } catch (error) {
-    logError(error, {
-      action: 'createStripeConnectAccount',
-      email,
-    });
-    return null;
+    // BUG-011: returning null swallowed the actual Stripe error (missing
+    // key, invalid email, country, account-already-exists). Return the
+    // message so the route can surface it to the user.
+    logError(error, { action: 'createStripeConnectAccount', email });
+    const msg = error instanceof Error ? error.message : 'stripe_connect_create_failed';
+    return { error: msg };
   }
 }
 
