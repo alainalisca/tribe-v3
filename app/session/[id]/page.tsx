@@ -109,7 +109,11 @@ export default function SessionDetailPage() {
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
       </div>
     );
-  if (!d.session)
+  if (!d.session) {
+    // BUG-001: only show "Session not found" when the row is truly absent.
+    // Transient/RLS/network errors get a retryable error state, not the
+    // confusing "not found" page on top of a session that exists.
+    const isTrulyNotFound = d.loadError === 'session_not_found';
     return (
       <div className="min-h-screen bg-theme-page pb-32">
         <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
@@ -124,20 +128,43 @@ export default function SessionDetailPage() {
         </div>
         <div className="pt-header flex items-center justify-center min-h-[60vh]">
           <div className="text-center p-6">
-            <div className="text-4xl mb-4">🔍</div>
-            <p className="text-lg font-semibold text-theme-primary mb-2">{t('sessionNotFound')}</p>
-            <p className="text-sm text-theme-tertiary mb-6">{t('checkConnectionRetry')}</p>
-            <Link
-              href="/"
-              className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-            >
-              {t('goHome')}
-            </Link>
+            <div className="text-4xl mb-4">{isTrulyNotFound ? '🔍' : '⚠️'}</div>
+            <p className="text-lg font-semibold text-theme-primary mb-2">
+              {isTrulyNotFound
+                ? t('sessionNotFound')
+                : language === 'es'
+                  ? 'No se pudo cargar la sesión'
+                  : "Couldn't load the session"}
+            </p>
+            <p className="text-sm text-theme-tertiary mb-6">
+              {isTrulyNotFound
+                ? t('checkConnectionRetry')
+                : language === 'es'
+                  ? 'Revisa tu conexión y vuelve a intentar.'
+                  : 'Check your connection and try again.'}
+            </p>
+            {isTrulyNotFound ? (
+              <Link
+                href="/"
+                className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+              >
+                {t('goHome')}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => d.reload()}
+                className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
+              >
+                {language === 'es' ? 'Reintentar' : 'Retry'}
+              </button>
+            )}
           </div>
         </div>
         <BottomNav />
       </div>
     );
+  }
 
   const isPast = (() => {
     const sessionDate = new Date(d.session.date + 'T00:00:00');

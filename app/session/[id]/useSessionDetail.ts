@@ -29,6 +29,10 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // BUG-001: distinguish "row truly missing" from "transient/RLS/network
+  // error" so the page only shows full-screen "Session not found" for the
+  // former. 'session_not_found' = real; anything else = recoverable.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
@@ -138,8 +142,12 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   async function loadSession() {
     try {
       setLoading(true);
+      setLoadError(null);
       const result = await fetchSessionWithDetails(supabase, sessionId);
-      if (!result.success || !result.data) throw new Error(result.error);
+      if (!result.success || !result.data) {
+        setLoadError(result.error || 'unknown');
+        return;
+      }
       setSession(result.data.session);
       setCreator(result.data.creator);
       setParticipants(result.data.participants);
@@ -238,6 +246,8 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     creator,
     participants,
     loading,
+    loadError,
+    reload: loadSession,
     user,
     userIsAdmin,
     hasJoined,

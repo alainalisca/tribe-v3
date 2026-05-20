@@ -69,21 +69,33 @@ export async function fetchSessionWithDetails(
   }>
 > {
   try {
+    // maybeSingle distinguishes "no row" (data null, no error) from real
+    // fetch errors (RLS, network). With .single(), an RLS denial looked
+    // identical to "row missing" — every transient failure rendered as
+    // "Session not found" even though the session was fine (BUG-001).
     const { data: session, error } = await supabase
       .from('sessions')
       .select(
         'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
       )
       .eq('id', sessionId)
-      .single();
+      .maybeSingle();
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logError(error, { action: 'fetchSessionWithDetails.sessionFetch', sessionId });
+      return { success: false, error: error.message };
+    }
+    if (!session) {
+      return { success: false, error: 'session_not_found' };
+    }
 
+    // Sub-fetches are best-effort: a missing creator profile or an empty
+    // participants list must NOT collapse the whole page into "not found".
     const { data: creator } = await supabase
       .from('users')
       .select('id, name, avatar_url, average_rating, total_reviews')
       .eq('id', session.creator_id)
-      .single();
+      .maybeSingle();
 
     const { data: participants } = await supabase
       .from('session_participants')
