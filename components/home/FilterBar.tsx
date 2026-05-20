@@ -9,6 +9,7 @@ import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
 import AdminQuickAccess from '@/components/AdminQuickAccess';
+import WhatsNewBadge from '@/components/WhatsNewBadge';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
@@ -124,6 +125,7 @@ export default function FilterBar({
               to it, also conditionally rendered. */}
           <AdminQuickAccess />
           <TribeOSQuickAccess />
+          <WhatsNewBadge />
           <NotificationBell />
           <LanguageToggle />
         </div>

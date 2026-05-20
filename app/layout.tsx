@@ -5,7 +5,6 @@ import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import AppStoreBanner from '@/components/IOSInstallPrompt';
 import BackButtonHandler from '@/components/BackButtonHandler';
 import InAppNotificationToast from '@/components/InAppNotificationToast';
-import WhatsNewSheet from '@/components/WhatsNewSheet';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import FeedbackWidget from '@/components/FeedbackWidget';
@@ -92,7 +91,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <PageTransition>{children}</PageTransition>
               </ConfirmProvider>
               <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
-              <WhatsNewSheet />
             </LanguageProvider>
           </ThemeProvider>
         </PostHogProvider>
