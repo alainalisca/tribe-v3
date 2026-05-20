@@ -79,7 +79,9 @@ export async function fetchConfirmedParticipantsWithUsers(
   try {
     const { data, error } = await supabase
       .from('session_participants')
-      .select('user_id, status, is_guest, guest_name, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
+      .select(
+        'user_id, status, is_guest, guest_name, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
+      )
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
     if (error) return { success: false, error: error.message };
@@ -96,6 +98,12 @@ export async function fetchParticipantCountForUser(
   userId: string
 ): Promise<DalResult<number>> {
   try {
+    // BUG-008 guard: same reasoning as fetchSessionsByCreatorCount. A falsy
+    // userId must never reach the eq() filter or the count returns the
+    // whole confirmed-participants table.
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      return { success: true, data: 0 };
+    }
     const { count, error } = await supabase
       .from('session_participants')
       .select('id', { count: 'exact', head: true })

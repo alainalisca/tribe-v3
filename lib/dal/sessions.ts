@@ -466,6 +466,13 @@ export async function fetchSessionsByCreatorCount(
   creatorId: string
 ): Promise<DalResult<number>> {
   try {
+    // BUG-008 guard: if creatorId is falsy/literal "undefined" (race during
+    // auth bootstrap, bad URL), refuse to issue the query — supabase-js with
+    // an undefined eq value can serialize to no filter, counting the whole
+    // sessions table (the "70 Created" symptom on a brand-new account).
+    if (!creatorId || creatorId === 'undefined' || creatorId === 'null') {
+      return { success: true, data: 0 };
+    }
     const { count, error } = await supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })
