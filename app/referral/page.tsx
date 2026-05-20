@@ -192,11 +192,14 @@ export default function ReferralPage() {
               {referralCode ? (
                 <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
               ) : codeError ? (
-                <p className="text-sm text-stone-500 dark:text-gray-400">
-                  {language === 'es'
-                    ? 'No se pudo generar tu código. Intenta de nuevo en un momento.'
-                    : "Couldn't generate your code. Please try again in a moment."}
-                </p>
+                <div className="text-sm text-stone-500 dark:text-gray-400 space-y-1">
+                  <p>
+                    {language === 'es'
+                      ? 'No se pudo generar tu código. Intenta de nuevo en un momento.'
+                      : "Couldn't generate your code. Please try again in a moment."}
+                  </p>
+                  <p className="text-xs text-red-500 break-words">DEBUG: {codeError}</p>
+                </div>
               ) : (
                 <p className="text-sm text-stone-500 dark:text-gray-400">
                   {language === 'es' ? 'Generando código...' : 'Generating code…'}
