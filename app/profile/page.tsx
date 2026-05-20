@@ -100,14 +100,23 @@ export default function ProfilePage() {
 
         {/* Profile Section */}
         <div className="px-4 -mt-16 relative z-10">
-          {/* Avatar */}
+          {/* Avatar. BUG-034: tapping the avatar opens the same lightbox the
+              gallery photos use, so users can see their picture full size. */}
           <div className="relative inline-block">
-            <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
-              <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
-              <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
-                {getInitials(profile?.name || 'User')}
-              </AvatarFallback>
-            </Avatar>
+            <button
+              type="button"
+              onClick={() => profile?.avatar_url && openPhoto(profile.avatar_url)}
+              disabled={!profile?.avatar_url}
+              aria-label={language === 'es' ? 'Ver foto de perfil' : 'View profile photo'}
+              className="block rounded-full focus:outline-none focus:ring-2 focus:ring-tribe-green disabled:cursor-default"
+            >
+              <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
+                <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
+                <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
+                  {getInitials(profile?.name || 'User')}
+                </AvatarFallback>
+              </Avatar>
+            </button>
             <label className="absolute bottom-0 right-0 bg-slate-900 p-2.5 rounded-full cursor-pointer hover:bg-slate-800 transition shadow-lg">
               <Camera className="w-5 h-5 text-white" />
               <input

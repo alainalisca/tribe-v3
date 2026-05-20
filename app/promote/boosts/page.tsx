@@ -29,6 +29,7 @@ import {
   Gift,
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 
@@ -519,10 +520,7 @@ export default function BoostsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-tribe-green"></div>
-          <p className="mt-4 text-theme-secondary">Loading...</p>
-        </div>
+        <LoadingSpinner size="lg" className="flex items-center justify-center" />
       </div>
     );
   }

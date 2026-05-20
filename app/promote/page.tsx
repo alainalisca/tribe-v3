@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
 import { trackEvent } from '@/lib/analytics';
 import { showInfo } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Megaphone, Eye, Users, Zap, Tag, Store, Bell, Crown, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
 interface UserStats {
@@ -144,10 +145,7 @@ export default function PromotePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-tribe-green mx-auto mb-4"></div>
-          <p className="text-theme-primary">{language === 'es' ? 'Cargando...' : 'Loading...'}</p>
-        </div>
+        <LoadingSpinner size="lg" className="flex items-center justify-center" />
       </div>
     );
   }

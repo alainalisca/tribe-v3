@@ -7,7 +7,7 @@ import { downloadICS, downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { showError } from '@/lib/toast';
+import { showError, showInfo } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
 import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
@@ -148,29 +148,33 @@ export default function ActionButtons({
                   Edit/Cancel for the host so it's the first thing they
                   see after acknowledging they're hosting. */}
               <WhatsAppShareButton session={session} language={_language} isCreator />
-              <Button
-                onClick={onEdit}
-                variant="outline"
-                className="w-full py-3 font-medium flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                {t('editSessionBtn')}
-              </Button>
-              <Button
-                onClick={sessionActions.handleCancel}
-                variant="destructive"
-                className="w-full py-2 text-sm font-bold flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-5 h-5" />
-                {t('cancelSession')}
-              </Button>
+              {/* BUG-024: pair Edit + Cancel side-by-side so the host action
+                  stack doesn't sprawl down the page on mobile. */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={onEdit}
+                  variant="outline"
+                  className="w-full py-3 font-medium flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  {t('editSessionBtn')}
+                </Button>
+                <Button
+                  onClick={sessionActions.handleCancel}
+                  variant="destructive"
+                  className="w-full py-3 text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  {t('cancelSession')}
+                </Button>
+              </div>
             </>
           )}
         </>
@@ -269,24 +273,32 @@ export default function ActionButtons({
         </Button>
       )}
 
+      {/* BUG-024: pair Group Chat + Invite Friend so attendees/hosts get
+          two equally-weighted actions on one row instead of two stacked
+          full-width buttons. */}
       {(hasJoined || isCreator) && !isPast && (
-        <Link
-          href={`/session/${session.id}/chat`}
-          className="w-full py-3 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-white font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
-        >
-          <MessageCircle className="w-5 h-5" />
-          {t('groupChat')}
-        </Link>
-      )}
-      {(hasJoined || isCreator) && !isPast && (
-        <Button onClick={onInvite} disabled={creatingInvite} variant="outline" className="w-full py-3 font-medium">
-          {creatingInvite ? t('generating') : t('inviteFriend')}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href={`/session/${session.id}/chat`}
+            className="w-full py-3 bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-white text-sm font-medium rounded-lg hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center justify-center gap-2"
+          >
+            <MessageCircle className="w-5 h-5" />
+            {t('groupChat')}
+          </Link>
+          <Button
+            onClick={onInvite}
+            disabled={creatingInvite}
+            variant="outline"
+            className="w-full py-3 text-sm font-medium"
+          >
+            {creatingInvite ? t('generating') : t('inviteFriend')}
+          </Button>
+        </div>
       )}
       {/* Calendar integration: legacy ICS for creators, enhanced dual-button for joined users */}
       {isCreator && !hasJoined && (
         <Button
-          onClick={() =>
+          onClick={() => {
             downloadICS({
               sport: session.sport,
               date: session.date,
@@ -296,8 +308,14 @@ export default function ActionButtons({
               description: session.description,
               creatorName: session.creator?.name,
               sessionId: session.id,
-            })
-          }
+            });
+            // BUG-031: silent .ics download felt broken — confirm what happened.
+            showInfo(
+              _language === 'es'
+                ? 'Archivo de calendario descargado. Ábrelo para agregar la sesión.'
+                : 'Calendar file downloaded. Open it to add the session.'
+            );
+          }}
           variant="outline"
           className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-medium flex items-center justify-center gap-2"
         >
@@ -320,9 +338,14 @@ export default function ActionButtons({
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() =>
-                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` })
-              }
+              onClick={() => {
+                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` });
+                showInfo(
+                  _language === 'es'
+                    ? 'Archivo de calendario descargado. Ábrelo para agregar la sesión.'
+                    : 'Calendar file downloaded. Open it to add the session.'
+                );
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
             >
               <CalendarIcon className="w-4 h-4" />

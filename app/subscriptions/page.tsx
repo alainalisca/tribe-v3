@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { showSuccess, showError } from '@/lib/toast';
 import { formatTime12Hour } from '@/lib/utils';
 import { sportTranslations } from '@/lib/translations';
@@ -212,9 +213,7 @@ export default function SubscriptionsPage() {
       {/* Content */}
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tribe-green"></div>
-          </div>
+          <LoadingSpinner />
         ) : error ? (
           <div className="text-center py-12">
             <p className="text-stone-600 dark:text-gray-300 mb-4">{error}</p>

@@ -148,9 +148,14 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
   const schedule = lang === 'es' ? event.schedule_text_es : event.schedule_text_en;
   const description = lang === 'es' ? event.description_es : event.description_en;
 
-  return (
-    <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md">
-      {/* Header bar */}
+  // BUG-015: previously the whole card looked clickable but only the small
+  // "Learn More" link did anything. When a website is set, the entire card
+  // is now the link; otherwise show a muted "Details coming soon" hint so
+  // the affordance matches reality.
+  const hasLink = !!event.website_url;
+
+  const body = (
+    <>
       <div className="bg-gradient-to-r from-tribe-green-light to-lime-400 px-4 py-3 flex items-center gap-2">
         <span className="text-2xl">{sportInfo.icon}</span>
         <div className="min-w-0">
@@ -163,7 +168,6 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
         </div>
       </div>
 
-      {/* Body */}
       <div className="p-4 space-y-2">
         {description && <p className="text-xs text-stone-500 dark:text-gray-300 line-clamp-2">{description}</p>}
 
@@ -181,7 +185,6 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
           </div>
         )}
 
-        {/* Price / Free badge */}
         <div>
           {event.is_free ? (
             <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">
@@ -192,18 +195,33 @@ function EventCard({ event, lang }: { event: LocalFitnessEvent; lang: 'en' | 'es
           ) : null}
         </div>
 
-        {/* Learn More link */}
-        {event.website_url && (
-          <a
-            href={event.website_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-xs text-tribe-green hover:underline font-medium mt-1"
-          >
-            {lang === 'es' ? 'Saber Mas →' : 'Learn More →'}
-          </a>
+        {hasLink ? (
+          <span className="inline-block text-xs text-tribe-green font-medium mt-1">
+            {lang === 'es' ? 'Saber más →' : 'Learn more →'}
+          </span>
+        ) : (
+          <span className="inline-block text-xs text-stone-400 dark:text-gray-500 italic mt-1">
+            {lang === 'es' ? 'Detalles próximamente' : 'Details coming soon'}
+          </span>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  if (hasLink) {
+    return (
+      <a
+        href={event.website_url!}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+      >
+        {body}
+      </a>
+    );
+  }
+
+  return (
+    <div className="flex-shrink-0 w-72 bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md">{body}</div>
   );
 }
