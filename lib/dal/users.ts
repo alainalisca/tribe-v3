@@ -6,17 +6,29 @@ import type { User as UserRow, UserUpdate } from '@/lib/database.types';
 
 export async function fetchUserProfile(supabase: SupabaseClient, userId: string): Promise<DalResult<UserRow>> {
   try {
+    // Guard against `/profile/undefined` style routes where userId becomes
+    // the literal string "undefined"/"null" or empty (BUG-004).
+    if (!userId || userId === 'undefined' || userId === 'null') {
+      return { success: false, error: 'user_not_found' };
+    }
+    // maybeSingle differentiates "no row" from RLS/network errors so
+    // callers can show "user not found" only when the user truly doesn't
+    // exist — not on transient failure (parallel to BUG-001 fix).
     const { data, error } = await supabase
       .from('users')
       .select(
         'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, date_of_birth, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, emergency_contact_name, emergency_contact_phone, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, created_at, updated_at'
       )
       .eq('id', userId)
-      .single();
-    if (error) return { success: false, error: error.message };
+      .maybeSingle();
+    if (error) {
+      logError(error, { action: 'fetchUserProfile', userId });
+      return { success: false, error: error.message };
+    }
+    if (!data) return { success: false, error: 'user_not_found' };
     return { success: true, data };
   } catch (error) {
-    logError(error, { action: 'fetchUserProfile' });
+    logError(error, { action: 'fetchUserProfile', userId });
     return { success: false, error: 'Failed to fetch user' };
   }
 }

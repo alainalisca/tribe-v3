@@ -58,11 +58,11 @@ export default function ParticipantList({
               <Avatar className="w-12 h-12">
                 <AvatarImage loading="lazy" src={creator.avatar_url || undefined} alt={creator.name || ''} />
                 <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-lg">
-                  {creator.name[0]?.toUpperCase()}
+                  {creator.name?.[0]?.toUpperCase() || 'H'}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium text-stone-900 dark:text-white">{creator.name}</p>
+                <p className="font-medium text-stone-900 dark:text-white">{creator.name || t('host')}</p>
                 <p className="text-sm text-muted-foreground">{t('host')}</p>
               </div>
             </Link>
@@ -70,7 +70,12 @@ export default function ParticipantList({
         )}
 
         {participants.map((participant, index) => {
+          // A participant row with a null user_id is a guest. A row with a
+          // user_id but no joined user object is a registered athlete whose
+          // profile we couldn't join (deleted/RLS) — render the row without
+          // a broken /profile/<id> link (BUG-004).
           const isGuest = !participant.user_id;
+          const hasLinkableProfile = !!participant.user_id && !!participant.user;
           const displayName = participant.is_guest ? participant.guest_name : participant.user?.name || t('unknown');
           const avatarInitial = participant.is_guest
             ? participant.guest_name?.[0]?.toUpperCase()
@@ -98,11 +103,18 @@ export default function ParticipantList({
                     <span className="text-sm text-muted-foreground">{t('guest')}</span>
                   </div>
                 </div>
-              ) : (
+              ) : hasLinkableProfile ? (
                 <Link href={`/profile/${participant.user_id}`} className="flex items-center gap-3 flex-1">
                   {avatar}
                   <p className="font-medium text-stone-900 dark:text-white">{displayName}</p>
                 </Link>
+              ) : (
+                // No joined profile → render non-linked so we don't navigate
+                // to /profile/<id> only to show "User not found".
+                <div className="flex items-center gap-3 flex-1">
+                  {avatar}
+                  <p className="font-medium text-stone-900 dark:text-white">{displayName}</p>
+                </div>
               )}
 
               <div className="flex items-center gap-2">
