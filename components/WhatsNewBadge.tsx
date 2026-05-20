@@ -190,7 +190,7 @@ export default function WhatsNewBadge() {
           // fixed bottom-0 z-50, so a sheet inside FilterBar can never
           // visually beat BottomNav no matter how high its z-index is).
           <div
-            className={`fixed inset-0 z-[100] flex items-end justify-center transition-opacity ${
+            className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity ${
               closing ? 'opacity-0' : 'opacity-100'
             }`}
             style={{ transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms` }}
@@ -207,9 +207,9 @@ export default function WhatsNewBadge() {
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
-              className={`relative w-full max-w-md bg-theme-card rounded-t-2xl shadow-xl px-6 py-4 max-h-[80vh] overflow-y-auto ${
-                closing ? 'translate-y-full' : 'translate-y-0'
-              } transition-transform`}
+              className={`relative w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl shadow-xl px-6 py-4 max-h-[80vh] overflow-y-auto ${
+                closing ? 'translate-y-full sm:translate-y-0 sm:opacity-0' : 'translate-y-0 opacity-100'
+              } transition-all`}
               style={{
                 transitionDuration: `${closing ? EXIT_MS : ENTER_MS}ms`,
                 paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
