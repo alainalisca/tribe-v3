@@ -5,8 +5,12 @@ Updated per fix. Items grouped by what they need from you.
 
 ## Migrations to apply in Supabase (run these in SQL editor)
 
-- **BUG-002 (Q&A 404):** Apply `supabase/migrations/014_session_comments.sql`. The `session_comments` table is missing from your live DB, which is why every Q&A read returns 404 and "nothing happens" on send. Code-side I already made the send surface a clear error toast and the empty state read "couldn't load right now" instead of "be the first to ask." Once the migration is applied, Q&A will work as designed.
-- **BUG-005 (Referral code empty):** Apply `supabase/migrations/014_referrals.sql` if it isn't in your DB. The same root cause as BUG-002 — `referrals` table missing means `getOrCreateReferralCode` can't insert and the page shows a blank code. Code-side I now display "Couldn't generate your code" instead of blank, and the Copy/WhatsApp/Share buttons are disabled when there's no code (so you stop sharing `/auth?ref=` URLs with nothing after the equals sign). Heads-up: there are TWO files named `014_*` (014_session_comments.sql and 014_referrals.sql) — both need to be applied, the numbering collision is pre-existing.
+- ~~**BUG-002 (Q&A 404):** Apply `014_session_comments.sql`.~~ Done 2026-05-20.
+- ~~**BUG-005 (Referral code empty):** Apply `014_referrals.sql` + `089_align_referrals.sql`.~~ Done 2026-05-20.
+- ~~**BUG-010 (Community banner upload):** `community-banners` bucket via `090_community_banners_bucket.sql`.~~ Done 2026-05-20.
+- ~~**Community post image upload + post visibility:** `091_media_bucket.sql` (bucket), `092_fix_community_rls_recursion.sql` (RLS recursion fix), and applied `027_community_post_moderation.sql` (was missing — added `is_pinned` column).~~ Done 2026-05-20.
+
+**Discovered along the way:** several historic migrations were never applied to the live DB (014, 027). When future bugs look like "code is correct but nothing works," check `supabase/migrations/` for anything that hasn't been run — that's the next place to look.
 
 ## Env vars to set/verify in Vercel
 

@@ -568,11 +568,8 @@ export default function CommunityDetailPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12 space-y-2">
+                  <div className="text-center py-12">
                     <p className="text-theme-primary font-medium">{t.noPosts2}</p>
-                    <p className="text-xs text-red-500 break-words px-4">
-                      DEBUG: posts.length={posts.length}, communityId={communityId}
-                    </p>
                   </div>
                 )}
               </div>
