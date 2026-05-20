@@ -174,7 +174,7 @@ export default function StorefrontPage() {
               orientation="horizontal"
             />
             {profileColumn}
-            <StorefrontEmpty language={lang} />
+            <StorefrontEmpty language={lang} isOwner={isOwn} />
           </div>
         ) : (
           <>
