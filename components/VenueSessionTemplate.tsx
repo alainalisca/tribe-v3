@@ -43,8 +43,11 @@ export default function VenueSessionTemplate({ venue, userLat, userLng, language
   const distance = venue.distance_km ? venue.distance_km.toFixed(1) : '?';
   const distanceLabel = lang === 'es' ? 'km' : 'km';
 
+  // BUG-016: /create reads `location` and `lat`/`lng` query params. The
+  // old `venue_name` was never read, so "Host a Session Here" landed on
+  // /create with no pre-fill. Use the same param names as the routes flow.
   const createParams = new URLSearchParams({
-    venue_name: venue.name,
+    location: venue.name,
     lat: venue.location_lat.toString(),
     lng: venue.location_lng.toString(),
   }).toString();
