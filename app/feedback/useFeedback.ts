@@ -163,6 +163,21 @@ export function useFeedback() {
 
       if (!result.success) throw new Error(result.error);
 
+      // Fire-and-forget: fan out an in-app notification to all admins so a
+      // new bug report shows up on the NotificationBell badge.
+      fetch('/api/admin/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'admin_bug_report',
+          message: `New bug report: ${bugTitle} (${bugSeverity})`,
+          entity_type: 'bug_report',
+          actor_id: user!.id,
+        }),
+      }).catch(() => {
+        // Non-fatal: the bug report itself was already saved.
+      });
+
       showSuccess(t.bugSuccess);
       setBugTitle('');
       setBugDescription('');

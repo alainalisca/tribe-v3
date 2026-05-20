@@ -93,13 +93,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message || 'Signup failed' }, { status: 400 });
     }
 
-    // Fire-and-forget admin notification
+    // Fire-and-forget admin notification (email + in-app bell badge)
     const origin = request.nextUrl.origin;
     fetch(`${origin}/api/notify-admin-signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userName: name, userEmail: email, signupMethod: 'Email' }),
     }).catch((err) => logError(err, { action: 'notifyAdminSignup', route: '/api/auth/signup' }));
+
+    // In-app bell badge for admins
+    const adminSecret = process.env.ADMIN_NOTIFY_SECRET;
+    fetch(`${origin}/api/admin/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(adminSecret ? { 'x-admin-notify-secret': adminSecret } : {}),
+      },
+      body: JSON.stringify({
+        type: 'admin_new_signup',
+        message: `New signup: ${name} (${email})`,
+        entity_type: 'user',
+        entity_id: data?.user?.id ?? null,
+        actor_id: data?.user?.id ?? null,
+      }),
+    }).catch((err) => logError(err, { action: 'adminNotifyFanout', route: '/api/auth/signup' }));
 
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
