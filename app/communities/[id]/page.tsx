@@ -335,8 +335,9 @@ export default function CommunityDetailPage() {
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/communities')}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
+            aria-label="Back to communities"
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>
@@ -567,8 +568,11 @@ export default function CommunityDetailPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12 space-y-2">
                     <p className="text-theme-primary font-medium">{t.noPosts2}</p>
+                    <p className="text-xs text-red-500 break-words px-4">
+                      DEBUG: posts.length={posts.length}, communityId={communityId}
+                    </p>
                   </div>
                 )}
               </div>

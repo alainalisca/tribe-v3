@@ -174,7 +174,7 @@ export default function NewPostPage() {
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push(`/communities/${communityId}`)}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
             aria-label={t.cancel}
           >
@@ -258,7 +258,7 @@ export default function NewPostPage() {
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push(`/communities/${communityId}`)}
               className="flex-1 px-6 py-3 border-2 border-stone-300 dark:border-tribe-card rounded-lg font-semibold text-theme-primary hover:bg-stone-100 dark:hover:bg-tribe-mid transition"
             >
               {t.cancel}
