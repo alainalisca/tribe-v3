@@ -143,13 +143,15 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
-      {/* Panel — mobile: bottom sheet. Desktop: centered card. */}
-      <div className="relative w-full sm:max-w-md bg-tribe-dark border border-tribe-mid rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] pt-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-6 px-6">
+      {/* Panel — mobile: bottom sheet. Desktop: centered card.
+          BUG-020: switched from hardcoded bg-tribe-dark/text-white to
+          theme tokens so the guide respects light/dark mode. */}
+      <div className="relative w-full sm:max-w-md bg-theme-card border border-theme rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] pt-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-6 px-6">
         {/* Top row: progress + close */}
         <div className="flex items-center justify-between mb-5">
           <p
             aria-label={s.progressLabel(index + 1, steps.length)}
-            className="text-[10px] uppercase tracking-[0.12em] font-bold text-white/50"
+            className="text-[10px] uppercase tracking-[0.12em] font-bold text-theme-tertiary"
           >
             {s.progressLabel(index + 1, steps.length)}
           </p>
@@ -157,7 +159,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
             type="button"
             onClick={onClose}
             aria-label={s.closeLabel}
-            className="text-white/50 hover:text-white transition-colors"
+            className="text-theme-tertiary hover:text-theme-primary transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -169,7 +171,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
             <div
               key={i}
               className={`h-1 rounded-full transition-all ${
-                i === index ? 'flex-[3] bg-tribe-green' : 'flex-1 bg-tribe-mid'
+                i === index ? 'flex-[3] bg-tribe-green' : 'flex-1 bg-theme-inset'
               }`}
             />
           ))}
@@ -184,11 +186,11 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
           ) : null}
           <h2
             id={`${id}-title-${index}`}
-            className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mb-2"
+            className="text-xl sm:text-2xl font-black text-theme-primary tracking-tight leading-tight mb-2"
           >
             {step.title}
           </h2>
-          <div className="text-sm sm:text-base text-white/80 leading-relaxed">{step.body}</div>
+          <div className="text-sm sm:text-base text-theme-secondary leading-relaxed">{step.body}</div>
         </div>
 
         {/* Footer actions */}
@@ -198,7 +200,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
             <button
               type="button"
               onClick={onClose}
-              className="text-sm font-semibold text-white/60 hover:text-white transition-colors"
+              className="text-sm font-semibold text-theme-tertiary hover:text-theme-primary transition-colors"
             >
               {s.skip}
             </button>
@@ -206,7 +208,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
             <button
               type="button"
               onClick={goBack}
-              className="inline-flex items-center gap-1 text-sm font-semibold text-white/60 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-theme-tertiary hover:text-theme-primary transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
               {s.back}
@@ -217,7 +219,7 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
           <button
             type="button"
             onClick={goNext}
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-tribe-green text-tribe-dark text-sm font-bold rounded-full shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all"
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-tribe-green text-slate-900 text-sm font-bold rounded-full shadow-[0_4px_20px_rgba(132,204,22,0.35)] hover:shadow-[0_6px_28px_rgba(132,204,22,0.5)] hover:-translate-y-0.5 transition-all"
           >
             {isLast ? (
               <>

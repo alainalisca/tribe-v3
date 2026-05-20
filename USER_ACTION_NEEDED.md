@@ -30,4 +30,6 @@ _(none yet)_
 
 ## Notes on bugs I marked deferred or partial
 
-_(none yet)_
+- **BUG-020 (Onboarding modal re-pops):** the dark-theme half is fixed (QuickGuide now uses theme tokens — respects light/dark). The persistence half stays on localStorage, which still gets cleared in incognito / cache clears / new device. A robust cross-device fix needs either a `users.seen_guides jsonb` column or use of `auth.user_metadata`. Both require a small effort I can do later; the current state is "mostly persistent on the same browser." Flag this as a follow-up.
+- **BUG-018 (Tip modal copy):** superseded by #7 — tips are real charges now, the existing "Say thanks to {name}" / "100% goes to {name}" copy is correct. The QA confusion was that Al's test account is literally named "tribe".
+- **BUG-023 (Map artifact), BUG-035 (Banner reposition), BUG-037 (Referral tracking backend)** — deferred per the spec.
