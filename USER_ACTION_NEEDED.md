@@ -14,7 +14,7 @@ Updated per fix. Items grouped by what they need from you.
 
 ## Supabase Storage buckets / RLS to configure
 
-_(none yet)_
+- **BUG-010 (Community banner upload):** create a public Storage bucket named **`community-banners`** in Supabase, with an INSERT policy allowing authenticated users (and a SELECT policy allowing public read). The upload code uploads to that bucket; if it doesn't exist (or RLS blocks) you get the "Failed to upload banner" toast. The error now also appends the underlying Supabase message so future failures are diagnosable.
 
 ## Static assets to populate later (low priority)
 

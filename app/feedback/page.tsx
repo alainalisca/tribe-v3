@@ -49,7 +49,11 @@ export default function FeedbackPage() {
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </Button>
           <h1 className="text-xl font-bold text-theme-primary">
-            {t.pageTitle} Tribe<span className="text-tribe-green">.</span>
+            {t.pageTitle} Tribe
+            <span
+              aria-hidden="true"
+              className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+            />
           </h1>
         </div>
       </div>

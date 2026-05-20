@@ -89,7 +89,11 @@ export default function AuthPage() {
           <CardContent className="p-8">
             <div className="text-center mb-10">
               <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
-                Tribe<span className="text-tribe-green">.</span>
+                Tribe
+                <span
+                  aria-hidden="true"
+                  className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+                />
               </h1>
               <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
               <h2 className="text-muted-foreground font-extrabold tracking-tight text-lg">

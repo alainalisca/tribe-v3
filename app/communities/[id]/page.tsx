@@ -223,7 +223,10 @@ export default function CommunityDetailPage() {
     } catch (error) {
       logError(error, { action: 'handleBannerUpload' });
       await haptic('error');
-      showError(t.bannerError);
+      // BUG-010: surface the underlying message (most common cause is
+      // the 'community-banners' Storage bucket missing or RLS blocking).
+      const detail = error instanceof Error && error.message ? `${t.bannerError}: ${error.message}` : t.bannerError;
+      showError(detail);
     } finally {
       setUploadingBanner(false);
       if (bannerInputRef.current) bannerInputRef.current.value = '';

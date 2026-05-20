@@ -109,7 +109,11 @@ export default function FilterBar({
           {/* Slightly larger so the wordmark dominates and the notification
               badge can't visually mash into the green dot. */}
           <h1 className="text-2xl font-extrabold text-stone-900 dark:text-white cursor-pointer leading-none tracking-tight">
-            Tribe<span className="text-tribe-green">.</span>
+            Tribe
+            <span
+              aria-hidden="true"
+              className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+            />
           </h1>
         </Link>
         <div className="flex items-center gap-2">

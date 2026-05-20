@@ -233,7 +233,11 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
             </Button>
             <h1 className="text-lg font-bold text-theme-primary leading-tight">
-              Tribe<span className="text-tribe-green">.</span>
+              Tribe
+              <span
+                aria-hidden="true"
+                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+              />
             </h1>
           </div>
         </div>

@@ -53,7 +53,11 @@ export default function ProfilePage() {
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/">
             <h1 className="text-xl font-bold text-theme-primary cursor-pointer">
-              Tribe<span className="text-tribe-green">.</span>
+              Tribe
+              <span
+                aria-hidden="true"
+                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+              />
             </h1>
           </Link>
           <Link href="/settings">
