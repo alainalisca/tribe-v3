@@ -42,5 +42,6 @@ export * from './subscriptions';
 export * from './leadDiscovery';
 export * from './notificationPreferences';
 export * from './tribeOSWaitlist';
+export * from './releaseNotes';
 // Note: instructorPosts is NOT re-exported from here because its symbol names
 // collide with comments.ts / promote.ts. Import directly from './instructorPosts'.
