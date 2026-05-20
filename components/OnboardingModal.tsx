@@ -10,6 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
 
+import TribeWordmark from '@/components/TribeWordmark';
 interface OnboardingModalProps {
   onComplete: () => void;
 }
@@ -89,13 +90,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             >
               {step === 1 ? (
                 <div className="mb-4 flex justify-center">
-                  <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white">
-                    Tribe
-                    <span
-                      aria-hidden="true"
-                      className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-                    />
-                  </h1>
+                  <TribeWordmark className="h-6 w-auto" />
                 </div>
               ) : (
                 <motion.div

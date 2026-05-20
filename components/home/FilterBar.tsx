@@ -14,6 +14,7 @@ import { sportTranslations, TranslationKey } from '@/lib/translations';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
 
+import TribeWordmark from '@/components/TribeWordmark';
 interface FilterBarProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -110,13 +111,7 @@ export default function FilterBar({
         <Link href="/profile" className="shrink-0">
           {/* Slightly larger so the wordmark dominates and the notification
               badge can't visually mash into the green dot. */}
-          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-white cursor-pointer leading-none tracking-tight">
-            Tribe
-            <span
-              aria-hidden="true"
-              className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-            />
-          </h1>
+          <TribeWordmark className="h-6 w-auto" />
         </Link>
         <div className="flex items-center gap-2">
           {/* Premium-only shortcut to /os/dashboard. Renders nothing

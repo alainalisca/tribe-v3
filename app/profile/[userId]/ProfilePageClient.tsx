@@ -40,6 +40,7 @@ import { getProfileTranslations } from './translations';
 import ProfileLightbox from './ProfileLightbox';
 import ReportUserModal from './ReportUserModal';
 
+import TribeWordmark from '@/components/TribeWordmark';
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export interface ProfileStats {
@@ -232,13 +233,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             >
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
             </Button>
-            <h1 className="text-lg font-bold text-theme-primary leading-tight">
-              Tribe
-              <span
-                aria-hidden="true"
-                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-              />
-            </h1>
+            <TribeWordmark className="h-5 w-auto" />
           </div>
         </div>
         <div className="pt-header flex items-center justify-center min-h-[60vh]">

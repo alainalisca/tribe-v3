@@ -15,6 +15,7 @@ import AchievementBadges from '@/components/AchievementBadges';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 
+import TribeWordmark from '@/components/TribeWordmark';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -52,13 +53,7 @@ export default function ProfilePage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/">
-            <h1 className="text-xl font-bold text-theme-primary cursor-pointer">
-              Tribe
-              <span
-                aria-hidden="true"
-                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-              />
-            </h1>
+            <TribeWordmark className="h-5 w-auto" />
           </Link>
           <Link href="/settings">
             <button className="p-2 hover:bg-stone-200 rounded-lg transition">

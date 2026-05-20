@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
 
+import TribeWordmark from '@/components/TribeWordmark';
 interface InstructorProfile {
   id: string;
   name: string | null;
@@ -91,13 +92,7 @@ export default function InstructorShareClient() {
     return (
       <div className="min-h-screen bg-tribe-dark flex items-center justify-center p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Tribe
-            <span
-              aria-hidden="true"
-              className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-            />
-          </h1>
+          <TribeWordmark className="h-6 w-auto" />
           <p className="text-theme-tertiary mt-4">
             {language === 'es' ? 'Instructor no encontrado' : 'Instructor not found'}
           </p>
@@ -118,13 +113,7 @@ export default function InstructorShareClient() {
     <div className="min-h-screen bg-tribe-dark">
       {/* Header */}
       <div className="px-6 pt-10 pb-4 text-center">
-        <h1 className="text-2xl font-bold text-white">
-          Tribe
-          <span
-            aria-hidden="true"
-            className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-          />
-        </h1>
+        <TribeWordmark className="h-6 w-auto" />
         <p className="text-sm text-theme-tertiary mt-1">
           {language === 'es' ? 'Entrena con tu tribu' : 'Train with your tribe'}
         </p>

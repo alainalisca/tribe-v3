@@ -18,6 +18,7 @@ import ResetPasswordForm from './ResetPasswordForm';
 import EmailAuthForm from './EmailAuthForm';
 import { useAuthHandlers } from './useAuthHandlers';
 
+import TribeWordmark from '@/components/TribeWordmark';
 export default function AuthPage() {
   const { language } = useLanguage();
   const t = useTranslations('auth');
@@ -88,13 +89,7 @@ export default function AuthPage() {
         <Card className="rounded-2xl dark:bg-tribe-card shadow-xl border-none">
           <CardContent className="p-8">
             <div className="text-center mb-10">
-              <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
-                Tribe
-                <span
-                  aria-hidden="true"
-                  className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-                />
-              </h1>
+              <TribeWordmark className="h-6 w-auto" />
               <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
               <h2 className="text-muted-foreground font-extrabold tracking-tight text-lg">
                 {h.isResetPassword ? h.t.resetPassword : h.isLogin ? h.t.welcomeBack : h.t.joinCommunity}
