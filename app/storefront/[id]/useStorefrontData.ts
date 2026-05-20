@@ -140,111 +140,124 @@ export function useStorefrontData(instructorId: string) {
     setJoinedSessionIds((prev) => new Set([...prev, sessionId]));
   }, []);
 
+  // Instructor profile + partner data. Both are independent reads keyed on
+  // instructorId so they fire in parallel. Partner-instructors is a follow-up
+  // only when a partner row exists.
   useEffect(() => {
-    const fetchInstructor = async () => {
+    if (!instructorId) return;
+    let cancelled = false;
+    (async () => {
       try {
-        const { data: instructorData, error } = await supabase
-          .from('users')
-          .select(
-            'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted'
-          )
-          .eq('id', instructorId)
-          .single();
+        const [instructorResult, partnerResult] = await Promise.all([
+          supabase
+            .from('users')
+            .select(
+              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted'
+            )
+            .eq('id', instructorId)
+            .single(),
+          fetchPartnerByUserId(supabase, instructorId),
+        ]);
 
-        if (error) throw error;
+        if (cancelled) return;
+
+        if (instructorResult.error) throw instructorResult.error;
+        const instructorData = instructorResult.data;
         setInstructor({
           ...instructorData,
           tagline: instructorData.storefront_tagline,
           verified: instructorData.is_verified_instructor,
         } as unknown as Instructor);
 
-        const pResult = await fetchPartnerByUserId(supabase, instructorId);
-        if (pResult.success && pResult.data && pResult.data.status === 'active') {
-          setPartnerData(pResult.data);
-          const iResult = await fetchPartnerInstructors(supabase, pResult.data.id);
-          if (iResult.success && iResult.data) setPartnerInstructors(iResult.data);
+        if (partnerResult.success && partnerResult.data && partnerResult.data.status === 'active') {
+          setPartnerData(partnerResult.data);
+          const iResult = await fetchPartnerInstructors(supabase, partnerResult.data.id);
+          if (!cancelled && iResult.success && iResult.data) setPartnerInstructors(iResult.data);
         }
       } catch (err) {
         logError(err, { action: 'useStorefrontData.fetchInstructor', instructorId });
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    if (instructorId) fetchInstructor();
   }, [instructorId, supabase]);
 
+  // Storefront data (sessions/boosts/packages/media/posts/product count/
+  // follower counts). All six independent reads now fire in one Promise.all
+  // batch instead of six sequential awaits. Network time goes from sum to
+  // max — typically a 5-7x speedup on a slow connection.
   useEffect(() => {
-    const fetchStorefrontData = async () => {
+    if (!instructorId) return;
+    let cancelled = false;
+    (async () => {
       try {
         setLoading(true);
 
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        const { data: sessionsData } = await supabase
-          .from('sessions')
-          .select('*')
-          .eq('creator_id', instructorId)
-          .eq('status', 'open')
-          .gte('date', todayStr)
-          .order('date', { ascending: true });
 
-        if (sessionsData) {
-          const { data: boostData } = await supabase
-            .from('boost_campaigns')
-            .select('session_id')
+        const [
+          sessionsResult,
+          boostsResult,
+          packagesResult,
+          mediaResult,
+          postsResult,
+          productsResult,
+          followersResult,
+          followingResult,
+        ] = await Promise.all([
+          supabase
+            .from('sessions')
+            .select('*')
+            .eq('creator_id', instructorId)
+            .eq('status', 'open')
+            .gte('date', todayStr)
+            .order('date', { ascending: true }),
+          supabase.from('boost_campaigns').select('session_id').eq('instructor_id', instructorId).eq('is_active', true),
+          supabase.from('service_packages').select('*').eq('instructor_id', instructorId).eq('is_active', true),
+          supabase
+            .from('storefront_media')
+            .select('*')
             .eq('instructor_id', instructorId)
-            .eq('is_active', true);
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('instructor_posts')
+            .select('*')
+            .eq('author_id', instructorId)
+            .order('created_at', { ascending: false }),
+          // Product count drives empty-tab hiding (spec 6C). Fail-open: on a
+          // count error leave productCount null so the page shows the tab
+          // rather than wrongly hiding real products.
+          supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('instructor_id', instructorId)
+            .eq('status', 'active'),
+          supabase.from('user_follows').select('follower_id').eq('following_id', instructorId),
+          supabase.from('user_follows').select('following_id').eq('follower_id', instructorId),
+        ]);
 
-          const boostedSessionIds = new Set(boostData?.map((b: { session_id: string }) => b.session_id) || []);
-          setSessions(sessionsData.map((s: Session) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })));
+        if (cancelled) return;
+
+        if (sessionsResult.data) {
+          const boostedSessionIds = new Set(boostsResult.data?.map((b: { session_id: string }) => b.session_id) || []);
+          setSessions(sessionsResult.data.map((s: Session) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })));
         }
-
-        const { data: packagesData } = await supabase
-          .from('service_packages')
-          .select('*')
-          .eq('instructor_id', instructorId)
-          .eq('is_active', true);
-        if (packagesData) setPackages(packagesData);
-
-        const { data: mediaData } = await supabase
-          .from('storefront_media')
-          .select('*')
-          .eq('instructor_id', instructorId)
-          .order('created_at', { ascending: false });
-        if (mediaData) setMedia(mediaData);
-
-        const { data: postsData } = await supabase
-          .from('instructor_posts')
-          .select('*')
-          .eq('author_id', instructorId)
-          .order('created_at', { ascending: false });
-        if (postsData) setPosts(postsData);
-
-        // Product count drives empty-tab hiding (spec 6C). Fail-open:
-        // on a count error leave productCount null so the page shows
-        // the tab rather than wrongly hiding real products.
-        const { count: prodCount, error: prodErr } = await supabase
-          .from('products')
-          .select('id', { count: 'exact', head: true })
-          .eq('instructor_id', instructorId)
-          .eq('status', 'active');
-        setProductCount(prodErr ? null : (prodCount ?? 0));
-
-        const { data: followerData } = await supabase
-          .from('user_follows')
-          .select('follower_id')
-          .eq('following_id', instructorId);
-        const { data: followingData } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', instructorId);
+        if (packagesResult.data) setPackages(packagesResult.data);
+        if (mediaResult.data) setMedia(mediaResult.data);
+        if (postsResult.data) setPosts(postsResult.data);
+        setProductCount(productsResult.error ? null : (productsResult.count ?? 0));
 
         setFollowState({
           isFollowing: false,
-          followerCount: followerData?.length || 0,
-          followingCount: followingData?.length || 0,
+          followerCount: followersResult.data?.length || 0,
+          followingCount: followingResult.data?.length || 0,
         });
 
         setLoading(false);
       } catch (err) {
+        if (cancelled) return;
         logError(err, { action: 'useStorefrontData.fetchStorefrontData', instructorId });
         showError(
           language === 'es'
@@ -253,9 +266,11 @@ export function useStorefrontData(instructorId: string) {
         );
         setLoading(false);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-    if (instructorId) fetchStorefrontData();
-  }, [instructorId, supabase]);
+  }, [instructorId, supabase, language]);
 
   // Resolve the *actual* follow state for the signed-in viewer. Runs
   // whenever the current user resolves (decoupled from the follower
