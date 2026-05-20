@@ -17,6 +17,7 @@ export default function ReferralPage() {
   const { language } = useLanguage();
   const [userId, setUserId] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string>('');
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [friendsInvited, setFriendsInvited] = useState(0);
@@ -87,6 +88,15 @@ export default function ReferralPage() {
         const codeResult = await getOrCreateReferralCode(supabase, authUser.id);
         if (codeResult.success && codeResult.data) {
           setReferralCode(codeResult.data);
+          setCodeError(null);
+        } else {
+          // Blank code used to render silently — surface the failure so we
+          // don't ship a "share with no code" WhatsApp link (BUG-005).
+          setCodeError(codeResult.error || 'unknown');
+          logError(new Error(codeResult.error || 'getOrCreateReferralCode failed'), {
+            action: 'referral.loadCode',
+            userId: authUser.id,
+          });
         }
 
         // Fetch real referral stats via DAL
@@ -173,11 +183,24 @@ export default function ReferralPage() {
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.referralCode}</h2>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 bg-stone-100 dark:bg-tribe-surface rounded-xl p-4 text-center">
-              <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
+              {referralCode ? (
+                <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
+              ) : codeError ? (
+                <p className="text-sm text-stone-500 dark:text-gray-400">
+                  {language === 'es'
+                    ? 'No se pudo generar tu código. Intenta de nuevo en un momento.'
+                    : "Couldn't generate your code. Please try again in a moment."}
+                </p>
+              ) : (
+                <p className="text-sm text-stone-500 dark:text-gray-400">
+                  {language === 'es' ? 'Generando código...' : 'Generating code…'}
+                </p>
+              )}
             </div>
             <button
               onClick={handleCopyCode}
-              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-tribe-green-hover transition font-semibold flex items-center gap-2"
+              disabled={!referralCode}
+              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-tribe-green-hover transition font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>
@@ -190,14 +213,16 @@ export default function ReferralPage() {
           <div className="space-y-3">
             <button
               onClick={handleCopyLink}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+              disabled={!referralCode}
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Copy className="w-5 h-5 text-tribe-green" />
               {t.copyLink}
             </button>
             <button
               onClick={handleShareWhatsApp}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+              disabled={!referralCode}
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-xl">💬</span>
               {t.shareWhatsApp}
@@ -205,7 +230,8 @@ export default function ReferralPage() {
             {'share' in navigator && (
               <button
                 onClick={handleShare}
-                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+                disabled={!referralCode}
+                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-xl">↗️</span>
                 {t.share}
