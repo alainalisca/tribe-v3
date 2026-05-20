@@ -216,9 +216,13 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   }
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/80 flex flex-col" data-modal="true" onClick={onClose}>
-      <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
-
+    // BUG-030: bottom sheet on mobile, centered card on desktop — was
+    // pinned to the bottom on every viewport.
+    <div
+      className="fixed inset-0 z-[70] bg-black/80 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      data-modal="true"
+      onClick={onClose}
+    >
       <div
         className="bg-white dark:bg-tribe-card w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}

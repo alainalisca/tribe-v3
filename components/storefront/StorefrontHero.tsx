@@ -76,7 +76,11 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
             )}
           </div>
           <div className="min-w-0 flex-1 pb-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-theme-primary truncate">{instructor.name}</h1>
+            {/* BUG-027: capitalize so lowercase test/legacy display names
+                (e.g. 'tribe') don't read as broken on the storefront header. */}
+            <h1 className="text-2xl font-extrabold tracking-tight text-theme-primary truncate capitalize">
+              {instructor.name}
+            </h1>
             {instructor.verified && (
               <p className="text-tribe-green text-xs font-semibold">
                 ✓ {language === 'es' ? 'Verificado' : 'Verified'}
