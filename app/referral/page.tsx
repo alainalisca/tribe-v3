@@ -37,12 +37,17 @@ export default function ReferralPage() {
       friendsInvited: 'Friends Invited',
       rewardsEarned: 'Rewards Earned',
       howItWorks: 'How It Works',
-      howItWorksDesc: 'For every friend who joins and completes their first session, you both earn a reward',
-      rewardTiers: 'Reward Tiers',
-      freePromo: 'Free promo code (10% off next session)',
-      featuredProfile: 'Featured profile for 1 week',
-      freeBoost: 'Free boost campaign',
-      proStorefront: '1 month Pro storefront',
+      // BUG-017: rewards are credits toward premium features, not cash /
+      // session discounts. Tracking is via the referral code in the signup
+      // URL; credits issue when the referred athlete completes their first
+      // session.
+      howItWorksDesc:
+        'Share your code. When a friend signs up with it and completes their first session, you both earn credits toward Tribe+ premium features.',
+      rewardTiers: 'Reward Tiers (Tribe+ credits)',
+      freePromo: '1 referral: 1 month of Tribe+ credits',
+      featuredProfile: '3 referrals: featured profile for 1 week',
+      freeBoost: '5 referrals: free boost campaign for instructors',
+      proStorefront: '10 referrals: 1 month of Tribe+ Pro storefront',
       referralLink: 'Referral Link',
     },
     es: {
@@ -57,12 +62,13 @@ export default function ReferralPage() {
       friendsInvited: 'Amigos Invitados',
       rewardsEarned: 'Recompensas Ganadas',
       howItWorks: 'Cómo Funciona',
-      howItWorksDesc: 'Por cada amigo que se una y complete su primera sesión, ambos ganan una recompensa',
-      rewardTiers: 'Niveles de Recompensa',
-      freePromo: 'Código de promoción gratis (10% de descuento en la próxima sesión)',
-      featuredProfile: 'Perfil destacado por 1 semana',
-      freeBoost: 'Campaña de impulso gratis',
-      proStorefront: 'Escaparate Pro por 1 mes',
+      howItWorksDesc:
+        'Comparte tu código. Cuando un amigo se registre con él y complete su primera sesión, ambos ganan créditos para funciones premium de Tribe+.',
+      rewardTiers: 'Niveles de Recompensa (créditos Tribe+)',
+      freePromo: '1 referido: 1 mes de créditos Tribe+',
+      featuredProfile: '3 referidos: perfil destacado por 1 semana',
+      freeBoost: '5 referidos: campaña de impulso gratis (para instructores)',
+      proStorefront: '10 referidos: Tribe+ Pro storefront por 1 mes',
       referralLink: 'Enlace de Referencia',
     },
   };

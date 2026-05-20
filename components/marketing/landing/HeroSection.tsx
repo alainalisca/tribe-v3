@@ -23,7 +23,7 @@ const t = {
     subtitle: 'Find sessions, join the community, train with real people in Medellín.',
     ctaAthlete: "I'm an Athlete",
     ctaInstructor: "I'm an Instructor",
-    active: 'Active in 6+ neighborhoods across Medellín',
+    active: (n: number) => `Active in ${n} neighborhoods across Medellín`,
     appStore: 'Download on the',
     playStore: 'GET IT ON',
   },
@@ -33,7 +33,7 @@ const t = {
     subtitle: 'Encuentra sesiones, únete a la comunidad, entrena con gente real en Medellín.',
     ctaAthlete: 'Soy Atleta',
     ctaInstructor: 'Soy Instructor',
-    active: 'Activo en 6+ barrios en Medellín',
+    active: (n: number) => `Activo en ${n} barrios en Medellín`,
     appStore: 'Descargar en',
     playStore: 'DISPONIBLE EN',
   },
@@ -167,7 +167,7 @@ export default function HeroSection() {
               </span>
             ))}
           </div>
-          <p className="text-sm text-gray-500">{s.active}</p>
+          <p className="text-sm text-gray-500">{s.active(neighborhoods.length)}</p>
         </div>
       </div>
     </section>

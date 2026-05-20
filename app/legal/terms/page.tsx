@@ -58,8 +58,8 @@ export default function TermsPage() {
                     <div className="bg-stone-100 dark:bg-tribe-mid p-4 rounded-lg">
                       <p className="font-semibold text-stone-900 dark:text-white">
                         Email:{' '}
-                        <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">
-                          admin@aplusfitnessllc.com
+                        <a href="mailto:tribe@aplusfitnessllc.com" className="text-tribe-green hover:underline">
+                          tribe@aplusfitnessllc.com
                         </a>
                       </p>
                       <p className="text-sm mt-2 text-stone-700 dark:text-gray-300">{t.businessName}</p>

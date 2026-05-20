@@ -69,8 +69,8 @@ export default function SafetyPage() {
                       {i === 3 ? (
                         <>
                           {step}{' '}
-                          <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">
-                            admin@aplusfitnessllc.com
+                          <a href="mailto:tribe@aplusfitnessllc.com" className="text-tribe-green hover:underline">
+                            tribe@aplusfitnessllc.com
                           </a>
                         </>
                       ) : (

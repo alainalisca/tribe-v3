@@ -56,8 +56,8 @@ export default function PrivacyPage() {
                       <p>{sec.contactLabel}</p>
                       <p className="font-semibold mt-2">
                         Email:{' '}
-                        <a href="mailto:admin@aplusfitnessllc.com" className="text-tribe-green hover:underline">
-                          admin@aplusfitnessllc.com
+                        <a href="mailto:tribe@aplusfitnessllc.com" className="text-tribe-green hover:underline">
+                          tribe@aplusfitnessllc.com
                         </a>
                       </p>
                       <p className="text-sm mt-2">{t.businessName}</p>
