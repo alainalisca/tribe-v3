@@ -17,16 +17,16 @@ export default function CommunityCard({ community, onClick }: CommunityCardProps
   const sportName = community.sport ? sportTranslations[community.sport]?.[language] || community.sport : null;
 
   return (
-    <Link href={`/communities/${community.id}`} onClick={onClick} className="block">
-      <div className="bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+    <Link href={`/communities/${community.id}`} onClick={onClick} className="block h-full">
+      <div className="h-full bg-white dark:bg-tribe-mid rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow flex flex-col">
         {/* Cover image — name-centered fallback when no cover_image_url */}
         {community.cover_image_url ? (
           <div
-            className="w-full h-40 bg-cover bg-center"
+            className="w-full h-40 flex-shrink-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${community.cover_image_url})` }}
           />
         ) : (
-          <div className="h-40 w-full bg-gradient-to-br from-tribe-green via-lime-500 to-emerald-600 relative overflow-hidden flex items-center justify-center p-4">
+          <div className="h-40 w-full flex-shrink-0 bg-gradient-to-br from-tribe-green via-lime-500 to-emerald-600 relative overflow-hidden flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 to-transparent" />
             <div className="relative z-10 text-center">
               <p className="text-2xl font-extrabold text-white tracking-tight leading-tight line-clamp-2">
@@ -39,21 +39,22 @@ export default function CommunityCard({ community, onClick }: CommunityCardProps
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4 space-y-3">
-          {/* Name and sport */}
+        {/* Content. flex-1 + mt-auto on the footer keeps every card the same
+            height even when description is missing (was uneven before). */}
+        <div className="p-4 flex flex-col flex-1">
           <div>
             <h3 className="font-semibold text-theme-primary line-clamp-2">{community.name}</h3>
             {sportName && <p className="text-xs text-stone-500 dark:text-gray-400 mt-1">{sportName}</p>}
           </div>
 
-          {/* Description */}
-          {community.description && (
-            <p className="text-sm text-stone-600 dark:text-gray-300 line-clamp-2">{community.description}</p>
-          )}
+          {/* Description — always rendered with a fixed line clamp so missing
+              descriptions don't shrink the card. */}
+          <p className="text-sm text-stone-600 dark:text-gray-300 line-clamp-2 mt-3 min-h-[2.5rem]">
+            {community.description || ''}
+          </p>
 
-          {/* Member count */}
-          <div className="flex items-center gap-1 text-xs text-stone-500 dark:text-gray-400">
+          {/* Member count pinned to bottom of card */}
+          <div className="flex items-center gap-1 text-xs text-stone-500 dark:text-gray-400 mt-auto pt-3">
             <Users className="w-4 h-4" />
             <span>
               {community.member_count} {language === 'es' ? 'miembros' : 'members'}
