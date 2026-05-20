@@ -31,6 +31,7 @@ const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal')
 // the home page actually renders for an authed user.
 const TribeWelcomeGuide = dynamic(() => import('@/components/TribeWelcomeGuide'), { ssr: false });
 import StoriesRow from '@/components/StoriesRow';
+import LazyMount from '@/components/LazyMount';
 import FilterBar from '@/components/home/FilterBar';
 import CityGreeting from '@/components/home/CityGreeting';
 import LiveNowSection from '@/components/home/LiveNowSection';
@@ -262,16 +263,17 @@ export default function HomePage() {
                 const visibleSessions = f.filteredSessions.slice(0, f.visibleCount);
 
                 // Discovery & banner slots keyed by position (after Nth session card)
+                // Discovery slots — anything below position 2 stays eager
+                // (it's likely above the fold). Everything from position 4
+                // onward is wrapped in <LazyMount> so its inner useEffect
+                // fetch doesn't fire until the user scrolls near it. Cuts
+                // ~7 simultaneous Supabase queries from first paint.
                 const discoverySlots: Record<number, React.ReactNode> = {
-                  // After 2nd card: social post preview + featured partner
+                  // After 2nd card: social post preview (eager — above fold for most viewports)
                   2: f.user ? <FeedPostPreview key="disc-post-preview" /> : null,
                   // After 3rd card: show AT MOST ONE banner in priority order.
-                  // Stacking all four was a wall of asks before the user had
-                  // even joined a session. Priority: complete-your-profile
-                  // for incomplete users (most relevant), then Streak for
-                  // returning users, then InstructorUpsell, then Referral.
-                  // Each child component returns null when it has nothing to
-                  // show, so the first-non-null pattern below picks one.
+                  // Eager so the profile-completion ask lands while the user
+                  // is still actively scrolling early cards.
                   3: f.user
                     ? (() => {
                         const profileIncomplete =
@@ -293,25 +295,55 @@ export default function HomePage() {
                         return <StreakBanner key="banner-streak" userId={f.user.id} />;
                       })()
                     : null,
+                  // After 4th card and onward: lazy-mount.
+                  4: f.user ? (
+                    <LazyMount key="disc-instructors-lazy" minHeight="200px">
+                      <FeaturedInstructors language={f.language} />
+                    </LazyMount>
+                  ) : null,
+                  5: f.user ? (
+                    <LazyMount key="disc-featured-partner-lazy" minHeight="150px">
+                      <FeaturedPartnerBanner />
+                    </LazyMount>
+                  ) : null,
+                  6: f.user ? (
+                    <LazyMount key="disc-partners-lazy" minHeight="200px">
+                      <FindTrainingPartners language={f.language} />
+                    </LazyMount>
+                  ) : null,
                   // After 7th card: instructor upsell (only for non-instructors)
                   7:
                     f.user && f.userProfile && !f.userProfile.is_instructor ? (
-                      <InstructorUpsellBanner key="banner-instructor-upsell" userId={f.user.id} language={f.language} />
+                      <LazyMount key="banner-instructor-upsell-lazy" minHeight="120px">
+                        <InstructorUpsellBanner userId={f.user.id} language={f.language} />
+                      </LazyMount>
                     ) : null,
-                  // After 10th card: referral (lowest priority — only shown to
-                  // engaged users who've scrolled this deep)
-                  10: f.user ? <ReferralBanner key="banner-referral" userId={f.user.id} /> : null,
-                  // After 4th card: FeaturedInstructors
-                  4: f.user ? <FeaturedInstructors key="disc-instructors" language={f.language} /> : null,
-                  // After 5th card: FeaturedPartnerBanner
-                  5: f.user ? <FeaturedPartnerBanner key="featured-partner" /> : null,
-                  6: f.user ? <FindTrainingPartners key="disc-partners" language={f.language} /> : null,
-                  9: f.user ? <LocalFitnessEventsSection key="disc-events" language={f.language} /> : null,
-                  12: f.user ? (
-                    <StoriesCarousel key="disc-stories" language={f.language} userId={f.user?.id || null} />
+                  9: f.user ? (
+                    <LazyMount key="disc-events-lazy" minHeight="240px">
+                      <LocalFitnessEventsSection language={f.language} />
+                    </LazyMount>
                   ) : null,
-                  15: f.user ? <PopularVenuesSection key="disc-venues" language={f.language} /> : null,
-                  18: f.user ? <PopularRoutesSection key="disc-routes" language={f.language} /> : null,
+                  // After 10th card: referral
+                  10: f.user ? (
+                    <LazyMount key="banner-referral-lazy" minHeight="120px">
+                      <ReferralBanner userId={f.user.id} />
+                    </LazyMount>
+                  ) : null,
+                  12: f.user ? (
+                    <LazyMount key="disc-stories-lazy" minHeight="180px">
+                      <StoriesCarousel language={f.language} userId={f.user?.id || null} />
+                    </LazyMount>
+                  ) : null,
+                  15: f.user ? (
+                    <LazyMount key="disc-venues-lazy" minHeight="220px">
+                      <PopularVenuesSection language={f.language} />
+                    </LazyMount>
+                  ) : null,
+                  18: f.user ? (
+                    <LazyMount key="disc-routes-lazy" minHeight="220px">
+                      <PopularRoutesSection language={f.language} />
+                    </LazyMount>
+                  ) : null,
                 };
 
                 const items: React.ReactNode[] = [];
