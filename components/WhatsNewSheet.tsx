@@ -60,23 +60,29 @@ export default function WhatsNewSheet() {
           return;
         }
 
-        // Suppress while new-user onboarding is incomplete. Onboarding flag
-        // lives in localStorage (`hasSeenOnboarding_{userId}`) per the
-        // existing OnboardingModal handoff in app/page.tsx.
-        if (typeof window !== 'undefined') {
-          const seen = window.localStorage.getItem(`hasSeenOnboarding_${user.id}`);
-          if (!seen) {
-            setState({ kind: 'hidden' });
-            return;
-          }
-        }
-
-        const [latestResult, lastSeenResult] = await Promise.all([
+        // Suppress while new-user onboarding is still up. The real
+        // "onboarding complete" signal lives in useHomeFeed.ts:
+        //   isProfileComplete = avatar_url && sports.length > 0
+        // The localStorage `hasSeenOnboarding_{userId}` flag only gets set
+        // when a user explicitly dismisses the OnboardingModal — established
+        // users (who joined before the modal existed, or whose profile was
+        // already complete) never trigger it. So treat "profile complete OR
+        // localStorage flag set" as "onboarding done, ok to show the sheet."
+        const [latestResult, lastSeenResult, profileProbe] = await Promise.all([
           getLatestReleaseNote(supabase),
           getUserLastSeenRelease(supabase, user.id),
+          supabase.from('users').select('avatar_url, sports').eq('id', user.id).maybeSingle(),
         ]);
 
         if (cancelled) return;
+
+        const flagSet = typeof window !== 'undefined' && !!window.localStorage.getItem(`hasSeenOnboarding_${user.id}`);
+        const profile = profileProbe.data as { avatar_url: string | null; sports: string[] | null } | null;
+        const profileComplete = !!profile?.avatar_url && (profile?.sports?.length ?? 0) > 0;
+        if (!flagSet && !profileComplete) {
+          setState({ kind: 'hidden' });
+          return;
+        }
 
         if (!latestResult.success || !latestResult.data) {
           setState({ kind: 'hidden' });
