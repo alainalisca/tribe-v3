@@ -834,49 +834,65 @@ export default function InstructorOnboardingPage() {
 
         {/* Navigation Buttons */}
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-surface border-t border-stone-200 dark:border-gray-700 p-4 safe-area-bottom">
-          <div className="max-w-lg mx-auto flex gap-3">
-            {step > 1 && (
-              <button
-                onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-card flex items-center justify-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                {t.back}
-              </button>
-            )}
-            {step < 3 ? (
-              <button
-                onClick={() => {
-                  void haptic('light');
-                  setStep((s) => (s + 1) as 1 | 2 | 3);
-                }}
-                disabled={step === 1 && !form.name.trim()}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
-                  step === 1 && !form.name.trim()
-                    ? 'bg-stone-200 dark:bg-stone-600 text-stone-400 cursor-not-allowed'
-                    : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
-                }`}
-              >
-                {t.next}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            ) : (
+          <div className="max-w-lg mx-auto space-y-2">
+            <div className="flex gap-3">
+              {step > 1 && (
+                <button
+                  onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}
+                  className="flex-1 py-3 rounded-xl font-semibold text-sm bg-stone-100 dark:bg-tribe-mid text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-card flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {t.back}
+                </button>
+              )}
+              {step < 3 ? (
+                <button
+                  onClick={() => {
+                    void haptic('light');
+                    setStep((s) => (s + 1) as 1 | 2 | 3);
+                  }}
+                  disabled={step === 1 && !form.name.trim()}
+                  className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
+                    step === 1 && !form.name.trim()
+                      ? 'bg-stone-200 dark:bg-stone-600 text-stone-400 cursor-not-allowed'
+                      : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
+                  }`}
+                >
+                  {t.next}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleFinish}
+                  disabled={saving}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm bg-tribe-green text-slate-900 hover:bg-tribe-green flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <LoadingSpinner className="w-4 h-4" />
+                      {t.saving}
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5" />
+                      {t.finish}
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Skip & finish later — appears whenever the user has at least
+                a name (the minimum to be a real instructor account). They
+                can refine the rest from /profile/edit + the storefront
+                page later. Removes the "887-line gauntlet" feel by giving
+                instructors an opt-out at every step except the final one. */}
+            {step < 3 && form.name.trim() && !saving && (
               <button
                 onClick={handleFinish}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl font-bold text-sm bg-tribe-green text-slate-900 hover:bg-tribe-green flex items-center justify-center gap-2"
+                className="block mx-auto text-xs text-stone-500 dark:text-gray-400 hover:text-tribe-green underline-offset-2 hover:underline transition"
               >
-                {saving ? (
-                  <>
-                    <LoadingSpinner className="w-4 h-4" />
-                    {t.saving}
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    {t.finish}
-                  </>
-                )}
+                {language === 'es' ? 'Saltar y terminar después' : 'Skip and finish later'}
               </button>
             )}
           </div>
