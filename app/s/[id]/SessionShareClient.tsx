@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Calendar, Clock, MapPin, Users, Star, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -10,7 +9,8 @@ import { trackEvent } from '@/lib/analytics';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 
 import TribeWordmark from '@/components/TribeWordmark';
-interface SessionData {
+
+export interface InitialSession {
   id: string;
   title: string;
   sport: string;
@@ -33,71 +33,42 @@ interface SessionData {
   } | null;
 }
 
-export default function SessionShareClient() {
-  const params = useParams();
-  const sessionId = params.id as string;
+interface Props {
+  initialSession: InitialSession | null;
+  sessionId: string;
+}
+
+export default function SessionShareClient({ initialSession, sessionId }: Props) {
   const { language } = useLanguage();
   const supabase = createClient();
 
-  const [session, setSession] = useState<SessionData | null>(null);
+  // session is server-fetched — no client refetch on mount, no Loading flash.
+  // Only the auth user and live participant count are client-side.
+  const session = initialSession;
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    if (!session) return;
+    (async () => {
+      const [{ count }, userRes] = await Promise.all([
+        supabase
+          .from('session_participants')
+          .select('*', { count: 'exact', head: true })
+          .eq('session_id', sessionId)
+          .eq('status', 'confirmed'),
+        supabase.auth.getUser(),
+      ]);
+      setConfirmedCount(count ?? 0);
+      if (userRes.data?.user) setUserId(userRes.data.user.id);
+      trackEvent('session_viewed', { session_id: sessionId, source: 'public_share' });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  async function loadData() {
-    try {
-      const [sessionRes, userRes] = await Promise.all([
-        supabase
-          .from('sessions')
-          .select(
-            'id, title, sport, date, time, start_time, location_name, location_lat, location_lng, price, price_cents, currency, max_participants, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
-          )
-          .eq('id', sessionId)
-          .single(),
-        supabase.auth.getUser(),
-      ]);
-
-      if (sessionRes.data) {
-        const raw = sessionRes.data as any;
-        setSession({
-          ...raw,
-          creator: Array.isArray(raw.creator) ? raw.creator[0] : raw.creator,
-        });
-      }
-
-      if (userRes.data?.user) setUserId(userRes.data.user.id);
-
-      const { count } = await supabase
-        .from('session_participants')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionId)
-        .eq('status', 'confirmed');
-      setConfirmedCount(count ?? 0);
-
-      trackEvent('session_viewed', { session_id: sessionId, source: 'public_share' });
-    } catch {
-      // Session not found handled by null check
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-tribe-dark flex items-center justify-center">
-        <div className="animate-pulse text-white text-lg">Loading...</div>
-      </div>
-    );
-  }
-
   if (!session) {
     return (
-      <div className="min-h-screen bg-tribe-dark flex items-center justify-center p-6">
+      <div className="min-h-screen bg-theme-page flex items-center justify-center p-6">
         <div className="text-center">
           <TribeWordmark className="h-6 w-auto" />
           <p className="text-theme-tertiary mt-4">{language === 'es' ? 'Sesión no encontrada' : 'Session not found'}</p>
@@ -150,7 +121,7 @@ export default function SessionShareClient() {
       : 'Join This Session on Tribe';
 
   return (
-    <div className="min-h-screen bg-tribe-dark">
+    <div className="min-h-screen bg-theme-page">
       {/* Header */}
       <div className="px-6 pt-10 pb-4 text-center">
         <TribeWordmark className="h-6 w-auto" />
@@ -161,13 +132,13 @@ export default function SessionShareClient() {
 
       {/* Session Card */}
       <div className="max-w-lg mx-auto px-4 pb-10">
-        <div className="bg-tribe-surface rounded-2xl p-6 border border-tribe-mid space-y-5">
+        <div className="bg-theme-card rounded-2xl p-6 border border-theme space-y-5">
           {/* Sport tag + title */}
           <div>
             <span className="inline-block px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide mb-3">
               {session.sport}
             </span>
-            <h2 className="text-2xl font-bold text-white leading-tight">{session.title}</h2>
+            <h2 className="text-2xl font-bold text-theme-primary leading-tight">{session.title}</h2>
           </div>
 
           {/* Date & time */}
@@ -197,7 +168,7 @@ export default function SessionShareClient() {
 
           {/* Price + spots */}
           <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2 text-white font-semibold">
+            <div className="flex items-center gap-2 text-theme-primary font-semibold">
               <DollarSign className="w-4 h-4 text-tribe-green" />
               {priceDisplay}
             </div>
@@ -215,7 +186,7 @@ export default function SessionShareClient() {
 
           {/* Instructor */}
           {session.creator && (
-            <div className="flex items-center gap-3 pt-2 border-t border-tribe-mid">
+            <div className="flex items-center gap-3 pt-2 border-t border-theme">
               <div className="w-10 h-10 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden flex-shrink-0">
                 {session.creator.avatar_url ? (
                   <img
@@ -228,7 +199,7 @@ export default function SessionShareClient() {
                 )}
               </div>
               <div>
-                <p className="text-white font-semibold text-sm">{session.creator.name}</p>
+                <p className="text-theme-primary font-semibold text-sm">{session.creator.name}</p>
                 {rating != null && rating > 0 && (
                   <div className="flex items-center gap-1 text-xs text-theme-tertiary">
                     <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />

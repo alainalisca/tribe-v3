@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPopularNeighborhoods } from '@/lib/city-config';
 
+// TODO: Al — drop real cycling + running photos into /public/landing-cycling.jpg
+// and /public/landing-running.jpg, then swap the temporary reuse below.
+// Hosting locally avoids the Unsplash rate-limit / dead-photo risk that the
+// previous external URLs carried, and keeps the hero loading from one origin.
 const PHOTOS = {
   hero: '/landing-hero.jpg',
   rowers: '/landing-rowers.jpg',
   deadlift: '/landing-deadlift.jpg',
-  cycling: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80',
-  running: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80',
+  cycling: '/landing-rowers.jpg',
+  running: '/landing-deadlift.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
