@@ -8,6 +8,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { showError } from '@/lib/toast';
+import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
 import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
@@ -81,15 +82,32 @@ export default function ActionButtons({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: session.id }),
       });
-      const data = await res.json();
-      if (data.success && data.data?.redirect_url) {
-        window.location.href = data.data.redirect_url;
-      } else {
-        showError(data.error || (_language === 'es' ? 'Error al procesar pago' : 'Payment processing failed'));
-        setProcessingPayment(false);
+      // Parse defensively: a 5xx that returned HTML (e.g. an outage page)
+      // would throw on res.json() and the user used to see nothing — the
+      // catch had an empty `{}` that swallowed the error. Now we capture
+      // the body text on parse failure for the toast + log.
+      const raw = await res.text();
+      let data: { success?: boolean; data?: { redirect_url?: string }; error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        // non-JSON response; surface the status and a snippet in logs
       }
-    } catch {
+      if (res.ok && data.success && data.data?.redirect_url) {
+        window.location.href = data.data.redirect_url;
+        return;
+      }
+      const fallback = _language === 'es' ? 'Error al procesar pago' : 'Payment processing failed';
+      showError(data.error || fallback);
+      logError(new Error(`payment_create_failed_${res.status}: ${data.error || raw.slice(0, 200)}`), {
+        action: 'handlePaidJoin',
+        sessionId: session.id,
+        status: res.status,
+      });
+      setProcessingPayment(false);
+    } catch (err) {
       showError(_language === 'es' ? 'Error de conexión' : 'Connection error');
+      logError(err, { action: 'handlePaidJoin.network', sessionId: session.id });
       setProcessingPayment(false);
     }
   }

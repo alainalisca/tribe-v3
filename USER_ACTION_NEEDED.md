@@ -9,7 +9,7 @@ Updated per fix. Items grouped by what they need from you.
 
 ## Env vars to set/verify in Vercel
 
-_(none yet)_
+- **BUG-003 (Pay & Join):** If the button now shows a clear toast like "Failed to create Wompi transaction" or "Payment already completed", that's diagnostic of the real cause. Make sure these are set in **Preview** env (not just Production): `WOMPI_PUBLIC_KEY`, `WOMPI_PRIVATE_KEY`, `WOMPI_SANDBOX=true`. For USD paths: `STRIPE_SECRET_KEY` + webhooks pointed at the deployed URL. Without these the route returns a 5xx and the button looked silent before this fix; now it always toasts + logs.
 
 ## Supabase Storage buckets / RLS to configure
 
