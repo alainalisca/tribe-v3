@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 import {
   fetchSessionComments,
   insertSessionComment,
@@ -28,6 +29,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
   const [expanded, setExpanded] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [fetchFailed, setFetchFailed] = useState(false);
 
   const isEs = language === 'es';
 
@@ -36,12 +38,22 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
 
     const loadComments = async () => {
       setLoading(true);
+      setFetchFailed(false);
       try {
         const result = await fetchSessionComments(supabase, sessionId);
         if (result.success && result.data) {
           setComments(result.data);
+        } else {
+          // Distinguish "no comments" from "fetch failed" so the empty
+          // state isn't misleading (table missing / RLS blocked / 404).
+          setFetchFailed(true);
+          logError(new Error(result.error || 'fetchSessionComments failed'), {
+            action: 'loadSessionComments',
+            sessionId,
+          });
         }
       } catch (error) {
+        setFetchFailed(true);
         logError(error, { action: 'loadSessionComments', sessionId });
       } finally {
         setLoading(false);
@@ -61,8 +73,16 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
       if (result.success && result.data) {
         setComments((prev) => [...prev, result.data!]);
         setNewComment('');
+      } else {
+        // Send-failure used to be silent ("nothing happens"). Tell the user.
+        showError(isEs ? 'No se pudo enviar la pregunta.' : 'Could not send question.');
+        logError(new Error(result.error || 'insertSessionComment failed'), {
+          action: 'addSessionComment',
+          sessionId,
+        });
       }
     } catch (error) {
+      showError(isEs ? 'No se pudo enviar la pregunta.' : 'Could not send question.');
       logError(error, { action: 'addSessionComment', sessionId });
     } finally {
       setSubmitting(false);
@@ -74,8 +94,15 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
       const result = await deleteSessionComment(supabase, commentId);
       if (result.success) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
+      } else {
+        showError(isEs ? 'No se pudo eliminar.' : 'Could not delete.');
+        logError(new Error(result.error || 'deleteSessionComment failed'), {
+          action: 'deleteSessionComment',
+          sessionId,
+        });
       }
     } catch (error) {
+      showError(isEs ? 'No se pudo eliminar.' : 'Could not delete.');
       logError(error, { action: 'deleteSessionComment', sessionId });
     }
   };
@@ -119,6 +146,10 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
           <div className="space-y-3 mt-3 max-h-96 overflow-y-auto">
             {loading && comments.length === 0 ? (
               <p className="text-sm text-theme-secondary">{isEs ? 'Cargando...' : 'Loading...'}</p>
+            ) : fetchFailed && comments.length === 0 ? (
+              <p className="text-sm text-theme-secondary italic py-2">
+                {isEs ? 'No se pudieron cargar las preguntas en este momento.' : "Couldn't load questions right now."}
+              </p>
             ) : comments.length === 0 ? (
               <p className="text-sm text-theme-secondary italic py-2">
                 {isEs
