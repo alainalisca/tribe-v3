@@ -181,16 +181,55 @@ export default function CreateCommunityPage() {
             </select>
           </div>
 
-          {/* Cover Image URL */}
+          {/* Cover Image — upload (with URL fallback for already-set images) */}
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-theme-primary">{t.coverImage}</label>
             <p className="text-xs text-stone-500 dark:text-gray-400">{t.coverImageHint}</p>
+            <div className="flex items-center gap-3">
+              <input
+                id="community-cover-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  // BUG-021: replaced the URL-only input with a real upload.
+                  // Falls back to the URL input below for already-hosted images.
+                  const file = e.target.files?.[0];
+                  if (!file || !userId) return;
+                  const path = `community-covers/${userId}-${Date.now()}.${file.name.split('.').pop()}`;
+                  const { error: upErr } = await supabase.storage
+                    .from('profile-images')
+                    .upload(path, file, { contentType: file.type, upsert: true });
+                  if (upErr) {
+                    logError(upErr, { action: 'communityCoverUpload' });
+                    return;
+                  }
+                  const {
+                    data: { publicUrl },
+                  } = supabase.storage.from('profile-images').getPublicUrl(path);
+                  setFormData((prev) => ({ ...prev, cover_image_url: publicUrl }));
+                }}
+              />
+              <label
+                htmlFor="community-cover-upload"
+                className="px-4 py-2 bg-tribe-green text-slate-900 rounded-lg font-semibold text-sm cursor-pointer hover:bg-lime-500 transition"
+              >
+                {language === 'es' ? 'Subir imagen' : 'Upload image'}
+              </label>
+              {formData.cover_image_url && (
+                <img
+                  src={formData.cover_image_url}
+                  alt=""
+                  className="w-12 h-12 rounded-lg object-cover border border-stone-200 dark:border-tribe-card"
+                />
+              )}
+            </div>
             <input
               type="url"
-              placeholder="https://example.com/image.jpg"
+              placeholder={language === 'es' ? 'O pega una URL de imagen' : 'Or paste an image URL'}
               value={formData.cover_image_url}
               onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent"
+              className="w-full px-4 py-3 bg-stone-100 dark:bg-tribe-mid rounded-lg border border-stone-200 dark:border-tribe-card text-theme-primary placeholder-stone-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-tribe-green focus:border-transparent text-sm"
             />
           </div>
 
