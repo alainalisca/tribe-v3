@@ -11,7 +11,7 @@ import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartn
 import { togglePostLike } from '@/lib/dal/instructorPosts';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
-import { showError } from '@/lib/toast';
+import { showError, showSuccess } from '@/lib/toast';
 
 export interface Instructor {
   id: string;
@@ -298,11 +298,16 @@ export function useStorefrontData(instructorId: string) {
           .eq('follower_id', currentUserId)
           .eq('following_id', instructorId);
         if (error) throw error;
+        // BUG-006: the button label flipped but with no follower-count
+        // display anywhere in the storefront, the user got no visible
+        // confirmation. A toast makes the success obvious.
+        showSuccess(language === 'es' ? 'Dejaste de seguir' : 'Unfollowed');
       } else {
         const { error } = await supabase
           .from('user_follows')
           .insert({ follower_id: currentUserId, following_id: instructorId });
         if (error) throw error;
+        showSuccess(language === 'es' ? 'Ahora sigues' : 'Following');
       }
     } catch (err) {
       // Roll back the optimistic update.
