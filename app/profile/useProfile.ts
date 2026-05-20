@@ -20,6 +20,7 @@ export function useProfile(language: 'en' | 'es') {
 
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
@@ -77,6 +78,9 @@ export function useProfile(language: 'en' | 'es') {
 
       const profileResult = await fetchUserProfile(supabase, authUser.id);
       setProfile(profileResult.data ?? null);
+      setDebugInfo(
+        `authId=${authUser.id} ok=${profileResult.success} err=${profileResult.error ?? 'none'} hasData=${!!profileResult.data} name=${profileResult.data?.name ?? 'null'}`
+      );
 
       const createdResult = await fetchSessionsByCreatorCount(supabase, authUser.id);
       const created = createdResult.success ? (createdResult.data ?? 0) : 0;
@@ -217,5 +221,6 @@ export function useProfile(language: 'en' | 'es') {
     displayedSports,
     getProfileCompleteness,
     router,
+    debugInfo,
   };
 }

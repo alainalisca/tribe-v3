@@ -34,6 +34,7 @@ export default function ProfilePage() {
     displayedSports,
     getProfileCompleteness,
     router,
+    debugInfo,
   } = useProfile(language);
 
   if (loading) {
@@ -48,6 +49,13 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-theme-page pb-32">
+      {/* TEMPORARY: profile-blank diagnostic — surfaces what fetchUserProfile
+          returned on the client. Remove once root-caused. */}
+      {debugInfo && (
+        <div className="fixed top-16 left-0 right-0 z-50 mx-2 mt-2 p-2 bg-red-50 dark:bg-red-900/40 border border-red-300 dark:border-red-700 rounded text-[10px] text-red-800 dark:text-red-200 break-words">
+          DEBUG: {debugInfo}
+        </div>
+      )}
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
