@@ -218,11 +218,13 @@ export default function SessionDetailPage() {
           onOpenLightbox={d.openLightbox}
         />
 
-        {/* Share button */}
+        {/* Share button — BUG-022: previously bg-theme-surface blended into
+            the page background. Tribe-green pill gives clear contrast in
+            light AND dark mode. */}
         <div className="flex justify-end">
           <button
             onClick={shareSession}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-surface border border-theme text-theme-primary hover:opacity-90 transition text-sm font-medium"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-tribe-green text-slate-900 hover:bg-lime-500 transition text-sm font-semibold"
           >
             <Share2 className="w-4 h-4" />
             {language === 'es' ? 'Compartir' : 'Share'}

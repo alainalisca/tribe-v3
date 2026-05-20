@@ -88,27 +88,36 @@ export default function InstructorCard({ instructor, language }: InstructorCardP
           <RatingStars rating={instructor.average_rating} reviews={instructor.total_reviews} language={language} />
         </div>
 
-        {/* Specialties */}
-        {instructor.specialties.length > 0 && (
-          <div className="mb-3">
-            <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1.5">{labels.specialties}</p>
-            <div className="flex flex-wrap gap-1">
-              {instructor.specialties.slice(0, 3).map((s, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-0.5 bg-tribe-green/20 text-tribe-green text-xs font-medium rounded-full"
-                >
-                  {s}
-                </span>
-              ))}
-              {instructor.specialties.length > 3 && (
-                <span className="px-2 py-0.5 bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-stone-400 text-xs font-medium rounded-full">
-                  +{instructor.specialties.length - 3}
-                </span>
-              )}
+        {/* Specialties — BUG-029/033: split slash- or comma-joined values
+            (some legacy rows have a single specialties[0] like
+            "Yoga/soundhealing/meditacion/...") into individual pills. */}
+        {(() => {
+          const tags = (instructor.specialties || [])
+            .flatMap((s) => s.split(/[\s]*[/,][\s]*/))
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (tags.length === 0) return null;
+          return (
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1.5">{labels.specialties}</p>
+              <div className="flex flex-wrap gap-1">
+                {tags.slice(0, 3).map((s, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 bg-tribe-green/20 text-tribe-green text-xs font-medium rounded-full"
+                  >
+                    {s}
+                  </span>
+                ))}
+                {tags.length > 3 && (
+                  <span className="px-2 py-0.5 bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-stone-400 text-xs font-medium rounded-full">
+                    +{tags.length - 3}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Stats */}
         <div className="space-y-2 mb-4 text-xs text-theme-secondary flex-grow">

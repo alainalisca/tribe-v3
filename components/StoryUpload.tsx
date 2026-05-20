@@ -33,6 +33,16 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   const [preview, setPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [caption, setCaption] = useState('');
+  // BUG-036: on desktop web there's no real camera access via <input type=file>
+  // — it just opens the file picker. "Photo or Camera" reads as a lie there.
+  // Detect native (Capacitor) and label accordingly.
+  const [isNative, setIsNative] = useState(false);
+  useEffect(() => {
+    import('@capacitor/core')
+      .then(({ Capacitor }) => setIsNative(!!Capacitor?.isNativePlatform?.()))
+      .catch(() => setIsNative(false));
+  }, []);
+  const photoLabel = isNative ? t.takePhoto : language === 'es' ? 'Subir foto' : 'Upload Photo';
   const [uploading, setUploading] = useState(false);
 
   // Lock body scroll while modal is open
@@ -227,7 +237,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
             <div className="relative w-full">
               <div className="flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold">
                 <Camera className="w-5 h-5" />
-                {t.takePhoto}
+                {photoLabel}
               </div>
               <input
                 type="file"
