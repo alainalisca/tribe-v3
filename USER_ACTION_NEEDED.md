@@ -26,10 +26,12 @@ _(none yet)_
 
 ## Native (Capacitor) work that needs a native build/release
 
-_(none yet)_
+- **BUG-031 (Calendar UX):** web users now get a toast confirming the `.ics` file was downloaded. On native iOS/Android the `.ics` will also download — iOS will offer to open in Calendar.app via the share sheet. If you want a native "Add to Calendar" button that writes directly to the device calendar (no file step), we need the `@capacitor-community/calendar` plugin + a new native build. Low priority — the current flow works on both web and native.
 
 ## Notes on bugs I marked deferred or partial
 
 - **BUG-020 (Onboarding modal re-pops):** the dark-theme half is fixed (QuickGuide now uses theme tokens — respects light/dark). The persistence half stays on localStorage, which still gets cleared in incognito / cache clears / new device. A robust cross-device fix needs either a `users.seen_guides jsonb` column or use of `auth.user_metadata`. Both require a small effort I can do later; the current state is "mostly persistent on the same browser." Flag this as a follow-up.
 - **BUG-018 (Tip modal copy):** superseded by #7 — tips are real charges now, the existing "Say thanks to {name}" / "100% goes to {name}" copy is correct. The QA confusion was that Al's test account is literally named "tribe".
 - **BUG-023 (Map artifact), BUG-035 (Banner reposition), BUG-037 (Referral tracking backend)** — deferred per the spec.
+- **BUG-032 (Consistent loading state):** I consolidated the three biggest page-level spinners (`/promote`, `/promote/boosts`, `/subscriptions`) onto the shared `LoadingSpinner`. Inline spinners inside buttons / small contexts (StoryUpload upload state, PhotoUploadSection, AttendanceTracker, etc.) were left alone — they're size-specific and switching them to the shared component would actually look worse. If the goal is a stricter sweep, flag it and I'll do another pass.
+- **BUG-015 (Local Fitness Events links):** the cards already read from `local_fitness_events` (DB-backed, not hardcoded). Now the entire card is a link when `website_url` is set, and shows a muted "Details coming soon" hint when not. If you want every card to be guaranteed-clickable, populate the `website_url` column for every row via `/admin/events`.

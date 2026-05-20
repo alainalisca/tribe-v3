@@ -17,7 +17,7 @@ Spec: `Claude_Code_QA_Round1_Bug_Fix_Spec.md.docx`. Updated per commit.
 
 - [x] BUG-006 Follow button does nothing (819ccd7 — toast on success)
 - [x] BUG-009 Tribe.OS attendance error messaging (d52ad1c — upgrade prompt)
-- [ ] BUG-010 Community banner upload (pending)
+- [x] BUG-010 Community banner upload error surfacing (be0ec59)
 - [x] BUG-011 Stripe Connect account create (fd9cdfa — surfaces real error)
 
 ## Session 2 — WRONG
@@ -25,7 +25,7 @@ Spec: `Claude_Code_QA_Round1_Bug_Fix_Spec.md.docx`. Updated per commit.
 - [x] BUG-012 "6+" neighborhoods → real count (9cf645f)
 - [x] BUG-013 WhatsApp emojis broken (9cf645f)
 - [x] BUG-014 Legal email admin@ → tribe@ (9cf645f)
-- [ ] BUG-015 Local Fitness Events links (pending — needs data audit)
+- [x] BUG-015 Local Fitness Events links (77ea205 — whole card clickable / hint)
 - [x] BUG-016 Pre-fill location on create (80c06c7)
 - [x] BUG-017 Referral reward copy (9cf645f)
 - [x] BUG-018 Tip modal copy (n/a — superseded by #7)
@@ -35,18 +35,18 @@ Spec: `Claude_Code_QA_Round1_Bug_Fix_Spec.md.docx`. Updated per commit.
 
 ## Session 3 — UGLY
 
-- [ ] BUG-022 Share button contrast
-- [ ] BUG-024 Host buttons layout
-- [ ] BUG-025 Tribe logo period
-- [ ] BUG-026 Storefront pb-24
-- [ ] BUG-027 Storefront fallback (banner/avatar/case)
-- [ ] BUG-028 Description formatting (links + line breaks)
-- [ ] BUG-029 / BUG-033 Sport tags as pills
-- [ ] BUG-030 Add Story modal centering
-- [ ] BUG-031 Calendar UX (web toast / native)
-- [ ] BUG-032 Consistent loading state
-- [ ] BUG-034 Profile photo lightbox
-- [ ] BUG-036 Desktop camera label
+- [x] BUG-022 Share button contrast (6aeb485)
+- [x] BUG-024 Host buttons layout (77ea205 — grid-cols-2 pairings)
+- [x] BUG-025 Tribe logo period → CSS circle (be0ec59 + bulk script)
+- [x] BUG-026 Storefront pb-24 (6aeb485)
+- [x] BUG-027 Storefront fallback / name capitalization (87ffddd)
+- [x] BUG-028 Description formatting (links + line breaks) (6aeb485)
+- [x] BUG-029 / BUG-033 Sport tags as pills (6aeb485)
+- [x] BUG-030 Add Story modal centering (87ffddd)
+- [x] BUG-031 Calendar UX toast (77ea205)
+- [x] BUG-032 Consistent loading state (77ea205 — three page-level spinners; rest are inline)
+- [x] BUG-034 Profile photo lightbox (77ea205 — own profile; /[userId] already had one)
+- [x] BUG-036 Desktop camera label (6aeb485)
 
 ## Deferred per spec
 
