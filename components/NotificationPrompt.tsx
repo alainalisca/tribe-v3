@@ -34,11 +34,25 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
     setUserId(user.id);
 
+    // Don't ambush users on their first home visit. Record the first-visit
+    // timestamp on this device, and only prompt on subsequent visits — by
+    // then the user has seen what Tribe is and the ask makes sense. Also
+    // require a 1-minute gap so the prompt doesn't pop while they're
+    // actively scrolling through cards.
+    const firstVisitKey = `tribe_first_home_visit_${user.id}`;
+    const firstVisit = localStorage.getItem(firstVisitKey);
+    if (!firstVisit) {
+      localStorage.setItem(firstVisitKey, Date.now().toString());
+      return;
+    }
+    const msSinceFirstVisit = Date.now() - Number(firstVisit);
+    if (msSinceFirstVisit < 60_000) return;
+
     const hasAsked = localStorage.getItem('notification-prompt-shown');
     const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied';
 
     if (!hasAsked && permission === 'default') {
-      setTimeout(() => setShow(true), 5000);
+      setTimeout(() => setShow(true), 10_000);
     }
   }
 

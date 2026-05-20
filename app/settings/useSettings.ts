@@ -199,9 +199,24 @@ export function useSettings(language: 'en' | 'es') {
         const permission = await Notification.requestPermission();
         if (permission === 'granted' && user?.id) {
           const { requestNotificationPermission } = await import('@/lib/notifications');
-          await requestNotificationPermission(user.id);
-          setNotificationsEnabled(true);
-          showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+          try {
+            await requestNotificationPermission(user.id);
+            setNotificationsEnabled(true);
+            showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+          } catch (err) {
+            setNotificationsEnabled(false);
+            // PUSH_NOT_CONFIGURED → VAPID env var missing in this env. Distinct
+            // from generic failure so the user knows it's not their fault.
+            if (err instanceof Error && err.message === 'PUSH_NOT_CONFIGURED') {
+              showError(
+                language === 'en'
+                  ? "Push notifications aren't set up on this environment yet. Try again from the production app."
+                  : 'Las notificaciones push aún no están configuradas en este entorno. Intenta desde la app de producción.'
+              );
+            } else {
+              throw err;
+            }
+          }
         } else {
           setNotificationsEnabled(false);
         }
@@ -209,6 +224,11 @@ export function useSettings(language: 'en' | 'es') {
     } catch (error) {
       logError(error, { action: 'toggleNotifications' });
       setNotificationsEnabled(false);
+      showError(
+        language === 'en'
+          ? 'Could not enable notifications. Check your device settings.'
+          : 'No se pudieron activar las notificaciones. Revisa la configuración de tu dispositivo.'
+      );
     }
   }
 

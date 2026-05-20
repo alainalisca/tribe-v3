@@ -265,24 +265,42 @@ export default function HomePage() {
                 const discoverySlots: Record<number, React.ReactNode> = {
                   // After 2nd card: social post preview + featured partner
                   2: f.user ? <FeedPostPreview key="disc-post-preview" /> : null,
-                  // After 3rd card: banners (ProfileCompletion, Streak, Referral, InstructorUpsell)
-                  3: f.user ? (
-                    <div key="banners" className="space-y-3">
-                      {f.userProfile && (
-                        <ProfileCompletionBanner
-                          hasPhoto={!!f.userProfile.avatar_url}
-                          hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
-                          hasName={!!f.userProfile.name}
-                          userId={f.user.id}
-                        />
-                      )}
-                      <StreakBanner userId={f.user.id} />
-                      <ReferralBanner userId={f.user.id} />
-                      {f.userProfile && !f.userProfile.is_instructor && (
-                        <InstructorUpsellBanner userId={f.user.id} language={f.language} />
-                      )}
-                    </div>
-                  ) : null,
+                  // After 3rd card: show AT MOST ONE banner in priority order.
+                  // Stacking all four was a wall of asks before the user had
+                  // even joined a session. Priority: complete-your-profile
+                  // for incomplete users (most relevant), then Streak for
+                  // returning users, then InstructorUpsell, then Referral.
+                  // Each child component returns null when it has nothing to
+                  // show, so the first-non-null pattern below picks one.
+                  3: f.user
+                    ? (() => {
+                        const profileIncomplete =
+                          f.userProfile &&
+                          (!f.userProfile.avatar_url ||
+                            !f.userProfile.name ||
+                            !(f.userProfile.sports && f.userProfile.sports.length > 0));
+                        if (profileIncomplete && f.userProfile) {
+                          return (
+                            <ProfileCompletionBanner
+                              key="banner-profile"
+                              hasPhoto={!!f.userProfile.avatar_url}
+                              hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
+                              hasName={!!f.userProfile.name}
+                              userId={f.user.id}
+                            />
+                          );
+                        }
+                        return <StreakBanner key="banner-streak" userId={f.user.id} />;
+                      })()
+                    : null,
+                  // After 7th card: instructor upsell (only for non-instructors)
+                  7:
+                    f.user && f.userProfile && !f.userProfile.is_instructor ? (
+                      <InstructorUpsellBanner key="banner-instructor-upsell" userId={f.user.id} language={f.language} />
+                    ) : null,
+                  // After 10th card: referral (lowest priority — only shown to
+                  // engaged users who've scrolled this deep)
+                  10: f.user ? <ReferralBanner key="banner-referral" userId={f.user.id} /> : null,
                   // After 4th card: FeaturedInstructors
                   4: f.user ? <FeaturedInstructors key="disc-instructors" language={f.language} /> : null,
                   // After 5th card: FeaturedPartnerBanner

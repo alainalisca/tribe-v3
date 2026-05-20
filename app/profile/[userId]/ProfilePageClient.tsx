@@ -414,7 +414,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
                 className="w-full py-3 border-2 border-tribe-green text-tribe-green font-semibold hover:bg-tribe-green hover:text-slate-900 transition"
               >
                 <UserPlus className="w-5 h-5 mr-2" />
-                {language === 'es' ? 'Invitar a Sesion' : 'Invite to Session'}
+                {language === 'es' ? 'Invitar a sesión' : 'Invite to Session'}
               </Button>
             </div>
           )}

@@ -145,16 +145,19 @@ function MarketingFooter() {
           <p className="text-sm text-gray-500 mb-4">
             {t('Never Train Alone in Medellín', 'Nunca Entrenes Solo en Medellín')}
           </p>
-          {/* TODO: Al — add real App Store / Play Store badge images to public/images/ */}
           <div className="flex gap-3">
             <a
-              href="https://apps.apple.com" // TODO: Al — replace with real App Store URL
+              href="https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258"
+              target="_blank"
+              rel="noopener noreferrer"
               className="block px-3 py-1.5 border border-tribe-mid rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
             >
               App Store
             </a>
             <a
-              href="https://play.google.com" // TODO: Al — replace with real Play Store URL
+              href="https://play.google.com/store/apps/details?id=prod.tribe.android"
+              target="_blank"
+              rel="noopener noreferrer"
               className="block px-3 py-1.5 border border-tribe-mid rounded-lg text-xs text-gray-400 hover:text-white transition-colors"
             >
               Google Play
@@ -194,22 +197,13 @@ function MarketingFooter() {
               </Link>
             </li>
             <li>
-              {/* TODO: Al — replace with real support email */}
-              <a href="mailto:support@tribe.fitness" className="hover:text-white transition-colors">
+              <a href="mailto:tribe@aplusfitnessllc.com" className="hover:text-white transition-colors">
                 {t('Contact', 'Contacto')}
               </a>
             </li>
-            <li>
-              {/* TODO: Al — replace TRIBE_HANDLE with real Instagram handle */}
-              <a
-                href="https://instagram.com/TRIBE_HANDLE"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
-              >
-                Instagram
-              </a>
-            </li>
+            {/* Instagram link removed until a real handle exists — broken
+                placeholder links read worse than no link. Add back here when
+                the account is live. */}
           </ul>
         </div>
 

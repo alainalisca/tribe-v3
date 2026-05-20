@@ -4,23 +4,22 @@
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getSafetyContent } from '../legalTranslations';
 
 export default function SafetyPage() {
   const { language } = useLanguage();
+  const router = useRouter();
   const t = getSafetyContent(language);
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid safe-area-top">
       <div className="bg-stone-200 dark:bg-tribe-dark p-4 border-b border-stone-300 dark:border-black">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <Link href="/settings">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
-            </Button>
-          </Link>
+          <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Back">
+            <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white" />
+          </Button>
           <h1 className="text-xl font-bold text-stone-900 dark:text-white">{t.title}</h1>
         </div>
       </div>

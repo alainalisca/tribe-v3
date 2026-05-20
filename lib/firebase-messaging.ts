@@ -267,12 +267,19 @@ export async function registerForPushNotifications(userId: string): Promise<stri
     // Use web push for browser
     log('debug', 'Using web push for browser', { action: 'registerForPushNotifications', userId });
     const { requestNotificationPermission } = await import('@/lib/notifications');
-    const subscription = await requestNotificationPermission(userId);
-    log('debug', 'Web push registration complete', {
-      action: 'registerForPushNotifications',
-      userId,
-      subscriptionObtained: subscription !== null,
-    });
-    return subscription ? 'web-push' : null;
+    try {
+      const subscription = await requestNotificationPermission(userId);
+      log('debug', 'Web push registration complete', {
+        action: 'registerForPushNotifications',
+        userId,
+        subscriptionObtained: subscription !== null,
+      });
+      return subscription ? 'web-push' : null;
+    } catch (err) {
+      // PUSH_NOT_CONFIGURED bubbles up from missing VAPID env. Log and return
+      // null — caller decides how (or whether) to surface this to the user.
+      log('warn', 'Web push registration threw', { action: 'registerForPushNotifications', userId });
+      return null;
+    }
   }
 }

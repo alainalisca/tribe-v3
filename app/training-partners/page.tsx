@@ -26,11 +26,11 @@ const SPORTS_LIST = [
 
 function getTranslations(language: 'en' | 'es') {
   return {
-    title: language === 'es' ? 'Companeros de Entrenamiento' : 'Training Partners',
+    title: language === 'es' ? 'Compañeros de Entrenamiento' : 'Training Partners',
     search: language === 'es' ? 'Buscar por nombre...' : 'Search by name...',
     allSports: language === 'es' ? 'Todo' : 'All',
-    noResults: language === 'es' ? 'No hay atletas cerca aun' : 'No athletes nearby yet',
-    noResultsDesc: language === 'es' ? 'Se el primero en crear una sesion!' : 'Be the first to create a session!',
+    noResults: language === 'es' ? 'No hay atletas cerca aún' : 'No athletes nearby yet',
+    noResultsDesc: language === 'es' ? '¡Sé el primero en crear una sesión!' : 'Be the first to create a session!',
     loading: language === 'es' ? 'Cargando...' : 'Loading...',
   };
 }

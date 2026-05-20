@@ -107,7 +107,7 @@ export default function InstructorShareClient() {
   const rating = profile.average_rating;
   const sports = profile.sports ?? [];
   const ctaHref = userId ? `/profile/${profile.id}` : `/auth`;
-  const ctaLabel = language === 'es' ? 'Reserva una Sesion' : 'Book a Session';
+  const ctaLabel = language === 'es' ? 'Reserva una sesión' : 'Book a Session';
 
   return (
     <div className="min-h-screen bg-tribe-dark">
@@ -188,7 +188,7 @@ export default function InstructorShareClient() {
         {sessions.length > 0 && (
           <div className="bg-tribe-surface rounded-2xl p-6 border border-tribe-mid">
             <h3 className="text-lg font-bold text-white mb-4">
-              {language === 'es' ? 'Proximas Sesiones' : 'Upcoming Sessions'}
+              {language === 'es' ? 'Próximas sesiones' : 'Upcoming Sessions'}
             </h3>
             <div className="space-y-3">
               {sessions.map((s) => {

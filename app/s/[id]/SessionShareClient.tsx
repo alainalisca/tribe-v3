@@ -100,7 +100,7 @@ export default function SessionShareClient() {
       <div className="min-h-screen bg-tribe-dark flex items-center justify-center p-6">
         <div className="text-center">
           <TribeWordmark className="h-6 w-auto" />
-          <p className="text-theme-tertiary mt-4">{language === 'es' ? 'Sesion no encontrada' : 'Session not found'}</p>
+          <p className="text-theme-tertiary mt-4">{language === 'es' ? 'Sesión no encontrada' : 'Session not found'}</p>
           <Link href="/" className="mt-6 inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg">
             {language === 'es' ? 'Ir a Tribe' : 'Go to Tribe'}
           </Link>
@@ -146,7 +146,7 @@ export default function SessionShareClient() {
       ? 'Reservar Ahora'
       : 'Book Now'
     : language === 'es'
-      ? 'Unete a Esta Sesion en Tribe'
+      ? 'Únete a esta sesión en Tribe'
       : 'Join This Session on Tribe';
 
   return (

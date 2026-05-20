@@ -334,7 +334,7 @@ function CreateSessionPageInner() {
           <div className="bg-theme-card rounded-2xl p-6 border border-theme text-center space-y-4">
             <div className="text-5xl mb-2">🎉</div>
             <h2 className="text-xl font-bold text-theme-primary">
-              {language === 'es' ? 'Sesion Creada!' : 'Session Created!'}
+              {language === 'es' ? '¡Sesión creada!' : 'Session Created!'}
             </h2>
             <p className="text-sm text-theme-secondary">
               {language === 'es'
@@ -389,7 +389,7 @@ function CreateSessionPageInner() {
                 className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
                   bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
               >
-                {language === 'es' ? 'Ver Sesion' : 'View Session'}
+                {language === 'es' ? 'Ver sesión' : 'View Session'}
               </Link>
 
               {/* Go home */}
