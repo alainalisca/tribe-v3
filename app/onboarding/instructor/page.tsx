@@ -353,6 +353,10 @@ export default function InstructorOnboardingPage() {
         website_url: form.website_url || null,
         storefront_tagline: form.storefront_tagline || null,
         storefront_banner_url: form.storefront_banner_url || null,
+        // BUG-007: dual-write the banner to both columns so the /profile
+        // page (which reads banner_url) and the storefront page (which
+        // reads storefront_banner_url) both display the uploaded image.
+        banner_url: form.storefront_banner_url || null,
         earnings_currency: form.earnings_currency,
         photos: form.photos,
       };

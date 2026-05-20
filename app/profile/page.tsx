@@ -65,11 +65,20 @@ export default function ProfilePage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
-        {/* Banner */}
+        {/* Banner. Onboarding writes to storefront_banner_url, the profile
+            page historically read banner_url — falling back so the
+            uploaded banner shows up regardless of which column wrote it
+            (BUG-007). */}
         <div className="relative h-48 overflow-hidden">
           <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
-            {profile?.banner_url && (
-              <Image src={profile.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />
+            {(profile?.banner_url || profile?.storefront_banner_url) && (
+              <Image
+                src={(profile?.banner_url || profile?.storefront_banner_url)!}
+                alt="Profile banner"
+                fill
+                className="object-cover"
+                unoptimized
+              />
             )}
           </div>
           <div className="absolute bottom-4 right-4 z-30">
