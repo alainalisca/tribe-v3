@@ -9,6 +9,7 @@ import { deleteSession as dalDeleteSession, updateUser } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { formatDistance, calculateDistance } from '@/lib/distance';
+import { getSessionShareUrl } from '@/lib/share';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
@@ -48,7 +49,11 @@ export function useSessionActions({
         language === 'es'
           ? `¡Únete a ${session.sport} el ${new Date(session.date + 'T00:00:00').toLocaleDateString('es-ES')}! Nunca entrenes solo 💪`
           : `Join me for ${session.sport} on ${new Date(session.date + 'T00:00:00').toLocaleDateString('en-US')}! Never train alone 💪`;
-      const shareUrl = `${window.location.origin}/session/${session.id}`;
+      // Use the /s/[id] public share route — it has server-rendered OG
+      // metadata (title, description, preview image) so WhatsApp/IG unfurl
+      // it into a rich card. /session/[id] is the authed app page with no
+      // OG tags, which is why shared links showed as a naked blue URL.
+      const shareUrl = getSessionShareUrl(session.id);
       if (navigator.share) {
         navigator.share({ title: 'Tribe - ' + session.sport, text: shareText, url: shareUrl }).catch(() => {});
       } else {

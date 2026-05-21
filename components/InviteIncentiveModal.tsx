@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
-import { copyToClipboard } from '@/lib/share';
+import { copyToClipboard, getSessionShareUrl } from '@/lib/share';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface InviteIncentiveModalProps {
@@ -50,8 +50,10 @@ export default function InviteIncentiveModal({
 
   const t = txt[language as keyof typeof txt] || txt.en;
 
-  const inviteLink =
-    typeof window !== 'undefined' ? `${window.location.origin}/session/${sessionId}?invite=true` : `${sessionId}`;
+  // /s/[id] public share route (OG-enabled preview) + invite marker. The
+  // share page ignores the query param; it rides along so the destination
+  // can attribute the invite after the recipient clicks through.
+  const inviteLink = `${getSessionShareUrl(sessionId)}?invite=true`;
 
   const handleCopyLink = async () => {
     // Was an unguarded await — a blocked clipboard threw an unhandled
