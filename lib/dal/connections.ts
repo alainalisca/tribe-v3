@@ -400,7 +400,8 @@ export async function fetchTrainingPartners(
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, name, avatar_url, sports, location_lat, location_lng')
-        .in('id', potentialPartners);
+        .in('id', potentialPartners)
+        .is('deleted_at', null);
 
       if (usersError) return { success: false, error: usersError.message };
 
@@ -477,7 +478,8 @@ export async function fetchTrainingPartners(
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, name, avatar_url, sports, location_lat, location_lng')
-      .in('id', partnerIds);
+      .in('id', partnerIds)
+      .is('deleted_at', null);
 
     if (usersError) return { success: false, error: usersError.message };
 
@@ -562,6 +564,7 @@ export async function fetchNearbyAthletes(
       .from('users')
       .select('id, name, avatar_url, sports, location_lat, location_lng')
       .neq('id', userId)
+      .is('deleted_at', null)
       .not('location_lat', 'is', null)
       .not('location_lng', 'is', null);
 

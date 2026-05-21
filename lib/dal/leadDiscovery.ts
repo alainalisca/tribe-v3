@@ -62,6 +62,7 @@ export async function fetchSeekingAthletes(
         'id, name, avatar_url, seeking_trainer_sports, seeking_trainer_budget, seeking_trainer_schedule, seeking_trainer_note, location'
       )
       .eq('seeking_trainer', true)
+      .is('deleted_at', null)
       .range(offset, offset + limit - 1);
 
     if (sport) query = query.contains('seeking_trainer_sports', [sport]);

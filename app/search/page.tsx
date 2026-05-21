@@ -114,11 +114,12 @@ export default function SearchPage() {
       try {
         const query = `%${searchQuery}%`;
 
-        // Search people
+        // Search people (exclude soft-deleted accounts)
         const { data: usersData } = await supabase
           .from('users')
           .select('id, name, avatar_url, bio')
           .ilike('name', query)
+          .is('deleted_at', null)
           .limit(10);
 
         // Search communities
