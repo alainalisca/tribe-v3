@@ -67,11 +67,12 @@ export default function FirstMoverCTA({ locationName, language }: FirstMoverCTAP
         {buttonText} <span aria-hidden="true">→</span>
       </Link>
 
-      {/* Confidence note */}
+      {/* Honest framing — Tribe is pre-beta. No "thousands of people"
+          inflation. Founders narrative travels better anyway. */}
       <p className="text-xs text-stone-500 dark:text-gray-400 pt-2">
         {lang === 'es'
-          ? 'Tu sesión sera visible para miles de personas en tu area'
-          : 'Your session will be visible to thousands of people in your area'}
+          ? 'Sé uno de los fundadores de Tribe en tu barrio'
+          : 'Be one of the founders of Tribe in your neighborhood'}
       </p>
     </div>
   );

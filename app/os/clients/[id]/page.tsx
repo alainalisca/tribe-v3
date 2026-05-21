@@ -18,6 +18,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { formatCents, formatPaidTotal, formatShortDate } from '@/lib/format/currency';
 import { isValidUuid } from '@/lib/validations/uuid';
 import { buildWhatsAppUrl } from '@/lib/phone';
@@ -871,7 +872,7 @@ function Stat({
         <p className="text-lg font-bold text-gray-900 truncate">{value}</p>
         {badge}
       </div>
-      {sublabel ? <p className="text-[10px] text-gray-400 mt-0.5">{sublabel}</p> : null}
+      {sublabel ? <p className="text-[10px] text-theme-tertiary mt-0.5">{sublabel}</p> : null}
     </div>
   );
 }
@@ -916,6 +917,7 @@ function AttendanceListItem({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   // Refund flow state. Separate from editing because the refund is a
   // distinct forensic action (writes to gym_audit_log), and we don't
@@ -1006,7 +1008,16 @@ function AttendanceListItem({
 
   async function handleDelete() {
     if (deleting) return;
-    if (typeof window !== 'undefined' && !window.confirm(s.attEditConfirmDelete)) return;
+    if (
+      !(await confirm({
+        title: s.attDeleteAria,
+        message: s.attEditConfirmDelete,
+        confirmLabel: language === 'es' ? 'Eliminar' : 'Delete',
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
     setDeleting(true);
     setError(null);
     try {
@@ -1320,7 +1331,7 @@ function AttendanceListItem({
             onClick={startEdit}
             aria-label={s.attEditAria}
             title={s.attEditAria}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+            className="p-1.5 text-theme-tertiary hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>

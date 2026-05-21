@@ -14,6 +14,8 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { X, Image as ImageIcon, Loader } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { createPost, type PostType } from '@/lib/dal/instructorPosts';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
@@ -59,6 +61,9 @@ export default function PostComposer({ open, onClose, instructorId, language, on
   const [linkedSessionId, setLinkedSessionId] = useState<string>('');
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSessionLite[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEscapeKey(() => onClose(), open && !saving);
+  useBodyScrollLock(open);
 
   // Load the instructor's upcoming sessions once so the "link a session" dropdown
   // can populate. Intentionally narrow select to keep payload small.
@@ -196,13 +201,14 @@ export default function PostComposer({ open, onClose, instructorId, language, on
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={() => !saving && onClose()}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-tribe-card rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-md bg-white dark:bg-tribe-card rounded-t-2xl sm:rounded-2xl p-5 max-h-[90dvh] overflow-y-auto overscroll-contain"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-3">

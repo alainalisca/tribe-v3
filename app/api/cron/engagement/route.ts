@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { getRandomMessage, getMessageContent, replaceMessageVariables } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import {
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
   try {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isValidCronAuth(authHeader)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -143,7 +144,7 @@ export async function GET(request: Request) {
           try {
             await fetch(`${SITE_URL}/api/notifications/send`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
                 userId: user.id,
                 title: content.title,
@@ -224,7 +225,7 @@ export async function GET(request: Request) {
         batch.map(async (item) => {
           await fetch(`${SITE_URL}/api/notifications/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: item.userId,
               title: item.title,

@@ -89,17 +89,17 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
 
   if (loading) {
     return (
-      <div className="bg-[#3D4349] rounded-xl p-4">
-        <p className="text-xs text-gray-400">{t.loading}</p>
+      <div className="bg-theme-card rounded-xl p-4">
+        <p className="text-xs text-theme-tertiary">{t.loading}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#3D4349] rounded-xl p-4">
+    <div className="bg-theme-card rounded-xl p-4">
       <h3 className="text-sm font-semibold text-white mb-3">{t.heading}</h3>
       {sessions.length === 0 ? (
-        <p className="text-xs text-gray-400">{t.noSessions}</p>
+        <p className="text-xs text-theme-tertiary">{t.noSessions}</p>
       ) : (
         <ul className="space-y-2">
           {sessions.map((s) => {
@@ -119,8 +119,10 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${full ? 'bg-red-500' : 'bg-[#84cc16]'}`}
                     aria-hidden="true"
                   />
-                  <span className="text-xs text-gray-400 w-20 flex-shrink-0">{formatDayLabel(s.date, language)}</span>
-                  <span className="text-xs text-gray-400 w-16 flex-shrink-0">{s.start_time.slice(0, 5)}</span>
+                  <span className="text-xs text-theme-tertiary w-20 flex-shrink-0">
+                    {formatDayLabel(s.date, language)}
+                  </span>
+                  <span className="text-xs text-theme-tertiary w-16 flex-shrink-0">{s.start_time.slice(0, 5)}</span>
                   <span className="flex-1 truncate">{s.title || sportLabel}</span>
                   {full && <span className="text-[10px] uppercase text-red-400 font-semibold">{t.full}</span>}
                 </Link>

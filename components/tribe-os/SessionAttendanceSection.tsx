@@ -70,6 +70,9 @@ const copy = {
     method: { cash: 'Cash', transfer: 'Transfer', stripe: 'Stripe', other: 'Other' },
     saveSuccess: 'Attendance saved',
     addSuccess: 'Added to your client list',
+    upgradeTitle: 'Track attendance with Tribe.OS',
+    upgradeBody: 'Upgrade to Tribe.OS to mark client attendance and track payments per session.',
+    upgradeCta: 'Learn more',
   },
   // ES PENDING VERONICA REVIEW
   es: {
@@ -93,12 +96,16 @@ const copy = {
     method: { cash: 'Efectivo', transfer: 'Transferencia', stripe: 'Stripe', other: 'Otro' },
     saveSuccess: 'Asistencia guardada',
     addSuccess: 'Agregado a tu lista de clientes',
+    upgradeTitle: 'Registra asistencia con Tribe.OS',
+    upgradeBody: 'Activa Tribe.OS para marcar la asistencia de tus clientes y registrar pagos por sesión.',
+    upgradeCta: 'Más información',
   },
 } as const;
 
 type DataState =
   | { kind: 'loading' }
-  | { kind: 'hidden' } // not premium — section silently hidden
+  | { kind: 'hidden' } // not authenticated — render nothing
+  | { kind: 'upgrade' } // authenticated but not Tribe.OS premium — show upgrade CTA
   | { kind: 'error'; message: string }
   | {
       kind: 'ready';
@@ -141,7 +148,10 @@ export default function SessionAttendanceSection({ sessionId, isCreator }: Props
           .single();
         if (cancelled) return;
         if (premiumErr || !isTribeOSPremiumActive(premiumRow as PremiumRow)) {
-          setState({ kind: 'hidden' });
+          // BUG-009: non-premium creators used to see "Could not load
+          // attendance" — misleading because it's a feature gate, not a
+          // failure. Show a clear upgrade CTA instead.
+          setState({ kind: 'upgrade' });
           return;
         }
 
@@ -217,6 +227,19 @@ export default function SessionAttendanceSection({ sessionId, isCreator }: Props
       <div className="mt-4">
         {state.kind === 'loading' ? (
           <p className="py-6 text-center text-sm text-stone-500 dark:text-white/60">{s.loading}…</p>
+        ) : state.kind === 'upgrade' ? (
+          <div className="py-6 text-center space-y-3">
+            <p className="text-sm font-semibold text-stone-900 dark:text-white">{s.upgradeTitle}</p>
+            <p className="text-xs text-stone-500 dark:text-white/60 max-w-sm mx-auto leading-relaxed">
+              {s.upgradeBody}
+            </p>
+            <a
+              href="/os/dashboard/"
+              className="inline-block px-4 py-2 rounded-lg bg-tribe-green text-slate-900 font-bold text-xs hover:bg-lime-500 transition"
+            >
+              {s.upgradeCta}
+            </a>
+          </div>
         ) : state.kind === 'error' ? (
           <div className="py-6 text-center space-y-3">
             <AlertCircle className="w-6 h-6 text-tribe-red mx-auto" />

@@ -8,9 +8,13 @@ import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
+import AdminQuickAccess from '@/components/AdminQuickAccess';
+import WhatsNewBadge from '@/components/WhatsNewBadge';
 import { sportTranslations, TranslationKey } from '@/lib/translations';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
 
+import TribeWordmark from '@/components/TribeWordmark';
 interface FilterBarProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -57,6 +61,7 @@ export default function FilterBar({
   onNeighborhoodChange,
 }: FilterBarProps) {
   const fixedAreaRef = useRef<HTMLDivElement>(null);
+  const tr = useTranslations('home');
   const sports = Object.keys(sportTranslations);
 
   const measureFixed = useCallback(() => {
@@ -106,15 +111,16 @@ export default function FilterBar({
         <Link href="/profile" className="shrink-0">
           {/* Slightly larger so the wordmark dominates and the notification
               badge can't visually mash into the green dot. */}
-          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-white cursor-pointer leading-none tracking-tight">
-            Tribe<span className="text-tribe-green">.</span>
-          </h1>
+          <TribeWordmark className="h-6 w-auto" />
         </Link>
         <div className="flex items-center gap-2">
           {/* Premium-only shortcut to /os/dashboard. Renders nothing
               for non-premium users so the header stays clean for the
-              consumer app's main audience. */}
+              consumer app's main audience. Admin shortcut sits next
+              to it, also conditionally rendered. */}
+          <AdminQuickAccess />
           <TribeOSQuickAccess />
+          <WhatsNewBadge />
           <NotificationBell />
           <LanguageToggle />
         </div>
@@ -184,9 +190,9 @@ export default function FilterBar({
               onChange={(e) => setPricingFilter(e.target.value)}
               className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
             >
-              <option value="all">{language === 'es' ? 'Todos' : 'All'}</option>
-              <option value="free">{language === 'es' ? 'Gratis' : 'Free'}</option>
-              <option value="paid">{language === 'es' ? 'De pago' : 'Paid'}</option>
+              <option value="all">{tr('filterAll')}</option>
+              <option value="free">{tr('filterFree')}</option>
+              <option value="paid">{tr('filterPaid')}</option>
             </select>
           </div>
 

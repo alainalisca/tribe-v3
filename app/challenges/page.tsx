@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -103,7 +104,7 @@ export default function ChallengesPage() {
           setPublicChallenges(publicChallengesResult.data);
         }
       } catch (error) {
-        console.error('Error loading challenges:', error);
+        logError(error, { action: 'Error loading challenges' });
       } finally {
         setLoading(false);
       }

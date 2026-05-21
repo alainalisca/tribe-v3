@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import BottomNav from '@/components/BottomNav';
 import { useFeedback } from './useFeedback';
+import TribeWordmark from '@/components/TribeWordmark';
 
 export default function FeedbackPage() {
   const {
@@ -48,8 +49,9 @@ export default function FeedbackPage() {
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-3">
             <ArrowLeft className="w-6 h-6 text-theme-primary" />
           </Button>
-          <h1 className="text-xl font-bold text-theme-primary">
-            {t.pageTitle} Tribe<span className="text-tribe-green">.</span>
+          <h1 className="text-xl font-bold text-theme-primary flex items-center gap-1.5">
+            <span>{t.pageTitle}</span>
+            <TribeWordmark className="h-4 w-auto" />
           </h1>
         </div>
       </div>

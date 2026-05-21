@@ -130,22 +130,42 @@ export default function MyTrainingPage() {
   const handleShare = async () => {
     if (!stats) return;
     setSharing(true);
-    try {
-      const shareText = t.shareMessage(stats.totalSessions);
-      const shareUrl =
-        typeof window !== 'undefined' ? `${window.location.origin}/my-training` : 'https://tribe.app/my-training';
+    const shareText = t.shareMessage(stats.totalSessions);
+    const shareUrl =
+      typeof window !== 'undefined' ? `${window.location.origin}/my-training` : 'https://tribe.app/my-training';
+    const nav = typeof navigator !== 'undefined' ? navigator : undefined;
 
-      const nav: Navigator & {
-        share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
-      } = typeof navigator !== 'undefined' ? (navigator as Navigator) : ({} as Navigator);
-
-      if (typeof nav.share === 'function') {
-        await nav.share({ title: t.pageTitle, text: shareText, url: shareUrl });
-      } else if (nav.clipboard && typeof nav.clipboard.writeText === 'function') {
+    // Helper: copy to clipboard as the universal fallback.
+    const copyFallback = async () => {
+      if (nav?.clipboard?.writeText) {
         await nav.clipboard.writeText(`${shareText} ${shareUrl}`);
         showSuccess(t.shareCopied);
+        return true;
       }
-      await haptic('success');
+      return false;
+    };
+
+    try {
+      if (typeof nav?.share === 'function') {
+        try {
+          await nav.share({ title: t.pageTitle, text: shareText, url: shareUrl });
+          await haptic('success');
+        } catch (err) {
+          // AbortError = user dismissed the share sheet on purpose. Not a
+          // failure — say nothing. Any other rejection (common on desktop
+          // where navigator.share exists but isn't fully supported) falls
+          // back to clipboard.
+          if (err instanceof Error && err.name === 'AbortError') {
+            setSharing(false);
+            return;
+          }
+          const copied = await copyFallback();
+          if (!copied) showError(t.shareFailed);
+        }
+      } else {
+        const copied = await copyFallback();
+        if (!copied) showError(t.shareFailed);
+      }
       trackEvent('stats_shared', { total_sessions: stats.totalSessions });
     } catch {
       showError(t.shareFailed);

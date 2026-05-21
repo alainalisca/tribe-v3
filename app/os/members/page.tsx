@@ -72,7 +72,7 @@ const copy = {
       teams: 'Teams',
       tags: 'Tags',
       daysSinceLogin: 'Days Since Login',
-      sessions30d: 'Sessions (30d)',
+      sessions30d: 'Sessions',
       actions: 'Actions',
     },
     badge: { active: 'Active', watch: 'Watch', atRisk: 'At Risk', churned: 'Churned', lead: 'Lead' },
@@ -116,7 +116,7 @@ const copy = {
       teams: 'Equipos',
       tags: 'Etiquetas',
       daysSinceLogin: 'Días sin actividad',
-      sessions30d: 'Sesiones (30d)',
+      sessions30d: 'Sesiones',
       actions: 'Acciones',
     },
     badge: {
@@ -278,7 +278,7 @@ export default function MembersPage() {
         {/* Search bar + Add Member button (full-width row at top) */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-theme-tertiary absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="search"
               value={search}
@@ -484,10 +484,9 @@ function MembersTable({ rows, copy: s }: { rows: ClientWithStats[]; copy: typeof
   return (
     <div className="overflow-x-auto border-t border-gray-100">
       {/* Header — visible on lg+ */}
-      <div className="hidden lg:grid grid-cols-[2fr_1fr_1.2fr_1.4fr_1fr_1fr_0.8fr] gap-3 px-5 py-3 text-[10px] uppercase tracking-wider text-gray-400 font-semibold border-b border-gray-100">
+      <div className="hidden lg:grid grid-cols-[2fr_1fr_1.4fr_1fr_1fr_0.8fr] gap-3 px-5 py-3 text-[10px] uppercase tracking-wider text-theme-tertiary font-semibold border-b border-gray-100">
         <span>{s.columns.name}</span>
         <span>{s.columns.status}</span>
-        <span>{s.columns.teams}</span>
         <span>{s.columns.tags}</span>
         <span>{s.columns.daysSinceLogin}</span>
         <span>{s.columns.sessions30d}</span>
@@ -540,7 +539,7 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
   });
 
   return (
-    <li className="lg:grid lg:grid-cols-[2fr_1fr_1.2fr_1.4fr_1fr_1fr_0.8fr] lg:gap-3 lg:items-center px-5 py-3 hover:bg-gray-50 transition-colors">
+    <li className="lg:grid lg:grid-cols-[2fr_1fr_1.4fr_1fr_1fr_0.8fr] lg:gap-3 lg:items-center px-5 py-3 hover:bg-gray-50 transition-colors">
       {/* Name + email */}
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-9 h-9 rounded-full bg-tribe-green/20 text-tribe-dark font-bold flex items-center justify-center text-xs shrink-0">
@@ -559,15 +558,10 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
         <StatusBadge kind={displayStatus} copy={s} />
       </div>
 
-      {/* Teams — placeholder until Teams data model ships */}
-      <div className="mt-1 lg:mt-0">
-        <span className="text-xs text-gray-400">{s.noTeams}</span>
-      </div>
-
       {/* Tags */}
       <div className="mt-1 lg:mt-0 flex flex-wrap gap-1">
         {row.tags.length === 0 ? (
-          <span className="text-xs text-gray-400">{s.noTags}</span>
+          <span className="text-xs text-theme-tertiary">{s.noTags}</span>
         ) : (
           row.tags.slice(0, 3).map((t) => (
             <span
@@ -585,8 +579,9 @@ function MemberRow({ row, copy: s }: { row: ClientWithStats; copy: typeof copy.e
         <DaysSince days={ageDays} copy={s} />
       </div>
 
-      {/* Sessions 30d — placeholder using total_attended_count until
-          a 30-day rolling window is computed server-side. */}
+      {/* Lifetime sessions attended. Column is now labeled honestly
+          ("Sessions"), not "(30d)" — a rolling-window count is a
+          future enhancement, not a relabel. */}
       <div className="mt-1 lg:mt-0">
         <span className="text-xs font-semibold text-gray-700 tabular-nums">{row.total_attended_count}</span>
       </div>
@@ -641,7 +636,7 @@ function StatusBadge({
 }
 
 function DaysSince({ days, copy: s }: { days: number | null; copy: typeof copy.en | typeof copy.es }) {
-  if (days == null) return <span className="text-xs text-gray-400 font-medium">{s.noAttendance}</span>;
+  if (days == null) return <span className="text-xs text-theme-tertiary font-medium">{s.noAttendance}</span>;
   const isAlert = days >= 14;
   const isWarn = days >= 7 && days < 14;
   const cls = isAlert ? 'text-tribe-red' : isWarn ? 'text-amber-700' : 'text-tribe-green';

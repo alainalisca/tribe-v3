@@ -79,8 +79,11 @@ export async function POST(_request: NextRequest) {
     let accountId = profile.stripe_account_id as string | null;
     if (!accountId) {
       const account = await createStripeConnectAccount(profile.email, 'US');
-      if (!account) {
-        return NextResponse.json({ success: false, error: 'Failed to create Stripe Connect account' }, { status: 502 });
+      if ('error' in account) {
+        // BUG-011: surface the actual Stripe error (missing API key,
+        // invalid email, etc) instead of a generic banner. Most common
+        // cause in our prod has been STRIPE_SECRET_KEY not set in env.
+        return NextResponse.json({ success: false, error: `Stripe Connect: ${account.error}` }, { status: 502 });
       }
       accountId = account.accountId;
 

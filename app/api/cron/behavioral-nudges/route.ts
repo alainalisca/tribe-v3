@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { generateNudgesForUser } from '@/lib/nudges/behavioral-engine';
 import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
 
   try {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isValidCronAuth(authHeader)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (isColombiaQuietHour()) {

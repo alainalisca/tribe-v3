@@ -77,16 +77,18 @@ function SessionCard({
   return (
     <div
       className={`rounded-xl p-3 border ${
-        variant === 'primary' ? 'bg-[#3D4349] border-[#84cc16]/30' : 'bg-[#272D34] border-[#3D4349]'
+        variant === 'primary' ? 'bg-theme-card border-[#84cc16]/30' : 'bg-theme-surface border-theme'
       }`}
     >
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-theme-tertiary">
         {formatDay(s.date, language)}
         {s.start_time ? ` · ${s.start_time.slice(0, 5)}` : ''}
       </p>
       <p className="text-sm font-semibold text-white mt-0.5">{s.title || sportLabel}</p>
-      {variant === 'similar' && s.creator_name && <p className="text-xs text-gray-400 mt-0.5">{s.creator_name}</p>}
-      <p className="text-xs text-gray-400">
+      {variant === 'similar' && s.creator_name && (
+        <p className="text-xs text-theme-tertiary mt-0.5">{s.creator_name}</p>
+      )}
+      <p className="text-xs text-theme-tertiary">
         {s.neighborhood || s.location || ''}
         {spotsLabel ? ` · ${spotsLabel}` : ''}
         {' · '}
@@ -200,7 +202,7 @@ export default function RebookingStep({ instructorId, instructorName, sport, lan
   };
 
   if (loading) {
-    return <div className="py-6 text-center text-sm text-gray-400">{t.loading}</div>;
+    return <div className="py-6 text-center text-sm text-theme-tertiary">{t.loading}</div>;
   }
 
   return (

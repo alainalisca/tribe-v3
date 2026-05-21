@@ -216,7 +216,7 @@ export default function TeamsPage() {
         </header>
 
         <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-theme-tertiary absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="search"
             value={search}
@@ -504,7 +504,7 @@ function CreateTeamModal({
             type="button"
             onClick={onClose}
             aria-label={s.formCancel}
-            className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-gray-900 rounded-lg hover:bg-gray-100"
+            className="w-8 h-8 inline-flex items-center justify-center text-theme-tertiary hover:text-gray-900 rounded-lg hover:bg-gray-100"
           >
             <XIcon className="w-4 h-4" />
           </button>

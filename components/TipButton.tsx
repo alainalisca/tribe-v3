@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { createTip, createNotification } from '@/lib/dal';
-import { showSuccess, showError } from '@/lib/toast';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
-import { getPaymentGateway, type Currency } from '@/lib/payments/config';
+import { formatPrice } from '@/lib/formatCurrency';
+import { type Currency } from '@/lib/payments/config';
 
 interface TipButtonProps {
   tipperId: string;
@@ -22,17 +23,14 @@ interface TipButtonProps {
   onTipped?: () => void;
 }
 
+// Amounts are stored in the canonical minor-unit convention used across
+// payments/sessions and by both gateways (USD cents, COP pesos × 100), so
+// formatPrice() renders them correctly and Wompi/Stripe charge the right
+// figure.
 const PRESETS: Record<Currency, number[]> = {
-  COP: [5000, 10000, 20000],
-  USD: [200, 500, 1000], // cents
+  COP: [500000, 1000000, 2000000], // $5,000 / $10,000 / $20,000 COP
+  USD: [200, 500, 1000], // $2 / $5 / $10
 };
-
-function formatAmount(cents: number, currency: Currency, language: 'en' | 'es'): string {
-  if (currency === 'COP') {
-    return `$${Math.round(cents).toLocaleString(language === 'es' ? 'es-CO' : 'en-US')} COP`;
-  }
-  return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)} USD`;
-}
 
 const MAX_MESSAGE = 140;
 
@@ -44,15 +42,17 @@ export default function TipButton({
   currency,
   language,
   inline = false,
-  onTipped,
 }: TipButtonProps) {
-  const supabase = createClient();
   const [open, setOpen] = useState(inline);
   const [selected, setSelected] = useState<number | null>(PRESETS[currency][1] ?? null);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [message, setMessage] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEscapeKey(() => setOpen(false), open);
+  // Lock page scroll behind the modal (not in inline mode, which renders
+  // in-flow with no overlay).
+  useBodyScrollLock(open && !inline);
 
   const t = {
     sayThanks: language === 'es' ? `Dale las gracias a ${instructorName}` : `Say thanks to ${instructorName}`,
@@ -62,18 +62,19 @@ export default function TipButton({
     send: language === 'es' ? 'Enviar Propina' : 'Send Tip',
     cancel: language === 'es' ? 'Cancelar' : 'Cancel',
     tip: language === 'es' ? 'Dar Propina' : 'Tip',
-    thanks: language === 'es' ? `¡Alegraste el día de ${instructorName}!` : `You made ${instructorName}'s day!`,
-    success: language === 'es' ? 'Propina enviada' : 'Tip sent',
+    redirecting: language === 'es' ? 'Abriendo el pago seguro...' : 'Opening secure checkout...',
     error: language === 'es' ? 'No se pudo enviar la propina' : 'Could not send tip',
     invalid: language === 'es' ? 'Monto no válido' : 'Invalid amount',
     placeholder: language === 'es' ? 'Gran sesión 🙌' : 'Great session! 🙌',
   };
 
+  // Custom-amount input is in major units (dollars / pesos); convert to the
+  // canonical minor-unit amount the API and gateways expect.
   const effectiveAmount = (() => {
     if (customAmount) {
       const parsed = Number(customAmount.replace(/[^0-9.]/g, ''));
       if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-      return currency === 'USD' ? Math.round(parsed * 100) : Math.round(parsed);
+      return currency === 'USD' ? Math.round(parsed * 100) : Math.round(parsed) * 100;
     }
     return selected ?? 0;
   })();
@@ -83,49 +84,48 @@ export default function TipButton({
       showError(t.invalid);
       return;
     }
-    setSaving(true);
-    const gateway = getPaymentGateway(currency);
-    const res = await createTip(
-      supabase,
-      tipperId,
-      instructorId,
-      effectiveAmount,
-      currency,
-      gateway,
-      sessionId,
-      message.trim() || undefined
-    );
-    if (!res.success) {
-      setSaving(false);
-      showError(res.error || t.error);
-      return;
+    try {
+      setSubmitting(true);
+      trackEvent('tip_initiated', {
+        amount_cents: effectiveAmount,
+        currency,
+        tipper_id: tipperId,
+        instructor_id: instructorId,
+        session_id: sessionId ?? null,
+      });
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_type: 'tip',
+          instructor_id: instructorId,
+          currency,
+          amount_cents: effectiveAmount,
+          session_id: sessionId,
+          message: message.trim() || undefined,
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as {
+        success?: boolean;
+        error?: string;
+        data?: { redirect_url?: string };
+      } | null;
+
+      if (!res.ok || !json?.success || !json.data?.redirect_url) {
+        showError(json?.error || t.error);
+        setSubmitting(false);
+        return;
+      }
+
+      await haptic('light');
+      // Hand off to the gateway-hosted checkout. The tip finalizes via the
+      // webhook → finalize_payment tips fallback; there is no in-app
+      // "sent!" state because the charge has not settled yet.
+      window.location.href = json.data.redirect_url;
+    } catch {
+      showError(t.error);
+      setSubmitting(false);
     }
-
-    // Fire-and-forget notification to instructor.
-    const notifMsg =
-      language === 'es'
-        ? `Recibiste una propina de ${formatAmount(effectiveAmount, currency, 'es')}`
-        : `You received a tip of ${formatAmount(effectiveAmount, currency, 'en')}`;
-    await createNotification(supabase, {
-      recipient_id: instructorId,
-      actor_id: tipperId,
-      type: 'tip_received',
-      entity_type: 'tip',
-      entity_id: res.data?.id ?? null,
-      message: notifMsg,
-    });
-
-    trackEvent('tip_sent', {
-      amount_cents: effectiveAmount,
-      currency,
-      instructor_id: instructorId,
-      session_id: sessionId ?? null,
-    });
-    await haptic('success');
-    showSuccess(t.success);
-    setSuccess(true);
-    setSaving(false);
-    onTipped?.();
   };
 
   const renderPanel = () => (
@@ -144,17 +144,17 @@ export default function TipButton({
               className={`py-2 px-2 rounded-lg text-sm font-semibold transition-colors ${
                 selected === amt && !customAmount
                   ? 'bg-[#84cc16] text-slate-900'
-                  : 'bg-[#272D34] text-gray-200 hover:bg-[#404549]'
+                  : 'bg-theme-surface text-theme-secondary hover:opacity-90'
               }`}
             >
-              {formatAmount(amt, currency, language)}
+              {formatPrice(amt, currency)}
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1" htmlFor="tip-custom">
+        <label className="block text-xs text-theme-tertiary mb-1" htmlFor="tip-custom">
           {t.customLabel}
         </label>
         <input
@@ -167,12 +167,12 @@ export default function TipButton({
             setSelected(null);
           }}
           placeholder={currency === 'COP' ? '15000' : '7.50'}
-          className="w-full px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm"
+          className="w-full px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm"
         />
       </div>
 
       <div>
-        <label className="block text-xs text-gray-400 mb-1" htmlFor="tip-note">
+        <label className="block text-xs text-theme-tertiary mb-1" htmlFor="tip-note">
           {t.noteLabel}
         </label>
         <textarea
@@ -181,7 +181,7 @@ export default function TipButton({
           onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE))}
           rows={2}
           placeholder={t.placeholder}
-          className="w-full px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm resize-none"
+          className="w-full px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm resize-none"
         />
         <p className="text-[10px] text-gray-500 text-right">
           {message.length}/{MAX_MESSAGE}
@@ -195,8 +195,7 @@ export default function TipButton({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            disabled={saving}
-            className="flex-1 py-2.5 rounded-lg bg-[#272D34] text-gray-300 text-sm disabled:opacity-50"
+            className="flex-1 py-2.5 rounded-lg bg-theme-surface text-theme-secondary text-sm disabled:opacity-50"
           >
             {t.cancel}
           </button>
@@ -204,21 +203,17 @@ export default function TipButton({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={saving || success}
-          className={`flex-1 py-2.5 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors disabled:opacity-50 ${
-            inline ? '' : ''
-          }`}
+          disabled={submitting}
+          className="flex-1 py-2.5 rounded-lg bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold transition-colors disabled:opacity-50"
         >
-          {saving ? '…' : success ? '✓' : t.send}
+          {submitting ? t.redirecting : t.send}
         </button>
       </div>
-
-      {success && <p className="text-center text-sm text-[#A3E635] font-semibold animate-pulse">{t.thanks}</p>}
     </div>
   );
 
   if (inline) {
-    return <div className="bg-[#3D4349] rounded-2xl p-4">{renderPanel()}</div>;
+    return <div className="bg-theme-card rounded-2xl p-4">{renderPanel()}</div>;
   }
 
   return (
@@ -226,7 +221,7 @@ export default function TipButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#3D4349] hover:bg-[#404549] text-white text-sm font-semibold"
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-theme-card hover:opacity-90 text-theme-primary text-sm font-semibold"
       >
         <Heart className="w-4 h-4 text-[#A3E635]" />
         {t.tip} {instructorName}
@@ -234,12 +229,16 @@ export default function TipButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
           role="dialog"
           aria-modal="true"
-          onClick={() => !saving && setOpen(false)}
+          onClick={() => setOpen(false)}
         >
-          <div className="w-full max-w-md bg-[#3D4349] rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {renderPanel()}
           </div>
         </div>

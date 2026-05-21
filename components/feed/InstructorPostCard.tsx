@@ -150,14 +150,14 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
   };
 
   return (
-    <article id={post.id} className="bg-[#3D4349] rounded-2xl p-4 border border-[#404549]">
+    <article id={post.id} className="bg-theme-card rounded-2xl p-4 border border-theme">
       {/* Author */}
       <header className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#272D34] overflow-hidden relative flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-theme-surface overflow-hidden relative flex-shrink-0">
           {post.author?.avatar_url ? (
             <Image src={post.author.avatar_url} alt={post.author.name} fill sizes="40px" className="object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+            <div className="w-full h-full flex items-center justify-center text-sm text-theme-tertiary">
               {(post.author?.name || '?').charAt(0).toUpperCase()}
             </div>
           )}
@@ -212,9 +212,9 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
       {post.linked_session && (
         <Link
           href={`/session/${post.linked_session.id}`}
-          className="mt-3 block bg-[#272D34] rounded-xl p-3 border border-[#404549] hover:border-[#84cc16]"
+          className="mt-3 block bg-theme-surface rounded-xl p-3 border border-theme hover:border-[#84cc16]"
         >
-          <p className="text-xs text-gray-400">{post.linked_session.date}</p>
+          <p className="text-xs text-theme-tertiary">{post.linked_session.date}</p>
           <p className="text-sm font-semibold text-white mt-0.5">
             {post.linked_session.title ||
               (post.linked_session.sport
@@ -230,7 +230,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
       )}
 
       {/* Interactions */}
-      <footer className="mt-4 flex items-center gap-4 text-xs text-gray-400 pt-3 border-t border-[#272D34]">
+      <footer className="mt-4 flex items-center gap-4 text-xs text-theme-tertiary pt-3 border-t border-theme">
         <button
           type="button"
           onClick={handleLike}
@@ -255,7 +255,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
           <ul className="space-y-2">
             {comments.map((c) => (
               <li key={c.id} className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-[#272D34] overflow-hidden relative flex-shrink-0">
+                <div className="w-6 h-6 rounded-full bg-theme-surface overflow-hidden relative flex-shrink-0">
                   {c.user?.avatar_url ? (
                     <Image src={c.user.avatar_url} alt={c.user.name} fill sizes="24px" className="object-cover" />
                   ) : null}
@@ -263,7 +263,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
                 <div className="flex-1 min-w-0">
                   <p className="text-xs">
                     <span className="font-semibold text-white">{c.user?.name || ''}</span>{' '}
-                    <span className="text-gray-300">{c.body}</span>
+                    <span className="text-theme-secondary">{c.body}</span>
                   </p>
                   <p className="text-[10px] text-gray-500">{formatRelative(c.created_at, language)}</p>
                 </div>
@@ -277,7 +277,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder={language === 'es' ? 'Agregar un comentario…' : 'Add a comment…'}
-                className="flex-1 px-3 py-1.5 rounded-lg bg-[#272D34] text-white text-xs"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-theme-surface text-theme-primary text-xs"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

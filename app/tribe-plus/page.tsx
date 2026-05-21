@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Zap, BarChart3, Shield } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
-import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { SUBSCRIPTION_TIERS } from '@/lib/subscription/config';
+import { trackEvent } from '@/lib/analytics';
+import { showInfo } from '@/lib/toast';
 
 type BillingCycle = 'monthly' | 'annual';
 
@@ -15,9 +17,10 @@ function formatAmount(cents: number, currency: 'COP' | 'USD'): string {
 }
 
 export default function TribePlusPage() {
-  const { language } = useLanguage();
+  const tI18n = useTranslations('tribe-plus');
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [currency] = useState<'COP' | 'USD'>('COP');
+  const [notified, setNotified] = useState(false);
 
   const plus = SUBSCRIPTION_TIERS.plus;
   const monthlyCents = plus.price[currency];
@@ -27,63 +30,50 @@ export default function TribePlusPage() {
     annualCents > 0 && monthlyCents > 0 ? Math.max(0, Math.round(100 - (annualCents / (monthlyCents * 12)) * 100)) : 0;
 
   const t = {
-    headline:
-      language === 'es' ? 'Entrena mejor. Ahorra más. Ten prioridad.' : 'Train smarter. Save more. Get priority.',
-    cta: language === 'es' ? 'Empezar Prueba Gratis — 7 días' : 'Start Free Trial — 7 Days',
-    monthly: language === 'es' ? 'Mensual' : 'Monthly',
-    annual: language === 'es' ? 'Anual' : 'Annual',
-    save: (pct: number) => (language === 'es' ? `Ahorra ${pct}%` : `Save ${pct}%`),
-    per: language === 'es' ? '/mes' : '/month',
-    annualLabel: language === 'es' ? '/año' : '/year',
+    headline: tI18n('trainSmarterSaveMoreGet'),
+    cta: tI18n('startFreeTrial7Days'),
+    monthly: tI18n('monthly'),
+    annual: tI18n('annual'),
+    save: (pct: number) => tI18n('savePct', { pct: pct }),
+    per: tI18n('month'),
+    annualLabel: tI18n('year'),
     features: [
       {
         icon: Zap,
-        title: language === 'es' ? 'Cero Cargos por Reserva' : 'Zero Booking Fees',
-        desc: language === 'es' ? 'Ahorra en cada sesión pagada que reserves' : 'Save on every paid session you book',
+        title: tI18n('zeroBookingFees'),
+        desc: tI18n('saveOnEveryPaidSession'),
       },
       {
         icon: Sparkles,
-        title: language === 'es' ? '24h de Acceso Anticipado' : '24-Hour Early Access',
-        desc:
-          language === 'es'
-            ? 'Ve y reserva nuevas sesiones antes que nadie'
-            : 'See and book new sessions before anyone else',
+        title: tI18n('24HourEarlyAccess'),
+        desc: tI18n('seeAndBookNewSessions'),
       },
       {
         icon: BarChart3,
-        title: language === 'es' ? 'Estadísticas Avanzadas' : 'Advanced Training Stats',
-        desc:
-          language === 'es'
-            ? 'Análisis de entrenamiento a profundidad en Mi Entrenamiento'
-            : 'Deep training analytics on My Training',
+        title: tI18n('advancedTrainingStats'),
+        desc: tI18n('deepTrainingAnalyticsOnMy'),
       },
       {
         icon: Shield,
-        title: language === 'es' ? 'Insignia Tribe+' : 'Tribe+ Badge',
-        desc:
-          language === 'es'
-            ? 'Destaca en la comunidad con tu insignia ✦'
-            : 'Stand out in the community with your ✦ badge',
+        title: tI18n('tribeBadge'),
+        desc: tI18n('standOutInTheCommunity'),
       },
     ],
-    faqTitle: language === 'es' ? 'Preguntas Frecuentes' : 'FAQ',
+    faqTitle: tI18n('faq'),
     faqs: [
       {
-        q: language === 'es' ? '¿Puedo cancelar en cualquier momento?' : 'Can I cancel anytime?',
-        a:
-          language === 'es'
-            ? 'Sí. Mantienes el acceso hasta el final de tu período.'
-            : 'Yes. You keep access until the end of your billing period.',
+        q: tI18n('canICancelAnytime'),
+        a: tI18n('yesYouKeepAccessUntil'),
       },
       {
-        q: language === 'es' ? '¿Qué pasa con mis reservas si cancelo?' : 'What happens to my bookings if I cancel?',
-        a: language === 'es' ? 'Mantienes todas las reservas existentes.' : 'You keep all existing bookings.',
+        q: tI18n('whatHappensToMyBookings'),
+        a: tI18n('youKeepAllExistingBookings'),
       },
     ],
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-8 space-y-8">
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#84cc16] text-slate-900 text-xs font-bold tracking-widest">
@@ -92,7 +82,7 @@ export default function TribePlusPage() {
           <h1 className="text-3xl font-extrabold">{t.headline}</h1>
 
           {/* Cycle toggle */}
-          <div className="inline-flex rounded-xl bg-[#3D4349] p-1">
+          <div className="inline-flex rounded-xl bg-theme-card p-1">
             {(['monthly', 'annual'] as const).map((c) => (
               <button
                 key={c}
@@ -113,31 +103,36 @@ export default function TribePlusPage() {
           <div className="pt-2">
             <p className="text-4xl font-extrabold">
               {formatAmount(effectiveCents, currency)}
-              <span className="text-base font-medium text-gray-400 ml-1">
+              <span className="text-base font-medium text-theme-tertiary ml-1">
                 {cycle === 'annual' ? t.annualLabel : t.per}
               </span>
             </p>
           </div>
 
+          {/* Billing isn't live yet. Rather than a fake checkout or a
+              native alert, capture genuine demand (analytics) and tell
+              the user the honest truth via a styled toast. */}
           <button
             type="button"
-            className="mt-4 w-full py-3 rounded-xl bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold"
+            disabled={notified}
+            className="mt-4 w-full py-3 rounded-xl bg-[#84cc16] hover:bg-[#A3E635] text-slate-900 text-sm font-bold disabled:opacity-70"
             onClick={() => {
-              // Payment flow to be wired once instructor approves
-              alert(language === 'es' ? 'Próximamente: flujo de pago' : 'Coming soon: payment flow');
+              trackEvent('tribe_plus_interest', { cycle, currency });
+              setNotified(true);
+              showInfo(tI18n('tribeIsComingSoonWe'));
             }}
           >
-            {t.cta}
+            {notified ? tI18n('weLlNotifyYou') : t.cta}
           </button>
         </div>
 
         {/* Benefits grid */}
         <div className="grid grid-cols-2 gap-3">
           {t.features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-[#3D4349] rounded-2xl p-4">
+            <div key={title} className="bg-theme-card rounded-2xl p-4">
               <Icon className="w-5 h-5 text-[#A3E635] mb-2" />
               <h3 className="text-sm font-bold">{title}</h3>
-              <p className="text-xs text-gray-400 mt-1">{desc}</p>
+              <p className="text-xs text-theme-tertiary mt-1">{desc}</p>
             </div>
           ))}
         </div>
@@ -147,9 +142,9 @@ export default function TribePlusPage() {
           <h2 className="text-lg font-bold mb-3">{t.faqTitle}</h2>
           <ul className="space-y-3">
             {t.faqs.map(({ q, a }) => (
-              <li key={q} className="bg-[#3D4349] rounded-xl p-4">
+              <li key={q} className="bg-theme-card rounded-xl p-4">
                 <p className="text-sm font-semibold mb-1">{q}</p>
-                <p className="text-xs text-gray-400">{a}</p>
+                <p className="text-xs text-theme-tertiary">{a}</p>
               </li>
             ))}
           </ul>
@@ -157,9 +152,9 @@ export default function TribePlusPage() {
 
         <Link
           href="/settings/subscription"
-          className="block text-center text-sm text-gray-400 hover:text-white underline"
+          className="block text-center text-sm text-theme-tertiary hover:text-white underline"
         >
-          {language === 'es' ? 'Ya eres miembro? Administrar suscripción' : 'Already a member? Manage subscription'}
+          {tI18n('alreadyAMemberManageSubscription')}
         </Link>
       </div>
 

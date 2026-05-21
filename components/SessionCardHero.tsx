@@ -38,7 +38,7 @@ export default function SessionCardHero({
   return (
     <div className="relative w-full aspect-video overflow-hidden bg-gradient-to-br">
       {/* Hero image or gradient fallback */}
-      {!imgError ? (
+      {!imgError && heroSrc ? (
         <img
           src={heroSrc}
           alt={sportName}

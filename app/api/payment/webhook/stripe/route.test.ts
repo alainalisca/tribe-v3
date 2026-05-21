@@ -31,6 +31,7 @@ vi.mock('@/lib/payments/stripe', () => ({
 
 vi.mock('@/lib/payments/notifyAfterFinalize', () => ({
   notifyAfterFinalize: vi.fn().mockResolvedValue(undefined),
+  notifyTipReceived: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/dal/tribeOSSubscription', () => ({

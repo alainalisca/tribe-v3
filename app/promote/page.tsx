@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
+import { trackEvent } from '@/lib/analytics';
+import { showInfo } from '@/lib/toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Megaphone, Eye, Users, Zap, Tag, Store, Bell, Crown, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
 interface UserStats {
@@ -29,6 +33,7 @@ export default function PromotePage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isInstructor, setIsInstructor] = useState(false);
+  const [proNotified, setProNotified] = useState(false);
 
   const t = {
     pageTitle: language === 'es' ? 'Tribe Promoción' : 'Tribe Promote',
@@ -89,7 +94,7 @@ export default function PromotePage() {
           .single();
 
         if (profileError) {
-          console.error('Profile error:', profileError);
+          logError(profileError, { action: 'Profile error' });
           setError('Failed to load profile');
           setLoading(false);
           return;
@@ -128,7 +133,7 @@ export default function PromotePage() {
 
         setLoading(false);
       } catch (err) {
-        console.error('Error loading stats:', err);
+        logError(err, { action: 'Error loading stats' });
         setError('Failed to load data');
         setLoading(false);
       }
@@ -140,10 +145,7 @@ export default function PromotePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-tribe-green mx-auto mb-4"></div>
-          <p className="text-theme-primary">{language === 'es' ? 'Cargando...' : 'Loading...'}</p>
-        </div>
+        <LoadingSpinner size="lg" className="flex items-center justify-center" />
       </div>
     );
   }
@@ -343,14 +345,20 @@ export default function PromotePage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between pt-2 border-t border-tribe-green/20">
                 <p className="text-2xl font-bold text-tribe-green">{t.price}</p>
                 <button
+                  type="button"
+                  disabled={proNotified}
                   onClick={() => {
-                    alert(
-                      language === 'es' ? 'La función de mejora está en desarrollo' : 'Upgrade feature coming soon'
+                    trackEvent('promote_pro_interest');
+                    setProNotified(true);
+                    showInfo(
+                      language === 'es'
+                        ? 'Promote Pro llega pronto. Te avisaremos en cuanto esté disponible.'
+                        : "Promote Pro is coming soon. We'll let you know the moment it's available."
                     );
                   }}
-                  className="bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold px-6 py-2 rounded-xl transition-colors whitespace-nowrap"
+                  className="bg-tribe-green text-slate-900 hover:bg-tribe-green font-semibold px-6 py-2 rounded-xl transition-colors whitespace-nowrap disabled:opacity-70"
                 >
-                  {t.upgradeBtn}
+                  {proNotified ? (language === 'es' ? 'Te avisaremos ✓' : "We'll notify you ✓") : t.upgradeBtn}
                 </button>
               </div>
             </div>

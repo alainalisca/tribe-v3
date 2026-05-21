@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Heart, MessageCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { createClient } from '@/lib/supabase/client';
-import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 interface InstructorPost {
   id: string;
@@ -24,7 +24,7 @@ interface InstructorPost {
 }
 
 export default function FeedPostPreview() {
-  const { language } = useLanguage();
+  const t = useTranslations('home');
   const [post, setPost] = useState<InstructorPost | null>(null);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function FeedPostPreview() {
 
   if (!post) return null;
 
-  const timeAgo = getTimeAgo(post.created_at, language);
+  const timeAgo = getTimeAgo(post.created_at, t);
 
   return (
     <Link href="/feed" className="block">
@@ -90,25 +90,23 @@ export default function FeedPostPreview() {
           <span className="flex items-center gap-1">
             <MessageCircle className="w-3.5 h-3.5" /> {post.comments_count}
           </span>
-          <span className="ml-auto text-tribe-green text-xs font-medium">
-            {language === 'es' ? 'Ver en Feed' : 'View in Feed'} →
-          </span>
+          <span className="ml-auto text-tribe-green text-xs font-medium">{t('viewInFeed')} →</span>
         </div>
       </div>
     </Link>
   );
 }
 
-function getTimeAgo(dateStr: string, language: string): string {
+function getTimeAgo(dateStr: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (seconds < 3600) {
     const mins = Math.floor(seconds / 60);
-    return language === 'es' ? `hace ${mins}m` : `${mins}m ago`;
+    return t('minsAgo', { n: mins });
   }
   if (seconds < 86400) {
     const hours = Math.floor(seconds / 3600);
-    return language === 'es' ? `hace ${hours}h` : `${hours}h ago`;
+    return t('hoursAgo', { n: hours });
   }
   const days = Math.floor(seconds / 86400);
-  return language === 'es' ? `hace ${days}d` : `${days}d ago`;
+  return t('daysAgo', { n: days });
 }

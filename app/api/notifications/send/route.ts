@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log, logError } from '@/lib/logger';
-import { checkRateLimit } from '@/lib/rate-limit';
-import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
 
+// `url` is a client-side deep-link path (e.g. "/session/abc"), never
+// fetched server-side, so it is a bounded string — NOT z.string().url(),
+// which rejects app-relative paths and silently 400'd every real caller.
 const sendNotificationSchema = z.object({
   userId: z.string().uuid(),
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(1000),
-  url: z.string().url().optional(),
+  url: z.string().max(2048).optional(),
   data: z.record(z.string(), z.string()).optional(),
 });
 
@@ -20,32 +21,28 @@ const batchNotificationSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1),
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(1000),
-  url: z.string().url().optional(),
+  url: z.string().max(2048).optional(),
   data: z.record(z.string(), z.string()).optional(),
 });
 
 /**
  * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
  * @method POST
- * @auth Required - validates the caller is authenticated via Supabase auth. Rate limited to 30 requests per minute.
+ * @auth Internal only — requires a valid CRON_SECRET bearer. Not reachable with a user session.
  * @param {Object} request.body - JSON body with `userId` (string), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
  * @returns {{ success: boolean, method: 'fcm' | 'web-push', platform: string }} Delivery method used on success, or error details on failure.
  */
 export async function POST(request: Request) {
   try {
-    // AUTH: verify the caller is authenticated
-    const supabaseAuth = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
+    // AUTH: internal callers only. This endpoint can push arbitrary
+    // title/body to ANY user, so it must never be reachable with just a
+    // logged-in user session (that was a phishing/spoofing vector — any
+    // signed-up user could push Tribe-branded notifications to anyone).
+    // All legitimate callers are server-to-server (cron jobs,
+    // payment/booking webhooks, nearby alerts, the join-notify route) and
+    // present a valid internal CRON_SECRET bearer.
+    if (!isValidCronAuth(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-send:${authUser.id}`, 30, 60_000);
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
     const raw = await request.json();
@@ -150,26 +147,17 @@ export async function POST(request: Request) {
 /**
  * @description Batch sends push notifications to multiple users via FCM or Web Push, with automatic fallback and stale token/subscription cleanup.
  * @method PUT
- * @auth Required - validates the caller is authenticated via Supabase auth. Rate limited to 10 requests per minute.
+ * @auth Internal only — requires a valid CRON_SECRET bearer. Not reachable with a user session.
  * @param {Object} request.body - JSON body with `userIds` (string[]), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
  * @returns {{ success: boolean, results: { total: number, fcm: Object, webPush: Object, noSubscription: number } }} Breakdown of send results per notification channel.
  */
 // Batch send notifications to multiple users
 export async function PUT(request: Request) {
   try {
-    // AUTH: verify the caller is authenticated
-    const supabaseAuth = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
+    // AUTH: internal callers only (same rationale as POST). Batch send is
+    // used server-to-server by notify-nearby with the internal secret.
+    if (!isValidCronAuth(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { allowed } = await checkRateLimit(getServiceRoleClient(), `notify-batch:${authUser.id}`, 10, 60_000);
-    if (!allowed) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
 
     const raw = await request.json();

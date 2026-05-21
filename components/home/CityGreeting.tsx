@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Sun, Cloud, CloudRain, CloudDrizzle, CloudLightning } from 'lucide-react';
-import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { ACTIVE_CITY, type Neighborhood } from '@/lib/city-config';
 
 interface WeatherData {
@@ -23,7 +23,7 @@ interface CityGreetingProps {
 }
 
 export default function CityGreeting({ activeHood }: CityGreetingProps) {
-  const { language } = useLanguage();
+  const t = useTranslations('home');
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function CityGreeting({ activeHood }: CityGreetingProps) {
   return (
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-xl font-bold text-stone-900 dark:text-white tracking-tight">
-        {language === 'es' ? `En ${locationName}` : `In ${locationName}`}
+        {t('inCity', { city: locationName })}
       </h2>
       {weather && (
         <span className="text-sm text-stone-500 dark:text-gray-400 flex items-center gap-1">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -17,6 +18,8 @@ import {
 import { sportTranslations } from '@/lib/translations';
 import { ArrowLeft, Calendar, Users, Trophy, Loader, Heart } from 'lucide-react';
 import Image from 'next/image';
+import { useConfirm } from '@/components/ConfirmProvider';
+import { showError } from '@/lib/toast';
 import BottomNav from '@/components/BottomNav';
 
 const CHALLENGE_TYPE_LABELS = {
@@ -37,6 +40,7 @@ export default function ChallengePage() {
   const router = useRouter();
   const params = useParams();
   const { language } = useLanguage();
+  const confirm = useConfirm();
   const supabase = createClient();
 
   const challengeId = params.id as string;
@@ -63,6 +67,8 @@ export default function ChallengePage() {
       progress: 'Progress',
       loading: 'Loading...',
       error: 'Error loading challenge',
+      joinError: "Couldn't join the challenge. Please try again.",
+      leaveError: "Couldn't leave the challenge. Please try again.",
     },
     es: {
       back: 'Atrás',
@@ -78,6 +84,8 @@ export default function ChallengePage() {
       progress: 'Progreso',
       loading: 'Cargando...',
       error: 'Error al cargar reto',
+      joinError: 'No se pudo unir al reto. Intenta de nuevo.',
+      leaveError: 'No se pudo salir del reto. Intenta de nuevo.',
     },
   };
 
@@ -125,7 +133,7 @@ export default function ChallengePage() {
           setLeaderboard(leaderboardResult.data);
         }
       } catch (error) {
-        console.error('Error loading challenge:', error);
+        logError(error, { action: 'Error loading challenge' });
       } finally {
         setLoading(false);
       }
@@ -147,9 +155,14 @@ export default function ChallengePage() {
         if (leaderboardResult.success && leaderboardResult.data) {
           setLeaderboard(leaderboardResult.data);
         }
+      } else {
+        // Was a silent no-op — the button appeared to do nothing.
+        logError(new Error(result.error ?? 'join_challenge_failed'), { action: 'handleJoinChallenge', challengeId });
+        showError(strings.joinError);
       }
     } catch (error) {
-      console.error('Error joining challenge:', error);
+      logError(error, { action: 'handleJoinChallenge', challengeId });
+      showError(strings.joinError);
     } finally {
       setActionLoading(false);
     }
@@ -158,7 +171,19 @@ export default function ChallengePage() {
   const handleLeaveChallenge = async () => {
     if (!currentUserId) return;
 
-    if (!confirm(language === 'es' ? '¿Estás seguro?' : 'Are you sure?')) return;
+    if (
+      !(await confirm({
+        title: language === 'es' ? 'Salir del reto' : 'Leave challenge',
+        message:
+          language === 'es'
+            ? '¿Seguro que quieres salir de este reto? Perderás tu progreso.'
+            : "Are you sure you want to leave this challenge? You'll lose your progress.",
+        confirmLabel: language === 'es' ? 'Salir' : 'Leave',
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
 
     setActionLoading(true);
     try {
@@ -171,9 +196,13 @@ export default function ChallengePage() {
         if (leaderboardResult.success && leaderboardResult.data) {
           setLeaderboard(leaderboardResult.data);
         }
+      } else {
+        logError(new Error(result.error ?? 'leave_challenge_failed'), { action: 'handleLeaveChallenge', challengeId });
+        showError(strings.leaveError);
       }
     } catch (error) {
-      console.error('Error leaving challenge:', error);
+      logError(error, { action: 'handleLeaveChallenge', challengeId });
+      showError(strings.leaveError);
     } finally {
       setActionLoading(false);
     }

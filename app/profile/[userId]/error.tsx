@@ -11,13 +11,14 @@
  */
 
 import { useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BottomNav from '@/components/BottomNav';
 
 export default function ProfileError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error('[ProfileError]', { message: error.message, digest: error.digest });
+    logError(error, { action: 'ProfileError', digest: error.digest });
   }, [error]);
 
   return (

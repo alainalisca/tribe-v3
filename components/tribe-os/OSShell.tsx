@@ -28,10 +28,8 @@ import {
   LayoutDashboard,
   Users,
   Users2,
-  ClipboardList,
   Calendar,
   DollarSign,
-  MessageSquare,
   Brain,
   Settings as SettingsIcon,
   HelpCircle,
@@ -44,9 +42,9 @@ import OSShellBell from './OSShellBell';
 import PwaInstallPrompt from './PwaInstallPrompt';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
-import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 
-type PremiumProbe = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'> & {
+type ProfileProbe = {
   name?: string | null;
   email?: string | null;
 };
@@ -111,14 +109,16 @@ interface NavItem {
   matchPrefix: string;
 }
 
+// Programs + Messages are intentionally NOT listed: their routes are
+// ComingSoonPage placeholders. Promising unbuilt features in the
+// primary nav of a paid tier erodes trust on day one. Re-add here when
+// the real surfaces ship (routes still exist for any deep links).
 const NAV_ITEMS: readonly NavItem[] = [
   { href: '/os/dashboard', labelKey: 'dashboard', Icon: LayoutDashboard, matchPrefix: '/os/dashboard' },
   { href: '/os/members', labelKey: 'members', Icon: Users, matchPrefix: '/os/members' },
   { href: '/os/teams', labelKey: 'teams', Icon: Users2, matchPrefix: '/os/teams' },
-  { href: '/os/programs', labelKey: 'programs', Icon: ClipboardList, matchPrefix: '/os/programs' },
   { href: '/os/schedule', labelKey: 'schedule', Icon: Calendar, matchPrefix: '/os/schedule' },
   { href: '/os/revenue', labelKey: 'revenue', Icon: DollarSign, matchPrefix: '/os/revenue' },
-  { href: '/os/messages', labelKey: 'messages', Icon: MessageSquare, matchPrefix: '/os/messages' },
   { href: '/os/intelligence', labelKey: 'intelligence', Icon: Brain, matchPrefix: '/os/intelligence' },
   { href: '/os/settings', labelKey: 'settings', Icon: SettingsIcon, matchPrefix: '/os/settings' },
 ] as const;
@@ -150,21 +150,17 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
         }
         return;
       }
-      const { data, error } = await supabase
-        .from('users')
-        .select('tribe_os_tier, tribe_os_status, name, email')
-        .eq('id', authUser.id)
-        .single();
+      // Premium decision via the gym-aware resolver (owned -> coached
+      // -> legacy) so a non-owner coach at a premium gym gets the full
+      // shell. Fails CLOSED to the minimal shell on a transient error;
+      // page-level gates make the authoritative per-route decision.
+      const premium = await getTribeOSPremiumStatusForUser(supabase, authUser.id);
       if (cancelled) return;
-      if (error || !data) {
-        // Fail closed — non-premium gets the minimal shell.
-        setPremiumStatus('not_premium');
-        setUser({ email: authUser.email ?? null, name: null });
-        return;
-      }
-      const row = data as PremiumProbe;
-      setPremiumStatus(isTribeOSPremiumActive(row) ? 'premium' : 'not_premium');
-      setUser({ email: row.email ?? authUser.email ?? null, name: row.name ?? null });
+      const { data: profile } = await supabase.from('users').select('name, email').eq('id', authUser.id).single();
+      if (cancelled) return;
+      const p = (profile ?? null) as ProfileProbe | null;
+      setPremiumStatus(premium.success && premium.data?.active ? 'premium' : 'not_premium');
+      setUser({ email: p?.email ?? authUser.email ?? null, name: p?.name ?? null });
     })();
     return () => {
       cancelled = true;
@@ -222,7 +218,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           left-border accent that visually pins the active row to
           the rail. */}
       <aside
-        className={`fixed lg:sticky top-0 z-50 h-screen w-sidebar bg-tribe-dark border-r border-tribe-dark-80 text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
+        className={`fixed lg:sticky top-0 z-50 h-[100dvh] w-sidebar bg-tribe-dark border-r border-tribe-dark-80 text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

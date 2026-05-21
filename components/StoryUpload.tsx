@@ -33,6 +33,16 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   const [preview, setPreview] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [caption, setCaption] = useState('');
+  // BUG-036: on desktop web there's no real camera access via <input type=file>
+  // — it just opens the file picker. "Photo or Camera" reads as a lie there.
+  // Detect native (Capacitor) and label accordingly.
+  const [isNative, setIsNative] = useState(false);
+  useEffect(() => {
+    import('@capacitor/core')
+      .then(({ Capacitor }) => setIsNative(!!Capacitor?.isNativePlatform?.()))
+      .catch(() => setIsNative(false));
+  }, []);
+  const photoLabel = isNative ? t.takePhoto : language === 'es' ? 'Subir foto' : 'Upload Photo';
   const [uploading, setUploading] = useState(false);
 
   // Lock body scroll while modal is open
@@ -206,9 +216,13 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
   }
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/80 flex flex-col" data-modal="true" onClick={onClose}>
-      <div className={preview ? 'flex-1 min-h-0' : 'flex-1'} />
-
+    // BUG-030: bottom sheet on mobile, centered card on desktop — was
+    // pinned to the bottom on every viewport.
+    <div
+      className="fixed inset-0 z-[70] bg-black/80 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      data-modal="true"
+      onClick={onClose}
+    >
       <div
         className="bg-white dark:bg-tribe-card w-full sm:max-w-md sm:mx-auto sm:rounded-xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
@@ -227,7 +241,7 @@ export default function StoryUpload({ sessionId, userId, onClose, onUploaded }: 
             <div className="relative w-full">
               <div className="flex items-center gap-3 p-4 bg-tribe-green text-slate-900 rounded-xl font-semibold">
                 <Camera className="w-5 h-5" />
-                {t.takePhoto}
+                {photoLabel}
               </div>
               <input
                 type="file"

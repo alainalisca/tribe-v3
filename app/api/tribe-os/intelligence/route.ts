@@ -54,7 +54,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
     return NextResponse.json({
       success: true,
-      data: { insights: result.data ?? [] },
+      data: {
+        insights: result.data ?? [],
+        // The gym's billing currency. Impact figures (predicted_revenue_cents)
+        // are denominated in it, so the client must format with this rather
+        // than a hardcoded USD symbol (a COP gym was seeing "$" USD on
+        // COP-denominated impact). Null defaults to USD.
+        currency_default: gymRes.data.default_currency ?? 'USD',
+      },
     });
   } catch (error) {
     logError(error, { route: 'GET /api/tribe-os/intelligence' });

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Dumbbell,
@@ -79,8 +80,30 @@ export default function OnboardingRolePage() {
       }
 
       if (selectedRole === 'instructor') {
-        // Set is_instructor flag immediately so the onboarding knows
-        await supabase.from('users').update({ is_instructor: true }).eq('id', user.id);
+        // Set is_instructor flag immediately so the onboarding knows.
+        // Use .select() so we can tell an actual write apart from a 0-row
+        // no-op (RLS, network) — silently routing a failed instructor
+        // signup to /profile/edit was the old behavior and sent users
+        // into the wrong flow with no feedback.
+        const { data: updated, error: updateError } = await supabase
+          .from('users')
+          .update({ is_instructor: true })
+          .eq('id', user.id)
+          .select('id');
+
+        if (updateError || !updated || updated.length === 0) {
+          logError(updateError ?? new Error('is_instructor update returned 0 rows'), {
+            action: 'onboardingRoleSelection.instructorUpdate',
+            userId: user.id,
+          });
+          showError(
+            language === 'es'
+              ? 'No se pudo guardar tu rol. Intenta de nuevo.'
+              : "Couldn't save your role. Please try again."
+          );
+          setSubmitting(false);
+          return;
+        }
         router.push('/onboarding/instructor');
       } else {
         // Participant — go to regular profile edit
@@ -88,8 +111,12 @@ export default function OnboardingRolePage() {
       }
     } catch (err) {
       logError(err, { action: 'onboardingRoleSelection' });
-      // Fallback — go to profile edit regardless
-      router.push('/profile/edit');
+      showError(
+        language === 'es'
+          ? 'Algo salió mal. Intenta de nuevo en un momento.'
+          : 'Something went wrong. Please try again in a moment.'
+      );
+      setSubmitting(false);
     }
   }
 

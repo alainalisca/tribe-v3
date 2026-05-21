@@ -226,6 +226,12 @@ type EventName =
   | 'tribe_os_checkout_succeeded' // Stripe checkout returned ?subscribed=true
   | 'tribe_os_portal_opened' // user clicked manage subscription -> Stripe portal
 
+  // Demand signal for not-yet-built paid flows (honest "notify me")
+  | 'tribe_plus_interest' // user tapped Tribe+ subscribe before billing is live
+  | 'promote_pro_interest' // user tapped Promote Pro upgrade before billing is live
+  | 'tip_interest' // legacy: user tried to tip before tip charging was wired
+  | 'tip_initiated' // user started a real tip checkout (post tip-payment wiring)
+
   // Errors
   | 'error_occurred'
   | 'api_error';

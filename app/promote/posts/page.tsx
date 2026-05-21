@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Trash2, Pin, Edit2, X, Check, Loader, Eye, Heart, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
@@ -221,7 +223,7 @@ export default function PromotePostsPage() {
           setPostStats(stats);
         }
       } catch (error) {
-        console.error('Error initializing:', error);
+        logError(error, { action: 'Error initializing' });
       } finally {
         setLoading(false);
       }
@@ -236,12 +238,12 @@ export default function PromotePostsPage() {
     if (!currentUserId || !isInstructor) return;
 
     if (!formContent.trim()) {
-      alert(strings.contentRequired);
+      showError(strings.contentRequired);
       return;
     }
 
     if (formContent.length > CHAR_LIMIT) {
-      alert(strings.contentTooLong);
+      showError(strings.contentTooLong);
       return;
     }
 
@@ -281,10 +283,10 @@ export default function PromotePostsPage() {
       setFormLinkedSession('');
       setFormIsPinned(false);
 
-      alert(strings.successCreated);
+      showSuccess(strings.successCreated);
     } catch (error) {
-      console.error('Error creating post:', error);
-      alert(strings.errorCreating);
+      logError(error, { action: 'Error creating post' });
+      showError(strings.errorCreating);
     } finally {
       setSubmitting(false);
     }
@@ -304,10 +306,10 @@ export default function PromotePostsPage() {
 
       setPosts(posts.filter((p) => p.id !== postId));
       setDeleteConfirm(null);
-      alert(strings.successDeleted);
+      showSuccess(strings.successDeleted);
     } catch (error) {
-      console.error('Error deleting post:', error);
-      alert(strings.errorDeleting);
+      logError(error, { action: 'Error deleting post' });
+      showError(strings.errorDeleting);
     }
   };
 
@@ -323,12 +325,12 @@ export default function PromotePostsPage() {
     if (!currentUserId) return;
 
     if (!editContent.trim()) {
-      alert(strings.contentRequired);
+      showError(strings.contentRequired);
       return;
     }
 
     if (editContent.length > CHAR_LIMIT) {
-      alert(strings.contentTooLong);
+      showError(strings.contentTooLong);
       return;
     }
 
@@ -366,10 +368,10 @@ export default function PromotePostsPage() {
       );
 
       setEditingPostId(null);
-      alert(strings.successUpdated);
+      showSuccess(strings.successUpdated);
     } catch (error) {
-      console.error('Error updating post:', error);
-      alert(strings.errorUpdating);
+      logError(error, { action: 'Error updating post' });
+      showError(strings.errorUpdating);
     } finally {
       setSubmitting(false);
     }

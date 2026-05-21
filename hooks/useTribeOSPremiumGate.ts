@@ -4,8 +4,15 @@
  * Mirrors the server-side `requireTribeOSPremium` helper for routes.
  * On mount: fetches the current user, resolves their Tribe.OS premium
  * status via the gym-aware resolver (owned gym → coached gym → legacy
- * users.tribe_os_* row), and either lets the page render or redirects
- * to the home page's #tribe-os waitlist anchor.
+ * users.tribe_os_* row), then:
+ *   - not signed in  → /auth?returnTo=<path> (preserves intent)
+ *   - signed in, not premium → /os/dashboard (the ONE canonical upsell
+ *     surface; it renders the inline UpgradeCard). Previously every
+ *     gated page bounced to the /#tribe-os marketing anchor with a
+ *     bare "Redirecting…" and no upgrade path — 15 different dead-ends.
+ *     Routing them to the dashboard gives one consistent contextual
+ *     upgrade experience without duplicating UpgradeCard 15×.
+ *   - premium → render.
  *
  * IMPORTANT: this MUST use `getTribeOSPremiumStatusForUser` (the same
  * resolver the server-side `requireTribeOSPremium` uses) and NOT a raw
@@ -23,7 +30,7 @@
  *   // ...page content, userId is guaranteed non-null...
  */
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 
@@ -37,6 +44,7 @@ export interface PremiumGateResult {
 
 export function useTribeOSPremiumGate(): PremiumGateResult {
   const router = useRouter();
+  const pathname = usePathname();
   const [state, setState] = useState<PremiumGateState>('checking');
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -50,15 +58,18 @@ export function useTribeOSPremiumGate(): PremiumGateResult {
       if (!user) {
         if (!cancelled) {
           setState('redirecting');
-          router.replace('/#tribe-os');
+          const returnTo = encodeURIComponent(pathname || '/os/dashboard');
+          router.replace(`/auth?returnTo=${returnTo}`);
         }
         return;
       }
       const result = await getTribeOSPremiumStatusForUser(supabase, user.id);
       if (cancelled) return;
       if (!result.success || !result.data?.active) {
+        // One canonical upsell surface — the dashboard renders the
+        // inline UpgradeCard. No more 15 different /#tribe-os dead-ends.
         setState('redirecting');
-        router.replace('/#tribe-os');
+        router.replace('/os/dashboard');
         return;
       }
       setUserId(user.id);
@@ -67,7 +78,7 @@ export function useTribeOSPremiumGate(): PremiumGateResult {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, pathname]);
 
   return { state, userId };
 }

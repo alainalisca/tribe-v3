@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       // Use PUT for batch send to the unified notification endpoint
       const response = await fetch(`${SITE_URL}/api/notifications/send`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
         body: JSON.stringify({ userIds, title, body, url }),
       });
 

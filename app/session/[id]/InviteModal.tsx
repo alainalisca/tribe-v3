@@ -1,6 +1,7 @@
 'use client';
 
-import { showSuccess } from '@/lib/toast';
+import { showSuccess, showError } from '@/lib/toast';
+import { copyToClipboard } from '@/lib/share';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,13 @@ interface InviteModalProps {
 
 export default function InviteModal({ language, inviteLink, session, onClose }: InviteModalProps) {
   const { t } = useLanguage();
-  function copyInviteLink() {
-    navigator.clipboard.writeText(inviteLink);
-    showSuccess(t('linkCopied'));
+  async function copyInviteLink() {
+    // Was an unconditional success toast even when the clipboard write
+    // failed (blocked permission / insecure context). Only claim
+    // success when it actually copied.
+    const ok = await copyToClipboard(inviteLink);
+    if (ok) showSuccess(t('linkCopied'));
+    else showError(language === 'es' ? 'No se pudo copiar el enlace' : 'Could not copy the link');
   }
 
   function shareInviteLink() {

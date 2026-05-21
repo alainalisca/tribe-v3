@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import { logError } from '@/lib/logger';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import BottomNav from '@/components/BottomNav';
@@ -16,6 +17,7 @@ export default function ReferralPage() {
   const { language } = useLanguage();
   const [userId, setUserId] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string>('');
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [friendsInvited, setFriendsInvited] = useState(0);
@@ -35,12 +37,17 @@ export default function ReferralPage() {
       friendsInvited: 'Friends Invited',
       rewardsEarned: 'Rewards Earned',
       howItWorks: 'How It Works',
-      howItWorksDesc: 'For every friend who joins and completes their first session, you both earn a reward',
-      rewardTiers: 'Reward Tiers',
-      freePromo: 'Free promo code (10% off next session)',
-      featuredProfile: 'Featured profile for 1 week',
-      freeBoost: 'Free boost campaign',
-      proStorefront: '1 month Pro storefront',
+      // BUG-017: rewards are credits toward premium features, not cash /
+      // session discounts. Tracking is via the referral code in the signup
+      // URL; credits issue when the referred athlete completes their first
+      // session.
+      howItWorksDesc:
+        'Share your code. When a friend signs up with it and completes their first session, you both earn credits toward Tribe+ premium features.',
+      rewardTiers: 'Reward Tiers (Tribe+ credits)',
+      freePromo: '1 referral: 1 month of Tribe+ credits',
+      featuredProfile: '3 referrals: featured profile for 1 week',
+      freeBoost: '5 referrals: free boost campaign for instructors',
+      proStorefront: '10 referrals: 1 month of Tribe+ Pro storefront',
       referralLink: 'Referral Link',
     },
     es: {
@@ -55,12 +62,13 @@ export default function ReferralPage() {
       friendsInvited: 'Amigos Invitados',
       rewardsEarned: 'Recompensas Ganadas',
       howItWorks: 'Cómo Funciona',
-      howItWorksDesc: 'Por cada amigo que se una y complete su primera sesión, ambos ganan una recompensa',
-      rewardTiers: 'Niveles de Recompensa',
-      freePromo: 'Código de promoción gratis (10% de descuento en la próxima sesión)',
-      featuredProfile: 'Perfil destacado por 1 semana',
-      freeBoost: 'Campaña de impulso gratis',
-      proStorefront: 'Escaparate Pro por 1 mes',
+      howItWorksDesc:
+        'Comparte tu código. Cuando un amigo se registre con él y complete su primera sesión, ambos ganan créditos para funciones premium de Tribe+.',
+      rewardTiers: 'Niveles de Recompensa (créditos Tribe+)',
+      freePromo: '1 referido: 1 mes de créditos Tribe+',
+      featuredProfile: '3 referidos: perfil destacado por 1 semana',
+      freeBoost: '5 referidos: campaña de impulso gratis (para instructores)',
+      proStorefront: '10 referidos: Tribe+ Pro storefront por 1 mes',
       referralLink: 'Enlace de Referencia',
     },
   };
@@ -86,6 +94,15 @@ export default function ReferralPage() {
         const codeResult = await getOrCreateReferralCode(supabase, authUser.id);
         if (codeResult.success && codeResult.data) {
           setReferralCode(codeResult.data);
+          setCodeError(null);
+        } else {
+          // Blank code used to render silently — surface the failure so we
+          // don't ship a "share with no code" WhatsApp link (BUG-005).
+          setCodeError(codeResult.error || 'unknown');
+          logError(new Error(codeResult.error || 'getOrCreateReferralCode failed'), {
+            action: 'referral.loadCode',
+            userId: authUser.id,
+          });
         }
 
         // Fetch real referral stats via DAL
@@ -96,7 +113,7 @@ export default function ReferralPage() {
         }
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      logError(error, { action: 'Error loading user data' });
     } finally {
       setLoading(false);
     }
@@ -138,7 +155,7 @@ export default function ReferralPage() {
         });
       } catch (err) {
         if (!(err instanceof Error && err.name === 'AbortError')) {
-          console.error('Share failed:', err);
+          logError(err, { action: 'Share failed' });
         }
       }
     }
@@ -172,11 +189,24 @@ export default function ReferralPage() {
           <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">{t.referralCode}</h2>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 bg-stone-100 dark:bg-tribe-surface rounded-xl p-4 text-center">
-              <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
+              {referralCode ? (
+                <p className="text-3xl font-bold text-tribe-green font-mono">{referralCode}</p>
+              ) : codeError ? (
+                <p className="text-sm text-stone-500 dark:text-gray-400">
+                  {language === 'es'
+                    ? 'No se pudo generar tu código. Intenta de nuevo en un momento.'
+                    : "Couldn't generate your code. Please try again in a moment."}
+                </p>
+              ) : (
+                <p className="text-sm text-stone-500 dark:text-gray-400">
+                  {language === 'es' ? 'Generando código...' : 'Generating code…'}
+                </p>
+              )}
             </div>
             <button
               onClick={handleCopyCode}
-              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-tribe-green-hover transition font-semibold flex items-center gap-2"
+              disabled={!referralCode}
+              className="bg-tribe-green text-slate-900 p-3 rounded-xl hover:bg-tribe-green-hover transition font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             </button>
@@ -189,14 +219,16 @@ export default function ReferralPage() {
           <div className="space-y-3">
             <button
               onClick={handleCopyLink}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+              disabled={!referralCode}
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Copy className="w-5 h-5 text-tribe-green" />
               {t.copyLink}
             </button>
             <button
               onClick={handleShareWhatsApp}
-              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+              disabled={!referralCode}
+              className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="text-xl">💬</span>
               {t.shareWhatsApp}
@@ -204,7 +236,8 @@ export default function ReferralPage() {
             {'share' in navigator && (
               <button
                 onClick={handleShare}
-                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2"
+                disabled={!referralCode}
+                className="w-full p-4 rounded-xl text-left font-semibold bg-stone-100 dark:bg-tribe-surface text-stone-900 dark:text-white hover:bg-stone-200 dark:hover:bg-tribe-mid transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="text-xl">↗️</span>
                 {t.share}

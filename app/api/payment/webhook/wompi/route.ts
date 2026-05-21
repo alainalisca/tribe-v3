@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { verifyWompiWebhookSignature, mapWompiStatus, extractWompiTransactionData } from '@/lib/payments/wompi';
-import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
+import { notifyAfterFinalize, notifyTipReceived } from '@/lib/payments/notifyAfterFinalize';
 
 interface WebhookPayload {
   transaction?: {
@@ -133,6 +133,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       success?: boolean;
       error?: string;
       payment_id?: string;
+      tip_id?: string;
       was_duplicate?: boolean;
     };
     if (!result.success) {
@@ -145,6 +146,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // force the gateway to retry.
     if (paymentStatus === 'approved' && !result.was_duplicate && result.payment_id) {
       notifyAfterFinalize(supabase, result.payment_id).catch(() => undefined);
+    }
+    // Tip finalized via the tips-table fallback (no payments row). Notify the
+    // instructor exactly once — same fire-and-forget contract.
+    if (paymentStatus === 'approved' && !result.was_duplicate && result.tip_id) {
+      notifyTipReceived(supabase, result.tip_id).catch(() => undefined);
     }
 
     // Always return 200 to acknowledge receipt

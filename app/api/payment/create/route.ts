@@ -25,6 +25,7 @@ import {
 import { createWompiTransaction } from '@/lib/payments/wompi';
 import { createStripeCheckoutSession } from '@/lib/payments/stripe';
 import { isCreatorPremium } from '@/lib/dal/tribeOSSubscription';
+import { createTip } from '@/lib/dal/tips';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -63,6 +64,166 @@ export async function POST(request: NextRequest) {
     }
 
     const paymentType = body.payment_type || 'session_participation';
+
+    // ──── TIP PAYMENT ────
+    // A gratuity from an athlete to an instructor. Unlike a session, a tip
+    // has no server-side canonical price, so the amount is client-supplied
+    // and clamped to per-currency bounds. 100% goes to the instructor
+    // (platform_fee_cents = 0). The tip is tracked only in the `tips` table
+    // (no payments row): finalize_payment (migration 088) finalizes it via a
+    // tips-table fallback, and the migration-029 trigger updates the
+    // instructor's cached totals on approval.
+    if (paymentType === 'tip') {
+      const { instructor_id, currency, amount_cents, session_id: tipSessionId, message } = body;
+
+      if (!instructor_id || !currency || amount_cents === undefined || amount_cents === null) {
+        return NextResponse.json(
+          { success: false, error: 'Missing required fields: instructor_id, currency, amount_cents' },
+          { status: 400 }
+        );
+      }
+
+      if (!isSupportedCurrency(currency)) {
+        return NextResponse.json({ success: false, error: `Unsupported currency: ${currency}` }, { status: 400 });
+      }
+
+      if (instructor_id === user.id) {
+        return NextResponse.json({ success: false, error: 'Cannot tip yourself' }, { status: 400 });
+      }
+
+      // Per-currency tip bounds, expressed in the same minor-unit convention
+      // the rest of the payment system (and the gateways) use: USD cents and
+      // COP pesos × 100. The USD floor sits well above Stripe's 50-cent hard
+      // minimum. We reject (not silently clamp) an out-of-range amount so the
+      // athlete is never charged a different number than they chose.
+      const TIP_BOUNDS: Record<string, { min: number; max: number }> = {
+        USD: { min: 100, max: 50_000 }, // $1.00 .. $500.00
+        COP: { min: 200_000, max: 200_000_000 }, // ~$2,000 .. ~$2,000,000 COP
+      };
+      const bounds = TIP_BOUNDS[currency];
+      const tipAmount = Math.floor(Number(amount_cents));
+      if (!Number.isFinite(tipAmount) || tipAmount <= 0) {
+        return NextResponse.json({ success: false, error: 'Invalid tip amount' }, { status: 400 });
+      }
+      if (bounds && (tipAmount < bounds.min || tipAmount > bounds.max)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              currency === 'USD'
+                ? `Tip must be between $${(bounds.min / 100).toFixed(2)} and $${(bounds.max / 100).toFixed(2)} USD`
+                : `Tip must be between $${(bounds.min / 100).toLocaleString()} and $${(
+                    bounds.max / 100
+                  ).toLocaleString()} COP`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const gateway = getPaymentGateway(currency as 'COP' | 'USD');
+      const userEmail = user.email || '';
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const serviceSupabase = createServiceClient(supabaseUrl, serviceRoleKey);
+
+      // USD tips route through the instructor's Stripe Connect account as a
+      // 100%-destination charge. Refuse before creating anything if their
+      // onboarding isn't complete — otherwise funds would settle to the
+      // platform with no way to forward them (same hazard as USD sessions).
+      let instructorStripeAccountId: string | undefined;
+      if (gateway === 'stripe') {
+        const { data: instructorProfile } = await serviceSupabase
+          .from('users')
+          .select('stripe_account_id, stripe_onboarding_complete')
+          .eq('id', instructor_id)
+          .maybeSingle();
+        if (!instructorProfile?.stripe_account_id || !instructorProfile?.stripe_onboarding_complete) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'This instructor cannot accept USD tips yet (payout setup incomplete).',
+            },
+            { status: 409 }
+          );
+        }
+        instructorStripeAccountId = instructorProfile.stripe_account_id;
+      }
+
+      const tipResult = await createTip(
+        serviceSupabase,
+        user.id,
+        instructor_id,
+        tipAmount,
+        currency,
+        gateway,
+        typeof tipSessionId === 'string' ? tipSessionId : undefined,
+        typeof message === 'string' ? message : undefined
+      );
+      if (!tipResult.success || !tipResult.data) {
+        logError(new Error(tipResult.success ? 'createTip returned no id' : tipResult.error), {
+          route: '/api/payment/create',
+          action: 'create_tip',
+          instructorId: instructor_id,
+        });
+        return NextResponse.json({ success: false, error: 'Failed to create tip' }, { status: 500 });
+      }
+      const tipId = tipResult.data.id;
+
+      let redirectUrl: string | undefined;
+
+      if (gateway === 'wompi') {
+        const wompiResult = await createWompiTransaction({
+          amountCents: tipAmount,
+          currency: 'COP',
+          customerEmail: userEmail,
+          reference: tipId,
+          redirectUrl: `${siteUrl}/payment/confirm?tip=${tipId}`,
+        });
+        if (!wompiResult) {
+          await serviceSupabase.from('tips').update({ status: 'error' }).eq('id', tipId);
+          logError(new Error('Wompi transaction creation returned null'), {
+            route: '/api/payment/create',
+            action: 'wompi_tip_transaction',
+            tipId,
+            amountCents: tipAmount,
+          });
+          return NextResponse.json({ success: false, error: 'Failed to create Wompi transaction' }, { status: 500 });
+        }
+        redirectUrl = wompiResult.redirect_url;
+        // The gateway transaction id is the handle finalize_payment matches
+        // the tip on when the webhook fires.
+        await serviceSupabase.from('tips').update({ gateway_payment_id: wompiResult.transaction_id }).eq('id', tipId);
+      } else {
+        const stripeResult = await createStripeCheckoutSession({
+          amountCents: tipAmount,
+          currency: 'USD',
+          customerEmail: userEmail,
+          sessionId: tipId, // carried in Stripe metadata for traceability
+          participantUserId: user.id,
+          successUrl: `${siteUrl}/payment/confirm?tip=${tipId}&gateway=stripe`,
+          cancelUrl: `${siteUrl}/profile/${instructor_id}?tip=cancelled`,
+          instructorStripeAccountId,
+          // Tips carry no platform fee — 100% to the instructor.
+          applicationFeeCents: 0,
+          productName: 'Tribe Tip',
+          paymentType: 'tip',
+        });
+        if (!stripeResult?.url) {
+          await serviceSupabase.from('tips').update({ status: 'error' }).eq('id', tipId);
+          return NextResponse.json({ success: false, error: 'Failed to create Stripe session' }, { status: 500 });
+        }
+        redirectUrl = stripeResult.url;
+        await serviceSupabase.from('tips').update({ gateway_payment_id: stripeResult.sessionId }).eq('id', tipId);
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          gateway,
+          tip_id: tipId,
+          redirect_url: redirectUrl,
+        },
+      });
+    }
 
     // ──── BOOST CAMPAIGN / PRO STOREFRONT PAYMENTS ────
     if (paymentType === 'boost_campaign' || paymentType === 'pro_storefront') {
@@ -503,12 +664,18 @@ export async function POST(request: NextRequest) {
 
       redirectUrl = stripeResult.url;
 
-      // Store Stripe session ID
+      // Store the Stripe Checkout Session id as the gateway handle.
+      // NOTE: we intentionally do NOT set stripe_payment_intent_id here —
+      // at create-time the PaymentIntent (pi_...) does not exist yet; only
+      // the Checkout Session (cs_...) does. Writing the cs_ id into a
+      // column named stripe_payment_intent_id was the root cause of
+      // refunds never being matched (charge.refunded is keyed by pi_).
+      // The real pi_ is backfilled by the checkout.session.completed
+      // webhook handler.
       await serviceSupabase
         .from('payments')
         .update({
           gateway_payment_id: stripeResult.sessionId,
-          stripe_payment_intent_id: stripeResult.sessionId,
           status: 'processing',
         })
         .eq('id', paymentId);

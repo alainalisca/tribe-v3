@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Dumbbell, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { expressInterest, withdrawInterest, hasExpressedInterest, createNotification } from '@/lib/dal';
@@ -32,6 +34,9 @@ export default function InterestButton({
   const [sport, setSport] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [saving, setSaving] = useState(false);
+
+  useEscapeKey(() => setOpen(false), open && !saving);
+  useBodyScrollLock(open);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,16 +142,16 @@ export default function InterestButton({
 
   return (
     <>
-      <div className="bg-[#3D4349] rounded-2xl p-4">
+      <div className="bg-theme-card rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <Dumbbell className="w-4 h-4 text-[#A3E635]" />
           <h3 className="text-sm font-semibold text-white">{t.title}</h3>
         </div>
-        <p className="text-xs text-gray-400 mb-3">{t.subtext}</p>
+        <p className="text-xs text-theme-tertiary mb-3">{t.subtext}</p>
 
         {hasInterest ? (
           <div className="space-y-1">
-            <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-[#272D34] text-gray-400 text-sm font-semibold">
+            <div className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-theme-surface text-theme-tertiary text-sm font-semibold">
               <Check className="w-4 h-4" /> {t.interestSent}
             </div>
             <button
@@ -171,25 +176,26 @@ export default function InterestButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
           onClick={() => !saving && setOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-md bg-[#3D4349] rounded-2xl p-5 border border-[#404549]"
+            className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5 border border-theme"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>
 
-            <label className="block text-xs text-gray-400 mb-1" htmlFor="interest-sport">
+            <label className="block text-xs text-theme-tertiary mb-1" htmlFor="interest-sport">
               {t.sportLabel}
             </label>
             <select
               id="interest-sport"
               value={sport}
               onChange={(e) => setSport(e.target.value)}
-              className="w-full mb-4 px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm"
+              className="w-full mb-4 px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm"
             >
               <option value="">{t.sportPlaceholder}</option>
               {specialties.length > 0
@@ -205,7 +211,7 @@ export default function InterestButton({
                   ))}
             </select>
 
-            <label className="block text-xs text-gray-400 mb-1" htmlFor="interest-message">
+            <label className="block text-xs text-theme-tertiary mb-1" htmlFor="interest-message">
               {t.messageLabel}
             </label>
             <textarea
@@ -214,7 +220,7 @@ export default function InterestButton({
               onChange={(e) => setMessage(e.target.value.slice(0, MAX_MESSAGE))}
               rows={3}
               placeholder={t.messagePlaceholder}
-              className="w-full mb-1 px-3 py-2 rounded-lg bg-[#272D34] text-white text-sm resize-none"
+              className="w-full mb-1 px-3 py-2 rounded-lg bg-theme-surface text-theme-primary text-sm resize-none"
             />
             <p className="text-[10px] text-gray-500 text-right mb-4">
               {message.length}/{MAX_MESSAGE}
@@ -225,7 +231,7 @@ export default function InterestButton({
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={saving}
-                className="flex-1 py-2 rounded-lg bg-[#272D34] text-gray-300 text-sm hover:bg-[#404549] disabled:opacity-50"
+                className="flex-1 py-2 rounded-lg bg-theme-surface text-theme-secondary text-sm hover:opacity-90 disabled:opacity-50"
               >
                 {t.cancel}
               </button>

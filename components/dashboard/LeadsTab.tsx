@@ -100,7 +100,7 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
         className="bg-white dark:bg-tribe-surface rounded-2xl p-4 border border-stone-200 dark:border-tribe-mid"
       >
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-stone-200 dark:bg-[#272D34] overflow-hidden flex-shrink-0 relative">
+          <div className="w-10 h-10 rounded-full bg-theme-surface overflow-hidden flex-shrink-0 relative">
             {entry.athlete.avatar_url ? (
               <Image
                 src={entry.athlete.avatar_url}
@@ -136,7 +136,7 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
           <div className="mt-3 flex gap-2">
             <Link
               href={`/profile/${entry.athlete.id}`}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-stone-100 dark:bg-[#272D34] text-theme-primary text-xs font-semibold hover:bg-stone-200"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-theme-surface text-theme-primary text-xs font-semibold hover:opacity-90"
             >
               <UserIcon className="w-3.5 h-3.5" />
               {t.viewProfile}
@@ -152,7 +152,7 @@ export default function LeadsTab({ instructorId, language }: LeadsTabProps) {
             <button
               type="button"
               onClick={() => updateStatus(entry.id, 'dismissed')}
-              className="px-3 py-2 rounded-lg bg-stone-100 dark:bg-[#272D34] text-theme-secondary text-xs font-semibold hover:text-theme-primary"
+              className="px-3 py-2 rounded-lg bg-theme-surface text-theme-secondary text-xs font-semibold hover:text-theme-primary"
               aria-label={t.dismiss}
             >
               <X className="w-3.5 h-3.5" />

@@ -30,7 +30,23 @@
     "morePlayers": "more players",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "noSessions": "No sessions available yet. Create the first one!"
+    "noSessions": "No sessions available yet. Create the first one!",
+    "inCity": "In {city}",
+    "exploreCity": "Explore {city}",
+    "exploreHint": "Tap a neighborhood to see what's happening",
+    "sessions": "Sessions",
+    "instructors": "Instructors",
+    "filterAll": "All",
+    "filterFree": "Free",
+    "filterPaid": "Paid",
+    "viewInFeed": "View in Feed",
+    "minsAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago",
+    "startingIn": "Starting in",
+    "beFirstToHost": "Be the first to host in {hood}",
+    "sessionsToday": "{count} sessions today",
+    "beFirstHere": "Be the first to create a session here"
   },
   "weather": {
     "clear": "Perfect day for outdoor training",
@@ -116,5 +132,34 @@
     "currentPlan": "Current plan",
     "manageSubscription": "Manage subscription",
     "cancelAnytime": "Cancel anytime"
+  },
+  "auth": {
+    "invitedBy": "🎉 Invited by {name}",
+    "or": "or"
+  },
+  "tribe-plus": {
+    "trainSmarterSaveMoreGet": "Train smarter. Save more. Get priority.",
+    "startFreeTrial7Days": "Start Free Trial — 7 Days",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "savePct": "Save {pct}%",
+    "month": "/month",
+    "year": "/year",
+    "zeroBookingFees": "Zero Booking Fees",
+    "saveOnEveryPaidSession": "Save on every paid session you book",
+    "24HourEarlyAccess": "24-Hour Early Access",
+    "seeAndBookNewSessions": "See and book new sessions before anyone else",
+    "advancedTrainingStats": "Advanced Training Stats",
+    "deepTrainingAnalyticsOnMy": "Deep training analytics on My Training",
+    "tribeBadge": "Tribe+ Badge",
+    "standOutInTheCommunity": "Stand out in the community with your ✦ badge",
+    "faq": "FAQ",
+    "canICancelAnytime": "Can I cancel anytime?",
+    "yesYouKeepAccessUntil": "Yes. You keep access until the end of your billing period.",
+    "whatHappensToMyBookings": "What happens to my bookings if I cancel?",
+    "youKeepAllExistingBookings": "You keep all existing bookings.",
+    "tribeIsComingSoonWe": "Tribe+ is coming soon. We'll let you know the moment it's available.",
+    "weLlNotifyYou": "We'll notify you ✓",
+    "alreadyAMemberManageSubscription": "Already a member? Manage subscription"
   }
 }

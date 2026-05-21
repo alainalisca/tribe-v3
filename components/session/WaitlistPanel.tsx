@@ -221,7 +221,7 @@ export default function WaitlistPanel({
             type="button"
             onClick={handlePass}
             disabled={busy}
-            className="px-4 py-2 rounded-lg bg-stone-200 dark:bg-[#272D34] text-theme-secondary text-sm font-semibold disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-theme-surface text-theme-secondary text-sm font-semibold disabled:opacity-50"
           >
             {t.pass}
           </button>

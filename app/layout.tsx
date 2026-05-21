@@ -9,6 +9,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import PageTransition from '@/components/PageTransition';
+import { ConfirmProvider } from '@/components/ConfirmProvider';
 import './globals.css';
 import type { Metadata } from 'next';
 
@@ -51,6 +52,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={jakartaSans.variable} suppressHydrationWarning>
       <head>
+        {/* Theme FOUC guard — runs before paint/hydration. Reads the
+            saved preference (default light), resolves "system", and sets
+            the html class so there's no flash of the wrong theme. Must
+            stay in sync with applyThemeClass() in contexts/ThemeContext. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('tribe-theme')||'light';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var c=document.documentElement.classList;c.remove('light','dark');c.add(t==='dark'?'dark':'light');}catch(e){}})();`,
+          }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -77,7 +87,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <AppStoreBanner />
               <BackButtonHandler />
               <InAppNotificationToast />
-              <PageTransition>{children}</PageTransition>
+              <ConfirmProvider>
+                <PageTransition>{children}</PageTransition>
+              </ConfirmProvider>
               <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
             </LanguageProvider>
           </ThemeProvider>

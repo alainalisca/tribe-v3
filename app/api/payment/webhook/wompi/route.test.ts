@@ -31,6 +31,7 @@ vi.mock('@/lib/payments/wompi', () => ({
 
 vi.mock('@/lib/payments/notifyAfterFinalize', () => ({
   notifyAfterFinalize: vi.fn().mockResolvedValue(undefined),
+  notifyTipReceived: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -39,7 +40,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import { POST } from './route';
 import { verifyWompiWebhookSignature, mapWompiStatus, extractWompiTransactionData } from '@/lib/payments/wompi';
-import { notifyAfterFinalize } from '@/lib/payments/notifyAfterFinalize';
+import { notifyAfterFinalize, notifyTipReceived } from '@/lib/payments/notifyAfterFinalize';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase mock ──────────────────────────────────────────────────
@@ -219,6 +220,40 @@ describe('POST /api/payment/webhook/wompi', () => {
       p_new_status: 'approved',
     });
     expect(notifyAfterFinalize).toHaveBeenCalledWith(supabase, 'pay-happy');
+  });
+
+  it('finalizes a tip (no payments row) and notifies the instructor', async () => {
+    vi.mocked(verifyWompiWebhookSignature).mockReturnValue(true);
+    vi.mocked(extractWompiTransactionData).mockReturnValue({ currency: 'COP', amount_in_cents: 1_000_000 } as never);
+    vi.mocked(mapWompiStatus).mockReturnValue('approved' as never);
+
+    // No payments row exists for a tip — the existingPayment lookup misses
+    // and finalize_payment resolves it via the tips-table fallback.
+    const supabase = mockSupabase({
+      existingPayment: null,
+      rpcResult: { data: { success: true, was_duplicate: false, tip_id: 'tip-1' } },
+    });
+    vi.mocked(createClient).mockReturnValue(supabase as never);
+
+    const body = JSON.stringify({
+      transaction: {
+        id: 'txn_tip',
+        reference: 'tip-1',
+        amount_in_cents: 1_000_000,
+        currency: 'COP',
+        status: 'APPROVED',
+      },
+    });
+    const res = await POST(request(body, { 'x-signature': 'ok', 'x-timestamp': '1' }));
+    expect(res.status).toBe(200);
+    expect(supabase.__rpcFn).toHaveBeenCalledWith('finalize_payment', {
+      p_gateway_payment_id: 'txn_tip',
+      p_expected_amount_cents: 1_000_000,
+      p_gateway: 'wompi',
+      p_new_status: 'approved',
+    });
+    expect(notifyTipReceived).toHaveBeenCalledWith(supabase, 'tip-1');
+    expect(notifyAfterFinalize).not.toHaveBeenCalled();
   });
 
   it('returns 500 on RPC error so Wompi retries', async () => {

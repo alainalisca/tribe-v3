@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { fetchGuestParticipant } from '@/lib/dal/participants';
+
+/** Minimal HTML-entity escape for values interpolated into the email body. */
+function esc(s: string): string {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  );
+}
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -54,12 +63,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // SECURITY: bind this email to a REAL guest join. Without this the
+    // endpoint is an open, unauthenticated relay — anyone could POST and
+    // make Tribe's sending domain deliver an arbitrary-content email to
+    // any address (spam / phishing / domain-reputation damage). Only
+    // send when (sessionId, email) matches an actual is_guest=true
+    // participant row. Generic 403 — don't reveal whether it exists.
+    const guestRes = await fetchGuestParticipant(rateLimitClient, sessionId, { guest_email: email });
+    if (!guestRes.success || !guestRes.data) {
+      return NextResponse.json({ error: 'Not eligible' }, { status: 403 });
+    }
+
     const resend = getResendClient();
     const isSpanish = language === 'es';
 
+    // Escaped copies for HTML interpolation (defense-in-depth — these
+    // are now join-bound but still user-supplied free text).
+    const eGuest = esc(guestName);
+    const eSport = esc(sessionSport);
+    const eDate = esc(sessionDate);
+    const eTime = esc(sessionTime);
+    const eLoc = esc(sessionLocation);
+    const eHost = esc(hostName);
+
     const subject = isSpanish ? `¡Estás confirmado para ${sessionSport}!` : `You're confirmed for ${sessionSport}!`;
 
-    const greeting = isSpanish ? `¡Hola ${guestName}!` : `Hey ${guestName}!`;
+    const greeting = isSpanish ? `¡Hola ${eGuest}!` : `Hey ${eGuest}!`;
 
     const confirmed = isSpanish
       ? `Tu asistencia está confirmada para la siguiente sesión de entrenamiento:`
@@ -96,29 +125,29 @@ export async function POST(request: NextRequest) {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="color: #6b7280; padding: 4px 12px 4px 0; font-size: 14px; white-space: nowrap;">${sportLabel}</td>
-                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${sessionSport}</td>
+                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${eSport}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 4px 12px 4px 0; font-size: 14px; white-space: nowrap;">${dateLabel}</td>
-                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${sessionDate}</td>
+                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${eDate}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 4px 12px 4px 0; font-size: 14px; white-space: nowrap;">${timeLabel}</td>
-                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${sessionTime}</td>
+                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${eTime}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 4px 12px 4px 0; font-size: 14px; white-space: nowrap;">${locationLabel}</td>
-                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${sessionLocation}</td>
+                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${eLoc}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 4px 12px 4px 0; font-size: 14px; white-space: nowrap;">${hostedByLabel}</td>
-                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${hostName}</td>
+                  <td style="color: #1e293b; padding: 4px 0; font-weight: 600; font-size: 14px;">${eHost}</td>
                 </tr>
               </table>
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${SITE_URL}/session/${sessionId}"
+              <a href="${SITE_URL}/session/${encodeURIComponent(sessionId)}"
                  style="display: inline-block; background: #9EE551; color: #1e293b; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                 ${buttonText}
               </a>

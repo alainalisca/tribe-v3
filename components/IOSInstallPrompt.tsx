@@ -58,7 +58,11 @@ export default function AppStoreBanner() {
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-tribe-dark rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl font-bold text-white">
-              Tribe<span className="text-tribe-green">.</span>
+              Tribe
+              <span
+                aria-hidden="true"
+                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
+              />
             </span>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">{t('getTheTribeApp')}</h2>

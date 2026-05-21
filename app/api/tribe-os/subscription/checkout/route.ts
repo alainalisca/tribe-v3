@@ -128,6 +128,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
       });
       return NextResponse.json({ success: false, error: 'failed_to_resolve_gym' }, { status: 500 });
     }
+    let resolvedGymId: string;
     if (!gymRes.data) {
       const display = premiumRow.name || user.email.split('@')[0] || 'Solo Practice';
       const created = await createGym(service, {
@@ -144,22 +145,41 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
         });
         return NextResponse.json({ success: false, error: 'failed_to_create_gym' }, { status: 500 });
       }
-      const newGymId = created.data!.id;
-      // Owner needs the gym_coaches row for dual-path RLS to work.
-      await addCoachToGym(service, newGymId, user.id, 'owner');
-    } else if (!gymRes.data.tribe_os_stripe_customer_id) {
-      // Existing gym (e.g. backfilled in migration 069) without a Stripe
-      // customer id yet. Tag it so the webhook can find it on the first
-      // subscription event.
-      const tagged = await updateGym(service, gymRes.data.id, { stripeCustomerId: customerId });
-      if (!tagged.success) {
-        logError(new Error(`gym_tag_customer_failed: ${tagged.error ?? ''}`), {
-          action: 'tribe_os_checkout.gym_tag_customer',
-          userId: user.id,
-          gymId: gymRes.data.id,
-        });
-        // Non-fatal — webhook can fall back to owner_user_id lookup.
+      resolvedGymId = created.data!.id;
+    } else {
+      resolvedGymId = gymRes.data.id;
+      if (!gymRes.data.tribe_os_stripe_customer_id) {
+        // Existing gym (e.g. backfilled in migration 069) without a Stripe
+        // customer id yet. Tag it so the webhook can find it on the first
+        // subscription event.
+        const tagged = await updateGym(service, gymRes.data.id, { stripeCustomerId: customerId });
+        if (!tagged.success) {
+          logError(new Error(`gym_tag_customer_failed: ${tagged.error ?? ''}`), {
+            action: 'tribe_os_checkout.gym_tag_customer',
+            userId: user.id,
+            gymId: gymRes.data.id,
+          });
+          // Non-fatal — webhook can fall back to owner_user_id lookup.
+        }
       }
+    }
+
+    // The owner MUST have a gym_coaches row, or dual-path RLS (migration
+    // 070) denies them access to their own gym's data after they've
+    // paid. The previous code fired this only on the just-created path
+    // and ignored its result — a failure left a billed owner locked out
+    // with no self-heal. addCoachToGym is an idempotent upsert, so we
+    // run it on EVERY checkout (new or existing gym): a prior partial
+    // failure heals on the next attempt. Fatal on failure so the user
+    // retries instead of ending up billed with a broken gym.
+    const ownerLink = await addCoachToGym(service, resolvedGymId, user.id, 'owner');
+    if (!ownerLink.success) {
+      logError(new Error(`owner_coach_link_failed: ${ownerLink.error ?? ''}`), {
+        action: 'tribe_os_checkout.owner_coach_link',
+        userId: user.id,
+        gymId: resolvedGymId,
+      });
+      return NextResponse.json({ success: false, error: 'failed_to_link_owner' }, { status: 500 });
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001';

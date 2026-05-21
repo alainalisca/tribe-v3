@@ -27,6 +27,7 @@
 
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { evaluateGymAuditThresholds, type TriggeredAlert } from '@/lib/dal/auditWatchdog';
 import { sendAuditAlertEmail, type AuditAlertItem } from '@/lib/email/auditAlertEmail';
@@ -51,7 +52,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   try {
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isValidCronAuth(authHeader)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -299,7 +299,24 @@ export default function SessionDetails({
 
       {session.description && (
         <div className="mb-6 p-4 bg-stone-50 dark:bg-tribe-mid rounded-lg">
-          <p className="text-stone-700 dark:text-gray-300">{session.description}</p>
+          {/* BUG-028: preserve line breaks, turn URLs into clickable links. */}
+          <p className="text-stone-700 dark:text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
+            {session.description.split(/(\bhttps?:\/\/\S+\b)/g).map((part, i) =>
+              /^https?:\/\//.test(part) ? (
+                <a
+                  key={i}
+                  href={part}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-tribe-green underline break-all"
+                >
+                  {part}
+                </a>
+              ) : (
+                <span key={i}>{part}</span>
+              )
+            )}
+          </p>
         </div>
       )}
     </div>

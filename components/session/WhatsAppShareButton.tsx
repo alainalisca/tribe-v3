@@ -6,6 +6,7 @@ import { sportTranslations } from '@/lib/translations';
 import { formatTime12Hour } from '@/lib/utils';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { formatPrice } from '@/lib/formatCurrency';
+import { getSessionShareUrl } from '@/lib/share';
 import type { Currency } from '@/lib/payments/config';
 
 interface WhatsAppShareButtonProps {
@@ -66,13 +67,17 @@ export default function WhatsAppShareButton({ session, language, isCreator = fal
     );
     const priceStr = formatPriceLine(!!session.is_paid, session.price_cents, session.currency, language);
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const sessionUrl = `${origin}/session/${session.id}`;
+    // /s/[id] public share route — has OG metadata so WhatsApp unfurls a
+    // rich preview card instead of a naked link.
+    const sessionUrl = getSessionShareUrl(session.id);
 
+    // BUG-013: emojis in URL-encoded WhatsApp share text rendered as
+    // diamond replacement chars on some devices/preview. Plain text
+    // labels render reliably across all clients.
     const message =
       language === 'es'
-        ? `¡Únete a mi sesión de ${sportName} en Tribe!\n📅 ${dateStr} a las ${timeStr}\n📍 ${locationStr}\n💪 ${priceStr}\nReserva aquí: ${sessionUrl}`
-        : `Join my ${sportName} session on Tribe!\n📅 ${dateStr} at ${timeStr}\n📍 ${locationStr}\n💪 ${priceStr}\nBook here: ${sessionUrl}`;
+        ? `¡Únete a mi sesión de ${sportName} en Tribe!\nCuándo: ${dateStr} a las ${timeStr}\nDónde: ${locationStr}\nPrecio: ${priceStr}\nReserva aquí: ${sessionUrl}`
+        : `Join my ${sportName} session on Tribe!\nWhen: ${dateStr} at ${timeStr}\nWhere: ${locationStr}\nPrice: ${priceStr}\nBook here: ${sessionUrl}`;
 
     const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 

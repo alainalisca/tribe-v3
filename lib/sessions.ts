@@ -94,19 +94,17 @@ export async function joinSession({
       };
     }
 
-    // 11. Notify host (fire-and-forget)
-    const isRequest = status === 'pending';
-    fetch('/api/notifications/send', {
+    // 11. Notify host (fire-and-forget). Goes through the narrow
+    // notify-join route, NOT /api/notifications/send directly: that
+    // endpoint is internal-only now, and the recipient + message are
+    // derived server-side from the session (anti-spoofing).
+    fetch('/api/sessions/notify-join', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: session.creator_id,
-        title: isRequest ? '📩 New Join Request' : '🎉 New Training Partner!',
-        body: isRequest
-          ? `${userName} wants to join your ${session.sport} session`
-          : `${userName} joined your ${session.sport} session`,
-        url: `/session/${sessionId}`,
-        data: { sessionId, type: 'join' },
+        session_id: sessionId,
+        joiner_name: userName,
+        kind: status === 'pending' ? 'request' : 'join',
       }),
     }).catch((err) => logError(err, { action: 'notify_host', sessionId }));
 

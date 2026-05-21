@@ -15,6 +15,7 @@ import AchievementBadges from '@/components/AchievementBadges';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 
+import TribeWordmark from '@/components/TribeWordmark';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -52,9 +53,7 @@ export default function ProfilePage() {
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-card border-b border-theme">
         <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
           <Link href="/">
-            <h1 className="text-xl font-bold text-theme-primary cursor-pointer">
-              Tribe<span className="text-tribe-green">.</span>
-            </h1>
+            <TribeWordmark className="h-5 w-auto" />
           </Link>
           <Link href="/settings">
             <button className="p-2 hover:bg-stone-200 rounded-lg transition">
@@ -65,11 +64,20 @@ export default function ProfilePage() {
       </div>
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto">
-        {/* Banner */}
+        {/* Banner. Onboarding writes to storefront_banner_url, the profile
+            page historically read banner_url — falling back so the
+            uploaded banner shows up regardless of which column wrote it
+            (BUG-007). */}
         <div className="relative h-48 overflow-hidden">
           <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
-            {profile?.banner_url && (
-              <Image src={profile.banner_url} alt="Profile banner" fill className="object-cover" unoptimized />
+            {(profile?.banner_url || profile?.storefront_banner_url) && (
+              <Image
+                src={(profile?.banner_url || profile?.storefront_banner_url)!}
+                alt="Profile banner"
+                fill
+                className="object-cover"
+                unoptimized
+              />
             )}
           </div>
           <div className="absolute bottom-4 right-4 z-30">
@@ -87,14 +95,23 @@ export default function ProfilePage() {
 
         {/* Profile Section */}
         <div className="px-4 -mt-16 relative z-10">
-          {/* Avatar */}
+          {/* Avatar. BUG-034: tapping the avatar opens the same lightbox the
+              gallery photos use, so users can see their picture full size. */}
           <div className="relative inline-block">
-            <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
-              <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
-              <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
-                {getInitials(profile?.name || 'User')}
-              </AvatarFallback>
-            </Avatar>
+            <button
+              type="button"
+              onClick={() => profile?.avatar_url && openPhoto(profile.avatar_url)}
+              disabled={!profile?.avatar_url}
+              aria-label={language === 'es' ? 'Ver foto de perfil' : 'View profile photo'}
+              className="block rounded-full focus:outline-none focus:ring-2 focus:ring-tribe-green disabled:cursor-default"
+            >
+              <Avatar className="w-32 h-32 border-4 border-white dark:border-tribe-surface shadow-lg">
+                <AvatarImage loading="lazy" src={profile?.avatar_url || undefined} alt={profile?.name ?? ''} />
+                <AvatarFallback className="bg-tribe-green text-5xl font-bold text-slate-900">
+                  {getInitials(profile?.name || 'User')}
+                </AvatarFallback>
+              </Avatar>
+            </button>
             <label className="absolute bottom-0 right-0 bg-slate-900 p-2.5 rounded-full cursor-pointer hover:bg-slate-800 transition shadow-lg">
               <Camera className="w-5 h-5 text-white" />
               <input

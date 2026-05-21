@@ -157,7 +157,7 @@ export default function TrainingPreferencesPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 bg-white dark:bg-[#272D34] text-stone-900 dark:text-white">
+    <div className="min-h-screen pb-24 bg-theme-page text-theme-primary">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
         <div className="flex items-center gap-2">
           <Search className="w-5 h-5 text-[#A3E635]" />
@@ -165,10 +165,10 @@ export default function TrainingPreferencesPage() {
         </div>
 
         {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">{t.loading}</p>
+          <p className="py-12 text-center text-sm text-theme-tertiary">{t.loading}</p>
         ) : (
           <>
-            <div className="bg-[#3D4349] rounded-xl p-4">
+            <div className="bg-theme-card rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">{prefs.seeking_trainer ? t.toggleOn : t.toggleOff}</span>
                 <button
@@ -177,7 +177,7 @@ export default function TrainingPreferencesPage() {
                   aria-checked={prefs.seeking_trainer}
                   onClick={() => setPrefs((p) => ({ ...p, seeking_trainer: !p.seeking_trainer }))}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
-                    prefs.seeking_trainer ? 'bg-[#84cc16]' : 'bg-[#272D34]'
+                    prefs.seeking_trainer ? 'bg-[#84cc16]' : 'bg-theme-surface'
                   }`}
                 >
                   <span
@@ -187,7 +187,7 @@ export default function TrainingPreferencesPage() {
                   />
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-2">{t.subtitle}</p>
+              <p className="text-xs text-theme-tertiary mt-2">{t.subtitle}</p>
             </div>
 
             <section>
@@ -204,7 +204,7 @@ export default function TrainingPreferencesPage() {
                         type="button"
                         onClick={() => toggleSport(sport)}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                          selected ? 'bg-[#84cc16] text-slate-900' : 'bg-[#3D4349] text-gray-200'
+                          selected ? 'bg-[#84cc16] text-slate-900' : 'bg-theme-card text-gray-200'
                         }`}
                       >
                         {label}
@@ -227,7 +227,7 @@ export default function TrainingPreferencesPage() {
                     seeking_trainer_budget: (e.target.value || null) as SeekingBudget | null,
                   }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-[#3D4349] text-white text-sm"
+                className="w-full px-3 py-2 rounded-lg bg-theme-card text-theme-primary text-sm"
               >
                 <option value="">—</option>
                 {BUDGET_OPTIONS.map((b) => (
@@ -251,7 +251,7 @@ export default function TrainingPreferencesPage() {
                     seeking_trainer_schedule: (e.target.value || null) as SeekingSchedule | null,
                   }))
                 }
-                className="w-full px-3 py-2 rounded-lg bg-[#3D4349] text-white text-sm"
+                className="w-full px-3 py-2 rounded-lg bg-theme-card text-theme-primary text-sm"
               >
                 <option value="">—</option>
                 {SCHEDULE_OPTIONS.map((s) => (
@@ -271,7 +271,7 @@ export default function TrainingPreferencesPage() {
                 rows={3}
                 value={prefs.seeking_trainer_note || ''}
                 onChange={(e) => setPrefs((p) => ({ ...p, seeking_trainer_note: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg bg-[#3D4349] text-white text-sm resize-none"
+                className="w-full px-3 py-2 rounded-lg bg-theme-card text-theme-primary text-sm resize-none"
               />
             </section>
 

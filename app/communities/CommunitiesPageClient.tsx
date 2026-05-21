@@ -41,7 +41,7 @@ function getTranslations(language: 'en' | 'es') {
     all: language === 'es' ? 'Todos' : 'All',
     tabCommunities: language === 'es' ? 'Comunidades' : 'Communities',
     tabNews: language === 'es' ? 'Noticias' : 'News',
-    tabBulletin: language === 'es' ? 'Tablon' : 'Bulletin',
+    tabBulletin: language === 'es' ? 'Tablón' : 'Bulletin',
   };
 }
 

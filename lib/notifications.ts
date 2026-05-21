@@ -20,12 +20,18 @@ export async function requestNotificationPermission(userId: string) {
     return null;
   }
 
-  // Get VAPID public key from environment
+  // Get VAPID public key from environment. If missing, push is functionally
+  // broken in this environment — surface a clear sentinel so callers can show
+  // an actionable "Push notifications aren't configured yet" toast instead
+  // of a generic "Failed" message. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY in the
+  // Vercel Preview AND Production env scopes.
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
   if (!vapidPublicKey) {
-    log('error', 'VAPID public key not found', { action: 'requestNotificationPermission' });
-    return null;
+    log('error', 'VAPID public key missing — push not configured for this environment', {
+      action: 'requestNotificationPermission',
+    });
+    throw new Error('PUSH_NOT_CONFIGURED');
   }
 
   try {

@@ -316,6 +316,14 @@ export function useEditProfile(language: 'en' | 'es') {
         storefront_tagline: formData.storefront_tagline || null,
         storefront_banner_url: formData.storefront_banner_url || null,
         earnings_currency: formData.earnings_currency || 'COP',
+        // Self-heal: an authenticated owner editing their own profile is
+        // by definition an active account. Clears the zombie state the
+        // old broken delete flow left behind (deleted_at set / inactive),
+        // so previously-"deleted" accounts can save + display again.
+        // RLS permits this — the users UPDATE policy is auth.uid()=id
+        // with no deleted_at filter.
+        deleted_at: null,
+        is_active: true,
       });
 
       if (!updateResult.success) throw new Error(updateResult.error);

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -242,7 +244,7 @@ export default function FeedPage() {
           setHasMore(false);
         }
       } catch (error) {
-        console.error('Error loading feed:', error);
+        logError(error, { action: 'Error loading feed' });
       } finally {
         setLoading(false);
       }
@@ -256,29 +258,40 @@ export default function FeedPage() {
 
     const isLiked = likedPosts.has(postId);
 
-    // Optimistic update
-    const newLikedPosts = new Set(likedPosts);
-    if (isLiked) {
-      newLikedPosts.delete(postId);
-    } else {
-      newLikedPosts.add(postId);
-    }
-    setLikedPosts(newLikedPosts);
+    // Optimistic update (functional so a concurrent toggle of another
+    // post isn't clobbered by a stale snapshot).
+    setLikedPosts((prev) => {
+      const next = new Set(prev);
+      if (isLiked) next.delete(postId);
+      else next.add(postId);
+      return next;
+    });
 
     try {
+      // Supabase returns the error on the result — it does NOT throw — so
+      // we must inspect `error` and throw it ourselves. Without this a
+      // failed write left the optimistic like stuck (UI lied until refresh).
       if (isLiked) {
-        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUserId);
+        const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUserId);
+        if (error) throw error;
       } else {
-        await supabase.from('post_likes').insert({
+        const { error } = await supabase.from('post_likes').insert({
           post_id: postId,
           user_id: currentUserId,
           created_at: new Date().toISOString(),
         });
+        if (error) throw error;
       }
     } catch (error) {
-      console.error('Error toggling like:', error);
-      // Revert optimistic update
-      setLikedPosts(likedPosts);
+      logError(error, { action: 'Error toggling like', postId });
+      // Roll back only this post.
+      setLikedPosts((prev) => {
+        const next = new Set(prev);
+        if (isLiked) next.add(postId);
+        else next.delete(postId);
+        return next;
+      });
+      showError(language === 'es' ? 'No se pudo actualizar el me gusta.' : 'Could not update like.');
     }
   };
 
@@ -293,7 +306,7 @@ export default function FeedPage() {
       setShareMessage(postId);
       setTimeout(() => setShareMessage(''), 2000);
     } catch (error) {
-      console.error('Error copying to clipboard:', error);
+      logError(error, { action: 'Error copying to clipboard' });
     }
   };
 

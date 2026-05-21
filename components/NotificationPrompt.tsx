@@ -34,11 +34,25 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
     setUserId(user.id);
 
+    // Don't ambush users on their first home visit. Record the first-visit
+    // timestamp on this device, and only prompt on subsequent visits — by
+    // then the user has seen what Tribe is and the ask makes sense. Also
+    // require a 1-minute gap so the prompt doesn't pop while they're
+    // actively scrolling through cards.
+    const firstVisitKey = `tribe_first_home_visit_${user.id}`;
+    const firstVisit = localStorage.getItem(firstVisitKey);
+    if (!firstVisit) {
+      localStorage.setItem(firstVisitKey, Date.now().toString());
+      return;
+    }
+    const msSinceFirstVisit = Date.now() - Number(firstVisit);
+    if (msSinceFirstVisit < 60_000) return;
+
     const hasAsked = localStorage.getItem('notification-prompt-shown');
     const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied';
 
     if (!hasAsked && permission === 'default') {
-      setTimeout(() => setShow(true), 5000);
+      setTimeout(() => setShow(true), 10_000);
     }
   }
 
@@ -75,7 +89,7 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
   if (!show || hideWhenOnboarding) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
       <button
         onClick={handleDismiss}
         className="absolute top-1 right-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-700 rounded"

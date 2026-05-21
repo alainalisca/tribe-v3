@@ -129,9 +129,9 @@ export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: Feedba
 /** Inner component — only rendered after mount, so useTheme() is safe. */
 function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetProps) {
   const supabase = createClient();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const t = useWidgetTranslations();
-  const isDark = theme === 'dark';
+  const isDark = resolvedTheme === 'dark';
 
   // State
   const [isOpen, setIsOpen] = useState(false);
@@ -202,12 +202,17 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
         appVersion,
       };
 
-      // In dev, use the Next.js API route; in production (static export),
-      // use the Supabase Edge Function.
-      const isDev = process.env.NODE_ENV === 'development';
-      const feedbackUrl = isDev
-        ? '/api/feedback/widget'
-        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/feedback-widget`;
+      // The app runs on Vercel's Node runtime (NOT static export), so the
+      // Next.js API route works in production web too. Only the Capacitor
+      // NATIVE build has no Next server and must use the Supabase Edge
+      // Function. The old `NODE_ENV === 'development'` split sent ALL
+      // production web traffic to an Edge Function that isn't deployed —
+      // every web feedback submit failed with "Network error".
+      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+      const isNativeApp = typeof cap?.isNativePlatform === 'function' && cap.isNativePlatform();
+      const feedbackUrl = isNativeApp
+        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/feedback-widget`
+        : '/api/feedback/widget';
 
       const response = await fetch(feedbackUrl, {
         method: 'POST',
@@ -319,7 +324,7 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
                         isActive
                           ? 'border border-tribe-green bg-tribe-green/15 text-tribe-green'
                           : isDark
-                            ? 'border border-transparent bg-tribe-dark text-gray-400 hover:text-gray-300'
+                            ? 'border border-transparent bg-tribe-dark text-theme-tertiary hover:text-gray-300'
                             : 'border border-transparent bg-stone-100 text-gray-500 hover:text-gray-700'
                       }`}
                   >

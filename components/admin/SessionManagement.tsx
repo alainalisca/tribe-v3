@@ -40,11 +40,11 @@ export default function SessionManagement({
         </p>
       ) : sessions.length === 0 ? (
         <div className="p-6 text-center">
-          <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+          <Calendar className="w-12 h-12 text-theme-secondary mx-auto mb-2" />
           <p className="text-sm text-gray-500">
             {language === 'es' ? 'Nada que revisar ahora mismo' : 'Nothing to review right now'}
           </p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-theme-tertiary mt-1">
             {language === 'es'
               ? 'Las sesiones reportadas o canceladas aparecerán aquí.'
               : 'Reported or cancelled sessions will show up here.'}

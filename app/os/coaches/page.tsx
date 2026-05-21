@@ -232,7 +232,7 @@ export default function CoachesPage() {
               {/* Slug is technical metadata — useful for support /
                   shared-URL traceability, but de-emphasized until
                   there's an actual shared URL surface that uses it. */}
-              <p className="text-[10px] text-gray-300 mt-1 font-mono tracking-wide">{state.gym.slug}</p>
+              <p className="text-[10px] text-theme-secondary mt-1 font-mono tracking-wide">{state.gym.slug}</p>
             </section>
 
             {state.coaches.length === 0 || (state.coaches.length === 1 && state.coaches[0].role === 'owner') ? (
@@ -261,7 +261,7 @@ export default function CoachesPage() {
                 <InviteCoachForm onInvited={() => setReloadKey((k) => k + 1)} />
               </div>
             ) : (
-              <p className="text-xs text-gray-400 mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
+              <p className="text-xs text-theme-tertiary mt-6 text-center leading-relaxed">{s.inviteSoonNotice}</p>
             )}
           </>
         )}
@@ -401,7 +401,7 @@ function CoachRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
           {coach.user?.email ? <p className="text-xs text-gray-500 mt-0.5 truncate">{coach.user.email}</p> : null}
-          <p className="text-[11px] text-gray-400 mt-0.5 truncate">{lastActionLabel}</p>
+          <p className="text-[11px] text-theme-tertiary mt-0.5 truncate">{lastActionLabel}</p>
         </div>
         <span
           className={`inline-flex items-center px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border shrink-0 ${
@@ -417,7 +417,7 @@ function CoachRow({
             type="button"
             onClick={onRemove}
             aria-label={s.removeAria}
-            className="text-gray-400 hover:text-tribe-red transition-colors shrink-0"
+            className="text-theme-tertiary hover:text-tribe-red transition-colors shrink-0"
           >
             <Trash2 className="w-4 h-4" />
           </button>

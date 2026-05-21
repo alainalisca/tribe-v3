@@ -149,7 +149,7 @@ export default function PwaInstallPrompt() {
         type="button"
         onClick={handleDismiss}
         aria-label={s.dismiss}
-        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100"
+        className="absolute top-2 right-2 p-1 text-theme-tertiary hover:text-gray-700 rounded-full hover:bg-gray-100"
       >
         <X className="w-4 h-4" />
       </button>

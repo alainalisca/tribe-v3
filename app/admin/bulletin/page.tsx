@@ -15,6 +15,7 @@ import {
   type BulletinPost,
 } from '@/lib/dal/communityBulletin';
 import { showSuccess, showError } from '@/lib/toast';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { logError } from '@/lib/logger';
 import { Check, X, Trash2, ArrowLeft } from 'lucide-react';
 
@@ -22,6 +23,7 @@ export default function AdminBulletinPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language } = useLanguage();
+  const confirm = useConfirm();
 
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function AdminBulletinPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const t = {
-    title: language === 'es' ? 'Gestionar Tablon' : 'Manage Bulletin',
+    title: language === 'es' ? 'Gestionar Tablón' : 'Manage Bulletin',
     back: language === 'es' ? 'Volver' : 'Back',
     pending: language === 'es' ? 'Pendientes' : 'Pending',
     approved: language === 'es' ? 'Aprobados' : 'Approved',
@@ -101,7 +103,16 @@ export default function AdminBulletinPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(language === 'es' ? 'Eliminar este post?' : 'Delete this post?')) return;
+    if (
+      !(await confirm({
+        title: language === 'es' ? 'Eliminar publicación' : 'Delete post',
+        message: language === 'es' ? 'Esta acción no se puede deshacer.' : 'This cannot be undone.',
+        confirmLabel: language === 'es' ? 'Eliminar' : 'Delete',
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
     setActionLoading(id);
     const result = await deleteBulletinPost(supabase, id);
     if (result.success) {
@@ -135,7 +146,16 @@ export default function AdminBulletinPage() {
             </p>
             {post.description_en && <p className="text-xs text-stone-600 mt-1 line-clamp-2">{post.description_en}</p>}
           </div>
-          {post.image_url && <Image src={post.image_url} alt={post.title || 'Bulletin image'} className="w-16 h-16 rounded-lg object-cover shrink-0" width={64} height={64} unoptimized />}
+          {post.image_url && (
+            <Image
+              src={post.image_url}
+              alt={post.title || 'Bulletin image'}
+              className="w-16 h-16 rounded-lg object-cover shrink-0"
+              width={64}
+              height={64}
+              unoptimized
+            />
+          )}
         </div>
         <div className="flex gap-2">
           {showActions && (

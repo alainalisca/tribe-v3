@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { logError } from '@/lib/logger';
+import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -151,7 +153,7 @@ export default function SearchPage() {
           sessions: sessionsData?.map((s) => ({ ...s, type: 'session' })) || [],
         });
       } catch (error) {
-        console.error('Search error:', error);
+        logError(error, { action: 'Search error' });
       } finally {
         setLoading(false);
       }
@@ -312,19 +314,29 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
 
     setActionLoading(true);
     try {
+      // Supabase returns the error on the result — it does NOT throw. The
+      // state flip below must only happen on a confirmed write, or the
+      // button would show "Connected" while the DB has no row.
       if (isFollowing) {
-        await supabase.from('user_follows').delete().eq('follower_id', currentUserId).eq('following_id', user.id);
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', currentUserId)
+          .eq('following_id', user.id);
+        if (error) throw error;
       } else {
-        await supabase.from('user_follows').insert({
+        const { error } = await supabase.from('user_follows').insert({
           follower_id: currentUserId,
           following_id: user.id,
         });
+        if (error) throw error;
       }
 
       setIsFollowing(!isFollowing);
       onFollowChange();
     } catch (error) {
-      console.error('Error toggling follow:', error);
+      logError(error, { action: 'Error toggling follow' });
+      showError(language === 'es' ? 'No se pudo actualizar la conexión.' : 'Could not update connection.');
     } finally {
       setActionLoading(false);
     }

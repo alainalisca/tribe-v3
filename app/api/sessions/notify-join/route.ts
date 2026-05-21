@@ -1,0 +1,144 @@
+/**
+ * POST /api/sessions/notify-join
+ *
+ * Fires the "someone joined your session" push to a session's host.
+ *
+ * Why this route exists: /api/notifications/send is internal-only (it can
+ * push arbitrary title/body to any user, so a logged-in user must never
+ * reach it directly — that was a spoofing vector). The in-app join flows
+ * still need to notify the host, so they call this narrow route instead.
+ * Here the recipient (the session's creator) and the message text are
+ * derived SERVER-SIDE from the session row; the client only supplies the
+ * session id, a display name, and the join kind. The worst a caller can
+ * do is trigger a fixed-format "X joined your session" ping to that
+ * session's own host — not arbitrary content to an arbitrary user.
+ *
+ * Anti-abuse:
+ *  - Registered joins (kind !== 'guest') require an authenticated user who
+ *    is actually a participant of the session (verified server-side).
+ *  - Guests have no session to verify against; that path is rate-limited
+ *    and still fully server-templated, so the residual risk is a host
+ *    getting a spurious benign "a guest joined" ping for their own session.
+ *  - Both paths are rate-limited.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { z } from 'zod';
+import { logError } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const schema = z.object({
+  session_id: z.string().uuid(),
+  joiner_name: z.string().min(1).max(80),
+  kind: z.enum(['join', 'request', 'guest']),
+});
+
+/**
+ * Drop C0 control chars + DEL from a display name before it goes into a
+ * fixed server template. Codepoint filter (not a control-char regex
+ * literal) keeps the source free of untypeable bytes.
+ */
+function sanitizeName(raw: string): string {
+  const cleaned = Array.from(raw)
+    .filter((ch) => {
+      const cp = ch.codePointAt(0) ?? 0;
+      return cp > 0x1f && cp !== 0x7f;
+    })
+    .join('')
+    .trim()
+    .slice(0, 80);
+  return cleaned || 'Someone';
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  try {
+    const parsed = schema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map((i) => i.message).join(', ') },
+        { status: 400 }
+      );
+    }
+    const { session_id, joiner_name, kind } = parsed.data;
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Registered joins must come from the authenticated joiner.
+    if (kind !== 'guest' && !user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const service = getServiceRoleClient();
+
+    // Rate limit (rate_limits RLS denies non-service-role writes).
+    const rlKey = user ? `notify-join:${user.id}` : `notify-join:guest:${session_id}`;
+    const { allowed } = await checkRateLimit(service, rlKey, 20, 60_000);
+    if (!allowed) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+
+    const { data: session } = await service
+      .from('sessions')
+      .select('id, creator_id, sport, status')
+      .eq('id', session_id)
+      .maybeSingle();
+
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Session not found' }, { status: 404 });
+    }
+    // Inactive session or self-notify: benign no-op, not an error.
+    if (session.status !== 'active' || (user && session.creator_id === user.id)) {
+      return NextResponse.json({ success: true, skipped: true });
+    }
+
+    // Registered-join anti-abuse: the caller must actually be a participant
+    // of the session they claim to have joined.
+    if (kind !== 'guest' && user) {
+      const { data: participant } = await service
+        .from('session_participants')
+        .select('id')
+        .eq('session_id', session_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!participant) {
+        return NextResponse.json({ success: false, error: 'Not a participant' }, { status: 403 });
+      }
+    }
+
+    const safeName = sanitizeName(joiner_name);
+    const title = kind === 'request' ? '📩 New Join Request' : '🎉 New Training Partner!';
+    const body =
+      kind === 'request'
+        ? `${safeName} wants to join your ${session.sport} session`
+        : kind === 'guest'
+          ? `${safeName} (guest) joined your ${session.sport} session`
+          : `${safeName} joined your ${session.sport} session`;
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const cronSecret = process.env.CRON_SECRET;
+    if (siteUrl && cronSecret) {
+      // Fire-and-forget: a delivery hiccup must not fail the join UX.
+      fetch(`${siteUrl}/api/notifications/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
+        body: JSON.stringify({
+          userId: session.creator_id,
+          title,
+          body,
+          url: `/session/${session_id}`,
+          data: { sessionId: session_id, type: 'join' },
+        }),
+      }).catch((err) => logError(err, { route: '/api/sessions/notify-join', action: 'dispatch', session_id }));
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logError(error, { route: '/api/sessions/notify-join' });
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
+  }
+}

@@ -1,0 +1,41 @@
+# User actions needed (Al — read this when you're back from meetings)
+
+Running list of things I could NOT do autonomously while fixing the Round-1 QA bugs.
+Updated per fix. Items grouped by what they need from you.
+
+## Migrations to apply in Supabase (run these in SQL editor)
+
+- ~~**BUG-002 (Q&A 404):** Apply `014_session_comments.sql`.~~ Done 2026-05-20.
+- ~~**BUG-005 (Referral code empty):** Apply `014_referrals.sql` + `089_align_referrals.sql`.~~ Done 2026-05-20.
+- ~~**BUG-010 (Community banner upload):** `community-banners` bucket via `090_community_banners_bucket.sql`.~~ Done 2026-05-20.
+- ~~**Community post image upload + post visibility:** `091_media_bucket.sql` (bucket), `092_fix_community_rls_recursion.sql` (RLS recursion fix), and applied `027_community_post_moderation.sql` (was missing — added `is_pinned` column).~~ Done 2026-05-20.
+
+**Discovered along the way:** several historic migrations were never applied to the live DB (014, 027). When future bugs look like "code is correct but nothing works," check `supabase/migrations/` for anything that hasn't been run — that's the next place to look.
+
+## Env vars to set/verify in Vercel
+
+- **BUG-003 (Pay & Join):** If the button now shows a clear toast like "Failed to create Wompi transaction" or "Payment already completed", that's diagnostic of the real cause. Make sure these are set in **Preview** env (not just Production): `WOMPI_PUBLIC_KEY`, `WOMPI_PRIVATE_KEY`, `WOMPI_SANDBOX=true`. For USD paths: `STRIPE_SECRET_KEY` + webhooks pointed at the deployed URL. Without these the route returns a 5xx and the button looked silent before this fix; now it always toasts + logs.
+
+## Supabase Storage buckets / RLS to configure
+
+- ~~**BUG-010 (Community banner upload):** `community-banners` bucket created via migration 090 on 2026-05-20.~~ Done.
+
+## Static assets to populate later (low priority)
+
+- `public/images/sports/*.jpg` — real category photos for running/yoga/crossfit/cycling/boxing/pilates/etc. I disabled the sport-image map so missing images stop spamming 404s; cards render the sport gradient instead. When real photos exist, re-enable in `lib/sport-images.ts:getSessionHeroImage` (the SPORT_IMAGES map is still in the file, just unused).
+
+## Design decisions I deferred to you
+
+_(none yet)_
+
+## Native (Capacitor) work that needs a native build/release
+
+- **BUG-031 (Calendar UX):** web users now get a toast confirming the `.ics` file was downloaded. On native iOS/Android the `.ics` will also download — iOS will offer to open in Calendar.app via the share sheet. If you want a native "Add to Calendar" button that writes directly to the device calendar (no file step), we need the `@capacitor-community/calendar` plugin + a new native build. Low priority — the current flow works on both web and native.
+
+## Notes on bugs I marked deferred or partial
+
+- **BUG-020 (Onboarding modal re-pops):** the dark-theme half is fixed (QuickGuide now uses theme tokens — respects light/dark). The persistence half stays on localStorage, which still gets cleared in incognito / cache clears / new device. A robust cross-device fix needs either a `users.seen_guides jsonb` column or use of `auth.user_metadata`. Both require a small effort I can do later; the current state is "mostly persistent on the same browser." Flag this as a follow-up.
+- **BUG-018 (Tip modal copy):** superseded by #7 — tips are real charges now, the existing "Say thanks to {name}" / "100% goes to {name}" copy is correct. The QA confusion was that Al's test account is literally named "tribe".
+- **BUG-023 (Map artifact), BUG-035 (Banner reposition), BUG-037 (Referral tracking backend)** — deferred per the spec.
+- **BUG-032 (Consistent loading state):** I consolidated the three biggest page-level spinners (`/promote`, `/promote/boosts`, `/subscriptions`) onto the shared `LoadingSpinner`. Inline spinners inside buttons / small contexts (StoryUpload upload state, PhotoUploadSection, AttendanceTracker, etc.) were left alone — they're size-specific and switching them to the shared component would actually look worse. If the goal is a stricter sweep, flag it and I'll do another pass.
+- **BUG-015 (Local Fitness Events links):** the cards already read from `local_fitness_events` (DB-backed, not hardcoded). Now the entire card is a link when `website_url` is set, and shows a muted "Details coming soon" hint when not. If you want every card to be guaranteed-clickable, populate the `website_url` column for every row via `/admin/events`.

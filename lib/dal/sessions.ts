@@ -69,21 +69,33 @@ export async function fetchSessionWithDetails(
   }>
 > {
   try {
+    // maybeSingle distinguishes "no row" (data null, no error) from real
+    // fetch errors (RLS, network). With .single(), an RLS denial looked
+    // identical to "row missing" — every transient failure rendered as
+    // "Session not found" even though the session was fine (BUG-001).
     const { data: session, error } = await supabase
       .from('sessions')
       .select(
         'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
       )
       .eq('id', sessionId)
-      .single();
+      .maybeSingle();
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      logError(error, { action: 'fetchSessionWithDetails.sessionFetch', sessionId });
+      return { success: false, error: error.message };
+    }
+    if (!session) {
+      return { success: false, error: 'session_not_found' };
+    }
 
+    // Sub-fetches are best-effort: a missing creator profile or an empty
+    // participants list must NOT collapse the whole page into "not found".
     const { data: creator } = await supabase
       .from('users')
       .select('id, name, avatar_url, average_rating, total_reviews')
       .eq('id', session.creator_id)
-      .single();
+      .maybeSingle();
 
     const { data: participants } = await supabase
       .from('session_participants')
@@ -270,10 +282,9 @@ export async function cancelSession(
             Authorization: `Bearer ${process.env.CRON_SECRET}`,
           },
           body: JSON.stringify({
-            user_id: p.user_id,
+            userId: p.user_id,
             title: 'Session Cancelled',
             body: `"${session.title}" was cancelled.${refundNote}`,
-            type: 'session_cancelled',
             data: { session_id: sessionId },
           }),
         });
@@ -301,28 +312,6 @@ export async function deleteSession(supabase: SupabaseClient, sessionId: string)
   } catch (error) {
     logError(error, { action: 'deleteSession', sessionId });
     return { success: false, error: 'Failed to delete session' };
-  }
-}
-
-/**
- * Updates the participant count for a session.
- */
-export async function updateParticipantCount(
-  supabase: SupabaseClient,
-  sessionId: string,
-  count: number
-): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase
-      .from('sessions')
-      .update({ current_participants: Math.max(0, count) })
-      .eq('id', sessionId);
-
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'updateParticipantCount', sessionId });
-    return { success: false, error: 'Failed to update participant count' };
   }
 }
 
@@ -477,6 +466,13 @@ export async function fetchSessionsByCreatorCount(
   creatorId: string
 ): Promise<DalResult<number>> {
   try {
+    // BUG-008 guard: if creatorId is falsy/literal "undefined" (race during
+    // auth bootstrap, bad URL), refuse to issue the query — supabase-js with
+    // an undefined eq value can serialize to no filter, counting the whole
+    // sessions table (the "70 Created" symptom on a brand-new account).
+    if (!creatorId || creatorId === 'undefined' || creatorId === 'null') {
+      return { success: true, data: 0 };
+    }
     const { count, error } = await supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })

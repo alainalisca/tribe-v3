@@ -24,7 +24,7 @@ export default function VideoIntro({
   if (!videoUrl) {
     if (!isOwnStorefront) return null;
     return (
-      <div className="bg-[#3D4349] rounded-2xl p-4 border border-dashed border-[#84cc16]/40">
+      <div className="bg-theme-card rounded-2xl p-4 border border-dashed border-[#84cc16]/40">
         <p className="text-sm font-semibold text-theme-primary">
           {language === 'es' ? 'Agrega un video de introducción' : 'Add a video introduction'}
         </p>

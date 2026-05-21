@@ -30,7 +30,23 @@
     "morePlayers": "más jugadores",
     "today": "Hoy",
     "tomorrow": "Mañana",
-    "noSessions": "No hay sesiones disponibles aún. ¡Crea la primera!"
+    "noSessions": "No hay sesiones disponibles aún. ¡Crea la primera!",
+    "inCity": "En {city}",
+    "exploreCity": "Explora {city}",
+    "exploreHint": "Toca un barrio para ver qué está pasando",
+    "sessions": "Sesiones",
+    "instructors": "Instructores",
+    "filterAll": "Todos",
+    "filterFree": "Gratis",
+    "filterPaid": "De pago",
+    "viewInFeed": "Ver en Feed",
+    "minsAgo": "hace {n}m",
+    "hoursAgo": "hace {n}h",
+    "daysAgo": "hace {n}d",
+    "startingIn": "Empieza en",
+    "beFirstToHost": "Sé el primero en organizar en {hood}",
+    "sessionsToday": "{count} sesiones hoy",
+    "beFirstHere": "Sé el primero en crear una sesión aquí"
   },
   "weather": {
     "clear": "Día perfecto para entrenar al aire libre",
@@ -116,5 +132,34 @@
     "currentPlan": "Plan actual",
     "manageSubscription": "Gestionar suscripción",
     "cancelAnytime": "Cancela cuando quieras"
+  },
+  "auth": {
+    "invitedBy": "🎉 Invitado por {name}",
+    "or": "o"
+  },
+  "tribe-plus": {
+    "trainSmarterSaveMoreGet": "Entrena mejor. Ahorra más. Ten prioridad.",
+    "startFreeTrial7Days": "Empezar Prueba Gratis — 7 días",
+    "monthly": "Mensual",
+    "annual": "Anual",
+    "savePct": "Ahorra {pct}%",
+    "month": "/mes",
+    "year": "/año",
+    "zeroBookingFees": "Cero Cargos por Reserva",
+    "saveOnEveryPaidSession": "Ahorra en cada sesión pagada que reserves",
+    "24HourEarlyAccess": "24h de Acceso Anticipado",
+    "seeAndBookNewSessions": "Ve y reserva nuevas sesiones antes que nadie",
+    "advancedTrainingStats": "Estadísticas Avanzadas",
+    "deepTrainingAnalyticsOnMy": "Análisis de entrenamiento a profundidad en Mi Entrenamiento",
+    "tribeBadge": "Insignia Tribe+",
+    "standOutInTheCommunity": "Destaca en la comunidad con tu insignia ✦",
+    "faq": "Preguntas Frecuentes",
+    "canICancelAnytime": "¿Puedo cancelar en cualquier momento?",
+    "yesYouKeepAccessUntil": "Sí. Mantienes el acceso hasta el final de tu período.",
+    "whatHappensToMyBookings": "¿Qué pasa con mis reservas si cancelo?",
+    "youKeepAllExistingBookings": "Mantienes todas las reservas existentes.",
+    "tribeIsComingSoonWe": "Tribe+ llega pronto. Te avisaremos en cuanto esté disponible.",
+    "weLlNotifyYou": "Te avisaremos ✓",
+    "alreadyAMemberManageSubscription": "Ya eres miembro? Administrar suscripción"
   }
 }

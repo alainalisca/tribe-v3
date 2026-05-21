@@ -2,6 +2,7 @@
 
 import { downloadICS } from '@/lib/calendar';
 import { useLanguage } from '@/lib/LanguageContext';
+import { showInfo } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 
 interface CalendarButtonProps {
@@ -18,7 +19,7 @@ interface CalendarButtonProps {
 }
 
 export default function CalendarButton({ session }: CalendarButtonProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const handleAddToCalendar = () => {
     downloadICS({
       sport: session.sport,
@@ -30,6 +31,13 @@ export default function CalendarButton({ session }: CalendarButtonProps) {
       creatorName: session.creator?.name,
       sessionId: session.id,
     });
+    // BUG-031: a silent download looked broken on web. Confirm what happened
+    // and tell users to open the file from Downloads / their default calendar.
+    showInfo(
+      language === 'es'
+        ? 'Archivo de calendario descargado. Ábrelo para agregar la sesión.'
+        : 'Calendar file downloaded. Open it to add the session.'
+    );
   };
 
   return (

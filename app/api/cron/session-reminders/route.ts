@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import {
   updateSession,
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isValidCronAuth(authHeader)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -160,7 +161,7 @@ export async function GET(request: Request) {
 
               return fetch(`${SITE_URL}/api/notifications/send`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
                 body: JSON.stringify({
                   userId: userInfo.id,
                   title,

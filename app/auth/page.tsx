@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import LanguageToggle from '@/components/LanguageToggle';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,8 +18,10 @@ import ResetPasswordForm from './ResetPasswordForm';
 import EmailAuthForm from './EmailAuthForm';
 import { useAuthHandlers } from './useAuthHandlers';
 
+import TribeWordmark from '@/components/TribeWordmark';
 export default function AuthPage() {
   const { language } = useLanguage();
+  const t = useTranslations('auth');
   const h = useAuthHandlers(language);
   const searchParams = useSearchParams();
   const [referrerName, setReferrerName] = useState<string | null>(null);
@@ -49,7 +52,7 @@ export default function AuthPage() {
   const isError = !!h.message && h.message.includes('❌');
 
   return (
-    <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-[100dvh] bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 relative">
       {/* Atmospheric background image — sits behind the animated gradient */}
       <div
         aria-hidden
@@ -74,21 +77,19 @@ export default function AuthPage() {
         }}
       />
 
-      <div className="absolute top-0 right-4 pt-4 z-10">
+      <div className="absolute top-0 right-4 safe-area-top z-10">
         <LanguageToggle />
       </div>
 
       <motion.div
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl relative z-10"
+        className="w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl relative z-10"
         animate={isError ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
       >
         <Card className="rounded-2xl dark:bg-tribe-card shadow-xl border-none">
           <CardContent className="p-8">
             <div className="text-center mb-10">
-              <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
-                Tribe<span className="text-tribe-green">.</span>
-              </h1>
+              <TribeWordmark className="h-6 w-auto" />
               <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
               <h2 className="text-muted-foreground font-extrabold tracking-tight text-lg">
                 {h.isResetPassword ? h.t.resetPassword : h.isLogin ? h.t.welcomeBack : h.t.joinCommunity}
@@ -106,7 +107,7 @@ export default function AuthPage() {
                   className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-3 text-center mb-4"
                 >
                   <p className="text-sm text-stone-900 dark:text-white">
-                    {language === 'es' ? `🎉 Invitado por ${referrerName}` : `🎉 Invited by ${referrerName}`}
+                    {t('invitedBy', { name: referrerName ?? '' })}
                   </p>
                 </motion.div>
               )}
@@ -118,7 +119,6 @@ export default function AuthPage() {
                 appleLoading={h.appleLoading}
                 googleLoading={h.googleLoading}
                 loading={h.loading}
-                language={language}
                 onAppleSignIn={h.handleAppleSignIn}
                 onGoogleSignIn={h.handleGoogleSignIn}
               />
@@ -146,7 +146,6 @@ export default function AuthPage() {
                 acceptedTos={h.acceptedTos}
                 loading={h.loading}
                 message={h.message}
-                language={language}
                 needsVerification={h.needsVerification}
                 resendCooldown={h.resendCooldown}
                 onEmailChange={h.setEmail}

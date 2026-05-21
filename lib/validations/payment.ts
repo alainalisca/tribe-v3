@@ -29,11 +29,17 @@ import { z } from 'zod';
 export const createPaymentSchema = z.object({
   // Payment kind. Optional because session clients rely on the route's
   // default ('session_participation' when absent).
-  payment_type: z.enum(['session', 'session_participation', 'boost_campaign', 'pro_storefront']).optional(),
+  payment_type: z.enum(['session', 'session_participation', 'boost_campaign', 'pro_storefront', 'tip']).optional(),
 
   // Session participation flow.
   session_id: z.string().uuid().optional(),
   promo_code: z.string().max(50).optional(),
+
+  // Tip flow (payment_type: 'tip'). The amount is client-supplied (a
+  // gratuity has no server-side canonical price) so the route clamps it
+  // to per-currency floor/ceiling bounds. instructor_id is the recipient.
+  instructor_id: z.string().uuid().optional(),
+  message: z.string().max(140).optional(),
 
   // Boost campaign / pro storefront flow.
   reference_id: z.string().uuid().optional(),

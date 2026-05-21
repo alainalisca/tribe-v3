@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPopularNeighborhoods } from '@/lib/city-config';
 
+// TODO: Al — drop real cycling + running photos into /public/landing-cycling.jpg
+// and /public/landing-running.jpg, then swap the temporary reuse below.
+// Hosting locally avoids the Unsplash rate-limit / dead-photo risk that the
+// previous external URLs carried, and keeps the hero loading from one origin.
 const PHOTOS = {
   hero: '/landing-hero.jpg',
   rowers: '/landing-rowers.jpg',
   deadlift: '/landing-deadlift.jpg',
-  cycling: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80',
-  running: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80',
+  cycling: '/landing-rowers.jpg',
+  running: '/landing-deadlift.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -23,7 +27,7 @@ const t = {
     subtitle: 'Find sessions, join the community, train with real people in Medellín.',
     ctaAthlete: "I'm an Athlete",
     ctaInstructor: "I'm an Instructor",
-    active: 'Active in 6+ neighborhoods across Medellín',
+    active: (n: number) => `Active in ${n} neighborhoods across Medellín`,
     appStore: 'Download on the',
     playStore: 'GET IT ON',
   },
@@ -33,7 +37,7 @@ const t = {
     subtitle: 'Encuentra sesiones, únete a la comunidad, entrena con gente real en Medellín.',
     ctaAthlete: 'Soy Atleta',
     ctaInstructor: 'Soy Instructor',
-    active: 'Activo en 6+ barrios en Medellín',
+    active: (n: number) => `Activo en ${n} barrios en Medellín`,
     appStore: 'Descargar en',
     playStore: 'DISPONIBLE EN',
   },
@@ -167,7 +171,7 @@ export default function HeroSection() {
               </span>
             ))}
           </div>
-          <p className="text-sm text-gray-500">{s.active}</p>
+          <p className="text-sm text-gray-500">{s.active(neighborhoods.length)}</p>
         </div>
       </div>
     </section>

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTrialStatus, isFeatureFree } from '@/lib/trial';
 import TrialBanner from '@/components/TrialBanner';
@@ -27,6 +29,7 @@ import {
   Gift,
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 
@@ -247,7 +250,7 @@ export default function BoostsPage() {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          alert(i18n.errorAuth);
+          showError(i18n.errorAuth);
           return;
         }
 
@@ -261,7 +264,7 @@ export default function BoostsPage() {
           .single();
 
         if (!profile?.is_instructor) {
-          alert(i18n.errorAuth);
+          showError(i18n.errorAuth);
           return;
         }
 
@@ -271,8 +274,8 @@ export default function BoostsPage() {
         await fetchSessions(user.id);
         await fetchPosts(user.id);
       } catch (error) {
-        console.error('Auth check error:', error);
-        alert(i18n.errorAuth);
+        logError(error, { action: 'Auth check error' });
+        showError(i18n.errorAuth);
       } finally {
         setLoading(false);
       }
@@ -292,8 +295,8 @@ export default function BoostsPage() {
       if (error) throw error;
       setCampaigns(data || []);
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      alert(i18n.errorFetch);
+      logError(error, { action: 'Error fetching campaigns' });
+      showError(i18n.errorFetch);
     }
   };
 
@@ -310,7 +313,7 @@ export default function BoostsPage() {
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      logError(error, { action: 'Error fetching sessions' });
     }
   };
 
@@ -326,7 +329,7 @@ export default function BoostsPage() {
       if (error) throw error;
       setPosts(data || []);
     } catch (error) {
-      console.error('Error fetching posts:', error);
+      logError(error, { action: 'Error fetching posts' });
     }
   };
 
@@ -409,7 +412,7 @@ export default function BoostsPage() {
 
       if (isFree) {
         // Free trial — campaign is immediately active
-        alert(i18n.successCreate);
+        showSuccess(i18n.successCreate);
       } else {
         // Payment required — redirect to checkout
         const totalBudget = getTotalBudget();
@@ -451,8 +454,8 @@ export default function BoostsPage() {
       setCurrency('USD');
       await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error creating boost:', error);
-      alert(i18n.errorCreate);
+      logError(error, { action: 'Error creating boost' });
+      showError(i18n.errorCreate);
     } finally {
       setIsSubmitting(false);
     }
@@ -471,7 +474,7 @@ export default function BoostsPage() {
         .update({ status: 'active' })
         .eq('id', campaignId)
         .then(() => {
-          alert(i18n.successCreate);
+          showSuccess(i18n.successCreate);
           // Clean URL
           window.history.replaceState({}, '', '/promote/boosts');
           if (userId) fetchCampaigns(userId);
@@ -497,8 +500,8 @@ export default function BoostsPage() {
       if (error) throw error;
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error pausing campaign:', error);
-      alert('Error pausing campaign');
+      logError(error, { action: 'Error pausing campaign' });
+      showError('Error pausing campaign');
     }
   };
 
@@ -509,18 +512,15 @@ export default function BoostsPage() {
       if (error) throw error;
       if (userId) await fetchCampaigns(userId);
     } catch (error) {
-      console.error('Error cancelling campaign:', error);
-      alert('Error cancelling campaign');
+      logError(error, { action: 'Error cancelling campaign' });
+      showError('Error cancelling campaign');
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-theme-page flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-tribe-green"></div>
-          <p className="mt-4 text-theme-secondary">Loading...</p>
-        </div>
+        <LoadingSpinner size="lg" className="flex items-center justify-center" />
       </div>
     );
   }

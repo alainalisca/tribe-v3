@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
 import { showSuccess, showError } from '@/lib/toast';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { haptic } from '@/lib/haptics';
 import BottomNav from '@/components/BottomNav';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -83,6 +84,7 @@ export default function CommunityDetailPage() {
   const params = useParams();
   const supabase = createClient();
   const { language } = useLanguage();
+  const confirm = useConfirm();
   const t = getTranslations(language);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -221,7 +223,10 @@ export default function CommunityDetailPage() {
     } catch (error) {
       logError(error, { action: 'handleBannerUpload' });
       await haptic('error');
-      showError(t.bannerError);
+      // BUG-010: surface the underlying message (most common cause is
+      // the 'community-banners' Storage bucket missing or RLS blocking).
+      const detail = error instanceof Error && error.message ? `${t.bannerError}: ${error.message}` : t.bannerError;
+      showError(detail);
     } finally {
       setUploadingBanner(false);
       if (bannerInputRef.current) bannerInputRef.current.value = '';
@@ -229,7 +234,16 @@ export default function CommunityDetailPage() {
   }
 
   async function handleDeletePost(postId: string) {
-    if (!confirm(t.deleteConfirm)) return;
+    if (
+      !(await confirm({
+        title: t.delete,
+        message: t.deleteConfirm,
+        confirmLabel: t.delete,
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+        variant: 'danger',
+      }))
+    )
+      return;
     try {
       const result = await deleteCommunityPost(supabase, postId);
       if (result.success) {
@@ -270,7 +284,15 @@ export default function CommunityDetailPage() {
 
   async function handleReportPost(postId: string) {
     if (!userId) return;
-    if (!confirm(t.reportConfirm)) return;
+    if (
+      !(await confirm({
+        title: t.report,
+        message: t.reportConfirm,
+        confirmLabel: t.report,
+        cancelLabel: language === 'es' ? 'Cancelar' : 'Cancel',
+      }))
+    )
+      return;
     try {
       const result = await reportCommunityPost(supabase, { post_id: postId, reporter_id: userId });
       if (result.success) {
@@ -313,8 +335,9 @@ export default function CommunityDetailPage() {
       <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/communities')}
             className="p-2 hover:bg-stone-100 dark:hover:bg-tribe-mid rounded-lg transition"
+            aria-label="Back to communities"
           >
             <ChevronLeft className="w-6 h-6 text-theme-primary" />
           </button>

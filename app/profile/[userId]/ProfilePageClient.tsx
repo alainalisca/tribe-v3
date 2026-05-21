@@ -40,6 +40,7 @@ import { getProfileTranslations } from './translations';
 import ProfileLightbox from './ProfileLightbox';
 import ReportUserModal from './ReportUserModal';
 
+import TribeWordmark from '@/components/TribeWordmark';
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
 export interface ProfileStats {
@@ -232,9 +233,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             >
               <ArrowLeft className="w-6 h-6 text-stone-900 dark:text-white hover:opacity-70" />
             </Button>
-            <h1 className="text-lg font-bold text-theme-primary leading-tight">
-              Tribe<span className="text-tribe-green">.</span>
-            </h1>
+            <TribeWordmark className="h-5 w-auto" />
           </div>
         </div>
         <div className="pt-header flex items-center justify-center min-h-[60vh]">
@@ -415,7 +414,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
                 className="w-full py-3 border-2 border-tribe-green text-tribe-green font-semibold hover:bg-tribe-green hover:text-slate-900 transition"
               >
                 <UserPlus className="w-5 h-5 mr-2" />
-                {language === 'es' ? 'Invitar a Sesion' : 'Invite to Session'}
+                {language === 'es' ? 'Invitar a sesión' : 'Invite to Session'}
               </Button>
             </div>
           )}

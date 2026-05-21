@@ -17,8 +17,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { DollarSign } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTribeOSPremiumGate } from '@/hooks/useTribeOSPremiumGate';
 import { trackEvent } from '@/lib/analytics';
@@ -27,7 +29,13 @@ import type { RevenueSummary } from '@/lib/dal/revenue';
 import SummaryCards from './_components/SummaryCards';
 import EmptyState from './_components/EmptyState';
 import PeriodSelector from './_components/PeriodSelector';
-import RevenueChart from './_components/RevenueChart';
+// recharts is the single heaviest /os dependency and is only needed on
+// this page when the chart actually renders. Dynamic-import it (client
+// only) so it drops out of the shared /os bundle.
+const RevenueChart = dynamic(() => import('./_components/RevenueChart'), {
+  ssr: false,
+  loading: () => <LoadingSpinner />,
+});
 import PaymentTable from './_components/PaymentTable';
 import ExportButton from './_components/ExportButton';
 import AttendanceExportButton from './_components/AttendanceExportButton';
