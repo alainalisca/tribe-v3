@@ -36,6 +36,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { X, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export interface QuickGuideStep {
   /** Optional Lucide icon component for the step header. */
@@ -99,16 +100,10 @@ export default function QuickGuide({ id, open, onClose, steps }: QuickGuideProps
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // Body scroll lock while the guide is open — prevents the page
-  // behind from scrolling on mobile if the user pans.
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [open]);
+  // Body scroll lock while the guide is open. The position:fixed technique
+  // (via the shared hook) also defeats the iOS rubber-band that plain
+  // overflow:hidden leaves open.
+  useBodyScrollLock(open);
 
   if (!open) return null;
   if (steps.length === 0) return null;

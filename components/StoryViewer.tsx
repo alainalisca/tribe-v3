@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { createPortal } from 'react-dom';
 import { X, Trash2 } from 'lucide-react';
 import { log } from '@/lib/logger';
@@ -30,6 +31,9 @@ export default function StoryViewer({
 }: StoryViewerProps) {
   const { t } = useLanguage();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  // Full-screen story overlay — lock the page behind it so it can't be
+  // dragged on iOS. The viewer is always "open" while mounted.
+  useBodyScrollLock(true);
 
   useEffect(() => {
     setPortalTarget(document.body);

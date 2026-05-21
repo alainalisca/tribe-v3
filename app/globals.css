@@ -116,14 +116,32 @@ html {
   /* body's. This prevents body's overflow-y: auto from enabling scroll. */
   -webkit-overflow-scrolling: touch;
   padding: 0;
+  /* Height boundary on the root + overscroll-none here too. Without a root
+     height constraint, iOS WKWebView can rubber-band the whole document on
+     a fast fling (the "I can drag the whole page around" symptom). */
+  height: 100%;
+  overscroll-behavior: none;
 }
 
 body {
+  min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: none;
   touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
+}
+
+/* iOS auto-zooms any focused input/textarea/select with font-size < 16px.
+   That zoom shifts the layout and detaches position:fixed headers/nav, which
+   reads as "everything jumps and overlaps." Force 16px on small screens so
+   focus never triggers zoom. Desktop keeps the design's smaller sizes. */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 @layer components {

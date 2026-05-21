@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { haptic } from '@/lib/haptics';
 import { logError } from '@/lib/logger';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import {
   getLatestReleaseNote,
   getUserLastSeenRelease,
@@ -50,6 +51,7 @@ export default function WhatsNewBadge() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragDelta = useRef<number>(0);
+  useBodyScrollLock(sheetOpen);
 
   // Bootstrap: figure out if there's an unseen release for this user.
   useEffect(() => {

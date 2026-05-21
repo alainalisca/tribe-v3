@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Heart, Share2, Check, Loader } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import StarRating from '@/components/StarRating';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
@@ -48,6 +49,9 @@ export default function PostSessionPrompt({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitState, setSubmitState] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Full-screen prompt — lock the page behind it (always shown while mounted).
+  useBodyScrollLock(true);
 
   // LR-04 funnel: emit `rating_modal_shown` exactly once per mount so the
   // post-session rating funnel starts from "seen the prompt" rather than

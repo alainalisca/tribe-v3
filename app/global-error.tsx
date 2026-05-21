@@ -38,7 +38,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '100vh',
+            minHeight: '100dvh',
             padding: '1rem',
             backgroundColor: '#f5f5f4',
           }}

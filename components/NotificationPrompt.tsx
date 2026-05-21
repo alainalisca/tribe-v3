@@ -89,7 +89,7 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
   if (!show || hideWhenOnboarding) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">
       <button
         onClick={handleDismiss}
         className="absolute top-1 right-1 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-stone-100 dark:hover:bg-stone-700 rounded"

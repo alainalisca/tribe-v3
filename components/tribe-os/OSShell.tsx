@@ -218,7 +218,7 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
           left-border accent that visually pins the active row to
           the rail. */}
       <aside
-        className={`fixed lg:sticky top-0 z-50 h-screen w-sidebar bg-tribe-dark border-r border-tribe-dark-80 text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
+        className={`fixed lg:sticky top-0 z-50 h-[100dvh] w-sidebar bg-tribe-dark border-r border-tribe-dark-80 text-white flex flex-col transition-transform pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

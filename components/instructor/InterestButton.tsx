@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Dumbbell, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { expressInterest, withdrawInterest, hasExpressedInterest, createNotification } from '@/lib/dal';
@@ -35,6 +36,7 @@ export default function InterestButton({
   const [saving, setSaving] = useState(false);
 
   useEscapeKey(() => setOpen(false), open && !saving);
+  useBodyScrollLock(open);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,13 +176,14 @@ export default function InterestButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
           onClick={() => !saving && setOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-md bg-theme-card rounded-2xl p-5 border border-theme"
+            className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5 border border-theme"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>

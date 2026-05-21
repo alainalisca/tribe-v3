@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
@@ -49,6 +50,9 @@ export default function TipButton({
   const [submitting, setSubmitting] = useState(false);
 
   useEscapeKey(() => setOpen(false), open);
+  // Lock page scroll behind the modal (not in inline mode, which renders
+  // in-flow with no overlay).
+  useBodyScrollLock(open && !inline);
 
   const t = {
     sayThanks: language === 'es' ? `Dale las gracias a ${instructorName}` : `Say thanks to ${instructorName}`,
@@ -225,12 +229,16 @@ export default function TipButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
           role="dialog"
           aria-modal="true"
           onClick={() => setOpen(false)}
         >
-          <div className="w-full max-w-md bg-theme-card rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5"
+            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {renderPanel()}
           </div>
         </div>

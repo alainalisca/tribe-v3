@@ -52,7 +52,7 @@ export default function AuthPage() {
   const isError = !!h.message && h.message.includes('❌');
 
   return (
-    <div className="h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-[100dvh] bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4 relative">
       {/* Atmospheric background image — sits behind the animated gradient */}
       <div
         aria-hidden
@@ -77,12 +77,12 @@ export default function AuthPage() {
         }}
       />
 
-      <div className="absolute top-0 right-4 pt-4 z-10">
+      <div className="absolute top-0 right-4 safe-area-top z-10">
         <LanguageToggle />
       </div>
 
       <motion.div
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl relative z-10"
+        className="w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl relative z-10"
         animate={isError ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
       >
