@@ -1,9 +1,8 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useEffect, useCallback } from 'react';
 import { trackEvent } from '@/lib/analytics';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -64,18 +63,6 @@ export default function FilterBar({
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const tr = useTranslations('home');
   const sports = Object.keys(sportTranslations);
-  // Filter sheet is closed by default — opens when the user taps the
-  // Filters button. Lifts 4 selects + distance slider off the first paint
-  // so a new user sees session cards before they see a wall of dropdowns.
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  // Count how many filters are non-default so we can show a badge.
-  const activeFilterCount =
-    (selectedSport ? 1 : 0) +
-    (dateFilter !== 'all' ? 1 : 0) +
-    (genderFilter !== 'all' ? 1 : 0) +
-    (pricingFilter !== 'all' ? 1 : 0) +
-    (userLocation && maxDistance < 100 ? 1 : 0);
 
   const measureFixed = useCallback(() => {
     if (fixedAreaRef.current) {
@@ -163,23 +150,71 @@ export default function FilterBar({
             )}
           </div>
 
-          {/* Single Filters button + neighborhood pills. The 4 selects
-              (sport/date/gender/pricing) + distance slider now live in
-              the bottom-sheet below. New users see session cards instead
-              of a wall of dropdowns. */}
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(true)}
-            className="w-full inline-flex items-center justify-center gap-2 p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 text-sm font-medium hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            <span>{language === 'es' ? 'Filtros' : 'Filters'}</span>
-            {activeFilterCount > 0 && (
-              <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-tribe-green text-slate-900 text-xs font-bold rounded-full">
-                {activeFilterCount}
+          <div className="grid grid-cols-4 gap-2">
+            <select
+              value={selectedSport}
+              onChange={(e) => setSelectedSport(e.target.value)}
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+            >
+              <option value="">{t('sport')}</option>
+              {sports.map((sport) => (
+                <option key={sport} value={sport}>
+                  {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+            >
+              <option value="all">{t('date')}</option>
+              <option value="today">{t('today')}</option>
+              <option value="week">{t('week')}</option>
+              <option value="month">{t('month')}</option>
+            </select>
+
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+            >
+              <option value="all">{t('all')}</option>
+              <option value="women_only">{t('women')}</option>
+              <option value="men_only">{t('men')}</option>
+            </select>
+
+            <select
+              value={pricingFilter}
+              onChange={(e) => setPricingFilter(e.target.value)}
+              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
+            >
+              <option value="all">{tr('filterAll')}</option>
+              <option value="free">{tr('filterFree')}</option>
+              <option value="paid">{tr('filterPaid')}</option>
+            </select>
+          </div>
+
+          {userLocation && (
+            <div className="flex items-center gap-3 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg px-3 py-1.5">
+              <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
+                {t('dist')}
+              </label>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+                className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
+              />
+              <span className="text-xs font-semibold text-tribe-green min-w-[48px] text-right flex-shrink-0">
+                {maxDistance === 100 ? t('all') : `${maxDistance}km`}
               </span>
-            )}
-          </button>
+            </div>
+          )}
 
           {/* Neighborhood pills */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
@@ -239,156 +274,6 @@ export default function FilterBar({
           )}
         </div>
       </div>
-
-      {/* Filters bottom-sheet. Portal so it sits above BottomNav (z-50). */}
-      {filtersOpen &&
-        typeof document !== 'undefined' &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setFiltersOpen(false)}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="filters-sheet-title"
-          >
-            <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl shadow-xl px-6 py-4 max-h-[80vh] overflow-y-auto"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-            >
-              <div className="flex justify-center -mt-1 mb-3">
-                <div className="w-10 h-1 rounded-full bg-stone-300 dark:bg-tribe-mid" aria-hidden="true" />
-              </div>
-
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <h2 id="filters-sheet-title" className="text-lg font-bold text-theme-primary">
-                  {language === 'es' ? 'Filtros' : 'Filters'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen(false)}
-                  aria-label={language === 'es' ? 'Cerrar' : 'Close'}
-                  className="p-1 -m-1 rounded-full text-theme-secondary hover:text-theme-primary transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="block text-xs font-semibold text-theme-secondary mb-1.5 uppercase tracking-wide">
-                    {t('sport')}
-                  </span>
-                  <select
-                    value={selectedSport}
-                    onChange={(e) => setSelectedSport(e.target.value)}
-                    className="w-full p-2.5 bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-                  >
-                    <option value="">{language === 'es' ? 'Todos' : 'All'}</option>
-                    {sports.map((sport) => (
-                      <option key={sport} value={sport}>
-                        {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="block text-xs font-semibold text-theme-secondary mb-1.5 uppercase tracking-wide">
-                    {t('date')}
-                  </span>
-                  <select
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className="w-full p-2.5 bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-                  >
-                    <option value="all">{language === 'es' ? 'Todas las fechas' : 'Any date'}</option>
-                    <option value="today">{t('today')}</option>
-                    <option value="week">{t('week')}</option>
-                    <option value="month">{t('month')}</option>
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="block text-xs font-semibold text-theme-secondary mb-1.5 uppercase tracking-wide">
-                    {language === 'es' ? 'Género' : 'Gender'}
-                  </span>
-                  <select
-                    value={genderFilter}
-                    onChange={(e) => setGenderFilter(e.target.value)}
-                    className="w-full p-2.5 bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-                  >
-                    <option value="all">{t('all')}</option>
-                    <option value="women_only">{t('women')}</option>
-                    <option value="men_only">{t('men')}</option>
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="block text-xs font-semibold text-theme-secondary mb-1.5 uppercase tracking-wide">
-                    {language === 'es' ? 'Precio' : 'Price'}
-                  </span>
-                  <select
-                    value={pricingFilter}
-                    onChange={(e) => setPricingFilter(e.target.value)}
-                    className="w-full p-2.5 bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg text-theme-primary focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-                  >
-                    <option value="all">{tr('filterAll')}</option>
-                    <option value="free">{tr('filterFree')}</option>
-                    <option value="paid">{tr('filterPaid')}</option>
-                  </select>
-                </label>
-
-                {userLocation && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-semibold text-theme-secondary uppercase tracking-wide">
-                        {language === 'es' ? 'Distancia' : 'Distance'}
-                      </span>
-                      <span className="text-xs font-semibold text-tribe-green">
-                        {maxDistance === 100 ? t('all') : `${maxDistance} km`}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="5"
-                      max="100"
-                      step="5"
-                      value={maxDistance}
-                      onChange={(e) => setMaxDistance(Number(e.target.value))}
-                      className="w-full h-1.5 bg-stone-200 dark:bg-tribe-mid rounded-lg appearance-none cursor-pointer accent-tribe-green"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSport('');
-                    setDateFilter('all');
-                    setGenderFilter('all');
-                    setPricingFilter('all');
-                    setMaxDistance(100);
-                  }}
-                  className="flex-1 py-3 rounded-xl border border-stone-300 dark:border-tribe-mid text-theme-primary font-semibold hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
-                >
-                  {language === 'es' ? 'Limpiar' : 'Clear'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen(false)}
-                  className="flex-1 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold hover:bg-lime-500 transition"
-                >
-                  {language === 'es' ? `Ver ${filteredCount}` : `Show ${filteredCount}`}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
     </div>
   );
 }
