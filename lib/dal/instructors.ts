@@ -48,7 +48,10 @@ export async function fetchInstructors(
       .eq('is_instructor', true)
       // Hide seeded/test accounts from any public instructor listing
       // (Browse Instructors, sport-specific matchmaking, etc.). Migration 052.
-      .eq('is_test_account', false);
+      .eq('is_test_account', false)
+      // Hide soft-deleted accounts (admin_delete_user sets deleted_at). Without
+      // this a "deleted" instructor still showed in Descubre Instructores.
+      .is('deleted_at', null);
 
     // Filter by sport in specialties array
     if (options?.sport) {
@@ -149,6 +152,8 @@ export async function fetchFeaturedInstructors(
       // Hide seeded/test accounts from the home-page Featured Instructors
       // carousel. Migration 052.
       .eq('is_test_account', false)
+      // Hide soft-deleted accounts.
+      .is('deleted_at', null)
       .order('is_verified_instructor', { ascending: false, nullsFirst: false })
       .order('average_rating', { ascending: false, nullsFirst: false })
       .order('total_sessions_hosted', { ascending: false, nullsFirst: false })

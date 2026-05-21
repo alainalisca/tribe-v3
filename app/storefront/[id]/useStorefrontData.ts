@@ -155,7 +155,11 @@ export function useStorefrontData(instructorId: string) {
               'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted'
             )
             .eq('id', instructorId)
-            .single(),
+            // A soft-deleted account's storefront should not load — maybeSingle
+            // returns null (instructor stays null → not-found UI) instead of a
+            // ghost profile for an account the admin removed.
+            .is('deleted_at', null)
+            .maybeSingle(),
           fetchPartnerByUserId(supabase, instructorId),
         ]);
 
@@ -163,6 +167,13 @@ export function useStorefrontData(instructorId: string) {
 
         if (instructorResult.error) throw instructorResult.error;
         const instructorData = instructorResult.data;
+        // No row → instructor doesn't exist or was soft-deleted. Leave
+        // instructor null so the page renders its not-found state.
+        if (!instructorData) {
+          setInstructor(null);
+          setLoading(false);
+          return;
+        }
         setInstructor({
           ...instructorData,
           tagline: instructorData.storefront_tagline,
