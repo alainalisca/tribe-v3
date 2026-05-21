@@ -288,8 +288,12 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
 
       {/* Main column */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top bar — canonical 60px (spacing.topbar) */}
-        <header className="sticky top-0 z-30 bg-white border-b border-tribe-dark-40 h-topbar flex items-center gap-2 px-4 lg:px-8 pt-[env(safe-area-inset-top)]">
+        {/* Top bar — canonical 60px content height (spacing.topbar). The bar
+            GROWS by the safe-area inset rather than padding INTO a fixed
+            height: on a notched iPhone, h-topbar + pt-[inset] squished the
+            title under the status bar. Height = 60px + inset keeps the full
+            60px content row below the notch. */}
+        <header className="sticky top-0 z-30 bg-white border-b border-tribe-dark-40 h-[calc(60px+env(safe-area-inset-top,0px))] flex items-center gap-2 px-4 lg:px-8 pt-[env(safe-area-inset-top,0px)]">
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
