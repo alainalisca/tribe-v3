@@ -9,7 +9,7 @@ import { deleteSession as dalDeleteSession, updateUser } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { formatDistance, calculateDistance } from '@/lib/distance';
-import { getSessionShareUrl } from '@/lib/share';
+import { shareSession } from '@/lib/share';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
@@ -44,20 +44,27 @@ export function useSessionActions({
   } | null>(null);
 
   const handleShareSession = useCallback(
-    (session: SessionWithRelations) => {
-      const shareText =
-        language === 'es'
-          ? `¡Únete a ${session.sport} el ${new Date(session.date + 'T00:00:00').toLocaleDateString('es-ES')}! Nunca entrenes solo 💪`
-          : `Join me for ${session.sport} on ${new Date(session.date + 'T00:00:00').toLocaleDateString('en-US')}! Never train alone 💪`;
-      // Use the /s/[id] public share route — it has server-rendered OG
-      // metadata (title, description, preview image) so WhatsApp/IG unfurl
-      // it into a rich card. /session/[id] is the authed app page with no
-      // OG tags, which is why shared links showed as a naked blue URL.
-      const shareUrl = getSessionShareUrl(session.id);
-      if (navigator.share) {
-        navigator.share({ title: 'Tribe - ' + session.sport, text: shareText, url: shareUrl }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(shareText + '\n' + shareUrl);
+    async (session: SessionWithRelations) => {
+      // Route through the central shareSession() helper. It builds the
+      // /s/[id] OG-enabled URL, tries the native share sheet, and ALWAYS
+      // falls back to clipboard when native share is unavailable or fails
+      // (e.g. desktop browsers where navigator.share exists but rejects).
+      // The old hand-rolled navigator.share().catch(()=>{}) silently died
+      // on desktop, so the share button "did nothing."
+      const method = await shareSession(
+        {
+          id: session.id,
+          title: session.title || session.sport,
+          sport: session.sport,
+          date: session.date,
+          time: session.start_time,
+          priceCents: session.price_cents ?? null,
+          currency: session.currency ?? undefined,
+          instructorName: session.creator?.name ?? null,
+        },
+        language
+      );
+      if (method === 'clipboard') {
         showInfo(language === 'es' ? 'Enlace copiado' : 'Link copied!');
       }
     },
