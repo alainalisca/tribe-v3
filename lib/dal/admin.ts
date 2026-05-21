@@ -46,10 +46,14 @@ export async function fetchAdminStatsRaw(supabase: SupabaseClient): Promise<DalR
       { data: allSessionCreators },
       { data: allParticipants },
     ] = await Promise.all([
-      supabase.from('users').select('id', { count: 'exact', head: true }),
+      supabase.from('users').select('id', { count: 'exact', head: true }).is('deleted_at', null),
       supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('status', 'active').gte('date', today),
       supabase.from('chat_messages').select('id', { count: 'exact', head: true }),
-      supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .is('deleted_at', null)
+        .gte('created_at', todayStart.toISOString()),
       supabase.from('sessions').select('id, status, date, current_participants, sport, creator_id'),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
@@ -90,6 +94,11 @@ export async function fetchAdminUsersWithCounts(supabase: SupabaseClient): Promi
         .select(
           'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
         )
+        // Exclude soft-deleted users. The admin delete button calls the
+        // admin_delete_user RPC which sets deleted_at = NOW() (migration 050).
+        // Without this filter the "deleted" user reappeared on the next list
+        // reload — the row was gone optimistically, then re-fetched.
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(100),
       supabase.from('sessions').select('creator_id'),
