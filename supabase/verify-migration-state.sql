@@ -183,4 +183,48 @@ select '088_finalize_payment_tip_fallback',
          where p.proname = 'finalize_payment'
            and pg_get_functiondef(p.oid) like '%088: tip finalization fallback%'
        ) then 'applied' else 'MISSING' end
+union all
+select '089_align_referrals',
+       -- 089 makes referrals.referred_id nullable + adds converted_at for the
+       -- template-row pattern. converted_at is the cleanest detectable marker.
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'referrals' and column_name = 'converted_at'
+       ) then 'applied' else 'MISSING' end
+union all
+select '090_community_banners_bucket',
+       case when exists (
+         select 1 from storage.buckets where id = 'community-banners'
+       ) then 'applied' else 'MISSING' end
+union all
+select '091_media_bucket',
+       case when exists (
+         select 1 from storage.buckets where id = 'media'
+       ) then 'applied' else 'MISSING' end
+union all
+select '092_fix_community_rls_recursion',
+       -- 092 replaces the recursive community_posts SELECT policy with the
+       -- is_community_member-based one. Detect by the new policy name.
+       case when exists (
+         select 1 from pg_policies
+         where tablename = 'community_posts'
+           and policyname = 'Public posts + members + author can read'
+       ) then 'applied' else 'MISSING' end
+union all
+select '093_restore_users_select_grant',
+       -- 093 restores table-level SELECT on public.users to the authenticated
+       -- role (the grant that, when missing, blanked every profile page).
+       case when exists (
+         select 1 from information_schema.role_table_grants
+         where table_schema = 'public' and table_name = 'users'
+           and grantee = 'authenticated' and privilege_type = 'SELECT'
+       ) then 'applied' else 'MISSING' end
+union all
+select '094_release_notes',
+       case when to_regclass('public.release_notes') is not null
+              and exists (
+                select 1 from information_schema.columns
+                where table_schema = 'public' and table_name = 'users' and column_name = 'last_seen_release'
+              )
+            then 'applied' else 'MISSING' end
 order by migration;
