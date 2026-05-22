@@ -50,7 +50,7 @@ export interface AchievementShareData {
 const BASE_URL =
   typeof window !== 'undefined'
     ? window.location.origin
-    : process.env.NEXT_PUBLIC_APP_URL || 'https://app.tribesocial.co';
+    : process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
 
 export function getSessionShareUrl(sessionId: string): string {
   return `${BASE_URL}/s/${sessionId}`;

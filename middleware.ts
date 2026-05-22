@@ -52,6 +52,8 @@ const publicPaths = [
   '/legal',
   '/invite',
   '/session',
+  '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
+  '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
   '/about',
   '/faq',
   '/for-instructors',
@@ -67,6 +69,7 @@ const publicApiPaths = [
   '/api/payment/webhook/stripe', // Stripe sends webhooks without a session cookie; signature is verified in the handler.
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
+  '/api/og', // OG preview images for share cards; link scrapers (WhatsApp, etc.) carry no session cookie.
 ];
 
 function isPublicPath(pathname: string): boolean {
