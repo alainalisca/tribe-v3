@@ -111,9 +111,17 @@
 }
 
 html {
-  /* Do NOT set overflow on html — per CSS spec, non-visible overflow on */
-  /* the root element makes the viewport use html's values instead of */
-  /* body's. This prevents body's overflow-y: auto from enabling scroll. */
+  /* Do NOT set overflow-y / overflow:hidden on html — per CSS spec, a
+     non-visible value on the root makes the viewport use html's values
+     instead of body's, which would kill body's overflow-y: auto scroll.
+     overflow-x: CLIP is the exception: clip never establishes a scroll
+     container and never coerces the other axis, so it stops page-level
+     horizontal scrolling (a too-wide child leaking past the viewport, the
+     "I can drag the screen left/right" symptom on iOS WKWebView where
+     body's overflow-x: hidden alone is unreliable) without breaking
+     vertical scroll. Intentional inner carousels (overflow-x-auto) are
+     unaffected — they scroll within their own box, not the page. */
+  overflow-x: clip;
   -webkit-overflow-scrolling: touch;
   padding: 0;
   /* Height boundary on the root + overscroll-none here too. Without a root
