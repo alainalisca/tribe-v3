@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --lime: #9ee551;
+        --lime-dark: #6f9e2f;
+        --ink: #1e293b;
+        --ink-soft: #475569;
+        --muted: #64748b;
+        --line: #e7e9ec;
+        --bg-soft: #f6f7f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .page {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px 40px 48px;
+      }
+      /* Cover */
+      .cover {
+        text-align: center;
+        padding: 24px 0 8px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 28px;
+      }
+      .wordmark {
+        font-size: 44px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+        margin: 0;
+      }
+      .wordmark .dot {
+        color: var(--lime);
+      }
+      .cover .tag {
+        color: var(--lime-dark);
+        font-weight: 600;
+        font-size: 14px;
+        margin: 4px 0 14px;
+      }
+      .cover .doctitle {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0;
+      }
+      h2 {
+        font-size: 19px;
+        font-weight: 700;
+        margin: 30px 0 10px;
+        letter-spacing: -0.3px;
+      }
+      h2 .accent {
+        color: var(--lime-dark);
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--ink-soft);
+      }
+      .lead {
+        color: var(--ink);
+      }
+      strong {
+        color: var(--ink);
+      }
+      ul {
+        margin: 0 0 14px;
+        padding-left: 0;
+        list-style: none;
+      }
+      li {
+        position: relative;
+        padding-left: 22px;
+        margin-bottom: 9px;
+        color: var(--ink-soft);
+      }
+      li::before {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 8px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--lime);
+      }
+      li strong {
+        color: var(--ink);
+      }
+      .step {
+        margin: 18px 0;
+      }
+      .step-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+      }
+      .step-num {
+        flex: 0 0 26px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--lime);
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .step-title {
+        font-weight: 700;
+        color: var(--ink);
+        font-size: 14px;
+      }
+      .step p {
+        margin: 2px 0 0 36px;
+      }
+      .note {
+        font-style: italic;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      figure {
+        margin: 14px 0 18px;
+        text-align: center;
+      }
+      figure img {
+        width: 250px;
+        max-height: 480px;
+        height: auto;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        box-shadow: 0 6px 22px rgba(15, 23, 42, 0.12);
+      }
+      .invite-box {
+        background: var(--bg-soft);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--lime);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin: 4px 0 8px;
+      }
+      .invite-box p:last-child {
+        margin-bottom: 0;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--line);
+        margin: 26px 0;
+      }
+      .footer {
+        text-align: center;
+        color: var(--muted);
+        font-weight: 600;
+        margin-top: 30px;
+      }
+      .knowing li {
+        margin-bottom: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="cover">
+        <h1 class="wordmark">Tribe<span class="dot">.</span></h1>
+        <p class="tag">Nunca Entrenes Solo</p>
+        <p class="doctitle">Estás invitado, Guía para Instructores Fundadores</p>
+      </div>
+
+      <h2>Estás invitado</h2>
+      <div class="invite-box">
+        <p class="lead">
+          Estamos construyendo Tribe, un hogar para instructores de fitness y bienestar en Medellín, y estamos
+          empezando con un grupo pequeño y elegido a mano de instructores fundadores. Esta es una invitación para
+          ser uno de ellos.
+        </p>
+        <p>
+          Esto no es "descarga mi app y hazme un favor". Es lo contrario. Te estamos invitando temprano, mientras
+          Tribe todavía se está formando, porque los instructores que entran ahora ayudan a decidir en qué se
+          convierte. Tienes el primer derecho sobre tu espacio y tu audiencia, tus comentarios guían lo que
+          construimos después, y te conviertes en una de las caras que los atletas ven primero a medida que la
+          comunidad crece a tu alrededor.
+        </p>
+        <p><strong>Serías uno de los fundadores de esto en tu zona. Nos encantaría que lo construyeras con nosotros.</strong></p>
+      </div>
+
+      <figure><img src="../public/onboarding/02-home.jpeg" alt="Inicio de Tribe" /></figure>
+
+      <h2>Lo que recibes como instructor fundador</h2>
+
+      <p><strong>Una vitrina profesional.</strong> Una página con tu foto, tu biografía, tus especialidades, tus próximas sesiones y tus reseñas. Te hace ver tan profesional como eres, sin tener que crear una página web.</p>
+      <figure><img src="../public/onboarding/03-storefront.jpeg" alt="Vitrina del instructor" /></figure>
+
+      <p><strong>Descubrimiento.</strong> Apareces en "Descubre Instructores" para que los atletas de Medellín te encuentren, no solo las personas que ya tienes en tus contactos.</p>
+      <figure><img src="../public/onboarding/04-discover.jpeg" alt="Descubre instructores" /></figure>
+
+      <p><strong>El resto de lo que está incluido:</strong></p>
+      <ul>
+        <li><strong>Un solo enlace que vende por ti.</strong> Comparte el enlace de tu sesión o de tu vitrina en tus grupos de WhatsApp y en Instagram. Cualquiera que lo toque puede ver los detalles y unirse, incluso antes de tener una cuenta.</li>
+        <li><strong>Confirmaciones y recordatorios, resueltos.</strong> Tribe lleva la cuenta de quién va y les envía recordatorios. Se acabó contar cabezas en una hoja de cálculo o preguntarte quién va a llegar de verdad.</li>
+        <li><strong>Propinas.</strong> Los atletas pueden enviarte una propina después de una sesión, dinero real, directo a ti.</li>
+        <li><strong>Reseñas.</strong> Cada atleta contento puede dejarte una calificación, así tu reputación se construye sola con el tiempo.</li>
+        <li><strong>Una línea directa para darle forma.</strong> Como instructor fundador, lo que nos dices de verdad cambia el producto. No eres un número, eres un co-creador.</li>
+        <li><strong>Gratis para empezar.</strong> Crea tu vitrina y organiza tu primera sesión sin pagar nada.</li>
+      </ul>
+
+      <hr />
+
+      <h2>Empieza en 7 pasos <span class="accent">(unos 15 minutos)</span></h2>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">1</div><div class="step-title">Crea tu cuenta</div></div>
+        <p>Descarga Tribe (App Store / Google Play) o abre el enlace que te enviamos. Regístrate con tu correo, Apple o Google.</p>
+      </div>
+      <figure><img src="../public/onboarding/01-signin.jpeg" alt="Inicia sesión en Tribe" /></figure>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">2</div><div class="step-title">Elige "Soy instructor"</div></div>
+        <p>Esto desbloquea tu vitrina y las herramientas para organizar sesiones y recibir pagos.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">3</div><div class="step-title">Crea tu perfil</div></div>
+        <p>Agrega tu nombre, una foto clara y una biografía corta en tu propia voz, esto es lo primero que leen los atletas. <span class="note">No tienes que terminar todo ahora. Hay una opción de "saltar y terminar después", y puedes pulir tu perfil cuando quieras.</span></p>
+      </div>
+      <figure><img src="../public/onboarding/05-profile.jpeg" alt="Crea tu perfil" /></figure>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">4</div><div class="step-title">Configura tu vitrina</div></div>
+        <p>Agrega una frase corta (una línea sobre lo que haces) y una imagen de portada. Esta es la página a la que llega la gente cuando toca tu enlace.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">5</div><div class="step-title">(Si vas a cobrar) Configura tus pagos</div></div>
+        <p>Si piensas recibir pagos a través de la app, conecta tu método de pago: Wompi para pesos colombianos (Nequi, PSE, tarjeta) o Stripe para dólares. <span class="note">También puedes dejar los pagos por fuera de la app por ahora y usar Tribe solo para coordinar, tú decides.</span></p>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">6</div><div class="step-title">Crea tu primera sesión</div></div>
+        <p>Elige tu actividad, pon la fecha, la hora, la ubicación, cuántas personas pueden unirse y el precio (o márcala como gratis). Escribe la descripción con tus propias palabras: tu estilo, tu idioma.</p>
+      </div>
+      <figure><img src="../public/onboarding/06-create-session.jpeg" alt="Crea una sesión" /></figure>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">7</div><div class="step-title">Compártela</div></div>
+        <p>Abre tu nueva sesión y comparte el enlace en tus grupos de WhatsApp y en Instagram. La gente lo encuentra, lo toca y se une. También pueden ver cómo llegar, hacer preguntas y ver quién más va.</p>
+      </div>
+      <figure><img src="../public/onboarding/07-session-detail.jpeg" alt="Detalles de la sesión" /></figure>
+
+      <hr />
+
+      <h2>Después de tu primera sesión</h2>
+      <ul>
+        <li><strong>Mira quién va</strong> en la página de la sesión, y escríbele al grupo directamente a través de Tribe.</li>
+        <li><strong>Los atletas reciben recordatorios</strong> automáticamente, así llegan más.</li>
+        <li><strong>Pídele a los atletas contentos que dejen una reseña</strong>, es la forma más rápida de generar confianza con personas que aún no te conocen.</li>
+        <li><strong>Publica más sesiones</strong>, una clase semanal recurrente, un evento especial, lo que encaje con tu práctica. Cada una es un nuevo enlace para compartir.</li>
+        <li><strong>Cuéntanos qué falta.</strong> Estás temprano. Si algo haría que Tribe fuera mejor para ti, dilo. Para eso están los instructores fundadores.</li>
+      </ul>
+
+      <h2>Algunas cosas que vale la pena saber</h2>
+      <ul class="knowing">
+        <li><strong>Tus palabras, tu estilo.</strong> El título y la descripción de la sesión son completamente tuyos. Si enseñas una práctica que pone la filosofía primero, escríbelo así. Tribe no te impone un tono "fitness" en tu contenido.</li>
+        <li><strong>Paquetes.</strong> Puedes listar tus niveles de precios (clase individual, paquetes de varias clases, mensualidad) en tu vitrina para que los atletas vean tus opciones. Por ahora, cuando alguien quiere un paquete se comunica contigo para acordarlo. El pago de los paquetes se maneja directamente contigo.</li>
+        <li><strong>Español o inglés.</strong> La app funciona en los dos idiomas. Escribe tu perfil y tus sesiones en el idioma que usen tus atletas. Para la mayoría de instructores acá, eso es español.</li>
+        <li><strong>¿Necesitas ayuda?</strong> Escríbenos a tribe@aplusfitnessllc.com.</li>
+      </ul>
+
+      <p class="footer">Tribe — Nunca Entrenes Solo.</p>
+    </div>
+  </body>
+</html>
