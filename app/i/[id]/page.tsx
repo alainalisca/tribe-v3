@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { createClient } from '@/lib/supabase/server';
 import InstructorShareClient from './InstructorShareClient';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.tribesocial.co';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -43,7 +43,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     avatar: instructor.avatar_url || '',
   });
 
-  const ogImageUrl = `${BASE_URL}/api/og?${ogParams.toString()}`;
+  // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
+  // the image directly instead of chasing a 308 redirect.
+  const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
 
   return {
     title: `${instructor.name || 'Instructor'} | Tribe`,

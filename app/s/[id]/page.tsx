@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 import SessionShareClient, { type InitialSession } from './SessionShareClient';
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.tribesocial.co';
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -92,7 +92,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     neighborhood: neighborhoodName || '',
   });
 
-  const ogImageUrl = `${BASE_URL}/api/og?${ogParams.toString()}`;
+  // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
+  // the image directly instead of chasing a 308 redirect.
+  const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
 
   return {
     title: `${session.title} | Tribe`,
