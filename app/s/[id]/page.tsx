@@ -19,7 +19,7 @@ async function fetchSession(id: string) {
   const { data } = await supabase
     .from('sessions')
     .select(
-      'id, title, sport, date, time, start_time, location_name, location_lat, location_lng, price, price_cents, currency, max_participants, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
+      'id, title, sport, date, time, start_time, location_name, location_lat, location_lng, price, price_cents, currency, max_participants, photos, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -80,6 +80,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .filter(Boolean)
     .join(' · ');
 
+  // The host's first session photo becomes the share-card background when
+  // present; the OG route validates it loads and falls back gracefully.
+  const photos = (session as { photos?: string[] | null }).photos;
+  const sessionImage = Array.isArray(photos) && photos[0] ? photos[0] : '';
+
   // OG image URL
   const ogParams = new URLSearchParams({
     type: 'session',
@@ -90,6 +95,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     instructor: creator?.name || '',
     avatar: creator?.avatar_url || '',
     neighborhood: neighborhoodName || '',
+    image: sessionImage,
   });
 
   // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
