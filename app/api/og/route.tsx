@@ -26,38 +26,6 @@ const GREEN = '#A3E635';
 const GRAY = '#9CA3AF';
 const WHITE = '#FFFFFF';
 
-const SPORT_IMAGE_SLUGS = new Set([
-  'running',
-  'yoga',
-  'crossfit',
-  'cycling',
-  'swimming',
-  'boxing',
-  'pilates',
-  'hiking',
-  'basketball',
-  'soccer',
-  'tennis',
-  'martial_arts',
-  'dance',
-  'strength',
-  'functional',
-  'calisthenics',
-]);
-
-function buildHeroImageUrl(req: NextRequest, sport: string): string | null {
-  try {
-    const origin = new URL(req.url).origin;
-    const slug = sport.toLowerCase();
-    if (SPORT_IMAGE_SLUGS.has(slug)) {
-      return `${origin}/images/sports/${slug}.jpg`;
-    }
-    return `${origin}/images/sports/default.jpg`;
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const type = searchParams.get('type') ?? 'default';
@@ -72,8 +40,7 @@ export async function GET(request: NextRequest) {
   const neighborhood = searchParams.get('neighborhood') ?? '';
 
   if (type === 'session') {
-    const heroImageUrl = sport ? buildHeroImageUrl(request, sport) : null;
-    return renderSession({ title, sport, date, price, instructor, avatar, spots, neighborhood, heroImageUrl });
+    return renderSession({ title, sport, date, price, instructor, avatar, spots, neighborhood });
   }
   if (type === 'instructor') {
     return renderInstructor({ title: title || instructor, subtitle, avatar });
@@ -99,7 +66,6 @@ interface SessionParams {
   avatar: string;
   spots: string;
   neighborhood: string;
-  heroImageUrl?: string | null;
 }
 
 function renderSession(p: SessionParams) {
@@ -119,26 +85,8 @@ function renderSession(p: SessionParams) {
         backgroundColor: DARK_BG,
         padding: '50px 60px',
         fontFamily: 'system-ui, sans-serif',
-        position: 'relative',
       }}
     >
-      {p.heroImageUrl && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.heroImageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.2) 100%)',
-            }}
-          />
-        </div>
-      )}
       {/* Top row: logo + sport tag */}
       <div
         style={{
@@ -146,7 +94,6 @@ function renderSession(p: SessionParams) {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '40px',
-          zIndex: 1,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
