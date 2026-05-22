@@ -3,24 +3,6 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-const SPORT_EMOJI: Record<string, string> = {
-  running: '🏃',
-  cycling: '🚴',
-  swimming: '🏊',
-  yoga: '🧘',
-  crossfit: '🏋️',
-  tennis: '🎾',
-  basketball: '🏀',
-  soccer: '⚽',
-  hiking: '🥾',
-  boxing: '🥊',
-  hiit: '🔥',
-  pilates: '🧘‍♀️',
-  functional: '💪',
-  dance: '💃',
-  martial_arts: '🥋',
-};
-
 const DARK_BG = '#272D34';
 const GREEN = '#A3E635';
 const GRAY = '#9CA3AF';
@@ -57,14 +39,18 @@ export async function GET(request: NextRequest) {
   const neighborhood = searchParams.get('neighborhood') ?? '';
   const image = searchParams.get('image') ?? '';
 
+  // The real branded wordmark (white text + lime dot, for dark backgrounds).
+  const logoUrl = `${new URL(request.url).origin}/tribe-wordmark.png`;
+
   if (type === 'session') {
-    // Validate the session photo + host avatar in parallel; drop either if it
-    // won't load so the render can't blank out.
-    const [bg, av] = await Promise.all([
+    // Validate the session photo, host avatar, and logo in parallel; drop any
+    // that won't load so the render can't blank out.
+    const [bg, av, logo] = await Promise.all([
       image ? imageLoads(image).then((ok) => (ok ? image : '')) : Promise.resolve(''),
       avatar ? imageLoads(avatar).then((ok) => (ok ? avatar : '')) : Promise.resolve(''),
+      imageLoads(logoUrl).then((ok) => (ok ? logoUrl : '')),
     ]);
-    return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg });
+    return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg, logo });
   }
   if (type === 'instructor') {
     const av = avatar && (await imageLoads(avatar)) ? avatar : '';
@@ -93,17 +79,20 @@ interface SessionParams {
   neighborhood: string;
   /** Validated, loadable session photo URL. Empty = use the no-photo card. */
   image?: string;
+  /** Validated, loadable branded wordmark URL. Empty = text fallback. */
+  logo?: string;
 }
 
 function renderSession(p: SessionParams) {
-  const sportEmoji = SPORT_EMOJI[p.sport.toLowerCase()] ?? '💪';
   const sportLabel = p.sport.replace(/_/g, ' ');
 
   const detailItems: string[] = [];
   if (p.date) detailItems.push(p.date);
   if (p.neighborhood) detailItems.push(p.neighborhood);
 
-  const wordmark = (
+  const wordmark = p.logo ? (
+    <img src={p.logo} alt="" width={152} height={50} style={{ objectFit: 'contain' }} />
+  ) : (
     <div style={{ display: 'flex', alignItems: 'baseline' }}>
       <span style={{ fontSize: '40px', fontWeight: 800, color: WHITE }}>Tribe</span>
       <span style={{ fontSize: '40px', fontWeight: 800, color: GREEN }}>.</span>
@@ -200,13 +189,11 @@ function renderSession(p: SessionParams) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
                   backgroundColor: 'rgba(163,230,53,0.22)',
                   padding: '10px 22px',
                   borderRadius: '24px',
                 }}
               >
-                <span style={{ fontSize: '24px' }}>{sportEmoji}</span>
                 <span
                   style={{
                     fontSize: '20px',
@@ -259,27 +246,25 @@ function renderSession(p: SessionParams) {
     >
       {wordmark}
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '26px', marginBottom: showTitle ? '16px' : '4px' }}>
-          <span style={{ fontSize: '96px' }}>{sportEmoji}</span>
-          {p.sport && (
-            <span
-              style={{
-                fontSize: '70px',
-                fontWeight: 800,
-                color: GREEN,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '1px',
-                lineHeight: 1,
-              }}
-            >
-              {sportLabel}
-            </span>
-          )}
-        </div>
+        {p.sport && (
+          <span
+            style={{
+              fontSize: '88px',
+              fontWeight: 800,
+              color: GREEN,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '2px',
+              lineHeight: 1,
+              marginBottom: showTitle ? '18px' : '6px',
+            }}
+          >
+            {sportLabel}
+          </span>
+        )}
         {showTitle && (
           <div
             style={{
-              fontSize: '40px',
+              fontSize: '44px',
               fontWeight: 700,
               color: WHITE,
               lineHeight: 1.15,
