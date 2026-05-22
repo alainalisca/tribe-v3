@@ -129,6 +129,25 @@ const testimonial = (quote, name, specialty) => base(`
 const spotlightDemo = spotlight('Angie Gómez', 'Yoga y bienestar · El Poblado', 'Con Tribe llené mis clases con gente nueva que de verdad quería entrenar.', 'partner-portrait.jpg');
 const testimonialDemo = testimonial('Dejé de perseguir alumnos por WhatsApp. Ahora me encuentran a mí.', 'Angie Gómez', 'Instructora de Yoga, Medellín');
 
+// ---- PARTNER / UGC: session promo flyer (a partner's upcoming Tribe session) ----
+const detailRow = (label, val) => `<div style="display:flex;align-items:baseline;gap:24px">
+  <span style="font-size:24px;font-weight:700;color:${C.lime};text-transform:uppercase;letter-spacing:1px;width:180px">${label}</span>
+  <span style="font-size:36px;font-weight:600;color:${C.white}">${val}</span></div>`;
+const sessionPromo = (title, instructor, when, where, price) => base(`
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="mark" style="color:#fff">Tribe<span style="color:${C.lime}">.</span></div>
+    <div class="kick" style="color:${C.blue};margin-top:44px">Sesión en Tribe</div>
+    <div style="font-size:82px;font-weight:800;color:#fff;line-height:1.02;margin-top:16px;max-width:860px">${title}</div>
+    <div style="font-size:32px;font-weight:600;color:${C.lime};margin-top:14px">con ${instructor}</div>
+    <div style="margin-top:auto;border-top:1px solid #3a4048;padding-top:40px;display:flex;flex-direction:column;gap:28px">
+      ${detailRow('Cuándo', when)}${detailRow('Dónde', where)}${detailRow('Precio', price)}
+    </div>
+    <div style="font-size:36px;font-weight:700;color:#fff;margin-top:44px">Únete en Tribe. <span style="color:${C.lime}">Link en bio.</span></div>
+    <div class="foot" style="color:${C.lime}">NUNCA ENTRENES SOLO</div>
+  </div>`, C.dark);
+const sessionPromoDemo = sessionPromo('Yoga al amanecer', 'Angie Gómez', 'Sáb 24 May · 6:30 AM', 'El Poblado', 'Gratis');
+
 // ---- PHOTO-OVERLAY (free stock photo + text) ----
 const photoOverlay = base(`
   <img src="${STOCK}/running-group.jpg" style="position:absolute;inset:0;width:1080px;height:1350px;object-fit:cover;z-index:0">
@@ -153,6 +172,7 @@ const jobs = [
   ['feature-create', featureCreate], ['feature-instructor', featureInstructor],
   ...(hasPortrait ? [['spotlight', spotlightDemo]] : []),
   ['testimonial', testimonialDemo],
+  ['session-promo', sessionPromoDemo],
   ...carousel.map((h, i) => [`carousel-${i + 1}`, h]),
 ];
 
