@@ -26,6 +26,23 @@ const GREEN = '#A3E635';
 const GRAY = '#9CA3AF';
 const WHITE = '#FFFFFF';
 
+/**
+ * Confirm a URL actually resolves to an image before we hand it to Satori.
+ * Satori fetches <img> sources itself and throws the WHOLE render if any one
+ * 404s/times out — which silently produces a 0-byte image (the blank-card bug
+ * we hit with the old /images/sports hero). Pre-validating means a dead photo
+ * or avatar URL just falls back to a clean layout instead of breaking.
+ */
+async function imageLoads(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return false;
+    return (res.headers.get('content-type') ?? '').startsWith('image/');
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const type = searchParams.get('type') ?? 'default';
@@ -38,12 +55,20 @@ export async function GET(request: NextRequest) {
   const avatar = searchParams.get('avatar') ?? '';
   const spots = searchParams.get('spots') ?? '';
   const neighborhood = searchParams.get('neighborhood') ?? '';
+  const image = searchParams.get('image') ?? '';
 
   if (type === 'session') {
-    return renderSession({ title, sport, date, price, instructor, avatar, spots, neighborhood });
+    // Validate the session photo + host avatar in parallel; drop either if it
+    // won't load so the render can't blank out.
+    const [bg, av] = await Promise.all([
+      image ? imageLoads(image).then((ok) => (ok ? image : '')) : Promise.resolve(''),
+      avatar ? imageLoads(avatar).then((ok) => (ok ? avatar : '')) : Promise.resolve(''),
+    ]);
+    return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg });
   }
   if (type === 'instructor') {
-    return renderInstructor({ title: title || instructor, subtitle, avatar });
+    const av = avatar && (await imageLoads(avatar)) ? avatar : '';
+    return renderInstructor({ title: title || instructor, subtitle, avatar: av });
   }
   if (type === 'achievement') {
     const emoji = searchParams.get('emoji') ?? '🏆';
@@ -66,15 +91,160 @@ interface SessionParams {
   avatar: string;
   spots: string;
   neighborhood: string;
+  /** Validated, loadable session photo URL. Empty = use the no-photo card. */
+  image?: string;
 }
 
 function renderSession(p: SessionParams) {
   const sportEmoji = SPORT_EMOJI[p.sport.toLowerCase()] ?? '💪';
+  const sportLabel = p.sport.replace(/_/g, ' ');
+
   const detailItems: string[] = [];
   if (p.date) detailItems.push(p.date);
   if (p.neighborhood) detailItems.push(p.neighborhood);
-  const spotsText = p.spots ? `${p.spots} spots left` : '';
 
+  const wordmark = (
+    <div style={{ display: 'flex', alignItems: 'baseline' }}>
+      <span style={{ fontSize: '40px', fontWeight: 800, color: WHITE }}>Tribe</span>
+      <span style={{ fontSize: '40px', fontWeight: 800, color: GREEN }}>.</span>
+    </div>
+  );
+
+  const details = (detailItems.length > 0 || p.price) && (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '24px', color: GRAY }}>
+      {detailItems.map((item, i) => (
+        <span key={i} style={{ display: 'flex', alignItems: 'center' }}>
+          {i > 0 && <span style={{ marginRight: '20px', color: '#6B7280' }}>·</span>}
+          {item}
+        </span>
+      ))}
+      {p.price && (
+        <span style={{ display: 'flex', alignItems: 'center' }}>
+          {detailItems.length > 0 && <span style={{ marginRight: '20px', color: '#6B7280' }}>·</span>}
+          <span style={{ color: GREEN, fontWeight: 700 }}>{p.price}</span>
+        </span>
+      )}
+    </div>
+  );
+
+  const instructorRow = p.instructor ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div
+        style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '26px',
+          backgroundColor: GREEN,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {p.avatar ? (
+          <img src={p.avatar} alt="" width={52} height={52} style={{ objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: '22px', fontWeight: 700, color: '#1A1A1A' }}>
+            {p.instructor[0]?.toUpperCase() || '?'}
+          </span>
+        )}
+      </div>
+      <span style={{ fontSize: '22px', fontWeight: 600, color: WHITE }}>{p.instructor}</span>
+    </div>
+  ) : null;
+
+  // ── Photo mode: the host's session photo as a full-bleed background ──
+  if (p.image) {
+    return new ImageResponse(
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          position: 'relative',
+          fontFamily: 'system-ui, sans-serif',
+        }}
+      >
+        <img
+          src={p.image}
+          alt=""
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            background:
+              'linear-gradient(to top, rgba(10,12,14,0.95) 0%, rgba(10,12,14,0.55) 45%, rgba(10,12,14,0.30) 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '50px 60px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {wordmark}
+            {p.sport && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  backgroundColor: 'rgba(163,230,53,0.22)',
+                  padding: '10px 22px',
+                  borderRadius: '24px',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>{sportEmoji}</span>
+                <span
+                  style={{
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    color: GREEN,
+                    textTransform: 'uppercase' as const,
+                    letterSpacing: '1px',
+                  }}
+                >
+                  {sportLabel}
+                </span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                fontSize: '60px',
+                fontWeight: 800,
+                color: WHITE,
+                lineHeight: 1.1,
+                maxWidth: '1040px',
+                marginBottom: '20px',
+              }}
+            >
+              {p.title || 'Training Session'}
+            </div>
+            {details && <div style={{ display: 'flex', marginBottom: '24px' }}>{details}</div>}
+            {instructorRow}
+          </div>
+        </div>
+      </div>,
+      { width: 1200, height: 630 }
+    );
+  }
+
+  // ── No-photo mode: make the activity big and obvious ──
+  const showTitle = !!p.title && p.title.toLowerCase() !== sportLabel.toLowerCase();
   return new ImageResponse(
     <div
       style={{
@@ -83,128 +253,47 @@ function renderSession(p: SessionParams) {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: DARK_BG,
-        padding: '50px 60px',
+        padding: '56px 60px',
         fontFamily: 'system-ui, sans-serif',
       }}
     >
-      {/* Top row: logo + sport tag */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '40px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'baseline' }}>
-          <span style={{ fontSize: '40px', fontWeight: 800, color: WHITE }}>Tribe</span>
-          <span style={{ fontSize: '40px', fontWeight: 800, color: GREEN }}>.</span>
-        </div>
-        {p.sport && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: 'rgba(163,230,53,0.15)',
-              padding: '8px 20px',
-              borderRadius: '24px',
-            }}
-          >
-            <span style={{ fontSize: '22px' }}>{sportEmoji}</span>
+      {wordmark}
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '26px', marginBottom: showTitle ? '16px' : '4px' }}>
+          <span style={{ fontSize: '96px' }}>{sportEmoji}</span>
+          {p.sport && (
             <span
               style={{
-                fontSize: '18px',
-                fontWeight: 700,
+                fontSize: '70px',
+                fontWeight: 800,
                 color: GREEN,
                 textTransform: 'uppercase' as const,
                 letterSpacing: '1px',
+                lineHeight: 1,
               }}
             >
-              {p.sport}
+              {sportLabel}
             </span>
-          </div>
-        )}
-      </div>
-
-      {/* Title */}
-      <div
-        style={{
-          fontSize: '52px',
-          fontWeight: 700,
-          color: WHITE,
-          lineHeight: 1.15,
-          maxWidth: '950px',
-          marginBottom: '28px',
-        }}
-      >
-        {p.title || 'Training Session'}
-      </div>
-
-      {/* Details row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          fontSize: '22px',
-          color: GRAY,
-          marginBottom: 'auto',
-        }}
-      >
-        {detailItems.map((item, i) => (
-          <span key={i} style={{ display: 'flex', alignItems: 'center' }}>
-            {i > 0 && <span style={{ marginRight: '24px', color: '#4B5563' }}>·</span>}
-            {item}
-          </span>
-        ))}
-        {p.price && (
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            {detailItems.length > 0 && <span style={{ marginRight: '24px', color: '#4B5563' }}>·</span>}
-            <span style={{ color: GREEN, fontWeight: 700 }}>{p.price}</span>
-          </span>
-        )}
-        {spotsText && (
-          <span style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '24px', color: '#4B5563' }}>·</span>
-            {spotsText}
-          </span>
-        )}
-      </div>
-
-      {/* Instructor row at bottom */}
-      {p.instructor && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            paddingTop: '24px',
-            borderTop: '1px solid #374151',
-          }}
-        >
+          )}
+        </div>
+        {showTitle && (
           <div
             style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '24px',
-              backgroundColor: GREEN,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
+              fontSize: '40px',
+              fontWeight: 700,
+              color: WHITE,
+              lineHeight: 1.15,
+              maxWidth: '1040px',
+              marginBottom: '18px',
             }}
           >
-            {p.avatar ? (
-              <img src={p.avatar} width={48} height={48} style={{ objectFit: 'cover' }} />
-            ) : (
-              <span style={{ fontSize: '20px', fontWeight: 700, color: '#1A1A1A' }}>
-                {p.instructor[0]?.toUpperCase() || '?'}
-              </span>
-            )}
+            {p.title}
           </div>
-          <span style={{ fontSize: '20px', fontWeight: 600, color: WHITE }}>{p.instructor}</span>
-        </div>
+        )}
+        {details}
+      </div>
+      {instructorRow && (
+        <div style={{ display: 'flex', paddingTop: '24px', borderTop: '1px solid #374151' }}>{instructorRow}</div>
       )}
     </div>,
     { width: 1200, height: 630 }
@@ -252,7 +341,7 @@ function renderInstructor(p: InstructorParams) {
         }}
       >
         {p.avatar ? (
-          <img src={p.avatar} width={140} height={140} style={{ objectFit: 'cover' }} />
+          <img src={p.avatar} alt="" width={140} height={140} style={{ objectFit: 'cover' }} />
         ) : (
           <span style={{ fontSize: '56px', fontWeight: 700, color: WHITE }}>{p.title[0]?.toUpperCase() || '?'}</span>
         )}
