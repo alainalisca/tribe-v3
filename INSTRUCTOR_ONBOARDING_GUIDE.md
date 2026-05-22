@@ -33,6 +33,7 @@ You'd be one of the founders of this in your neighborhood. We'd love for you to 
 - **Tips.** Athletes can send you a tip after a session — real money, straight to you.
 - **Reviews.** Every happy athlete can leave a rating, so your reputation builds itself over time.
 - **A direct line to shape it.** As a founding instructor, what you tell us actually changes the product. You're not a number — you're a co-creator.
+- **We promote you.** We feature our founding instructors on Tribe's social media, tagging and crediting you, so your reach grows as ours does.
 - **Free to start.** Build your storefront and host your first session without paying anything.
 
 ---
@@ -78,6 +79,7 @@ You'd be one of the founders of this in your neighborhood. We'd love for you to 
 - **Your words, your style.** The session title and description are entirely yours. If you teach a philosophy-first practice, write it that way — Tribe doesn't force a "fitness" tone on your content.
 - **Packages.** You can list your pricing tiers (single class, multi-class packs, monthly) on your storefront so athletes see your options. For now, when someone wants a package they reach out to you to arrange it — payment for packages is handled with you directly.
 - **Spanish or English.** The app works in both. Write your profile and sessions in whichever language your athletes use — for most instructors here, that's Spanish.
+- **Sharing your content.** By joining as a founding instructor, you agree to let us feature your sessions and photos on Tribe's channels, always crediting and tagging you. You keep ownership of your content, and you can ask us to stop anytime.
 - **Need help?** Reach out to us at tribe@aplusfitnessllc.com.
 
 ---
