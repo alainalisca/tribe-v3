@@ -94,6 +94,41 @@ const feature = (head, hlWord, sub, shot, kick) => base(`
 const featureCreate = feature('Crea tu propia sesión en un minuto.', 'sesión', 'Pones dónde, cuándo y el precio. Compartes el link. Llega tu gente.', '06-create-session.jpeg', 'Para atletas');
 const featureInstructor = feature('Tu vitrina profesional, sin hacer web.', 'vitrina', 'Apareces en Descubre Instructores. Recibes confirmaciones, propinas y reseñas.', '03-storefront.jpeg', 'Para instructores');
 
+// ---- PARTNER / UGC: instructor spotlight (uses a partner photo) ----
+// Drop the partner's photo in social-assets/stock/ and pass the filename.
+const spotlight = (name, specialty, quote, photoFile) => base(`
+  <img src="${STOCK}/${photoFile}" style="position:absolute;right:0;top:0;width:540px;height:1350px;object-fit:cover;z-index:0">
+  <div style="position:absolute;right:0;top:0;width:560px;height:1350px;background:linear-gradient(to left, rgba(39,45,52,0) 0%, rgba(39,45,52,.6) 55%, #272D34 100%);z-index:1"></div>
+  <div class="wrap">
+    <div class="mark" style="color:#fff">Tribe<span style="color:${C.lime}">.</span></div>
+    <div style="margin-top:auto;max-width:600px">
+      <div class="kick" style="color:${C.blue};margin-bottom:18px">Instructor en Tribe</div>
+      <div style="font-size:74px;font-weight:800;color:${C.lime};line-height:1.0">${name}</div>
+      <div style="font-size:30px;font-weight:600;color:${C.white};margin-top:10px">${specialty}</div>
+      <div style="font-size:33px;font-weight:500;color:#e5e7eb;margin-top:30px;line-height:1.35;font-style:italic">“${quote}”</div>
+    </div>
+    <div class="foot" style="color:${C.lime}">NUNCA ENTRENES SOLO</div>
+  </div>`, C.dark);
+
+// ---- PARTNER / UGC: testimonial quote card (no photo needed) ----
+const testimonial = (quote, name, specialty) => base(`
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="mark" style="color:#fff">Tribe<span style="color:${C.lime}">.</span></div>
+    <div style="margin-top:auto">
+      <div style="font-size:150px;font-weight:800;color:${C.lime};line-height:.6;height:80px">“</div>
+      <div style="font-size:54px;font-weight:700;color:${C.white};line-height:1.2;max-width:880px">${quote}</div>
+      <div style="margin-top:36px">
+        <div style="font-size:30px;font-weight:700;color:${C.lime}">${name}</div>
+        <div style="font-size:26px;font-weight:500;color:${C.gray}">${specialty}</div>
+      </div>
+    </div>
+    <div class="foot" style="color:${C.gray};font-weight:600">NUNCA ENTRENES SOLO</div>
+  </div>`, C.dark);
+
+const spotlightDemo = spotlight('Angie Gómez', 'Yoga y bienestar · El Poblado', 'Con Tribe llené mis clases con gente nueva que de verdad quería entrenar.', 'partner-portrait.jpg');
+const testimonialDemo = testimonial('Dejé de perseguir alumnos por WhatsApp. Ahora me encuentran a mí.', 'Angie Gómez', 'Instructora de Yoga, Medellín');
+
 // ---- PHOTO-OVERLAY (free stock photo + text) ----
 const photoOverlay = base(`
   <img src="${STOCK}/running-group.jpg" style="position:absolute;inset:0;width:1080px;height:1350px;object-fit:cover;z-index:0">
@@ -110,11 +145,14 @@ const photoOverlay = base(`
 // Photo-overlay needs a downloaded stock image in social-assets/stock/ (gitignored).
 // Skip it on a fresh clone where no stock has been pulled yet.
 const hasStock = existsSync(path.join(__dirname, 'stock', 'running-group.jpg'));
+const hasPortrait = existsSync(path.join(__dirname, 'stock', 'partner-portrait.jpg'));
 
 const jobs = [
   ['cover-1-darklime', coverDarkLime], ['cover-2-limeblock', coverLimeBlock], ['cover-3-lightclean', coverLightClean],
   ...(hasStock ? [['photo-overlay', photoOverlay]] : []),
   ['feature-create', featureCreate], ['feature-instructor', featureInstructor],
+  ...(hasPortrait ? [['spotlight', spotlightDemo]] : []),
+  ['testimonial', testimonialDemo],
   ...carousel.map((h, i) => [`carousel-${i + 1}`, h]),
 ];
 
