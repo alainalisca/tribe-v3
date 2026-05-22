@@ -35,3 +35,8 @@ tribe_v3_skills.zip
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Internal docs — kept local only (repo is public)
+CHANGES_SINCE_RELEASE.md
+MANUAL_TEST_GUIDE.md
+QA_TEST_PLAN.md
