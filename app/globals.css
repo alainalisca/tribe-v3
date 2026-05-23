@@ -111,17 +111,17 @@
 }
 
 html {
-  /* Do NOT set overflow-y / overflow:hidden on html — per CSS spec, a
-     non-visible value on the root makes the viewport use html's values
-     instead of body's, which would kill body's overflow-y: auto scroll.
-     overflow-x: CLIP is the exception: clip never establishes a scroll
-     container and never coerces the other axis, so it stops page-level
-     horizontal scrolling (a too-wide child leaking past the viewport, the
-     "I can drag the screen left/right" symptom on iOS WKWebView where
-     body's overflow-x: hidden alone is unreliable) without breaking
-     vertical scroll. Intentional inner carousels (overflow-x-auto) are
-     unaffected — they scroll within their own box, not the page. */
-  overflow-x: clip;
+  /* Do NOT set ANY non-visible overflow on html (including overflow-x:clip).
+     The viewport-overflow-propagation rule (CSS Overflow 3, §3.3) transfers
+     body's overflow to the viewport ONLY if html is overflow:visible on both
+     axes. Any non-visible value on html — overflow-y:hidden, overflow:hidden,
+     OR overflow-x:clip — promotes html itself to the scroller, locks its
+     scroll region to its computed height, and stops re-measuring when feed
+     content lazy-loads after page paint. That caused the "trackpad scroll
+     dies after a few moments, reload fixes it" regression (2026-05-22).
+     Horizontal clipping lives on body (below). iOS-specific horizontal
+     leaks should be addressed with a layout wrapper or scoped to body — NEVER
+     the root. */
   -webkit-overflow-scrolling: touch;
   padding: 0;
   /* Height boundary on the root + overscroll-none here too. Without a root
