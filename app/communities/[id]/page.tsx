@@ -332,7 +332,7 @@ export default function CommunityDetailPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
       {/* Header */}
-      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
+      <div className="sticky top-0 safe-area-top bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <button
             onClick={() => router.push('/communities')}

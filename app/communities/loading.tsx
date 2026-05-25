@@ -15,7 +15,7 @@ import { SkeletonCard } from '@/components/Skeleton';
 export default function CommunitiesLoading() {
   return (
     <div className="min-h-screen bg-white dark:bg-tribe-surface pb-24">
-      <div className="sticky top-0 bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
+      <div className="sticky top-0 safe-area-top bg-white dark:bg-tribe-surface border-b border-gray-200 dark:border-tribe-mid z-40">
         <div className="max-w-2xl md:max-w-4xl mx-auto px-4 pt-4">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="h-7 w-36 bg-stone-200 dark:bg-tribe-mid rounded animate-pulse" />
