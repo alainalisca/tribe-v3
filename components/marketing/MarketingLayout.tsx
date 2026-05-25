@@ -40,7 +40,7 @@ function MarketingHeader() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 safe-area-top transition-all duration-300 ${
           scrolled ? 'bg-tribe-dark/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
         }`}
       >
@@ -86,7 +86,7 @@ function MarketingHeader() {
 
       {/* Mobile menu overlay */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-tribe-dark/98 backdrop-blur-md pt-20 px-6 md:hidden">
+        <div className="fixed inset-0 z-40 bg-tribe-dark/98 backdrop-blur-md pt-[calc(env(safe-area-inset-top,0px)+5rem)] px-6 md:hidden">
           <div className="flex flex-col gap-6">
             {navLinks.map((link) => (
               <Link
@@ -135,7 +135,7 @@ function MarketingFooter() {
   const t = (en: string, es: string) => (language === 'es' ? es : en);
 
   return (
-    <footer className="bg-tribe-dark border-t border-tribe-mid py-12 px-4">
+    <footer className="bg-tribe-dark border-t border-tribe-mid pt-12 pb-[calc(env(safe-area-inset-bottom,0px)+3rem)] px-4">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div>
@@ -246,7 +246,7 @@ export default function MarketingLayout({ children, fullBleed = false }: Marketi
   return (
     <div className="min-h-screen bg-tribe-dark text-white">
       <MarketingHeader />
-      <main className={fullBleed ? '' : 'pt-20'}>{children}</main>
+      <main className={fullBleed ? '' : 'pt-[calc(env(safe-area-inset-top,0px)+5rem)]'}>{children}</main>
       <MarketingFooter />
     </div>
   );
