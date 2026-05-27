@@ -16,13 +16,22 @@ interface PageProps {
 // user + live participant count).
 async function fetchSession(id: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  // Column names match supabase/schema.sql: start_time (not "time"),
+  // location (not "location_name"), price_cents (no separate "price").
+  // The old select referenced non-existent columns; PostgREST returned an
+  // error that this code silently dropped, so every shared link rendered
+  // "Session not found".
+  const { data, error } = await supabase
     .from('sessions')
     .select(
-      'id, title, sport, date, time, start_time, location_name, location_lat, location_lng, price, price_cents, currency, max_participants, photos, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
+      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, photos, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
     )
     .eq('id', id)
     .maybeSingle();
+  if (error) {
+    console.error('[/s/[id]] fetchSession error', { id, error: error.message });
+    return null;
+  }
   if (!data) return null;
   const raw = data as Record<string, unknown> & {
     creator: unknown;
@@ -56,12 +65,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   // Price display
-  const isFree = !session.price && !session.price_cents;
+  const isFree = !session.price_cents;
   const priceDisplay = isFree
     ? 'Free'
-    : session.price_cents
-      ? `$${(session.price_cents / 100).toLocaleString()} ${session.currency || 'COP'}`
-      : `$${session.price?.toLocaleString()} ${session.currency || 'COP'}`;
+    : `$${((session.price_cents ?? 0) / 100).toLocaleString()} ${session.currency || 'COP'}`;
 
   // Date display
   const dateDisplay = new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -85,10 +92,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const photos = (session as { photos?: string[] | null }).photos;
   const sessionImage = Array.isArray(photos) && photos[0] ? photos[0] : '';
 
+  // title is nullable in the schema; fall back to sport so OG/share cards
+  // never render the literal string "null".
+  const displayTitle = session.title || session.sport;
+
   // OG image URL
   const ogParams = new URLSearchParams({
     type: 'session',
-    title: session.title,
+    title: displayTitle,
     sport: session.sport || '',
     date: dateDisplay,
     price: priceDisplay,
@@ -103,19 +114,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
 
   return {
-    title: `${session.title} | Tribe`,
+    title: `${displayTitle} | Tribe`,
     description,
     openGraph: {
-      title: session.title,
+      title: displayTitle,
       description,
       type: 'website',
       siteName: 'Tribe - Never Train Alone',
       url: `${BASE_URL}/s/${id}`,
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: session.title }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: displayTitle }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: session.title,
+      title: displayTitle,
       description,
       images: [ogImageUrl],
     },

@@ -284,7 +284,7 @@ export default function SessionDetails({
                 {t('hostedBy')} {creator.name}
               </span>
             </div>
-            {creator.average_rating && creator.average_rating > 0 && (
+            {creator.average_rating != null && creator.average_rating > 0 && (
               <Badge className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm border-transparent gap-1">
                 <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
                 <span>{Number(creator.average_rating).toFixed(1)}</span>

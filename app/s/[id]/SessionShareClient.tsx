@@ -12,15 +12,13 @@ import TribeWordmark from '@/components/TribeWordmark';
 
 export interface InitialSession {
   id: string;
-  title: string;
+  title: string | null;
   sport: string;
   date: string;
-  time: string | null;
   start_time: string | null;
-  location_name: string | null;
+  location: string | null;
   location_lat: number | null;
   location_lng: number | null;
-  price: number | null;
   price_cents: number | null;
   currency: string | null;
   max_participants: number;
@@ -81,14 +79,12 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
   }
 
   const spotsLeft = session.max_participants - confirmedCount;
-  const isFree = !session.price && !session.price_cents;
+  const isFree = !session.price_cents;
   const priceDisplay = isFree
     ? language === 'es'
       ? 'Gratis'
       : 'Free'
-    : session.price_cents
-      ? `$${(session.price_cents / 100).toLocaleString()} ${session.currency || 'COP'}`
-      : `$${session.price?.toLocaleString()} ${session.currency || 'COP'}`;
+    : `$${((session.price_cents ?? 0) / 100).toLocaleString()} ${session.currency || 'COP'}`;
 
   const neighborhood =
     session.location_lat && session.location_lng
@@ -102,9 +98,8 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
     day: 'numeric',
   });
 
-  const timeDisplay = session.start_time || session.time || null;
-  const timeFormatted = timeDisplay
-    ? new Date(`2000-01-01T${timeDisplay}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
+  const timeFormatted = session.start_time
+    ? new Date(`2000-01-01T${session.start_time}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
         hour: 'numeric',
         minute: '2-digit',
       })
@@ -138,7 +133,7 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
             <span className="inline-block px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide mb-3">
               {session.sport}
             </span>
-            <h2 className="text-2xl font-bold text-theme-primary leading-tight">{session.title}</h2>
+            <h2 className="text-2xl font-bold text-theme-primary leading-tight">{session.title || session.sport}</h2>
           </div>
 
           {/* Date & time */}
@@ -156,11 +151,11 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
           </div>
 
           {/* Location */}
-          {(session.location_name || neighborhood) && (
+          {(session.location || neighborhood) && (
             <div className="flex items-start gap-2 text-sm text-theme-secondary">
               <MapPin className="w-4 h-4 text-tribe-green mt-0.5 flex-shrink-0" />
               <span>
-                {session.location_name}
+                {session.location}
                 {neighborhood && <span className="text-theme-tertiary"> — {neighborhood.name}</span>}
               </span>
             </div>

@@ -53,7 +53,8 @@ export default function SessionDetailPage() {
   async function shareSession() {
     if (!d.session) return;
     const shareUrl = `${window.location.origin}/s/${d.session.id}`;
-    const shareText = language === 'es' ? `${d.session.title} — Únete en Tribe` : `${d.session.title} — Join on Tribe`;
+    const titleForShare = d.session.title || d.session.sport;
+    const shareText = language === 'es' ? `${titleForShare} — Únete en Tribe` : `${titleForShare} — Join on Tribe`;
     if (navigator.share) {
       await navigator.share({ title: shareText, url: shareUrl });
       trackEvent('session_shared', { session_id: d.session.id, method: 'native' });
