@@ -126,10 +126,15 @@ export default function PostSessionFlow({
     setReviewError('');
 
     try {
+      // QA-08b: the `reviews` table column is `host_id`, not `instructor_id`.
+      // PostSessionPrompt was fixed for this in a previous pass; this sibling
+      // component still had the wrong column name so every rating insert
+      // returned "column reviews.instructor_id does not exist" and the user
+      // saw "Error submitting rating".
       const { error } = await supabase.from('reviews').insert({
         session_id: sessionId,
         reviewer_id: userId,
-        instructor_id: creatorId,
+        host_id: creatorId,
         rating,
         comment: reviewText.trim() || null,
       });
