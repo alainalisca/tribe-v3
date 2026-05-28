@@ -32,7 +32,17 @@ export function getStripeInstance(): Stripe {
 
 interface CreateStripeCheckoutSessionParams {
   amountCents: number;
-  currency: 'USD';
+  /**
+   * Presentment currency for the Stripe Checkout session.
+   *
+   * - 'USD' — the legacy path. Amount is in USD cents (100 = $1.00).
+   * - 'COP' — added so the Wompi-down emergency override can route Colombian
+   *   payments through Stripe. Stripe treats COP as a zero-decimal currency
+   *   (1500 = 1500 COP, no centavos). Callers using the app's internal
+   *   "minor units × 100" convention for COP MUST divide by 100 before
+   *   passing the amount here.
+   */
+  currency: 'USD' | 'COP';
   customerEmail: string;
   sessionId: string; // Tribe session ID
   participantUserId: string;

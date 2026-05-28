@@ -10,11 +10,27 @@ export type Currency = 'COP' | 'USD';
 export type PaymentStatus = 'pending' | 'processing' | 'approved' | 'declined' | 'voided' | 'error';
 
 /**
- * Select payment gateway based on currency
- * COP (Colombian Peso) → Wompi
- * USD (US Dollar) → Stripe
+ * Select payment gateway based on currency.
+ *
+ * Default routing:
+ *   COP (Colombian Peso) → Wompi
+ *   USD (US Dollar)      → Stripe
+ *
+ * Override: set the `PAYMENT_GATEWAY_OVERRIDE` env var to force a single
+ * gateway for all payments regardless of currency. This exists because
+ * Wompi requires a Colombian legal entity + bank, which we don't have
+ * yet — until we sort that out, set `PAYMENT_GATEWAY_OVERRIDE=stripe`
+ * on Vercel and COP charges will route through Stripe in COP. See
+ * `docs/PAYMENTS_HANDOFF.md` for the full story.
+ *
+ * Unset the env var to restore the per-currency default.
  */
 export function getPaymentGateway(currency: Currency): PaymentGateway {
+  const override = process.env.PAYMENT_GATEWAY_OVERRIDE?.toLowerCase();
+  if (override === 'stripe' || override === 'wompi') {
+    return override as PaymentGateway;
+  }
+
   switch (currency) {
     case 'COP':
       return 'wompi';

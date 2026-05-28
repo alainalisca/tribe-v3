@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { calculateFees, getPaymentGateway, isSupportedCurrency, PLATFORM_FEE_PERCENT } from './config';
 
 describe('calculateFees', () => {
@@ -36,16 +36,35 @@ describe('calculateFees', () => {
 });
 
 describe('getPaymentGateway', () => {
+  const originalOverride = process.env.PAYMENT_GATEWAY_OVERRIDE;
+  afterEach(() => {
+    if (originalOverride === undefined) delete process.env.PAYMENT_GATEWAY_OVERRIDE;
+    else process.env.PAYMENT_GATEWAY_OVERRIDE = originalOverride;
+  });
+
   it('returns wompi for COP', () => {
+    delete process.env.PAYMENT_GATEWAY_OVERRIDE;
     expect(getPaymentGateway('COP')).toBe('wompi');
   });
 
   it('returns stripe for USD', () => {
+    delete process.env.PAYMENT_GATEWAY_OVERRIDE;
     expect(getPaymentGateway('USD')).toBe('stripe');
   });
 
   it('throws for unsupported currency', () => {
+    delete process.env.PAYMENT_GATEWAY_OVERRIDE;
     expect(() => getPaymentGateway('EUR' as never)).toThrow('Unsupported currency: EUR');
+  });
+
+  it('PAYMENT_GATEWAY_OVERRIDE=stripe forces stripe for COP', () => {
+    process.env.PAYMENT_GATEWAY_OVERRIDE = 'stripe';
+    expect(getPaymentGateway('COP')).toBe('stripe');
+  });
+
+  it('PAYMENT_GATEWAY_OVERRIDE=wompi forces wompi for USD', () => {
+    process.env.PAYMENT_GATEWAY_OVERRIDE = 'wompi';
+    expect(getPaymentGateway('USD')).toBe('wompi');
   });
 });
 

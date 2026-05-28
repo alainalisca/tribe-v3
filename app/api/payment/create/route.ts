@@ -193,9 +193,13 @@ export async function POST(request: NextRequest) {
         // the tip on when the webhook fires.
         await serviceSupabase.from('tips').update({ gateway_payment_id: wompiResult.transaction_id }).eq('id', tipId);
       } else {
+        // PAYMENT_GATEWAY_OVERRIDE: COP can land here when the env override
+        // forces Stripe. The app stores COP as `value × 100` (Wompi convention).
+        // Stripe treats COP as zero-decimal, so divide by 100 when forwarding.
+        const stripeAmount = currency === 'COP' ? Math.round(tipAmount / 100) : tipAmount;
         const stripeResult = await createStripeCheckoutSession({
-          amountCents: tipAmount,
-          currency: 'USD',
+          amountCents: stripeAmount,
+          currency,
           customerEmail: userEmail,
           sessionId: tipId, // carried in Stripe metadata for traceability
           participantUserId: user.id,
@@ -330,9 +334,12 @@ export async function POST(request: NextRequest) {
         const finalSuccessUrl = success_url || `${siteUrl}/promote/boosts?payment=success&campaign=${reference_id}`;
         const finalCancelUrl = cancel_url || `${siteUrl}/promote/boosts?payment=cancelled&campaign=${reference_id}`;
 
+        // PAYMENT_GATEWAY_OVERRIDE: COP can land here when the override forces
+        // Stripe. App stores COP as `value × 100`; Stripe is zero-decimal.
+        const stripeAmount = currency === 'COP' ? Math.round(amount_cents / 100) : amount_cents;
         const stripeResult = await createStripeCheckoutSession({
-          amountCents: amount_cents,
-          currency: 'USD',
+          amountCents: stripeAmount,
+          currency,
           customerEmail: userEmail,
           sessionId: reference_id, // Use reference_id as Stripe metadata
           participantUserId: user.id,
@@ -641,9 +648,13 @@ export async function POST(request: NextRequest) {
       const successUrl = `${siteUrl}/payment/confirm?payment_id=${paymentId}&gateway=stripe`;
       const cancelUrl = `${siteUrl}/session/${session_id}?payment=cancelled`;
 
+      // PAYMENT_GATEWAY_OVERRIDE: COP can land here when the override forces
+      // Stripe. App stores COP as `value × 100`; Stripe is zero-decimal.
+      const stripeAmount = currency === 'COP' ? Math.round(amountCents / 100) : amountCents;
+      const stripeAppFee = currency === 'COP' ? Math.round(platformFeeCents / 100) : platformFeeCents;
       const stripeResult = await createStripeCheckoutSession({
-        amountCents,
-        currency: 'USD',
+        amountCents: stripeAmount,
+        currency,
         customerEmail: userEmail,
         sessionId: session_id,
         participantUserId: user.id,
@@ -652,7 +663,7 @@ export async function POST(request: NextRequest) {
         instructorStripeAccountId: creatorProfile.stripe_account_id,
         // Pass the exact DB-side platform fee so Stripe's split matches our
         // row. calculateFeesForUser() above already applied Tribe+ waivers.
-        applicationFeeCents: platformFeeCents,
+        applicationFeeCents: stripeAppFee,
         productName: `Tribe Session — ${session.sport}`,
         paymentType: 'session_participation_fee',
       });
