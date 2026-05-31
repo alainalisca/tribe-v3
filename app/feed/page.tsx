@@ -131,9 +131,18 @@ export default function FeedPage() {
 
       setCurrentUserId(user.id);
 
-      // Check if user is instructor
-      const { data: userData } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
+      // Check if user is instructor. Audit E-3: previously discarded the
+      // error, so a transient RLS/network failure silently hid all
+      // instructor-only UI on the feed (compose post, etc).
+      const { data: userData, error: userErr } = await supabase
+        .from('users')
+        .select('is_instructor')
+        .eq('id', user.id)
+        .single();
 
+      if (userErr) {
+        logError(userErr, { action: 'feed_instructor_check', userId: user.id });
+      }
       setIsInstructor(userData?.is_instructor || false);
     };
 

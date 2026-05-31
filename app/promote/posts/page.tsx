@@ -161,9 +161,23 @@ export default function PromotePostsPage() {
 
         setCurrentUserId(user.id);
 
-        // Check if user is instructor
-        const { data: userData } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
+        // Check if user is instructor. Audit E-2: previously a transient
+        // RLS/network failure on this lookup would silently boot the
+        // instructor back to /dashboard from their own promote page.
+        const { data: userData, error: userErr } = await supabase
+          .from('users')
+          .select('is_instructor')
+          .eq('id', user.id)
+          .single();
 
+        if (userErr) {
+          logError(userErr, { action: 'promote_posts_instructor_check', userId: user.id });
+          // Don't punt to /dashboard on a transient lookup failure — that
+          // hides the real problem. Surface a soft retry path instead by
+          // bailing out of the load; the page-level error boundary handles
+          // the rest.
+          throw userErr;
+        }
         const isInst = userData?.is_instructor || false;
         setIsInstructor(isInst);
 
