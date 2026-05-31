@@ -225,7 +225,16 @@ export function useStorefrontData(instructorId: string) {
             .eq('status', 'open')
             .gte('date', todayStr)
             .order('date', { ascending: true }),
-          supabase.from('boost_campaigns').select('session_id').eq('instructor_id', instructorId).eq('is_active', true),
+          // Audit S-5: schema columns are `boosted_session_id` (not `session_id`)
+          // and `status` (not boolean `is_active`). Both name mismatches caused
+          // PostgREST to reject the SELECT, so the storefront never showed
+          // boost badges on any session — defeating the point of paying for a
+          // boost on your own storefront.
+          supabase
+            .from('boost_campaigns')
+            .select('boosted_session_id')
+            .eq('instructor_id', instructorId)
+            .eq('status', 'active'),
           supabase.from('service_packages').select('*').eq('instructor_id', instructorId).eq('is_active', true),
           supabase
             .from('storefront_media')
@@ -252,7 +261,9 @@ export function useStorefrontData(instructorId: string) {
         if (cancelled) return;
 
         if (sessionsResult.data) {
-          const boostedSessionIds = new Set(boostsResult.data?.map((b: { session_id: string }) => b.session_id) || []);
+          const boostedSessionIds = new Set(
+            boostsResult.data?.map((b: { boosted_session_id: string }) => b.boosted_session_id) || []
+          );
           setSessions(sessionsResult.data.map((s: Session) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })));
         }
         if (packagesResult.data) setPackages(packagesResult.data);
