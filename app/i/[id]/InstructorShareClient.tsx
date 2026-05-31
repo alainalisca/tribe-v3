@@ -16,7 +16,8 @@ interface InstructorProfile {
   bio: string | null;
   sports: string[] | null;
   average_rating: number | null;
-  city: string | null;
+  // Schema column is `location`, not `city`. Audit S-2.
+  location: string | null;
 }
 
 interface UpcomingSession {
@@ -25,8 +26,9 @@ interface UpcomingSession {
   sport: string;
   date: string;
   start_time: string | null;
-  time: string | null;
-  location_name: string | null;
+  // Schema column is `location`, not `location_name`. There is no `time`
+  // column on sessions — only `start_time`. Audit S-2.
+  location: string | null;
 }
 
 export default function InstructorShareClient() {
@@ -53,12 +55,12 @@ export default function InstructorShareClient() {
       const [profileRes, sessionsRes, countRes, userRes] = await Promise.all([
         supabase
           .from('users')
-          .select('id, name, avatar_url, bio, sports, average_rating, city')
+          .select('id, name, avatar_url, bio, sports, average_rating, location')
           .eq('id', instructorId)
           .single(),
         supabase
           .from('sessions')
-          .select('id, title, sport, date, start_time, time, location_name')
+          .select('id, title, sport, date, start_time, location')
           .eq('creator_id', instructorId)
           .gte('date', today)
           .order('date', { ascending: true })
@@ -67,14 +69,22 @@ export default function InstructorShareClient() {
         supabase.auth.getUser(),
       ]);
 
+      if (profileRes.error) {
+        // The previous code swallowed this — same anti-pattern that hid the
+        // `/s/[id]` "Session not found" bug for months. Audit category 3.
+        console.error('[/i/[id]] profile fetch failed', profileRes.error);
+      }
+      if (sessionsRes.error) {
+        console.error('[/i/[id]] sessions fetch failed', sessionsRes.error);
+      }
       if (profileRes.data) setProfile(profileRes.data);
       if (sessionsRes.data) setSessions(sessionsRes.data);
       setSessionCount(countRes.count ?? 0);
       if (userRes.data?.user) setUserId(userRes.data.user.id);
 
       trackEvent('instructor_profile_viewed', { instructor_id: instructorId, source: 'public_share' });
-    } catch {
-      // Profile not found handled by null check
+    } catch (err) {
+      console.error('[/i/[id]] loadData threw', err);
     } finally {
       setLoading(false);
     }
@@ -132,10 +142,10 @@ export default function InstructorShareClient() {
               )}
             </div>
             <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
-            {profile.city && (
+            {profile.location && (
               <div className="flex items-center gap-1 mt-1 text-sm text-theme-tertiary">
                 <MapPin className="w-3.5 h-3.5" />
-                {profile.city}
+                {profile.location}
               </div>
             )}
           </div>
@@ -196,9 +206,8 @@ export default function InstructorShareClient() {
                   month: 'short',
                   day: 'numeric',
                 });
-                const t = s.start_time || s.time;
-                const tf = t
-                  ? new Date(`2000-01-01T${t}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
+                const tf = s.start_time
+                  ? new Date(`2000-01-01T${s.start_time}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
                       hour: 'numeric',
                       minute: '2-digit',
                     })
