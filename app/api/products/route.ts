@@ -57,9 +57,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify user is an instructor
-    const { data: profile } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
+    // Verify user is an instructor. Audit E-1: previously the SELECT error
+    // was discarded, so any RLS/transient failure made `profile` undefined,
+    // collapsing to a false 403 "Only instructors can create products" for
+    // real instructors. Distinguish lookup failure (500) from "not an
+    // instructor" (403).
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('is_instructor')
+      .eq('id', user.id)
+      .single();
 
+    if (profileError) {
+      logError(profileError, { route: '/api/products', action: 'instructor_check', userId: user.id });
+      return NextResponse.json({ success: false, error: 'Could not verify account' }, { status: 500 });
+    }
     if (!profile?.is_instructor) {
       return NextResponse.json({ success: false, error: 'Only instructors can create products' }, { status: 403 });
     }

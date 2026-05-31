@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { applyForPartnership, fetchPartnerByUserId } from '@/lib/dal/featuredPartners';
 import { createNotification, fetchAdminUserIds } from '@/lib/dal';
 import { showSuccess, showError } from '@/lib/toast';
+import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
 import PartnerApplyForm from '@/components/partner/PartnerApplyForm';
 import { ArrowLeft, Loader, CheckCircle } from 'lucide-react';
@@ -44,8 +45,17 @@ export default function PartnerApplyPage() {
       }
       setUserId(user.id);
 
-      const { data: profile } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
+      // Audit E-3: surface the error instead of silently treating the user
+      // as non-instructor.
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('is_instructor')
+        .eq('id', user.id)
+        .single();
 
+      if (profileError) {
+        logError(profileError, { action: 'partners_apply_instructor_check', userId: user.id });
+      }
       setIsInstructor(!!profile?.is_instructor);
 
       const result = await fetchPartnerByUserId(supabase, user.id);
