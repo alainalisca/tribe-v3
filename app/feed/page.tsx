@@ -52,7 +52,10 @@ interface SessionDetails {
   price_cents: number;
   currency: string | null;
   location: string;
-  instructor_id: string;
+  // Schema column is `creator_id`. Audit S-4. The prior name caused
+  // PostgREST to reject the SELECT and linked-session cards rendered
+  // without any of these fields.
+  creator_id: string;
   title: string;
 }
 
@@ -223,11 +226,14 @@ export default function FeedPage() {
           const sessionIds = postsData.filter((p) => p.linked_session_id).map((p) => p.linked_session_id) as string[];
 
           if (sessionIds.length > 0) {
-            const { data: sessions } = await supabase
+            const { data: sessions, error: sessionsError } = await supabase
               .from('sessions')
-              .select('id, sport, date, price_cents, currency, location, instructor_id, title')
+              .select('id, sport, date, price_cents, currency, location, creator_id, title')
               .in('id', sessionIds);
 
+            if (sessionsError) {
+              logError(sessionsError, { action: 'feed_linked_sessions_fetch', sessionIds });
+            }
             if (sessions) {
               const sessionMap: Record<string, SessionDetails> = {};
               sessions.forEach((s) => {
