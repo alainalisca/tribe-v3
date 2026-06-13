@@ -8,6 +8,7 @@ import { showError } from '@/lib/toast';
 import { createClient } from '@/lib/supabase/client';
 import UpgradeCard from '@/components/tribe-os/UpgradeCard';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
+import { logError } from '@/lib/logger';
 
 type PricingPreference = 'monthly_30' | 'revenue_share_15';
 
@@ -179,8 +180,19 @@ export default function TribeOSSection() {
         if (!cancelled) setAuthState('anon');
         return;
       }
-      const { data } = await supabase.from('users').select('tribe_os_tier, tribe_os_status').eq('id', user.id).single();
+      // Audit E-4: a transient lookup failure here showed real premium
+      // customers the public marketing CTA instead of their dashboard link.
+      // Now: log the error, then treat as 'not_premium' so the page still
+      // renders something — but at least the failure isn't invisible.
+      const { data, error } = await supabase
+        .from('users')
+        .select('tribe_os_tier, tribe_os_status')
+        .eq('id', user.id)
+        .single();
       if (cancelled) return;
+      if (error) {
+        logError(error, { action: 'landing_premium_check', userId: user.id });
+      }
       setAuthState(isTribeOSPremiumActive((data as PremiumRow | null) ?? null) ? 'premium' : 'not_premium');
     })();
     return () => {

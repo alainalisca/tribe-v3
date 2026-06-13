@@ -38,8 +38,20 @@ export async function createProduct(
   productData: Omit<ProductInsert, 'instructor_id'>
 ): Promise<DalResult<Product>> {
   try {
-    const { data: user } = await supabase.from('users').select('is_instructor').eq('id', instructorId).single();
+    // Audit E-1: distinguish lookup failure from "not an instructor". The
+    // previous version dropped `error`, so any RLS/transient failure
+    // surfaced as a misleading "Only instructors can create products"
+    // response — silently blocking real instructors with no logs.
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('is_instructor')
+      .eq('id', instructorId)
+      .single();
 
+    if (userError) {
+      logError(userError, { action: 'createProduct.instructorCheck', instructorId });
+      return { success: false, error: 'Could not verify account' };
+    }
     if (!user?.is_instructor) {
       return { success: false, error: 'Only instructors can create products' };
     }
