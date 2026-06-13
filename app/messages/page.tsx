@@ -117,7 +117,11 @@ export default function MessagesPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">{t('noConversations')}</h3>
                 <p className="text-stone-500 dark:text-gray-400 mb-4">
-                  {activeTab === 'sessions' ? t('joinSessionToChat') : 'Start a direct message with someone'}
+                  {activeTab === 'sessions'
+                    ? t('joinSessionToChat')
+                    : language === 'es'
+                      ? 'Inicia un mensaje directo con alguien'
+                      : 'Start a direct message with someone'}
                 </p>
                 <Link href="/">
                   <Button className="font-bold">{t('findSessions')}</Button>
@@ -214,9 +218,13 @@ export default function MessagesPage() {
                     <div className="w-16 h-16 bg-stone-100 dark:bg-tribe-mid rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageSquare className="w-8 h-8 text-stone-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">No direct messages</h3>
+                    <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                      {language === 'es' ? 'No hay mensajes directos' : 'No direct messages'}
+                    </h3>
                     <p className="text-stone-500 dark:text-gray-400 mb-4">
-                      Start a conversation by visiting someone&apos;s profile
+                      {language === 'es'
+                        ? 'Inicia una conversación visitando el perfil de alguien'
+                        : "Start a conversation by visiting someone's profile"}
                     </p>
                   </CardContent>
                 </Card>

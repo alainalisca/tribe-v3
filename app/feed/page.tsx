@@ -125,7 +125,7 @@ export default function FeedPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/login');
+        router.push('/auth');
         return;
       }
 

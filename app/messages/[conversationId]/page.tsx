@@ -10,6 +10,7 @@ import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
 import ChatView, { ChatMessage } from '@/components/ChatView';
+import { useLanguage } from '@/lib/LanguageContext';
 import {
   fetchConversationMessages,
   markConversationRead,
@@ -41,6 +42,7 @@ interface ChatMessagePayload {
 export default function ConversationPage({ params }: PageProps) {
   const router = useRouter();
   const supabase = createClient();
+  const { language } = useLanguage();
   const conversationId = params.conversationId;
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -157,7 +159,7 @@ export default function ConversationPage({ params }: PageProps) {
       await loadConversationData(user.id);
     } catch (error) {
       logError(error, { action: 'checkUserAndLoad' });
-      showError('Failed to load conversation');
+      showError(language === 'es' ? 'No se pudo cargar la conversación' : 'Failed to load conversation');
       setLoading(false);
     }
   }
@@ -188,7 +190,7 @@ export default function ConversationPage({ params }: PageProps) {
       await markConversationRead(supabase, conversationId, userId);
     } catch (error) {
       logError(error, { action: 'loadConversationData' });
-      showError('Failed to load messages');
+      showError(language === 'es' ? 'No se pudieron cargar los mensajes' : 'Failed to load messages');
     } finally {
       setLoading(false);
     }
@@ -200,14 +202,14 @@ export default function ConversationPage({ params }: PageProps) {
     try {
       const result = await sendDirectMessage(supabase, conversationId, currentUser.id, text);
       if (!result.success) {
-        showError(result.error || 'Failed to send message');
+        showError(result.error || (language === 'es' ? 'No se pudo enviar el mensaje' : 'Failed to send message'));
         return false;
       }
       trackEvent('message_sent', { conversation_id: conversationId });
       return true;
     } catch (error) {
       logError(error, { action: 'handleSendMessage' });
-      showError('Failed to send message');
+      showError(language === 'es' ? 'No se pudo enviar el mensaje' : 'Failed to send message');
       return false;
     }
   }

@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchUsersForAdmin, fetchParticipationsWithSession, fetchSessionsByCreator } from '@/lib/dal';
+import { isValidCronAuth } from '@/lib/auth/cron';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -21,8 +22,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 export async function POST(request: Request) {
   try {
     const resend = getResendClient();
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // T1-3: fail CLOSED via the shared helper. The old direct compare to
+    // `Bearer ${CRON_SECRET}` accepted the literal "Bearer undefined" when
+    // CRON_SECRET was unset — anyone could trigger a mass email blast.
+    if (!isValidCronAuth(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
