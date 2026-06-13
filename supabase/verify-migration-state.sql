@@ -227,4 +227,8 @@ select '094_release_notes',
                 where table_schema = 'public' and table_name = 'users' and column_name = 'last_seen_release'
               )
             then 'applied' else 'MISSING' end
+union all
+select '095_session_subscriptions',
+       case when to_regclass('public.session_subscriptions') is not null
+            then 'applied' else 'MISSING' end
 order by migration;
