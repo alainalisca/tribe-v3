@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForAdmin } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { isValidCronAuth } from '@/lib/auth/cron';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -22,8 +23,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 export async function POST(request: Request) {
   try {
     const resend = getResendClient();
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // T1-3: fail CLOSED via the shared helper (see send-inactive-nudge).
+    if (!isValidCronAuth(request.headers.get('authorization'))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
