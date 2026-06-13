@@ -39,6 +39,7 @@ export * from './tips';
 export * from './spotlight';
 export * from './waitlist';
 export * from './subscriptions';
+export * from './sessionSubscriptions';
 export * from './leadDiscovery';
 export * from './notificationPreferences';
 export * from './tribeOSWaitlist';
