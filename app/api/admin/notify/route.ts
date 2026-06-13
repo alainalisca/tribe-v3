@@ -11,9 +11,13 @@ import { logError } from '@/lib/logger';
  */
 export async function POST(request: NextRequest) {
   try {
+    // T1-2: fail CLOSED. The previous `if (internalSecret && ...)` skipped the
+    // check entirely when ADMIN_NOTIFY_SECRET was unset, leaving this admin
+    // fan-out endpoint fully open — anyone could inject a notification into
+    // every admin's bell (a phishing primitive). Now a missing secret denies.
     const internalSecret = process.env.ADMIN_NOTIFY_SECRET;
     const provided = request.headers.get('x-admin-notify-secret');
-    if (internalSecret && provided !== internalSecret) {
+    if (!internalSecret || provided !== internalSecret) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
