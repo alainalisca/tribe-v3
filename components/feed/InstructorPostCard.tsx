@@ -165,12 +165,12 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
         <div className="flex-1 min-w-0">
           <Link
             href={`/storefront/${post.author?.id}`}
-            className="flex items-center gap-1 font-semibold text-sm text-white hover:text-[#A3E635]"
+            className="flex items-center gap-1 font-semibold text-sm text-theme-primary hover:text-[#A3E635]"
           >
             {post.author?.name}
             {post.author?.is_verified_instructor && <ShieldCheck className="w-3.5 h-3.5 text-[#84cc16]" />}
           </Link>
-          <p className="text-xs text-gray-500">{formatRelative(post.created_at, language)}</p>
+          <p className="text-xs text-theme-tertiary">{formatRelative(post.created_at, language)}</p>
         </div>
         {post.is_pinned && <Pin className="w-4 h-4 text-[#A3E635]" />}
       </header>
@@ -181,9 +181,9 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
         </p>
       )}
 
-      {title && <h3 className="mt-1 text-base font-bold text-white">{title}</h3>}
+      {title && <h3 className="mt-1 text-base font-bold text-theme-primary">{title}</h3>}
 
-      {body && <p className="mt-2 text-sm text-gray-200 whitespace-pre-wrap">{body}</p>}
+      {body && <p className="mt-2 text-sm text-theme-secondary whitespace-pre-wrap">{body}</p>}
 
       {/* Media */}
       {post.media_urls && post.media_urls.length > 0 && (
@@ -215,7 +215,7 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
           className="mt-3 block bg-theme-surface rounded-xl p-3 border border-theme hover:border-[#84cc16]"
         >
           <p className="text-xs text-theme-tertiary">{post.linked_session.date}</p>
-          <p className="text-sm font-semibold text-white mt-0.5">
+          <p className="text-sm font-semibold text-theme-primary mt-0.5">
             {post.linked_session.title ||
               (post.linked_session.sport
                 ? language === 'es'
@@ -262,10 +262,10 @@ export default function InstructorPostCard({ post, viewerId, language }: Instruc
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs">
-                    <span className="font-semibold text-white">{c.user?.name || ''}</span>{' '}
+                    <span className="font-semibold text-theme-primary">{c.user?.name || ''}</span>{' '}
                     <span className="text-theme-secondary">{c.body}</span>
                   </p>
-                  <p className="text-[10px] text-gray-500">{formatRelative(c.created_at, language)}</p>
+                  <p className="text-[10px] text-theme-tertiary">{formatRelative(c.created_at, language)}</p>
                 </div>
               </li>
             ))}
