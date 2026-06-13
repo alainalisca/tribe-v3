@@ -155,7 +155,7 @@ export default function PromotePostsPage() {
         } = await supabase.auth.getUser();
 
         if (!user) {
-          router.push('/auth/login');
+          router.push('/auth');
           return;
         }
 
@@ -182,7 +182,10 @@ export default function PromotePostsPage() {
         setIsInstructor(isInst);
 
         if (!isInst) {
-          router.push('/dashboard');
+          // T0-2: `/dashboard` has no index route (only /dashboard/instructor
+          // and /dashboard/partner exist) — the bare path 404s. A non-instructor
+          // who lands here belongs on the athlete home feed.
+          router.push('/');
           return;
         }
 

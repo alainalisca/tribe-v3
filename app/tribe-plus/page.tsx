@@ -151,7 +151,7 @@ export default function TribePlusPage() {
         </section>
 
         <Link
-          href="/settings/subscription"
+          href="/subscriptions"
           className="block text-center text-sm text-theme-tertiary hover:text-white underline"
         >
           {tI18n('alreadyAMemberManageSubscription')}
