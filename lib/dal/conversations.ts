@@ -191,9 +191,7 @@ export async function fetchUserConversations(
           return null;
         }
 
-        const userData = Array.isArray(otherParticipant.users)
-          ? otherParticipant.users[0]
-          : otherParticipant.users;
+        const userData = Array.isArray(otherParticipant.users) ? otherParticipant.users[0] : otherParticipant.users;
 
         // Find latest message
         const lastMsg = latestMessages?.find((m) => m.conversation_id === convId);
@@ -201,9 +199,10 @@ export async function fetchUserConversations(
         // Count unread messages
         let unreadCount = 0;
         if (lastReadAt && lastMsg) {
-          const unreadMsgs = latestMessages?.filter(
-            (m) => m.conversation_id === convId && new Date(m.created_at) > new Date(lastReadAt)
-          ) || [];
+          const unreadMsgs =
+            latestMessages?.filter(
+              (m) => m.conversation_id === convId && new Date(m.created_at) > new Date(lastReadAt)
+            ) || [];
           unreadCount = unreadMsgs.length;
         }
 
@@ -283,7 +282,12 @@ export async function fetchConversationMessages(
       `
       )
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
+      // T0-7: grab the NEWEST `limit` messages, not the oldest. The previous
+      // ascending order + limit returned the first 50 messages ever sent in
+      // the thread, so opening a long-running DM showed ancient history and
+      // hid everything recent. Fetch newest-first, then reverse below so the
+      // UI still renders oldest→newest.
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) return { success: false, error: error.message };
@@ -311,6 +315,10 @@ export async function fetchConversationMessages(
             },
       };
     });
+
+    // We fetched newest-first to get the most recent slice; reverse so the
+    // caller renders chronologically (oldest at top, newest at bottom).
+    messages.reverse();
 
     return { success: true, data: messages };
   } catch (error) {
