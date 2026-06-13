@@ -6,6 +6,7 @@ import { Send } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export interface ChatMessage {
   id: string;
@@ -29,6 +30,7 @@ interface ChatViewProps {
 }
 
 export default function ChatView({ messages, currentUserId, onSend, loading, header }: ChatViewProps) {
+  const { language } = useLanguage();
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -154,7 +156,7 @@ export default function ChatView({ messages, currentUserId, onSend, loading, hea
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={language === 'es' ? 'Escribe un mensaje...' : 'Type a message...'}
             disabled={sending}
             autoComplete="off"
             enterKeyHint="send"
