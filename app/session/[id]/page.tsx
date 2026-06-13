@@ -29,6 +29,7 @@ import PhotoLightbox from './PhotoLightbox';
 import ActionButtons from './ActionButtons';
 import GuestJoinModal from './GuestJoinModal';
 import InviteModal from './InviteModal';
+import SubscribeButton from '@/components/SubscribeButton';
 import SessionStories from './SessionStories';
 import { useSessionDetail } from './useSessionDetail';
 import { confirmParticipantPayment } from '@/lib/dal';
@@ -266,6 +267,21 @@ export default function SessionDetailPage() {
           onInvite={d.generateInviteLink}
           creatingInvite={d.creatingInvite}
         />
+
+        {/* Subscribe to the recurring series — auto-enrolls the athlete in
+            future occurrences via the recurring-sessions cron. Only on the
+            recurring PARENT, for signed-in non-host, upcoming sessions. */}
+        {d.user && !isCreator && !isPast && d.session.is_recurring && (
+          <SubscribeButton
+            sessionId={d.session.id}
+            instructorId={d.session.creator_id}
+            userId={d.user.id}
+            isRecurring={!!d.session.is_recurring}
+            recurrencePattern={d.session.recurrence_pattern || 'weekly'}
+            price={d.session.price_cents ? d.session.price_cents / 100 : null}
+            currency={d.session.currency || 'COP'}
+          />
+        )}
 
         {/* Waitlist — visible when session full or when the viewer has an active offer */}
         <WaitlistPanel

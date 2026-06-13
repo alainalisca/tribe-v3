@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { childSessionExists, createChildSession } from '@/lib/dal/sessions';
+import { enrollSubscribersInChildSession } from '@/lib/dal/sessionSubscriptions';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import type { Session } from '@/lib/database.types';
 
 /** Number of days ahead to generate child sessions */
@@ -115,7 +117,13 @@ export async function GET(request: Request) {
 
     const parentSessions = (parents || []) as Session[];
     let childrenCreated = 0;
+    let subscribersEnrolled = 0;
     let errorCount = 0;
+
+    // Service-role client for the subscriber fan-out: it inserts
+    // session_participants rows on behalf of OTHER users, which the
+    // user-scoped RLS policy would reject for the cookie/anon client.
+    const serviceClient = getServiceRoleClient();
 
     // 2. For each parent, compute upcoming dates and create missing children
     for (const parent of parentSessions) {
@@ -155,6 +163,26 @@ export async function GET(request: Request) {
           }
 
           childrenCreated++;
+
+          // Auto-enroll the parent series' active subscribers into the new
+          // child occurrence. This is the feature the "Subscribe" button
+          // promises ("you'll be automatically added to future sessions") —
+          // it was never wired up before. Non-fatal: an enrollment failure
+          // logs but doesn't fail the child creation.
+          const childId = createResult.data;
+          if (childId) {
+            const enrollResult = await enrollSubscribersInChildSession(serviceClient, parent.id, childId);
+            if (enrollResult.success) {
+              subscribersEnrolled += enrollResult.data ?? 0;
+            } else {
+              logError(enrollResult.error, {
+                route: '/api/cron/recurring-sessions',
+                action: 'enroll_subscribers',
+                parentId: parent.id,
+                childId,
+              });
+            }
+          }
         } catch (err) {
           logError(err, {
             route: '/api/cron/recurring-sessions',
@@ -174,6 +202,7 @@ export async function GET(request: Request) {
       duration_ms,
       parentsProcessed: parentSessions.length,
       childrenCreated,
+      subscribersEnrolled,
       errors: errorCount,
     });
     return NextResponse.json({
@@ -182,6 +211,7 @@ export async function GET(request: Request) {
       duration_ms,
       parentsProcessed: parentSessions.length,
       childrenCreated,
+      subscribersEnrolled,
       errors: errorCount,
     });
   } catch (error: unknown) {

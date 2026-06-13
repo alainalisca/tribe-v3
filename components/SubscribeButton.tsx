@@ -7,6 +7,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { subscribeToSession } from '@/lib/dal/sessionSubscriptions';
+import { followUser, isFollowing } from '@/lib/dal';
 
 interface SubscribeButtonProps {
   sessionId: string;
@@ -50,48 +52,23 @@ export default function SubscribeButton({
   const handleSubscribe = async () => {
     setSubscribing(true);
     try {
-      // First, follow the instructor if not already following
-      const { data: followData, error: followError } = await supabase
-        .from('user_follows')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('follows_user_id', instructorId)
-        .single();
-
-      if (!followData && followError?.code !== 'PGRST116') {
-        throw followError;
+      // Follow the instructor if not already following. Best-effort — a follow
+      // failure shouldn't block the subscription itself.
+      const followStatus = await isFollowing(supabase, userId, instructorId);
+      if (followStatus.success && followStatus.data === false) {
+        await followUser(supabase, userId, instructorId);
       }
 
-      if (!followData) {
-        const { error: insertError } = await supabase.from('user_follows').insert({
-          user_id: userId,
-          follows_user_id: instructorId,
-        });
-
-        if (insertError) throw insertError;
-      }
-
-      // Insert/update session subscription record
-      const subscriptionData = {
-        user_id: userId,
-        session_id: sessionId,
-        instructor_id: instructorId,
-        is_subscription: true,
-        recurrence_pattern: recurrencePattern,
-        subscription_status: 'active',
-      };
-
-      const { error: subError } = await supabase.from('session_participants').upsert(
-        {
-          ...subscriptionData,
-          status: 'subscribed',
-        },
-        { onConflict: 'user_id,session_id' }
-      );
-
-      if (subError && subError.code !== 'PGRST116') {
-        throw subError;
-      }
+      // Record the session-series subscription in its own table (migration 095).
+      // The recurring-sessions cron reads this and auto-enrolls the user in each
+      // future occurrence.
+      const result = await subscribeToSession(supabase, {
+        userId,
+        sessionId,
+        instructorId,
+        recurrencePattern,
+      });
+      if (!result.success) throw new Error(result.error);
 
       setSubscribed(true);
       setShowConfirm(false);

@@ -20,25 +20,10 @@ import { sportTranslations } from '@/lib/translations';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
+import { fetchUserSubscriptions, unsubscribeFromSession } from '@/lib/dal/sessionSubscriptions';
+import type { SubscriptionWithSession } from '@/lib/dal/sessionSubscriptions';
 
-interface Subscription {
-  session_id: string;
-  session: {
-    id: string;
-    sport: string;
-    date: string;
-    start_time: string;
-    duration: number;
-    location: string;
-    price_cents: number | null;
-    currency: string | null;
-    creator: {
-      name: string;
-      avatar_url: string | null;
-    };
-  };
-  recurrence_pattern: string;
-}
+type Subscription = SubscriptionWithSession;
 
 export default function SubscriptionsPage() {
   const supabase = createClient();
@@ -69,63 +54,12 @@ export default function SubscriptionsPage() {
 
       const userId = sessionData.session.user.id;
 
-      // Fetch subscriptions where user is subscribed to recurring sessions
-      const { data, error: queryError } = await supabase
-        .from('session_participants')
-        .select(
-          `
-          user_id,
-          session_id,
-          is_subscription,
-          recurrence_pattern,
-          sessions (
-            id,
-            sport,
-            date,
-            start_time,
-            duration,
-            location,
-            price_cents,
-            currency,
-            creator_id,
-            users!creator_id (
-              id,
-              name,
-              avatar_url
-            )
-          )
-        `
-        )
-        .eq('user_id', userId)
-        .eq('is_subscription', true);
+      // Fetch the user's active session-series subscriptions via the DAL
+      // (backed by the session_subscriptions table, migration 095).
+      const result = await fetchUserSubscriptions(supabase, userId);
+      if (!result.success) throw new Error(result.error);
 
-      if (queryError) {
-        throw queryError;
-      }
-
-      // Filter and map data
-      const formattedData: Subscription[] = (data || [])
-        .filter((item: any) => item.sessions && item.recurrence_pattern)
-        .map((item: any) => ({
-          session_id: item.session_id,
-          session: {
-            id: item.sessions.id,
-            sport: item.sessions.sport,
-            date: item.sessions.date,
-            start_time: item.sessions.start_time,
-            duration: item.sessions.duration,
-            location: item.sessions.location,
-            price_cents: item.sessions.price_cents,
-            currency: item.sessions.currency,
-            creator: {
-              name: item.sessions.users?.[0]?.name || 'Unknown',
-              avatar_url: item.sessions.users?.[0]?.avatar_url,
-            },
-          },
-          recurrence_pattern: item.recurrence_pattern,
-        }));
-
-      setSubscriptions(formattedData);
+      setSubscriptions(result.data || []);
     } catch (err) {
       logError(err, { action: 'Error fetching subscriptions' });
       setError(language === 'es' ? 'Error al cargar suscripciones' : 'Failed to load subscriptions');
@@ -144,13 +78,8 @@ export default function SubscriptionsPage() {
 
       if (!userId) throw new Error('Not authenticated');
 
-      const { error } = await supabase
-        .from('session_participants')
-        .update({ is_subscription: false })
-        .eq('user_id', userId)
-        .eq('session_id', unsubscribeModal.sessionId);
-
-      if (error) throw error;
+      const result = await unsubscribeFromSession(supabase, userId, unsubscribeModal.sessionId);
+      if (!result.success) throw new Error(result.error);
 
       setSubscriptions((prev) => prev.filter((sub) => sub.session_id !== unsubscribeModal.sessionId));
       setUnsubscribeModal({ isOpen: false, sessionId: null });
@@ -163,14 +92,14 @@ export default function SubscriptionsPage() {
     }
   }
 
-  const getFrequencyText = (pattern: string): string => {
+  const getFrequencyText = (pattern: string | null): string => {
     const freq = pattern?.split('_')[0] || 'weekly';
     return language === 'es'
       ? { weekly: 'Semanal', biweekly: 'Biweekly', monthly: 'Mensual' }[freq] || 'Semanal'
       : { weekly: 'Weekly', biweekly: 'Biweekly', monthly: 'Monthly' }[freq] || 'Weekly';
   };
 
-  const getNextSessionDate = (sessionDate: string, pattern: string): string => {
+  const getNextSessionDate = (sessionDate: string, pattern: string | null): string => {
     const today = new Date();
     const sessionDateTime = new Date(sessionDate + 'T00:00:00');
 
