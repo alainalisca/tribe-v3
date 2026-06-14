@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import { updateUser, fetchUsersWithPush } from '@/lib/dal';
@@ -26,8 +27,9 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    // Get users who haven't received motivation today and have notifications enabled
-    const today = new Date().toISOString().split('T')[0];
+    // Get users who haven't received motivation today (Bogota-local day, so the
+    // "once per day" dedup tracks the user's actual calendar day, not UTC).
+    const today = bogotaToday();
 
     const usersResult = await fetchUsersWithPush(supabase, 'id, preferred_language, push_subscription', {
       lastMotivationBefore: today,

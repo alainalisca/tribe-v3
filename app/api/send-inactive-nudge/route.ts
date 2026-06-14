@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { fetchUsersForAdmin, fetchParticipationsWithSession, fetchSessionsByCreator } from '@/lib/dal';
+import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 
 function getResendClient() {
@@ -41,7 +42,10 @@ export async function POST(request: Request) {
 
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    const twoWeeksAgoStr = twoWeeksAgo.toISOString().split('T')[0];
+    // twoWeeksAgo (the Date) is compared to user.created_at (a UTC timestamp) —
+    // leave it. The string below is compared to session.date (Bogota-local), so
+    // it must use the Bogota calendar date. (T0-9)
+    const twoWeeksAgoStr = bogotaDateOffset(-14);
 
     let emailsSent = 0;
     let errors = 0;
