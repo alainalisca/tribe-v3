@@ -50,38 +50,30 @@ export async function getOrCreateDirectConversation(
   userId2: string
 ): Promise<DalResult<string>> {
   try {
-    // Check if conversation already exists (either direction)
-    const { data: existing, error: queryError } = await supabase
+    // T3 (perf audit H-4): find an existing direct conversation in TWO queries
+    // instead of one-query-per-conversation. (1) userId1's direct
+    // conversations, (2) which of those userId2 is also in — the intersection
+    // is the existing 1:1 thread (direct conversations have exactly 2 members).
+    const { data: myDirect, error: queryError } = await supabase
       .from('conversation_participants')
-      .select('conversation_id')
-      .eq('user_id', userId1);
+      .select('conversation_id, conversations!inner(type)')
+      .eq('user_id', userId1)
+      .eq('conversations.type', 'direct');
 
     if (queryError) return { success: false, error: queryError.message };
 
-    if (existing && existing.length > 0) {
-      // Find a direct conversation that has userId2 as the other participant
-      for (const row of existing) {
-        const { data: participants, error: checkError } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', row.conversation_id);
+    const myDirectIds = (myDirect || []).map((r) => r.conversation_id);
+    if (myDirectIds.length > 0) {
+      const { data: shared, error: sharedError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', userId2)
+        .in('conversation_id', myDirectIds)
+        .limit(1);
 
-        if (checkError) continue;
-
-        // Check if this conversation has exactly userId1 and userId2
-        const userIds = new Set(participants?.map((p) => p.user_id) || []);
-        if (userIds.size === 2 && userIds.has(userId1) && userIds.has(userId2)) {
-          // Verify it's a direct conversation type
-          const { data: conv } = await supabase
-            .from('conversations')
-            .select('id, type')
-            .eq('id', row.conversation_id)
-            .single();
-
-          if (conv?.type === 'direct') {
-            return { success: true, data: row.conversation_id };
-          }
-        }
+      if (sharedError) return { success: false, error: sharedError.message };
+      if (shared && shared.length > 0) {
+        return { success: true, data: shared[0].conversation_id };
       }
     }
 
@@ -122,108 +114,37 @@ export async function fetchUserConversations(
   userId: string
 ): Promise<DalResult<ConversationWithOtherUser[]>> {
   try {
-    // Get all conversations for this user
-    const { data: participations, error: participError } = await supabase
-      .from('conversation_participants')
-      .select(
-        `
-        conversation_id,
-        last_read_at,
-        conversations!inner (
-          id,
-          type,
-          created_at,
-          updated_at
-        )
-      `
-      )
-      .eq('user_id', userId)
-      .eq('conversations.type', 'direct')
-      .order('conversations(updated_at)', { ascending: false });
+    // T3 (perf audit H-7): one RPC returns other-participant + latest message +
+    // unread count per conversation, replacing the old query that pulled EVERY
+    // chat_message for every conversation. RLS-safe — the function uses
+    // auth.uid() internally and ignores any client input. See migration 101.
+    const { data, error } = await supabase.rpc('get_my_conversations');
+    if (error) return { success: false, error: error.message };
 
-    if (participError) return { success: false, error: participError.message };
-    if (!participations || participations.length === 0) {
-      return { success: true, data: [] };
-    }
+    type Row = {
+      conversation_id: string;
+      other_user_id: string | null;
+      other_user_name: string | null;
+      other_user_avatar: string | null;
+      last_message: string | null;
+      last_message_at: string | null;
+      unread_count: number;
+      last_read_at: string;
+    };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- used below in multiple .in() calls
-    const conversationIds = participations.map((p) => p.conversation_id);
-
-    // Get all participants for these conversations to find the "other" user
-    const { data: allParticipants, error: allParticError } = await supabase
-      .from('conversation_participants')
-      .select(
-        `
-        conversation_id,
-        user_id,
-        users!inner (
-          id,
-          name,
-          avatar_url
-        )
-      `
-      )
-      .in('conversation_id', conversationIds);
-
-    if (allParticError) return { success: false, error: allParticError.message };
-
-    // Get latest message for each conversation
-    const { data: latestMessages, error: msgError } = await supabase
-      .from('chat_messages')
-      .select('id, conversation_id, message, created_at')
-      .in('conversation_id', conversationIds)
-      .order('created_at', { ascending: false });
-
-    if (msgError) return { success: false, error: msgError.message };
-
-    // Build result
-    const result: ConversationWithOtherUser[] = participations
-      .map((participation) => {
-        const convId = participation.conversation_id;
-        const participationData = participation as Record<string, unknown>;
-        const lastReadAt = participationData.last_read_at as string;
-
-        // Find the other participant
-        const participants = allParticipants?.filter((p) => p.conversation_id === convId) || [];
-        const otherParticipant = participants.find((p) => p.user_id !== userId);
-
-        if (!otherParticipant || !otherParticipant.users) {
-          return null;
-        }
-
-        const userData = Array.isArray(otherParticipant.users) ? otherParticipant.users[0] : otherParticipant.users;
-
-        // Find latest message
-        const lastMsg = latestMessages?.find((m) => m.conversation_id === convId);
-
-        // Count unread messages
-        let unreadCount = 0;
-        if (lastReadAt && lastMsg) {
-          const unreadMsgs =
-            latestMessages?.filter(
-              (m) => m.conversation_id === convId && new Date(m.created_at) > new Date(lastReadAt)
-            ) || [];
-          unreadCount = unreadMsgs.length;
-        }
-
-        return {
-          id: convId,
-          other_user: {
-            id: userData.id as string,
-            name: (userData.name as string) || 'Unknown',
-            avatar_url: (userData.avatar_url as string | null) || null,
-          },
-          last_message: lastMsg
-            ? {
-                message: lastMsg.message,
-                created_at: lastMsg.created_at,
-              }
-            : null,
-          unread_count: unreadCount,
-          last_read_at: lastReadAt,
-        };
-      })
-      .filter((item) => item !== null) as ConversationWithOtherUser[];
+    const result: ConversationWithOtherUser[] = ((data as Row[]) || [])
+      .filter((r) => r.other_user_id)
+      .map((r) => ({
+        id: r.conversation_id,
+        other_user: {
+          id: r.other_user_id as string,
+          name: r.other_user_name || 'Unknown',
+          avatar_url: r.other_user_avatar ?? null,
+        },
+        last_message: r.last_message ? { message: r.last_message, created_at: r.last_message_at as string } : null,
+        unread_count: Number(r.unread_count) || 0,
+        last_read_at: r.last_read_at,
+      }));
 
     return { success: true, data: result };
   } catch (error) {
@@ -375,21 +296,30 @@ export async function getUnreadCount(supabase: SupabaseClient, userId: string): 
       return { success: true, data: 0 };
     }
 
-    // Count messages after last_read_at
-    let totalUnread = 0;
+    // T3 (perf audit H-5): replace the per-conversation COUNT loop with ONE
+    // message fetch (bounded to messages newer than the OLDEST last_read_at)
+    // and aggregate per conversation in memory using each conversation's own
+    // threshold.
+    const lastReadByConv = new Map<string, string>();
     for (const p of participations) {
       const pData = p as Record<string, unknown>;
-      const lastReadAt = pData.last_read_at as string;
+      lastReadByConv.set(pData.conversation_id as string, pData.last_read_at as string);
+    }
+    const convIds = Array.from(lastReadByConv.keys());
+    const oldestRead = Array.from(lastReadByConv.values()).sort()[0];
 
-      const { count, error: countError } = await supabase
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('conversation_id', pData.conversation_id)
-        .gt('created_at', lastReadAt);
+    const { data: msgs, error: msgError } = await supabase
+      .from('chat_messages')
+      .select('conversation_id, created_at')
+      .in('conversation_id', convIds)
+      .gt('created_at', oldestRead);
 
-      if (!countError && count !== null) {
-        totalUnread += count;
-      }
+    if (msgError) return { success: false, error: msgError.message };
+
+    let totalUnread = 0;
+    for (const m of (msgs as Array<{ conversation_id: string; created_at: string }>) || []) {
+      const threshold = lastReadByConv.get(m.conversation_id);
+      if (threshold && new Date(m.created_at) > new Date(threshold)) totalUnread += 1;
     }
 
     return { success: true, data: totalUnread };

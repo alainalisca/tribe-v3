@@ -260,4 +260,9 @@ select '100_post_comments_count_trigger',
        case when exists (
          select 1 from pg_trigger where tgname = 'trg_post_comments_count'
        ) then 'applied' else 'MISSING' end
+union all
+select '101_get_my_conversations_rpc',
+       case when exists (
+         select 1 from pg_proc where proname = 'get_my_conversations'
+       ) then 'applied' else 'MISSING' end
 order by migration;
