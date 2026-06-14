@@ -217,6 +217,18 @@ export async function GET(request: Request) {
       scored.sort((a, b) => b.score - a.score);
       const topMatches = scored.slice(0, 5);
 
+      // Dedup notifications: this cron runs daily and the smart_matches upsert
+      // is idempotent, so without this the SAME "X trains near you" push fired
+      // every single day until the match left 'pending' — pure spam. Fetch the
+      // set of matched users this person has already been notified about (one
+      // query per user, not per match) and only notify the new ones.
+      const { data: priorNotifs } = await supabase
+        .from('notifications')
+        .select('actor_id')
+        .eq('recipient_id', user.id)
+        .eq('type', 'smart_match');
+      const alreadyNotified = new Set((priorNotifs || []).map((n: { actor_id: string | null }) => n.actor_id));
+
       for (const match of topMatches) {
         const { data: upserted, error: upsertError } = await supabase
           .from('smart_matches')
@@ -241,6 +253,9 @@ export async function GET(request: Request) {
 
         matchesCreated++;
 
+        // Only notify about a match the user hasn't already been told about.
+        if (alreadyNotified.has(match.matched_user_id)) continue;
+
         const matchedUser = candidateMap.get(match.matched_user_id) || usersMap.get(match.matched_user_id);
         const matchedName = matchedUser?.name || 'Someone';
         const topSport = match.shared_sports[0] || 'fitness';
@@ -253,6 +268,7 @@ export async function GET(request: Request) {
           entity_id: upserted?.id || null,
           message: `${matchedName} also trains ${topSport} near you`,
         });
+        alreadyNotified.add(match.matched_user_id);
       }
     }
 
