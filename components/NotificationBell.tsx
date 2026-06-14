@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getUnreadNotificationCount } from '@/lib/dal/notifications';
@@ -20,47 +20,63 @@ import { getUnreadNotificationCount } from '@/lib/dal/notifications';
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const userIdRef = useRef<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
+  // Resolve the current user once.
   useEffect(() => {
     const supabase = createClient();
     let isMounted = true;
-
-    async function refreshCount(userId: string) {
-      const result = await getUnreadNotificationCount(supabase, userId);
-      if (isMounted && result.success) {
-        setUnreadCount(result.data ?? 0);
-      }
-    }
-
-    async function bootstrap() {
+    (async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user || !isMounted) {
+      if (!isMounted) return;
+      if (!user) {
         setLoading(false);
         return;
       }
-      userIdRef.current = user.id;
-      await refreshCount(user.id);
-      setLoading(false);
+      setUserId(user.id);
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Once we know the user, fetch their unread count and subscribe to THEIR
+  // notifications only.
+  useEffect(() => {
+    if (!userId) return;
+    const supabase = createClient();
+    let isMounted = true;
+
+    async function refreshCount() {
+      const result = await getUnreadNotificationCount(supabase, userId!);
+      if (isMounted && result.success) setUnreadCount(result.data ?? 0);
     }
 
-    bootstrap();
+    refreshCount().finally(() => {
+      if (isMounted) setLoading(false);
+    });
 
-    // Realtime subscription: refresh on any change to this user's notifications.
+    // T3-6: the previous subscription used a shared channel name
+    // ('notifications-bell') and NO row filter, so every user's bell woke up
+    // and re-counted on every other user's notification — O(users × events)
+    // realtime fanout. Filter to this recipient and use a per-user channel.
     const channel = supabase
-      .channel('notifications-bell')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        if (userIdRef.current) void refreshCount(userIdRef.current);
-      })
+      .channel(`notifications-bell-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
+        () => {
+          void refreshCount();
+        }
+      )
       .subscribe();
 
     // Safety-net poll every 5 minutes in case the realtime socket drops
-    // (mobile backgrounded tabs, flaky networks). Way less chatty than the
-    // old 30s poll, and only fires the count query — no auth round-trip.
+    // (mobile backgrounded tabs, flaky networks).
     const interval = setInterval(() => {
-      if (userIdRef.current) void refreshCount(userIdRef.current);
+      void refreshCount();
     }, 300_000);
 
     return () => {
@@ -68,7 +84,7 @@ export default function NotificationBell() {
       clearInterval(interval);
       void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   if (loading) {
     return (
