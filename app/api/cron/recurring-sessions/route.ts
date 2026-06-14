@@ -120,9 +120,12 @@ export async function GET(request: Request) {
     let subscribersEnrolled = 0;
     let errorCount = 0;
 
-    // Service-role client for the subscriber fan-out: it inserts
-    // session_participants rows on behalf of OTHER users, which the
-    // user-scoped RLS policy would reject for the cookie/anon client.
+    // Service-role client for all writes in this cron. The sessions INSERT
+    // policy is `auth.uid() = creator_id`, but a cron has no auth user
+    // (auth.uid() is null), so the cookie/anon client's child-session inserts
+    // were SILENTLY BLOCKED BY RLS — which is why 0 recurring children had
+    // ever been created. Service role bypasses RLS. (Also used for the
+    // subscriber fan-out, which writes session_participants for other users.)
     const serviceClient = getServiceRoleClient();
 
     // 2. For each parent, compute upcoming dates and create missing children
@@ -132,7 +135,7 @@ export async function GET(request: Request) {
       for (const date of nextDates) {
         try {
           // Check if child already exists for this date (idempotency)
-          const existsResult = await childSessionExists(supabase, parent.id, date);
+          const existsResult = await childSessionExists(serviceClient, parent.id, date);
           if (!existsResult.success) {
             logError(existsResult.error, {
               route: '/api/cron/recurring-sessions',
@@ -149,8 +152,9 @@ export async function GET(request: Request) {
             continue;
           }
 
-          // Create child session
-          const createResult = await createChildSession(supabase, parent, date);
+          // Create child session (service role — see note above; the anon
+          // client's insert is RLS-blocked in a cron).
+          const createResult = await createChildSession(serviceClient, parent, date);
           if (!createResult.success) {
             logError(createResult.error, {
               route: '/api/cron/recurring-sessions',
