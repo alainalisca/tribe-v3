@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { log, logError } from '@/lib/logger';
-import { fetchUserName, fetchUsersWithPush } from '@/lib/dal';
+import { fetchUserName, fetchUsersWithPush, fetchSessionFields } from '@/lib/dal';
 
 function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -34,15 +34,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { sessionId, sport, location, latitude, longitude, startIn, creatorId } = await request.json();
+    // T1-5: the ONLY values we trust from the body are the sessionId (an
+    // identifier we re-validate) and startIn (timing text, coerced to int).
+    // sport / location / coordinates / creator were previously taken from the
+    // body and interpolated straight into a push sent to every nearby user —
+    // a mass-phishing primitive. We now derive all of those from the session
+    // row itself, so the content is provably the creator's own session data.
+    const body = await request.json();
+    const sessionId = body?.sessionId;
+    const startIn = Number.isFinite(Number(body?.startIn)) ? Math.max(0, Math.floor(Number(body.startIn))) : 0;
 
-    // AUTHORIZATION: only the session creator can trigger nearby notifications
-    if (user.id !== creatorId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!sessionId || typeof sessionId !== 'string') {
+      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
     // Service role client needed to read all users' push tokens and locations
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Look up the session and derive everything from it. Coordinates use the
+    // canonical location_lat/location_lng pair (migration 054), falling back
+    // to the legacy latitude/longitude columns.
+    const sessionResult = await fetchSessionFields(
+      supabase,
+      sessionId,
+      'id, creator_id, sport, location, location_lat, location_lng, latitude, longitude'
+    );
+    if (!sessionResult.success || !sessionResult.data) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+    const session = sessionResult.data as {
+      creator_id: string;
+      sport: string;
+      location: string | null;
+      location_lat: number | null;
+      location_lng: number | null;
+      latitude: number | null;
+      longitude: number | null;
+    };
+
+    // AUTHORIZATION: only the session's creator can trigger nearby notifications.
+    if (user.id !== session.creator_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const creatorId = session.creator_id;
+    const sport = session.sport;
+    const location = session.location || '';
+    const latitude = session.location_lat ?? session.latitude;
+    const longitude = session.location_lng ?? session.longitude;
 
     // Get creator name
     const nameResult = await fetchUserName(supabase, creatorId);
