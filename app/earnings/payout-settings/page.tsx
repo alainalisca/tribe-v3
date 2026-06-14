@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { fetchMyPrivateProfile, upsertMyPrivateProfile } from '@/lib/dal/userPrivate';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -187,12 +188,11 @@ export default function PayoutSettingsPage() {
 
       setUser(authUser);
 
-      // Fetch user profile to check instructor status and get payout settings
+      // is_instructor + payout_method stay on users; the sensitive bank/document
+      // detail fields now live in user_private (T1-1). Fetch both.
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select(
-          'is_instructor, payout_method, payout_bank_name, payout_account_type, payout_account_number, payout_document_type, payout_document_number'
-        )
+        .select('is_instructor, payout_method')
         .eq('id', authUser.id)
         .single();
 
@@ -210,17 +210,23 @@ export default function PayoutSettingsPage() {
 
       setIsInstructor(true);
 
-      // Populate form with existing data
-      if (profileData) {
-        setFormData({
-          payout_method: profileData.payout_method || 'manual',
-          payout_bank_name: profileData.payout_bank_name || '',
-          payout_account_type: profileData.payout_account_type || 'savings',
-          payout_account_number: profileData.payout_account_number || '',
-          payout_document_type: profileData.payout_document_type || 'CC',
-          payout_document_number: profileData.payout_document_number || '',
-        });
+      const privateResult = await fetchMyPrivateProfile(supabase, authUser.id);
+      if (!privateResult.success) {
+        logError(privateResult.error, { action: 'loadSettings.private' });
+        setError('load_failed');
+        return;
       }
+      const priv = privateResult.data;
+
+      // Populate form with existing data
+      setFormData({
+        payout_method: profileData.payout_method || 'manual',
+        payout_bank_name: priv?.payout_bank_name || '',
+        payout_account_type: (priv?.payout_account_type as 'savings' | 'checking') || 'savings',
+        payout_account_number: priv?.payout_account_number || '',
+        payout_document_type: (priv?.payout_document_type as 'CC' | 'CE' | 'NIT' | 'PP' | 'TI') || 'CC',
+        payout_document_number: priv?.payout_document_number || '',
+      });
 
       // Fire-and-forget: fetch Stripe Connect status. We don't block the
       // initial render on this — the UI just shows a spinner in the
@@ -295,20 +301,28 @@ export default function PayoutSettingsPage() {
     try {
       setSaving(true);
 
+      // payout_method (non-sensitive enum) stays on users; the bank/document
+      // detail fields go to user_private (T1-1).
       const { error: updateError } = await supabase
         .from('users')
-        .update({
-          payout_method: formData.payout_method,
-          payout_bank_name: formData.payout_bank_name || null,
-          payout_account_type: formData.payout_account_type || null,
-          payout_account_number: formData.payout_account_number || null,
-          payout_document_type: formData.payout_document_type || null,
-          payout_document_number: formData.payout_document_number || null,
-        })
+        .update({ payout_method: formData.payout_method })
         .eq('id', user.id);
 
       if (updateError) {
         logError(updateError, { action: 'handleSave' });
+        showError(tr.errorSaving);
+        return;
+      }
+
+      const privateResult = await upsertMyPrivateProfile(supabase, user.id, {
+        payout_bank_name: formData.payout_bank_name || null,
+        payout_account_type: formData.payout_account_type || null,
+        payout_account_number: formData.payout_account_number || null,
+        payout_document_type: formData.payout_document_type || null,
+        payout_document_number: formData.payout_document_number || null,
+      });
+      if (!privateResult.success) {
+        logError(privateResult.error, { action: 'handleSave.private' });
         showError(tr.errorSaving);
         return;
       }
