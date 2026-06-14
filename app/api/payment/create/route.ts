@@ -553,7 +553,12 @@ export async function POST(request: NextRequest) {
     const userEmail = user.email || '';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Create payment record in DB
+    // Create payment record in DB.
+    // T0-6: `discount_cents` and `promo_code_id` are NOT columns on `payments`
+    // (they live on promo_redemptions / product_orders). Writing them 500'd
+    // every promo-code checkout. The discount is recorded against the promo
+    // code via redeemPromoCode() below, which writes the canonical
+    // promo_redemptions row — so the payment row doesn't need to carry them.
     const { data: paymentRecord, error: paymentError } = await serviceSupabase
       .from('payments')
       .insert({
@@ -565,8 +570,6 @@ export async function POST(request: NextRequest) {
         currency,
         gateway,
         status: 'pending',
-        discount_cents: discountCents,
-        promo_code_id: promoCodeId,
       })
       .select('id')
       .single();
