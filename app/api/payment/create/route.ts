@@ -231,6 +231,11 @@ export async function POST(request: NextRequest) {
 
     // ──── BOOST CAMPAIGN / PRO STOREFRONT PAYMENTS ────
     if (paymentType === 'boost_campaign' || paymentType === 'pro_storefront') {
+      // T0-6: boost/Pro checkout is gated off at the client (see
+      // app/promote/boosts) until activation-on-approval is wired into
+      // finalize_payment. A direct call here still fails before charging
+      // (no activation = charged-but-not-delivered), which is the safe
+      // pre-existing behavior. Re-enable both gates together.
       const { currency, reference_id, success_url, cancel_url } = body;
 
       if (!currency || !reference_id) {
@@ -553,7 +558,12 @@ export async function POST(request: NextRequest) {
     const userEmail = user.email || '';
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    // Create payment record in DB
+    // Create payment record in DB.
+    // T0-6: `discount_cents` and `promo_code_id` are NOT columns on `payments`
+    // (they live on promo_redemptions / product_orders). Writing them 500'd
+    // every promo-code checkout. The discount is recorded against the promo
+    // code via redeemPromoCode() below, which writes the canonical
+    // promo_redemptions row — so the payment row doesn't need to carry them.
     const { data: paymentRecord, error: paymentError } = await serviceSupabase
       .from('payments')
       .insert({
@@ -565,8 +575,6 @@ export async function POST(request: NextRequest) {
         currency,
         gateway,
         status: 'pending',
-        discount_cents: discountCents,
-        promo_code_id: promoCodeId,
       })
       .select('id')
       .single();

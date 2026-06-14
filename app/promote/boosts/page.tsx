@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { logError } from '@/lib/logger';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getTrialStatus, isFeatureFree } from '@/lib/trial';
 import TrialBanner from '@/components/TrialBanner';
@@ -388,6 +388,20 @@ export default function BoostsPage() {
       const now = new Date();
       const endsAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
       const isFree = isFeatureFree(instructorSince);
+
+      // T0-6: paid boost checkout is temporarily gated. The boost payment flow
+      // has no activation-on-approval wiring (finalize_payment doesn't flip a
+      // boost to 'active'), so charging would leave the campaign stuck in
+      // 'pending_payment' — strictly worse than the current pre-charge failure.
+      // Free-trial boosts (instructors within their trial window) still work.
+      // Remove this gate once the activation path is built.
+      if (!isFree) {
+        showInfo(
+          language === 'es' ? 'Los anuncios pagados estarán disponibles pronto.' : 'Paid boosts are coming soon.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
 
       const boostData = {
         instructor_id: userId,
