@@ -12,6 +12,21 @@ function getResendClient() {
 
 const ADMIN_EMAIL = 'tribe@aplusfitnessllc.com';
 
+/**
+ * T1-4: escape HTML before interpolating user-controlled values into the
+ * admin email. This is a public, unauthenticated endpoint — without escaping,
+ * a crafted userName like `<a href="https://evil">Reset</a>` injects a live
+ * link into a Tribe-branded email the admin opens (spear-phishing primitive).
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface AdminSignupNotificationBody {
   userName: string;
   userEmail: string;
@@ -46,6 +61,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Escape all user-controlled values before they enter the HTML body.
+    const safeName = escapeHtml(String(userName));
+    const safeEmail = escapeHtml(String(userEmail));
+    const safeMethod = escapeHtml(String(signupMethod));
+
     const resend = getResendClient();
     const timestamp = new Date().toLocaleString('en-US', {
       timeZone: 'America/Bogota',
@@ -56,7 +76,7 @@ export async function POST(request: NextRequest) {
     await resend.emails.send({
       from: 'Tribe <tribe@aplusfitnessllc.com>',
       to: ADMIN_EMAIL,
-      subject: `New Tribe signup: ${userName}`,
+      subject: `New Tribe signup: ${String(userName).replace(/[\r\n]/g, ' ')}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 20px;">
           <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -69,15 +89,15 @@ export async function POST(request: NextRequest) {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="color: #6b7280; padding: 6px 12px 6px 0; font-size: 14px; white-space: nowrap;">Name</td>
-                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${userName}</td>
+                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${safeName}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 6px 12px 6px 0; font-size: 14px; white-space: nowrap;">Email</td>
-                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${userEmail}</td>
+                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${safeEmail}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 6px 12px 6px 0; font-size: 14px; white-space: nowrap;">Method</td>
-                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${signupMethod}</td>
+                  <td style="color: #1e293b; padding: 6px 0; font-weight: 600; font-size: 14px;">${safeMethod}</td>
                 </tr>
                 <tr>
                   <td style="color: #6b7280; padding: 6px 12px 6px 0; font-size: 14px; white-space: nowrap;">Time</td>
