@@ -231,4 +231,16 @@ union all
 select '095_session_subscriptions',
        case when to_regclass('public.session_subscriptions') is not null
             then 'applied' else 'MISSING' end
+union all
+select '096_user_private_pii',
+       case when to_regclass('public.user_private') is not null
+            then 'applied' else 'MISSING' end
+union all
+select '097_drop_users_pii_columns',
+       -- Applied once the sensitive columns are gone from public.users.
+       case when not exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'users'
+           and column_name = 'payout_account_number'
+       ) then 'applied' else 'MISSING' end
 order by migration;

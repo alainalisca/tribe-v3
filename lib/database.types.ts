@@ -1425,11 +1425,8 @@ export type Database = {
           bio: string | null
           certifications: string[] | null
           created_at: string | null
-          date_of_birth: string | null
           earnings_currency: string | null
           email: string
-          emergency_contact_name: string | null
-          emergency_contact_phone: string | null
           facebook_url: string | null
           fcm_platform: string | null
           fcm_token: string | null
@@ -1452,11 +1449,6 @@ export type Database = {
           location_lng: number | null
           name: string | null
           photos: string[] | null
-          payout_account_number: string | null
-          payout_account_type: string | null
-          payout_bank_name: string | null
-          payout_document_number: string | null
-          payout_document_type: string | null
           payout_method: string | null
           preferred_language: string | null
           preferred_sports: string[] | null
@@ -1499,11 +1491,8 @@ export type Database = {
           bio?: string | null
           certifications?: string[] | null
           created_at?: string | null
-          date_of_birth?: string | null
           earnings_currency?: string | null
           email: string
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
           facebook_url?: string | null
           fcm_platform?: string | null
           fcm_token?: string | null
@@ -1526,11 +1515,6 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           photos?: string[] | null
-          payout_account_number?: string | null
-          payout_account_type?: string | null
-          payout_bank_name?: string | null
-          payout_document_number?: string | null
-          payout_document_type?: string | null
           payout_method?: string | null
           preferred_language?: string | null
           preferred_sports?: string[] | null
@@ -1573,11 +1557,8 @@ export type Database = {
           bio?: string | null
           certifications?: string[] | null
           created_at?: string | null
-          date_of_birth?: string | null
           earnings_currency?: string | null
           email?: string
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
           facebook_url?: string | null
           fcm_platform?: string | null
           fcm_token?: string | null
@@ -1600,11 +1581,6 @@ export type Database = {
           location_lng?: number | null
           name?: string | null
           photos?: string[] | null
-          payout_account_number?: string | null
-          payout_account_type?: string | null
-          payout_bank_name?: string | null
-          payout_document_number?: string | null
-          payout_document_type?: string | null
           payout_method?: string | null
           preferred_language?: string | null
           preferred_sports?: string[] | null
@@ -1638,6 +1614,56 @@ export type Database = {
           years_experience?: number | null
         }
         Relationships: []
+      }
+      user_private: {
+        Row: {
+          user_id: string
+          payout_bank_name: string | null
+          payout_account_type: string | null
+          payout_account_number: string | null
+          payout_document_type: string | null
+          payout_document_number: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          date_of_birth: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          payout_bank_name?: string | null
+          payout_account_type?: string | null
+          payout_account_number?: string | null
+          payout_document_type?: string | null
+          payout_document_number?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          date_of_birth?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          payout_bank_name?: string | null
+          payout_account_type?: string | null
+          payout_account_number?: string | null
+          payout_document_type?: string | null
+          payout_document_number?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          date_of_birth?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_private_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_follows: {
         Row: {
