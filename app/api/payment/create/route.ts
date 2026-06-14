@@ -231,6 +231,11 @@ export async function POST(request: NextRequest) {
 
     // ──── BOOST CAMPAIGN / PRO STOREFRONT PAYMENTS ────
     if (paymentType === 'boost_campaign' || paymentType === 'pro_storefront') {
+      // T0-6: boost/Pro checkout is gated off at the client (see
+      // app/promote/boosts) until activation-on-approval is wired into
+      // finalize_payment. A direct call here still fails before charging
+      // (no activation = charged-but-not-delivered), which is the safe
+      // pre-existing behavior. Re-enable both gates together.
       const { currency, reference_id, success_url, cancel_url } = body;
 
       if (!currency || !reference_id) {
