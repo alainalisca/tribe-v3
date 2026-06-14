@@ -99,7 +99,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
     const endText =
       value.recurrence_end_date && value.recurrence_end_date.trim()
         ? language === 'es'
-          ? ` hasta el ${new Date(value.recurrence_end_date + 'T00:00:00').toLocaleDateString('es-ES', { month: 'long', day: 'numeric' })}`
+          ? ` hasta el ${new Date(value.recurrence_end_date + 'T00:00:00').toLocaleDateString('es-CO', { month: 'long', day: 'numeric' })}`
           : ` until ${new Date(value.recurrence_end_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`
         : '';
 

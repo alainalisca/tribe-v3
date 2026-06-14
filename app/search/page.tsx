@@ -452,7 +452,7 @@ interface SessionResultProps {
 }
 
 function SessionResult({ session, language, onSelect }: SessionResultProps) {
-  const sessionDate = new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US');
+  const sessionDate = new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US');
   const { currency: userCurrency } = useUserCurrency();
 
   return (

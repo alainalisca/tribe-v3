@@ -10,11 +10,11 @@ interface Props {
 
 export default function PartnerStorefrontBadge({ partner, language }: Props) {
   const sinceDate = partner.starts_at
-    ? new Date(partner.starts_at).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+    ? new Date(partner.starts_at).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
         month: 'short',
         year: 'numeric',
       })
-    : new Date(partner.created_at).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+    : new Date(partner.created_at).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
         month: 'short',
         year: 'numeric',
       });

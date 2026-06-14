@@ -60,7 +60,7 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
               </p>
 
               <div className="text-xs text-stone-500 mb-3">
-                {new Date(item.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                {new Date(item.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
               </div>
 
               <div className="flex gap-2">

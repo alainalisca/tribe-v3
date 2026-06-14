@@ -74,7 +74,7 @@ export default function SessionCard({
               <div className="space-y-1">
                 <div className="flex items-center text-stone-700 dark:text-gray-300 text-sm">
                   <Calendar className="w-4 h-4 mr-2 text-stone-400" />
-                  {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+                  {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric',

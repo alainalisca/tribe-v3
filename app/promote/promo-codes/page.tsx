@@ -484,7 +484,7 @@ export default function PromoCodesPage() {
     if (promo.applies_to === 'specific_session') {
       const session = sessions.find((s) => s.id === promo.session_id);
       return session
-        ? `${session.sport} - ${new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}`
+        ? `${session.sport} - ${new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}`
         : t.sessionNotFound;
     }
     if (promo.applies_to === 'specific_package') {
@@ -733,7 +733,7 @@ export default function PromoCodesPage() {
                     {sessions.map((session) => (
                       <option key={session.id} value={session.id}>
                         {session.sport} -{' '}
-                        {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                        {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
                       </option>
                     ))}
                   </select>
@@ -906,7 +906,7 @@ export default function PromoCodesPage() {
                   {promo.expiry_date ? (
                     <p className="text-theme-secondary text-sm mb-2">
                       {t.expiresOn}:{' '}
-                      {new Date(promo.expiry_date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                      {new Date(promo.expiry_date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
                     </p>
                   ) : (
                     <p className="text-theme-secondary text-sm mb-2">No expiry date</p>

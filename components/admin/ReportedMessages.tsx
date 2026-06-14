@@ -75,7 +75,7 @@ export default function ReportedMessages({
                   {language === 'es' ? 'Por:' : 'By:'} {report.reporter?.name}
                 </span>
                 <span>
-                  {new Date(report.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                  {new Date(report.created_at ?? '').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
                 </span>
               </div>
 

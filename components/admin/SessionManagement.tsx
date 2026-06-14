@@ -75,7 +75,7 @@ export default function SessionManagement({
                       </span>
                       <span>&bull;</span>
                       <span>
-                        {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                        {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
                       </span>
                       <span>&bull;</span>
                       <span>

@@ -178,7 +178,7 @@ export default function InvitePage() {
               <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">
                 <Calendar className="w-4 h-4" />
                 <span>
-                  {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                  {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-stone-600 dark:text-gray-300">

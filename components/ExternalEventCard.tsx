@@ -49,12 +49,12 @@ const SPORT_LABELS: Record<string, Record<string, string>> = {
 export default function ExternalEventCard({ event, language }: ExternalEventCardProps) {
   const lang = (language === 'es' ? 'es' : 'en') as 'en' | 'es';
   const startTime = new Date(event.start_time);
-  const formattedDate = startTime.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
+  const formattedDate = startTime.toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
-  const formattedTime = startTime.toLocaleTimeString(lang === 'es' ? 'es-ES' : 'en-US', {
+  const formattedTime = startTime.toLocaleTimeString(lang === 'es' ? 'es-CO' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });

@@ -195,7 +195,7 @@ export default function RequestsPage() {
                       <p className="text-sm text-stone-600 dark:text-gray-400">
                         {request.session &&
                           new Date(request.session.date + 'T00:00:00').toLocaleDateString(
-                            language === 'es' ? 'es-ES' : 'en-US'
+                            language === 'es' ? 'es-CO' : 'en-US'
                           )}{' '}
                         {request.session && (
                           <>

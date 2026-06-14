@@ -340,12 +340,12 @@ function TribeSessionMiniCard({ session, language }: TribeSessionMiniCardProps) 
   const sportLabel = SPORT_LABELS[lang][session.sport as keyof (typeof SPORT_LABELS)['en']] || session.sport;
 
   const sessionDate = new Date(`${session.date}T${session.start_time}`);
-  const formattedDate = sessionDate.toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', {
+  const formattedDate = sessionDate.toLocaleDateString(lang === 'es' ? 'es-CO' : 'en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
-  const formattedTime = sessionDate.toLocaleTimeString(lang === 'es' ? 'es-ES' : 'en-US', {
+  const formattedTime = sessionDate.toLocaleTimeString(lang === 'es' ? 'es-CO' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });

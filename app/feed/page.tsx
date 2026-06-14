@@ -554,7 +554,7 @@ function PostCard({
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-tribe-green" />
-              <span>{new Date(session.date).toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}</span>
+              <span>{new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-tribe-green" />
