@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 import { log, logError } from '@/lib/logger';
 import { updateSession, fetchSessionsWithCreator, fetchSessionAttendance } from '@/lib/dal';
 
@@ -31,7 +32,9 @@ export async function GET(request: Request) {
 
     const sessionsResult = await fetchSessionsWithCreator(supabase, {
       followup_sent: false,
-      dateLte: now.toISOString().split('T')[0],
+      // T0-9: session.date is Bogota-local; the UTC date dropped a day's worth
+      // of just-ended evening sessions for ~5h each night.
+      dateLte: bogotaToday(now),
     });
 
     if (!sessionsResult.success) throw new Error(sessionsResult.error);

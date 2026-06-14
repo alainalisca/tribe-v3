@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 import { getRandomMessage, getMessageContent } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import {
@@ -61,8 +62,11 @@ export async function GET(request: Request) {
     const sessionsResult = await fetchSessionsWithCreator(supabase, {
       status: 'active',
       reminder_sent: false,
-      dateGte: now.toISOString().split('T')[0],
-      dateLte: twoHoursFifteenMinsFromNow.toISOString().split('T')[0],
+      // T0-9: session.date is a Bogota-local date. Deriving the coarse date
+      // filter from the UTC instant dropped evening sessions for ~5h/day once
+      // UTC rolled past midnight. Use the Bogota date of each instant instead.
+      dateGte: bogotaToday(now),
+      dateLte: bogotaToday(twoHoursFifteenMinsFromNow),
     });
     const sessions = sessionsResult.data as SessionWithCreator[] | null;
 
@@ -145,7 +149,7 @@ export async function GET(request: Request) {
     let morningMotivationSent = 0;
 
     if (isMorningWindow()) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = bogotaToday();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Get users who:

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaToday, bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { getRandomMessage, getMessageContent, replaceMessageVariables } from '@/lib/motivational-messages';
 import { log, logError } from '@/lib/logger';
 import {
@@ -62,8 +63,10 @@ export async function GET(request: Request) {
 
     // 1. WEEKLY RECAP (Sundays at 6 PM Colombia time)
     if (isSundayEveningWindow()) {
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const today = now.toISOString().split('T')[0];
+      // T0-9: Bogota-local dates — session.date is local, and "today" dedup
+      // should track the Bogota day, not UTC.
+      const oneWeekAgoStr = bogotaDateOffset(-7, now);
+      const today = bogotaToday(now);
 
       // Get users with push subscriptions who haven't received weekly recap today
       const usersResult = await fetchUsersWithPush(
@@ -84,11 +87,11 @@ export async function GET(request: Request) {
           const [participationsResult, hostedResult] = await Promise.all([
             fetchParticipationsWithSession(supabase, user.id, {
               status: 'confirmed',
-              dateGte: oneWeekAgo.toISOString().split('T')[0],
+              dateGte: oneWeekAgoStr,
               dateLte: today,
             }),
             fetchSessionsByCreator(supabase, user.id, {
-              dateGte: oneWeekAgo.toISOString().split('T')[0],
+              dateGte: oneWeekAgoStr,
               dateLte: today,
               fields: 'id, date, sport, duration, current_participants',
             }),
@@ -194,8 +197,8 @@ export async function GET(request: Request) {
     const pendingReEngagements: Array<{ userId: string; title: string; body: string }> = [];
 
     if (inactiveUsers.length > 0) {
-      // Count available sessions in the system
-      const sessionCountResult = await fetchActiveSessionCount(supabase, now.toISOString().split('T')[0]);
+      // Count available sessions in the system (Bogota-local "today")
+      const sessionCountResult = await fetchActiveSessionCount(supabase, bogotaToday(now));
       const availableSessions = sessionCountResult.data ?? 0;
 
       for (const user of inactiveUsers) {

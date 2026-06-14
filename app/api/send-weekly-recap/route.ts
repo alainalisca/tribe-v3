@@ -5,6 +5,7 @@ import { logError } from '@/lib/logger';
 import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForAdmin } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -38,9 +39,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No users found' }, { status: 400 });
     }
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
+    // T0-9: Bogota-local date — this is compared to session.date (local).
+    const oneWeekAgoStr = bogotaDateOffset(-7);
 
     let emailsSent = 0;
     let errors = 0;

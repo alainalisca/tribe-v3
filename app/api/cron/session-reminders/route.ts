@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
+import { bogotaToday, bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { log, logError } from '@/lib/logger';
 import {
   updateSession,
@@ -58,7 +59,8 @@ export async function GET(request: Request) {
 
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    // T0-9: today/tomorrow as Bogota-local dates (matches session.date), not UTC.
+    const today = bogotaToday(now);
 
     // Time windows for reminders (with 5 minute tolerance)
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
@@ -69,10 +71,8 @@ export async function GET(request: Request) {
     let oneHourRemindersSent = 0;
     let fifteenMinRemindersSent = 0;
 
-    // Get all active sessions for today and tomorrow
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    // Get all active sessions for today and tomorrow (Bogota-local dates)
+    const tomorrowStr = bogotaDateOffset(1, now);
 
     const sessionsResult = await fetchActiveSessionsForDates(supabase, [today, tomorrowStr]);
 
