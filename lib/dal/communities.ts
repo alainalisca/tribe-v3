@@ -215,20 +215,10 @@ export async function joinCommunity(
 
     if (memberError) return { success: false, error: memberError.message };
 
-    // Increment member count
-    const { error: updateError } = await supabase.rpc('increment', {
-      table: 'communities',
-      column: 'member_count',
-      value: 1,
-      id: communityId,
-    });
-
-    if (updateError) {
-      // Rollback member insert
-      await supabase.from('community_members').delete().eq('user_id', userId).eq('community_id', communityId);
-      return { success: false, error: updateError.message };
-    }
-
+    // member_count is maintained by the trg_community_member_count trigger
+    // (migration 099). The old rpc('increment', ...) call targeted a function
+    // that was never deployed, so it always errored and rolled the member
+    // insert back — breaking community join entirely.
     return { success: true };
   } catch (error) {
     logError(error, { action: 'joinCommunity' });
@@ -250,19 +240,8 @@ export async function leaveCommunity(
 
     if (deleteError) return { success: false, error: deleteError.message };
 
-    // Decrement member count
-    const { error: updateError } = await supabase.rpc('decrement', {
-      table: 'communities',
-      column: 'member_count',
-      value: 1,
-      id: communityId,
-    });
-
-    if (updateError) {
-      logError(updateError, { action: 'leaveCommunity - decrement failed' });
-      // Don't fail the whole operation if decrement fails
-    }
-
+    // member_count is maintained by the trg_community_member_count trigger
+    // (migration 099) — no app-side decrement needed.
     return { success: true };
   } catch (error) {
     logError(error, { action: 'leaveCommunity' });
@@ -399,14 +378,7 @@ export async function likeCommunityPost(
 
     if (insertError) return { success: false, error: insertError.message };
 
-    // Increment likes count
-    await supabase.rpc('increment', {
-      table: 'community_posts',
-      column: 'likes_count',
-      value: 1,
-      id: postId,
-    });
-
+    // likes_count maintained by trg_community_post_likes_count (migration 099).
     return { success: true };
   } catch (error) {
     logError(error, { action: 'likeCommunityPost' });
@@ -428,14 +400,7 @@ export async function unlikeCommunityPost(
 
     if (deleteError) return { success: false, error: deleteError.message };
 
-    // Decrement likes count
-    await supabase.rpc('decrement', {
-      table: 'community_posts',
-      column: 'likes_count',
-      value: 1,
-      id: postId,
-    });
-
+    // likes_count maintained by trg_community_post_likes_count (migration 099).
     return { success: true };
   } catch (error) {
     logError(error, { action: 'unlikeCommunityPost' });
@@ -490,14 +455,7 @@ export async function insertCommunityPostComment(
 
     if (error) return { success: false, error: error.message };
 
-    // Increment comments count
-    await supabase.rpc('increment', {
-      table: 'community_posts',
-      column: 'comments_count',
-      value: 1,
-      id: data.post_id,
-    });
-
+    // comments_count maintained by trg_community_post_comments_count (099).
     return { success: true, data: comment.id };
   } catch (error) {
     logError(error, { action: 'insertCommunityPostComment' });
