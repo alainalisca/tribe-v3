@@ -24,3 +24,14 @@ export const sportTranslations: { [key: string]: { en: string; es: string } } = 
   BMX: { en: 'BMX', es: 'BMX' },
   Other: { en: 'Other', es: 'Otro' },
 };
+
+/**
+ * Translate a stored sport name to the user's language, falling back to the
+ * raw value for sports not in the table. Use this everywhere a sport is shown
+ * instead of rendering `session.sport` directly — otherwise Spanish users see
+ * English sport names ("Running" instead of "Correr").
+ */
+export function translateSport(sport: string | null | undefined, language: 'en' | 'es'): string {
+  if (!sport) return '';
+  return sportTranslations[sport]?.[language] ?? sport;
+}

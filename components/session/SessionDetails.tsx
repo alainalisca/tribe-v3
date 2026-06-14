@@ -10,6 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
+import { translateSport } from '@/lib/translations';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 
@@ -53,7 +54,7 @@ export default function SessionDetails({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <span className="px-4 py-2 bg-tribe-green text-slate-900 rounded-full text-lg font-bold">
-            {session.sport}
+            {translateSport(session.sport, language)}
           </span>
           {session.skill_level && (
             <Badge

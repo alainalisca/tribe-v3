@@ -9,4 +9,4 @@ export const translations = {
 };
 
 export type TranslationKey = keyof typeof translations.en;
-export { sportTranslations } from './sportTranslationData';
+export { sportTranslations, translateSport } from './sportTranslationData';
