@@ -51,9 +51,7 @@ export function useNotifications() {
   const handleMarkRead = async (notificationId: string) => {
     const result = await markNotificationRead(supabase, notificationId);
     if (result.success) {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)));
     }
   };
 
@@ -78,14 +76,11 @@ export function useNotifications() {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return language === 'es' ? 'ahora' : 'now';
-    if (diffMins < 60)
-      return language === 'es' ? `${diffMins}m atrás` : `${diffMins}m ago`;
-    if (diffHours < 24)
-      return language === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
-    if (diffDays < 7)
-      return language === 'es' ? `${diffDays}d atrás` : `${diffDays}d ago`;
+    if (diffMins < 60) return language === 'es' ? `${diffMins}m atrás` : `${diffMins}m ago`;
+    if (diffHours < 24) return language === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
+    if (diffDays < 7) return language === 'es' ? `${diffDays}d atrás` : `${diffDays}d ago`;
 
-    return created.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US');
+    return created.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US');
   };
 
   return {

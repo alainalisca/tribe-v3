@@ -104,7 +104,7 @@ export default function SubscriptionsPage() {
     const sessionDateTime = new Date(sessionDate + 'T00:00:00');
 
     if (sessionDateTime >= today) {
-      return sessionDateTime.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+      return sessionDateTime.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -116,7 +116,7 @@ export default function SubscriptionsPage() {
     const nextDate = new Date(sessionDateTime);
     nextDate.setDate(nextDate.getDate() + daysToAdd);
 
-    return nextDate.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+    return nextDate.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

@@ -215,7 +215,7 @@ export function useMessages() {
     if (diffHours < 24) return `${diffHours}h`;
     if (diffDays < 7) return `${diffDays}d`;
 
-    return date.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+    return date.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
       month: 'short',
       day: 'numeric',
     });
