@@ -255,4 +255,9 @@ select '099_community_counter_triggers',
        case when exists (
          select 1 from pg_trigger where tgname = 'trg_community_member_count'
        ) then 'applied' else 'MISSING' end
+union all
+select '100_post_comments_count_trigger',
+       case when exists (
+         select 1 from pg_trigger where tgname = 'trg_post_comments_count'
+       ) then 'applied' else 'MISSING' end
 order by migration;
