@@ -1,28 +1,39 @@
 /**
  * Next.js instrumentation hook.
  *
- * `register()` is called once per runtime at server startup. We use it
- * to validate that the env vars our server-side code paths actually
- * need are non-empty.
+ * `register()` is called once per runtime when a server instance starts.
+ * We use it to validate that the env vars our server-side code paths
+ * actually need are non-empty, and to log loudly when one is missing.
  *
  * Why this exists: the Wompi outage of 2026-05-27 (see
  * docs/PAYMENTS_HANDOFF.md) was caused by `WOMPI_PRIVATE_KEY` being an
  * empty string in Vercel's env config. The Wompi adapter threw
  * "Missing Wompi credentials" inside a try/catch that returned null,
  * which surfaced as "Failed to create Wompi transaction" in the UI for
- * an unknown number of months. Nothing failed the boot — there was no
- * boot validation at all. This module is the structural fix.
+ * an unknown number of months. Nothing flagged it — there was no boot
+ * validation at all. This module is the diagnostic that surfaces it.
  *
- * Behavior:
- *   - On the Node.js runtime, log every missing/empty required var.
- *   - In production, throw on missing CRITICAL vars (fails the deploy
- *     fast — the alternative is silently 500-ing every payment).
- *   - In dev / preview, log warnings only so local development isn't
- *     blocked by half-configured features.
+ * IMPORTANT — why this NEVER throws:
+ *   An earlier version threw on missing CRITICAL vars in production,
+ *   on the theory that it would "fail the deploy fast." That theory was
+ *   wrong: `register()` does not run at build time, it runs at runtime on
+ *   the serverless function. Throwing here does not fail the deploy — the
+ *   deploy goes green, and then EVERY dynamically-rendered route 500s on
+ *   cold start with "An error occurred while loading instrumentation
+ *   hook." On 2026-06-14 a missing PAYMENT_GATEWAY_OVERRIDE=stripe (so the
+ *   empty Wompi keys counted as required) took down /session/[id],
+ *   /communities, /messages and every other dynamic route this way, while
+ *   the statically-served home page kept working — a confusing, total
+ *   outage caused by an OPTIONAL payment gateway not being configured.
  *
- * To temporarily allow a critical var to be missing (e.g. during the
- * Wompi outage when PAYMENT_GATEWAY_OVERRIDE=stripe is set), add the
- * key to the override allow-list at the bottom of this file.
+ *   So: a missing env var must never take down request handling. We log a
+ *   loud, greppable error (visible in Vercel runtime logs) and let the
+ *   server start. Genuinely load-bearing vars (Supabase URL/key) will
+ *   still fail their own code paths with clear per-request errors if
+ *   absent — that is strictly better than 500-ing everything from boot.
+ *
+ *   If you want a HARD failure for missing vars, do it at BUILD time
+ *   (a prebuild script or a check in next.config), not in this hook.
  */
 
 export function register() {
@@ -32,7 +43,7 @@ export function register() {
   /**
    * CRITICAL vars: server code paths assume these are non-empty. A
    * missing one means a major feature (payments, auth, push, email,
-   * cron, Tribe-OS shell) silently breaks in production.
+   * cron, Tribe-OS shell) breaks in production. We log — we do not throw.
    */
   const CRITICAL: ReadonlyArray<string> = [
     'NEXT_PUBLIC_SUPABASE_URL',
@@ -50,7 +61,7 @@ export function register() {
   ];
 
   /**
-   * WOMPI vars are critical ONLY when the Stripe override is OFF. When
+   * WOMPI vars matter ONLY when the Stripe override is OFF. When
    * PAYMENT_GATEWAY_OVERRIDE=stripe is in effect (current state per the
    * 2026-05-27 fix), Wompi is bypassed entirely and missing Wompi keys
    * are fine. See docs/PAYMENTS_HANDOFF.md for the full story.
@@ -68,17 +79,9 @@ export function register() {
 
   if (missing.length === 0) return;
 
+  // Loud, greppable, and non-fatal. Surfaces in Vercel runtime logs without
+  // taking the app down. Never throw here — see the header comment.
   const banner = `[instrumentation] Missing or empty required env vars: ${missing.join(', ')}`;
-
-  // In production, fail loudly. The cost of a noisy boot failure is
-  // smaller than the cost of silent breakage discovered weeks later.
-  if (process.env.NODE_ENV === 'production') {
-    // eslint-disable-next-line no-console -- boot diagnostic must be visible in Vercel logs
-    console.error(banner);
-    throw new Error(banner);
-  }
-
-  // In dev / preview, warn but allow the server to start.
-  // eslint-disable-next-line no-console -- boot diagnostic
-  console.warn(banner);
+  // eslint-disable-next-line no-console -- boot diagnostic must be visible in Vercel logs
+  console.error(banner);
 }
