@@ -205,58 +205,78 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ) : f.filteredSessions.length === 0 ? (
-            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
-              <CardContent className="p-8 text-center">
-                {f.searchQuery ||
-                f.selectedSport ||
-                f.dateFilter !== 'all' ||
-                f.genderFilter !== 'all' ||
-                f.selectedNeighborhood ? (
-                  <>
-                    <div className="text-4xl mb-4">🔍</div>
-                    <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-                      {f.t('noMatchingFilters')}
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-4">{f.t('tryDifferentSearch')}</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        f.setSearchQuery('');
-                        f.setSelectedSport('');
-                        f.setDateFilter('all');
-                        f.setGenderFilter('all');
-                        f.setSelectedNeighborhood(null);
-                      }}
-                      className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold hover:bg-tribe-green hover:text-slate-900"
-                    >
-                      {f.t('clearFilters')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-4xl mb-4">🏃‍♂️</div>
-                    <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
-                      {f.t('noSessionsFound')}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{f.t('tryDifferentSearch')}</p>
-                    <div className="mt-4">
-                      <FirstMoverCTA
-                        locationName={
-                          f.userLocation
-                            ? f.language === 'es'
-                              ? 'tu zona'
-                              : 'your area'
-                            : f.language === 'es'
-                              ? 'tu zona'
-                              : 'your area'
-                        }
-                        language={f.language}
-                      />
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <div className="space-y-4">
+              <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
+                <CardContent className="p-8 text-center">
+                  {f.searchQuery ||
+                  f.selectedSport ||
+                  f.dateFilter !== 'all' ||
+                  f.genderFilter !== 'all' ||
+                  f.selectedNeighborhood ? (
+                    <>
+                      <div className="text-4xl mb-4">🔍</div>
+                      <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                        {f.t('noMatchingFilters')}
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">{f.t('tryDifferentSearch')}</p>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          f.setSearchQuery('');
+                          f.setSelectedSport('');
+                          f.setDateFilter('all');
+                          f.setGenderFilter('all');
+                          f.setSelectedNeighborhood(null);
+                        }}
+                        className="px-6 py-3 border-2 border-tribe-green text-tribe-green font-bold hover:bg-tribe-green hover:text-slate-900"
+                      >
+                        {f.t('clearFilters')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl mb-4">🏃‍♂️</div>
+                      <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
+                        {f.t('noSessionsFound')}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{f.t('tryDifferentSearch')}</p>
+                      <div className="mt-4">
+                        <FirstMoverCTA
+                          locationName={
+                            f.userLocation
+                              ? f.language === 'es'
+                                ? 'tu zona'
+                                : 'your area'
+                              : f.language === 'es'
+                                ? 'tu zona'
+                                : 'your area'
+                          }
+                          language={f.language}
+                        />
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Discovery sections also render when the session feed is empty,
+                so the home page isn't barren (instructors / events / stories /
+                community / venues / routes). Otherwise these only appear
+                interleaved BETWEEN session cards below — which never render
+                when there are 0 sessions. Each section self-hides when it has
+                no data of its own. */}
+              {f.user && (
+                <>
+                  <FeaturedInstructors language={f.language} />
+                  <FeaturedPartnerBanner />
+                  <FindTrainingPartners language={f.language} />
+                  <LocalFitnessEventsSection language={f.language} />
+                  <StoriesCarousel language={f.language} userId={f.user?.id || null} />
+                  <PopularVenuesSection language={f.language} />
+                  <PopularRoutesSection language={f.language} />
+                </>
+              )}
+            </div>
           ) : (
             <div className="space-y-4">
               {(() => {
