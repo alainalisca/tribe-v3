@@ -204,7 +204,13 @@ export function verifyWompiWebhookSignature(body: string, signature: string, tim
 
     const expectedSignature = crypto.createHash('sha256').update(toHash).digest('hex');
 
-    return signature === expectedSignature;
+    // T1-8: constant-time compare to avoid a timing side-channel (matches how
+    // Stripe's library verifier behaves). Guard against length mismatch first —
+    // timingSafeEqual throws if the buffers differ in length.
+    const provided = Buffer.from(signature, 'hex');
+    const expected = Buffer.from(expectedSignature, 'hex');
+    if (provided.length !== expected.length) return false;
+    return crypto.timingSafeEqual(provided, expected);
   } catch (error) {
     logError(error, { action: 'verifyWompiWebhookSignature' });
     return false;
