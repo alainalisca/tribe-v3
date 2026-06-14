@@ -70,6 +70,14 @@ const publicApiPaths = [
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
   '/api/og', // OG preview images for share cards; link scrapers (WhatsApp, etc.) carry no session cookie.
+  // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
+  // header, NOT a session cookie. Without this exemption the cookie-based
+  // session gate below redirects every cron run to /auth before it reaches
+  // its handler — which silently broke EVERY job in vercel.json (recurring
+  // sessions, engagement, subscription-expiry, etc.). Each cron handler
+  // independently enforces the secret via isValidCronAuth(), so skipping the
+  // cookie check here is safe (same model as the Stripe webhook above).
+  '/api/cron',
 ];
 
 function isPublicPath(pathname: string): boolean {
