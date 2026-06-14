@@ -9,6 +9,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getEditProfileTranslations } from './translations';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
+import { fetchMyPrivateProfile, upsertMyPrivateProfile } from '@/lib/dal/userPrivate';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { trackEvent } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
@@ -135,8 +136,13 @@ export function useEditProfile(language: 'en' | 'es') {
       }
       setUser(authUser);
 
-      const profileResult = await fetchUserProfile(supabase, authUser.id);
+      const [profileResult, privateResult] = await Promise.all([
+        fetchUserProfile(supabase, authUser.id),
+        fetchMyPrivateProfile(supabase, authUser.id),
+      ]);
       const profileData = profileResult.data;
+      // Emergency contact moved to user_private (T1-1).
+      const priv = privateResult.success ? privateResult.data : null;
 
       if (profileData) {
         setFormData({
@@ -147,8 +153,8 @@ export function useEditProfile(language: 'en' | 'es') {
           sports: profileData.sports || [],
           photos: profileData.photos || [],
           avatar_url: profileData.avatar_url || '',
-          emergency_contact_name: profileData.emergency_contact_name || '',
-          emergency_contact_phone: profileData.emergency_contact_phone || '',
+          emergency_contact_name: priv?.emergency_contact_name || '',
+          emergency_contact_phone: priv?.emergency_contact_phone || '',
           instagram_username: profileData.instagram_username || '',
           facebook_url: profileData.facebook_url || '',
           is_instructor: profileData.is_instructor || false,
@@ -295,6 +301,7 @@ export function useEditProfile(language: 'en' | 'es') {
       // Strip cache-busting query string from avatar_url before persisting
       const cleanAvatarUrl = formData.avatar_url ? formData.avatar_url.split('?')[0] : null;
 
+      // Emergency contact moved to user_private (T1-1) — written separately below.
       const updateResult = await updateUser(supabase, user.id, {
         name: formData.name,
         username: formData.username,
@@ -303,8 +310,6 @@ export function useEditProfile(language: 'en' | 'es') {
         sports: formData.sports,
         photos: formData.photos,
         avatar_url: cleanAvatarUrl,
-        emergency_contact_name: formData.emergency_contact_name,
-        emergency_contact_phone: formData.emergency_contact_phone,
         instagram_username: formData.instagram_username,
         facebook_url: formData.facebook_url,
         is_instructor: formData.is_instructor,
@@ -327,6 +332,13 @@ export function useEditProfile(language: 'en' | 'es') {
       });
 
       if (!updateResult.success) throw new Error(updateResult.error);
+
+      // Emergency contact -> user_private (T1-1).
+      const privateResult = await upsertMyPrivateProfile(supabase, user.id, {
+        emergency_contact_name: formData.emergency_contact_name || null,
+        emergency_contact_phone: formData.emergency_contact_phone || null,
+      });
+      if (!privateResult.success) throw new Error(privateResult.error);
 
       // LR-04 funnel: fire `profile_first_save` exactly once per user so
       // the onboarding → first-save conversion is countable. A localStorage
