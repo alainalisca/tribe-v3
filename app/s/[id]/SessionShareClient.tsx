@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
+import { translateSport } from '@/lib/translations';
 
 import TribeWordmark from '@/components/TribeWordmark';
 
@@ -131,9 +132,11 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
           {/* Sport tag + title */}
           <div>
             <span className="inline-block px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide mb-3">
-              {session.sport}
+              {translateSport(session.sport, language)}
             </span>
-            <h2 className="text-2xl font-bold text-theme-primary leading-tight">{session.title || session.sport}</h2>
+            <h2 className="text-2xl font-bold text-theme-primary leading-tight">
+              {session.title || translateSport(session.sport, language)}
+            </h2>
           </div>
 
           {/* Date & time */}

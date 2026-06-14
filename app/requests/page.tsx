@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
+import { translateSport } from '@/lib/translations';
 import { getErrorMessage } from '@/lib/errorMessages';
 import BottomNav from '@/components/BottomNav';
 import { showSuccess, showError } from '@/lib/toast';
@@ -189,7 +190,7 @@ export default function RequestsPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="font-bold text-stone-900 dark:text-white">
-                        {request.session?.sport} - {request.session?.location}
+                        {translateSport(request.session?.sport, language)} - {request.session?.location}
                       </h3>
                       <p className="text-sm text-stone-600 dark:text-gray-400">
                         {request.session &&
