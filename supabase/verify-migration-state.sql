@@ -243,4 +243,11 @@ select '097_drop_users_pii_columns',
          where table_schema = 'public' and table_name = 'users'
            and column_name = 'payout_account_number'
        ) then 'applied' else 'MISSING' end
+union all
+select '098_rls_self_escalation_guards',
+       case when exists (
+         select 1 from pg_trigger where tgname = 'users_banned_guard'
+       ) and exists (
+         select 1 from pg_trigger where tgname = 'session_participants_status_guard'
+       ) then 'applied' else 'MISSING' end
 order by migration;
