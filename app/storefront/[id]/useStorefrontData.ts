@@ -254,8 +254,17 @@ export function useStorefrontData(instructorId: string) {
             .select('id', { count: 'exact', head: true })
             .eq('instructor_id', instructorId)
             .eq('status', 'active'),
-          supabase.from('user_follows').select('follower_id').eq('following_id', instructorId),
-          supabase.from('user_follows').select('following_id').eq('follower_id', instructorId),
+          // T3-7: count-only (head:true) instead of transferring every follower
+          // row just to read .length — an instructor with thousands of followers
+          // was shipping thousands of UUIDs on every storefront open.
+          supabase
+            .from('user_follows')
+            .select('follower_id', { count: 'exact', head: true })
+            .eq('following_id', instructorId),
+          supabase
+            .from('user_follows')
+            .select('following_id', { count: 'exact', head: true })
+            .eq('follower_id', instructorId),
         ]);
 
         if (cancelled) return;
@@ -273,8 +282,8 @@ export function useStorefrontData(instructorId: string) {
 
         setFollowState({
           isFollowing: false,
-          followerCount: followersResult.data?.length || 0,
-          followingCount: followingResult.data?.length || 0,
+          followerCount: followersResult.count || 0,
+          followingCount: followingResult.count || 0,
         });
 
         setLoading(false);

@@ -199,13 +199,19 @@ export default function PromotePostsPage() {
         if (postsError) throw postsError;
         setPosts(postsData || []);
 
-        // Load user's upcoming sessions
-        const now = new Date().toISOString();
+        // Load user's upcoming sessions. Two bugs fixed (audit S-4 class):
+        //  - sessions has `creator_id`, not `instructor_id` — the old filter
+        //    made PostgREST reject the query, so the "link a session" dropdown
+        //    was always empty.
+        //  - `date` is a DATE column; comparing it to a full ISO timestamp
+        //    (`...T20:00:00Z`) silently excluded today's sessions. Compare to a
+        //    YYYY-MM-DD date string instead.
+        const today = new Date().toISOString().split('T')[0];
         const { data: sessionsData, error: sessionsError } = await supabase
           .from('sessions')
           .select('id, title, sport, date, price_cents, location')
-          .eq('instructor_id', user.id)
-          .gte('date', now)
+          .eq('creator_id', user.id)
+          .gte('date', today)
           .order('date', { ascending: true });
 
         if (sessionsError) throw sessionsError;
