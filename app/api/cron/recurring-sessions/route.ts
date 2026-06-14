@@ -5,81 +5,11 @@ import { log, logError } from '@/lib/logger';
 import { childSessionExists, createChildSession } from '@/lib/dal/sessions';
 import { enrollSubscribersInChildSession } from '@/lib/dal/sessionSubscriptions';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
+import { computeRecurrenceDates } from '@/lib/recurrence';
 import type { Session } from '@/lib/database.types';
 
 /** Number of days ahead to generate child sessions */
 const LOOKAHEAD_DAYS = 7;
-
-/**
- * Compute the next occurrence dates for a recurring session within a lookahead window.
- * Returns an array of ISO date strings (YYYY-MM-DD).
- */
-function computeNextDates(parent: Session, lookaheadDays: number): string[] {
-  const pattern = parent.recurrence_pattern;
-  if (!pattern) return [];
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const endWindow = new Date(today);
-  endWindow.setDate(endWindow.getDate() + lookaheadDays);
-
-  // If recurrence_end_date is set and it's before today, no more occurrences
-  if (parent.recurrence_end_date) {
-    const recEnd = new Date(parent.recurrence_end_date + 'T23:59:59');
-    if (recEnd < today) return [];
-    // Cap the window at the recurrence end date
-    if (recEnd < endWindow) {
-      endWindow.setTime(recEnd.getTime());
-    }
-  }
-
-  const originalDate = new Date(parent.date + 'T00:00:00');
-  const dates: string[] = [];
-
-  if (pattern === 'weekly') {
-    // Same day of week, every week starting from the original date
-    const cursor = new Date(originalDate);
-    while (cursor <= endWindow) {
-      if (cursor > today) {
-        dates.push(toISODate(cursor));
-      }
-      cursor.setDate(cursor.getDate() + 7);
-    }
-  } else if (pattern === 'biweekly') {
-    // Same day of week, every 2 weeks from original date
-    const cursor = new Date(originalDate);
-    while (cursor <= endWindow) {
-      if (cursor > today) {
-        dates.push(toISODate(cursor));
-      }
-      cursor.setDate(cursor.getDate() + 14);
-    }
-  } else if (pattern === 'monthly') {
-    // Same day of month
-    const dayOfMonth = originalDate.getDate();
-    const cursor = new Date(originalDate);
-    while (cursor <= endWindow) {
-      if (cursor > today) {
-        dates.push(toISODate(cursor));
-      }
-      // Move to next month, keeping the same day
-      cursor.setMonth(cursor.getMonth() + 1);
-      // Handle months with fewer days (e.g., Jan 31 -> Feb 28)
-      cursor.setDate(Math.min(dayOfMonth, daysInMonth(cursor.getFullYear(), cursor.getMonth())));
-    }
-  }
-
-  return dates;
-}
-
-function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
 
 /**
  * @description Generates child session instances for active recurring parent sessions.
@@ -130,7 +60,7 @@ export async function GET(request: Request) {
 
     // 2. For each parent, compute upcoming dates and create missing children
     for (const parent of parentSessions) {
-      const nextDates = computeNextDates(parent, LOOKAHEAD_DAYS);
+      const nextDates = computeRecurrenceDates(parent, new Date(), LOOKAHEAD_DAYS);
 
       for (const date of nextDates) {
         try {
