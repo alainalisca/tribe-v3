@@ -250,4 +250,9 @@ select '098_rls_self_escalation_guards',
        ) and exists (
          select 1 from pg_trigger where tgname = 'session_participants_status_guard'
        ) then 'applied' else 'MISSING' end
+union all
+select '099_community_counter_triggers',
+       case when exists (
+         select 1 from pg_trigger where tgname = 'trg_community_member_count'
+       ) then 'applied' else 'MISSING' end
 order by migration;
