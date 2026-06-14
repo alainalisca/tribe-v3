@@ -105,13 +105,22 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // Log the nudge first (so anti-spam catches it next run).
-      await supabase.from('nudge_log').insert({
+      // Log the nudge first (so anti-spam catches it next run). The dedup
+      // check above keys on nudge_log; if this insert silently failed the user
+      // would be re-nudged every run. So check the error and skip the
+      // notification when the dedup record can't be written — better to miss a
+      // nudge than to spam.
+      const { error: nudgeLogError } = await supabase.from('nudge_log').insert({
         user_id: userId,
         nudge_type: best.nudgeType,
         message: best.message,
         action_url: best.actionUrl,
       });
+      if (nudgeLogError) {
+        logError(nudgeLogError, { route, action: 'nudge_log_insert', userId });
+        skipped += 1;
+        continue;
+      }
 
       // Create the in-app notification.
       await createNotification(supabase, {
