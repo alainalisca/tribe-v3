@@ -67,9 +67,20 @@ const publicApiPaths = [
   '/api/generate-calendar',
   '/api/webhook/chat-message',
   '/api/payment/webhook/stripe', // Stripe sends webhooks without a session cookie; signature is verified in the handler.
+  '/api/payment/webhook/wompi', // Wompi webhook — HMAC SHA256 signature verified in the handler; no cookie.
   '/api/health', // LR-02: monitoring probes don't carry session cookies
   '/api/tribe-os-waitlist', // Public marketing form on the landing page; rate-limited by IP in the handler.
   '/api/og', // OG preview images for share cards; link scrapers (WhatsApp, etc.) carry no session cookie.
+  // Internal server-to-server endpoints invoked via fetch() with an
+  // `Authorization: Bearer ${CRON_SECRET}` header (NOT a cookie). Without
+  // these exemptions the session gate redirected the internal fetch to /auth,
+  // which silently broke: host "someone joined your session" + nearby-session
+  // push (via /api/notifications/send), and the weekly recap / inactive nudge
+  // emails (called by the weekly cron). Each handler enforces CRON_SECRET via
+  // isValidCronAuth(), so skipping the cookie check here is safe.
+  '/api/notifications/send',
+  '/api/send-weekly-recap',
+  '/api/send-inactive-nudge',
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
   // session gate below redirects every cron run to /auth before it reaches
