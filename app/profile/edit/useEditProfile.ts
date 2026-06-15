@@ -298,8 +298,15 @@ export function useEditProfile(language: 'en' | 'es') {
     try {
       setSaving(true);
 
-      // Strip cache-busting query string from avatar_url before persisting
-      const cleanAvatarUrl = formData.avatar_url ? formData.avatar_url.split('?')[0] : null;
+      // Strip cache-busting query string from avatar_url before persisting.
+      // When no dedicated headshot is set, fall back to the first gallery photo
+      // so the user still shows an image everywhere (Browse Instructors,
+      // messages, communities) — not just on their own profile, which already
+      // does this fallback at render. Prevents the "image is gone" report where
+      // a user uploaded gallery photos but never a headshot.
+      const cleanAvatarUrl = formData.avatar_url
+        ? formData.avatar_url.split('?')[0]
+        : (formData.photos.find((p) => p && p.trim()) ?? null);
 
       // Emergency contact moved to user_private (T1-1) — written separately below.
       const updateResult = await updateUser(supabase, user.id, {

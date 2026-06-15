@@ -4,6 +4,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { fuzzLocation } from '@/lib/location';
+import { resolveAvatarUrl } from '@/lib/avatar';
 import type { DalResult } from './types';
 
 /** Full instructor profile for Browse Instructors page */
@@ -43,7 +44,7 @@ export async function fetchInstructors(
     let query = supabase
       .from('users')
       .select(
-        'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience'
+        'id, name, avatar_url, photos, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience'
       )
       .eq('is_instructor', true)
       // Hide seeded/test accounts from any public instructor listing
@@ -96,7 +97,7 @@ export async function fetchInstructors(
       return {
         id: row.id,
         name: row.name,
-        avatar_url: row.avatar_url,
+        avatar_url: resolveAvatarUrl(row.avatar_url, row.photos as string[] | null),
         tagline: row.storefront_tagline ?? null,
         location: row.location ?? null,
         specialties: (row.specialties as string[]) || [],
@@ -146,7 +147,7 @@ export async function fetchFeaturedInstructors(
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, avatar_url, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, years_experience'
+        'id, name, avatar_url, photos, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, years_experience'
       )
       .eq('is_instructor', true)
       // Hide seeded/test accounts from the home-page Featured Instructors
@@ -160,7 +161,13 @@ export async function fetchFeaturedInstructors(
       .limit(limit);
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as FeaturedInstructor[] };
+    // Fall back to the first gallery photo when no headshot is set, so the
+    // home carousel matches the profile page instead of showing initials.
+    const featured = (data || []).map((row) => ({
+      ...row,
+      avatar_url: resolveAvatarUrl(row.avatar_url, row.photos as string[] | null),
+    })) as FeaturedInstructor[];
+    return { success: true, data: featured };
   } catch (error) {
     logError(error, { action: 'fetchFeaturedInstructors' });
     return { success: false, error: 'Failed to fetch featured instructors' };
