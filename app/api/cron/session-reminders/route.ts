@@ -139,6 +139,9 @@ export async function GET(request: Request) {
         const filteredUsersToNotify = usersToNotify.filter((_, idx) => prefsChecks[idx]);
 
         // Send notifications in parallel batches
+        // T2-4: track failures so we only mark the reminder sent if it was
+        // actually delivered.
+        let anySendFailed = false;
         const BATCH_SIZE = 10;
         for (let i = 0; i < filteredUsersToNotify.length; i += BATCH_SIZE) {
           const batch = filteredUsersToNotify.slice(i, i + BATCH_SIZE);
@@ -172,30 +175,44 @@ export async function GET(request: Request) {
             })
           );
           for (let j = 0; j < results.length; j++) {
-            if (results[j].status === 'fulfilled') {
+            const result = results[j];
+            // A fetch that RESOLVES with a non-2xx (a 500, or a redirect to
+            // /auth) is not a successful send — check res.ok, not just
+            // "fulfilled". (T2-4)
+            if (result.status === 'fulfilled' && result.value.ok) {
               if (needsOneHourReminder) {
                 oneHourRemindersSent++;
               } else {
                 fifteenMinRemindersSent++;
               }
             } else {
-              logError((results[j] as PromiseRejectedResult).reason, {
-                route: '/api/cron/session-reminders',
-                action: 'send_reminder',
-                userId: batch[j].id,
-                sessionId: session.id,
-              });
+              anySendFailed = true;
+              logError(
+                result.status === 'rejected'
+                  ? (result as PromiseRejectedResult).reason
+                  : new Error(`notifications/send returned ${result.value.status}`),
+                {
+                  route: '/api/cron/session-reminders',
+                  action: 'send_reminder',
+                  userId: batch[j].id,
+                  sessionId: session.id,
+                }
+              );
             }
           }
         }
 
-        // Mark reminder as sent
-        if (needsOneHourReminder) {
-          await updateSession(supabase, session.id, { reminder_1hr_sent: true });
-        }
+        // Mark reminder as sent — only if every send was accepted, so a failed
+        // send doesn't permanently suppress the reminder (T2-4). On failure the
+        // flag stays unset and the next run retries.
+        if (!anySendFailed) {
+          if (needsOneHourReminder) {
+            await updateSession(supabase, session.id, { reminder_1hr_sent: true });
+          }
 
-        if (needsFifteenMinReminder) {
-          await updateSession(supabase, session.id, { reminder_15min_sent: true });
+          if (needsFifteenMinReminder) {
+            await updateSession(supabase, session.id, { reminder_15min_sent: true });
+          }
         }
       }
     }
