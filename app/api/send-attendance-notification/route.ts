@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
+import { isValidCronAuth } from '@/lib/auth/cron';
 import { fetchSessionFields, fetchUserProfileMaybe } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 
@@ -22,14 +23,20 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 export async function POST(request: Request) {
   try {
     const resend = getResendClient();
-    // AUTH: verify the caller is authenticated
+    // AUTH: allow EITHER a server-to-server cron call (CRON_SECRET bearer — the
+    // post-session-followups cron) OR an authenticated user session
+    // (AttendanceTracker calls this client-side when an instructor marks
+    // attendance). The cron has no session cookie, so it must authenticate via
+    // the secret.
     const supabase = await createClient();
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isValidCronAuth(request.headers.get('authorization'))) {
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError || !authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     const { sessionId, userId } = await request.json();

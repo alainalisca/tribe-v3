@@ -89,6 +89,10 @@ export async function GET(request: Request) {
           user: { id: string; name: string; email: string; preferred_language: string | null } | null;
         }>;
 
+        // T2-4: track whether any send failed so we don't mark the reminder
+        // "sent" when the notification service rejected/threw.
+        let anySendFailed = false;
+
         if (session.creator) {
           const hostLang = session.creator.preferred_language || 'en';
           const safeLocation = formatSessionLocation(
@@ -107,16 +111,21 @@ export async function GET(request: Request) {
               ? `${session.sport} comienza en 2 horas en ${safeLocation}`
               : `${session.sport} starts in 2 hours at ${safeLocation}`;
 
-          await fetch(`${SITE_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
-            body: JSON.stringify({
-              userId: session.creator.id,
-              title: hostTitle,
-              body: hostBody,
-              url: `/session/${session.id}`,
-            }),
-          });
+          try {
+            const res = await fetch(`${SITE_URL}/api/notifications/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
+              body: JSON.stringify({
+                userId: session.creator.id,
+                title: hostTitle,
+                body: hostBody,
+                url: `/session/${session.id}`,
+              }),
+            });
+            if (!res.ok) anySendFailed = true;
+          } catch {
+            anySendFailed = true;
+          }
         }
 
         for (const participant of participants) {
@@ -127,21 +136,30 @@ export async function GET(request: Request) {
               ? `${session.sport} comienza en 2 horas. ¡Nunca entrenes solo!`
               : `${session.sport} starts in 2 hours. Never train alone!`;
 
-          await fetch(`${SITE_URL}/api/notifications/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
-            body: JSON.stringify({
-              userId: participant.user_id,
-              title: pTitle,
-              body: pBody,
-              url: `/session/${session.id}`,
-            }),
-          });
+          try {
+            const res = await fetch(`${SITE_URL}/api/notifications/send`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
+              body: JSON.stringify({
+                userId: participant.user_id,
+                title: pTitle,
+                body: pBody,
+                url: `/session/${session.id}`,
+              }),
+            });
+            if (!res.ok) anySendFailed = true;
+          } catch {
+            anySendFailed = true;
+          }
         }
 
-        await updateSession(supabase, session.id, { reminder_sent: true });
-
-        remindersSent++;
+        // T2-4: only mark the reminder sent if the notification service accepted
+        // every send. Marking it sent after a failure loses the reminder
+        // forever; leaving the flag unset lets the next run retry.
+        if (!anySendFailed) {
+          await updateSession(supabase, session.id, { reminder_sent: true });
+          remindersSent++;
+        }
       }
     }
 

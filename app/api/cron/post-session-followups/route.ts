@@ -71,7 +71,9 @@ export async function GET(request: Request) {
 
       if (attendees.length === 0) continue;
 
-      // Send emails in parallel batches of 10 to avoid overwhelming the API
+      // Send emails in parallel batches of 10 to avoid overwhelming the API.
+      // T2-4: track failures so a failed send doesn't mark the follow-up sent.
+      let anySendFailed = false;
       const BATCH_SIZE = 10;
       for (let i = 0; i < attendees.length; i += BATCH_SIZE) {
         const batch = attendees.slice(i, i + BATCH_SIZE);
@@ -79,7 +81,13 @@ export async function GET(request: Request) {
           batch.map((attendee) =>
             fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              // This is a server-to-server call with no session cookie; it must
+              // authenticate via CRON_SECRET (the endpoint accepts cron OR
+              // session auth).
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${process.env.CRON_SECRET}`,
+              },
               body: JSON.stringify({
                 sessionId: session.id,
                 userId: attendee.user_id,
@@ -88,21 +96,34 @@ export async function GET(request: Request) {
           )
         );
         for (let j = 0; j < results.length; j++) {
-          if (results[j].status === 'fulfilled') {
+          const result = results[j];
+          // A fetch that RESOLVES with a non-2xx is not a successful send —
+          // check res.ok, not just "fulfilled". (T2-4)
+          if (result.status === 'fulfilled' && result.value.ok) {
             sentCount++;
           } else {
-            logError((results[j] as PromiseRejectedResult).reason, {
-              route: '/api/cron/post-session-followups',
-              action: 'send_followup_email',
-              sessionId: session.id,
-              userId: batch[j].user_id,
-            });
+            anySendFailed = true;
+            logError(
+              result.status === 'rejected'
+                ? (result as PromiseRejectedResult).reason
+                : new Error(`send-attendance-notification returned ${result.value.status}`),
+              {
+                route: '/api/cron/post-session-followups',
+                action: 'send_followup_email',
+                sessionId: session.id,
+                userId: batch[j].user_id,
+              }
+            );
           }
         }
       }
 
-      // Mark follow-up as sent
-      await updateSession(supabase, session.id, { followup_sent: true });
+      // Mark follow-up as sent — only if every email was accepted, so a failed
+      // send doesn't permanently suppress the follow-up (T2-4). On failure the
+      // flag stays unset and the next run retries.
+      if (!anySendFailed) {
+        await updateSession(supabase, session.id, { followup_sent: true });
+      }
     }
 
     const duration_ms = Date.now() - startedAt;

@@ -81,6 +81,8 @@ const publicApiPaths = [
   '/api/notifications/send',
   '/api/send-weekly-recap',
   '/api/send-inactive-nudge',
+  '/api/send-attendance-notification', // cron (CRON_SECRET) or user session — both checked in the handler
+
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
   // session gate below redirects every cron run to /auth before it reaches
