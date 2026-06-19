@@ -201,8 +201,8 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   creating: 'Creando...',
 
   // Tarjeta de Sesion
-  spots: 'espacios',
-  spotsLeft: 'lugares disponibles',
+  spots: 'cupos',
+  spotsLeft: 'cupos disponibles',
   share: 'Compartir',
   chat: 'Chat',
   joined: 'Unido',

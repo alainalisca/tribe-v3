@@ -29,7 +29,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing lat/lon' }, { status: 400 });
   }
 
-  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY;
+  // Prefer the server-only key (not exposed to client bundles).
+  // Falls back to the public key during migration — once GOOGLE_MAPS_SERVER_KEY
+  // is set in .env.local, remove the NEXT_PUBLIC_ fallback.
+  const key = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_PLACES_KEY;
   if (!key) {
     return NextResponse.json({ error: 'Google API key not configured' }, { status: 500 });
   }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { initPostHog, posthog } from '@/lib/posthog';
+import { initPostHog, getPostHog } from '@/lib/posthog';
 
 function PostHogPageView() {
   const pathname = usePathname();
@@ -10,13 +10,16 @@ function PostHogPageView() {
 
   useEffect(() => {
     if (pathname) {
-      let url = window.origin + pathname;
-      if (searchParams && searchParams.toString()) {
-        url = url + `?${searchParams.toString()}`;
+      const ph = getPostHog();
+      if (ph) {
+        let url = window.origin + pathname;
+        if (searchParams && searchParams.toString()) {
+          url = url + `?${searchParams.toString()}`;
+        }
+        ph.capture('$pageview', {
+          $current_url: url,
+        });
       }
-      posthog.capture('$pageview', {
-        $current_url: url,
-      });
     }
   }, [pathname, searchParams]);
 
@@ -24,8 +27,14 @@ function PostHogPageView() {
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  const initialized = useRef(false);
+
   useEffect(() => {
-    initPostHog();
+    if (!initialized.current) {
+      initialized.current = true;
+      // Load PostHog asynchronously — doesn't block initial render
+      initPostHog();
+    }
   }, []);
 
   return (

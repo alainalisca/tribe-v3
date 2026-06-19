@@ -114,7 +114,7 @@ export const sessionNearbyMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Spots Available!', body: 'A {{sport}} session near you has {{spots}} spots left.' },
-    es: { title: 'Lugares Disponibles!', body: 'Una sesion de {{sport}} cerca tiene {{spots}} lugares.' },
+    es: { title: 'Cupos Disponibles!', body: 'Una sesion de {{sport}} cerca tiene {{spots}} cupos.' },
   },
   {
     en: { title: 'Perfect Match!', body: '{{sport}} session matches your interests - {{distance}} away.' },

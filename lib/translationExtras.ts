@@ -404,7 +404,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   youreInvited: 'Estas Invitado!',
   by: 'Por',
   confirmed: 'confirmados',
-  confirmYourSpot: 'Confirma tu lugar',
+  confirmYourSpot: 'Confirma tu cupo',
   infoSharedWithOrganizer: 'Tu informacion sera compartida con el organizador',
   haveAccountJoinFromApp: 'Tienes una cuenta. Unete desde la app!',
 

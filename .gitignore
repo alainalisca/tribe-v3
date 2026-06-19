@@ -22,3 +22,8 @@ android/app/app.keystore
 *.p8
 generate-apple-secret.js
 supabase/.temp/
+
+# Firebase service-account private keys — never commit
+*firebase-adminsdk*.json
+tribe---never-train-alone-*.json
+tribe-ee89c-firebase-adminsdk-*.json
