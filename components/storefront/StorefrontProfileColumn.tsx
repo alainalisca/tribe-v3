@@ -96,6 +96,13 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
       >
         {followState.isFollowing ? (lang === 'es' ? 'Siguiendo' : 'Following') : lang === 'es' ? 'Seguir' : 'Follow'}
       </button>
+      {!isOwn && (
+        <p className="-mt-1 px-1 text-xs text-theme-tertiary">
+          {lang === 'es'
+            ? 'Síguelo para ver sus publicaciones y nuevas sesiones en tu feed.'
+            : 'Follow to see their posts and new sessions in your feed.'}
+        </p>
+      )}
       {isOwn && (
         <button
           onClick={async () => {

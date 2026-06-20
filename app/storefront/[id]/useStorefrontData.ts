@@ -4,7 +4,7 @@
  * JSX/layout, never data fetching. Sole addition: `productCount` (a
  * head-count query) which the new tab system uses to hide empty tabs.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
@@ -30,6 +30,7 @@ export interface Instructor {
   years_experience?: number | null;
   total_participants_served?: number | null;
   total_sessions_hosted?: number | null;
+  photos?: string[] | null;
 }
 
 export interface Session {
@@ -152,7 +153,7 @@ export function useStorefrontData(instructorId: string) {
           supabase
             .from('users')
             .select(
-              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted'
+              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos'
             )
             .eq('id', instructorId)
             // A soft-deleted account's storefront should not load — maybeSingle
@@ -402,11 +403,24 @@ export function useStorefrontData(instructorId: string) {
     setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likes_count: res.data!.likeCount } : p)));
   };
 
+  // #5/#4: the storefront only ever rendered `storefront_media`, never the
+  // instructor's profile gallery (`users.photos`) — so an instructor who
+  // uploaded photos to their profile still showed only a cover + avatar here.
+  // Surface those photos in the Media tab (deduped against any storefront_media
+  // row with the same URL so nothing double-renders).
+  const combinedMedia = useMemo<StorefrontMedia[]>(() => {
+    const galleryPhotos: StorefrontMedia[] = (instructor?.photos ?? [])
+      .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+      .map((url, i) => ({ id: `photo-${i}`, url, media_type: 'image', instructor_id: instructorId }));
+    const seen = new Set(galleryPhotos.map((m) => m.url));
+    return [...galleryPhotos, ...media.filter((m) => !seen.has(m.url))];
+  }, [instructor, media, instructorId]);
+
   return {
     instructor,
     sessions,
     packages,
-    media,
+    media: combinedMedia,
     posts,
     productCount,
     followState,
