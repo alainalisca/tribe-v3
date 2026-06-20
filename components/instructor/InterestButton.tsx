@@ -75,8 +75,8 @@ export default function InterestButton({
     cancel: language === 'es' ? 'Cancelar' : 'Cancel',
     success:
       language === 'es'
-        ? `¡Interés enviado! ${instructorName} verá tu perfil`
-        : `Interest sent! ${instructorName} will see your profile`,
+        ? `¡Interés enviado! Le avisamos a ${instructorName}.`
+        : `Interest sent! We've let ${instructorName} know.`,
     withdrawn: language === 'es' ? 'Interés retirado' : 'Interest withdrawn',
     error: language === 'es' ? 'Ocurrió un error' : 'Something went wrong',
     notifTitleEn: `${instructorName ? 'Athlete' : 'Athlete'} is interested in training with you`,
@@ -115,6 +115,17 @@ export default function InterestButton({
       entity_type: 'user',
       entity_id: athleteId,
       message: notifMessage,
+    });
+
+    // Device push (the createNotification above is the in-app bell; this is the
+    // ping). The server route templates the message and verifies the recipient
+    // — we only send the instructor id. Fire-and-forget.
+    fetch('/api/instructor/notify-interest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instructor_id: instructorId }),
+    }).catch(() => {
+      /* a failed push must not block the interest UX */
     });
 
     await haptic('success');
