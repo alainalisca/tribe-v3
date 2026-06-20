@@ -82,6 +82,7 @@ const publicApiPaths = [
   '/api/send-weekly-recap',
   '/api/send-inactive-nudge',
   '/api/send-attendance-notification', // cron (CRON_SECRET) or user session — both checked in the handler
+  '/api/send-welcome-email', // welcome onboarding email cron (CRON_SECRET); enforced via isValidCronAuth() in the handler
 
   // Vercel Cron invocations carry an `Authorization: Bearer ${CRON_SECRET}`
   // header, NOT a session cookie. Without this exemption the cookie-based
