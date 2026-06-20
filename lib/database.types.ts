@@ -1444,6 +1444,7 @@ export type Database = {
           last_motivation_sent: string | null
           last_reengagement_sent: string | null
           last_weekly_recap_sent: string | null
+          welcome_email_sent_at: string | null
           location: string | null
           location_lat: number | null
           location_lng: number | null
@@ -1510,6 +1511,7 @@ export type Database = {
           last_motivation_sent?: string | null
           last_reengagement_sent?: string | null
           last_weekly_recap_sent?: string | null
+          welcome_email_sent_at?: string | null
           location?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1576,6 +1578,7 @@ export type Database = {
           last_motivation_sent?: string | null
           last_reengagement_sent?: string | null
           last_weekly_recap_sent?: string | null
+          welcome_email_sent_at?: string | null
           location?: string | null
           location_lat?: number | null
           location_lng?: number | null

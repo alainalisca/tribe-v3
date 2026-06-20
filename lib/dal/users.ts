@@ -17,7 +17,7 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, created_at, updated_at'
+        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -211,7 +211,7 @@ export async function fetchUsersForAdmin(supabase: SupabaseClient): Promise<DalR
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, created_at, updated_at'
+        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .order('created_at', { ascending: false })
       .limit(100);
@@ -292,6 +292,47 @@ export async function fetchBlockedStatus(
   } catch (error) {
     logError(error, { action: 'fetchBlockedStatus' });
     return { success: false, error: 'Failed' };
+  }
+}
+
+/** Fetch users who haven't been sent the welcome onboarding email yet (oldest first). */
+export async function fetchUsersNeedingWelcomeEmail(
+  supabase: SupabaseClient,
+  limit = 50
+): Promise<DalResult<Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language'>[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, preferred_language')
+      .is('welcome_email_sent_at', null)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) {
+      logError(error, { action: 'fetchUsersNeedingWelcomeEmail' });
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchUsersNeedingWelcomeEmail' });
+    return { success: false, error: 'Failed to fetch users needing welcome email' };
+  }
+}
+
+/** Mark the welcome onboarding email as sent for a user (stamps welcome_email_sent_at). */
+export async function markWelcomeEmailSent(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ welcome_email_sent_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) {
+      logError(error, { action: 'markWelcomeEmailSent', userId });
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'markWelcomeEmailSent', userId });
+    return { success: false, error: 'Failed to mark welcome email sent' };
   }
 }
 
