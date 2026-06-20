@@ -260,7 +260,12 @@ export function useEditProfile(language: 'en' | 'es') {
     });
   }
 
-  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  // Cover-photo crop flow (#1): selecting a file opens the crop modal (zoom +
+  // pan); the framed result is uploaded on confirm. bannerCropSrc holds the
+  // object URL of the in-progress image (null = modal closed).
+  const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
+
+  function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -270,6 +275,19 @@ export function useEditProfile(language: 'en' | 'es') {
       return;
     }
 
+    // Open the crop modal instead of uploading the raw file directly.
+    setBannerCropSrc(URL.createObjectURL(file));
+  }
+
+  function handleBannerCropCancel() {
+    setBannerCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
+  async function handleBannerCropConfirm(file: File) {
+    if (!user) return;
     try {
       setUploadingBanner(true);
       const compressed = await compressImage(file);
@@ -284,8 +302,9 @@ export function useEditProfile(language: 'en' | 'es') {
       } = supabase.storage.from('profile-images').getPublicUrl(path);
 
       setFormData({ ...formData, storefront_banner_url: publicUrl });
+      handleBannerCropCancel();
     } catch (error) {
-      logError(error, { action: 'handleBannerUpload' });
+      logError(error, { action: 'handleBannerCropConfirm' });
       showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploadingBanner(false);
@@ -399,6 +418,9 @@ export function useEditProfile(language: 'en' | 'es') {
     handleAvatarUpload,
     handlePhotoUpload,
     handleBannerUpload,
+    bannerCropSrc,
+    handleBannerCropConfirm,
+    handleBannerCropCancel,
     removePhoto,
     handleSave,
     toggleSport,

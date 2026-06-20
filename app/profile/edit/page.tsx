@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useEditProfile } from './useEditProfile';
+import ImageCropModal from '@/components/ImageCropModal';
 
 export default function EditProfilePage() {
   const { language } = useLanguage();
@@ -48,6 +49,9 @@ export default function EditProfilePage() {
     handleAvatarUpload,
     handlePhotoUpload,
     handleBannerUpload,
+    bannerCropSrc,
+    handleBannerCropConfirm,
+    handleBannerCropCancel,
     removePhoto,
     handleSave,
     toggleSport,
@@ -785,6 +789,15 @@ export default function EditProfilePage() {
           {saving ? tr.saving : tr.saveProfile}
         </Button>
       </div>
+
+      {bannerCropSrc && (
+        <ImageCropModal
+          src={bannerCropSrc}
+          language={language === 'es' ? 'es' : 'en'}
+          onConfirm={handleBannerCropConfirm}
+          onCancel={handleBannerCropCancel}
+        />
+      )}
     </div>
   );
 }
