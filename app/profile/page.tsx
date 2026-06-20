@@ -16,6 +16,7 @@ import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import MyCoachEntryCard from '@/components/tribe-os/MyCoachEntryCard';
 
 import TribeWordmark from '@/components/TribeWordmark';
+import ImageCropModal from '@/components/ImageCropModal';
 export default function ProfilePage() {
   const { language, t } = useLanguage();
   const {
@@ -28,6 +29,9 @@ export default function ProfilePage() {
     selectedPhoto,
     handleAvatarUpload,
     handleBannerUpload,
+    bannerCropSrc,
+    handleBannerCropConfirm,
+    handleBannerCropCancel,
     openPhoto,
     getInitials,
     sports,
@@ -36,6 +40,8 @@ export default function ProfilePage() {
     getProfileCompleteness,
     router,
   } = useProfile(language);
+
+  const cover = profile?.banner_url || profile?.storefront_banner_url || null;
 
   if (loading) {
     return (
@@ -69,17 +75,15 @@ export default function ProfilePage() {
             uploaded banner shows up regardless of which column wrote it
             (BUG-007). */}
         <div className="relative h-48 overflow-hidden">
-          <div className="relative w-full h-full bg-gradient-to-br from-tribe-green to-lime-500">
-            {(profile?.banner_url || profile?.storefront_banner_url) && (
-              <Image
-                src={(profile?.banner_url || profile?.storefront_banner_url)!}
-                alt="Profile banner"
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => cover && openPhoto(cover)}
+            disabled={!cover}
+            aria-label={language === 'es' ? 'Ver foto de portada' : 'View cover photo'}
+            className="relative block w-full h-full bg-gradient-to-br from-tribe-green to-lime-500 disabled:cursor-default"
+          >
+            {cover && <Image src={cover} alt="Profile banner" fill className="object-cover" unoptimized />}
+          </button>
           <div className="absolute bottom-4 right-4 z-30">
             <label className="block bg-white p-3 rounded-full cursor-pointer hover:bg-opacity-90 transition shadow-xl border-2 border-white">
               <Camera className="w-5 h-5 text-slate-900" />
@@ -349,6 +353,15 @@ export default function ProfilePage() {
             unoptimized
           />
         </div>
+      )}
+
+      {bannerCropSrc && (
+        <ImageCropModal
+          src={bannerCropSrc}
+          language={language === 'es' ? 'es' : 'en'}
+          onConfirm={handleBannerCropConfirm}
+          onCancel={handleBannerCropCancel}
+        />
       )}
 
       <BottomNav />

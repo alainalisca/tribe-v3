@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Check, MapPin } from 'lucide-react';
+import { Check, MapPin, X } from 'lucide-react';
 import type { Instructor } from '@/app/storefront/[id]/useStorefrontData';
 
 interface StorefrontHeroProps {
@@ -30,6 +30,7 @@ function initialsOf(name: string): string {
 export default function StorefrontHero({ instructor, language }: StorefrontHeroProps) {
   const sportTag = instructor.specialties?.[0];
   const [imgError, setImgError] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const showImage = !!instructor.avatar_url && !imgError;
 
   return (
@@ -37,7 +38,14 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
       {/* Banner — kept short so it doesn't dominate on wide screens */}
       <div className="relative h-32 sm:h-40 md:h-44 overflow-hidden bg-tribe-dark rounded-b-2xl">
         {instructor.storefront_banner_url ? (
-          <Image src={instructor.storefront_banner_url} alt="" fill className="object-cover" unoptimized priority />
+          <button
+            type="button"
+            onClick={() => setCoverOpen(true)}
+            aria-label={language === 'es' ? 'Ver foto de portada' : 'View cover photo'}
+            className="relative block h-full w-full"
+          >
+            <Image src={instructor.storefront_banner_url} alt="" fill className="object-cover" unoptimized priority />
+          </button>
         ) : (
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-tribe-dark via-tribe-surface to-tribe-dark" />
@@ -104,6 +112,33 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
           </span>
         </div>
       </div>
+
+      {coverOpen && instructor.storefront_banner_url && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black p-4"
+          onClick={() => setCoverOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 transition hover:bg-white/20"
+            onClick={() => setCoverOpen(false)}
+            aria-label={language === 'es' ? 'Cerrar' : 'Close'}
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+          <Image
+            src={instructor.storefront_banner_url}
+            alt=""
+            width={1200}
+            height={400}
+            className="max-h-[90vh] max-w-[95vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+            unoptimized
+          />
+        </div>
+      )}
     </div>
   );
 }

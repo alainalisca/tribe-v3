@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { getProfileTranslations } from './translations';
+import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { fetchUserProfile, updateUser, fetchSessionsByCreatorCount, fetchParticipantCountForUser } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
@@ -28,6 +29,9 @@ export function useProfile(language: 'en' | 'es') {
   const [loading, setLoading] = useState(true);
   const [showAllSports, setShowAllSports] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  // Cover-photo crop flow: selecting a file opens the crop modal (zoom + pan);
+  // the framed result is uploaded on confirm. null = modal closed.
+  const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -130,8 +134,10 @@ export function useProfile(language: 'en' | 'es') {
     }
   }
 
-  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Reset the input so re-picking the same file fires onChange again.
+    e.target.value = '';
     if (!file || !user) return;
 
     const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -140,13 +146,27 @@ export function useProfile(language: 'en' | 'es') {
       return;
     }
 
+    // Open the crop modal (zoom + pan) instead of uploading the raw file, so
+    // the user controls what part of the cover shows.
+    setBannerCropSrc(URL.createObjectURL(file));
+  }
+
+  function handleBannerCropCancel() {
+    setBannerCropSrc((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }
+
+  async function handleBannerCropConfirm(file: File) {
+    if (!user) return;
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner-${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `banners/${fileName}`;
+      const compressed = await compressImage(file);
+      const filePath = `banners/banner-${user.id}-${Date.now()}.jpg`;
 
-      const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, file);
-
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, compressed, { contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
 
       const {
@@ -154,12 +174,12 @@ export function useProfile(language: 'en' | 'es') {
       } = supabase.storage.from('profile-images').getPublicUrl(filePath);
 
       const updateResult = await updateUser(supabase, user.id, { banner_url: publicUrl });
-
       if (!updateResult.success) throw new Error(updateResult.error);
 
+      handleBannerCropCancel();
       await loadProfile();
     } catch (error) {
-      logError(error, { action: 'handleBannerUpload' });
+      logError(error, { action: 'handleBannerCropConfirm' });
       showError(language === 'es' ? 'Error al subir el banner' : 'Failed to upload banner');
     }
   }
@@ -210,6 +230,9 @@ export function useProfile(language: 'en' | 'es') {
     setSelectedPhoto,
     handleAvatarUpload,
     handleBannerUpload,
+    bannerCropSrc,
+    handleBannerCropConfirm,
+    handleBannerCropCancel,
     openPhoto,
     getInitials,
     sports,
