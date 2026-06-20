@@ -220,3 +220,38 @@ export async function fetchUserForNotification(
     return { success: false, error: 'Failed' };
   }
 }
+
+/** Fetch users who have not yet received the welcome email, oldest first. */
+export async function fetchUsersNeedingWelcomeEmail(
+  supabase: SupabaseClient,
+  limit = 50
+): Promise<DalResult<Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language'>[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, preferred_language')
+      .is('welcome_email_sent_at', null)
+      .order('created_at', { ascending: true })
+      .limit(limit);
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: data || [] };
+  } catch (error) {
+    logError(error, { action: 'fetchUsersNeedingWelcomeEmail' });
+    return { success: false, error: 'Failed to fetch users needing welcome email' };
+  }
+}
+
+/** Mark a user's welcome email as sent. */
+export async function markWelcomeEmailSent(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ welcome_email_sent_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'markWelcomeEmailSent' });
+    return { success: false, error: 'Failed to mark welcome email sent' };
+  }
+}
