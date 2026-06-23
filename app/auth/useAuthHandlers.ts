@@ -36,6 +36,9 @@ export function useAuthHandlers(language: 'en' | 'es') {
   const [message, setMessage] = useState('');
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [verifyMode, setVerifyMode] = useState<'signup' | 'recovery' | null>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
 
   function getSafeReturnTo(): string {
     const returnTo = searchParams.get('returnTo');
@@ -226,11 +229,13 @@ export function useAuthHandlers(language: 'en' | 'es') {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error);
         trackEvent('signup_completed', { method: 'email' });
-        setMessage(t.checkEmail);
-        setEmail('');
-        setPassword('');
-        setName('');
-        setBirthDate('');
+        // Move to in-app code entry instead of asking the user to click an
+        // email link. A typed code can't be consumed by email scanners and
+        // works regardless of which browser opens the inbox.
+        setOtpEmail(email);
+        setOtpCode('');
+        setVerifyMode('signup');
+        setMessage(t.codeSent);
       }
     } catch (error: unknown) {
       logError(error, { action: 'handleEmailAuth' });
@@ -250,11 +255,12 @@ export function useAuthHandlers(language: 'en' | 'es') {
     setLoading(true);
     setMessage('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) throw error;
-      setMessage(t.resetEmailSent);
+      setOtpEmail(email);
+      setOtpCode('');
+      setVerifyMode('recovery');
+      setMessage(t.codeSent);
     } catch (error: unknown) {
       logError(error, { action: 'handleForgotPassword' });
       setMessage('❌ ' + getErrorMessage(error, 'forgot_password', language));
@@ -264,9 +270,13 @@ export function useAuthHandlers(language: 'en' | 'es') {
   }
 
   async function handleResendVerification() {
-    if (resendCooldown > 0 || !email) return;
+    const target = otpEmail || email;
+    if (resendCooldown > 0 || !target) return;
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      const { error } = await supabase.auth.resend({
+        type: verifyMode === 'recovery' ? 'recovery' : 'signup',
+        email: target,
+      });
       if (error) throw error;
       showSuccess(t.verificationSent);
       setResendCooldown(60);
@@ -274,6 +284,52 @@ export function useAuthHandlers(language: 'en' | 'es') {
       logError(error, { action: 'handleResendVerification' });
       showError(getErrorMessage(error, 'resend_verification', language));
     }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: otpEmail,
+        token: otpCode.trim(),
+        type: verifyMode === 'recovery' ? 'recovery' : 'signup',
+      });
+      if (error) throw error;
+
+      if (verifyMode === 'recovery') {
+        // Session is now established; show the new-password form.
+        setVerifyMode(null);
+        setIsResetPassword(true);
+        return;
+      }
+
+      if (data.user) {
+        const { isNewUser } = await upsertUserProfile(data.user);
+        trackEvent('signup_email_verified', { user_id: data.user.id });
+        const refCode = localStorage.getItem('tribe_referral_code');
+        if (refCode) {
+          await applyReferralCode(supabase, refCode, data.user.id);
+          localStorage.removeItem('tribe_referral_code');
+          trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
+        }
+        await haptic('success');
+        window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
+      }
+    } catch (error: unknown) {
+      logError(error, { action: 'handleVerifyCode' });
+      setMessage('❌ ' + getErrorMessage(error, 'verify_code', language));
+      await haptic('error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleBackFromVerify() {
+    setVerifyMode(null);
+    setOtpCode('');
+    setMessage('');
   }
 
   async function handleResetPassword(e: React.FormEvent) {
@@ -330,5 +386,11 @@ export function useAuthHandlers(language: 'en' | 'es') {
     handleForgotPassword,
     handleResetPassword,
     handleResendVerification,
+    verifyMode,
+    otpCode,
+    setOtpCode,
+    otpEmail,
+    handleVerifyCode,
+    handleBackFromVerify,
   };
 }
