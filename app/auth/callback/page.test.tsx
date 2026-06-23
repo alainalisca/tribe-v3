@@ -1,5 +1,5 @@
 // app/auth/callback/page.test.tsx
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 
 let params = new URLSearchParams('code=abc');
@@ -24,11 +24,24 @@ describe('AuthCallbackPage — duplicate code', () => {
     Object.defineProperty(window, 'location', { value: { href: '' }, writable: true });
   });
 
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('does not bounce to /auth when the code was consumed but a session exists', async () => {
     exchangeCodeForSession.mockResolvedValue({ error: { message: 'invalid request' } });
     getSession.mockResolvedValue({ data: { session: { access_token: 't' } } });
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
     render(<AuthCallbackPage />);
     await waitFor(() => expect(getUser).toHaveBeenCalled());
     expect(window.location.href).not.toContain('/auth?error');
+  });
+
+  it('redirects to /auth?error when exchange fails and no session exists', async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: { message: 'bad_code' } });
+    getSession.mockResolvedValue({ data: { session: null } });
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    render(<AuthCallbackPage />);
+    await waitFor(() => expect(window.location.href).toContain('/auth?error'));
   });
 });

@@ -324,6 +324,8 @@ export function useAuthHandlers(language: 'en' | 'es') {
         }
         await haptic('success');
         window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
+      } else {
+        setMessage('❌ ' + getErrorMessage(new Error('otp_expired'), 'verify_code', language));
       }
     } catch (error: unknown) {
       logError(error, { action: 'handleVerifyCode' });

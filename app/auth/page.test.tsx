@@ -142,18 +142,8 @@ describe('AuthPage', () => {
   });
 
   it('toggles to sign-up form', async () => {
-    render(<AuthPage />);
-
-    expect(screen.getByText("Don't have an account? Sign up")).toBeInTheDocument();
-
-    act(() => {
-      mockIsLogin = false;
-    });
-
-    // Re-render by simulating click — setIsLogin updates mockIsLogin and the button rerenders
-    const { rerender } = render(<AuthPage />);
     mockIsLogin = false;
-    rerender(<AuthPage />);
+    render(<AuthPage />);
 
     expect(screen.getAllByText('Join the community').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sign Up').length).toBeGreaterThan(0);

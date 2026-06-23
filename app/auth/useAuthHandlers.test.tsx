@@ -59,6 +59,7 @@ describe('useAuthHandlers — OTP verify', () => {
   });
 
   it('handleVerifyCode calls verifyOtp with type signup and redirects new users to onboarding', async () => {
+    verifyOtp.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
     const { result } = renderHook(() => useAuthHandlers('en'));
     act(() => {
       result.current.setIsLogin(false);
@@ -70,6 +71,7 @@ describe('useAuthHandlers — OTP verify', () => {
       await result.current.handleVerifyCode({ preventDefault() {} } as React.FormEvent);
     });
     expect(verifyOtp).toHaveBeenCalledWith({ email: '', token: '123456', type: 'signup' });
+    expect(window.location.href).toBe('/onboarding/role');
   });
 
   it('handleResendVerification in signup mode calls resend with type signup', async () => {
@@ -118,12 +120,15 @@ describe('useAuthHandlers — OTP verify', () => {
     expect(resend).not.toHaveBeenCalled();
   });
 
-  it('shows a sign-in nudge when the URL carries an invalid/expired link error', () => {
+  it('shows a sign-in nudge when the URL carries an invalid/expired link error', async () => {
     // Set BEFORE rendering: the errorParam effect runs on mount.
     // (mockSearchParams is the mutable URLSearchParams from the top of this file.)
     mockSearchParams = new URLSearchParams('error=Email link is invalid or has expired');
-    const { result } = renderHook(() => useAuthHandlers('es'));
-    expect(result.current.message).toBe(getAuthTranslations('es').verifiedSignIn);
+    let result: ReturnType<typeof renderHook<ReturnType<typeof useAuthHandlers>, unknown>>;
+    await act(async () => {
+      result = renderHook(() => useAuthHandlers('es'));
+    });
+    expect(result!.result.current.message).toBe(getAuthTranslations('es').verifiedSignIn);
     mockSearchParams = new URLSearchParams(); // reset for other tests
   });
 });
