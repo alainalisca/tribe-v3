@@ -33,6 +33,14 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       en: 'Password must be at least 6 characters.',
       es: 'La contraseña debe tener al menos 6 caracteres.',
     },
+    otp_expired: {
+      en: 'That code is incorrect or has expired. Request a new one.',
+      es: 'El código es incorrecto o ya expiró. Pide uno nuevo.',
+    },
+    'Token has expired or is invalid': {
+      en: 'That code is incorrect or has expired. Request a new one.',
+      es: 'El código es incorrecto o ya expiró. Pide uno nuevo.',
+    },
 
     // Database errors
     '23505': {
@@ -150,6 +158,10 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
     weak_password: {
       en: 'Password must be at least 6 characters.',
       es: 'La contraseña debe tener al menos 6 caracteres.',
+    },
+    verify_code: {
+      en: 'That code is incorrect or has expired. Request a new one.',
+      es: 'El código es incorrecto o ya expiró. Pide uno nuevo.',
     },
   };
 

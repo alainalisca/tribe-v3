@@ -171,4 +171,18 @@ describe('getErrorMessage', () => {
       expect(en).not.toBe(es); // EN and ES should be different
     }
   });
+
+  // --- Extended: OTP verification ---
+
+  describe('getErrorMessage — OTP', () => {
+    it('maps an expired/invalid OTP to localized copy (es)', () => {
+      const msg = getErrorMessage({ code: 'otp_expired' }, 'verify_code', 'es');
+      expect(msg).toBe('El código es incorrecto o ya expiró. Pide uno nuevo.');
+    });
+
+    it('falls back to the verify_code context message in en', () => {
+      const msg = getErrorMessage({ message: 'something else' }, 'verify_code', 'en');
+      expect(msg).toBe('That code is incorrect or has expired. Request a new one.');
+    });
+  });
 });
