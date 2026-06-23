@@ -28,7 +28,14 @@ function initialsOf(name: string): string {
  * Decorative gradient kept per spec Part 5C. Theme tokens only.
  */
 export default function StorefrontHero({ instructor, language }: StorefrontHeroProps) {
-  const sportTag = instructor.specialties?.[0];
+  // BUG-029/033: some rows store every specialty as one slash/comma-joined
+  // string (e.g. "Yoga/soundhealing/meditacion/..."). Split so the hero tag is
+  // a single short specialty, not one giant unbreakable word that widens the
+  // whole page and breaks the layout. Mirrors the InstructorCard pill logic.
+  const sportTag = (instructor.specialties || [])
+    .flatMap((s) => s.split(/\s*[/,]\s*/))
+    .map((s) => s.trim())
+    .filter(Boolean)[0];
   const [imgError, setImgError] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const showImage = !!instructor.avatar_url && !imgError;
@@ -99,12 +106,14 @@ export default function StorefrontHero({ instructor, language }: StorefrontHeroP
 
         {sportTag && (
           <div className="mt-3">
-            <span className="inline-block bg-tribe-green/20 text-tribe-green px-2.5 py-0.5 rounded-full text-xs font-semibold">
+            <span className="inline-block max-w-full truncate align-bottom bg-tribe-green/20 text-tribe-green px-2.5 py-0.5 rounded-full text-xs font-semibold">
               {sportTag}
             </span>
           </div>
         )}
-        {instructor.tagline && <p className="mt-2 text-sm text-theme-secondary line-clamp-2">{instructor.tagline}</p>}
+        {instructor.tagline && (
+          <p className="mt-2 text-sm text-theme-secondary line-clamp-2 break-words">{instructor.tagline}</p>
+        )}
         <div className="mt-1 flex items-center gap-1 text-xs text-theme-secondary">
           <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
           <span className="truncate">
