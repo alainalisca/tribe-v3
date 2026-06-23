@@ -74,7 +74,15 @@ export function useAuthHandlers(language: 'en' | 'es') {
       const transientErrors = ['server_error', 'temporarily_unavailable', 'access_denied'];
       const decoded = decodeURIComponent(errorParam);
       const isTransient = transientErrors.some((e) => decoded.toLowerCase().includes(e));
-      if (!isTransient) {
+      // A failed email-link exchange usually means the account WAS verified
+      // (Supabase's verify endpoint ran) but the browser auto-login failed.
+      // Nudge the user to sign in instead of showing a dead-end error.
+      const lower = decoded.toLowerCase();
+      const looksLikeVerifyFailure =
+        lower.includes('expired') || lower.includes('invalid') || lower.includes('code verifier');
+      if (looksLikeVerifyFailure) {
+        setMessage(t.verifiedSignIn);
+      } else if (!isTransient) {
         setMessage(t.authError(decoded));
       }
     }

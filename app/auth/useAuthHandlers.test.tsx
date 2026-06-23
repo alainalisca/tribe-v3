@@ -30,6 +30,7 @@ vi.mock('@/lib/toast', () => ({ showError: vi.fn(), showSuccess: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 
 import { useAuthHandlers } from './useAuthHandlers';
+import { getAuthTranslations } from './translations';
 
 describe('useAuthHandlers — OTP verify', () => {
   beforeEach(() => {
@@ -115,5 +116,14 @@ describe('useAuthHandlers — OTP verify', () => {
     });
     expect(resetPasswordForEmail).toHaveBeenCalledWith('ana@example.com');
     expect(resend).not.toHaveBeenCalled();
+  });
+
+  it('shows a sign-in nudge when the URL carries an invalid/expired link error', () => {
+    // Set BEFORE rendering: the errorParam effect runs on mount.
+    // (mockSearchParams is the mutable URLSearchParams from the top of this file.)
+    mockSearchParams = new URLSearchParams('error=Email link is invalid or has expired');
+    const { result } = renderHook(() => useAuthHandlers('es'));
+    expect(result.current.message).toBe(getAuthTranslations('es').verifiedSignIn);
+    mockSearchParams = new URLSearchParams(); // reset for other tests
   });
 });
