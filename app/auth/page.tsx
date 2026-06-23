@@ -16,6 +16,7 @@ import { lookupReferralCode } from '@/lib/dal/referrals';
 import OAuthButtons from './OAuthButtons';
 import ResetPasswordForm from './ResetPasswordForm';
 import EmailAuthForm from './EmailAuthForm';
+import VerifyCodeForm from './VerifyCodeForm';
 import { useAuthHandlers } from './useAuthHandlers';
 
 import TribeWordmark from '@/components/TribeWordmark';
@@ -92,7 +93,13 @@ export default function AuthPage() {
               <TribeWordmark className="h-6 w-auto" />
               <p className="text-tribe-green font-medium text-base mb-2">{h.t.tagline}</p>
               <h2 className="text-muted-foreground font-extrabold tracking-tight text-lg">
-                {h.isResetPassword ? h.t.resetPassword : h.isLogin ? h.t.welcomeBack : h.t.joinCommunity}
+                {h.verifyMode
+                  ? h.t.verifyTitle
+                  : h.isResetPassword
+                    ? h.t.resetPassword
+                    : h.isLogin
+                      ? h.t.welcomeBack
+                      : h.t.joinCommunity}
               </h2>
             </div>
 
@@ -113,7 +120,7 @@ export default function AuthPage() {
               )}
             </AnimatePresence>
 
-            {!h.isResetPassword && (
+            {!h.isResetPassword && !h.verifyMode && (
               <OAuthButtons
                 t={h.t}
                 appleLoading={h.appleLoading}
@@ -124,7 +131,20 @@ export default function AuthPage() {
               />
             )}
 
-            {h.isResetPassword ? (
+            {h.verifyMode ? (
+              <VerifyCodeForm
+                t={h.t}
+                email={h.otpEmail}
+                code={h.otpCode}
+                loading={h.loading}
+                message={h.message}
+                resendCooldown={h.resendCooldown}
+                onCodeChange={h.setOtpCode}
+                onSubmit={h.handleVerifyCode}
+                onResend={h.handleResendVerification}
+                onBack={h.handleBackFromVerify}
+              />
+            ) : h.isResetPassword ? (
               <ResetPasswordForm
                 t={h.t}
                 password={h.password}
@@ -159,7 +179,7 @@ export default function AuthPage() {
               />
             )}
 
-            {!h.isResetPassword && (
+            {!h.isResetPassword && !h.verifyMode && (
               <div className="mt-8 text-center">
                 <button
                   onClick={() => {
