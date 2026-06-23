@@ -10,6 +10,7 @@ vi.mock('next/navigation', () => ({
 
 const verifyOtp = vi.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
 const resend = vi.fn().mockResolvedValue({ error: null });
+const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null });
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
@@ -17,6 +18,7 @@ vi.mock('@/lib/supabase/client', () => ({
       signInWithPassword: vi.fn(),
       verifyOtp,
       resend,
+      resetPasswordForEmail,
     },
   }),
 }));
@@ -32,6 +34,8 @@ import { useAuthHandlers } from './useAuthHandlers';
 describe('useAuthHandlers — OTP verify', () => {
   beforeEach(() => {
     verifyOtp.mockClear();
+    resend.mockClear();
+    resetPasswordForEmail.mockClear();
     Object.defineProperty(window, 'location', { value: { href: '' }, writable: true });
   });
 
@@ -65,5 +69,51 @@ describe('useAuthHandlers — OTP verify', () => {
       await result.current.handleVerifyCode({ preventDefault() {} } as React.FormEvent);
     });
     expect(verifyOtp).toHaveBeenCalledWith({ email: '', token: '123456', type: 'signup' });
+  });
+
+  it('handleResendVerification in signup mode calls resend with type signup', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) }));
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    // Go through the signup flow to land in signup verify mode
+    act(() => {
+      result.current.setIsLogin(false);
+      result.current.setEmail('ana@example.com');
+      result.current.setPassword('password1');
+      result.current.setName('Ana');
+      result.current.setBirthDate('1990-01-01');
+      result.current.setAcceptedTos(true);
+    });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault() {} } as React.FormEvent);
+    });
+    expect(result.current.verifyMode).toBe('signup');
+    expect(result.current.otpEmail).toBe('ana@example.com');
+
+    await act(async () => {
+      await result.current.handleResendVerification();
+    });
+    expect(resend).toHaveBeenCalledWith({ type: 'signup', email: 'ana@example.com' });
+    expect(resetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
+  it('handleResendVerification in recovery mode calls resetPasswordForEmail and not resend', async () => {
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    // Go through the forgot-password flow to land in recovery verify mode
+    act(() => {
+      result.current.setEmail('ana@example.com');
+    });
+    await act(async () => {
+      await result.current.handleForgotPassword();
+    });
+    expect(result.current.verifyMode).toBe('recovery');
+    expect(result.current.otpEmail).toBe('ana@example.com');
+
+    resetPasswordForEmail.mockClear();
+
+    await act(async () => {
+      await result.current.handleResendVerification();
+    });
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('ana@example.com');
+    expect(resend).not.toHaveBeenCalled();
   });
 });

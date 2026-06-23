@@ -273,10 +273,10 @@ export function useAuthHandlers(language: 'en' | 'es') {
     const target = otpEmail || email;
     if (resendCooldown > 0 || !target) return;
     try {
-      const { error } = await supabase.auth.resend({
-        type: verifyMode === 'recovery' ? 'recovery' : 'signup',
-        email: target,
-      });
+      const { error } =
+        verifyMode === 'recovery'
+          ? await supabase.auth.resetPasswordForEmail(target)
+          : await supabase.auth.resend({ type: 'signup', email: target });
       if (error) throw error;
       showSuccess(t.verificationSent);
       setResendCooldown(60);
