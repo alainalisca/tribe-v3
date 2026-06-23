@@ -49,10 +49,19 @@ export default function AuthCallbackPage() {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (exchangeError) {
-        logError(exchangeError, { action: 'exchangeCodeForSession', route: '/auth/callback' });
-        setError(exchangeError.message);
-        window.location.href = `/auth?error=${encodeURIComponent(exchangeError.message)}`;
-        return;
+        // A single-use code can be consumed twice — an email scanner pre-fetch
+        // or a double mount. If the first exchange already established a
+        // session, the duplicate's error is harmless; only fail when there is
+        // genuinely no session.
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session) {
+          logError(exchangeError, { action: 'exchangeCodeForSession', route: '/auth/callback' });
+          setError(exchangeError.message);
+          window.location.href = `/auth?error=${encodeURIComponent(exchangeError.message)}`;
+          return;
+        }
       }
     } catch (err: unknown) {
       logError(err, { action: 'exchangeCodeForSession', route: '/auth/callback' });
