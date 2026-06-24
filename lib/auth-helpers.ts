@@ -23,7 +23,8 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
     const profileResult = await fetchUserProfileMaybe(supabase, user.id, 'id, avatar_url, created_at');
     const existingProfile = profileResult.success ? profileResult.data : null;
 
-    const avatarUrl = user.user_metadata?.avatar_url || null;
+    const providerAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+    const existingAvatar = existingProfile?.avatar_url || null;
     const name =
       displayName || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
 
@@ -31,10 +32,18 @@ export async function upsertUserProfile(user: User, displayName?: string): Promi
     const upsertPayload: Record<string, string | null> = {
       id: user.id,
       name,
-      avatar_url: avatarUrl,
     };
     if (user.email) {
       upsertPayload.email = user.email;
+    }
+
+    // Only set avatar_url when the user doesn't already have one. Never overwrite an
+    // existing avatar (an uploaded photo, or one captured at an earlier sign-in) with
+    // the provider's value — that value is null for Apple and photo-less Google
+    // accounts, so writing it on every login was silently wiping uploaded photos.
+    // Omitting the column leaves it untouched on the upsert's UPDATE path.
+    if (!existingAvatar && providerAvatar) {
+      upsertPayload.avatar_url = providerAvatar;
     }
 
     const upsertResult = await upsertUser(supabase, upsertPayload);

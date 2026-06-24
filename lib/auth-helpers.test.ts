@@ -141,6 +141,85 @@ describe('upsertUserProfile', () => {
     expect(result.isNewUser).toBe(true);
   });
 
+  it('does NOT overwrite an existing avatar when the provider has no photo (Apple re-login)', async () => {
+    // Existing user already has an uploaded photo; Apple returns no avatar.
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', avatar_url: 'https://cdn.tribe/uploaded.jpg', created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      email: undefined,
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: { full_name: 'Apple User' }, // no avatar_url / picture
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    // avatar_url must be omitted (column untouched) or keep the old value — never null.
+    expect([undefined, 'https://cdn.tribe/uploaded.jpg']).toContain(upsertPayload.avatar_url);
+  });
+
+  it('does NOT overwrite an existing custom avatar with the provider photo on re-login', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', avatar_url: 'https://cdn.tribe/custom-upload.jpg', created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: { full_name: 'Test User', avatar_url: 'https://google/provider.jpg' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.avatar_url ?? 'https://cdn.tribe/custom-upload.jpg').toBe(
+      'https://cdn.tribe/custom-upload.jpg'
+    );
+  });
+
+  it('captures the provider photo for a new user', async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 5_000).toISOString(),
+      user_metadata: { full_name: 'New User', avatar_url: 'https://google/new.jpg' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.avatar_url).toBe('https://google/new.jpg');
+  });
+
+  it('fills an empty avatar from the provider photo for an existing user', async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: { id: 'user-123', avatar_url: null, created_at: '2025-01-01' },
+      error: null,
+    });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 120_000).toISOString(),
+      user_metadata: { full_name: 'Test User', avatar_url: 'https://google/provider.jpg' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.avatar_url).toBe('https://google/provider.jpg');
+  });
+
+  it('falls back to user_metadata.picture (Google) when avatar_url is absent', async () => {
+    mockMaybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const user = createMockUser({
+      created_at: new Date(Date.now() - 5_000).toISOString(),
+      user_metadata: { full_name: 'Google User', picture: 'https://google/picture.jpg' },
+    });
+    await upsertUserProfile(user);
+
+    const upsertPayload = mockUpsert.mock.calls[0][0];
+    expect(upsertPayload.avatar_url).toBe('https://google/picture.jpg');
+  });
+
   it('handles upsert error gracefully', async () => {
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     mockUpsert.mockResolvedValue({ error: { message: 'DB error' } });
