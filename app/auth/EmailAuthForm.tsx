@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import PasswordInput from './PasswordInput';
 import type { AuthTranslations } from './translations';
 
 interface EmailAuthFormProps {
@@ -11,6 +12,7 @@ interface EmailAuthFormProps {
   isLogin: boolean;
   email: string;
   password: string;
+  confirmPassword: string;
   name: string;
   birthDate: string;
   acceptedTos: boolean;
@@ -18,6 +20,7 @@ interface EmailAuthFormProps {
   message: string;
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
+  onConfirmPasswordChange: (v: string) => void;
   onNameChange: (v: string) => void;
   onBirthDateChange: (v: string) => void;
   onAcceptedTosChange: (v: boolean) => void;
@@ -33,6 +36,7 @@ export default function EmailAuthForm({
   isLogin,
   email,
   password,
+  confirmPassword,
   name,
   birthDate,
   acceptedTos,
@@ -40,6 +44,7 @@ export default function EmailAuthForm({
   message,
   onEmailChange,
   onPasswordChange,
+  onConfirmPasswordChange,
   onNameChange,
   onBirthDateChange,
   onAcceptedTosChange,
@@ -116,19 +121,17 @@ export default function EmailAuthForm({
         />
       </div>
 
-      <div>
-        <Label className="text-stone-700 dark:text-gray-300 mb-1.5">{t.password}</Label>
-        <Input
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => onPasswordChange(e.target.value)}
-          required
-          minLength={6}
-          autoComplete={isLogin ? 'current-password' : 'new-password'}
-          enterKeyHint={isLogin ? 'go' : 'next'}
-          className="h-auto py-3 dark:border-tribe-mid focus:ring-tribe-green bg-white dark:bg-tribe-mid text-stone-900 dark:text-white"
-        />
+      <PasswordInput
+        label={t.password}
+        value={password}
+        onChange={onPasswordChange}
+        showPasswordLabel={t.showPassword}
+        hidePasswordLabel={t.hidePassword}
+        required
+        minLength={6}
+        autoComplete={isLogin ? 'current-password' : 'new-password'}
+        enterKeyHint={isLogin ? 'go' : 'next'}
+      >
         {!isLogin && password && (
           <div className="mt-2">
             <div className="w-full h-1.5 bg-stone-200 dark:bg-tribe-mid rounded-full overflow-hidden">
@@ -170,7 +173,21 @@ export default function EmailAuthForm({
             {t.forgotPassword}
           </Button>
         )}
-      </div>
+      </PasswordInput>
+
+      {!isLogin && (
+        <PasswordInput
+          label={t.confirmPassword}
+          value={confirmPassword}
+          onChange={onConfirmPasswordChange}
+          showPasswordLabel={t.showPassword}
+          hidePasswordLabel={t.hidePassword}
+          required
+          minLength={6}
+          autoComplete="new-password"
+          enterKeyHint="go"
+        />
+      )}
 
       {message && (
         <div

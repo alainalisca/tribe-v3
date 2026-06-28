@@ -170,4 +170,78 @@ describe('AuthPage', () => {
     expect(screen.getByText('Contraseña')).toBeInTheDocument();
     expect(screen.getByText('¿Olvidaste tu contraseña?')).toBeInTheDocument();
   });
+
+  // BUG-225: confirm-password field on registration
+  it('shows confirm password field on signup form', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("Don't have an account? Sign up")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Don't have an account? Sign up"));
+
+    expect(screen.getByText('Confirm Password')).toBeInTheDocument();
+  });
+
+  it('mismatch passwords shows error and blocks submit on signup', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText("Don't have an account? Sign up")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Don't have an account? Sign up"));
+
+    // Fill in required fields so we reach the password-match guard
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Test User' } });
+    fireEvent.change(screen.getByPlaceholderText('email@example.com'), {
+      target: { value: 'test@example.com' },
+    });
+    // Accept ToS
+    fireEvent.click(screen.getByRole('checkbox'));
+    // Set a birthDate that is 20+ years ago so the age guard passes
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only DOM query
+    fireEvent.change(document.querySelector('input[type="date"]') as any, {
+      target: { value: '2000-01-01' },
+    });
+    // Two password inputs with placeholder ••••••••
+    const pwInputs = screen.getAllByPlaceholderText('••••••••');
+    fireEvent.change(pwInputs[0], { target: { value: 'password123' } });
+    fireEvent.change(pwInputs[1], { target: { value: 'different456' } });
+
+    fireEvent.click(screen.getByText('Sign Up'));
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('❌ Passwords do not match')).toBeInTheDocument();
+    });
+  });
+
+  // BUG-226: show/hide password toggle
+  it('renders show password toggle button on login form', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Welcome back!')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Show password')).toBeInTheDocument();
+  });
+
+  it('toggling eye icon reveals the password field value', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Welcome back!')).toBeInTheDocument();
+    });
+
+    const pwInput = screen.getByPlaceholderText('••••••••');
+    expect(pwInput).toHaveAttribute('type', 'password');
+
+    const toggleBtn = screen.getByLabelText('Show password');
+    fireEvent.click(toggleBtn);
+
+    expect(pwInput).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('Hide password')).toBeInTheDocument();
+  });
 });

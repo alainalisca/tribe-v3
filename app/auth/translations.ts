@@ -59,6 +59,8 @@ export function getAuthTranslations(language: 'en' | 'es') {
     pwTooShort: language === 'es' ? 'Muy corta' : 'Too short',
     pwWeak: language === 'es' ? 'Débil' : 'Weak',
     pwStrong: language === 'es' ? 'Fuerte' : 'Strong',
+    showPassword: language === 'es' ? 'Mostrar contraseña' : 'Show password',
+    hidePassword: language === 'es' ? 'Ocultar contraseña' : 'Hide password',
     authError: (msg: string) =>
       language === 'es' ? `❌ Error de autenticación: ${msg}` : `❌ Authentication error: ${msg}`,
   };

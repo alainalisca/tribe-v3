@@ -141,6 +141,7 @@ export default function AuthPage() {
                 isLogin={h.isLogin}
                 email={h.email}
                 password={h.password}
+                confirmPassword={h.confirmPassword}
                 name={h.name}
                 birthDate={h.birthDate}
                 acceptedTos={h.acceptedTos}
@@ -150,6 +151,7 @@ export default function AuthPage() {
                 resendCooldown={h.resendCooldown}
                 onEmailChange={h.setEmail}
                 onPasswordChange={h.setPassword}
+                onConfirmPasswordChange={h.setConfirmPassword}
                 onNameChange={h.setName}
                 onBirthDateChange={h.setBirthDate}
                 onAcceptedTosChange={h.setAcceptedTos}
