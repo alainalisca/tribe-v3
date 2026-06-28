@@ -9,7 +9,20 @@ import BottomNav from '@/components/BottomNav';
 import { trackEvent } from '@/lib/analytics';
 import { showInfo } from '@/lib/toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { Megaphone, Eye, Users, Zap, Tag, Store, Bell, Crown, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
+import {
+  Megaphone,
+  Eye,
+  Users,
+  Zap,
+  Tag,
+  Store,
+  Bell,
+  Crown,
+  ArrowRight,
+  ArrowLeft,
+  AlertCircle,
+  Package,
+} from 'lucide-react';
 
 interface UserStats {
   follower_count: number;
@@ -69,6 +82,9 @@ export default function PromotePage() {
     posts: language === 'es' ? 'publicaciones' : 'posts',
     codes: language === 'es' ? 'códigos' : 'codes',
     campaigns: language === 'es' ? 'campañas' : 'campaigns',
+    servicePackages: language === 'es' ? 'Paquetes de Servicio' : 'Service Packages',
+    servicePackagesDesc: language === 'es' ? 'Crea y vende paquetes' : 'Create and sell packages',
+    managePackages: language === 'es' ? 'Gestionar' : 'Manage',
   };
 
   useEffect(() => {
@@ -324,6 +340,26 @@ export default function PromotePage() {
               </p>
               <div className="flex items-center gap-2 text-tribe-green font-semibold text-sm">
                 <span>{language === 'es' ? 'Gestionar' : 'Manage'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </div>
+          </Link>
+
+          {/* Service Packages Card */}
+          <Link href="/promote/packages">
+            <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700 hover:border-tribe-green transition-all cursor-pointer h-full">
+              <div className="flex items-start gap-3 mb-3">
+                <Package className="w-6 h-6 text-tribe-green flex-shrink-0 mt-1" />
+                <div className="flex-1">
+                  <h3 className="text-base font-bold text-theme-primary">{t.servicePackages}</h3>
+                  <p className="text-theme-secondary text-xs">{t.servicePackagesDesc}</p>
+                </div>
+              </div>
+              <p className="text-theme-secondary text-sm mb-4">
+                {language === 'es' ? 'Muestra tus paquetes en tu escaparate' : 'Display packages on your storefront'}
+              </p>
+              <div className="flex items-center gap-2 text-tribe-green font-semibold text-sm">
+                <span>{t.managePackages}</span>
                 <ArrowRight className="w-4 h-4" />
               </div>
             </div>
