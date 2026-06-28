@@ -99,16 +99,23 @@ export const CURRENCY_CHANGE_EVENT = CHANGE_EVENT;
 /**
  * Format a session price for display.
  *
- *   - Same currency:  "$100,000"
- *   - Cross-currency: "$100,000 COP (~$25 USD)"  /  "$25 USD (~$100,000 COP)"
+ *   - Same currency:  "COP 100.000"
+ *   - Cross-currency: "COP 100.000 (~USD 25.00)"
  *
  * The original price is always primary; the user-preferred currency is the
  * parenthetical hint. We never hide the original — instructors quote what
  * they actually want to be paid, and a buyer needs to see that.
+ *
+ * Currency codes come from Intl.NumberFormat with currencyDisplay:'code' via
+ * formatPrice — they are NEVER passed through the translation layer. This
+ * ensures "COP" always renders as the ISO code regardless of locale ICU data.
  */
 export function formatPriceForUser(amountCents: number, sessionCurrency: Currency, userCurrency: Currency): string {
-  const primary = `${formatPrice(amountCents, sessionCurrency)} ${sessionCurrency}`;
+  // formatPrice already includes the ISO currency code in its output (e.g.
+  // "COP 150.000" or "USD 35.00") via currencyDisplay:'code' — do not append
+  // sessionCurrency again as a raw string.
+  const primary = formatPrice(amountCents, sessionCurrency);
   if (sessionCurrency === userCurrency) return primary;
   const converted = convertCents(amountCents, sessionCurrency, userCurrency);
-  return `${primary} (~${formatPrice(converted, userCurrency)} ${userCurrency})`;
+  return `${primary} (~${formatPrice(converted, userCurrency)})`;
 }

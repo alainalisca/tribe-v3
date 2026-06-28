@@ -14,12 +14,20 @@ const localeFor: Record<FormatLanguage, string> = {
   es: 'es-CO',
 };
 
-/** Format minor units (cents) as a localized currency string. */
+/** Format minor units (cents) as a localized currency string.
+ *
+ * Always uses currencyDisplay:'code' so the ISO code (e.g. "COP", "USD") is
+ * rendered literally and never routed through locale-specific currency-name
+ * lookup that can produce unexpected words in some ICU datasets or browser
+ * versions (e.g. es-CO currencyDisplay:'name' gives "pesos colombianos" and
+ * some environments have historically emitted incorrect strings for "COP").
+ */
 export function formatCents(cents: number, currency: Currency, language: FormatLanguage): string {
   const decimals = currency === 'COP' ? 0 : 2;
   return new Intl.NumberFormat(localeFor[language], {
     style: 'currency',
     currency,
+    currencyDisplay: 'code',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(cents / 100);
