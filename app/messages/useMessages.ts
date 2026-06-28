@@ -12,8 +12,10 @@ import {
   fetchSessionsByIds,
   fetchChatMessagesForSessions,
   fetchUserConversations,
+  getOrCreateDirectConversation,
   ConversationWithOtherUser,
 } from '@/lib/dal';
+import { showError } from '@/lib/toast';
 import type { User } from '@supabase/supabase-js';
 
 export interface Conversation {
@@ -39,11 +41,16 @@ export interface Conversation {
   unread_count: number;
 }
 
-export function useMessages() {
+interface UseMessagesOptions {
+  /** When set, immediately get-or-create a DM with this user ID and navigate in */
+  targetUserId?: string | null;
+}
+
+export function useMessages({ targetUserId }: UseMessagesOptions = {}) {
   const router = useRouter();
   const supabase = createClient();
   const { t, language } = useLanguage();
-  const [, setUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [directConversations, setDirectConversations] = useState<ConversationWithOtherUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +61,32 @@ export function useMessages() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
+  // When targetUserId changes after mount (e.g., after auth resolves), open DM
+  useEffect(() => {
+    if (targetUserId && currentUser) {
+      openDirectMessage(currentUser.id, targetUserId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when both are ready
+  }, [targetUserId, currentUser]);
+
+  async function openDirectMessage(userId: string, targetId: string) {
+    // Do nothing if trying to message yourself
+    if (userId === targetId) return;
+
+    const result = await getOrCreateDirectConversation(supabase, userId, targetId);
+    if (!result.success || !result.data) {
+      logError(new Error(result.error ?? 'getOrCreateDirectConversation failed'), {
+        action: 'openDirectMessage',
+        userId,
+        targetId,
+      });
+      showError(language === 'es' ? 'No se pudo abrir la conversación' : 'Could not open the conversation');
+      return;
+    }
+    // Replace so the ?user= URL is not left in history
+    router.replace(`/messages/${result.data}`);
+  }
+
   async function checkUser() {
     const {
       data: { user },
@@ -62,7 +95,7 @@ export function useMessages() {
       router.push('/auth');
       return;
     }
-    setUser(user);
+    setCurrentUser(user);
     await loadConversations(user.id);
   }
 
