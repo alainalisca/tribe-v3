@@ -387,7 +387,7 @@ function UnpaidList({
         let message: string;
         if (suggestedCurrency && suggestedUnitCents) {
           const totalCents = suggestedUnitCents * g.unpaid_count;
-          const totalLabel = `${formatCents(totalCents, suggestedCurrency, language)} ${suggestedCurrency}`;
+          const totalLabel = formatCents(totalCents, suggestedCurrency, language);
           message = s.reminderTemplateWithAmount(g.client_name, g.unpaid_count, oldestDate, totalLabel);
         } else {
           message = s.reminderTemplate(g.client_name, g.unpaid_count, oldestDate);

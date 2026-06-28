@@ -32,7 +32,7 @@ export default function StorefrontPackageCard({
   const currency = (pkg.currency || 'COP') as Currency;
 
   const priceDisplay = pkg.price_cents
-    ? `${formatPrice(pkg.price_cents, currency)} ${currency}`
+    ? formatPrice(pkg.price_cents, currency)
     : `$${pkg.price.toLocaleString(currency === 'COP' ? 'es-CO' : 'en-US', { maximumFractionDigits: currency === 'COP' ? 0 : 2 })} ${currency}`;
 
   const t = {

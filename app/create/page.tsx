@@ -709,8 +709,7 @@ function CreateSessionPageInner() {
                                   {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
                                 </span>
                                 <span className="font-medium text-emerald-800 dark:text-emerald-300">
-                                  {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}{' '}
-                                  {formData.currency}
+                                  {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}
                                 </span>
                               </div>
                               {(() => {
@@ -731,8 +730,7 @@ function CreateSessionPageInner() {
                                         {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
                                       </span>
                                       <span className="text-theme-tertiary">
-                                        -{formatDisplayAmount(platformFeeCents / 100, formData.currency as Currency)}{' '}
-                                        {formData.currency}
+                                        -{formatDisplayAmount(platformFeeCents / 100, formData.currency as Currency)}
                                       </span>
                                     </div>
                                     <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
@@ -741,8 +739,7 @@ function CreateSessionPageInner() {
                                           {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
                                         </span>
                                         <span className="text-emerald-800 dark:text-emerald-300">
-                                          {formatDisplayAmount(payoutCents / 100, formData.currency as Currency)}{' '}
-                                          {formData.currency}
+                                          {formatDisplayAmount(payoutCents / 100, formData.currency as Currency)}
                                         </span>
                                       </div>
                                     </div>
