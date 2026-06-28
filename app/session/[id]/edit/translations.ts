@@ -29,6 +29,7 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         saving: 'Guardando...',
         cancel: 'Cancelar',
         updated: 'Sesi\u00f3n actualizada',
+        photoSectionHint: 'Las sesiones con fotos reciben muchas m\u00e1s reservas',
       }
     : {
         editSession: 'Edit Session',
@@ -59,6 +60,7 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         saving: 'Saving...',
         cancel: 'Cancel',
         updated: 'Session updated',
+        photoSectionHint: 'Sessions with photos get significantly more bookings',
       };
 }
 

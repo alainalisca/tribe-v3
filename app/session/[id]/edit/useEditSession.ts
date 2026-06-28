@@ -40,6 +40,10 @@ const defaultFormData: EditSessionFormData = {
   join_policy: 'open',
 };
 
+// photos is managed separately (not in formData) because PhotoUploadSection
+// owns its own state shape: string[] rather than a form field value.
+export type EditSessionPhotos = string[];
+
 export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslations) {
   const router = useRouter();
   const params = useParams();
@@ -47,8 +51,15 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EditSessionFormData>(defaultFormData);
+  const [photos, setPhotos] = useState<EditSessionPhotos>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Fetch current user and session in parallel so the photo uploader has a
+    // userId as soon as the data is ready.
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
     loadSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
@@ -74,6 +85,8 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
         equipment: session.equipment || '',
         join_policy: session.join_policy || 'open',
       });
+      // Initialise photo state from the existing session photos (may be null)
+      setPhotos(session.photos ?? []);
     } catch {
       showError(language === 'es' ? 'Error al cargar sesi\u00f3n' : 'Error loading session');
       router.back();
@@ -87,7 +100,13 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     setSaving(true);
 
     try {
-      const result = await updateSession(supabase, params.id as string, formData);
+      // Persist photos alongside the other edited fields. Passing null when
+      // the array is empty clears any previously stored photos (matches the
+      // create-flow convention in insertSession).
+      const result = await updateSession(supabase, params.id as string, {
+        ...formData,
+        photos: photos.length > 0 ? photos : null,
+      });
       if (!result.success) throw new Error(result.error);
 
       showSuccess(txt.updated);
@@ -104,8 +123,12 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     saving,
     formData,
     setFormData,
+    photos,
+    setPhotos,
     handleSubmit,
     params,
     router,
+    supabase,
+    userId,
   };
 }

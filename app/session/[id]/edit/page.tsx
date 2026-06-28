@@ -12,11 +12,13 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getEditSessionTranslations } from './translations';
 import { useEditSession } from './useEditSession';
+import PhotoUploadSection from '@/app/create/PhotoUploadSection';
 
 export default function EditSessionPage() {
   const { language } = useLanguage();
   const txt = getEditSessionTranslations(language);
-  const { loading, saving, formData, setFormData, handleSubmit, params, router } = useEditSession(language, txt);
+  const { loading, saving, formData, setFormData, photos, setPhotos, handleSubmit, params, router, supabase, userId } =
+    useEditSession(language, txt);
 
   if (loading) {
     return (
@@ -209,6 +211,25 @@ export default function EditSessionPage() {
               className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
             />
           </div>
+
+          {/* Cover photo — reuses the same upload component as the create flow */}
+          {userId && (
+            <div data-photo-section>
+              <PhotoUploadSection
+                supabase={supabase}
+                userId={userId}
+                language={language}
+                photos={photos}
+                onPhotosChange={setPhotos}
+              />
+              {photos.length === 0 && (
+                <p className="text-xs text-tribe-amber mt-2 flex items-center gap-1.5">
+                  <span>💡</span>
+                  <span>{txt.photoSectionHint}</span>
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-4 pt-4">
             <Button type="submit" disabled={saving} className="flex-1 py-3 font-bold">
