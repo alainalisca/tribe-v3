@@ -28,6 +28,7 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
 import { logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 const schema = z.object({
   session_id: z.string().uuid(),
@@ -110,14 +111,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // Fetch the host's preferred language so the notification arrives in
+    // their language, not the joiner's client-side locale.
+    const { data: hostRow } = await service
+      .from('users')
+      .select('preferred_language')
+      .eq('id', session.creator_id)
+      .maybeSingle();
+    const hostLang = toLang((hostRow as { preferred_language?: string | null } | null)?.preferred_language);
+
     const safeName = sanitizeName(joiner_name);
-    const title = kind === 'request' ? '📩 New Join Request' : '🎉 New Training Partner!';
-    const body =
-      kind === 'request'
-        ? `${safeName} wants to join your ${session.sport} session`
-        : kind === 'guest'
-          ? `${safeName} (guest) joined your ${session.sport} session`
-          : `${safeName} joined your ${session.sport} session`;
+    const templateKey = kind === 'request' ? 'join_request' : kind === 'guest' ? 'join_guest' : 'join';
+    const { title, body } = notificationCopy(templateKey, hostLang, { name: safeName, sport: session.sport });
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const cronSecret = process.env.CRON_SECRET;

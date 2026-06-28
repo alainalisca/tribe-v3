@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 /** Haversine distance between two lat/lng points in km */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
 
     const { data: usersData, error: usersError } = await supabase
       .from('users')
-      .select('id, name, location_lat, location_lng, sports, gender')
+      .select('id, name, location_lat, location_lng, sports, gender, preferred_language')
       .in('id', userIds)
       .eq('banned', false);
 
@@ -260,13 +261,23 @@ export async function GET(request: Request) {
         const matchedName = matchedUser?.name || 'Someone';
         const topSport = match.shared_sports[0] || 'fitness';
 
+        // usersMap values include preferred_language (fetched above).
+        const recipientRow = usersMap.get(user.id);
+        const recipientLang = toLang(
+          (recipientRow as { preferred_language?: string | null } | undefined)?.preferred_language
+        );
+        const matchCopy = notificationCopy('smart_match', recipientLang, {
+          name: matchedName,
+          sport: topSport,
+        });
+
         await supabase.from('notifications').insert({
           recipient_id: user.id,
           actor_id: match.matched_user_id,
           type: 'smart_match',
           entity_type: 'smart_match',
           entity_id: upserted?.id || null,
-          message: `${matchedName} also trains ${topSport} near you`,
+          message: matchCopy.body,
         });
         alreadyNotified.add(match.matched_user_id);
       }

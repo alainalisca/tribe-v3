@@ -31,16 +31,25 @@ function mockAuth(user: { id: string } | null) {
 function mockService(opts: {
   session?: { id: string; creator_id: string; sport: string; status: string } | null;
   isParticipant?: boolean;
+  hostLanguage?: string | null;
 }) {
   const sessionMaybe = vi.fn().mockResolvedValue({ data: opts.session ?? null, error: null });
   const participantMaybe = vi.fn().mockResolvedValue({
     data: opts.isParticipant ? { id: 'p1' } : null,
     error: null,
   });
+  // Language lookup for the host: .select().eq().maybeSingle()
+  const userMaybe = vi.fn().mockResolvedValue({
+    data: { preferred_language: opts.hostLanguage ?? null },
+    error: null,
+  });
   vi.mocked(getServiceRoleClient).mockReturnValue({
     from: vi.fn((table: string) => {
       if (table === 'sessions') {
         return { select: () => ({ eq: () => ({ maybeSingle: sessionMaybe }) }) };
+      }
+      if (table === 'users') {
+        return { select: () => ({ eq: () => ({ maybeSingle: userMaybe }) }) };
       }
       // session_participants: .select().eq().eq().maybeSingle()
       return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: participantMaybe }) }) }) };
@@ -99,9 +108,10 @@ describe('POST /api/sessions/notify-join', () => {
     expect(res.status).toBe(404);
   });
 
-  it('dispatches to the host with server-derived recipient + copy on a valid join', async () => {
+  it('dispatches to the host with server-derived recipient + EN copy (null host language)', async () => {
     mockAuth({ id: JOINER_ID });
-    mockService({ session: ACTIVE_SESSION, isParticipant: true });
+    // hostLanguage null → falls back to 'en'
+    mockService({ session: ACTIVE_SESSION, isParticipant: true, hostLanguage: null });
 
     const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Alex', kind: 'join' }));
     expect(res.status).toBe(200);
@@ -117,9 +127,23 @@ describe('POST /api/sessions/notify-join', () => {
     expect(sent.body).toBe('Alex joined your Running session');
   });
 
+  it('dispatches to the host in ES when host language is "es"', async () => {
+    mockAuth({ id: JOINER_ID });
+    mockService({ session: ACTIVE_SESSION, isParticipant: true, hostLanguage: 'es' });
+
+    const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Ana', kind: 'join' }));
+    expect(res.status).toBe(200);
+    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(sent.userId).toBe(CREATOR_ID);
+    // ES title / body from notificationCopy('join', 'es', ...)
+    expect(sent.title).toBe('🎉 ¡Nuevo compañero de entrenamiento!');
+    expect(sent.body).not.toContain('joined');
+    expect(sent.body).toContain('Ana');
+  });
+
   it('allows the guest path without auth and sends a guest-templated body', async () => {
     mockAuth(null);
-    mockService({ session: ACTIVE_SESSION });
+    mockService({ session: ACTIVE_SESSION, hostLanguage: null });
     const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Sam', kind: 'guest' }));
     expect(res.status).toBe(200);
     const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);

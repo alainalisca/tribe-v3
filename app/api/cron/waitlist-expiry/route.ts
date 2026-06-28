@@ -4,6 +4,7 @@ import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
 import { expireStaleOffers, offerSpotToNextInLine } from '@/lib/dal/waitlist';
 import { createNotification } from '@/lib/dal/notifications';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 /**
  * Hourly cron: expire stale 24-hour offers and auto-offer to the next
@@ -44,6 +45,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
+    // Pre-fetch preferred_language for all affected users in one query.
+    const allAffectedIds = [...expiringUsers.map((e) => e.user_id)];
+    const langMap = new Map<string, 'en' | 'es'>();
+    if (allAffectedIds.length > 0) {
+      const { data: langRows } = await supabase.from('users').select('id, preferred_language').in('id', allAffectedIds);
+      for (const row of (langRows as Array<{ id: string; preferred_language: string | null }> | null) ?? []) {
+        langMap.set(row.id, toLang(row.preferred_language));
+      }
+    }
+
     // Per unique session, re-offer to the next waiting user.
     const sessions = Array.from(new Set(expiringUsers.map((e) => e.session_id)));
     let reoffered = 0;
@@ -51,26 +62,40 @@ export async function GET(request: Request) {
       const offer = await offerSpotToNextInLine(supabase, sessionId);
       if (offer.success && offer.data) {
         reoffered += 1;
+        const offeredToId = offer.data.offered_to;
+        // offered_to may not be in our pre-fetched set; fall back to a lookup.
+        let recipientLang = langMap.get(offeredToId);
+        if (!recipientLang) {
+          const { data: lr } = await supabase
+            .from('users')
+            .select('preferred_language')
+            .eq('id', offeredToId)
+            .maybeSingle();
+          recipientLang = toLang((lr as { preferred_language?: string | null } | null)?.preferred_language);
+        }
+        const copy = notificationCopy('waitlist_offered', recipientLang);
         await createNotification(supabase, {
-          recipient_id: offer.data.offered_to,
+          recipient_id: offeredToId,
           actor_id: null,
           type: 'waitlist_offered',
           entity_type: 'session',
           entity_id: sessionId,
-          message: 'A spot opened up on a session you were waitlisted for.',
+          message: copy.body,
         });
       }
     }
 
     // Notify previously-offered users that their offer expired.
     for (const e of expiringUsers) {
+      const expiredLang = langMap.get(e.user_id) ?? 'es';
+      const copy = notificationCopy('waitlist_expired', expiredLang);
       await createNotification(supabase, {
         recipient_id: e.user_id,
         actor_id: null,
         type: 'waitlist_expired',
         entity_type: 'session',
         entity_id: e.session_id,
-        message: 'The spot offer for a waitlisted session has expired.',
+        message: copy.body,
       });
     }
 

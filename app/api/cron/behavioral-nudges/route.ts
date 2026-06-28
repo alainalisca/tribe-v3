@@ -55,7 +55,7 @@ export async function GET(request: Request) {
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     const { data: activeUsers, error: usersErr } = await supabase
       .from('users')
-      .select('id, last_active_at')
+      .select('id, last_active_at, preferred_language')
       .gte('last_active_at', since)
       .limit(500);
     if (usersErr) {
@@ -66,8 +66,9 @@ export async function GET(request: Request) {
     let skipped = 0;
     const cutoff = new Date(Date.now() - ANTI_SPAM_WINDOW_HOURS * 3600 * 1000).toISOString();
 
-    for (const userRow of (activeUsers as Array<{ id: string }> | null) || []) {
+    for (const userRow of (activeUsers as Array<{ id: string; preferred_language: string | null }> | null) || []) {
       const userId = userRow.id;
+      const userLang = userRow.preferred_language === 'es' ? 'es' : 'en';
 
       // Anti-spam: max 1 behavioral nudge per 48 hours.
       const { count: recent } = await supabase
@@ -105,6 +106,10 @@ export async function GET(request: Request) {
         continue;
       }
 
+      // Select the message string for the recipient's preferred language.
+      // behavioral-engine supplies both `message` (EN) and `messageEs` (ES).
+      const localizedMessage = userLang === 'es' ? best.messageEs : best.message;
+
       // Log the nudge first (so anti-spam catches it next run). The dedup
       // check above keys on nudge_log; if this insert silently failed the user
       // would be re-nudged every run. So check the error and skip the
@@ -113,7 +118,7 @@ export async function GET(request: Request) {
       const { error: nudgeLogError } = await supabase.from('nudge_log').insert({
         user_id: userId,
         nudge_type: best.nudgeType,
-        message: best.message,
+        message: localizedMessage,
         action_url: best.actionUrl,
       });
       if (nudgeLogError) {
@@ -122,14 +127,14 @@ export async function GET(request: Request) {
         continue;
       }
 
-      // Create the in-app notification.
+      // Create the in-app notification in the recipient's language.
       await createNotification(supabase, {
         recipient_id: userId,
         actor_id: null,
         type: best.nudgeType,
         entity_type: 'nudge',
         entity_id: null,
-        message: best.message,
+        message: localizedMessage,
       });
 
       sent += 1;
