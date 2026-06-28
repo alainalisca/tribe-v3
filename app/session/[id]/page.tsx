@@ -21,6 +21,7 @@ import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
 import ReviewsList from '@/components/instructor/ReviewsList';
 import WaitlistPanel from '@/components/session/WaitlistPanel';
+import PendingRequestsPanel from '@/components/session/PendingRequestsPanel';
 import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -280,6 +281,18 @@ export default function SessionDetailPage() {
             recurrencePattern={d.session.recurrence_pattern || 'weekly'}
             price={d.session.price_cents ? d.session.price_cents / 100 : null}
             currency={d.session.currency || 'COP'}
+          />
+        )}
+
+        {/* Host-only: pending join requests for curated (manual-approval) sessions */}
+        {isCreator && d.session.join_policy === 'curated' && d.user && (
+          <PendingRequestsPanel
+            sessionId={d.session.id}
+            sessionTitle={d.session.title || d.session.sport}
+            hostId={d.user.id}
+            language={language}
+            t={t}
+            onApproved={() => d.loadSession()}
           />
         )}
 

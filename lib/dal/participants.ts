@@ -334,3 +334,25 @@ export async function fetchPendingParticipantsForSessions(
     return { success: false, error: 'Failed' };
   }
 }
+
+/** Fetch pending join requests for a single session (for host approval panel). */
+export async function fetchPendingParticipantsForSession(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<DalResult<PendingParticipantWithUser[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('session_participants')
+      .select(
+        'id, user_id, session_id, joined_at, status, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
+      )
+      .eq('session_id', sessionId)
+      .eq('status', 'pending')
+      .order('joined_at', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as unknown as PendingParticipantWithUser[] };
+  } catch (error) {
+    logError(error, { action: 'fetchPendingParticipantsForSession' });
+    return { success: false, error: 'Failed' };
+  }
+}

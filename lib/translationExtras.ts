@@ -236,6 +236,16 @@ export const extEn = {
   noMatchingFilters: 'No sessions match your filters',
   clearFilters: 'Clear filters',
 
+  // PendingRequestsPanel (BUG-206)
+  pendingJoinRequests: 'Pending Join Requests',
+  noPendingJoinRequests: 'No pending requests',
+  approveAthlete: 'Approve',
+  declineAthlete: 'Decline',
+  approveSuccess: 'Athlete approved',
+  declineSuccess: 'Request declined',
+  approvalFailed: 'Could not approve request',
+  declineFailed: 'Could not decline request',
+
   // P1 fixes
   guest: 'Guest',
   findYourTribe: 'Find Your Tribe',
@@ -479,6 +489,16 @@ export const extEs: Record<keyof typeof extEn, string> = {
   withdrawRequest: 'Retirar Solicitud',
   noMatchingFilters: 'No hay sesiones que coincidan con tus filtros',
   clearFilters: 'Limpiar filtros',
+
+  // PendingRequestsPanel (BUG-206)
+  pendingJoinRequests: 'Solicitudes de Ingreso Pendientes',
+  noPendingJoinRequests: 'Sin solicitudes pendientes',
+  approveAthlete: 'Aprobar',
+  declineAthlete: 'Rechazar',
+  approveSuccess: 'Atleta aprobado',
+  declineSuccess: 'Solicitud rechazada',
+  approvalFailed: 'No se pudo aprobar la solicitud',
+  declineFailed: 'No se pudo rechazar la solicitud',
 
   // P1 fixes
   guest: 'Invitado',
