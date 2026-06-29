@@ -255,6 +255,19 @@ export const extEn = {
   findYourTribe: 'Find Your Tribe',
   onboardingDescBrowse: 'Browse sessions by sport, skill level, and location. Join with one tap.',
   inviteOnlyLabel: 'Invite Only',
+
+  // BUG-211: Instructor intro video upload (StorefrontEditor)
+  introVideo: 'Intro Video',
+  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  uploadVideo: 'Upload video',
+  changeVideo: 'Change video',
+  removeVideo: 'Remove video',
+  videoTooLarge: 'Video exceeds the 50 MB limit. Choose a smaller file.',
+  videoWrongType: 'Only MP4 files are accepted. Convert your video and try again.',
+  videoTooLong: 'Video exceeds the 60-second limit. Trim it and try again.',
+  videoUploadError: 'Could not upload video. Please try again.',
+  videoSaved: 'Video saved.',
+  videoRemoved: 'Video removed.',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -513,4 +526,17 @@ export const extEs: Record<keyof typeof extEn, string> = {
   findYourTribe: 'Encuentra tu Tribu',
   onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicacion. Unete con un toque.',
   inviteOnlyLabel: 'Solo con Invitacion',
+
+  // BUG-211: Instructor intro video upload (StorefrontEditor)
+  introVideo: 'Video de Presentacion',
+  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  uploadVideo: 'Subir video',
+  changeVideo: 'Cambiar video',
+  removeVideo: 'Eliminar video',
+  videoTooLarge: 'El video supera el limite de 50 MB. Elige un archivo mas pequeno.',
+  videoWrongType: 'Solo se aceptan archivos MP4. Convierte tu video e intenta de nuevo.',
+  videoTooLong: 'El video supera el limite de 60 segundos. Recortalo e intenta de nuevo.',
+  videoUploadError: 'No se pudo subir el video. Intenta de nuevo.',
+  videoSaved: 'Video guardado.',
+  videoRemoved: 'Video eliminado.',
 };

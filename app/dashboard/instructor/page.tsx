@@ -186,6 +186,7 @@ export default function InstructorDashboardPage() {
                 initialTagline={profile.storefront_tagline || ''}
                 initialSpecialties={(profile.specialties as string[]) || []}
                 initialBannerUrl={profile.storefront_banner_url || ''}
+                initialVideoUrl={profile.storefront_video_url ?? null}
               />
             </>
           )}
