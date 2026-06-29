@@ -81,10 +81,16 @@ export async function listCommunityEvents(
   userId?: string | null
 ): Promise<DalResult<CommunityEventWithRsvp[]>> {
   try {
+    // Only return events that haven't started yet or are still in progress.
+    // Uses event_at >= now (v1 filter); events with ends_at in the future but
+    // event_at in the past remain excluded — acceptable for v1.
+    const now = new Date().toISOString();
+
     const { data, error } = await supabase
       .from('community_events')
       .select('*, creator:created_by(id, name, avatar_url), community_event_rsvps(user_id)')
       .eq('community_id', communityId)
+      .gte('event_at', now)
       .order('event_at', { ascending: true });
 
     if (error) return { success: false, error: error.message };

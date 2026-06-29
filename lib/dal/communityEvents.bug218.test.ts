@@ -20,6 +20,7 @@ type MockChain = {
   select: ReturnType<typeof vi.fn>;
   single: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   delete: ReturnType<typeof vi.fn>;
 };
@@ -41,11 +42,33 @@ function makeInsertMock(resolvedValue: unknown): SupabaseClient {
 function makeSelectMock(resolvedValue: unknown): SupabaseClient {
   const chain: Partial<MockChain> = {};
   chain.order = vi.fn(() => Promise.resolve(resolvedValue));
+  chain.gte = vi.fn(() => chain);
   chain.eq = vi.fn(() => chain);
   chain.select = vi.fn(() => chain);
   return {
     from: () => chain,
   } as unknown as SupabaseClient;
+}
+
+/**
+ * Build a select mock that captures the `gte` cutoff so tests can assert
+ * the DAL passes a future-only filter.
+ */
+function makeSelectMockWithGteCapture(resolvedValue: unknown): {
+  supabase: SupabaseClient;
+  getCapturedGte: () => string | null;
+} {
+  let capturedGte: string | null = null;
+  const chain: Partial<MockChain> = {};
+  chain.order = vi.fn(() => Promise.resolve(resolvedValue));
+  chain.gte = vi.fn((_col: string, val: string) => {
+    capturedGte = val;
+    return chain;
+  });
+  chain.eq = vi.fn(() => chain);
+  chain.select = vi.fn(() => chain);
+  const supabase = { from: () => chain } as unknown as SupabaseClient;
+  return { supabase, getCapturedGte: () => capturedGte };
 }
 
 function makeDeleteMock(resolvedValue: unknown): SupabaseClient {
@@ -189,6 +212,42 @@ describe('listCommunityEvents (BUG-218)', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('permission denied');
+  });
+
+  it('passes a gte filter so past events are excluded and upcoming ones are included (BUG-218)', async () => {
+    // The DAL must call .gte('event_at', <iso string >= now>) so the DB
+    // only returns upcoming events. This test verifies the cutoff is present
+    // and is not in the past.
+    const beforeCall = new Date().toISOString();
+
+    const upcomingRow = {
+      id: 'evt-future',
+      community_id: 'comm-1',
+      created_by: 'user-1',
+      title: 'Future Run',
+      description: null,
+      location: null,
+      event_at: '2099-01-01T08:00:00Z',
+      ends_at: null,
+      created_at: '2026-06-29T00:00:00Z',
+      updated_at: '2026-06-29T00:00:00Z',
+      creator: null,
+      community_event_rsvps: [],
+    };
+
+    const { supabase, getCapturedGte } = makeSelectMockWithGteCapture({ data: [upcomingRow], error: null });
+
+    const result = await listCommunityEvents(supabase, 'comm-1', null);
+
+    // Upcoming event is returned
+    expect(result.success).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data![0].id).toBe('evt-future');
+
+    // The gte cutoff is present and is at or after `beforeCall`
+    const capturedGte = getCapturedGte();
+    expect(capturedGte).not.toBeNull();
+    expect(capturedGte! >= beforeCall).toBe(true);
   });
 });
 

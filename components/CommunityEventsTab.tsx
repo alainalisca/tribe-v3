@@ -167,7 +167,7 @@ export default function CommunityEventsTab({ communityId, isMember, userId }: Co
       await haptic('success');
       showSuccess(currentlyRsvpd ? t.rsvpCancelled : t.rsvpSuccess);
 
-      // Optimistic local update — avoids full reload
+      // Optimistic local update — avoids visible flicker
       setEvents((prev) =>
         prev.map((ev) =>
           ev.id === eventId
@@ -179,6 +179,13 @@ export default function CommunityEventsTab({ communityId, isMember, userId }: Co
             : ev
         )
       );
+
+      // Silent reconcile: re-fetch from server so the optimistic count can't
+      // drift (e.g. after the idempotent 23505 path where no row was inserted).
+      // Done without setLoading so there is no spinner flash.
+      void listCommunityEvents(supabase, communityId, userId).then((r) => {
+        if (r.success) setEvents(r.data ?? []);
+      });
     } catch (err) {
       logError(err, { action: 'handleRsvpToggle' });
       await haptic('error');
