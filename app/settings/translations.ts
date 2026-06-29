@@ -49,6 +49,21 @@ export function getSettingsTranslations(language: 'en' | 'es') {
       language === 'es'
         ? 'Configura tus deportes, horarios y preferencias para encontrar compañeros de entrenamiento'
         : 'Set your sports, schedule and preferences to find training partners',
+    location: language === 'es' ? 'Ubicación' : 'Location',
+    locationDesc:
+      language === 'es'
+        ? 'Permite compartir tu ubicación para encontrar atletas y sesiones cercanas.'
+        : 'Allow location access to find nearby athletes and training sessions.',
+    enableLocation: language === 'es' ? 'Activar Ubicación' : 'Enable Location',
+    locationGranted: language === 'es' ? '✓ Ubicación Activada' : '✓ Location Enabled',
+    locationDenied: language === 'es' ? 'Ubicación Bloqueada' : 'Location Blocked',
+    locationSuccessToast: language === 'es' ? '¡Ubicación guardada!' : 'Location saved!',
+    locationDeniedToast:
+      language === 'es'
+        ? 'Acceso denegado. Para activarla, ve a Configuración del navegador > Permisos de sitio > Ubicación.'
+        : 'Access denied. To enable it, go to browser Settings > Site Permissions > Location.',
+    locationUnsupportedToast:
+      language === 'es' ? 'Tu navegador no admite geolocalización.' : 'Your browser does not support geolocation.',
   };
 }
 

@@ -9,6 +9,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getSettingsTranslations } from './translations';
 import { fetchUserField, fetchUserIsAdmin, updateUser } from '@/lib/dal';
+import { requestUserLocation } from '@/lib/location';
 import { resetUser } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
 
@@ -26,6 +27,8 @@ export function useSettings(language: 'en' | 'es') {
   const [loadingReminders, setLoadingReminders] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const [debugRunning, setDebugRunning] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<PermissionState | 'unsupported'>('prompt');
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -66,6 +69,28 @@ export function useSettings(language: 'en' | 'es') {
     checkNotificationStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check when user loads
   }, [user]);
+
+  // Read the current geolocation permission state so the button can reflect it.
+  // Runs once on mount; no subscription (state changes on next page visit).
+  useEffect(() => {
+    async function checkLocationPermission() {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        setLocationPermission('unsupported');
+        return;
+      }
+      if (typeof navigator.permissions?.query === 'function') {
+        try {
+          const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+          setLocationPermission(status.state);
+          status.onchange = () => setLocationPermission(status.state);
+        } catch {
+          // Permissions API unavailable — leave at default 'prompt'
+        }
+      }
+    }
+    checkLocationPermission();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   // Load user's reminder preference
   useEffect(() => {
@@ -320,6 +345,36 @@ export function useSettings(language: 'en' | 'es') {
     }
   }
 
+  async function enableLocation() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      showError(txt.locationUnsupportedToast);
+      return;
+    }
+    setLoadingLocation(true);
+    try {
+      const loc = await requestUserLocation();
+      if (loc && user) {
+        // Persist location to the user row so the home feed and
+        // training-partner search can use it without re-prompting.
+        const result = await updateUser(supabase, user.id, {
+          location_lat: loc.latitude,
+          location_lng: loc.longitude,
+        });
+        if (!result.success) throw new Error(result.error);
+        setLocationPermission('granted');
+        showSuccess(txt.locationSuccessToast);
+      } else if (!loc) {
+        // null return means the user denied, or permission was blocked
+        showError(txt.locationDeniedToast);
+      }
+    } catch (error: unknown) {
+      logError(error, { action: 'enableLocation' });
+      showError(getErrorMessage(error, 'update_settings', language));
+    } finally {
+      setLoadingLocation(false);
+    }
+  }
+
   function openDeleteConfirm() {
     setDeleteInput('');
     setShowDeleteConfirm(true);
@@ -349,5 +404,8 @@ export function useSettings(language: 'en' | 'es') {
     debugInfo,
     debugRunning,
     runNotificationDiagnostic,
+    locationPermission,
+    loadingLocation,
+    enableLocation,
   };
 }
