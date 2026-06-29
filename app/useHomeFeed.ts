@@ -111,6 +111,11 @@ export function useHomeFeed() {
   useEffect(() => {
     if (!userChecked) return;
     loadProfile();
+    // If a leave/join on the detail page set this flag, respect it and refetch
+    // immediately so the count is correct when the user returns (BUG-207).
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('tribe_sessions_dirty')) {
+      sessionStorage.removeItem('tribe_sessions_dirty');
+    }
     loadSessions();
     const deferredId = setTimeout(() => {
       scheduleSessionReminders();
@@ -118,6 +123,23 @@ export function useHomeFeed() {
     }, 4000);
     return () => clearTimeout(deferredId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when user is set
+  }, [userChecked]);
+
+  // Refetch sessions when the user returns to this tab/app after navigating
+  // away (e.g. back from session detail after leaving). Keeps the home-screen
+  // count in sync without a manual pull-to-refresh (BUG-207).
+  useEffect(() => {
+    if (!userChecked) return;
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return;
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('tribe_sessions_dirty')) {
+        sessionStorage.removeItem('tribe_sessions_dirty');
+        loadSessions();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSessions is stable
   }, [userChecked]);
 
   useEffect(() => {

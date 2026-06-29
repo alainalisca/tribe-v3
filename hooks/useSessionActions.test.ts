@@ -16,6 +16,8 @@ import { renderHook, act } from '@testing-library/react';
  *     the pending-request toast and calls onSessionUpdated.
  *   - handleCancel sets a confirm dialog; its onConfirm invokes
  *     cancelSession and navigates to /sessions on success.
+ *   - handleLeave (BUG-207) → confirm dialog → doLeave removes user
+ *     from local state, sets tribe_sessions_dirty flag, navigates home.
  *
  * Everything deeper than that (capacity_full translation, curated
  * vs open, RPC error propagation) is covered in lib/sessions.test.ts.
@@ -53,6 +55,7 @@ import { useSessionActions } from './useSessionActions';
 import { joinSession } from '@/lib/sessions';
 import { cancelSession } from '@/lib/dal';
 import { showSuccess, showInfo } from '@/lib/toast';
+import { removeUserFromSession } from './sessionActionHelpers';
 import type { Session } from '@/lib/database.types';
 
 const fakeSession = {
@@ -164,5 +167,42 @@ describe('useSessionActions.handleCancel', () => {
 
     expect(cancelSession).toHaveBeenCalledWith(params.supabase, 'sess-1');
     expect(params.onNavigate).toHaveBeenCalledWith('/sessions');
+  });
+});
+
+describe('useSessionActions.handleLeave (BUG-207)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset the dirty flag before each test.
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('tribe_sessions_dirty');
+  });
+
+  it('stages a confirm dialog; onConfirm removes user from local state, sets dirty flag, navigates home', async () => {
+    vi.mocked(removeUserFromSession).mockResolvedValue(true as never);
+    const params = makeParams('user-1');
+    const { result } = renderHook(() => useSessionActions(params));
+
+    act(() => {
+      result.current.handleLeave();
+    });
+
+    expect(result.current.confirmAction).not.toBeNull();
+    expect(removeUserFromSession).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.confirmAction!.onConfirm();
+    });
+
+    // DB delete was called (no onNavigate arg — BUG-207 fix).
+    expect(removeUserFromSession).toHaveBeenCalledWith(params.supabase, fakeSession, 'user-1');
+    // Local state was cleared.
+    expect(params.setParticipants).toHaveBeenCalled();
+    expect(params.setSession).toHaveBeenCalled();
+    // Dirty flag was set so the home feed refetches on return.
+    expect(sessionStorage.getItem('tribe_sessions_dirty')).toBe('1');
+    // Success toast shown.
+    expect(showSuccess).toHaveBeenCalled();
+    // Navigates to home, not /sessions.
+    expect(params.onNavigate).toHaveBeenCalledWith('/');
   });
 });
