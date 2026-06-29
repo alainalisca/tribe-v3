@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
-import { applyForPartnership, fetchPartnerByUserId } from '@/lib/dal/featuredPartners';
+import { applyForPartnership, fetchPartnerByUserId, selfActivatePartner } from '@/lib/dal/featuredPartners';
+import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
 import { createNotification, fetchAdminUserIds } from '@/lib/dal';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import BottomNav from '@/components/BottomNav';
 import PartnerApplyForm from '@/components/partner/PartnerApplyForm';
-import { ArrowLeft, Loader, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader, CheckCircle, Star, Zap } from 'lucide-react';
 
 export default function PartnerApplyPage() {
   const router = useRouter();
@@ -21,8 +22,9 @@ export default function PartnerApplyPage() {
   const [isInstructor, setIsInstructor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [activating, setActivating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [existingPartner, setExistingPartner] = useState(false);
+  const [existingPartner, setExistingPartner] = useState<FeaturedPartner | null>(null);
 
   // Form state
   const [businessName, setBusinessName] = useState('');
@@ -60,7 +62,7 @@ export default function PartnerApplyPage() {
 
       const result = await fetchPartnerByUserId(supabase, user.id);
       if (result.success && result.data) {
-        setExistingPartner(true);
+        setExistingPartner(result.data);
       }
       setLoading(false);
     }
@@ -92,6 +94,10 @@ export default function PartnerApplyPage() {
 
     if (result.success) {
       setSubmitted(true);
+      // Refresh the partner record so the activation prompt appears
+      if (result.data) {
+        setExistingPartner(result.data);
+      }
       showSuccess(language === 'es' ? 'Solicitud enviada' : 'Application submitted');
 
       // Notify admin(s) about the new application
@@ -113,6 +119,38 @@ export default function PartnerApplyPage() {
     }
   }
 
+  async function handleActivate() {
+    setActivating(true);
+    const result = await selfActivatePartner(supabase);
+    setActivating(false);
+
+    if (!result.success) {
+      const errMsg =
+        result.error === 'no_application'
+          ? t('No application found. Please apply first.', 'No se encontró una solicitud. Aplica primero.')
+          : result.error === 'invalid_status'
+            ? t('Your application cannot be activated right now.', 'Tu solicitud no puede activarse en este momento.')
+            : t('Activation failed. Please try again.', 'La activación falló. Intenta de nuevo.');
+      showError(errMsg);
+      return;
+    }
+
+    if (result.data?.alreadyActive) {
+      showInfo(t('Your profile is already featured and active.', 'Tu perfil ya está destacado y activo.'));
+      router.push('/dashboard/partner');
+      return;
+    }
+
+    showSuccess(
+      t(
+        'Featured instructor activated! Your profile is now live.',
+        '¡Instructor destacado activado! Tu perfil ya está publicado.'
+      )
+    );
+    // Redirect to the partner dashboard
+    router.push('/dashboard/partner');
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark flex items-center justify-center">
@@ -122,6 +160,9 @@ export default function PartnerApplyPage() {
   }
 
   const t = (en: string, es: string) => (language === 'es' ? es : en);
+
+  const isPending = existingPartner?.status === 'pending' || existingPartner?.status === 'paused';
+  const isActive = existingPartner?.status === 'active';
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
@@ -154,21 +195,77 @@ export default function PartnerApplyPage() {
           </div>
         )}
 
-        {/* Guard: already applied */}
-        {isInstructor && existingPartner && (
+        {/* Already active: go to dashboard */}
+        {isInstructor && isActive && (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">📋</div>
+            <Star className="w-16 h-16 text-tribe-green mx-auto mb-4 fill-tribe-green/20" />
             <p className="text-lg font-bold text-stone-900 dark:text-white mb-2">
-              {t('Application Already Submitted', 'Solicitud Ya Enviada')}
+              {t('Featured Instructor — Active', 'Instructor Destacado — Activo')}
             </p>
-            <p className="text-sm text-stone-500 dark:text-tribe-gray-60">
-              {t('Your application is being reviewed.', 'Tu solicitud está siendo revisada.')}
+            <p className="text-sm text-stone-500 dark:text-tribe-gray-60 mb-6">
+              {t('Your profile is live and featured in the app.', 'Tu perfil está publicado y destacado en la app.')}
             </p>
+            <button
+              onClick={() => router.push('/dashboard/partner')}
+              className="px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-xl text-sm hover:bg-lime-500 transition"
+            >
+              {t('Go to Dashboard', 'Ir al Panel')}
+            </button>
           </div>
         )}
 
-        {/* Success state */}
-        {submitted && (
+        {/* Pending application: show beta activation CTA */}
+        {isInstructor && isPending && (
+          <div className="py-6 space-y-5">
+            <div className="bg-white dark:bg-tribe-card rounded-2xl border border-stone-200 dark:border-tribe-mid p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-tribe-green" />
+                <p className="font-bold text-stone-900 dark:text-white">
+                  {t('Application Submitted', 'Solicitud Enviada')}
+                </p>
+              </div>
+              <p className="text-sm text-stone-500 dark:text-tribe-gray-60">
+                {t(`Business: ${existingPartner?.business_name}`, `Negocio: ${existingPartner?.business_name}`)}
+              </p>
+            </div>
+
+            {/* Beta free activation card */}
+            <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-2xl p-5 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tribe-green/20 mb-3">
+                <Zap className="w-6 h-6 text-tribe-green" />
+              </div>
+              <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
+                {t('Activate Now — Free for 6 Months', 'Activar Ahora — Gratis por 6 Meses')}
+              </h3>
+              <p className="text-sm text-stone-600 dark:text-tribe-gray-60 mb-4">
+                {t(
+                  'Introductory beta offer: get featured immediately at no cost. Your profile will appear in the home feed and discovery for 6 months.',
+                  'Oferta beta introductoria: destácate de inmediato sin costo. Tu perfil aparecerá en el feed principal y en búsqueda por 6 meses.'
+                )}
+              </p>
+              <button
+                onClick={handleActivate}
+                disabled={activating}
+                className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl text-base hover:bg-lime-500 transition disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {activating ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    {t('Activating...', 'Activando...')}
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4" />
+                    {t('Get Featured — Free', 'Destacarme — Gratis')}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Success state after submitting the form for the first time */}
+        {submitted && !isPending && !isActive && (
           <div className="text-center py-12">
             <CheckCircle className="w-16 h-16 text-tribe-green mx-auto mb-4" />
             <p className="text-lg font-bold text-stone-900 dark:text-white mb-2">
@@ -180,7 +277,7 @@ export default function PartnerApplyPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Form: only show when no existing partner record and not yet submitted */}
         {isInstructor && !existingPartner && !submitted && (
           <PartnerApplyForm
             language={language}
@@ -203,6 +300,41 @@ export default function PartnerApplyPage() {
             submitting={submitting}
             onSubmit={handleSubmit}
           />
+        )}
+
+        {/* Post-submit: show activation CTA immediately */}
+        {isInstructor && submitted && existingPartner && isPending && (
+          <div className="mt-5 bg-tribe-green/10 border border-tribe-green/30 rounded-2xl p-5 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tribe-green/20 mb-3">
+              <Zap className="w-6 h-6 text-tribe-green" />
+            </div>
+            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
+              {t('Activate Now — Free for 6 Months', 'Activar Ahora — Gratis por 6 Meses')}
+            </h3>
+            <p className="text-sm text-stone-600 dark:text-tribe-gray-60 mb-4">
+              {t(
+                'Your application is in. Activate instantly for free during the beta.',
+                'Tu solicitud está lista. Activa de inmediato sin costo durante la beta.'
+              )}
+            </p>
+            <button
+              onClick={handleActivate}
+              disabled={activating}
+              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl text-base hover:bg-lime-500 transition disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {activating ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  {t('Activating...', 'Activando...')}
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  {t('Get Featured — Free', 'Destacarme — Gratis')}
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
       <BottomNav />

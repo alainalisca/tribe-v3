@@ -337,6 +337,39 @@ export async function incrementPartnerMetric(
   }
 }
 
+/** Self-activate a pending partner record (beta free trial, 6 months).
+ *  Calls the `self_activate_featured_partner` SECURITY DEFINER RPC which
+ *  enforces ownership and status checks server-side.
+ *
+ *  Returns:
+ *    { success: true,  data: { alreadyActive: false } } — first activation
+ *    { success: true,  data: { alreadyActive: true  } } — idempotent no-op
+ *    { success: false, error: string               } — not found / not owner
+ */
+export async function selfActivatePartner(supabase: SupabaseClient): Promise<DalResult<{ alreadyActive: boolean }>> {
+  try {
+    const { data, error } = await supabase.rpc('self_activate_featured_partner');
+
+    if (error) {
+      logError(error, { action: 'selfActivatePartner' });
+      return { success: false, error: error.message };
+    }
+
+    // RPC returns a JSONB discriminated union
+    const result = data as { ok: boolean; already_active?: boolean; error?: string } | null;
+
+    if (!result || !result.ok) {
+      const reason = result?.error ?? 'unknown_error';
+      return { success: false, error: reason };
+    }
+
+    return { success: true, data: { alreadyActive: result.already_active === true } };
+  } catch (err) {
+    logError(err, { action: 'selfActivatePartner' });
+    return { success: false, error: 'Failed to activate partner' };
+  }
+}
+
 /** Submit a partnership application (inserts a pending record) */
 export async function applyForPartnership(
   supabase: SupabaseClient,
