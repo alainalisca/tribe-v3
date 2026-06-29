@@ -270,4 +270,14 @@ select '102_partner_self_activate_rpc',
        case when exists (
          select 1 from pg_proc where proname = 'self_activate_featured_partner'
        ) then 'applied' else 'MISSING' end
+union all
+select '103_fix_chat_messages_dm_and_privacy',
+       -- BUG-204: session_id made nullable (DM sends no longer fail) +
+       -- privacy leak closed (dropped USING(true) policy, added
+       -- conversation-scoped SELECT/INSERT). Detect by session_id nullability.
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'chat_messages'
+           and column_name = 'session_id' and is_nullable = 'YES'
+       ) then 'applied' else 'MISSING' end
 order by migration;
