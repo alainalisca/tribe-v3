@@ -225,9 +225,21 @@ export function useSettings(language: 'en' | 'es') {
         if (permission === 'granted' && user?.id) {
           const { requestNotificationPermission } = await import('@/lib/notifications');
           try {
-            await requestNotificationPermission(user.id);
-            setNotificationsEnabled(true);
-            showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+            const subscription = await requestNotificationPermission(user.id);
+            // Only flip ON when the subscription was actually saved.
+            // `null` means the push manager subscribe or DB persist failed —
+            // keep the toggle OFF so the UI never lies about push being active.
+            if (subscription) {
+              setNotificationsEnabled(true);
+              showSuccess(language === 'en' ? 'Notifications enabled!' : '¡Notificaciones activadas!');
+            } else {
+              setNotificationsEnabled(false);
+              showError(
+                language === 'en'
+                  ? "Notifications aren't available right now. Check your browser settings and try again."
+                  : 'Las notificaciones no están disponibles ahora. Revisa la configuración del navegador e intenta de nuevo.'
+              );
+            }
           } catch (err) {
             setNotificationsEnabled(false);
             // PUSH_NOT_CONFIGURED → VAPID env var missing in this env. Distinct
@@ -235,8 +247,8 @@ export function useSettings(language: 'en' | 'es') {
             if (err instanceof Error && err.message === 'PUSH_NOT_CONFIGURED') {
               showError(
                 language === 'en'
-                  ? "Push notifications aren't set up on this environment yet. Try again from the production app."
-                  : 'Las notificaciones push aún no están configuradas en este entorno. Intenta desde la app de producción.'
+                  ? "Notifications aren't available right now. Push isn't configured in this environment yet."
+                  : 'Las notificaciones no están disponibles ahora. Push aún no está configurado en este entorno.'
               );
             } else {
               throw err;
