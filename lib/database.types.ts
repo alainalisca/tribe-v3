@@ -96,39 +96,50 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          // BUG-204: session_id is nullable after migration 103 (DMs use conversation_id)
+          conversation_id: string | null
           created_at: string | null
           deleted: boolean | null
           deleted_at: string | null
           deleted_by: string | null
           id: string
           message: string
-          session_id: string
+          session_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          conversation_id?: string | null
           created_at?: string | null
           deleted?: boolean | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           message: string
-          session_id: string
+          session_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          conversation_id?: string | null
           created_at?: string | null
           deleted?: boolean | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           message?: string
-          session_id?: string
+          session_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_messages_deleted_by_fkey"
             columns: ["deleted_by"]
