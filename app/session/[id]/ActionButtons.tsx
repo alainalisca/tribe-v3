@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { LogOut, Trash2, MessageCircle, Lock, CreditCard, Loader2 } from 'lucide-react';
-import { downloadICS, downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
+import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -295,71 +295,63 @@ export default function ActionButtons({
           </Button>
         </div>
       )}
-      {/* Calendar integration: legacy ICS for creators, enhanced dual-button for joined users */}
-      {isCreator && !hasJoined && (
-        <Button
-          onClick={() => {
-            downloadICS({
-              sport: session.sport,
-              date: session.date,
-              start_time: session.start_time,
-              duration: session.duration,
-              location: session.location,
-              description: session.description,
-              creatorName: session.creator?.name,
-              sessionId: session.id,
-            });
-            // BUG-031: silent .ics download felt broken — confirm what happened.
-            showInfo(
-              _language === 'es'
-                ? 'Archivo de calendario descargado. Ábrelo para agregar la sesión.'
-                : 'Calendar file downloaded. Open it to add the session.'
-            );
-          }}
-          variant="outline"
-          className="w-full py-3 border-2 border-tribe-green text-tribe-green dark:text-tribe-green hover:bg-tribe-green hover:text-slate-900 font-medium flex items-center justify-center gap-2"
-        >
-          <CalendarIcon className="w-5 h-5" />
-          {t('addToCalendar')}
-        </Button>
-      )}
       {/* Non-creator, future session → muted WhatsApp share. Creators see the
           prominent variant higher up; this is for attendees and prospects
           who'd want to invite a friend to come along. */}
       {!isCreator && !isPast && <WhatsAppShareButton session={session} language={_language} />}
 
-      {hasJoined && (
-        <div className="mt-4 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
-          <p className="text-sm font-semibold text-stone-900 dark:text-white">
-            {_language === 'es' ? '¡Estás inscrito!' : "You're in!"}
-          </p>
+      {/* BUG-224: Add to Calendar — shown to ALL users on future sessions.
+          Primary: Google Calendar URL (opens in new tab, works on all browsers
+          including mobile). Secondary: Apple Calendar via .ics download.
+          Removed legacy creator-only ICS-only button. */}
+      {!isPast && (
+        <div className="mt-2 p-4 bg-tribe-green/10 border border-tribe-green/30 rounded-xl space-y-2">
+          {hasJoined && (
+            <p className="text-sm font-semibold text-stone-900 dark:text-white">
+              {_language === 'es' ? '¡Estás inscrito!' : "You're in!"}
+            </p>
+          )}
           <p className="text-xs text-stone-500 dark:text-gray-400">
-            {_language === 'es' ? 'Agrega a tu calendario para no olvidar' : "Add to your calendar so you don't forget"}
+            {_language === 'es' ? 'Agrega esta sesion a tu calendario' : 'Add this session to your calendar'}
           </p>
           <div className="flex gap-2">
-            <button
+            {/* Primary: Google Calendar — reliable on desktop and mobile web */}
+            <a
+              href={getGoogleCalendarUrl({
+                ...calendarData,
+                url: `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${session.id}`,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => {
-                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` });
-                showInfo(
-                  _language === 'es'
-                    ? 'Archivo de calendario descargado. Ábrelo para agregar la sesión.'
-                    : 'Calendar file downloaded. Open it to add the session.'
-                );
+                showInfo(t('addToCalendarOpened'));
+                trackEvent('session_calendar_added', {
+                  session_id: session.id,
+                  provider: 'google',
+                  user_state: hasJoined ? 'joined' : isCreator ? 'creator' : 'viewer',
+                });
               }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
             >
               <CalendarIcon className="w-4 h-4" />
-              Apple Calendar
-            </button>
-            <a
-              href={getGoogleCalendarUrl(calendarData)}
-              target="_blank"
-              rel="noopener noreferrer"
+              {t('addToCalendarGoogle')}
+            </a>
+            {/* Secondary: Apple Calendar via .ics — desktop Safari / macOS */}
+            <button
+              onClick={() => {
+                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` });
+                showInfo(t('addToCalendarIcsDownloaded'));
+                trackEvent('session_calendar_added', {
+                  session_id: session.id,
+                  provider: 'apple',
+                  user_state: hasJoined ? 'joined' : isCreator ? 'creator' : 'viewer',
+                });
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-white dark:bg-tribe-surface text-stone-900 dark:text-white text-sm font-semibold rounded-lg border border-stone-200 dark:border-gray-600 hover:bg-stone-50 dark:hover:bg-tribe-mid transition"
             >
               <CalendarIcon className="w-4 h-4" />
-              Google
-            </a>
+              {t('addToCalendarApple')}
+            </button>
           </div>
         </div>
       )}

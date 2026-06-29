@@ -31,6 +31,10 @@ export const extEn = {
 
   // CalendarButton
   addToCalendar: 'Add to Calendar',
+  addToCalendarGoogle: 'Google Calendar',
+  addToCalendarApple: 'Apple Calendar',
+  addToCalendarOpened: 'Opening Google Calendar in a new tab.',
+  addToCalendarIcsDownloaded: 'Calendar file downloaded. Open it to add the session.',
 
   // Error page
   somethingWentWrong: 'Something went wrong',
@@ -285,6 +289,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // CalendarButton
   addToCalendar: 'Agregar al Calendario',
+  addToCalendarGoogle: 'Google Calendar',
+  addToCalendarApple: 'Apple Calendar',
+  addToCalendarOpened: 'Abriendo Google Calendar en una nueva pestaña.',
+  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Abrelo para agregar la sesion.',
 
   // Error page
   somethingWentWrong: 'Algo salio mal',
