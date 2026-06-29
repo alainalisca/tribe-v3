@@ -3,6 +3,8 @@
 import { ToggleLeft, ToggleRight } from 'lucide-react';
 import type { Database } from '@/lib/database.types';
 import type { TranslationShape } from './packagesI18n';
+import { formatPrice } from '@/lib/formatCurrency';
+import type { Currency } from '@/lib/payments/config';
 
 type ServicePackageRow = Database['public']['Tables']['service_packages']['Row'];
 
@@ -14,10 +16,8 @@ export interface PackageCardProps {
 }
 
 export function PackageCard({ pkg, t, language, onToggleActive }: PackageCardProps): React.JSX.Element {
-  const price =
-    pkg.currency === 'COP'
-      ? `$${(pkg.price_cents / 100).toLocaleString('es-CO', { maximumFractionDigits: 0 })} COP`
-      : `$${(pkg.price_cents / 100).toFixed(2)} USD`;
+  const currency = (pkg.currency || 'COP') as Currency;
+  const price = pkg.price_cents != null ? formatPrice(pkg.price_cents, currency) : '';
 
   return (
     <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">

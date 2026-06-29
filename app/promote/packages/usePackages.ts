@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { insertServicePackage, fetchServicePackages, deactivateServicePackage } from '@/lib/dal/promote';
+import {
+  insertServicePackage,
+  fetchServicePackages,
+  deactivateServicePackage,
+  updateServicePackage,
+} from '@/lib/dal/promote';
 import { showSuccess, showError } from '@/lib/toast';
 import type { Database } from '@/lib/database.types';
 import { translations, defaultForm, type FormState, type TranslationShape } from './packagesI18n';
@@ -130,11 +135,6 @@ export function usePackages(language: string): UsePackagesReturn {
         return;
       }
     } else {
-      // Reactivate by calling updateServicePackage directly would require
-      // importing it; instead we refresh after a direct update via the DAL
-      // shape. Since updateServicePackage is exported from the same DAL file,
-      // import it here.
-      const { updateServicePackage } = await import('@/lib/dal/promote');
       const result = await updateServicePackage(supabase, pkg.id, { is_active: true });
       if (!result.success) {
         showError(t.errorCreate);
