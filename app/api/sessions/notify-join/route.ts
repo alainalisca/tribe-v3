@@ -129,10 +129,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // the join via the bell/notifications panel regardless of whether push/
     // VAPID is configured. The service-role client bypasses RLS for the
     // server-side insert.
+    //
+    // IMPORTANT: `type` must be one of the values in the notifications.type
+    // CHECK constraint. `templateKey` ('join' | 'join_request' | 'join_guest')
+    // is ONLY used to select localized copy above — it must NOT be stored as
+    // the type. All three join variants map to 'session_join', which is in the
+    // allowed set and has an icon + session click-through in the notifications
+    // page.
     const inAppResult = await createNotification(service, {
       recipient_id: session.creator_id,
       actor_id: user?.id ?? null,
-      type: templateKey,
+      type: 'session_join',
       entity_type: 'session',
       entity_id: session_id,
       message: body,
