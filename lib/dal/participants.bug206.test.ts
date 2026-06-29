@@ -5,7 +5,9 @@
  *  - fetchPendingParticipantsForSession: returns only status='pending' rows
  *  - updateParticipantStatus: pending → confirmed (approve path)
  *  - updateParticipantStatus: surfaces DB errors correctly
+ *  - updateParticipantStatus: treats 0 affected rows as failure (RLS block detection)
  *  - deleteParticipant: decline path removes the row
+ *  - deleteParticipant: treats 0 affected rows as failure (RLS block detection)
  *
  * UI-level testing of PendingRequestsPanel is impractical in this Jest/Vitest
  * setup (no jsdom rendering in the DAL test suite), so we test the DAL
@@ -22,16 +24,26 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 // ---------------------------------------------------------------------------
 /**
  * Builds a minimal Supabase client mock with a fluent builder chain.
- * `selectData` is returned by select() chains; `updateError`/`deleteError` let
- * each operation return distinct errors.
+ * `selectData` is returned by select() chains; `updateData`/`deleteData`
+ * simulate affected rows returned by .select() after update/delete.
+ * An empty array (default) simulates an RLS-blocked write (0 rows affected).
  */
 function makeMockSupabase(opts: {
   selectData?: unknown[];
   selectError?: { message: string } | null;
+  updateData?: unknown[];
   updateError?: { message: string } | null;
+  deleteData?: unknown[];
   deleteError?: { message: string } | null;
 }) {
-  const { selectData = [], selectError = null, updateError = null, deleteError = null } = opts;
+  const {
+    selectData = [],
+    selectError = null,
+    updateData = [{ id: 'part-1' }],
+    updateError = null,
+    deleteData = [{ id: 'part-1' }],
+    deleteError = null,
+  } = opts;
 
   return {
     from: (_table: string) => ({
@@ -43,13 +55,17 @@ function makeMockSupabase(opts: {
           }),
         }),
       }),
-      // update chain used by updateParticipantStatus
+      // update chain used by updateParticipantStatus (.update().eq().select())
       update: (_payload: unknown) => ({
-        eq: (_col: string, _val: unknown) => Promise.resolve({ error: updateError }),
+        eq: (_col: string, _val: unknown) => ({
+          select: (_cols2: string) => Promise.resolve({ data: updateData, error: updateError }),
+        }),
       }),
-      // delete chain used by deleteParticipant
+      // delete chain used by deleteParticipant (.delete().eq().select())
       delete: () => ({
-        eq: (_col: string, _val: unknown) => Promise.resolve({ error: deleteError }),
+        eq: (_col: string, _val: unknown) => ({
+          select: (_cols2: string) => Promise.resolve({ data: deleteData, error: deleteError }),
+        }),
       }),
     }),
   } as unknown as SupabaseClient;
@@ -108,19 +124,28 @@ describe('fetchPendingParticipantsForSession', () => {
 // updateParticipantStatus — approve path (pending → confirmed)
 // ---------------------------------------------------------------------------
 describe('updateParticipantStatus (approve path)', () => {
-  it('returns success when DB update succeeds', async () => {
-    const supabase = makeMockSupabase({ updateError: null });
+  it('returns success when DB update succeeds and returns an affected row', async () => {
+    const supabase = makeMockSupabase({ updateData: [{ id: 'part-1' }], updateError: null });
     const result = await updateParticipantStatus(supabase, 'part-1', 'confirmed');
 
     expect(result.success).toBe(true);
   });
 
-  it('returns error when DB update fails', async () => {
-    const supabase = makeMockSupabase({ updateError: { message: 'row not found' } });
+  it('returns error when DB update fails (Supabase error)', async () => {
+    const supabase = makeMockSupabase({ updateData: [], updateError: { message: 'row not found' } });
     const result = await updateParticipantStatus(supabase, 'part-ghost', 'confirmed');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('row not found');
+  });
+
+  it('returns error when 0 rows are affected (RLS-blocked write)', async () => {
+    // Simulates an RLS block: Supabase returns no error but 0 rows updated.
+    const supabase = makeMockSupabase({ updateData: [], updateError: null });
+    const result = await updateParticipantStatus(supabase, 'part-ghost', 'confirmed');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/No rows updated/);
   });
 });
 
@@ -128,18 +153,27 @@ describe('updateParticipantStatus (approve path)', () => {
 // deleteParticipant — decline path
 // ---------------------------------------------------------------------------
 describe('deleteParticipant (decline path)', () => {
-  it('returns success when DB delete succeeds', async () => {
-    const supabase = makeMockSupabase({ deleteError: null });
+  it('returns success when DB delete succeeds and returns an affected row', async () => {
+    const supabase = makeMockSupabase({ deleteData: [{ id: 'part-1' }], deleteError: null });
     const result = await deleteParticipant(supabase, 'part-1');
 
     expect(result.success).toBe(true);
   });
 
-  it('returns error when DB delete fails', async () => {
-    const supabase = makeMockSupabase({ deleteError: { message: 'foreign key violation' } });
+  it('returns error when DB delete fails (Supabase error)', async () => {
+    const supabase = makeMockSupabase({ deleteData: [], deleteError: { message: 'foreign key violation' } });
     const result = await deleteParticipant(supabase, 'part-1');
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('foreign key violation');
+  });
+
+  it('returns error when 0 rows are affected (RLS-blocked delete)', async () => {
+    // Simulates an RLS block: Supabase returns no error but 0 rows deleted.
+    const supabase = makeMockSupabase({ deleteData: [], deleteError: null });
+    const result = await deleteParticipant(supabase, 'part-ghost');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/No rows deleted/);
   });
 });

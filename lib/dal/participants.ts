@@ -30,8 +30,14 @@ export async function updateParticipantStatus(
   status: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('session_participants').update({ status }).eq('id', id);
+    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
+    // write returns no error but also 0 rows — treat that as a failure so the
+    // host sees the real outcome instead of a silent fake-success.
+    const { data, error } = await supabase.from('session_participants').update({ status }).eq('id', id).select('id');
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'No rows updated — RLS may have blocked the write' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateParticipantStatus' });
@@ -41,8 +47,13 @@ export async function updateParticipantStatus(
 
 export async function deleteParticipant(supabase: SupabaseClient, id: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('session_participants').delete().eq('id', id);
+    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
+    // delete returns no error but also 0 rows — treat that as a failure.
+    const { data, error } = await supabase.from('session_participants').delete().eq('id', id).select('id');
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'No rows deleted — RLS may have blocked the write' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'deleteParticipant' });
