@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
+import { followUser, unfollowUser } from '@/lib/dal/promote';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
 import { togglePostLike } from '@/lib/dal/instructorPosts';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -339,21 +340,19 @@ export function useStorefrontData(instructorId: string) {
     }));
     try {
       if (wasFollowing) {
-        const { error } = await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', instructorId);
-        if (error) throw error;
+        // BUG-215: route through DAL so a 0-row (RLS-blocked) delete surfaces
+        // as a failure instead of a silent success that reverts on reload.
+        const result = await unfollowUser(supabase, currentUserId, instructorId);
+        if (!result.success) throw new Error(result.error ?? 'Unfollow failed');
         // BUG-006: the button label flipped but with no follower-count
         // display anywhere in the storefront, the user got no visible
         // confirmation. A toast makes the success obvious.
         showSuccess(language === 'es' ? 'Dejaste de seguir' : 'Unfollowed');
       } else {
-        const { error } = await supabase
-          .from('user_follows')
-          .insert({ follower_id: currentUserId, following_id: instructorId });
-        if (error) throw error;
+        // BUG-215: route through DAL so a 0-row (RLS-blocked) insert surfaces
+        // as a failure instead of a silent success that reverts on reload.
+        const result = await followUser(supabase, currentUserId, instructorId);
+        if (!result.success) throw new Error(result.error ?? 'Follow failed');
         showSuccess(language === 'es' ? 'Ahora sigues' : 'Following');
       }
     } catch (err) {
