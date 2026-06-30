@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useEditProfile } from './useEditProfile';
 import ImageCropModal from '@/components/ImageCropModal';
+import { parseCommaList, formatCommaList } from '@/lib/format/commaList';
 
 export default function EditProfilePage() {
   const { language } = useLanguage();
@@ -61,7 +62,28 @@ export default function EditProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [bannerUseUrl, setBannerUseUrl] = useState(false);
 
+  // Raw text while the user edits comma-separated fields. We split to the
+  // array only on blur (and at save time via formData sync), so the comma
+  // keystroke is never consumed mid-word.
+  const [specialtiesRaw, setSpecialtiesRaw] = useState<string | null>(null);
+  const [certificationsRaw, setCertificationsRaw] = useState<string | null>(null);
+
   const triggerAvatarUpload = () => avatarInputRef.current?.click();
+
+  // Flush raw comma-list strings into the save call so clicking Save while
+  // still focused in a field doesn't lose uncommitted text.
+  function handleSaveWithFlush() {
+    const overrides: { specialties?: string[]; certifications?: string[] } = {};
+    if (specialtiesRaw !== null) {
+      overrides.specialties = parseCommaList(specialtiesRaw);
+      setSpecialtiesRaw(null);
+    }
+    if (certificationsRaw !== null) {
+      overrides.certifications = parseCommaList(certificationsRaw);
+      setCertificationsRaw(null);
+    }
+    void handleSave(overrides);
+  }
 
   if (loading) {
     return (
@@ -97,7 +119,11 @@ export default function EditProfilePage() {
             </Link>
             <h1 className="text-xl font-bold text-theme-primary">{tr.editProfile}</h1>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 font-semibold">
+          <Button
+            onClick={handleSaveWithFlush}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 font-semibold"
+          >
             <Save className="w-4 h-4" />
             {saving ? tr.saving : tr.save}
           </Button>
@@ -330,16 +356,17 @@ export default function EditProfilePage() {
                     </Label>
                     <Input
                       type="text"
-                      value={formData.specialties.join(', ')}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          specialties: e.target.value
-                            .split(',')
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        })
-                      }
+                      value={specialtiesRaw ?? formatCommaList(formData.specialties)}
+                      onChange={(e) => setSpecialtiesRaw(e.target.value)}
+                      onBlur={() => {
+                        if (specialtiesRaw !== null) {
+                          setFormData({
+                            ...formData,
+                            specialties: parseCommaList(specialtiesRaw),
+                          });
+                          setSpecialtiesRaw(null);
+                        }
+                      }}
                       placeholder="E.g. CrossFit, HIIT, Yoga, Pilates"
                       className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
@@ -351,16 +378,17 @@ export default function EditProfilePage() {
                     </Label>
                     <Input
                       type="text"
-                      value={formData.certifications.join(', ')}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          certifications: e.target.value
-                            .split(',')
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        })
-                      }
+                      value={certificationsRaw ?? formatCommaList(formData.certifications)}
+                      onChange={(e) => setCertificationsRaw(e.target.value)}
+                      onBlur={() => {
+                        if (certificationsRaw !== null) {
+                          setFormData({
+                            ...formData,
+                            certifications: parseCommaList(certificationsRaw),
+                          });
+                          setCertificationsRaw(null);
+                        }
+                      }}
                       placeholder="E.g. NASM-CPT, Yoga RYT-200"
                       className="h-auto py-2 dark:bg-tribe-mid dark:border-gray-600 dark:text-white placeholder-gray-500 focus-visible:ring-tribe-green"
                     />
@@ -785,7 +813,7 @@ export default function EditProfilePage() {
         </div>
 
         {/* Save Button */}
-        <Button onClick={handleSave} disabled={saving} className="w-full py-4 font-bold rounded-2xl text-lg">
+        <Button onClick={handleSaveWithFlush} disabled={saving} className="w-full py-4 font-bold rounded-2xl text-lg">
           {saving ? tr.saving : tr.saveProfile}
         </Button>
       </div>

@@ -311,7 +311,7 @@ export function useEditProfile(language: 'en' | 'es') {
     }
   }
 
-  async function handleSave() {
+  async function handleSave(overrides?: { specialties?: string[]; certifications?: string[] }) {
     if (!user) return;
 
     try {
@@ -340,8 +340,8 @@ export function useEditProfile(language: 'en' | 'es') {
         facebook_url: formData.facebook_url,
         is_instructor: formData.is_instructor,
         instructor_bio: formData.instructor_bio || null,
-        specialties: formData.specialties,
-        certifications: formData.certifications,
+        specialties: overrides?.specialties ?? formData.specialties,
+        certifications: overrides?.certifications ?? formData.certifications,
         years_experience: formData.years_experience,
         website_url: formData.website_url || null,
         storefront_tagline: formData.storefront_tagline || null,
