@@ -47,6 +47,7 @@ describe('useAuthHandlers — OTP verify', () => {
       result.current.setIsLogin(false);
       result.current.setEmail('ana@example.com');
       result.current.setPassword('password1');
+      result.current.setConfirmPassword('password1');
       result.current.setName('Ana');
       result.current.setBirthDate('1990-01-01');
       result.current.setAcceptedTos(true);
@@ -82,6 +83,7 @@ describe('useAuthHandlers — OTP verify', () => {
       result.current.setIsLogin(false);
       result.current.setEmail('ana@example.com');
       result.current.setPassword('password1');
+      result.current.setConfirmPassword('password1');
       result.current.setName('Ana');
       result.current.setBirthDate('1990-01-01');
       result.current.setAcceptedTos(true);
@@ -118,6 +120,24 @@ describe('useAuthHandlers — OTP verify', () => {
     });
     expect(resetPasswordForEmail).toHaveBeenCalledWith('ana@example.com');
     expect(resend).not.toHaveBeenCalled();
+  });
+
+  it('signup with mismatched passwords shows error and does not enter verify mode', async () => {
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    act(() => {
+      result.current.setIsLogin(false);
+      result.current.setEmail('ana@example.com');
+      result.current.setPassword('password1');
+      result.current.setConfirmPassword('different2');
+      result.current.setName('Ana');
+      result.current.setBirthDate('1990-01-01');
+      result.current.setAcceptedTos(true);
+    });
+    await act(async () => {
+      await result.current.handleSubmit({ preventDefault() {} } as React.FormEvent);
+    });
+    expect(result.current.message).toContain('Passwords do not match');
+    expect(result.current.verifyMode).toBeNull();
   });
 
   it('shows a sign-in nudge when the URL carries an invalid/expired link error', async () => {

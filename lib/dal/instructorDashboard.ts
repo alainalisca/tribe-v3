@@ -180,6 +180,7 @@ export interface StorefrontProfileUpdate {
   storefront_tagline?: string | null;
   specialties?: string[] | null;
   storefront_banner_url?: string | null;
+  storefront_video_url?: string | null;
 }
 
 /** Update storefront-related fields on users table */
@@ -212,7 +213,9 @@ export async function fetchDashboardPackages(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
+      .select(
+        'id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at'
+      )
       .eq('instructor_id', userId)
       .eq('is_active', true)
       .order('display_order', { ascending: true })

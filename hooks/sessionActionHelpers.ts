@@ -153,18 +153,15 @@ export async function checkGuestStatus(
   }
 }
 
-/** Remove a registered user from a session */
-export async function removeUserFromSession(
-  supabase: SupabaseClient,
-  session: Session,
-  userId: string,
-  language: 'en' | 'es',
-  onNavigate: (path: string) => void
-): Promise<void> {
+/**
+ * Remove a registered user from a session.
+ * Returns true on success; throws on DB error.
+ * Callers are responsible for showing a toast and navigating — keeping this
+ * function pure so the caller can update local state before navigating (BUG-207).
+ */
+export async function removeUserFromSession(supabase: SupabaseClient, session: Session, userId: string): Promise<true> {
   const deleteResult = await deleteParticipantBySessionAndUser(supabase, session.id, userId);
   if (!deleteResult.success) throw new Error(deleteResult.error);
-
-  // The 087 trigger recomputes the count from the delete above.
-  showSuccess(language === 'es' ? 'Has salido de la sesion' : 'You have left the session');
-  onNavigate('/sessions');
+  // The 087 trigger recomputes sessions.current_participants from this delete.
+  return true;
 }

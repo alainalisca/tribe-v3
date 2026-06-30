@@ -96,39 +96,50 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          // BUG-204: session_id is nullable after migration 103 (DMs use conversation_id)
+          conversation_id: string | null
           created_at: string | null
           deleted: boolean | null
           deleted_at: string | null
           deleted_by: string | null
           id: string
           message: string
-          session_id: string
+          session_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          conversation_id?: string | null
           created_at?: string | null
           deleted?: boolean | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           message: string
-          session_id: string
+          session_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          conversation_id?: string | null
           created_at?: string | null
           deleted?: boolean | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           message?: string
-          session_id?: string
+          session_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_messages_deleted_by_fkey"
             columns: ["deleted_by"]
@@ -2296,6 +2307,96 @@ export type Database = {
           created_at?: string
         }
         Relationships: []
+      }
+      community_events: {
+        Row: {
+          id: string
+          community_id: string
+          created_by: string
+          title: string
+          description: string | null
+          location: string | null
+          event_at: string
+          ends_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          community_id: string
+          created_by: string
+          title: string
+          description?: string | null
+          location?: string | null
+          event_at: string
+          ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          community_id?: string
+          created_by?: string
+          title?: string
+          description?: string | null
+          location?: string | null
+          event_at?: string
+          ends_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_events_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_event_rsvps: {
+        Row: {
+          id: string
+          event_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "community_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_event_rsvps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

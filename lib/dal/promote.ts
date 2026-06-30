@@ -25,6 +25,8 @@ type UserFollowInsert = Database['public']['Tables']['user_follows']['Insert'];
 
 /**
  * Create a follow relationship between two users.
+ * BUG-215: appends .select() so that RLS-blocked inserts (which return 0 rows
+ * without an error) are treated as failures rather than silent successes.
  * Optional: pass notificationMessage to create a follow notification.
  */
 export async function followUser(
@@ -38,8 +40,12 @@ export async function followUser(
       follower_id: followerId,
       following_id: followingId,
     };
-    const { error } = await supabase.from('user_follows').insert(data);
+    const { data: inserted, error } = await supabase.from('user_follows').insert(data).select();
     if (error) return { success: false, error: error.message };
+    // RLS-blocked insert returns no error but 0 rows — treat that as failure.
+    if (!inserted || inserted.length === 0) {
+      return { success: false, error: 'Follow was blocked — no row written' };
+    }
 
     // Create notification for the followed user
     if (notificationMessage) {
@@ -62,6 +68,8 @@ export async function followUser(
 
 /**
  * Remove a follow relationship between two users.
+ * BUG-215: appends .select() so that RLS-blocked deletes (which return 0 rows
+ * without an error) are treated as failures rather than silent successes.
  */
 export async function unfollowUser(
   supabase: SupabaseClient,
@@ -69,12 +77,17 @@ export async function unfollowUser(
   followingId: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from('user_follows')
       .delete()
       .eq('follower_id', followerId)
-      .eq('following_id', followingId);
+      .eq('following_id', followingId)
+      .select();
     if (error) return { success: false, error: error.message };
+    // RLS-blocked delete returns no error but 0 rows — treat that as failure.
+    if (!deleted || deleted.length === 0) {
+      return { success: false, error: 'Unfollow was blocked — no row deleted' };
+    }
     return { success: true, data: null };
   } catch (error) {
     logError(error, { action: 'unfollowUser', followerId, followingId });
@@ -95,9 +108,7 @@ export async function fetchFollowers(
       .select('follower:users!user_follows_follower_id_fkey(id, name, avatar_url)')
       .eq('following_id', userId);
     if (error) return { success: false, error: error.message };
-    const followers = (data || [])
-      .map((row: any) => row.follower)
-      .filter(Boolean);
+    const followers = (data || []).map((row: any) => row.follower).filter(Boolean);
     return { success: true, data: followers };
   } catch (error) {
     logError(error, { action: 'fetchFollowers', userId });
@@ -118,9 +129,7 @@ export async function fetchFollowing(
       .select('following:users!user_follows_following_id_fkey(id, name, avatar_url)')
       .eq('follower_id', userId);
     if (error) return { success: false, error: error.message };
-    const following = (data || [])
-      .map((row: any) => row.following)
-      .filter(Boolean);
+    const following = (data || []).map((row: any) => row.following).filter(Boolean);
     return { success: true, data: following };
   } catch (error) {
     logError(error, { action: 'fetchFollowing', userId });
@@ -153,10 +162,7 @@ export async function isFollowing(
 /**
  * Get the count of followers for a user.
  */
-export async function getFollowerCount(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<DalResult<number>> {
+export async function getFollowerCount(supabase: SupabaseClient, userId: string): Promise<DalResult<number>> {
   try {
     const { count, error } = await supabase
       .from('user_follows')
@@ -202,11 +208,7 @@ export async function insertStorefrontMedia(
   data: StorefrontMediaInsert
 ): Promise<DalResult<StorefrontMediaRow>> {
   try {
-    const { data: media, error } = await supabase
-      .from('storefront_media')
-      .insert(data)
-      .select()
-      .single();
+    const { data: media, error } = await supabase.from('storefront_media').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: media };
   } catch (error) {
@@ -224,10 +226,7 @@ export async function updateStorefrontMedia(
   data: Partial<StorefrontMediaInsert>
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('storefront_media')
-      .update(data)
-      .eq('id', mediaId);
+    const { error } = await supabase.from('storefront_media').update(data).eq('id', mediaId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -239,10 +238,7 @@ export async function updateStorefrontMedia(
 /**
  * Delete a storefront media item.
  */
-export async function deleteStorefrontMedia(
-  supabase: SupabaseClient,
-  mediaId: string
-): Promise<DalResult<null>> {
+export async function deleteStorefrontMedia(supabase: SupabaseClient, mediaId: string): Promise<DalResult<null>> {
   try {
     const { error } = await supabase.from('storefront_media').delete().eq('id', mediaId);
     if (error) return { success: false, error: error.message };
@@ -290,7 +286,9 @@ export async function fetchServicePackages(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
+      .select(
+        'id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at'
+      )
       .eq('instructor_id', instructorId)
       .eq('is_active', true)
       .order('display_order', { ascending: true })
@@ -313,7 +311,9 @@ export async function fetchServicePackageById(
   try {
     const { data, error } = await supabase
       .from('service_packages')
-      .select('id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at')
+      .select(
+        'id, instructor_id, name, description, price_cents, currency, package_type, session_count, duration_days, is_active, tag, display_order, created_at, updated_at'
+      )
       .eq('id', packageId)
       .single();
     if (error) return { success: false, error: error.message };
@@ -332,11 +332,7 @@ export async function insertServicePackage(
   data: ServicePackageInsert
 ): Promise<DalResult<ServicePackageRow>> {
   try {
-    const { data: pkg, error } = await supabase
-      .from('service_packages')
-      .insert(data)
-      .select()
-      .single();
+    const { data: pkg, error } = await supabase.from('service_packages').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: pkg };
   } catch (error) {
@@ -354,10 +350,7 @@ export async function updateServicePackage(
   data: Partial<ServicePackageInsert>
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('service_packages')
-      .update(data)
-      .eq('id', packageId);
+    const { error } = await supabase.from('service_packages').update(data).eq('id', packageId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -369,15 +362,9 @@ export async function updateServicePackage(
 /**
  * Deactivate a service package (soft delete).
  */
-export async function deactivateServicePackage(
-  supabase: SupabaseClient,
-  packageId: string
-): Promise<DalResult<null>> {
+export async function deactivateServicePackage(supabase: SupabaseClient, packageId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('service_packages')
-      .update({ is_active: false })
-      .eq('id', packageId);
+    const { error } = await supabase.from('service_packages').update({ is_active: false }).eq('id', packageId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -400,7 +387,9 @@ export async function fetchInstructorPosts(
   try {
     const { data, error } = await supabase
       .from('instructor_posts')
-      .select('id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at')
+      .select(
+        'id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at'
+      )
       .eq('author_id', authorId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -441,7 +430,9 @@ export async function fetchFeedPosts(
     // Now query posts using the extracted array
     const { data, error } = await supabase
       .from('instructor_posts')
-      .select('id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at')
+      .select(
+        'id, author_id, content, media_url, media_type, linked_session_id, like_count, view_count, is_pinned, created_at, updated_at'
+      )
       .in('author_id', followingIds)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -462,11 +453,7 @@ export async function insertPost(
   data: InstructorPostInsert
 ): Promise<DalResult<InstructorPostRow>> {
   try {
-    const { data: post, error } = await supabase
-      .from('instructor_posts')
-      .insert(data)
-      .select()
-      .single();
+    const { data: post, error } = await supabase.from('instructor_posts').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: post };
   } catch (error) {
@@ -484,10 +471,7 @@ export async function updatePost(
   data: Partial<InstructorPostInsert>
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('instructor_posts')
-      .update(data)
-      .eq('id', postId);
+    const { error } = await supabase.from('instructor_posts').update(data).eq('id', postId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -499,10 +483,7 @@ export async function updatePost(
 /**
  * Delete an instructor post.
  */
-export async function deletePost(
-  supabase: SupabaseClient,
-  postId: string
-): Promise<DalResult<null>> {
+export async function deletePost(supabase: SupabaseClient, postId: string): Promise<DalResult<null>> {
   try {
     const { error } = await supabase.from('instructor_posts').delete().eq('id', postId);
     if (error) return { success: false, error: error.message };
@@ -561,17 +542,9 @@ export async function likePost(
 /**
  * Remove a like from a post.
  */
-export async function unlikePost(
-  supabase: SupabaseClient,
-  postId: string,
-  userId: string
-): Promise<DalResult<null>> {
+export async function unlikePost(supabase: SupabaseClient, postId: string, userId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('post_likes')
-      .delete()
-      .eq('post_id', postId)
-      .eq('user_id', userId);
+    const { error } = await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -614,7 +587,9 @@ export async function fetchPromoCodes(
   try {
     const { data, error } = await supabase
       .from('promo_codes')
-      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
+      .select(
+        'id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at'
+      )
       .eq('instructor_id', instructorId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -629,14 +604,13 @@ export async function fetchPromoCodes(
 /**
  * Lookup a promo code by its code string.
  */
-export async function fetchPromoCodeByCode(
-  supabase: SupabaseClient,
-  code: string
-): Promise<DalResult<PromoCodeRow>> {
+export async function fetchPromoCodeByCode(supabase: SupabaseClient, code: string): Promise<DalResult<PromoCodeRow>> {
   try {
     const { data, error } = await supabase
       .from('promo_codes')
-      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
+      .select(
+        'id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at'
+      )
       .eq('code', code)
       .single();
     if (error) return { success: false, error: error.message };
@@ -655,11 +629,7 @@ export async function insertPromoCode(
   data: PromoCodeInsert
 ): Promise<DalResult<PromoCodeRow>> {
   try {
-    const { data: promo, error } = await supabase
-      .from('promo_codes')
-      .insert(data)
-      .select()
-      .single();
+    const { data: promo, error } = await supabase.from('promo_codes').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: promo };
   } catch (error) {
@@ -677,10 +647,7 @@ export async function updatePromoCode(
   data: Partial<PromoCodeInsert>
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('promo_codes')
-      .update(data)
-      .eq('id', promoId);
+    const { error } = await supabase.from('promo_codes').update(data).eq('id', promoId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -692,15 +659,9 @@ export async function updatePromoCode(
 /**
  * Deactivate a promo code (soft delete).
  */
-export async function deactivatePromoCode(
-  supabase: SupabaseClient,
-  promoId: string
-): Promise<DalResult<null>> {
+export async function deactivatePromoCode(supabase: SupabaseClient, promoId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('promo_codes')
-      .update({ is_active: false })
-      .eq('id', promoId);
+    const { error } = await supabase.from('promo_codes').update({ is_active: false }).eq('id', promoId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -746,7 +707,9 @@ export async function validatePromoCode(
   try {
     let query = supabase
       .from('promo_codes')
-      .select('id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at')
+      .select(
+        'id, instructor_id, code, discount_type, discount_value, currency, max_uses, current_uses, applies_to, applies_to_id, min_amount_cents, starts_at, expires_at, is_active, created_at'
+      )
       .eq('code', code)
       .eq('is_active', true);
 
@@ -787,7 +750,9 @@ export async function fetchBoostCampaigns(
   try {
     const { data, error } = await supabase
       .from('boost_campaigns')
-      .select('id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at')
+      .select(
+        'id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at'
+      )
       .eq('instructor_id', instructorId)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -802,14 +767,14 @@ export async function fetchBoostCampaigns(
 /**
  * Get all active boost campaigns (for displaying in feed).
  */
-export async function fetchActiveBoosts(
-  supabase: SupabaseClient
-): Promise<DalResult<BoostCampaignRow[]>> {
+export async function fetchActiveBoosts(supabase: SupabaseClient): Promise<DalResult<BoostCampaignRow[]>> {
   try {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('boost_campaigns')
-      .select('id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at')
+      .select(
+        'id, instructor_id, boost_type, boosted_session_id, boosted_post_id, tier, daily_budget_cents, currency, total_budget_cents, spent_cents, starts_at, ends_at, impressions, clicks, conversions, status, boost_payment_id, created_at, updated_at'
+      )
       .eq('status', 'active')
       .lte('starts_at', now)
       .gte('ends_at', now)
@@ -826,9 +791,7 @@ export async function fetchActiveBoosts(
 /**
  * Get session IDs that are currently boosted.
  */
-export async function fetchActiveBoostedSessionIds(
-  supabase: SupabaseClient
-): Promise<DalResult<string[]>> {
+export async function fetchActiveBoostedSessionIds(supabase: SupabaseClient): Promise<DalResult<string[]>> {
   try {
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -839,9 +802,7 @@ export async function fetchActiveBoostedSessionIds(
       .gte('ends_at', now)
       .not('boosted_session_id', 'is', null);
     if (error) return { success: false, error: error.message };
-    const sessionIds = (data || [])
-      .map((row: any) => row.boosted_session_id)
-      .filter(Boolean);
+    const sessionIds = (data || []).map((row: any) => row.boosted_session_id).filter(Boolean);
     return { success: true, data: sessionIds };
   } catch (error) {
     logError(error, { action: 'fetchActiveBoostedSessionIds' });
@@ -857,11 +818,7 @@ export async function insertBoostCampaign(
   data: BoostCampaignInsert
 ): Promise<DalResult<BoostCampaignRow>> {
   try {
-    const { data: campaign, error } = await supabase
-      .from('boost_campaigns')
-      .insert(data)
-      .select()
-      .single();
+    const { data: campaign, error } = await supabase.from('boost_campaigns').insert(data).select().single();
     if (error) return { success: false, error: error.message };
     return { success: true, data: campaign };
   } catch (error) {
@@ -879,10 +836,7 @@ export async function updateBoostCampaign(
   data: Partial<BoostCampaignInsert>
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('boost_campaigns')
-      .update(data)
-      .eq('id', campaignId);
+    const { error } = await supabase.from('boost_campaigns').update(data).eq('id', campaignId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -894,15 +848,9 @@ export async function updateBoostCampaign(
 /**
  * Cancel a boost campaign (set status to 'cancelled').
  */
-export async function cancelBoostCampaign(
-  supabase: SupabaseClient,
-  campaignId: string
-): Promise<DalResult<null>> {
+export async function cancelBoostCampaign(supabase: SupabaseClient, campaignId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('boost_campaigns')
-      .update({ status: 'cancelled' })
-      .eq('id', campaignId);
+    const { error } = await supabase.from('boost_campaigns').update({ status: 'cancelled' }).eq('id', campaignId);
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
   } catch (error) {
@@ -914,10 +862,7 @@ export async function cancelBoostCampaign(
 /**
  * Record a boost campaign impression (increment impressions by 1).
  */
-export async function recordBoostImpression(
-  supabase: SupabaseClient,
-  campaignId: string
-): Promise<DalResult<null>> {
+export async function recordBoostImpression(supabase: SupabaseClient, campaignId: string): Promise<DalResult<null>> {
   try {
     const { data: campaign, error: fetchError } = await supabase
       .from('boost_campaigns')
@@ -943,10 +888,7 @@ export async function recordBoostImpression(
 /**
  * Record a boost campaign click (increment clicks by 1).
  */
-export async function recordBoostClick(
-  supabase: SupabaseClient,
-  campaignId: string
-): Promise<DalResult<null>> {
+export async function recordBoostClick(supabase: SupabaseClient, campaignId: string): Promise<DalResult<null>> {
   try {
     const { data: campaign, error: fetchError } = await supabase
       .from('boost_campaigns')

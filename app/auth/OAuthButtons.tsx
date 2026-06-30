@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { isInAppBrowser } from '@/lib/inAppBrowser';
 import type { AuthTranslations } from './translations';
 
 interface OAuthButtonsProps {
@@ -24,18 +25,37 @@ export default function OAuthButtons({
 }: OAuthButtonsProps) {
   const tr = useTranslations('auth');
   const [showApple, setShowApple] = useState(true);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+
   useEffect(() => {
+    // Detect native platform via Capacitor; hide Apple button on Android
     import('@capacitor/core')
       .then(({ Capacitor }) => {
         if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
           setShowApple(false);
         }
+        // Only show in-app browser warning on web, not in the installed native app
+        if (!Capacitor.isNativePlatform()) {
+          setInAppBrowser(isInAppBrowser());
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        // Capacitor not available — we're on plain web
+        setInAppBrowser(isInAppBrowser());
+      });
   }, []);
 
   return (
     <>
+      {inAppBrowser && (
+        <div
+          role="alert"
+          className="mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-200"
+        >
+          {t.inAppBrowserWarning}
+        </div>
+      )}
+
       {showApple && (
         <Button
           onClick={onAppleSignIn}

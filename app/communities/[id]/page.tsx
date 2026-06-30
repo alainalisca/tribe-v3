@@ -31,6 +31,7 @@ import {
 import { compressImage } from '@/components/session/recapPhotosHelpers';
 import { sportTranslations } from '@/lib/translations';
 import Image from 'next/image';
+import CommunityEventsTab from '@/components/CommunityEventsTab';
 import {
   ChevronLeft,
   Users,
@@ -49,6 +50,7 @@ import {
 const getTranslations = (language: 'en' | 'es') => ({
   members: language === 'es' ? 'Miembros' : 'Members',
   posts: language === 'es' ? 'Publicaciones' : 'Posts',
+  events: language === 'es' ? 'Eventos' : 'Events',
   join: language === 'es' ? 'Unirse' : 'Join',
   leave: language === 'es' ? 'Salir' : 'Leave',
   newPost: language === 'es' ? 'Nueva Publicación' : 'New Post',
@@ -96,7 +98,7 @@ export default function CommunityDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [isMember, setIsMember] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'members'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'members'>('posts');
   const [joining, setJoining] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [openMenuPostId, setOpenMenuPostId] = useState<string | null>(null);
@@ -423,6 +425,16 @@ export default function CommunityDetailPage() {
                 {t.posts}
               </button>
               <button
+                onClick={() => setActiveTab('events')}
+                className={`px-4 py-3 font-medium border-b-2 transition ${
+                  activeTab === 'events'
+                    ? 'border-tribe-green text-tribe-green'
+                    : 'border-transparent text-stone-500 dark:text-gray-400'
+                }`}
+              >
+                {t.events}
+              </button>
+              <button
                 onClick={() => setActiveTab('members')}
                 className={`px-4 py-3 font-medium border-b-2 transition ${
                   activeTab === 'members'
@@ -572,6 +584,13 @@ export default function CommunityDetailPage() {
                     <p className="text-theme-primary font-medium">{t.noPosts2}</p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Events Tab */}
+            {activeTab === 'events' && (
+              <div className="px-4 py-6">
+                <CommunityEventsTab communityId={communityId} isMember={isMember} userId={userId} />
               </div>
             )}
 

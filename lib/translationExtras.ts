@@ -31,6 +31,10 @@ export const extEn = {
 
   // CalendarButton
   addToCalendar: 'Add to Calendar',
+  addToCalendarGoogle: 'Google Calendar',
+  addToCalendarApple: 'Apple Calendar',
+  addToCalendarOpened: 'Opening Google Calendar in a new tab.',
+  addToCalendarIcsDownloaded: 'Calendar file downloaded. Open it to add the session.',
 
   // Error page
   somethingWentWrong: 'Something went wrong',
@@ -236,11 +240,34 @@ export const extEn = {
   noMatchingFilters: 'No sessions match your filters',
   clearFilters: 'Clear filters',
 
+  // PendingRequestsPanel (BUG-206)
+  pendingJoinRequests: 'Pending Join Requests',
+  noPendingJoinRequests: 'No pending requests',
+  approveAthlete: 'Approve',
+  declineAthlete: 'Decline',
+  approveSuccess: 'Athlete approved',
+  declineSuccess: 'Request declined',
+  approvalFailed: 'Could not approve request',
+  declineFailed: 'Could not decline request',
+
   // P1 fixes
   guest: 'Guest',
   findYourTribe: 'Find Your Tribe',
   onboardingDescBrowse: 'Browse sessions by sport, skill level, and location. Join with one tap.',
   inviteOnlyLabel: 'Invite Only',
+
+  // BUG-211: Instructor intro video upload (StorefrontEditor)
+  introVideo: 'Intro Video',
+  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  uploadVideo: 'Upload video',
+  changeVideo: 'Change video',
+  removeVideo: 'Remove video',
+  videoTooLarge: 'Video exceeds the 50 MB limit. Choose a smaller file.',
+  videoWrongType: 'Only MP4 files are accepted. Convert your video and try again.',
+  videoTooLong: 'Video exceeds the 60-second limit. Trim it and try again.',
+  videoUploadError: 'Could not upload video. Please try again.',
+  videoSaved: 'Video saved.',
+  videoRemoved: 'Video removed.',
 };
 
 export const extEs: Record<keyof typeof extEn, string> = {
@@ -275,6 +302,10 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // CalendarButton
   addToCalendar: 'Agregar al Calendario',
+  addToCalendarGoogle: 'Google Calendar',
+  addToCalendarApple: 'Apple Calendar',
+  addToCalendarOpened: 'Abriendo Google Calendar en una nueva pestaña.',
+  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Abrelo para agregar la sesion.',
 
   // Error page
   somethingWentWrong: 'Algo salio mal',
@@ -480,9 +511,32 @@ export const extEs: Record<keyof typeof extEn, string> = {
   noMatchingFilters: 'No hay sesiones que coincidan con tus filtros',
   clearFilters: 'Limpiar filtros',
 
+  // PendingRequestsPanel (BUG-206)
+  pendingJoinRequests: 'Solicitudes de Ingreso Pendientes',
+  noPendingJoinRequests: 'Sin solicitudes pendientes',
+  approveAthlete: 'Aprobar',
+  declineAthlete: 'Rechazar',
+  approveSuccess: 'Atleta aprobado',
+  declineSuccess: 'Solicitud rechazada',
+  approvalFailed: 'No se pudo aprobar la solicitud',
+  declineFailed: 'No se pudo rechazar la solicitud',
+
   // P1 fixes
   guest: 'Invitado',
   findYourTribe: 'Encuentra tu Tribu',
   onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicacion. Unete con un toque.',
   inviteOnlyLabel: 'Solo con Invitacion',
+
+  // BUG-211: Instructor intro video upload (StorefrontEditor)
+  introVideo: 'Video de Presentacion',
+  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  uploadVideo: 'Subir video',
+  changeVideo: 'Cambiar video',
+  removeVideo: 'Eliminar video',
+  videoTooLarge: 'El video supera el limite de 50 MB. Elige un archivo mas pequeno.',
+  videoWrongType: 'Solo se aceptan archivos MP4. Convierte tu video e intenta de nuevo.',
+  videoTooLong: 'El video supera el limite de 60 segundos. Recortalo e intenta de nuevo.',
+  videoUploadError: 'No se pudo subir el video. Intenta de nuevo.',
+  videoSaved: 'Video guardado.',
+  videoRemoved: 'Video eliminado.',
 };

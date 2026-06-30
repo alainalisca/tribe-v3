@@ -9,14 +9,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 
 type Tab = 'sessions' | 'direct';
 
 export default function MessagesPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('sessions');
+  const searchParams = useSearchParams();
+  const targetUserId = searchParams.get('user');
+  const [activeTab, setActiveTab] = useState<Tab>(targetUserId ? 'direct' : 'sessions');
   const { t, language, conversations, directConversations, loading, error, formatTime, getTranslatedSport, retry } =
-    useMessages();
+    useMessages({ targetUserId });
 
   if (loading) {
     return (

@@ -49,7 +49,7 @@ function formatPriceLine(
     return language === 'es' ? 'Gratis' : 'Free';
   }
   const c = (currency || 'COP') as Currency;
-  return `${formatPrice(priceCents, c)} ${c}`;
+  return formatPrice(priceCents, c);
 }
 
 export default function WhatsAppShareButton({ session, language, isCreator = false }: WhatsAppShareButtonProps) {

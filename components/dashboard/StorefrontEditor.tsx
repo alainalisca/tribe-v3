@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { updateStorefrontProfile } from '@/lib/dal/instructorDashboard';
 import { showSuccess, showError } from '@/lib/toast';
+import VideoUploadSection from '@/components/dashboard/VideoUploadSection';
 
 interface StorefrontEditorProps {
   userId: string;
@@ -16,6 +17,7 @@ interface StorefrontEditorProps {
   initialTagline: string;
   initialSpecialties: string[];
   initialBannerUrl: string;
+  initialVideoUrl?: string | null;
 }
 
 export default function StorefrontEditor({
@@ -25,6 +27,7 @@ export default function StorefrontEditor({
   initialTagline,
   initialSpecialties,
   initialBannerUrl,
+  initialVideoUrl = null,
 }: StorefrontEditorProps) {
   const supabase = createClient();
 
@@ -188,6 +191,9 @@ export default function StorefrontEditor({
           className="w-full px-4 py-3 rounded-xl bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid text-theme-primary focus:ring-2 focus:ring-tribe-green focus:border-transparent outline-none"
         />
       </div>
+
+      {/* Intro Video */}
+      <VideoUploadSection supabase={supabase} userId={userId} initialVideoUrl={initialVideoUrl} />
 
       {/* Actions */}
       <div className="flex gap-3">

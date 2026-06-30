@@ -198,6 +198,42 @@ describe('AuthPage', () => {
     expect(screen.getByText('¿Olvidaste tu contraseña?')).toBeInTheDocument();
   });
 
+  // BUG-225: confirm-password field on registration
+  it('shows confirm password field on signup form', async () => {
+    mockIsLogin = false;
+    render(<AuthPage />);
+
+    expect(screen.getByText('Confirm Password')).toBeInTheDocument();
+  });
+
+  // BUG-226: show/hide password toggle
+  it('renders show password toggle button on login form', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Welcome back!')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Show password')).toBeInTheDocument();
+  });
+
+  it('toggling eye icon reveals the password field value', async () => {
+    render(<AuthPage />);
+
+    await vi.waitFor(() => {
+      expect(screen.getByText('Welcome back!')).toBeInTheDocument();
+    });
+
+    const pwInput = screen.getByPlaceholderText('••••••••');
+    expect(pwInput).toHaveAttribute('type', 'password');
+
+    const toggleBtn = screen.getByLabelText('Show password');
+    fireEvent.click(toggleBtn);
+
+    expect(pwInput).toHaveAttribute('type', 'text');
+    expect(screen.getByLabelText('Hide password')).toBeInTheDocument();
+  });
+
   // ---------------------------------------------------------------------------
   // Task 5: verify-branch rendering
   // ---------------------------------------------------------------------------

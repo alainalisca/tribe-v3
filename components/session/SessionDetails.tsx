@@ -221,8 +221,7 @@ export default function SessionDetails({
                           {language === 'es' ? 'Precio por persona' : 'Price per person'}
                         </span>
                         <span className="text-emerald-700 dark:text-emerald-300">
-                          {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}{' '}
-                          {session.currency || 'USD'}
+                          {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
@@ -234,8 +233,7 @@ export default function SessionDetails({
                           {formatPrice(
                             Math.round(session.price_cents! * feeRatio),
                             (session.currency || 'USD') as Currency
-                          )}{' '}
-                          {session.currency || 'USD'}
+                          )}
                         </span>
                       </div>
                       <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
@@ -246,8 +244,7 @@ export default function SessionDetails({
                           {formatPrice(
                             Math.round(session.price_cents! * payoutRatio),
                             (session.currency || 'USD') as Currency
-                          )}{' '}
-                          {session.currency || 'USD'}
+                          )}
                         </span>
                       </div>
                       {confirmedCount > 0 && (
@@ -261,8 +258,7 @@ export default function SessionDetails({
                             {formatPrice(
                               Math.round(session.price_cents! * payoutRatio * confirmedCount),
                               (session.currency || 'USD') as Currency
-                            )}{' '}
-                            {session.currency || 'USD'}
+                            )}
                           </span>
                         </div>
                       )}

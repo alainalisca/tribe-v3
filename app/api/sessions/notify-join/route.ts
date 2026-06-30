@@ -26,8 +26,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { z } from 'zod';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { createNotification } from '@/lib/dal';
 
 const schema = z.object({
   session_id: z.string().uuid(),
@@ -110,19 +112,53 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    const safeName = sanitizeName(joiner_name);
-    const title = kind === 'request' ? '📩 New Join Request' : '🎉 New Training Partner!';
-    const body =
-      kind === 'request'
-        ? `${safeName} wants to join your ${session.sport} session`
-        : kind === 'guest'
-          ? `${safeName} (guest) joined your ${session.sport} session`
-          : `${safeName} joined your ${session.sport} session`;
+    // Fetch the host's preferred language so the notification arrives in
+    // their language, not the joiner's client-side locale.
+    const { data: hostRow } = await service
+      .from('users')
+      .select('preferred_language')
+      .eq('id', session.creator_id)
+      .maybeSingle();
+    const hostLang = toLang((hostRow as { preferred_language?: string | null } | null)?.preferred_language);
 
+    const safeName = sanitizeName(joiner_name);
+    const templateKey = kind === 'request' ? 'join_request' : kind === 'guest' ? 'join_guest' : 'join';
+    const { title, body } = notificationCopy(templateKey, hostLang, { name: safeName, sport: session.sport });
+
+    // Always create an in-app notification for the host so they learn about
+    // the join via the bell/notifications panel regardless of whether push/
+    // VAPID is configured. The service-role client bypasses RLS for the
+    // server-side insert.
+    //
+    // IMPORTANT: `type` must be one of the values in the notifications.type
+    // CHECK constraint. `templateKey` ('join' | 'join_request' | 'join_guest')
+    // is ONLY used to select localized copy above — it must NOT be stored as
+    // the type. All three join variants map to 'session_join', which is in the
+    // allowed set and has an icon + session click-through in the notifications
+    // page.
+    const inAppResult = await createNotification(service, {
+      recipient_id: session.creator_id,
+      actor_id: user?.id ?? null,
+      type: 'session_join',
+      entity_type: 'session',
+      entity_id: session_id,
+      message: body,
+    });
+    if (!inAppResult.success) {
+      // Non-fatal — push still fires; but log so we can detect DAL issues.
+      logError(inAppResult.error, {
+        route: '/api/sessions/notify-join',
+        action: 'create_in_app_notification',
+        session_id,
+        host: session.creator_id,
+      });
+    }
+
+    // Best-effort push (web/FCM). A delivery failure must not fail the join
+    // UX — the host already has the in-app notification above.
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const cronSecret = process.env.CRON_SECRET;
     if (siteUrl && cronSecret) {
-      // Fire-and-forget: a delivery hiccup must not fail the join UX.
       fetch(`${siteUrl}/api/notifications/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
@@ -133,7 +169,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           url: `/session/${session_id}`,
           data: { sessionId: session_id, type: 'join' },
         }),
-      }).catch((err) => logError(err, { route: '/api/sessions/notify-join', action: 'dispatch', session_id }));
+      })
+        .then(async (res) => {
+          if (res.status === 404) {
+            // 404 means the host has no push token — expected when VAPID
+            // is not configured or the host never enabled push. Structured
+            // warning so it is detectable in logs without being noisy.
+            log('warn', 'notify-join: host has no push token — in-app notification delivered instead', {
+              route: '/api/sessions/notify-join',
+              action: 'push_no_token',
+              session_id,
+              host: session.creator_id,
+              status: res.status,
+            });
+          } else if (!res.ok) {
+            const detail = await res.text().catch(() => '');
+            logError(new Error(`push dispatch failed: ${res.status} ${detail}`), {
+              route: '/api/sessions/notify-join',
+              action: 'push_failed',
+              session_id,
+            });
+          }
+        })
+        .catch((err) => logError(err, { route: '/api/sessions/notify-join', action: 'dispatch', session_id }));
     }
 
     return NextResponse.json({ success: true });

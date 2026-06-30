@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { translations, Language, TranslationKey } from './translations';
 import { trackEvent } from '@/lib/analytics';
+import { createClient } from '@/lib/supabase/client';
+import { updateUser } from '@/lib/dal';
 
 interface LanguageContextType {
   language: Language;
@@ -56,6 +58,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
     if (previousLang !== lang) {
       trackEvent('language_changed', { from: previousLang, to: lang });
+
+      // Persist the preference server-side so notification senders can honour it.
+      // Fire-and-forget: a DB hiccup must not block the UI language switch.
+      const supabase = createClient();
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user) {
+          updateUser(supabase, data.user.id, { preferred_language: lang }).catch(() => {
+            // Intentionally silent — the localStorage value still works client-side.
+          });
+        }
+      });
     }
   };
 

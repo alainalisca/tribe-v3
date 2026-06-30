@@ -8,6 +8,7 @@ import {
   DollarSign,
   Globe,
   LogOut,
+  MapPin,
   Shield,
   Trash2,
   MessageSquare,
@@ -66,6 +67,9 @@ export default function SettingsPage() {
     debugInfo,
     debugRunning,
     runNotificationDiagnostic,
+    locationPermission,
+    loadingLocation,
+    enableLocation,
   } = useSettings(language);
 
   return (
@@ -240,6 +244,40 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Location Section */}
+        {locationPermission !== 'unsupported' && (
+          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-2">
+              <MapPin className="w-5 h-5 text-tribe-green" />
+              <h2 className="text-lg font-bold text-theme-primary">{txt.location}</h2>
+            </div>
+            <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.locationDesc}</p>
+            <button
+              onClick={enableLocation}
+              disabled={loadingLocation || locationPermission === 'granted'}
+              className={`w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between ${
+                locationPermission === 'granted'
+                  ? 'bg-tribe-green text-slate-900'
+                  : locationPermission === 'denied'
+                    ? 'bg-stone-100 dark:bg-tribe-surface text-stone-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+              }`}
+            >
+              <span>
+                {locationPermission === 'granted'
+                  ? txt.locationGranted
+                  : locationPermission === 'denied'
+                    ? txt.locationDenied
+                    : txt.enableLocation}
+              </span>
+              {loadingLocation && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />}
+            </button>
+            {locationPermission === 'denied' && (
+              <p className="text-xs text-stone-500 dark:text-gray-400 mt-2">{txt.locationDeniedToast}</p>
+            )}
+          </div>
+        )}
 
         {/* Notification Debug Section — admin only */}
         {userIsAdmin && (

@@ -59,7 +59,7 @@ export default function StorefrontSessionCard({
   // Format the price display
   const priceDisplay = isPaid
     ? session.price_cents
-      ? `${formatPrice(session.price_cents, currency)} ${currency}`
+      ? formatPrice(session.price_cents, currency)
       : `$${session.price.toLocaleString(currency === 'COP' ? 'es-CO' : 'en-US', { maximumFractionDigits: currency === 'COP' ? 0 : 2 })} ${currency}`
     : language === 'es'
       ? 'Gratis'

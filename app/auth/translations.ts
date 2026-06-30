@@ -59,6 +59,8 @@ export function getAuthTranslations(language: 'en' | 'es') {
     pwTooShort: language === 'es' ? 'Muy corta' : 'Too short',
     pwWeak: language === 'es' ? 'Débil' : 'Weak',
     pwStrong: language === 'es' ? 'Fuerte' : 'Strong',
+    showPassword: language === 'es' ? 'Mostrar contraseña' : 'Show password',
+    hidePassword: language === 'es' ? 'Ocultar contraseña' : 'Hide password',
     verifyTitle: language === 'es' ? 'Verifica tu cuenta' : 'Verify your account',
     verifyInstructions: (email: string) =>
       language === 'es'
@@ -79,6 +81,10 @@ export function getAuthTranslations(language: 'en' | 'es') {
         : '✅ Your account is verified. Sign in with your email and password.',
     authError: (msg: string) =>
       language === 'es' ? `❌ Error de autenticación: ${msg}` : `❌ Authentication error: ${msg}`,
+    inAppBrowserWarning:
+      language === 'es'
+        ? 'Para entrar con Google o Apple, abre Tribe en tu navegador (Chrome o Safari). Toca el menú (•••) y elige "Abrir en el navegador".'
+        : 'To sign in with Google or Apple, open Tribe in your browser (Chrome or Safari). Tap the menu (•••) and choose "Open in browser".',
   };
 }
 

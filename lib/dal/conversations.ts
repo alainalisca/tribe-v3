@@ -250,6 +250,9 @@ export async function fetchConversationMessages(
 
 /**
  * Send a direct message in a conversation.
+ * BUG-204: session_id is intentionally omitted (nullable after migration 103).
+ * Uses .select() so a 0-row result (e.g. RLS block) surfaces as a real error
+ * instead of a silent false-success.
  */
 export async function sendDirectMessage(
   supabase: SupabaseClient,
@@ -258,13 +261,22 @@ export async function sendDirectMessage(
   message: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('chat_messages').insert({
-      conversation_id: conversationId,
-      user_id: userId,
-      message,
-    });
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        conversation_id: conversationId,
+        user_id: userId,
+        message,
+        // session_id intentionally omitted — DMs are conversation-scoped, not
+        // session-scoped. Column is nullable after migration 103.
+      })
+      .select('id');
 
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      // Insert was silently blocked (e.g. RLS policy rejected the row).
+      return { success: false, error: 'Message blocked or failed to save' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'sendDirectMessage', conversationId, userId });

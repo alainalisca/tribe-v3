@@ -30,8 +30,14 @@ export async function updateParticipantStatus(
   status: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('session_participants').update({ status }).eq('id', id);
+    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
+    // write returns no error but also 0 rows — treat that as a failure so the
+    // host sees the real outcome instead of a silent fake-success.
+    const { data, error } = await supabase.from('session_participants').update({ status }).eq('id', id).select('id');
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'No rows updated — RLS may have blocked the write' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateParticipantStatus' });
@@ -41,8 +47,13 @@ export async function updateParticipantStatus(
 
 export async function deleteParticipant(supabase: SupabaseClient, id: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase.from('session_participants').delete().eq('id', id);
+    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
+    // delete returns no error but also 0 rows — treat that as a failure.
+    const { data, error } = await supabase.from('session_participants').delete().eq('id', id).select('id');
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'No rows deleted — RLS may have blocked the write' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'deleteParticipant' });
@@ -331,6 +342,28 @@ export async function fetchPendingParticipantsForSessions(
     return { success: true, data: data || [] };
   } catch (error) {
     logError(error, { action: 'fetchPendingParticipantsForSessions' });
+    return { success: false, error: 'Failed' };
+  }
+}
+
+/** Fetch pending join requests for a single session (for host approval panel). */
+export async function fetchPendingParticipantsForSession(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<DalResult<PendingParticipantWithUser[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('session_participants')
+      .select(
+        'id, user_id, session_id, joined_at, status, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
+      )
+      .eq('session_id', sessionId)
+      .eq('status', 'pending')
+      .order('joined_at', { ascending: true });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data || []) as unknown as PendingParticipantWithUser[] };
+  } catch (error) {
+    logError(error, { action: 'fetchPendingParticipantsForSession' });
     return { success: false, error: 'Failed' };
   }
 }

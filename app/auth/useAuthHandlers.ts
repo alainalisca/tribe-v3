@@ -223,6 +223,10 @@ export function useAuthHandlers(language: 'en' | 'es') {
           setMessage(t.mustBe18);
           return;
         }
+        if (password !== confirmPassword) {
+          setMessage(t.passwordsNoMatch);
+          return;
+        }
         // LR-04 funnel: emit both `signup_started` (legacy) and
         // `signup_email_submitted` (canonical) at the form-POST moment so
         // the new funnel has clean naming while existing dashboards keep

@@ -108,6 +108,11 @@ export function useSessionActions({
           language === 'es' ? '¡Estás dentro! Nunca entrenarás solo.' : "You're in! You'll never train alone."
         );
       }
+      // Signal the home feed to refetch when the user navigates back, so
+      // the joined count is correct without a manual refresh (BUG-207).
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('tribe_sessions_dirty', '1');
+      }
       await onSessionUpdated();
     } catch (error) {
       haptic('error');
@@ -134,6 +139,10 @@ export function useSessionActions({
       showSuccess(language === 'es' ? '¡Confirmado! Te esperamos' : 'Confirmed! See you there');
       setShowGuestModal(false);
       celebrateJoin();
+      // Signal the home feed to refetch when the user navigates back (BUG-207).
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('tribe_sessions_dirty', '1');
+      }
       onSessionUpdated();
     } catch (error) {
       haptic('error');
@@ -164,6 +173,11 @@ export function useSessionActions({
       if (!removed) return;
       setGuestHasJoined(false);
       setGuestParticipantId(null);
+      // Signal the home feed to refetch on return (BUG-207 — same pattern as
+      // doLeave for authenticated users).
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('tribe_sessions_dirty', '1');
+      }
       showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       onSessionUpdated();
     } catch (error) {
@@ -185,7 +199,21 @@ export function useSessionActions({
   async function doLeave() {
     if (!user) return;
     try {
-      await removeUserFromSession(supabase, session, user.id, language, onNavigate);
+      await removeUserFromSession(supabase, session, user.id);
+      // Optimistically remove the user from the local participant list and
+      // decrement the visible count so the UI reflects reality before
+      // navigation (BUG-207).
+      setParticipants((prev) => prev.filter((p) => p.user_id !== user.id));
+      setSession((prev) =>
+        prev ? { ...prev, current_participants: Math.max(0, (prev.current_participants ?? 0) - 1) } : prev
+      );
+      // Signal the home feed to refetch when the user returns, since the
+      // SPA does not remount the home page on back-navigation (BUG-207).
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('tribe_sessions_dirty', '1');
+      }
+      showSuccess(language === 'es' ? 'Has salido de la sesion' : 'You have left the session');
+      onNavigate('/');
     } catch (error) {
       showError(getErrorMessage(error, 'join_session', language));
     }
