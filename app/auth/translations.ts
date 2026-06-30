@@ -63,6 +63,10 @@ export function getAuthTranslations(language: 'en' | 'es') {
     hidePassword: language === 'es' ? 'Ocultar contraseña' : 'Hide password',
     authError: (msg: string) =>
       language === 'es' ? `❌ Error de autenticación: ${msg}` : `❌ Authentication error: ${msg}`,
+    inAppBrowserWarning:
+      language === 'es'
+        ? 'Para entrar con Google o Apple, abre Tribe en tu navegador (Chrome o Safari). Toca el menú (•••) y elige "Abrir en el navegador".'
+        : 'To sign in with Google or Apple, open Tribe in your browser (Chrome or Safari). Tap the menu (•••) and choose "Open in browser".',
   };
 }
 
