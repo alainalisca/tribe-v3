@@ -20,6 +20,14 @@ import type { User } from '@supabase/supabase-js';
 type PayoutMethod = 'wompi' | 'manual' | 'stripe_connect';
 type StripeConnectState = 'not_started' | 'in_progress' | 'complete';
 
+// Stripe Connect is hidden by default: the onboarding account is hardcoded to
+// country 'US' (app/api/stripe/connect/onboard/route.ts) and requires a US
+// SSN/EIN + bank account, so Colombian instructors hit a dead end. For the
+// Medellin market the working path is Wompi (bank transfer) or Manual. Set
+// NEXT_PUBLIC_ENABLE_STRIPE_PAYOUTS=true to re-enable once Connect supports
+// the instructor's actual country.
+const SHOW_STRIPE_PAYOUTS = process.env.NEXT_PUBLIC_ENABLE_STRIPE_PAYOUTS === 'true';
+
 interface PayoutFormData {
   payout_method: PayoutMethod;
   payout_bank_name: string;
@@ -420,27 +428,29 @@ export default function PayoutSettingsPage() {
                 </div>
               </label>
 
-              {/* Stripe Connect Method — for USD payouts */}
-              <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
-                <input
-                  type="radio"
-                  name="payout_method"
-                  value="stripe_connect"
-                  checked={formData.payout_method === 'stripe_connect'}
-                  onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as PayoutMethod })}
-                  className="mt-1 w-4 h-4 cursor-pointer accent-tribe-green"
-                />
-                <div className="flex-1">
-                  <p className="font-semibold text-theme-primary">
-                    {language === 'es' ? 'Stripe (USD Internacional)' : 'Stripe (USD / International)'}
-                  </p>
-                  <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">
-                    {language === 'es'
-                      ? 'Recibe pagos en dólares (USD). Requiere completar verificación de identidad y cuenta bancaria en Stripe.'
-                      : 'Receive USD payments. Requires completing ID + bank verification on Stripe (takes ~5 minutes).'}
-                  </p>
-                </div>
-              </label>
+              {/* Stripe Connect Method — for USD payouts (hidden: see SHOW_STRIPE_PAYOUTS) */}
+              {SHOW_STRIPE_PAYOUTS && (
+                <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
+                  <input
+                    type="radio"
+                    name="payout_method"
+                    value="stripe_connect"
+                    checked={formData.payout_method === 'stripe_connect'}
+                    onChange={(e) => setFormData({ ...formData, payout_method: e.target.value as PayoutMethod })}
+                    className="mt-1 w-4 h-4 cursor-pointer accent-tribe-green"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-theme-primary">
+                      {language === 'es' ? 'Stripe (USD Internacional)' : 'Stripe (USD / International)'}
+                    </p>
+                    <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">
+                      {language === 'es'
+                        ? 'Recibe pagos en dólares (USD). Requiere completar verificación de identidad y cuenta bancaria en Stripe.'
+                        : 'Receive USD payments. Requires completing ID + bank verification on Stripe (takes ~5 minutes).'}
+                    </p>
+                  </div>
+                </label>
+              )}
 
               {/* Manual Method */}
               <label className="flex items-start gap-3 p-3 border border-stone-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-stone-50 dark:hover:bg-tribe-surface transition">
@@ -574,7 +584,7 @@ export default function PayoutSettingsPage() {
         )}
 
         {/* Stripe Connect card — shown when stripe_connect is selected */}
-        {formData.payout_method === 'stripe_connect' && (
+        {SHOW_STRIPE_PAYOUTS && formData.payout_method === 'stripe_connect' && (
           <Card className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-theme-primary">

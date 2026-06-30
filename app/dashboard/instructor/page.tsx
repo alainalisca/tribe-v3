@@ -11,6 +11,7 @@ import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
+import PayoutSetupBanner from '@/components/PayoutSetupBanner';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
 import LeadsTab from '@/components/dashboard/LeadsTab';
@@ -137,6 +138,10 @@ export default function InstructorDashboardPage() {
         <div className="mt-4">
           <TribeOSEntryCard variant="inline" />
         </div>
+
+        {/* Payout setup nudge — shows until the instructor connects a real
+            payout method so clients can actually pay them. */}
+        <PayoutSetupBanner />
 
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
