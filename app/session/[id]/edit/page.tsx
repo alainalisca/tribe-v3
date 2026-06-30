@@ -13,12 +13,26 @@ import Link from 'next/link';
 import { getEditSessionTranslations } from './translations';
 import { useEditSession } from './useEditSession';
 import PhotoUploadSection from '@/app/create/PhotoUploadSection';
+import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 
 export default function EditSessionPage() {
   const { language } = useLanguage();
   const txt = getEditSessionTranslations(language);
-  const { loading, saving, formData, setFormData, photos, setPhotos, handleSubmit, params, router, supabase, userId } =
-    useEditSession(language, txt);
+  const {
+    loading,
+    saving,
+    formData,
+    setFormData,
+    recurringValue,
+    setRecurringValue,
+    photos,
+    setPhotos,
+    handleSubmit,
+    params,
+    router,
+    supabase,
+    userId,
+  } = useEditSession(language, txt);
 
   if (loading) {
     return (
@@ -210,6 +224,12 @@ export default function EditSessionPage() {
               placeholder={txt.equipmentPlaceholder}
               className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
             />
+          </div>
+
+          {/* ─── Recurrence ─── */}
+          <div className="border border-theme rounded-lg p-4 bg-theme-card">
+            <Label className="mb-3 block text-theme-primary font-semibold">{txt.recurringSection}</Label>
+            <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
           </div>
 
           {/* Cover photo — reuses the same upload component as the create flow */}
