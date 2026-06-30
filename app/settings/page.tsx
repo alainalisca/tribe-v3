@@ -255,7 +255,7 @@ export default function SettingsPage() {
             <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.locationDesc}</p>
             <button
               onClick={enableLocation}
-              disabled={loadingLocation || locationPermission === 'granted'}
+              disabled={loadingLocation || locationPermission === 'granted' || locationPermission === 'denied'}
               className={`w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between ${
                 locationPermission === 'granted'
                   ? 'bg-tribe-green text-slate-900'

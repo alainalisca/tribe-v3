@@ -22,6 +22,11 @@ const getT = (language: 'en' | 'es') => ({
   creating: language === 'es' ? 'Creando...' : 'Creating...',
   cancel: language === 'es' ? 'Cancelar' : 'Cancel',
   required: language === 'es' ? 'El titulo y la fecha son requeridos' : 'Title and start date are required',
+  pastDate: language === 'es' ? 'La fecha de inicio debe ser en el futuro' : 'The start date must be in the future',
+  endBeforeStart:
+    language === 'es'
+      ? 'La fecha de fin debe ser despues de la fecha de inicio'
+      : 'The end date must be after the start date',
   success: language === 'es' ? 'Evento creado' : 'Event created',
   error: language === 'es' ? 'No se pudo crear el evento' : 'Failed to create event',
   membersOnly: language === 'es' ? 'Debes ser miembro para crear eventos' : 'You must be a member to create events',
@@ -69,6 +74,16 @@ export default function NewCommunityEventPage() {
     e.preventDefault();
     if (!title.trim() || !eventAt) {
       showError(t.required);
+      return;
+    }
+    // The events list only shows event_at >= now, so a past-dated event would
+    // be created successfully but never appear. Reject it up front.
+    if (new Date(eventAt).getTime() <= Date.now()) {
+      showError(t.pastDate);
+      return;
+    }
+    if (endsAt && new Date(endsAt).getTime() <= new Date(eventAt).getTime()) {
+      showError(t.endBeforeStart);
       return;
     }
     if (!userId) return;
