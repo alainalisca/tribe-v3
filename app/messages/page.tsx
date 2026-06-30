@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BottomNav from '@/components/BottomNav';
 import { useMessages } from './useMessages';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 
 type Tab = 'sessions' | 'direct';
 
-export default function MessagesPage() {
+function MessagesContent() {
   const searchParams = useSearchParams();
   const targetUserId = searchParams.get('user');
   const [activeTab, setActiveTab] = useState<Tab>(targetUserId ? 'direct' : 'sessions');
@@ -295,5 +295,13 @@ export default function MessagesPage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-stone-50 dark:bg-tribe-mid" />}>
+      <MessagesContent />
+    </Suspense>
   );
 }

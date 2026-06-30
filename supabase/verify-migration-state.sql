@@ -298,4 +298,14 @@ select '105_drop_notifications_type_check',
        case when not exists (
          select 1 from pg_constraint where conname = 'notifications_type_check'
        ) then 'applied' else 'MISSING' end
+union all
+select '106_community_events_update_with_check',
+       -- Added WITH CHECK to the community_events UPDATE policy. Applied
+       -- once that policy carries a with_check clause.
+       case when exists (
+         select 1 from pg_policies
+         where tablename = 'community_events'
+           and policyname = 'community_events_update'
+           and with_check is not null
+       ) then 'applied' else 'MISSING' end
 order by migration;

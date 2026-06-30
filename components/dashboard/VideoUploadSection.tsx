@@ -61,7 +61,10 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
 
     setUploading(true);
     try {
-      const path = `storefront-videos/${userId}/${Date.now()}.mp4`;
+      // Stable path (one object per user) + upsert so replacing a video
+      // overwrites the old one instead of orphaning a timestamped file in the
+      // public bucket. A cache-busting query param ensures the new video shows.
+      const path = `storefront-videos/${userId}/intro.mp4`;
       const { error: uploadError } = await supabase.storage.from('media').upload(path, file, { upsert: true });
 
       if (uploadError) {
@@ -70,7 +73,7 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
       }
 
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
 
       const result = await updateStorefrontProfile(supabase, userId, { storefront_video_url: publicUrl });
       if (!result.success) {
@@ -96,6 +99,8 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
         showError(result.error || t('videoUploadError'));
         return;
       }
+      // Clean up the stored object so it does not linger in the public bucket.
+      await supabase.storage.from('media').remove([`storefront-videos/${userId}/intro.mp4`]);
       setVideoUrl(null);
       showSuccess(t('videoRemoved'));
     } catch (err) {
