@@ -190,12 +190,18 @@ export async function updateStorefrontProfile(
   updates: StorefrontProfileUpdate
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .update(updates as UserUpdate)
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id');
 
     if (error) return { success: false, error: error.message };
+    // 0-row write: the row did not match or RLS blocked it. Without this guard
+    // the caller shows "saved" but nothing persisted (the update silently no-ops).
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Profile not updated — the change could not be saved.' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'updateStorefrontProfile', userId });
