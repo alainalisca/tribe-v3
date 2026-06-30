@@ -280,4 +280,22 @@ select '103_fix_chat_messages_dm_and_privacy',
          where table_schema = 'public' and table_name = 'chat_messages'
            and column_name = 'session_id' and is_nullable = 'YES'
        ) then 'applied' else 'MISSING' end
+union all
+select '104_close_partner_self_update_hole',
+       -- Security fix: dropped the over-broad "Partners manage own record"
+       -- UPDATE policy on featured_partners (owners could self-activate /
+       -- zero their fee directly). Applied once that policy is gone.
+       case when not exists (
+         select 1 from pg_policies
+         where tablename = 'featured_partners'
+           and policyname = 'Partners manage own record'
+       ) then 'applied' else 'MISSING' end
+union all
+select '105_drop_notifications_type_check',
+       -- Dropped the notifications.type CHECK constraint that silently
+       -- rejected valid notification types. Applied once the constraint
+       -- no longer exists.
+       case when not exists (
+         select 1 from pg_constraint where conname = 'notifications_type_check'
+       ) then 'applied' else 'MISSING' end
 order by migration;

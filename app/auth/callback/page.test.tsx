@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 
-let params = new URLSearchParams('code=abc');
+const params = new URLSearchParams('code=abc');
 vi.mock('next/navigation', () => ({ useSearchParams: () => params }));
 
 const exchangeCodeForSession = vi.fn();

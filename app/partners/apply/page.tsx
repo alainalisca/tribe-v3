@@ -301,41 +301,6 @@ export default function PartnerApplyPage() {
             onSubmit={handleSubmit}
           />
         )}
-
-        {/* Post-submit: show activation CTA immediately */}
-        {isInstructor && submitted && existingPartner && isPending && (
-          <div className="mt-5 bg-tribe-green/10 border border-tribe-green/30 rounded-2xl p-5 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-tribe-green/20 mb-3">
-              <Zap className="w-6 h-6 text-tribe-green" />
-            </div>
-            <h3 className="text-lg font-bold text-stone-900 dark:text-white mb-1">
-              {t('Activate Now — Free for 6 Months', 'Activar Ahora — Gratis por 6 Meses')}
-            </h3>
-            <p className="text-sm text-stone-600 dark:text-tribe-gray-60 mb-4">
-              {t(
-                'Your application is in. Activate instantly for free during the beta.',
-                'Tu solicitud está lista. Activa de inmediato sin costo durante la beta.'
-              )}
-            </p>
-            <button
-              onClick={handleActivate}
-              disabled={activating}
-              className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl text-base hover:bg-lime-500 transition disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {activating ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  {t('Activating...', 'Activando...')}
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4" />
-                  {t('Get Featured — Free', 'Destacarme — Gratis')}
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
       <BottomNav />
     </div>
