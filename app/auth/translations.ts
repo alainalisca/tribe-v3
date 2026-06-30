@@ -59,6 +59,24 @@ export function getAuthTranslations(language: 'en' | 'es') {
     pwTooShort: language === 'es' ? 'Muy corta' : 'Too short',
     pwWeak: language === 'es' ? 'Débil' : 'Weak',
     pwStrong: language === 'es' ? 'Fuerte' : 'Strong',
+    verifyTitle: language === 'es' ? 'Verifica tu cuenta' : 'Verify your account',
+    verifyInstructions: (email: string) =>
+      language === 'es'
+        ? `Ingresa el código de 6 dígitos que enviamos a ${email}.`
+        : `Enter the 6-digit code we sent to ${email}.`,
+    codeLabel: language === 'es' ? 'Código de verificación' : 'Verification code',
+    codePlaceholder: '123456',
+    verifyButton: language === 'es' ? 'Verificar' : 'Verify',
+    codeSent:
+      language === 'es'
+        ? '✅ Te enviamos un código de 6 dígitos a tu correo.'
+        : '✅ We sent a 6-digit code to your email.',
+    useDifferentEmail: language === 'es' ? 'Usar otro correo' : 'Use a different email',
+    resendCode: language === 'es' ? 'Reenviar código' : 'Resend code',
+    verifiedSignIn:
+      language === 'es'
+        ? '✅ Tu cuenta ya está verificada. Inicia sesión con tu correo y contraseña.'
+        : '✅ Your account is verified. Sign in with your email and password.',
     authError: (msg: string) =>
       language === 'es' ? `❌ Error de autenticación: ${msg}` : `❌ Authentication error: ${msg}`,
   };
