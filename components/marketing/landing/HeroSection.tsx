@@ -5,16 +5,14 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getPopularNeighborhoods } from '@/lib/city-config';
 
-// TODO: Al — drop real cycling + running photos into /public/landing-cycling.jpg
-// and /public/landing-running.jpg, then swap the temporary reuse below.
 // Hosting locally avoids the Unsplash rate-limit / dead-photo risk that the
 // previous external URLs carried, and keeps the hero loading from one origin.
+// TODO: Al — when real cycling + running photos are ready, add them to /public
+// and restore the two extra tiles in the grid below.
 const PHOTOS = {
   hero: '/landing-hero.jpg',
   rowers: '/landing-rowers.jpg',
   deadlift: '/landing-deadlift.jpg',
-  cycling: '/landing-rowers.jpg',
-  running: '/landing-deadlift.jpg',
 };
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -148,12 +146,6 @@ export default function HeroSection() {
                   fill
                   className="object-cover object-[center_30%]"
                 />
-              </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.cycling} alt="Cycling" fill className="object-cover" />
-              </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-                <Image src={PHOTOS.running} alt="Running" fill className="object-cover" />
               </div>
             </div>
           </div>
