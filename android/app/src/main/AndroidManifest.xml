@@ -46,4 +46,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- T-DISC1: nearby-session discovery. Coarse is sufficient (we fuzz to ~500m);
+         fine is declared so the OS "precise location" toggle is available. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>
