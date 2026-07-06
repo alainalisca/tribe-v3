@@ -175,6 +175,55 @@ describe('joinSession', () => {
     });
   });
 
+  // T-PAY1: paid sessions are off-platform — joining always creates a pending
+  // request (awaiting payment confirmation), even on an 'open' join policy.
+  it('calls join_session RPC with status=pending for PAID sessions (open policy)', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ join_policy: 'open', is_paid: true, price_cents: 2_000_000 }),
+    } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: true, participant_id: 'pp-paid', status: 'pending' } });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: true, status: 'pending' });
+    expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+      p_session_id: 'sess-1',
+      p_user_id: 'user-1',
+      p_status: 'pending',
+    });
+  });
+
+  // Guard: is_paid flag with price 0 is not a real paid session → stays confirmed.
+  it('keeps status=confirmed for an open session flagged paid but priced 0', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({
+      success: true,
+      data: session({ join_policy: 'open', is_paid: true, price_cents: 0 }),
+    } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: true, status: 'confirmed' } });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: true, status: 'confirmed' });
+    expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+      p_session_id: 'sess-1',
+      p_user_id: 'user-1',
+      p_status: 'confirmed',
+    });
+  });
+
   it('translates "Session is full" RPC error to capacity_full', async () => {
     vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
     vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);

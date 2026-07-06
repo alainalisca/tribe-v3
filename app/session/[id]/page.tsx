@@ -284,17 +284,22 @@ export default function SessionDetailPage() {
           />
         )}
 
-        {/* Host-only: pending join requests for curated (manual-approval) sessions */}
-        {isCreator && d.session.join_policy === 'curated' && d.user && (
-          <PendingRequestsPanel
-            sessionId={d.session.id}
-            sessionTitle={d.session.title || d.session.sport}
-            hostId={d.user.id}
-            language={language}
-            t={t}
-            onApproved={() => d.loadSession()}
-          />
-        )}
+        {/* Host-only: pending requests for manual-approval sessions. Curated
+            sessions and paid sessions (T-PAY1: off-platform, awaiting payment
+            confirmation) both use this panel. */}
+        {isCreator &&
+          (d.session.join_policy === 'curated' || (!!d.session.is_paid && d.session.price_cents > 0)) &&
+          d.user && (
+            <PendingRequestsPanel
+              sessionId={d.session.id}
+              sessionTitle={d.session.title || d.session.sport}
+              hostId={d.user.id}
+              language={language}
+              t={t}
+              onApproved={() => d.loadSession()}
+              isPaid={!!d.session.is_paid && d.session.price_cents > 0}
+            />
+          )}
 
         {/* Waitlist — visible when session full or when the viewer has an active offer */}
         <WaitlistPanel
