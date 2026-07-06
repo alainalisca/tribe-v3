@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProfileTranslations } from './translations';
+import type { ProfileTranslations } from '@/app/profile/[userId]/translations';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';

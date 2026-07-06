@@ -14,6 +14,7 @@ import StorefrontTrustBar from '@/components/storefront/StorefrontTrustBar';
 import StorefrontTabs, { type StorefrontTab } from '@/components/storefront/StorefrontTabs';
 import StorefrontTabPanels from '@/components/storefront/StorefrontTabPanels';
 import StorefrontEmpty from '@/components/storefront/StorefrontEmpty';
+import BlockReportControls from '@/components/BlockReportControls';
 import { useStorefrontData } from './useStorefrontData';
 
 export default function StorefrontPage() {
@@ -157,7 +158,10 @@ export default function StorefrontPage() {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <h2 className="flex-1 text-center text-theme-primary font-semibold truncate px-2">{instructor.name}</h2>
-          <div className="w-6" />
+          {/* T-H1: block/report an instructor — same mechanism the profile page uses.
+              Self-gates (renders nothing for the owner or logged-out viewers), so it
+              replaces the header's balance spacer. */}
+          <BlockReportControls targetUserId={instructorId} viewerId={d.currentUserId} />
         </div>
       </div>
 

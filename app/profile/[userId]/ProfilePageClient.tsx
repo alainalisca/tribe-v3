@@ -12,24 +12,21 @@
  *     photo carousel
  */
 'use client';
-import { showSuccess, showError, showInfo } from '@/lib/toast';
+import { showSuccess } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, MapPin, Shield, Flag, UserPlus, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, UserPlus, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import BottomNav from '@/components/BottomNav';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import ReviewsList from '@/components/instructor/ReviewsList';
 import TribePlusBadge from '@/components/TribePlusBadge';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
-import { getErrorMessage } from '@/lib/errorMessages';
 import { sportTranslations } from '@/lib/translations';
-import { blockUser, unblockUser, reportUser, fetchBlockedStatus } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -38,7 +35,7 @@ import TrailblazerBadge from '@/components/TrailblazerBadge';
 import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { getProfileTranslations } from './translations';
 import ProfileLightbox from './ProfileLightbox';
-import ReportUserModal from './ReportUserModal';
+import BlockReportControls from '@/components/BlockReportControls';
 
 import TribeWordmark from '@/components/TribeWordmark';
 type UserProfile = Database['public']['Tables']['users']['Row'];
@@ -77,23 +74,11 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
   // raw numbers.
   const [profile] = useState<UserProfile | null>(initialProfile);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportDescription, setReportDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   // QA-06: inline avatar carousel — index into [avatar_url, ...photos]
   const [avatarIndex, setAvatarIndex] = useState(0);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    variant?: 'danger' | 'default';
-    onConfirm: () => void;
-  } | null>(null);
 
   useEffect(() => {
     checkCurrentUser();
@@ -140,67 +125,6 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
       data: { user },
     } = await supabase.auth.getUser();
     setCurrentUser(user);
-    if (user) {
-      const blockedResult = await fetchBlockedStatus(supabase, user.id, userId);
-      setIsBlocked(blockedResult.success ? !!blockedResult.data : false);
-    }
-  }
-
-  async function handleBlock() {
-    if (!currentUser) return;
-    try {
-      if (isBlocked) {
-        const result = await unblockUser(supabase, currentUser.id, userId);
-        if (!result.success) throw new Error(result.error);
-        setIsBlocked(false);
-        showSuccess(t.userUnblocked);
-      } else {
-        setConfirmAction({
-          title: t.block,
-          message: t.blockConfirm,
-          confirmLabel: t.block,
-          variant: 'danger',
-          onConfirm: async () => {
-            setConfirmAction(null);
-            try {
-              const result = await blockUser(supabase, { user_id: currentUser.id, blocked_user_id: userId });
-              if (!result.success) throw new Error(result.error);
-              setIsBlocked(true);
-              showSuccess(t.userBlocked);
-            } catch (error: unknown) {
-              showError(getErrorMessage(error, 'admin_action', language));
-            }
-          },
-        });
-      }
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'admin_action', language));
-    }
-  }
-
-  async function handleReport() {
-    if (!reportReason.trim()) {
-      showInfo(t.selectReasonError);
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const reportResult = await reportUser(supabase, {
-        reporter_id: currentUser!.id,
-        reported_user_id: userId,
-        reason: reportReason,
-        description: reportDescription,
-      });
-      if (!reportResult.success) throw new Error(reportResult.error);
-      showSuccess(t.reportSuccess);
-      setShowReportModal(false);
-      setReportReason('');
-      setReportDescription('');
-    } catch (error: unknown) {
-      showError(getErrorMessage(error, 'submit_feedback', language));
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   async function shareInstructor() {
@@ -263,24 +187,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             </Button>
             <h1 className="text-xl font-bold text-theme-primary">{profile.name}</h1>
           </div>
-          {currentUser && !isOwnProfile && (
-            <div className="flex gap-2">
-              <button
-                onClick={handleBlock}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${isBlocked ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'bg-stone-100 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'}`}
-              >
-                <Shield className="w-4 h-4 inline mr-1" />
-                {isBlocked ? t.unblock : t.block}
-              </button>
-              <button
-                onClick={() => setShowReportModal(true)}
-                className="px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition"
-              >
-                <Flag className="w-4 h-4 inline mr-1" />
-                {t.report}
-              </button>
-            </div>
-          )}
+          <BlockReportControls targetUserId={userId} viewerId={currentUser?.id ?? null} />
         </div>
       </div>
 
@@ -615,30 +522,6 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
           }}
         />
       )}
-
-      {showReportModal && (
-        <ReportUserModal
-          t={t}
-          reportReason={reportReason}
-          reportDescription={reportDescription}
-          submitting={submitting}
-          onReasonChange={setReportReason}
-          onDescriptionChange={setReportDescription}
-          onClose={() => setShowReportModal(false)}
-          onSubmit={handleReport}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!confirmAction}
-        title={confirmAction?.title ?? ''}
-        message={confirmAction?.message ?? ''}
-        confirmLabel={confirmAction?.confirmLabel ?? t.submit}
-        cancelLabel={t.cancel}
-        variant={confirmAction?.variant ?? 'default'}
-        onConfirm={() => confirmAction?.onConfirm()}
-        onCancel={() => setConfirmAction(null)}
-      />
 
       <BottomNav />
     </div>
