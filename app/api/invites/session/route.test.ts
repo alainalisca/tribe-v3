@@ -12,12 +12,32 @@ vi.mock('@/lib/dal/notifications', () => ({
 vi.mock('@/lib/dal/sessions', () => ({
   fetchSession: vi.fn(),
 }));
+vi.mock('@/lib/dal/invites', () => ({
+  insertInviteToken: vi.fn(),
+}));
 
 import { POST } from './route';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/dal/notifications';
 import { fetchSession } from '@/lib/dal/sessions';
+import { insertInviteToken } from '@/lib/dal/invites';
+
+/**
+ * Service-role client mock (T-INV1): the route reads the recipient's
+ * preferred_language via .from('users').select().eq().maybeSingle().
+ */
+function createServiceMock(recipientLanguage: string | null = null) {
+  return {
+    from: vi.fn().mockImplementation(() => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => Promise.resolve({ data: { preferred_language: recipientLanguage }, error: null }),
+        }),
+      }),
+    })),
+  };
+}
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -40,10 +60,7 @@ function createMockRequest(body: Record<string, unknown>): NextRequest {
  *      (sender participation check only if sender is NOT creator)
  *   2. 'users' - sender profile lookup (.single)
  */
-function createAuthMock(overrides: {
-  recipientInSession?: unknown;
-  senderProfile?: unknown;
-}) {
+function createAuthMock(overrides: { recipientInSession?: unknown; senderProfile?: unknown }) {
   // Track maybeSingle calls on session_participants to differentiate
   // sender participation check vs recipient check
   let participantMaybeSingleCount = 0;
@@ -194,8 +211,10 @@ describe('POST /api/invites/session', () => {
       },
     } as never);
 
-    const serviceSupabaseMock = {};
+    // Recipient prefers Spanish — the notification must be composed in ES.
+    const serviceSupabaseMock = createServiceMock('es');
     vi.mocked(createServiceClient).mockReturnValue(serviceSupabaseMock as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
 
     vi.mocked(createNotification).mockResolvedValue({
       success: true,
@@ -212,7 +231,19 @@ describe('POST /api/invites/session', () => {
     const json = await res.json();
     expect(json.success).toBe(true);
 
-    // Verify createNotification was called with correct args
+    // T-INV1: an invite token is minted so the in-app invite is acceptable
+    // via /invite/{token}. expires_at is left to the DB default.
+    expect(insertInviteToken).toHaveBeenCalledWith(
+      serviceSupabaseMock,
+      expect.objectContaining({
+        session_id: SESSION_ID,
+        created_by: AUTH_USER_ID,
+        token: expect.stringMatching(/^[0-9a-f]{32}$/),
+      })
+    );
+
+    // Verify createNotification was called with correct args, composed in
+    // the RECIPIENT's language (es), not the sender's.
     expect(createNotification).toHaveBeenCalledWith(
       serviceSupabaseMock,
       expect.objectContaining({
@@ -221,7 +252,34 @@ describe('POST /api/invites/session', () => {
         type: 'session_invite',
         entity_type: 'session',
         entity_id: SESSION_ID,
-      }),
+        message: 'Al Alisca te invito a Basketball el 2026-04-15',
+      })
     );
+  });
+
+  // ── 5. Token mint failure -> 500 (invite would be a dead end) ────
+
+  it('returns 500 when the invite token cannot be created', async () => {
+    const mockClient = createAuthMock({
+      recipientInSession: null,
+      senderProfile: { name: 'Al Alisca' },
+    });
+    mockClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: AUTH_USER_ID, email: 'test@test.com' } },
+      error: null,
+    } as never);
+    vi.mocked(createClient).mockResolvedValue(mockClient as never);
+
+    vi.mocked(fetchSession).mockResolvedValue({
+      success: true,
+      data: { id: SESSION_ID, creator_id: AUTH_USER_ID, sport: 'Basketball', date: '2026-04-15' },
+    } as never);
+
+    vi.mocked(createServiceClient).mockReturnValue(createServiceMock(null) as never);
+    vi.mocked(insertInviteToken).mockResolvedValue({ success: false, error: 'rls' } as never);
+
+    const res = await POST(createMockRequest({ session_id: SESSION_ID, recipient_user_id: RECIPIENT_USER_ID }));
+    expect(res.status).toBe(500);
+    expect(createNotification).not.toHaveBeenCalled();
   });
 });

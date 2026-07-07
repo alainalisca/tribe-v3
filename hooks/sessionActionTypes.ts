@@ -45,5 +45,14 @@ export function getJoinErrorMessages(language: 'en' | 'es'): Record<string, stri
       language === 'es'
         ? 'Sesion privada. Necesitas una invitacion del organizador.'
         : 'This is a private session. You need a direct invitation from the host.',
+    // T-INV1: invite link acceptance failures.
+    invite_invalid:
+      language === 'es'
+        ? 'Esta invitacion no es valida. Pide al organizador un nuevo enlace.'
+        : 'This invitation is not valid. Ask the host for a new link.',
+    invite_expired:
+      language === 'es'
+        ? 'Esta invitacion ya expiro. Pide al organizador un nuevo enlace.'
+        : 'This invitation has expired. Ask the host for a new link.',
   };
 }

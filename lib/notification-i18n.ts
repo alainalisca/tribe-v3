@@ -37,7 +37,8 @@ type TemplateKey =
   | 'leave'
   | 'request_approved'
   | 'request_declined'
-  | 'payment_confirmed';
+  | 'payment_confirmed'
+  | 'session_invite';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -153,6 +154,17 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '✅ Pago confirmado',
       body: 'Tu pago para "{{session}}" fue confirmado. ¡Nos vemos!',
+    },
+  },
+  // T-INV1: recipient = invited athlete, composed in THEIR language.
+  session_invite: {
+    en: {
+      title: '💌 You are invited',
+      body: '{{name}} invited you to {{sport}} on {{date}}',
+    },
+    es: {
+      title: '💌 Tienes una invitacion',
+      body: '{{name}} te invito a {{sport}} el {{date}}',
     },
   },
 };
