@@ -31,7 +31,16 @@ function getNotificationLink(notification: NotificationWithActor): string | null
   const { type, entity_type, entity_id, actor_id } = notification;
   if (type === 'follow' && actor_id) return `/profile/${actor_id}`;
   if (
-    ['session_join', 'session_reminder', 'session_update', 'review'].includes(type) &&
+    // T-NOTIF1: leave + approve/decline notifications also click through to the session.
+    [
+      'session_join',
+      'session_leave',
+      'session_reminder',
+      'session_update',
+      'review',
+      'join_request_approved',
+      'join_request_declined',
+    ].includes(type) &&
     entity_type === 'session' &&
     entity_id
   )

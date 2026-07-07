@@ -1,7 +1,9 @@
 /**
  * POST /api/sessions/notify-join
  *
- * Fires the "someone joined your session" push to a session's host.
+ * Notifies a session's host about a participation event — a join / request /
+ * guest join, or (T-NOTIF1) a leave — via an in-app notification plus a
+ * best-effort push. The message is composed in the host's preferred language.
  *
  * Why this route exists: /api/notifications/send is internal-only (it can
  * push arbitrary title/body to any user, so a logged-in user must never
@@ -34,7 +36,7 @@ import { createNotification } from '@/lib/dal';
 const schema = z.object({
   session_id: z.string().uuid(),
   joiner_name: z.string().min(1).max(80),
-  kind: z.enum(['join', 'request', 'guest']),
+  kind: z.enum(['join', 'request', 'guest', 'leave']),
 });
 
 /**
@@ -99,8 +101,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Registered-join anti-abuse: the caller must actually be a participant
-    // of the session they claim to have joined.
-    if (kind !== 'guest' && user) {
+    // of the session they claim to have joined. Skipped for 'leave' — by then
+    // the participant row is already deleted (this fires after a confirmed
+    // leave), and the message is still fully server-templated + rate-limited,
+    // so the residual risk is a benign "X left" ping to the session's own host.
+    if (kind !== 'guest' && kind !== 'leave' && user) {
       const { data: participant } = await service
         .from('session_participants')
         .select('id')
@@ -122,7 +127,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const hostLang = toLang((hostRow as { preferred_language?: string | null } | null)?.preferred_language);
 
     const safeName = sanitizeName(joiner_name);
-    const templateKey = kind === 'request' ? 'join_request' : kind === 'guest' ? 'join_guest' : 'join';
+    const templateKey =
+      kind === 'request' ? 'join_request' : kind === 'guest' ? 'join_guest' : kind === 'leave' ? 'leave' : 'join';
     const { title, body } = notificationCopy(templateKey, hostLang, { name: safeName, sport: session.sport });
 
     // Always create an in-app notification for the host so they learn about
@@ -139,7 +145,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const inAppResult = await createNotification(service, {
       recipient_id: session.creator_id,
       actor_id: user?.id ?? null,
-      type: 'session_join',
+      type: kind === 'leave' ? 'session_leave' : 'session_join',
       entity_type: 'session',
       entity_id: session_id,
       message: body,
@@ -167,7 +173,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           title,
           body,
           url: `/session/${session_id}`,
-          data: { sessionId: session_id, type: 'join' },
+          data: { sessionId: session_id, type: kind === 'leave' ? 'leave' : 'join' },
         }),
       })
         .then(async (res) => {

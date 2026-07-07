@@ -22,6 +22,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import type { PendingParticipantWithUser } from '@/lib/dal/types';
 import type { TranslationKey } from '@/lib/translations';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 interface PendingRequestsPanelProps {
   sessionId: string;
@@ -91,29 +92,23 @@ export default function PendingRequestsPanel({
       // Optimistically remove from list
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       showSuccess(approveToast);
-      // In-app notification to the athlete
+      // T-NOTIF1: in-app notification to the athlete, composed in THEIR
+      // preferred language (not the host's UI language). T-PAY1: paid
+      // sessions confirm the payment instead of approving a request.
       if (req.user_id) {
-        const athleteName = req.user?.name ?? (es ? 'Atleta' : 'Athlete');
-        const message = isPaid
-          ? es
-            ? `Tu pago para "${sessionTitle}" fue confirmado. ¡Nos vemos!`
-            : `Your payment for "${sessionTitle}" was confirmed. See you there!`
-          : es
-            ? `Tu solicitud para "${sessionTitle}" fue aprobada.`
-            : `Your request to join "${sessionTitle}" was approved.`;
+        const { body } = notificationCopy(
+          isPaid ? 'payment_confirmed' : 'request_approved',
+          toLang(req.user?.preferred_language),
+          { session: sessionTitle }
+        );
         await createNotification(supabase, {
           recipient_id: req.user_id,
           actor_id: hostId,
           type: 'join_request_approved',
           entity_type: 'session',
           entity_id: sessionId,
-          message,
-        }).catch((err) =>
-          logError(err, {
-            action: 'PendingRequestsPanel.notify_approve',
-            athleteName,
-          })
-        );
+          message: body,
+        }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_approve', sessionId }));
       }
       onApproved?.();
     } finally {
@@ -135,6 +130,20 @@ export default function PendingRequestsPanel({
       }
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       showSuccess(t('declineSuccess'));
+      // T-NOTIF1: notify the athlete their request was declined, in their language.
+      if (req.user_id) {
+        const { body } = notificationCopy('request_declined', toLang(req.user?.preferred_language), {
+          session: sessionTitle,
+        });
+        await createNotification(supabase, {
+          recipient_id: req.user_id,
+          actor_id: hostId,
+          type: 'join_request_declined',
+          entity_type: 'session',
+          entity_id: sessionId,
+          message: body,
+        }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_decline', sessionId }));
+      }
     } finally {
       setBusy((prev) => {
         const next = new Set(prev);

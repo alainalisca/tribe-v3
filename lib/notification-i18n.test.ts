@@ -107,6 +107,60 @@ describe('notificationCopy', () => {
     });
   });
 
+  // T-NOTIF1 templates — recipient-language rendering for leave / approve / decline.
+  describe('leave template', () => {
+    it('EN: "X left your <sport> session"', () => {
+      const { body } = notificationCopy('leave', 'en', { name: 'Ana', sport: 'Running' });
+      expect(body).toBe('Ana left your Running session');
+    });
+    it('ES does not contain the English verb "left"', () => {
+      const { body } = notificationCopy('leave', 'es', { name: 'Ana', sport: 'Running' });
+      expect(body).not.toContain('left');
+      expect(body).toContain('salio');
+      expect(body).toContain('Ana');
+    });
+  });
+
+  describe('request_approved template', () => {
+    it('EN says approved and includes the session', () => {
+      const { body } = notificationCopy('request_approved', 'en', { session: 'Morning Run' });
+      expect(body).toContain('approved');
+      expect(body).toContain('Morning Run');
+    });
+    it('ES says aprobada, not "approved"', () => {
+      const { body } = notificationCopy('request_approved', 'es', { session: 'Morning Run' });
+      expect(body).not.toContain('approved');
+      expect(body).toContain('aprobada');
+    });
+  });
+
+  describe('request_declined template', () => {
+    it('EN says declined', () => {
+      const { body } = notificationCopy('request_declined', 'en', { session: 'Morning Run' });
+      expect(body).toContain('declined');
+    });
+    it('ES says rechazada, not "declined"', () => {
+      const { body } = notificationCopy('request_declined', 'es', { session: 'Morning Run' });
+      expect(body).not.toContain('declined');
+      expect(body).toContain('rechazada');
+    });
+  });
+
+  describe('payment_confirmed template', () => {
+    it('EN says confirmed and includes the session', () => {
+      const { body } = notificationCopy('payment_confirmed', 'en', { session: 'Morning Run' });
+      expect(body).toContain('payment');
+      expect(body).toContain('confirmed');
+      expect(body).toContain('Morning Run');
+    });
+    it('ES says confirmado, not "confirmed"', () => {
+      const { body } = notificationCopy('payment_confirmed', 'es', { session: 'Morning Run' });
+      expect(body).not.toContain('confirmed');
+      expect(body).toContain('pago');
+      expect(body).toContain('confirmado');
+    });
+  });
+
   describe('variable interpolation', () => {
     it('fills {{name}} and {{sport}} from vars', () => {
       const { body } = notificationCopy('join', 'en', { name: 'Pedro', sport: 'Hiking' });

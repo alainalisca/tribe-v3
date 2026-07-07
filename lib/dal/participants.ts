@@ -236,12 +236,19 @@ export async function deleteParticipantBySessionAndUser(
   userId: string
 ): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
+    // T-NOTIF1: return the deleted rows so a 0-row delete (RLS block or no
+    // matching participant) surfaces as a real failure instead of a fake
+    // success — the leave must actually remove the participant.
+    const { data, error } = await supabase
       .from('session_participants')
       .delete()
       .eq('session_id', sessionId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select('id');
     if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: 'not_removed' };
+    }
     return { success: true };
   } catch (error) {
     logError(error, { action: 'deleteParticipantBySessionAndUser' });
@@ -355,7 +362,9 @@ export async function fetchPendingParticipantsForSession(
     const { data, error } = await supabase
       .from('session_participants')
       .select(
-        'id, user_id, session_id, joined_at, status, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
+        // T-NOTIF1: preferred_language so the approve/decline notification can
+        // be composed in the athlete's (recipient's) language, not the host's.
+        'id, user_id, session_id, joined_at, status, user:users!session_participants_user_id_fkey(id, name, avatar_url, preferred_language)'
       )
       .eq('session_id', sessionId)
       .eq('status', 'pending')

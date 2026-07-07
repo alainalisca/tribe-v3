@@ -14,6 +14,7 @@ import {
   insertGuestParticipant,
   storeGuestLocally,
   notifyHostOfGuestJoin,
+  notifyHostOfLeave,
   sendGuestConfirmationEmail,
   removeGuestParticipant,
   checkGuestStatus,
@@ -207,6 +208,9 @@ export function useSessionActions({
     if (!user) return;
     try {
       await removeUserFromSession(supabase, session, user.id);
+      // T-NOTIF1: notify the host that this athlete left (mirrors the join
+      // notification). Fire-and-forget, only after the delete confirmed above.
+      notifyHostOfLeave(session, user.user_metadata?.name || user.email || 'Someone');
       // Optimistically remove the user from the local participant list and
       // decrement the visible count so the UI reflects reality before
       // navigation (BUG-207).

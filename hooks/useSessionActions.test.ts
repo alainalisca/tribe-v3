@@ -49,6 +49,7 @@ vi.mock('./sessionActionHelpers', () => ({
   removeGuestParticipant: vi.fn(),
   checkGuestStatus: vi.fn(),
   removeUserFromSession: vi.fn(),
+  notifyHostOfLeave: vi.fn(),
 }));
 
 import { useSessionActions } from './useSessionActions';

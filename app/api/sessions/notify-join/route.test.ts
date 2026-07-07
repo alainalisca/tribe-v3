@@ -28,6 +28,7 @@ const ALLOWED_NOTIFICATION_TYPES: readonly string[] = [
   'comment',
   'review',
   'session_join',
+  'session_leave', // T-NOTIF1: migration 105 dropped the CHECK; this is an app-used type
   'community_invite',
   'achievement',
   'referral_complete',
@@ -218,5 +219,33 @@ describe('POST /api/sessions/notify-join', () => {
       expect(payload.entity_type).toBe('session');
       expect(payload.entity_id).toBe(SESSION_ID);
     }
+  });
+
+  // T-NOTIF1: leave notification.
+  it('kind "leave" notifies the host even though the participant row is already gone', async () => {
+    mockAuth({ id: JOINER_ID });
+    // isParticipant: false — the leaver's row is deleted before this fires. A
+    // 'join' would 403 here; 'leave' must skip that check and still notify.
+    mockService({ session: ACTIVE_SESSION, isParticipant: false, hostLanguage: null });
+
+    const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Alex', kind: 'leave' }));
+    expect(res.status).toBe(200);
+
+    expect(vi.mocked(createNotification)).toHaveBeenCalledOnce();
+    const [, payload] = vi.mocked(createNotification).mock.calls[0] as [unknown, { type: string }];
+    expect(payload.type).toBe('session_leave');
+    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(sent.userId).toBe(CREATOR_ID);
+    expect(sent.body).toBe('Alex left your Running session');
+  });
+
+  it('kind "leave" renders in the host language (es)', async () => {
+    mockAuth({ id: JOINER_ID });
+    mockService({ session: ACTIVE_SESSION, isParticipant: false, hostLanguage: 'es' });
+    const res = await POST(req({ session_id: SESSION_ID, joiner_name: 'Ana', kind: 'leave' }));
+    expect(res.status).toBe(200);
+    const sent = JSON.parse(fetchSpy.mock.calls[0][1].body as string);
+    expect(sent.body).not.toContain('left');
+    expect(sent.body).toContain('salio');
   });
 });

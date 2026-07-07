@@ -62,6 +62,23 @@ export function notifyHostOfGuestJoin(session: Session, guestName: string): void
   }).catch((err) => logError(err, { action: 'handleGuestJoin', sessionId: session.id }));
 }
 
+/**
+ * T-NOTIF1: fire-and-forget notify the host that a registered athlete left,
+ * mirroring notifyHostOfGuestJoin. Call only after a confirmed delete so the
+ * host is never told about a leave that did not persist.
+ */
+export function notifyHostOfLeave(session: Session, leaverName: string): void {
+  fetch('/api/sessions/notify-join', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: session.id,
+      joiner_name: leaverName,
+      kind: 'leave',
+    }),
+  }).catch((err) => logError(err, { action: 'notifyHostOfLeave', sessionId: session.id }));
+}
+
 /** Fire-and-forget confirmation email to a guest who provided an email address */
 export function sendGuestConfirmationEmail(
   session: Session & { creator?: { name?: string } },

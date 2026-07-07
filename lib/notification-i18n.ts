@@ -33,7 +33,11 @@ type TemplateKey =
   | 'waitlist_offered'
   | 'waitlist_expired'
   | 'spotlight_selected'
-  | 'smart_match';
+  | 'smart_match'
+  | 'leave'
+  | 'request_approved'
+  | 'request_declined'
+  | 'payment_confirmed';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -104,6 +108,51 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '🤝 Coincidencia de entrenamiento',
       body: '{{name}} tambien entrena {{sport}} cerca de ti',
+    },
+  },
+  // T-NOTIF1: recipient = host (someone left their session).
+  leave: {
+    en: {
+      title: '👋 Someone left',
+      body: '{{name}} left your {{sport}} session',
+    },
+    es: {
+      title: '👋 Alguien salio',
+      body: '{{name}} salio de tu sesion de {{sport}}',
+    },
+  },
+  // T-NOTIF1: recipient = athlete (host approved their join request).
+  request_approved: {
+    en: {
+      title: '✅ Request approved',
+      body: 'Your request to join "{{session}}" was approved',
+    },
+    es: {
+      title: '✅ Solicitud aprobada',
+      body: 'Tu solicitud para unirte a "{{session}}" fue aprobada',
+    },
+  },
+  // T-NOTIF1: recipient = athlete (host declined their join request).
+  request_declined: {
+    en: {
+      title: '❌ Request declined',
+      body: 'Your request to join "{{session}}" was declined',
+    },
+    es: {
+      title: '❌ Solicitud rechazada',
+      body: 'Tu solicitud para unirte a "{{session}}" fue rechazada',
+    },
+  },
+  // T-PAY1 x T-NOTIF1: recipient = athlete (host confirmed their off-platform
+  // payment for a paid session). Copy matches T-PAY1's approved wording.
+  payment_confirmed: {
+    en: {
+      title: '✅ Payment confirmed',
+      body: 'Your payment for "{{session}}" was confirmed. See you there!',
+    },
+    es: {
+      title: '✅ Pago confirmado',
+      body: 'Tu pago para "{{session}}" fue confirmado. ¡Nos vemos!',
     },
   },
 };
