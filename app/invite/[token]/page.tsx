@@ -8,9 +8,12 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchInviteWithSession, fetchUsersByIds, insertParticipant } from '@/lib/dal';
+import { joinSession } from '@/lib/sessions';
+import { getJoinErrorMessages } from '@/hooks/sessionActionTypes';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,12 +35,17 @@ export default function InvitePage() {
   const token = params.token as string;
   const supabase = createClient();
   const { language, t } = useLanguage();
+  const ti = useTranslations('invite');
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<SessionRow | null>(null);
   const [inviter, setInviter] = useState<InviterInfo | null>(null);
   const [isGuest, setIsGuest] = useState(true);
   const [joining, setJoining] = useState(false);
+  // T-INV1: registered-user acceptance needs the auth user's id/name, and the
+  // expired state gets its own screen instead of falling through to "not found".
+  const [authUser, setAuthUser] = useState<{ id: string; name: string } | null>(null);
+  const [expired, setExpired] = useState(false);
 
   const [guestData, setGuestData] = useState({
     name: '',
@@ -58,17 +66,21 @@ export default function InvitePage() {
       } = await supabase.auth.getUser();
       if (user) {
         setIsGuest(false);
+        setAuthUser({
+          id: user.id,
+          name: (user.user_metadata?.name as string | undefined) || user.email || 'Someone',
+        });
       }
 
       // Load invite token
       const inviteResult = await fetchInviteWithSession(supabase, token);
       if (!inviteResult.success) throw new Error(inviteResult.error);
 
-      const inviteData = inviteResult.data as { expires_at: string; session: SessionRow; created_by: string };
+      const inviteData = inviteResult.data as { expires_at: string | null; session: SessionRow; created_by: string };
 
-      // Check if token expired
-      if (new Date(inviteData.expires_at) < new Date()) {
-        showError(t('inviteExpired'));
+      // Check if token expired — dedicated screen, not the "not found" fallthrough (T-INV1).
+      if (inviteData.expires_at && new Date(inviteData.expires_at) < new Date()) {
+        setExpired(true);
         return;
       }
 
@@ -136,10 +148,66 @@ export default function InvitePage() {
     }
   }
 
+  // T-INV1: registered-user acceptance. Reuses the standard joinSession
+  // machinery (capacity, duplicates, paid status, host notification); the
+  // token unlocks the invite_only gate.
+  async function handleAcceptInvite() {
+    if (!session || !authUser) return;
+    setJoining(true);
+    try {
+      const result = await joinSession({
+        supabase,
+        sessionId: session.id,
+        userId: authUser.id,
+        userName: authUser.name,
+        inviteToken: token,
+      });
+
+      if (!result.success) {
+        if (result.error === 'invite_expired') setExpired(true);
+        if (result.error === 'already_joined') {
+          // "Already used" for a multi-use invite: you are already in.
+          showInfo(getJoinErrorMessages(language)['already_joined']);
+          router.push(`/session/${session.id}`);
+          return;
+        }
+        const messages = getJoinErrorMessages(language);
+        showError(messages[result.error ?? ''] || ti('acceptFailed'));
+        return;
+      }
+
+      if (result.status === 'pending') {
+        // Same pending copy as useSessionActions: paid (T-PAY1) → pay the
+        // instructor directly; curated → host reviews the request.
+        const paidRequest = !!session.is_paid && (session.price_cents ?? 0) > 0;
+        showSuccess(paidRequest ? ti('requestSentPaid') : ti('requestSentCurated'));
+      } else {
+        showSuccess(t('confirmedSeeYou'));
+      }
+      router.push(`/session/${session.id}`);
+    } finally {
+      setJoining(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center">
         <p className="text-theme-primary">{t('loading')}</p>
+      </div>
+    );
+  }
+
+  if (expired) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-theme-primary mb-2">{t('inviteExpired')}</h1>
+          <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('askHostForNewLink')}</p>
+          <Link href="/" className="text-tribe-green hover:underline">
+            {t('goHome')}
+          </Link>
+        </div>
       </div>
     );
   }
@@ -149,6 +217,7 @@ export default function InvitePage() {
       <div className="min-h-screen bg-stone-50 dark:bg-tribe-mid flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-theme-primary mb-2">{t('inviteNotFound')}</h1>
+          <p className="text-sm text-stone-600 dark:text-gray-300 mb-4">{t('askHostForNewLink')}</p>
           <Link href="/" className="text-tribe-green hover:underline">
             {t('goHome')}
           </Link>
@@ -265,13 +334,14 @@ export default function InvitePage() {
             </CardContent>
           </Card>
         ) : (
+          /* T-INV1: registered users accept here — the session page's
+             invite-only lock never offers a join button. */
           <Card className="dark:bg-tribe-card">
             <CardContent className="p-4 text-center">
-              <p className="text-theme-primary mb-4">{t('haveAccountJoinFromApp')}</p>
-              <Link
-                href={`/session/${session.id}`}
-                className="inline-block px-6 py-3 bg-tribe-green text-slate-900 font-bold rounded-lg hover:bg-lime-500 transition"
-              >
+              <Button onClick={handleAcceptInvite} disabled={joining} className="w-full py-3 font-bold mb-3">
+                {joining ? t('joining') : t('acceptInvitation')}
+              </Button>
+              <Link href={`/session/${session.id}`} className="text-sm text-tribe-green hover:underline">
                 {t('viewSession')}
               </Link>
             </CardContent>

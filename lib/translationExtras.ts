@@ -157,6 +157,8 @@ export const extEn = {
   // Invite page
   inviteExpired: 'Invite expired',
   invalidInvite: 'Invalid invite',
+  acceptInvitation: 'Accept invitation',
+  askHostForNewLink: 'Ask the host for a new invite link.',
   fillNameAndPhone: 'Fill in name and phone',
   confirmedSeeYou: 'Confirmed! See you there',
   inviteNotFound: 'Invite not found',
@@ -428,6 +430,8 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // Invite page
   inviteExpired: 'Invitacion expirada',
   invalidInvite: 'Invitacion invalida',
+  acceptInvitation: 'Aceptar invitacion',
+  askHostForNewLink: 'Pide al organizador un nuevo enlace.',
   fillNameAndPhone: 'Completa nombre y telefono',
   confirmedSeeYou: 'Confirmado! Nos vemos ahi',
   inviteNotFound: 'Invitacion no encontrada',

@@ -23,10 +23,11 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 vi.mock('@/lib/dal', () => ({
   fetchSessionFields: vi.fn(),
   checkExistingParticipation: vi.fn(),
+  fetchInviteTokenForJoin: vi.fn(),
 }));
 
 import { joinSession } from './sessions';
-import { fetchSessionFields, checkExistingParticipation } from '@/lib/dal';
+import { fetchSessionFields, checkExistingParticipation, fetchInviteTokenForJoin } from '@/lib/dal';
 
 function makeSupabase(rpcResult: { data?: unknown; error?: { message: string } | null } = {}) {
   const rpc = vi.fn().mockResolvedValue({
@@ -130,6 +131,136 @@ describe('joinSession', () => {
     });
     expect(res.error).toBe('invite_only');
     expect(s.__rpc).not.toHaveBeenCalled();
+  });
+
+  // T-INV1: invite tokens unlock the invite_only gate; everything else
+  // (capacity, duplicates, paid status) still goes through the normal flow.
+  describe('invite_only with inviteToken', () => {
+    beforeEach(() => {
+      vi.mocked(fetchSessionFields).mockResolvedValue({
+        success: true,
+        data: session({ join_policy: 'invite_only' }),
+      } as never);
+      vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    });
+
+    function invite(overrides: Partial<Record<string, unknown>> = {}) {
+      return {
+        success: true,
+        data: { session_id: 'sess-1', expires_at: '2999-01-01T00:00:00Z', ...overrides },
+      };
+    }
+
+    it('joins (status=confirmed) with a valid unexpired token for this session', async () => {
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue(invite() as never);
+      const s = makeSupabase({ data: { success: true, participant_id: 'pp-1', status: 'confirmed' } });
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-valid',
+      });
+      expect(res).toEqual({ success: true, status: 'confirmed' });
+      expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+        p_session_id: 'sess-1',
+        p_user_id: 'user-1',
+        p_status: 'confirmed',
+      });
+    });
+
+    it('returns invite_expired for an expired token and does not call the RPC', async () => {
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue(invite({ expires_at: '2020-01-01T00:00:00Z' }) as never);
+      const s = makeSupabase();
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-old',
+      });
+      expect(res.error).toBe('invite_expired');
+      expect(s.__rpc).not.toHaveBeenCalled();
+    });
+
+    it('returns invite_invalid for an unknown token', async () => {
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue({ success: true, data: null } as never);
+      const s = makeSupabase();
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-ghost',
+      });
+      expect(res.error).toBe('invite_invalid');
+      expect(s.__rpc).not.toHaveBeenCalled();
+    });
+
+    it('returns invite_invalid for a token minted for a DIFFERENT session', async () => {
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue(invite({ session_id: 'sess-other' }) as never);
+      const s = makeSupabase();
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-wrong-session',
+      });
+      expect(res.error).toBe('invite_invalid');
+      expect(s.__rpc).not.toHaveBeenCalled();
+    });
+
+    it('returns invite_invalid when the token lookup itself fails', async () => {
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue({ success: false, error: 'db down' } as never);
+      const s = makeSupabase();
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-any',
+      });
+      expect(res.error).toBe('invite_invalid');
+      expect(s.__rpc).not.toHaveBeenCalled();
+    });
+
+    it('paid invite_only session with valid token still goes pending (T-PAY1 interplay)', async () => {
+      vi.mocked(fetchSessionFields).mockResolvedValue({
+        success: true,
+        data: session({ join_policy: 'invite_only', is_paid: true, price_cents: 2_000_000 }),
+      } as never);
+      vi.mocked(fetchInviteTokenForJoin).mockResolvedValue(invite() as never);
+      const s = makeSupabase({ data: { success: true, participant_id: 'pp-2', status: 'pending' } });
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-valid',
+      });
+      expect(res).toEqual({ success: true, status: 'pending' });
+      expect(s.__rpc).toHaveBeenCalledWith('join_session', {
+        p_session_id: 'sess-1',
+        p_user_id: 'user-1',
+        p_status: 'pending',
+      });
+    });
+
+    it('already_joined wins over token validation (multi-use token, repeat accept)', async () => {
+      vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: true } as never);
+      const s = makeSupabase();
+      const res = await joinSession({
+        supabase: s as never,
+        sessionId: 'sess-1',
+        userId: 'user-1',
+        userName: 'Al',
+        inviteToken: 'tok-valid',
+      });
+      expect(res.error).toBe('already_joined');
+      expect(fetchInviteTokenForJoin).not.toHaveBeenCalled();
+      expect(s.__rpc).not.toHaveBeenCalled();
+    });
   });
 
   it('calls join_session RPC with status=confirmed for open sessions', async () => {

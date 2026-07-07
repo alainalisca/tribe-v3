@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { createNotification } from '@/lib/dal/notifications';
 import { fetchSession } from '@/lib/dal/sessions';
+import { insertInviteToken } from '@/lib/dal/invites';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { logError } from '@/lib/logger';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 
 const inviteSchema = z.object({
   session_id: z.string().uuid(),
@@ -88,15 +91,42 @@ export async function POST(request: Request) {
 
     // Get sender name for notification message
     const { data: senderProfile } = await supabase.from('users').select('name').eq('id', user.id).single();
-
     const senderName = senderProfile?.name || 'Someone';
-    const message = `${senderName} invited you to ${session.sport} on ${session.date}`;
 
-    // Create notification using service role client to bypass RLS
+    // Service role client: RLS bypass for the notification insert, the
+    // recipient language lookup, and the invite token mint.
     const serviceSupabase = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // T-INV1: mint an invite token so the in-app invite is acceptable through
+    // the same /invite/{token} flow as shared links. expires_at is left to the
+    // DB default (created_at + 7 days). Without a token the invite is a dead
+    // end (invite_only sessions reject tokenless joins), so failure here fails
+    // the request.
+    const token = randomBytes(16).toString('hex');
+    const tokenResult = await insertInviteToken(serviceSupabase, {
+      session_id,
+      token,
+      created_by: user.id,
+    });
+    if (!tokenResult.success) {
+      return NextResponse.json({ error: 'Failed to create invite' }, { status: 500 });
+    }
+
+    // T-INV1: compose the message in the RECIPIENT's language.
+    const { data: recipientProfile } = await serviceSupabase
+      .from('users')
+      .select('preferred_language')
+      .eq('id', recipient_user_id)
+      .maybeSingle();
+    const { body: message } = notificationCopy('session_invite', toLang(recipientProfile?.preferred_language), {
+      name: senderName,
+      sport: session.sport,
+      date: session.date,
+    });
+
     const notifResult = await createNotification(serviceSupabase, {
       recipient_id: recipient_user_id,
       actor_id: user.id,

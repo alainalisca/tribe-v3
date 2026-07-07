@@ -1,12 +1,18 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { fetchSessionFields, checkExistingParticipation } from '@/lib/dal';
+import { fetchSessionFields, checkExistingParticipation, fetchInviteTokenForJoin } from '@/lib/dal';
 
 interface JoinSessionParams {
   supabase: SupabaseClient;
   sessionId: string;
   userId: string;
   userName: string;
+  /**
+   * T-INV1: invite link token. Required to join an invite_only session;
+   * ignored for open/curated sessions. Tokens are multi-use shareable
+   * links that expire 7 days after creation (DB default on invite_tokens).
+   */
+  inviteToken?: string;
 }
 
 interface JoinSessionResult {
@@ -20,6 +26,7 @@ export async function joinSession({
   sessionId,
   userId,
   userName,
+  inviteToken,
 }: JoinSessionParams): Promise<JoinSessionResult> {
   try {
     // 1. Fetch the session
@@ -61,9 +68,25 @@ export async function joinSession({
       return { success: false, error: 'already_joined' };
     }
 
-    // 5. Check invite_only
+    // 5. Check invite_only (T-INV1). A valid, unexpired token for THIS
+    // session unlocks the normal join flow below; anything else keeps the
+    // gate closed. "Already used" is not a token state — tokens are
+    // multi-use, and a repeat acceptance is caught by the already_joined
+    // check above.
+    // FOLLOW-UP (T-INV1 Break 3): this gate is client-side only — the
+    // join_session RPC does not check join_policy, so a direct RPC call
+    // bypasses it. Server-side enforcement is tracked as a separate ticket.
     if (session.join_policy === 'invite_only') {
-      return { success: false, error: 'invite_only' };
+      if (!inviteToken) {
+        return { success: false, error: 'invite_only' };
+      }
+      const inviteResult = await fetchInviteTokenForJoin(supabase, inviteToken);
+      if (!inviteResult.success || !inviteResult.data || inviteResult.data.session_id !== sessionId) {
+        return { success: false, error: 'invite_invalid' };
+      }
+      if (inviteResult.data.expires_at && new Date(inviteResult.data.expires_at) < new Date()) {
+        return { success: false, error: 'invite_expired' };
+      }
     }
 
     // 6. Determine status based on join policy AND paid state.

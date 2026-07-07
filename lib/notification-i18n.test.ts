@@ -161,6 +161,28 @@ describe('notificationCopy', () => {
     });
   });
 
+  // T-INV1: in-app session invite, composed in the recipient's language.
+  describe('session_invite template', () => {
+    it('EN: "X invited you to <sport> on <date>"', () => {
+      const { body } = notificationCopy('session_invite', 'en', {
+        name: 'Ana',
+        sport: 'Running',
+        date: '2026-07-10',
+      });
+      expect(body).toBe('Ana invited you to Running on 2026-07-10');
+    });
+    it('ES does not contain the English verb "invited"', () => {
+      const { body } = notificationCopy('session_invite', 'es', {
+        name: 'Ana',
+        sport: 'Running',
+        date: '2026-07-10',
+      });
+      expect(body).not.toContain('invited');
+      expect(body).toContain('te invito');
+      expect(body).toContain('Ana');
+    });
+  });
+
   describe('variable interpolation', () => {
     it('fills {{name}} and {{sport}} from vars', () => {
       const { body } = notificationCopy('join', 'en', { name: 'Pedro', sport: 'Hiking' });

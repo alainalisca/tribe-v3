@@ -161,5 +161,10 @@
     "tribeIsComingSoonWe": "Tribe+ is coming soon. We'll let you know the moment it's available.",
     "weLlNotifyYou": "We'll notify you ✓",
     "alreadyAMemberManageSubscription": "Already a member? Manage subscription"
+  },
+  "invite": {
+    "requestSentPaid": "Request sent! Pay the instructor directly and they will confirm your spot.",
+    "requestSentCurated": "Request sent! The host will review your profile and decide.",
+    "acceptFailed": "Could not accept the invitation"
   }
 }

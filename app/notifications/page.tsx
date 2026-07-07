@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bell, Calendar, MessageCircle, Users, Star, Gift, Zap, CheckCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
+import { createClient } from '@/lib/supabase/client';
+import { fetchLatestInviteTokenForSession } from '@/lib/dal';
 import { useNotifications } from './useNotifications';
 import type { NotificationWithActor } from '@/lib/dal/notifications';
 
@@ -14,6 +16,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   session_reminder: <Calendar className="w-5 h-5 text-tribe-green" />,
   session_update: <Calendar className="w-5 h-5 text-blue-400" />,
   session_join: <Users className="w-5 h-5 text-tribe-green" />,
+  session_invite: <Users className="w-5 h-5 text-tribe-green" />,
   new_message: <MessageCircle className="w-5 h-5 text-tribe-green" />,
   dm: <MessageCircle className="w-5 h-5 text-tribe-green" />,
   connection_request: <Users className="w-5 h-5 text-amber-500" />,
@@ -56,10 +59,29 @@ export default function NotificationsPage() {
   const { t, notifications, loading, error, handleMarkRead, handleMarkAllRead, formatTime } = useNotifications();
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  function handleNotificationTap(notification: NotificationWithActor) {
+  async function handleNotificationTap(notification: NotificationWithActor) {
     trackEvent('notification_tapped', { notification_type: notification.type });
     if (!notification.is_read) {
       handleMarkRead(notification.id);
+    }
+    // T-INV1: a session invite routes to the /invite/{token} acceptance flow.
+    // The token is not stored on the notification (entity_id is a uuid), so
+    // resolve the inviter's latest unexpired token for this session; fall back
+    // to the session page if none is left.
+    if (notification.type === 'session_invite' && notification.entity_type === 'session' && notification.entity_id) {
+      if (notification.actor_id) {
+        const result = await fetchLatestInviteTokenForSession(
+          createClient(),
+          notification.entity_id,
+          notification.actor_id
+        );
+        if (result.success && result.data?.token) {
+          router.push(`/invite/${result.data.token}`);
+          return;
+        }
+      }
+      router.push(`/session/${notification.entity_id}`);
+      return;
     }
     const link = getNotificationLink(notification);
     if (link) router.push(link);
