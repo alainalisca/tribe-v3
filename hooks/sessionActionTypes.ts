@@ -33,26 +33,35 @@ export interface GuestData {
   email: string;
 }
 
-/** Error messages for join failures, keyed by error code */
-export function getJoinErrorMessages(language: 'en' | 'es'): Record<string, string> {
-  return {
-    session_not_found: language === 'es' ? 'Sesion no encontrada' : 'Session not found',
-    session_not_active: language === 'es' ? 'Esta sesion ya no esta activa' : 'This session is no longer active',
-    self_join: language === 'es' ? 'No puedes unirte a tu propia sesion!' : 'You cannot join your own session!',
-    already_joined: language === 'es' ? 'Ya te uniste a esta sesion!' : 'You already joined this session!',
-    capacity_full: language === 'es' ? 'Esta sesion esta llena' : 'This session is full',
-    invite_only:
-      language === 'es'
-        ? 'Sesion privada. Necesitas una invitacion del organizador.'
-        : 'This is a private session. You need a direct invitation from the host.',
+/**
+ * Error messages for join failures, keyed by error code. Structured as
+ * per-language records (not per-entry ternaries) per UI-I01/UI-I02.
+ */
+const JOIN_ERROR_MESSAGES: Record<'en' | 'es', Record<string, string>> = {
+  en: {
+    session_not_found: 'Session not found',
+    session_not_active: 'This session is no longer active',
+    self_join: 'You cannot join your own session!',
+    already_joined: 'You already joined this session!',
+    capacity_full: 'This session is full',
+    invite_only: 'This is a private session. You need a direct invitation from the host.',
     // T-INV1: invite link acceptance failures.
-    invite_invalid:
-      language === 'es'
-        ? 'Esta invitacion no es valida. Pide al organizador un nuevo enlace.'
-        : 'This invitation is not valid. Ask the host for a new link.',
-    invite_expired:
-      language === 'es'
-        ? 'Esta invitacion ya expiro. Pide al organizador un nuevo enlace.'
-        : 'This invitation has expired. Ask the host for a new link.',
-  };
+    invite_invalid: 'This invitation is not valid. Ask the host for a new link.',
+    invite_expired: 'This invitation has expired. Ask the host for a new link.',
+  },
+  es: {
+    session_not_found: 'Sesion no encontrada',
+    session_not_active: 'Esta sesion ya no esta activa',
+    self_join: 'No puedes unirte a tu propia sesion!',
+    already_joined: 'Ya te uniste a esta sesion!',
+    capacity_full: 'Esta sesion esta llena',
+    invite_only: 'Sesion privada. Necesitas una invitacion del organizador.',
+    // T-INV1: invite link acceptance failures.
+    invite_invalid: 'Esta invitacion no es valida. Pide al organizador un nuevo enlace.',
+    invite_expired: 'Esta invitacion ya expiro. Pide al organizador un nuevo enlace.',
+  },
+};
+
+export function getJoinErrorMessages(language: 'en' | 'es'): Record<string, string> {
+  return JOIN_ERROR_MESSAGES[language];
 }

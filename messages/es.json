@@ -161,5 +161,10 @@
     "tribeIsComingSoonWe": "Tribe+ llega pronto. Te avisaremos en cuanto esté disponible.",
     "weLlNotifyYou": "Te avisaremos ✓",
     "alreadyAMemberManageSubscription": "Ya eres miembro? Administrar suscripción"
+  },
+  "invite": {
+    "requestSentPaid": "¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.",
+    "requestSentCurated": "¡Solicitud enviada! El organizador revisará tu perfil.",
+    "acceptFailed": "No se pudo aceptar la invitacion"
   }
 }

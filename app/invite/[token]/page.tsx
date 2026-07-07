@@ -13,6 +13,7 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchInviteWithSession, fetchUsersByIds, insertParticipant } from '@/lib/dal';
 import { joinSession } from '@/lib/sessions';
 import { getJoinErrorMessages } from '@/hooks/sessionActionTypes';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ export default function InvitePage() {
   const token = params.token as string;
   const supabase = createClient();
   const { language, t } = useLanguage();
+  const ti = useTranslations('invite');
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<SessionRow | null>(null);
@@ -170,10 +172,7 @@ export default function InvitePage() {
           return;
         }
         const messages = getJoinErrorMessages(language);
-        showError(
-          messages[result.error ?? ''] ||
-            (language === 'es' ? 'No se pudo aceptar la invitacion' : 'Could not accept the invitation')
-        );
+        showError(messages[result.error ?? ''] || ti('acceptFailed'));
         return;
       }
 
@@ -181,15 +180,7 @@ export default function InvitePage() {
         // Same pending copy as useSessionActions: paid (T-PAY1) → pay the
         // instructor directly; curated → host reviews the request.
         const paidRequest = !!session.is_paid && (session.price_cents ?? 0) > 0;
-        showSuccess(
-          paidRequest
-            ? language === 'es'
-              ? '¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.'
-              : 'Request sent! Pay the instructor directly and they will confirm your spot.'
-            : language === 'es'
-              ? '¡Solicitud enviada! El organizador revisará tu perfil.'
-              : 'Request sent! The host will review your profile and decide.'
-        );
+        showSuccess(paidRequest ? ti('requestSentPaid') : ti('requestSentCurated'));
       } else {
         showSuccess(t('confirmedSeeYou'));
       }
