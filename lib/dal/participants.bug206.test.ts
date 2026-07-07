@@ -15,7 +15,12 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { fetchPendingParticipantsForSession, updateParticipantStatus, deleteParticipant } from './participants';
+import {
+  fetchPendingParticipantsForSession,
+  updateParticipantStatus,
+  deleteParticipant,
+  deleteParticipantBySessionAndUser,
+} from './participants';
 
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 
@@ -61,12 +66,18 @@ function makeMockSupabase(opts: {
           select: (_cols2: string) => Promise.resolve({ data: updateData, error: updateError }),
         }),
       }),
-      // delete chain used by deleteParticipant (.delete().eq().select())
-      delete: () => ({
-        eq: (_col: string, _val: unknown) => ({
+      // delete chain — supports deleteParticipant (.delete().eq().select())
+      // AND deleteParticipantBySessionAndUser (.delete().eq().eq().select()).
+      delete: () => {
+        const node: {
+          eq: () => typeof node;
+          select: (cols: string) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
+        } = {
+          eq: () => node,
           select: (_cols2: string) => Promise.resolve({ data: deleteData, error: deleteError }),
-        }),
-      }),
+        };
+        return { eq: () => node };
+      },
     }),
   } as unknown as SupabaseClient;
 }
@@ -175,5 +186,30 @@ describe('deleteParticipant (decline path)', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/No rows deleted/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deleteParticipantBySessionAndUser — leave path (T-NOTIF1 hardening)
+// ---------------------------------------------------------------------------
+describe('deleteParticipantBySessionAndUser (leave path)', () => {
+  it('returns success when a row is actually removed', async () => {
+    const supabase = makeMockSupabase({ deleteData: [{ id: 'part-1' }], deleteError: null });
+    const result = await deleteParticipantBySessionAndUser(supabase, 'sess-1', 'user-1');
+    expect(result.success).toBe(true);
+  });
+
+  it('returns not_removed when 0 rows are deleted (RLS block or already gone)', async () => {
+    const supabase = makeMockSupabase({ deleteData: [], deleteError: null });
+    const result = await deleteParticipantBySessionAndUser(supabase, 'sess-1', 'user-ghost');
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('not_removed');
+  });
+
+  it('surfaces a Supabase error', async () => {
+    const supabase = makeMockSupabase({ deleteData: [], deleteError: { message: 'db down' } });
+    const result = await deleteParticipantBySessionAndUser(supabase, 'sess-1', 'user-1');
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('db down');
   });
 });

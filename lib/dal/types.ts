@@ -66,7 +66,7 @@ export interface PendingParticipantWithUser {
   session_id: string;
   joined_at: string | null;
   status: string;
-  user: { id: string; name: string; avatar_url: string | null } | null;
+  user: { id: string; name: string; avatar_url: string | null; preferred_language: string | null } | null;
 }
 
 /** Story with user and session join */
