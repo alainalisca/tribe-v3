@@ -1,18 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { LogOut, Trash2, MessageCircle, Lock, CreditCard, Loader2 } from 'lucide-react';
+import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/button';
-import { showError, showInfo } from '@/lib/toast';
-import { logError } from '@/lib/logger';
+import { showInfo } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
-import { formatPrice as formatPriceUtil } from '@/lib/formatCurrency';
-import type { Currency } from '@/lib/payments/config';
 import WhatsAppShareButton from '@/components/session/WhatsAppShareButton';
+import PaidSessionRequest from '@/components/session/PaidSessionRequest';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -53,7 +50,6 @@ export default function ActionButtons({
   creatingInvite,
 }: ActionButtonsProps) {
   const { t } = useLanguage();
-  const [processingPayment, setProcessingPayment] = useState(false);
 
   const isPaidSession = !!session.is_paid && session.price_cents > 0;
   const calendarData = {
@@ -63,54 +59,6 @@ export default function ActionButtons({
     durationMinutes: session.duration || 60,
     location: session.location || undefined,
   };
-
-  // formatPrice imported from @/lib/formatCurrency
-
-  // Handle paid session checkout — calls /api/payment/create and redirects to gateway
-  async function handlePaidJoin() {
-    if (!user || !session) return;
-    setProcessingPayment(true);
-    trackEvent('payment_initiated', {
-      session_id: session.id,
-      amount_cents: session.price_cents,
-      currency: session.currency,
-      gateway: session.currency === 'COP' ? 'wompi' : 'stripe',
-    });
-    try {
-      const res = await fetch('/api/payment/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: session.id }),
-      });
-      // Parse defensively: a 5xx that returned HTML (e.g. an outage page)
-      // would throw on res.json() and the user used to see nothing — the
-      // catch had an empty `{}` that swallowed the error. Now we capture
-      // the body text on parse failure for the toast + log.
-      const raw = await res.text();
-      let data: { success?: boolean; data?: { redirect_url?: string }; error?: string } = {};
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        // non-JSON response; surface the status and a snippet in logs
-      }
-      if (res.ok && data.success && data.data?.redirect_url) {
-        window.location.href = data.data.redirect_url;
-        return;
-      }
-      const fallback = _language === 'es' ? 'Error al procesar pago' : 'Payment processing failed';
-      showError(data.error || fallback);
-      logError(new Error(`payment_create_failed_${res.status}: ${data.error || raw.slice(0, 200)}`), {
-        action: 'handlePaidJoin',
-        sessionId: session.id,
-        status: res.status,
-      });
-      setProcessingPayment(false);
-    } catch (err) {
-      showError(_language === 'es' ? 'Error de conexión' : 'Connection error');
-      logError(err, { action: 'handlePaidJoin.network', sessionId: session.id });
-      setProcessingPayment(false);
-    }
-  }
 
   return (
     <div className="space-y-2">
@@ -181,7 +129,12 @@ export default function ActionButtons({
       ) : isPending ? (
         <>
           <div className="w-full py-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 font-bold rounded-lg text-center">
-            ⏳ {t('pendingApproval')}
+            ⏳{' '}
+            {isPaidSession
+              ? _language === 'es'
+                ? 'Esperando confirmación de pago'
+                : 'Awaiting payment confirmation'
+              : t('pendingApproval')}
           </div>
           <Button
             onClick={sessionActions.handleLeave}
@@ -221,52 +174,15 @@ export default function ActionButtons({
           {t('inviteOnlyLabel')}
         </div>
       ) : isPaidSession ? (
-        /* ── Paid session: show price + Pay button ── */
-        <div className="space-y-2">
-          <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-700 dark:text-green-300 font-medium">
-                  {_language === 'es' ? 'Sesión de pago' : 'Paid Session'}
-                </p>
-                <p className="text-lg font-bold text-green-800 dark:text-green-200">
-                  {session.currency || 'COP'}{' '}
-                  {formatPriceUtil(session.price_cents, (session.currency || 'COP') as Currency)}
-                </p>
-              </div>
-              <div className="text-xs text-green-800 dark:text-green-200 text-right font-medium">
-                {session.currency === 'USD' ? '💳 Stripe' : '🇨🇴 Wompi'}
-                <br />
-                <span className="text-green-700 dark:text-green-300 font-normal">
-                  {session.currency === 'USD'
-                    ? _language === 'es'
-                      ? 'Tarjeta de crédito/débito'
-                      : 'Credit/debit card'
-                    : _language === 'es'
-                      ? 'Nequi, PSE, tarjeta'
-                      : 'Nequi, PSE, card'}
-                </span>
-              </div>
-            </div>
-          </div>
-          <Button
-            onClick={handlePaidJoin}
-            disabled={processingPayment || sessionActions.joining}
-            className="w-full py-3 font-bold bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
-          >
-            {processingPayment ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                {_language === 'es' ? 'Procesando...' : 'Processing...'}
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-5 h-5" />
-                {_language === 'es' ? 'Pagar y unirse' : 'Pay & Join'}
-              </>
-            )}
-          </Button>
-        </div>
+        /* ── T-PAY1: paid session → off-platform request (no checkout, no money through Tribe) ── */
+        <PaidSessionRequest
+          priceCents={session.price_cents}
+          currency={session.currency || 'COP'}
+          paymentInstructions={session.payment_instructions ?? null}
+          onRequest={sessionActions.handleJoin}
+          requesting={sessionActions.joining}
+          language={_language}
+        />
       ) : (
         <Button onClick={sessionActions.handleJoin} disabled={sessionActions.joining} className="w-full py-3 font-bold">
           {sessionActions.joining ? t('joining') : t('joinSession')}

@@ -32,6 +32,12 @@ interface PendingRequestsPanelProps {
   t: (key: TranslationKey) => string;
   /** Called after an approve so the parent can refresh the session count. */
   onApproved?: () => void;
+  /**
+   * T-PAY1: when the session is paid, approving means "I received payment
+   * directly from this athlete" — so the copy shifts to payment confirmation.
+   * The action is otherwise identical (pending → confirmed).
+   */
+  isPaid?: boolean;
 }
 
 export default function PendingRequestsPanel({
@@ -41,8 +47,19 @@ export default function PendingRequestsPanel({
   language,
   t,
   onApproved,
+  isPaid = false,
 }: PendingRequestsPanelProps) {
   const supabase = createClient();
+  const es = language === 'es';
+  // Paid sessions reuse the same approve flow with payment-confirmation copy.
+  const headerLabel = isPaid ? (es ? 'Confirmaciones de pago' : 'Payment confirmations') : t('pendingJoinRequests');
+  const approveLabel = isPaid ? (es ? 'Confirmar pago' : 'Confirm payment') : t('approveAthlete');
+  const emptyLabel = isPaid
+    ? es
+      ? 'No hay pagos por confirmar'
+      : 'No payments to confirm'
+    : t('noPendingJoinRequests');
+  const approveToast = isPaid ? (es ? 'Pago confirmado' : 'Payment confirmed') : t('approveSuccess');
   const [requests, setRequests] = useState<PendingParticipantWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   // Track which participant IDs are currently processing (approve/decline in-flight)
@@ -73,12 +90,15 @@ export default function PendingRequestsPanel({
       }
       // Optimistically remove from list
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
-      showSuccess(t('approveSuccess'));
+      showSuccess(approveToast);
       // In-app notification to the athlete
       if (req.user_id) {
-        const athleteName = req.user?.name ?? (language === 'es' ? 'Atleta' : 'Athlete');
-        const message =
-          language === 'es'
+        const athleteName = req.user?.name ?? (es ? 'Atleta' : 'Athlete');
+        const message = isPaid
+          ? es
+            ? `Tu pago para "${sessionTitle}" fue confirmado. ¡Nos vemos!`
+            : `Your payment for "${sessionTitle}" was confirmed. See you there!`
+          : es
             ? `Tu solicitud para "${sessionTitle}" fue aprobada.`
             : `Your request to join "${sessionTitle}" was approved.`;
         await createNotification(supabase, {
@@ -135,7 +155,7 @@ export default function PendingRequestsPanel({
   if (requests.length === 0) {
     return (
       <div className="mt-4 rounded-xl p-4 bg-theme-surface border border-theme text-center text-sm text-theme-secondary">
-        {t('noPendingJoinRequests')}
+        {emptyLabel}
       </div>
     );
   }
@@ -144,7 +164,7 @@ export default function PendingRequestsPanel({
     <div className="mt-4 rounded-xl border border-tribe-green/40 bg-tribe-green/5 overflow-hidden">
       <div className="px-4 py-3 border-b border-tribe-green/20">
         <h3 className="text-sm font-semibold text-theme-primary">
-          {t('pendingJoinRequests')}
+          {headerLabel}
           <span className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-tribe-green text-slate-900 text-xs font-bold">
             {requests.length}
           </span>
@@ -176,11 +196,11 @@ export default function PendingRequestsPanel({
                   type="button"
                   onClick={() => handleApprove(req)}
                   disabled={isBusy}
-                  aria-label={`${t('approveAthlete')} ${name}`}
+                  aria-label={`${approveLabel} ${name}`}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-tribe-green text-slate-900 text-xs font-bold hover:bg-lime-400 transition disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  {t('approveAthlete')}
+                  {approveLabel}
                 </button>
                 <button
                   type="button"

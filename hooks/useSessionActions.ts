@@ -84,10 +84,17 @@ export function useSessionActions({
       }
       if (result.status === 'pending') {
         haptic('light');
+        // T-PAY1: a paid session's request is "awaiting payment" — tell the
+        // athlete to pay the instructor directly so the instructor can confirm.
+        const paidRequest = !!session.is_paid && (session.price_cents ?? 0) > 0;
         showSuccess(
-          language === 'es'
-            ? '¡Solicitud enviada! El organizador revisará tu perfil.'
-            : 'Request sent! The host will review your profile and decide.'
+          paidRequest
+            ? language === 'es'
+              ? '¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.'
+              : 'Request sent! Pay the instructor directly and they will confirm your spot.'
+            : language === 'es'
+              ? '¡Solicitud enviada! El organizador revisará tu perfil.'
+              : 'Request sent! The host will review your profile and decide.'
         );
       } else {
         haptic('success');

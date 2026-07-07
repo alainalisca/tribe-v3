@@ -26,7 +26,7 @@ export async function joinSession({
     const sessionResult = await fetchSessionFields(
       supabase,
       sessionId,
-      'id, creator_id, join_policy, max_participants, current_participants, status, sport'
+      'id, creator_id, join_policy, max_participants, current_participants, status, sport, is_paid, price_cents'
     );
 
     if (!sessionResult.success || !sessionResult.data) {
@@ -41,6 +41,8 @@ export async function joinSession({
       current_participants: number;
       status: string;
       sport: string;
+      is_paid: boolean | null;
+      price_cents: number | null;
     };
 
     // 2. Check session is active
@@ -64,8 +66,13 @@ export async function joinSession({
       return { success: false, error: 'invite_only' };
     }
 
-    // 6. Determine status based on join policy
-    const status = session.join_policy === 'curated' ? 'pending' : 'confirmed';
+    // 6. Determine status based on join policy AND paid state.
+    // T-PAY1: paid sessions (price > 0) are off-platform — the athlete pays the
+    // instructor directly and the instructor confirms receipt. So joining a paid
+    // session always creates a pending request (awaiting payment confirmation),
+    // exactly like the curated manual-approval flow. Tribe never touches money.
+    const isPaid = !!session.is_paid && (session.price_cents ?? 0) > 0;
+    const status = session.join_policy === 'curated' || isPaid ? 'pending' : 'confirmed';
 
     // 7. Atomic join via RPC.
     // LOGIC-01: the RPC holds a row-level lock on the session, counts confirmed
