@@ -146,6 +146,21 @@ describe('notificationCopy', () => {
     });
   });
 
+  describe('payment_confirmed template', () => {
+    it('EN says confirmed and includes the session', () => {
+      const { body } = notificationCopy('payment_confirmed', 'en', { session: 'Morning Run' });
+      expect(body).toContain('payment');
+      expect(body).toContain('confirmed');
+      expect(body).toContain('Morning Run');
+    });
+    it('ES says confirmado, not "confirmed"', () => {
+      const { body } = notificationCopy('payment_confirmed', 'es', { session: 'Morning Run' });
+      expect(body).not.toContain('confirmed');
+      expect(body).toContain('pago');
+      expect(body).toContain('confirmado');
+    });
+  });
+
   describe('variable interpolation', () => {
     it('fills {{name}} and {{sport}} from vars', () => {
       const { body } = notificationCopy('join', 'en', { name: 'Pedro', sport: 'Hiking' });

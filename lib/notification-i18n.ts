@@ -36,7 +36,8 @@ type TemplateKey =
   | 'smart_match'
   | 'leave'
   | 'request_approved'
-  | 'request_declined';
+  | 'request_declined'
+  | 'payment_confirmed';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -140,6 +141,18 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '❌ Solicitud rechazada',
       body: 'Tu solicitud para unirte a "{{session}}" fue rechazada',
+    },
+  },
+  // T-PAY1 x T-NOTIF1: recipient = athlete (host confirmed their off-platform
+  // payment for a paid session). Copy matches T-PAY1's approved wording.
+  payment_confirmed: {
+    en: {
+      title: '✅ Payment confirmed',
+      body: 'Your payment for "{{session}}" was confirmed. See you there!',
+    },
+    es: {
+      title: '✅ Pago confirmado',
+      body: 'Tu pago para "{{session}}" fue confirmado. ¡Nos vemos!',
     },
   },
 };
