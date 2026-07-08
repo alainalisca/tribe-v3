@@ -318,4 +318,15 @@ select '108_fix_join_notify_triggers_session_title',
          where proname = 'notify_join_request'
            and pg_get_functiondef(oid) ilike '%s.title%'
        ) then 'applied' else 'MISSING' end
+union all
+select '109_fix_participant_count_drift',
+       -- T-COUNT1: dropped the legacy delta trigger update_participant_count so
+       -- only the recompute trigger maintains current_participants. Applied
+       -- once that legacy trigger is gone from session_participants.
+       case when not exists (
+         select 1 from pg_trigger t
+         join pg_class c on c.oid = t.tgrelid
+         where c.relname = 'session_participants'
+           and t.tgname = 'update_participant_count'
+       ) then 'applied' else 'MISSING' end
 order by migration;
