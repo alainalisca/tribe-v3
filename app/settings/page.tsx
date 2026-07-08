@@ -21,6 +21,7 @@ import {
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { trackEvent } from '@/lib/analytics';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { useTheme } from '@/contexts/ThemeContext';
 import { haptic } from '@/lib/haptics';
 import BottomNav from '@/components/BottomNav';
@@ -35,6 +36,7 @@ import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
 
 export default function SettingsPage() {
   const { language, setLanguage } = useLanguage();
+  const tLoc = useTranslations('settings.location');
   const { theme, setTheme } = useTheme();
   const { currency: userCurrency, setCurrency: setUserCurrency } = useUserCurrency();
   const router = useRouter();
@@ -245,39 +247,43 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Location Section */}
-        {locationPermission !== 'unsupported' && (
-          <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
-            <div className="flex items-center gap-3 mb-2">
-              <MapPin className="w-5 h-5 text-tribe-green" />
-              <h2 className="text-lg font-bold text-theme-primary">{txt.location}</h2>
+        {/* Location Section — always shown; the content adapts to the permission
+            state. Previously the whole section was hidden when 'unsupported'
+            (making it look "missing"), and 'denied' rendered a dead disabled
+            button with no way forward. */}
+        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-2">
+            <MapPin className="w-5 h-5 text-tribe-green" />
+            <h2 className="text-lg font-bold text-theme-primary">{txt.location}</h2>
+          </div>
+          <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.locationDesc}</p>
+
+          {locationPermission === 'unsupported' ? (
+            // Location unavailable (insecure context / device without it): a
+            // short hint instead of hiding the whole section.
+            <p className="text-sm text-stone-500 dark:text-gray-400">{tLoc('unsupportedHint')}</p>
+          ) : locationPermission === 'denied' ? (
+            // Denied: the browser/OS won't let us re-prompt, so show clear
+            // re-enable guidance instead of a dead button.
+            <div className="rounded-xl bg-stone-100 dark:bg-tribe-surface p-4">
+              <p className="text-sm font-semibold text-stone-700 dark:text-gray-300">{txt.locationDenied}</p>
+              <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{tLoc('deniedGuidance')}</p>
             </div>
-            <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.locationDesc}</p>
+          ) : (
             <button
               onClick={enableLocation}
-              disabled={loadingLocation || locationPermission === 'granted' || locationPermission === 'denied'}
+              disabled={loadingLocation || locationPermission === 'granted'}
               className={`w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between ${
                 locationPermission === 'granted'
                   ? 'bg-tribe-green text-slate-900'
-                  : locationPermission === 'denied'
-                    ? 'bg-stone-100 dark:bg-tribe-surface text-stone-500 dark:text-gray-400 cursor-not-allowed'
-                    : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
               }`}
             >
-              <span>
-                {locationPermission === 'granted'
-                  ? txt.locationGranted
-                  : locationPermission === 'denied'
-                    ? txt.locationDenied
-                    : txt.enableLocation}
-              </span>
+              <span>{locationPermission === 'granted' ? txt.locationGranted : txt.enableLocation}</span>
               {loadingLocation && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />}
             </button>
-            {locationPermission === 'denied' && (
-              <p className="text-xs text-stone-500 dark:text-gray-400 mt-2">{txt.locationDeniedToast}</p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Notification Debug Section — admin only */}
         {userIsAdmin && (

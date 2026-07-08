@@ -105,6 +105,10 @@
       "sessionReminderDesc": "1 hour before each session starts",
       "weeklyDigest": "Weekly digest",
       "weeklyDigestDesc": "Summary of your activity every Monday"
+    },
+    "location": {
+      "deniedGuidance": "Location is blocked. To use nearby features, allow location for Tribe in your device settings, then reopen this screen.",
+      "unsupportedHint": "Location isn't available on this device or browser."
     }
   },
   "postSession": {

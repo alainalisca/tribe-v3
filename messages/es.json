@@ -105,6 +105,10 @@
       "sessionReminderDesc": "1 hora antes de que comience cada sesión",
       "weeklyDigest": "Resumen semanal",
       "weeklyDigestDesc": "Resumen de tu actividad cada lunes"
+    },
+    "location": {
+      "deniedGuidance": "La ubicación está bloqueada. Para ver funciones cercanas, permite la ubicación para Tribe en los ajustes de tu dispositivo y vuelve a abrir esta pantalla.",
+      "unsupportedHint": "La ubicación no está disponible en este dispositivo o navegador."
     }
   },
   "postSession": {
