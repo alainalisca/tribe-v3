@@ -308,4 +308,14 @@ select '106_community_events_update_with_check',
            and policyname = 'community_events_update'
            and with_check is not null
        ) then 'applied' else 'MISSING' end
+union all
+select '108_fix_join_notify_triggers_session_title',
+       -- BUG-001 hotfix: notify_join_request / notify_join_accepted selected
+       -- the nonexistent sessions.name, aborting every pending join + approval.
+       -- Applied once the corrected function selects s.title (not s.name).
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'notify_join_request'
+           and pg_get_functiondef(oid) ilike '%s.title%'
+       ) then 'applied' else 'MISSING' end
 order by migration;
