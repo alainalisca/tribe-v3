@@ -48,17 +48,41 @@ export async function createNotification(
       message,
     };
 
-    const { data: notification, error } = await supabase
-      .from('notifications')
-      .insert(data)
-      .select()
-      .single();
+    const { data: notification, error } = await supabase.from('notifications').insert(data).select().single();
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: notification };
   } catch (error) {
     logError(error, { action: 'createNotification', recipient_id });
     return { success: false, error: 'Failed to create notification' };
+  }
+}
+
+/**
+ * T-PROF1: true if the user already has an UNREAD notification of the given
+ * type. Used to insert the "profile incomplete" nudge at most once — it
+ * re-notifies only after the previous one has been read/cleared, so a repeated
+ * dashboard load doesn't spam the bell.
+ */
+export async function hasUnreadNotificationOfType(
+  supabase: SupabaseClient,
+  recipientId: string,
+  type: string
+): Promise<DalResult<boolean>> {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('recipient_id', recipientId)
+      .eq('type', type)
+      .eq('is_read', false)
+      .limit(1)
+      .maybeSingle();
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: !!data };
+  } catch (error) {
+    logError(error, { action: 'hasUnreadNotificationOfType', recipientId });
+    return { success: false, error: 'Failed to check notifications' };
   }
 }
 
@@ -91,10 +115,7 @@ export async function fetchNotifications(
 /**
  * Get count of unread notifications for a user.
  */
-export async function getUnreadNotificationCount(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<DalResult<number>> {
+export async function getUnreadNotificationCount(supabase: SupabaseClient, userId: string): Promise<DalResult<number>> {
   try {
     const { count, error } = await supabase
       .from('notifications')
@@ -113,15 +134,9 @@ export async function getUnreadNotificationCount(
 /**
  * Mark a single notification as read.
  */
-export async function markNotificationRead(
-  supabase: SupabaseClient,
-  notificationId: string
-): Promise<DalResult<null>> {
+export async function markNotificationRead(supabase: SupabaseClient, notificationId: string): Promise<DalResult<null>> {
   try {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('id', notificationId);
+    const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: null };
@@ -134,10 +149,7 @@ export async function markNotificationRead(
 /**
  * Mark all notifications as read for a user.
  */
-export async function markAllNotificationsRead(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<DalResult<null>> {
+export async function markAllNotificationsRead(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
   try {
     const { error } = await supabase
       .from('notifications')

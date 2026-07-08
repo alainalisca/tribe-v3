@@ -4,7 +4,7 @@
 import { trackEvent } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bell, Calendar, MessageCircle, Users, Star, Gift, Zap, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Bell, Calendar, MessageCircle, Users, Star, Gift, Zap, CheckCheck, UserCog } from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
@@ -27,6 +27,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   referral_converted: <Gift className="w-5 h-5 text-amber-500" />,
   streak_milestone: <Zap className="w-5 h-5 text-amber-500" />,
   achievement: <Zap className="w-5 h-5 text-amber-500" />,
+  profile_incomplete: <UserCog className="w-5 h-5 text-tribe-green" />,
   general: <Bell className="w-5 h-5 text-stone-400" />,
 };
 
@@ -48,6 +49,8 @@ function getNotificationLink(notification: NotificationWithActor): string | null
     entity_id
   )
     return `/session/${entity_id}`;
+  // T-PROF1: the incomplete-profile nudge sends the instructor to edit their profile.
+  if (type === 'profile_incomplete') return '/profile/edit';
   if (['dm', 'new_message'].includes(type) && entity_id) return `/messages/${entity_id}`;
   if (['community_invite', 'community_post'].includes(type) && entity_id) return `/communities/${entity_id}`;
   if (type === 'connection_request' && actor_id) return `/profile/${actor_id}`;

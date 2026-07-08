@@ -170,5 +170,17 @@
     "requestSentPaid": "¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.",
     "requestSentCurated": "¡Solicitud enviada! El organizador revisará tu perfil.",
     "acceptFailed": "No se pudo aceptar la invitacion"
+  },
+  "instructorIncomplete": {
+    "title": "Completa tu perfil de instructor",
+    "description": "Estas oculto en la pagina Entrena con un Instructor hasta que agregues:",
+    "cta": "Terminar mi perfil",
+    "fields": {
+      "photo": "Foto de perfil",
+      "bio": "Biografia",
+      "specialties": "Al menos una especialidad",
+      "location": "Ubicacion",
+      "years_experience": "Anos de experiencia"
+    }
   }
 }

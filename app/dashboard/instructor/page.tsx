@@ -12,6 +12,7 @@ import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
 import PayoutSetupBanner from '@/components/PayoutSetupBanner';
+import InstructorProfileIncompleteBanner from '@/components/InstructorProfileIncompleteBanner';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
 import LeadsTab from '@/components/dashboard/LeadsTab';
@@ -26,6 +27,10 @@ import {
   type ServicePackageRow,
 } from '@/lib/dal/instructorDashboard';
 import { fetchUserProfile } from '@/lib/dal/users';
+import { createNotification, hasUnreadNotificationOfType } from '@/lib/dal/notifications';
+import { getMissingInstructorFields } from '@/lib/instructorProfile';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { logError } from '@/lib/logger';
 import type { User } from '@/lib/database.types';
 
 type Tab = 'storefront' | 'sessions' | 'analytics' | 'packages' | 'leads';
@@ -84,6 +89,32 @@ export default function InstructorDashboardPage() {
       }
       setProfile(profileResult.data as unknown as User);
 
+      // T-PROF1: if the profile is incomplete the instructor is hidden from
+      // discovery — nudge them once (app-side, no DB trigger). Insert only when
+      // there's no existing unread nudge, so a repeat dashboard visit doesn't
+      // spam the bell; it re-notifies after the prior one is read.
+      const missing = getMissingInstructorFields(profileResult.data);
+      if (missing.length > 0) {
+        try {
+          const existing = await hasUnreadNotificationOfType(supabase, authUser.id, 'profile_incomplete');
+          if (existing.success && !existing.data) {
+            const { body } = notificationCopy(
+              'profile_incomplete',
+              toLang((profileResult.data as { preferred_language?: string | null }).preferred_language)
+            );
+            await createNotification(supabase, {
+              recipient_id: authUser.id,
+              type: 'profile_incomplete',
+              entity_type: 'user',
+              entity_id: authUser.id,
+              message: body,
+            });
+          }
+        } catch (error) {
+          logError(error, { action: 'InstructorDashboard.profileIncompleteNotify', userId: authUser.id });
+        }
+      }
+
       // Load all data in parallel
       const [sessResult, statsResult, pkgResult, leadsResult] = await Promise.all([
         fetchInstructorSessions(supabase, authUser.id),
@@ -138,6 +169,10 @@ export default function InstructorDashboardPage() {
         <div className="mt-4">
           <TribeOSEntryCard variant="inline" />
         </div>
+
+        {/* T-PROF1: profile-completeness nudge — shown while the instructor is
+            hidden from the Train with an Instructor page. Lists what's missing. */}
+        {profile && <InstructorProfileIncompleteBanner missingFields={getMissingInstructorFields(profile)} />}
 
         {/* Payout setup nudge — shows until the instructor connects a real
             payout method so clients can actually pay them. */}

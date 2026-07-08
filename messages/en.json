@@ -170,5 +170,17 @@
     "requestSentPaid": "Request sent! Pay the instructor directly and they will confirm your spot.",
     "requestSentCurated": "Request sent! The host will review your profile and decide.",
     "acceptFailed": "Could not accept the invitation"
+  },
+  "instructorIncomplete": {
+    "title": "Complete your instructor profile",
+    "description": "You're hidden from the Train with an Instructor page until you add:",
+    "cta": "Finish my profile",
+    "fields": {
+      "photo": "Profile photo",
+      "bio": "Bio",
+      "specialties": "At least one specialty",
+      "location": "Location",
+      "years_experience": "Years of experience"
+    }
   }
 }
