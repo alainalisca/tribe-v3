@@ -158,8 +158,11 @@ export default function HomePage() {
           {/* ── Combined City Greeting + Weather (single line) ── */}
           <CityGreeting activeHood={ACTIVE_CITY.neighborhoods.find((n) => n.id === f.selectedNeighborhood) || null} />
 
-          {/* ── Location prompt (only if needed) ── */}
-          {f.user && !f.userLocation && !f.loading && (
+          {/* ── Location prompt (only if genuinely unknown) ── */}
+          {/* BUG-008: gate on locationKnown (permission + stored coords + in-memory),
+              not just the transient in-memory userLocation, so the banner stops
+              reappearing after the user has granted location. */}
+          {f.user && !f.locationKnown && !f.loading && (
             <button
               onClick={async () => {
                 // User clicked "Enable location" — explicit intent,

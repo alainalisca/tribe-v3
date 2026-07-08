@@ -37,6 +37,25 @@ export interface UserProfile {
   sports: string[] | null;
   safety_waiver_accepted: boolean | null;
   is_instructor: boolean | null;
+  // BUG-008: stored coordinates persist "the user has provided location",
+  // so the Enable-location banner can stay hidden across reloads.
+  location_lat: number | null;
+  location_lng: number | null;
+}
+
+/**
+ * BUG-008: whether the Enable-location banner should stay hidden. Location is
+ * "known" when we have in-memory coords, a granted OS/browser permission, OR
+ * coordinates already stored on the profile. Pure so it can be unit-tested.
+ */
+export function computeLocationKnown(
+  userLocation: { latitude: number; longitude: number } | null,
+  locationPermission: PermissionState | null,
+  profile: Pick<UserProfile, 'location_lat' | 'location_lng'> | null
+): boolean {
+  if (userLocation) return true;
+  if (locationPermission === 'granted') return true;
+  return profile?.location_lat != null && profile?.location_lng != null;
 }
 
 export function useHomeFeed() {
@@ -49,6 +68,10 @@ export function useHomeFeed() {
   const [userChecked, setUserChecked] = useState(false);
   const [sessions, setSessions] = useState<SessionWithRelations[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  // BUG-008: the real browser geolocation permission, read once on mount (same
+  // signal the settings page uses). 'granted' means location is enabled even
+  // before the deferred silent fetch resolves — so the banner shouldn't show.
+  const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [editingSession, setEditingSession] = useState<SessionWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,9 +125,28 @@ export function useHomeFeed() {
       idleId === undefined
         ? setTimeout(() => getUserLocation().then((loc) => loc && setUserLocation(loc)), 3000)
         : undefined;
+    // BUG-008: read the real geolocation permission so a granted user never
+    // sees the Enable-location banner, even before the silent fetch resolves
+    // and even if it returns null. Best-effort; the Permissions API is absent
+    // in some webviews (there we fall back to userLocation / stored coords).
+    let permCleanup: (() => void) | undefined;
+    if (typeof navigator !== 'undefined' && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((status) => {
+          setLocationPermission(status.state);
+          const onChange = () => setLocationPermission(status.state);
+          status.addEventListener('change', onChange);
+          permCleanup = () => status.removeEventListener('change', onChange);
+        })
+        .catch(() => {
+          /* Permissions API unavailable — banner falls back to coords/in-memory */
+        });
+    }
     return () => {
       if (idleId !== undefined) cancelIdleCallback(idleId);
       if (fallbackId !== undefined) clearTimeout(fallbackId);
+      permCleanup?.();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -211,7 +253,7 @@ export function useHomeFeed() {
     const result = await fetchUserProfileMaybe(
       supabase,
       user.id,
-      'name, avatar_url, bio, sports, safety_waiver_accepted, is_instructor'
+      'name, avatar_url, bio, sports, safety_waiver_accepted, is_instructor, location_lat, location_lng'
     );
     setUserProfile((result.data as UserProfile | null) ?? null);
   }
@@ -227,6 +269,9 @@ export function useHomeFeed() {
     sessions,
     userLocation,
     setUserLocation,
+    // BUG-008: hide the Enable-location banner once location is known
+    // (in-memory coords, granted permission, or stored profile coords).
+    locationKnown: computeLocationKnown(userLocation, locationPermission, userProfile),
     showOnboarding,
     setShowOnboarding,
     editingSession,
