@@ -165,7 +165,11 @@ export default function StorefrontPage() {
         </div>
       </div>
 
-      <main className="pt-header max-w-5xl mx-auto">
+      {/* BUG-006: overflow-x-clip contains any child wider than the viewport so
+          the centered (mx-auto) main can't split the overflow and shift the whole
+          page left. `clip` (not `hidden`) avoids creating a scroll container, so
+          the sticky sidebar + sticky tabs below keep working. */}
+      <main className="pt-header max-w-5xl mx-auto overflow-x-clip">
         <StorefrontHero instructor={instructor} language={lang} />
 
         {!hasContent ? (
