@@ -76,10 +76,12 @@ export function useSessionActions({
           reason: result.error ?? 'unknown',
         });
         const errorMessages = getJoinErrorMessages(language);
+        // BUG-001/002: only surface a known, mapped code. An unmapped error
+        // (e.g. a raw Postgres message like "column s.name does not exist")
+        // must NOT reach the UI — fall back to a friendly generic message.
+        // The raw reason is still captured in logs + the analytics event above.
         showInfo(
-          errorMessages[result.error!] ||
-            result.error ||
-            (language === 'es' ? 'No se pudo unir a la sesión' : 'Could not join session')
+          errorMessages[result.error!] || (language === 'es' ? 'No se pudo unir a la sesión' : 'Could not join session')
         );
         return;
       }

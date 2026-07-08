@@ -143,6 +143,24 @@ describe('useSessionActions.handleJoin', () => {
     expect(showInfo).toHaveBeenCalledWith('This session is full');
     expect(params.onSessionUpdated).not.toHaveBeenCalled();
   });
+
+  // BUG-001/002: a raw Postgres error must never reach the UI. An unmapped
+  // error code falls back to the friendly generic message.
+  it('shows a friendly fallback (never the raw DB error) for an unmapped error', async () => {
+    vi.mocked(joinSession).mockResolvedValue({
+      success: false,
+      error: 'column s.name does not exist',
+    } as never);
+    const params = makeParams('user-1');
+    const { result } = renderHook(() => useSessionActions(params));
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(showInfo).toHaveBeenCalledWith('Could not join session');
+    expect(showInfo).not.toHaveBeenCalledWith(expect.stringContaining('s.name'));
+  });
 });
 
 describe('useSessionActions.handleCancel', () => {
