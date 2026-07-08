@@ -1,8 +1,47 @@
 import { log, logError } from '@/lib/logger';
+import { Capacitor } from '@capacitor/core';
 
 export interface Location {
   latitude: number;
   longitude: number;
+}
+
+/**
+ * Native (Capacitor) geolocation for iOS/Android.
+ *
+ * The native WebView's `navigator.geolocation` does not reliably trigger the
+ * OS permission prompt (on Android it needs the app to hold the manifest
+ * permission and grant it to the WebView), which is why native users saw
+ * "no permissions requested". Going through the @capacitor/geolocation plugin
+ * requests the real OS permission declared in AndroidManifest + Info.plist.
+ *
+ * `prompt=false` (silent) never asks — for background flows. `prompt=true`
+ * asks when the permission isn't yet granted — for explicit-intent flows.
+ * Denied/unavailable resolves to null so callers fall back to the default
+ * (city-config) location rather than breaking.
+ */
+async function nativeGetPosition(prompt: boolean): Promise<Location | null> {
+  try {
+    const { Geolocation } = await import('@capacitor/geolocation');
+    let perm = await Geolocation.checkPermissions();
+    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+      if (!prompt) return null; // silent: never trigger the OS prompt
+      perm = await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+      if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+        log('debug', 'native_location_not_granted', { action: 'nativeGetPosition', state: perm.location });
+        return null;
+      }
+    }
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 300000,
+    });
+    return { latitude: position.coords.latitude, longitude: position.coords.longitude };
+  } catch (error) {
+    logError(error, { action: 'nativeGetPosition' });
+    return null;
+  }
 }
 
 /**
@@ -21,6 +60,10 @@ export interface Location {
  * (button clicks, "find nearby" toggles) where prompting is expected.
  */
 export async function getUserLocation(): Promise<Location | null> {
+  // Native: only return a position if permission was already granted; never prompt.
+  if (Capacitor.isNativePlatform()) {
+    return nativeGetPosition(false);
+  }
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     log('debug', 'Geolocation not supported', { action: 'getUserLocation' });
     return null;
@@ -73,6 +116,10 @@ export async function getUserLocation(): Promise<Location | null> {
  * search).
  */
 export async function requestUserLocation(): Promise<Location | null> {
+  // Native: request the real OS permission via the Capacitor plugin, then read.
+  if (Capacitor.isNativePlatform()) {
+    return nativeGetPosition(true);
+  }
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     log('debug', 'Geolocation not supported', { action: 'requestUserLocation' });
     return null;

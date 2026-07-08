@@ -13,6 +13,26 @@ import { requestUserLocation } from '@/lib/location';
 import { resetUser } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
 
+/**
+ * T-DISC1: read the native OS location permission via the Capacitor plugin.
+ * Returns null on web (so the caller falls back to the browser Permissions API)
+ * and the mapped state on native so the settings button reflects reality.
+ */
+async function readNativeLocationPermission(): Promise<PermissionState | null> {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    if (!Capacitor.isNativePlatform()) return null;
+    const { Geolocation } = await import('@capacitor/geolocation');
+    const perm = await Geolocation.checkPermissions();
+    if (perm.location === 'granted' || perm.coarseLocation === 'granted') return 'granted';
+    if (perm.location === 'denied' && perm.coarseLocation === 'denied') return 'denied';
+    return 'prompt';
+  } catch (error) {
+    logError(error, { action: 'readNativeLocationPermission' });
+    return null;
+  }
+}
+
 export function useSettings(language: 'en' | 'es') {
   const router = useRouter();
   const supabase = createClient();
@@ -74,6 +94,13 @@ export function useSettings(language: 'en' | 'es') {
   // Runs once on mount; no subscription (state changes on next page visit).
   useEffect(() => {
     async function checkLocationPermission() {
+      // Native: reflect the real OS permission via the Capacitor plugin — the
+      // WebView Permissions API does not report the native permission state.
+      const native = await readNativeLocationPermission();
+      if (native) {
+        setLocationPermission(native);
+        return;
+      }
       if (typeof navigator === 'undefined' || !navigator.geolocation) {
         setLocationPermission('unsupported');
         return;
@@ -358,7 +385,10 @@ export function useSettings(language: 'en' | 'es') {
   }
 
   async function enableLocation() {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    // On native the Capacitor plugin handles geolocation even when the WebView
+    // does not expose navigator.geolocation, so only block the web path here.
+    const native = await readNativeLocationPermission();
+    if (!native && (typeof navigator === 'undefined' || !navigator.geolocation)) {
       showError(txt.locationUnsupportedToast);
       return;
     }
@@ -378,6 +408,9 @@ export function useSettings(language: 'en' | 'es') {
       } else if (!loc) {
         // null return means the user denied, or permission was blocked
         showError(txt.locationDeniedToast);
+        // Reflect the real native permission state after a denial/unavailable.
+        const after = await readNativeLocationPermission();
+        if (after) setLocationPermission(after);
       }
     } catch (error: unknown) {
       logError(error, { action: 'enableLocation' });
