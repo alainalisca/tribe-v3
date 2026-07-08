@@ -308,4 +308,14 @@ select '106_community_events_update_with_check',
            and policyname = 'community_events_update'
            and with_check is not null
        ) then 'applied' else 'MISSING' end
+union all
+select '107_join_session_enforce_policy',
+       -- T-SEC1: join_session now enforces join_policy server-side. The old
+       -- signature took a trusted p_status; the new one takes p_invite_token.
+       -- Applied once the function's argument name has changed accordingly.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'join_session'
+           and 'p_invite_token' = any(proargnames)
+       ) then 'applied' else 'MISSING' end
 order by migration;

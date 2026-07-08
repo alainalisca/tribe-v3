@@ -68,14 +68,16 @@ export async function joinSession({
       return { success: false, error: 'already_joined' };
     }
 
-    // 5. Check invite_only (T-INV1). A valid, unexpired token for THIS
-    // session unlocks the normal join flow below; anything else keeps the
-    // gate closed. "Already used" is not a token state — tokens are
-    // multi-use, and a repeat acceptance is caught by the already_joined
-    // check above.
-    // FOLLOW-UP (T-INV1 Break 3): this gate is client-side only — the
-    // join_session RPC does not check join_policy, so a direct RPC call
-    // bypasses it. Server-side enforcement is tracked as a separate ticket.
+    // 5. Check invite_only (T-INV1). A valid, unexpired token for THIS session
+    // unlocks the join; anything else keeps the gate closed. "Already used" is
+    // not a token state — tokens are multi-use, and a repeat acceptance is
+    // caught by the already_joined check above.
+    //
+    // These client-side checks give athletes fast, specific feedback, but they
+    // are NO LONGER the security boundary: T-SEC1 moved policy enforcement into
+    // the join_session RPC, which re-validates the token (and derives the
+    // status) server-side. This block short-circuits before the round-trip;
+    // the RPC is authoritative if a caller skips it.
     if (session.join_policy === 'invite_only') {
       if (!inviteToken) {
         return { success: false, error: 'invite_only' };
@@ -89,25 +91,16 @@ export async function joinSession({
       }
     }
 
-    // 6. Determine status based on join policy AND paid state.
-    // T-PAY1: paid sessions (price > 0) are off-platform — the athlete pays the
-    // instructor directly and the instructor confirms receipt. So joining a paid
-    // session always creates a pending request (awaiting payment confirmation),
-    // exactly like the curated manual-approval flow. Tribe never touches money.
-    const isPaid = !!session.is_paid && (session.price_cents ?? 0) > 0;
-    const status = session.join_policy === 'curated' || isPaid ? 'pending' : 'confirmed';
-
-    // 7. Atomic join via RPC.
-    // LOGIC-01: the RPC holds a row-level lock on the session, counts confirmed
-    // participants, and inserts in one transaction. The previous fallback
-    // read count then inserted in two round-trips, which allowed two
-    // concurrent joiners to both pass the capacity check.
-    // The RPC also keeps sessions.current_participants in sync, so the
-    // separate updateParticipantCount call afterwards is no longer needed.
+    // 6. Atomic join via RPC (T-SEC1: the RPC is the single source of truth for
+    // the join status). It reads the session's own join_policy/is_paid inside a
+    // row lock, validates the invite token for invite-only sessions, derives the
+    // outcome (curated/paid -> pending, else confirmed), enforces capacity, and
+    // inserts idempotently — all server-side. The client no longer sends a
+    // status; it passes the invite token and trusts the returned status.
     const { data: rpcResult, error: rpcError } = await supabase.rpc('join_session', {
       p_session_id: sessionId,
       p_user_id: userId,
-      p_status: status,
+      p_invite_token: inviteToken ?? null,
     });
 
     if (rpcError) {
@@ -124,7 +117,11 @@ export async function joinSession({
       };
     }
 
-    // 11. Notify host (fire-and-forget). Goes through the narrow
+    // Trust the server-derived status for UX (toast copy) and the host
+    // notification kind — not a client guess.
+    const status: 'confirmed' | 'pending' = rpcData.status === 'pending' ? 'pending' : 'confirmed';
+
+    // 7. Notify host (fire-and-forget). Goes through the narrow
     // notify-join route, NOT /api/notifications/send directly: that
     // endpoint is internal-only now, and the recipient + message are
     // derived server-side from the session (anti-spoofing).

@@ -8,12 +8,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * (migration 042), which holds a row-level lock on the session and
  * serializes concurrent joins. The pre-RPC client-side fallback is gone.
  *
+ * T-SEC1 (2026-07-07): the RPC is now the single authority on the join
+ * status. joinSession no longer sends a client-derived p_status; it sends
+ * p_invite_token (the token or null) and TRUSTS the status the RPC returns.
+ * The client-side policy checks remain only for fast UX feedback, not as the
+ * security boundary.
+ *
  * What this file verifies:
  *   1. Pre-RPC validation — session_not_found, session_not_active,
  *      self_join, already_joined, invite_only — each returns the
  *      expected error without calling the RPC.
- *   2. Happy paths for open join (status: confirmed) and curated
- *      join (status: pending) — RPC is called with the right args.
+ *   2. The RPC is called with p_invite_token (never p_status), and the
+ *      returned status is what joinSession reports back.
  *   3. RPC-level errors propagate through the caller.
  *   4. RPC returning `{success: false, error: 'Session is full'}` is
  *      translated to the stable 'capacity_full' code.
@@ -162,10 +168,11 @@ describe('joinSession', () => {
         inviteToken: 'tok-valid',
       });
       expect(res).toEqual({ success: true, status: 'confirmed' });
+      // T-SEC1: the client sends the token, NOT a status — the RPC derives it.
       expect(s.__rpc).toHaveBeenCalledWith('join_session', {
         p_session_id: 'sess-1',
         p_user_id: 'user-1',
-        p_status: 'confirmed',
+        p_invite_token: 'tok-valid',
       });
     });
 
@@ -231,6 +238,7 @@ describe('joinSession', () => {
         data: session({ join_policy: 'invite_only', is_paid: true, price_cents: 2_000_000 }),
       } as never);
       vi.mocked(fetchInviteTokenForJoin).mockResolvedValue(invite() as never);
+      // The RPC derives pending for a paid session; the client returns it.
       const s = makeSupabase({ data: { success: true, participant_id: 'pp-2', status: 'pending' } });
       const res = await joinSession({
         supabase: s as never,
@@ -243,7 +251,7 @@ describe('joinSession', () => {
       expect(s.__rpc).toHaveBeenCalledWith('join_session', {
         p_session_id: 'sess-1',
         p_user_id: 'user-1',
-        p_status: 'pending',
+        p_invite_token: 'tok-valid',
       });
     });
 
@@ -263,7 +271,9 @@ describe('joinSession', () => {
     });
   });
 
-  it('calls join_session RPC with status=confirmed for open sessions', async () => {
+  // T-SEC1: the client passes no status and no token for a plain open join;
+  // it trusts the RPC's returned status (server-derived confirmed).
+  it('calls the RPC with a null token for open sessions and returns the RPC status', async () => {
     vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
     vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
     const s = makeSupabase({ data: { success: true, participant_id: 'pp-1', status: 'confirmed' } });
@@ -279,11 +289,13 @@ describe('joinSession', () => {
     expect(s.__rpc).toHaveBeenCalledWith('join_session', {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
-      p_status: 'confirmed',
+      p_invite_token: null,
     });
   });
 
-  it('calls join_session RPC with status=pending for curated sessions', async () => {
+  // T-SEC1: the RPC forces curated to pending server-side; the client returns
+  // whatever the RPC reports, not a client guess.
+  it('returns pending for curated sessions from the RPC status', async () => {
     vi.mocked(fetchSessionFields).mockResolvedValue({
       success: true,
       data: session({ join_policy: 'curated' }),
@@ -302,13 +314,12 @@ describe('joinSession', () => {
     expect(s.__rpc).toHaveBeenCalledWith('join_session', {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
-      p_status: 'pending',
+      p_invite_token: null,
     });
   });
 
-  // T-PAY1: paid sessions are off-platform — joining always creates a pending
-  // request (awaiting payment confirmation), even on an 'open' join policy.
-  it('calls join_session RPC with status=pending for PAID sessions (open policy)', async () => {
+  // T-PAY1 x T-SEC1: the RPC forces paid (price > 0) to pending server-side.
+  it('returns pending for PAID sessions (open policy) from the RPC status', async () => {
     vi.mocked(fetchSessionFields).mockResolvedValue({
       success: true,
       data: session({ join_policy: 'open', is_paid: true, price_cents: 2_000_000 }),
@@ -327,12 +338,13 @@ describe('joinSession', () => {
     expect(s.__rpc).toHaveBeenCalledWith('join_session', {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
-      p_status: 'pending',
+      p_invite_token: null,
     });
   });
 
-  // Guard: is_paid flag with price 0 is not a real paid session → stays confirmed.
-  it('keeps status=confirmed for an open session flagged paid but priced 0', async () => {
+  // The client trusts the server: an open, price-0 session confirms because the
+  // RPC returns confirmed.
+  it('returns confirmed for an open session flagged paid but priced 0', async () => {
     vi.mocked(fetchSessionFields).mockResolvedValue({
       success: true,
       data: session({ join_policy: 'open', is_paid: true, price_cents: 0 }),
@@ -351,8 +363,26 @@ describe('joinSession', () => {
     expect(s.__rpc).toHaveBeenCalledWith('join_session', {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
-      p_status: 'confirmed',
+      p_invite_token: null,
     });
+  });
+
+  // T-SEC1: security-relevant — the client must NOT override the RPC's
+  // authoritative status. An open session where the RPC (correctly, per real
+  // server policy) returns pending must surface as pending, not confirmed.
+  it('trusts the RPC status over any client-side expectation', async () => {
+    vi.mocked(fetchSessionFields).mockResolvedValue({ success: true, data: session() } as never);
+    vi.mocked(checkExistingParticipation).mockResolvedValue({ success: true, data: false } as never);
+    const s = makeSupabase({ data: { success: true, participant_id: 'pp-x', status: 'pending' } });
+
+    const res = await joinSession({
+      supabase: s as never,
+      sessionId: 'sess-1',
+      userId: 'user-1',
+      userName: 'Al',
+    });
+
+    expect(res).toEqual({ success: true, status: 'pending' });
   });
 
   it('translates "Session is full" RPC error to capacity_full', async () => {
