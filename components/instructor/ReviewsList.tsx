@@ -190,7 +190,9 @@ export default function ReviewsList({ hostId, limit = 10, showAll = false, langu
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-white">{average.toFixed(1)}</span>
+              {/* BUG-004: was hardcoded text-white, invisible on the light
+                  session page. Theme-aware so the average shows in both modes. */}
+              <span className="text-3xl font-bold text-theme-primary">{average.toFixed(1)}</span>
               <span className="text-sm text-theme-tertiary">/ 5</span>
             </div>
             <div className="mt-1">

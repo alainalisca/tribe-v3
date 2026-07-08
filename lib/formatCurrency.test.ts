@@ -28,6 +28,21 @@ describe('formatPrice — BUG-221 currency code safety', () => {
   });
 });
 
+describe('formatPrice — BUG-003 no duplicated currency code', () => {
+  // The paid-session price label is built directly from formatPrice, which
+  // already emits the ISO code. Guard that the code appears exactly once so a
+  // caller can't reintroduce the "COP COP 35.000" duplication.
+  it('COP label contains the code exactly once', () => {
+    const label = formatPrice(3500000, 'COP');
+    expect(label.match(/COP/g)?.length).toBe(1);
+  });
+
+  it('USD label contains the code exactly once', () => {
+    const label = formatPrice(3500, 'USD');
+    expect(label.match(/USD/g)?.length).toBe(1);
+  });
+});
+
 describe('formatPrice', () => {
   it('formats COP cents correctly with Colombian separators', () => {
     const result = formatPrice(15000000, 'COP');
