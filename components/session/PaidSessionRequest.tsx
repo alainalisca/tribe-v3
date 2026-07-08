@@ -38,7 +38,9 @@ export default function PaidSessionRequest({
 }: PaidSessionRequestProps) {
   const [open, setOpen] = useState(false);
   const es = language === 'es';
-  const priceLabel = `${currency || 'COP'} ${formatPrice(priceCents, (currency || 'COP') as Currency)}`;
+  // BUG-003: formatPrice already emits the ISO code (currencyDisplay: 'code'),
+  // e.g. "COP 35.000". Prepending the currency again printed "COP COP 35.000".
+  const priceLabel = formatPrice(priceCents, (currency || 'COP') as Currency);
 
   const copy = {
     paidSession: es ? 'Sesión de pago' : 'Paid session',
