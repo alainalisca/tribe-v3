@@ -187,14 +187,23 @@ export default function InterestButton({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
+          // BUG-005: z-[1100] puts the modal above the fixed BottomNav (z-50)
+          // and the FeedbackWidget floating button (z-[1000]), which otherwise
+          // painted on top of the form.
+          className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
           onClick={() => !saving && setOpen(false)}
           role="dialog"
           aria-modal="true"
         >
           <div
-            className="w-full max-w-md bg-theme-card rounded-t-2xl sm:rounded-2xl p-5 border border-theme"
-            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1.25rem)' }}
+            // BUG-005: as a bottom sheet the form can sit under the on-screen
+            // keyboard. Cap the height (dvh accounts for browser chrome) and
+            // scroll internally, and pad the bottom by the keyboard inset so the
+            // focused field lifts above the keyboard (safe-area as the fallback).
+            className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-theme-card rounded-t-2xl sm:rounded-2xl p-5 border border-theme"
+            style={{
+              paddingBottom: 'max(env(keyboard-inset-height, 0px), env(safe-area-inset-bottom, 0px), 1.25rem)',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-white mb-4">{t.modalTitle}</h2>
