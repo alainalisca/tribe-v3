@@ -16,16 +16,42 @@
 -- migration 042 before this change and confirmed byte-identical (no drift), so
 -- this migration is a safe, scoped replacement of the known-good 042 body.
 --
--- Signature change: p_status (text, trusted) is REPLACED by p_invite_token
--- (text, validated). Same (uuid, uuid, text) type slot, but the parameter NAME
--- changes, which CREATE OR REPLACE cannot do — so we DROP then CREATE. The
--- only caller is lib/sessions.ts, updated in the same PR.
+-- ROLLING-DEPLOY SAFE: this migration can be applied BEFORE the new client
+-- ships. The signature keeps p_status as an optional, IGNORED parameter
+-- (DEFAULT NULL) alongside the new p_invite_token (DEFAULT NULL):
+--   * old client sends { p_session_id, p_user_id, p_status }  -> resolves,
+--     p_status is ignored, status is derived server-side. Open / curated /
+--     paid joins all still produce the correct outcome (the old client's
+--     derived p_status already agreed with the server derivation).
+--   * new client sends { p_session_id, p_user_id, p_invite_token } -> resolves,
+--     enabling invite-only acceptance.
+-- Because there is exactly ONE join_session function, PostgREST resolves each
+-- caller unambiguously by the set of named args it supplies (the other
+-- parameter falls back to its DEFAULT).
+--
+-- Invite-only note: while the OLD client is still live it does not pass a
+-- token, so invite-only joins are rejected by the RPC until the new client
+-- deploys. That is expected and accepted for the rolling window; open /
+-- curated / paid are unaffected.
+--
+-- FOLLOW-UP: once the new client is fully deployed everywhere, a later cleanup
+-- migration can DROP p_status entirely — signature (uuid, uuid, text) for
+-- p_invite_token only. p_status has no callers at that point.
+--
+-- The parameter NAME set changes, which CREATE OR REPLACE cannot do, so we DROP
+-- the old (uuid, uuid, text) function then CREATE the new (uuid, uuid, text,
+-- text) one. Also drop the target 4-arg shape defensively so re-runs are clean.
 
 DROP FUNCTION IF EXISTS public.join_session(uuid, uuid, text);
+DROP FUNCTION IF EXISTS public.join_session(uuid, uuid, text, text);
 
 CREATE FUNCTION public.join_session(
   p_session_id uuid,
   p_user_id uuid,
+  -- DEPRECATED (T-SEC1): accepted but IGNORED. Kept only so the pre-T-SEC1
+  -- client (which still sends p_status) resolves during a rolling deploy.
+  -- A later cleanup migration will drop this. Status is derived below.
+  p_status text DEFAULT NULL,
   p_invite_token text DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
@@ -44,6 +70,10 @@ DECLARE
   v_token_session uuid;
   v_token_expires timestamptz;
 BEGIN
+  -- p_status is intentionally never read: the join outcome is derived below
+  -- from the session's own policy. It exists only for rolling-deploy
+  -- compatibility with the pre-T-SEC1 client (see header).
+
   -- Lock the session row so parallel joins serialize. Read the policy inputs
   -- in the same locked SELECT so the outcome is decided from server state.
   SELECT max_participants, status, join_policy, is_paid, price_cents
@@ -135,4 +165,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.join_session(uuid, uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.join_session(uuid, uuid, text, text) TO authenticated;
