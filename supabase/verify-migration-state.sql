@@ -351,4 +351,16 @@ select '043_lock_is_admin',
          where c.relname = 'users'
            and t.tgname = 'users_is_admin_guard'
        ) then 'applied' else 'MISSING' end
+union all
+select '111_async_http_and_externalize_secrets',
+       -- T-HTTP1: the sync HTTP triggers moved to net.http_post and the
+       -- hardcoded secrets moved to Vault. Applied once notify_join_request is
+       -- async (uses net.http_post, no extensions.http).
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'notify_join_request'
+           and pronamespace = 'public'::regnamespace
+           and pg_get_functiondef(oid) like '%net.http_post%'
+           and pg_get_functiondef(oid) not like '%extensions.http%'
+       ) then 'applied' else 'MISSING' end
 order by migration;
