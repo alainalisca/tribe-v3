@@ -363,4 +363,18 @@ select '111_async_http_and_externalize_secrets',
            and pg_get_functiondef(oid) like '%net.http_post%'
            and pg_get_functiondef(oid) not like '%extensions.http%'
        ) then 'applied' else 'MISSING' end
+union all
+select '067_users_push_token_revoke',
+       -- T-SEC (drift audit RLS-H1): 067 revokes SELECT on push/FCM + Tribe.OS
+       -- billing columns from anon/authenticated so they aren't cross-user
+       -- readable. Was found unapplied for `authenticated` (push_subscription
+       -- holds private push keys). Applied once NEITHER anon nor authenticated
+       -- can SELECT push_subscription on users.
+       case when not exists (
+         select 1 from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'users'
+           and column_name = 'push_subscription'
+           and privilege_type = 'SELECT'
+           and grantee in ('anon', 'authenticated')
+       ) then 'applied' else 'MISSING' end
 order by migration;
