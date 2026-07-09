@@ -5,6 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import { fuzzLocation } from '@/lib/location';
 import { resolveAvatarUrl } from '@/lib/avatar';
+import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
 
 /** Full instructor profile for Browse Instructors page */
@@ -44,7 +45,8 @@ export async function fetchInstructors(
     let query = supabase
       .from('users')
       .select(
-        'id, name, avatar_url, photos, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience'
+        // bio + instructor_bio are needed for the T-PROF1 completeness filter.
+        'id, name, avatar_url, photos, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience, bio, instructor_bio'
       )
       .eq('is_instructor', true)
       // Hide seeded/test accounts from any public instructor listing
@@ -87,7 +89,13 @@ export async function fetchInstructors(
     const { data, error } = await query;
     if (error) return { success: false, error: error.message };
 
-    const instructors: InstructorProfile[] = (data || []).map((row) => {
+    // T-PROF1: hide instructors whose profile is missing any of the five
+    // required fields (photo, bio, specialty, location, years of experience).
+    // Filtered on the raw rows so the check sees bio/instructor_bio before the
+    // InstructorProfile mapping drops them.
+    const complete = (data || []).filter((row) => isInstructorProfileComplete(row));
+
+    const instructors: InstructorProfile[] = complete.map((row) => {
       // Fuzz user coords to ~500m before sending to client. Browse Instructors
       // is a public-facing listing; raw coords would let anyone reverse-
       // geocode an instructor's home address. 500m precision is plenty for

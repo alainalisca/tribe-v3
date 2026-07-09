@@ -38,7 +38,8 @@ type TemplateKey =
   | 'request_approved'
   | 'request_declined'
   | 'payment_confirmed'
-  | 'session_invite';
+  | 'session_invite'
+  | 'profile_incomplete';
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   join: {
@@ -165,6 +166,18 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     es: {
       title: '💌 Tienes una invitacion',
       body: '{{name}} te invito a {{sport}} el {{date}}',
+    },
+  },
+  // T-PROF1: recipient = the instructor. Nudge to finish their profile so they
+  // become discoverable on the Train with an Instructor page.
+  profile_incomplete: {
+    en: {
+      title: '📝 Complete your instructor profile',
+      body: "You're hidden from the Train with an Instructor page until your profile is complete. Tap to finish it.",
+    },
+    es: {
+      title: '📝 Completa tu perfil de instructor',
+      body: 'Estas oculto en la pagina Entrena con un Instructor hasta que completes tu perfil. Toca para terminarlo.',
     },
   },
 };
