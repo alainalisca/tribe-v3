@@ -115,3 +115,84 @@ from pg_policies where schemaname = 'public' order by tablename, policyname;
 select tgname from pg_trigger t join pg_class c on c.oid=t.tgrelid
 where c.relname='users' and not t.tgisinternal;   -- expect users_is_admin_guard to be ABSENT
 ```
+
+---
+
+# RLS Audit (T-DRIFT2) — 2026-07-08
+
+Completes the RLS half that T-DRIFT1 left partial. Full `pg_policies` SELECT-condition dump analyzed (complete through all tables); the compact all-command list paginated at `gym_teams`, so **write-policy dedup for tables alphabetically after `gym_teams` is not yet fully enumerated** — a targeted re-run is noted at the end. Read-only; no live change, no migrations. Findings ranked by risk.
+
+## P0 — verify immediately
+
+### RLS-H1 — `users` is fully public/anon-readable; sensitive columns rest entirely on column REVOKEs *(security)*
+Three SELECT policies expose every row of `users`:
+- `Users can view all profiles` — `{public}`, `USING (true)`
+- `users_select_policy` — `{public}`, `USING (true)`
+- `users_select_instructor_public` — `{anon}`, `USING (is_instructor = true)`
+
+`users` holds **`is_admin`, `banned`, `email`, `fcm_token`, `push_subscription`, `stripe_account_id`, `wompi_merchant_id`, `total_earnings_cents`, `payout_method`, `location_lat/lng`** (all confirmed present). RLS is row-level and **cannot restrict columns**, so with `USING (true)` the *only* thing preventing anon/any user from reading these is the **column-level `REVOKE`s in migrations 065/066/067** — which the migration-state verifier marks *"cannot verify automatically,"* and which **T-SEC2 already showed to be incomplete** (anon + authenticated still hold column `UPDATE` on `is_admin`). If the SELECT revokes are likewise missing, admin flags, push tokens, Stripe/Wompi IDs, earnings, and precise home coordinates are **world-readable**.
+- **Verify now (read-only):**
+  ```sql
+  select grantee, string_agg(column_name, ', ' order by column_name) as readable_cols
+  from information_schema.column_privileges
+  where table_schema='public' and table_name='users' and privilege_type='SELECT'
+    and grantee in ('anon','authenticated')
+    and column_name in ('is_admin','banned','email','fcm_token','push_subscription',
+                        'stripe_account_id','wompi_merchant_id','total_earnings_cents',
+                        'payout_method','location_lat','location_lng')
+  group by grantee;
+  ```
+  Any sensitive column listed for `anon`/`authenticated` = exposed. **Follow-up:** (re)apply the column REVOKEs (065–067); collapse the two `USING(true)` policies to one; if public profile browsing is required, expose a safe column subset via a view rather than the whole row.
+
+## High
+
+### RLS-H2 — `invite_tokens` is world-readable → undermines invite-only *(access control)*
+`Anyone can view invite tokens` — `{public}`, `USING (true)`. Any anon can enumerate **every** invite token. Since a valid token is exactly what unlocks an invite-only join (T-INV1 / the T-SEC1 RPC), public read of the token table means anyone can pull a token and join any invite-only session. **Follow-up:** remove the public SELECT; token lookups should go through a `SECURITY DEFINER` function / service-role path keyed by the exact token, never a table scan.
+
+### RLS-H3 — `session_participants` public read exposes guest PII + guest_token *(privacy / impersonation)*
+Four SELECT policies, three effectively "everyone": `Anyone can view session participants` (`{public}` true), `participants_select_policy` (`{public}` true), `sp_select_authenticated` (`{authenticated}` true), plus `Guests can view own participation`. The table holds **`guest_phone`, `guest_email`, `guest_name`, `guest_token`, `payment_status`** (confirmed). `USING(true)` public read makes guest phone/email world-readable, and **`guest_token` being readable enables guest-session impersonation**. **Follow-up:** scope the SELECT (participant/creator only) and/or column-revoke `guest_token`/`guest_phone`/`guest_email` from `anon`/`authenticated`.
+
+## Medium
+
+### RLS-M1 — `sessions` fully public-readable (3 `USING(true)` policies)
+`select_all` (`{authenticated}`), `sessions_select_paid_visible` (`{authenticated}`), `sessions_select_policy` (`{public}`) — all `USING (true)`. Sessions are meant to be discoverable, but this also exposes exact **`location_lat/lng`** and **`payment_instructions`** to anon. Three redundant true-policies is also pure duplication. **Follow-up:** one policy; consider fuzzing/omitting exact coords + payment_instructions for non-participants (the discover DAL already fuzzes coords — RLS should not hand out the raw values).
+
+### RLS-M2 — `community_post_comments` leaks private-community comments
+`Users can read comments on visible posts` — `{public}`, `USING (true)` — sits alongside the correctly-scoped `community_post_comments_select` (checks community membership/privacy). RLS is permissive (OR), so the `true` policy **wins** and comments on **private** communities become world-readable. **Follow-up:** drop the `USING(true)` policy; keep the scoped one.
+
+### RLS-M3 — pervasive duplicate / overlapping policies
+Same-command duplicates that widen access and obscure intent (RLS OR-combines them):
+- `users`: **4 UPDATE** (`Admin can update users`, `Admins can update any user`, `users_update_own_profile`, `users_update_policy` — 3 are self-updates; see T-SEC2) + **3 SELECT**.
+- `session_participants`: **4 SELECT** (3 = everyone). `sessions`: **3 SELECT** (all true).
+- `blocked_users`: 2×INSERT, 2×DELETE, 2×SELECT (identical `auth.uid()=user_id`).
+- `community_posts`: 2×DELETE (`Authors and admins…` + `Authors or community admins…`).
+- `post_comments`: 2×SELECT both `USING(true)` (`Anyone can read comments` + `anyone_can_read_comments`).
+- `referrals`: 2×SELECT with identical qual. `reported_messages`/`reported_users`: overlapping admin variants.
+**Follow-up:** a dedup migration collapsing each set to the single intended policy.
+
+## Low
+
+### RLS-L1 — `{public}` role on write policies (should be `{authenticated}`)
+Most INSERT/UPDATE/DELETE policies target `{public}` (includes `anon`) rather than `{authenticated}`, relying entirely on the `auth.uid()` qual. Not exploitable (anon's `auth.uid()` is null so the quals fail), but loose and inconsistent with the newer `{authenticated}` policies. Tighten during the dedup pass.
+
+### RLS-L2 — hardcoded email-admin policies
+`reported_messages` / `reported_users` / `users "Admin can update users"` gate on `auth.jwt()->>'email' = 'alainalisca@…'` — a brittle literal, redundant with the `is_app_admin()` / `is_app_admin_uid()` helpers now in place. Retire in favor of the helper.
+
+## Recommended follow-up migrations (NOT written)
+| ID | Priority | Action |
+|---|---|---|
+| M-USERS-COL | P0 | Verify + (re)apply 065–067 column `REVOKE`s on `users`; collapse the `USING(true)` SELECT policies; expose public profile fields via a safe view. |
+| M-INVITE | High | Remove public SELECT on `invite_tokens`; move token lookup to a `SECURITY DEFINER` function keyed by exact token. |
+| M-PARTICIPANTS | High | Scope `session_participants` SELECT and/or column-revoke `guest_token`/`guest_phone`/`guest_email`. |
+| M-SESSIONS | Medium | One SELECT policy; keep exact coords/`payment_instructions` out of anon reads. |
+| M-COMMENTS | Medium | Drop the `USING(true)` `community_post_comments` policy (keep the scoped one). |
+| M-DEDUP | Medium | Collapse duplicate policy sets (`users` UPDATE ×4, `session_participants`/`sessions` SELECT, `blocked_users`, `community_posts`, `post_comments`, `referrals`, `reported_*`). |
+| M-ROLE | Low | `{public}` → `{authenticated}` on writes; retire hardcoded email-admin policies for `is_app_admin()`. |
+
+## Data limitation / next enumeration
+The compact all-command dump paginated at `gym_teams`, so **write-policy dedup and the repo name-diff for tables after `gym_teams` are incomplete**. To finish, re-run the compact query in two halves so neither hits the row cap:
+```sql
+select tablename, policyname, cmd, roles from pg_policies
+where schemaname='public' and tablename >= 'gym_teams' order by tablename, policyname;
+```
+The exposure findings above (H1–M2) are complete regardless — they derive from the full SELECT-condition dump.
