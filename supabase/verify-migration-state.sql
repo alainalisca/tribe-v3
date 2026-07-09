@@ -377,4 +377,17 @@ select '067_users_push_token_revoke',
            and privilege_type = 'SELECT'
            and grantee in ('anon', 'authenticated')
        ) then 'applied' else 'MISSING' end
+union all
+select '112_users_private_fields',
+       -- T-SEC3 Phase A (additive): server-side accessors added ahead of the
+       -- 113 column revoke. Applied once BOTH definer helpers exist.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'get_my_private_profile'
+           and pronamespace = 'public'::regnamespace
+       ) and exists (
+         select 1 from pg_proc
+         where proname = 'get_admin_user_ids'
+           and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
