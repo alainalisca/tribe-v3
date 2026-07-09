@@ -14,10 +14,20 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     // maybeSingle differentiates "no row" from RLS/network errors so
     // callers can show "user not found" only when the user truly doesn't
     // exist — not on transient failure (parallel to BUG-001 fix).
+    // Column list is intentionally explicit (never `*`): `users` has per-column
+    // SELECT grants (migrations 067 + 113), so `*` would hit permission-denied
+    // on revoked columns. Excluded here:
+    //   - push_subscription, fcm_token, fcm_platform, fcm_updated_at
+    //     (service-role only since 067 — reading them from a session client
+    //     errors; the push-send paths use fetchUserProfileMaybe instead)
+    //   - is_admin, payout_method, stripe_account_id, wompi_merchant_id,
+    //     total_earnings_cents (revoked in 113). Self reads its own admin status
+    //     via is_app_admin() and its payout/earnings via fetchMyBillingProfile();
+    //     no page reads these off a foreign profile.
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
+        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -26,33 +36,91 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
       return { success: false, error: error.message };
     }
     if (!data) return { success: false, error: 'user_not_found' };
-    return { success: true, data };
+    // The select intentionally omits 9 columns (see note above); cast the
+    // narrowed row back to UserRow — no caller reads the omitted fields off
+    // this result (verified for T-SEC3).
+    return { success: true, data: data as unknown as UserRow };
   } catch (error) {
     logError(error, { action: 'fetchUserProfile', userId });
     return { success: false, error: 'Failed to fetch user' };
   }
 }
 
+/**
+ * Is the CURRENT user an admin? `is_admin` is no longer client-readable
+ * (migration 113); admin status is resolved via the is_app_admin() SECURITY
+ * DEFINER RPC, which only ever reports the authenticated caller. The `userId`
+ * param is retained for call-site compatibility (every caller passes their own
+ * id) and guarded: a mismatched id fails loudly rather than silently returning
+ * the caller's own status, since the RPC cannot answer for another user.
+ */
 export async function fetchUserIsAdmin(supabase: SupabaseClient, userId: string): Promise<DalResult<boolean>> {
   try {
-    const { data, error } = await supabase.from('users').select('is_admin').eq('id', userId).single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || (userId && userId !== user.id)) {
+      return { success: false, error: 'fetchUserIsAdmin only supports the current user' };
+    }
+    const { data, error } = await supabase.rpc('is_app_admin');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: !!data?.is_admin };
+    return { success: true, data: !!data };
   } catch (error) {
     logError(error, { action: 'fetchUserIsAdmin' });
     return { success: false, error: 'Failed to check admin status' };
   }
 }
 
-/** Fetch all admin user IDs (for sending admin notifications) */
+/**
+ * Fetch all admin user IDs (for sending admin notifications, e.g. partner
+ * applications). Uses the get_admin_user_ids() SECURITY DEFINER RPC because the
+ * previous cross-user `select id where is_admin = true` is blocked by the 113
+ * revoke. Returns only admin UUIDs — never the is_admin flag of a queried user.
+ */
 export async function fetchAdminUserIds(supabase: SupabaseClient): Promise<DalResult<string[]>> {
   try {
-    const { data, error } = await supabase.from('users').select('id').eq('is_admin', true);
+    const { data, error } = await supabase.rpc('get_admin_user_ids');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data ?? []).map((u) => u.id) };
+    // RETURNS SETOF uuid -> PostgREST yields an array of id strings.
+    return { success: true, data: (data as string[] | null) ?? [] };
   } catch (error) {
     logError(error, { action: 'fetchAdminUserIds' });
     return { success: false, error: 'Failed to fetch admin user IDs' };
+  }
+}
+
+export interface MyBillingProfile {
+  payout_method: string | null;
+  stripe_account_id: string | null;
+  wompi_merchant_id: string | null;
+  total_earnings_cents: number | null;
+  earnings_currency: string | null;
+}
+
+const EMPTY_BILLING_PROFILE: MyBillingProfile = {
+  payout_method: null,
+  stripe_account_id: null,
+  wompi_merchant_id: null,
+  total_earnings_cents: null,
+  earnings_currency: null,
+};
+
+/**
+ * Fetch the CURRENT user's own payout/earnings fields, which live on `users`
+ * but are no longer client-readable (migration 113). Backed by the
+ * get_my_private_profile() SECURITY DEFINER RPC, scoped strictly to auth.uid().
+ * Distinct from fetchMyPrivateProfile() (userPrivate.ts), which reads the
+ * separate `user_private` PII table.
+ */
+export async function fetchMyBillingProfile(supabase: SupabaseClient): Promise<DalResult<MyBillingProfile>> {
+  try {
+    const { data, error } = await supabase.rpc('get_my_private_profile');
+    if (error) return { success: false, error: error.message };
+    // Returns a jsonb object, or null when unauthenticated.
+    return { success: true, data: (data as MyBillingProfile | null) ?? { ...EMPTY_BILLING_PROFILE } };
+  } catch (error) {
+    logError(error, { action: 'fetchMyBillingProfile' });
+    return { success: false, error: 'Failed to fetch billing profile' };
   }
 }
 

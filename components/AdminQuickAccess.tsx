@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { fetchUserIsAdmin } from '@/lib/dal';
 import { useLanguage } from '@/lib/LanguageContext';
 
 type State = 'loading' | 'hidden' | 'active';
@@ -34,9 +35,11 @@ export default function AdminQuickAccess() {
         if (!cancelled) setState('hidden');
         return;
       }
-      const { data, error } = await supabase.from('users').select('is_admin').eq('id', user.id).single();
+      // is_admin is not client-readable (migration 113); resolve via the DAL,
+      // which uses the is_app_admin() RPC for the current user.
+      const adminResult = await fetchUserIsAdmin(supabase, user.id);
       if (cancelled) return;
-      if (error || !data?.is_admin) {
+      if (!adminResult.success || !adminResult.data) {
         setState('hidden');
         return;
       }
