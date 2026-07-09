@@ -329,4 +329,15 @@ select '109_fix_participant_count_drift',
          where c.relname = 'session_participants'
            and t.tgname = 'update_participant_count'
        ) then 'applied' else 'MISSING' end
+union all
+select '110_fix_like_comment_follow_counter_drift',
+       -- T-COUNT2: consolidated post_likes / post_comments / user_follows to a
+       -- single recompute writer each. Applied once the legacy delta functions
+       -- are gone.
+       case when not exists (
+         select 1 from pg_proc
+         where pronamespace = 'public'::regnamespace
+           and proname in ('on_post_like', 'update_post_like_count',
+                           'update_post_comment_count', 'on_user_follow', 'on_user_unfollow')
+       ) then 'applied' else 'MISSING' end
 order by migration;
