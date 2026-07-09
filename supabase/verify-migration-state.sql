@@ -340,4 +340,15 @@ select '110_fix_like_comment_follow_counter_drift',
            and proname in ('on_post_like', 'update_post_like_count',
                            'update_post_comment_count', 'on_user_follow', 'on_user_unfollow')
        ) then 'applied' else 'MISSING' end
+union all
+select '043_lock_is_admin',
+       -- T-SEC2 / drift audit H1: 043 was never deployed to prod, leaving no
+       -- guard against is_admin self-escalation. Applied 2026-07-08. Applied
+       -- once the BEFORE UPDATE guard trigger exists on users.
+       case when exists (
+         select 1 from pg_trigger t
+         join pg_class c on c.oid = t.tgrelid
+         where c.relname = 'users'
+           and t.tgname = 'users_is_admin_guard'
+       ) then 'applied' else 'MISSING' end
 order by migration;

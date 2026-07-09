@@ -14,7 +14,7 @@ Live objects were dumped from `pg_proc`, `pg_trigger`, and `pg_policies` (public
 |---|---|---|
 | Live-only functions (untracked) | ~16 | `notify_new_message`, `send_push_notification_webhook`, `on_post_like`, `on_user_follow`, `set_payment_status_on_join`, `sync_session_coords` |
 | Live-only triggers (untracked) | ~20 | `chat-message-notifications`, `on_message_sent`, `trg_post_like_insert/delete`, `trg_user_follow_insert/delete` |
-| Repo-only, not deployed | 3 (from migration 043) | `prevent_is_admin_self_update`, `log_is_admin_change`, `is_app_admin_uid` |
+| Repo-only, not deployed | 3 (from migration 043) — **RESOLVED 2026-07-08** | `prevent_is_admin_self_update`, `log_is_admin_change`, `is_app_admin_uid` (043 applied via T-SEC2) |
 | Diverged / renamed | 2 | `update_host_rating` (live) vs `update_host_average_rating` (repo); `schema.sql` still defines `update_session_participant_count` that #85/109 dropped |
 
 Two of the untracked drift classes are **the same double-trigger / counter-delta pattern that produced `current_participants = -1`** in T-COUNT1, now found on `post_likes`, `post_comments`, and `user_follows`.
@@ -23,7 +23,9 @@ Two of the untracked drift classes are **the same double-trigger / counter-delta
 
 ## P0 / High
 
-### H1 — Admin-escalation guard (migration 043) is NOT deployed on live *(security)*
+### H1 — Admin-escalation guard (migration 043) is NOT deployed on live *(security)* — ✅ RESOLVED 2026-07-08
+> **Resolved (T-SEC2, 2026-07-08).** Confirmed exploitable on live — three `users` UPDATE policies allowed self-row updates and `authenticated` held column `UPDATE` on `is_admin` (RLS can't restrict columns), so a non-admin could self-promote. Migration 043 was applied to production and verified: non-admin `is_admin` self-update is blocked, ordinary profile updates still work, and service-role/admin grants still succeed and are audited. `verify-migration-state.sql` now checks for `users_is_admin_guard`. Original finding below.
+
 `043_lock_is_admin.sql` defines `is_app_admin_uid()`, `prevent_is_admin_self_update()` + trigger `users_is_admin_guard`, and `log_is_admin_change()` + trigger `users_is_admin_audit`. **None of these functions exist in live `pg_proc`, and the live `users` table has only `protect_verified_instructor_trigger` and `users_banned_guard` — no `users_is_admin_guard`.** So migration 043 was never applied. This means live has no trigger preventing a user from setting their own `is_admin = true`. Whether it's directly exploitable depends on the `users` UPDATE RLS policy (not in the captured policy subset — must confirm), but the guard the repo believes exists is absent. Compounding: `098_rls_self_escalation_guards.sql` (which *is* deployed) comments that "is_admin was already locked" — an assumption that is false in production.
 - **Recommendation:** verify the `users` self-UPDATE policy; re-apply migration 043 (idempotent `CREATE OR REPLACE` + guarded triggers). Treat as P0 until the policy is confirmed to block `is_admin` writes.
 
