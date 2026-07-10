@@ -378,6 +378,18 @@ select '067_users_push_token_revoke',
            and grantee in ('anon', 'authenticated')
        ) then 'applied' else 'MISSING' end
 union all
+select '113_revoke_users_sensitive_columns',
+       -- T-SEC3 Phase B: SELECT on is_admin + payout/earnings columns revoked
+       -- from anon/authenticated. Applied once is_admin is no longer granted to
+       -- either role (the other 4 columns are revoked in the same statement).
+       case when not exists (
+         select 1 from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'users'
+           and column_name = 'is_admin'
+           and privilege_type = 'SELECT'
+           and grantee in ('anon', 'authenticated')
+       ) then 'applied' else 'MISSING' end
+union all
 select '112_users_private_fields',
        -- T-SEC3 Phase A (additive): server-side accessors added ahead of the
        -- 113 column revoke. Applied once BOTH definer helpers exist.
