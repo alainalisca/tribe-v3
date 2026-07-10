@@ -47,7 +47,8 @@ export interface SessionWithCreator {
   creator: {
     id: string;
     name: string;
-    email: string;
+    // email intentionally omitted: no caller reads creator.email, and selecting
+    // it broke the anon cron callers under the T-SEC5 email revoke (Batch 4).
     preferred_language: string | null;
   } | null;
 }
