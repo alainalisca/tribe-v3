@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
-import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForAdmin } from '@/lib/dal';
+import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForEmailJobs } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
@@ -29,14 +29,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Backend batch job: service-role. The anon/authenticated roles cannot read
+    // the `users` columns this job needs (migrations 067 + 113), and its
+    // per-user activity queries below should not be RLS-scoped to a session.
+    const supabase = getServiceRoleClient();
 
-    const usersResult = await fetchUsersForAdmin(supabase);
-    const allUsers = usersResult.data || [];
-    const users = allUsers.filter((u) => u.email != null);
+    const usersResult = await fetchUsersForEmailJobs(supabase);
+    // A failed query must NOT look like "nobody to email" — that is how this
+    // job went silently dead under the 067 revoke. Surface it.
+    if (!usersResult.success) {
+      logError(usersResult.error, { action: 'sendWeeklyRecap.fetchUsers' });
+      return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
+    }
 
+    const users = (usersResult.data ?? []).filter((u) => u.email != null);
+
+    // Genuinely zero eligible recipients is a success, not an error.
     if (users.length === 0) {
-      return NextResponse.json({ error: 'No users found' }, { status: 400 });
+      return NextResponse.json({ success: true, emailsSent: 0, errors: 0, totalUsers: 0 });
     }
 
     // T0-9: Bogota-local date — this is compared to session.date (local).

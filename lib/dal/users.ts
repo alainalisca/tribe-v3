@@ -274,19 +274,52 @@ export async function upsertUser(supabase: SupabaseClient, payload: Record<strin
   }
 }
 
-export async function fetchUsersForAdmin(supabase: SupabaseClient): Promise<DalResult<UserRow[]>> {
+/** The only user fields the batch email jobs consume. */
+export type EmailJobUser = Pick<UserRow, 'id' | 'email' | 'name' | 'preferred_language' | 'created_at'>;
+
+const EMAIL_JOB_USER_FIELDS = 'id, email, name, preferred_language, created_at';
+const EMAIL_JOB_PAGE_SIZE = 500;
+
+/**
+ * Every user eligible to receive a batch email (weekly recap, inactive nudge).
+ *
+ * Callers MUST pass the service-role client. This is a backend batch job, and
+ * `users` has per-column SELECT grants (migrations 067 + 113) that the anon and
+ * authenticated roles cannot satisfy — the previous wide select broke silently
+ * under those revokes.
+ *
+ * Selects only the fields the jobs actually use, so a future column revoke
+ * can't break email again.
+ *
+ * Excludes soft-deleted, banned, and test accounts. Uses `not(col, 'is', true)`
+ * rather than `eq(col, false)` so a NULL never silently drops a real recipient.
+ *
+ * Paginates rather than capping: a fixed `.limit()` would silently skip users
+ * once the base outgrows it.
+ */
+export async function fetchUsersForEmailJobs(supabase: SupabaseClient): Promise<DalResult<EmailJobUser[]>> {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select(
-        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, is_admin, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, push_subscription, fcm_token, fcm_platform, fcm_updated_at, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, total_earnings_cents, earnings_currency, follower_count, following_count, payout_method, stripe_account_id, wompi_merchant_id, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
-      )
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    const users: EmailJobUser[] = [];
+    for (let from = 0; ; from += EMAIL_JOB_PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('users')
+        .select(EMAIL_JOB_USER_FIELDS)
+        .is('deleted_at', null)
+        .not('banned', 'is', true)
+        .not('is_test_account', 'is', true)
+        .order('created_at', { ascending: false })
+        .range(from, from + EMAIL_JOB_PAGE_SIZE - 1);
+      if (error) {
+        logError(error, { action: 'fetchUsersForEmailJobs' });
+        return { success: false, error: error.message };
+      }
+      const page = (data ?? []) as unknown as EmailJobUser[];
+      users.push(...page);
+      if (page.length < EMAIL_JOB_PAGE_SIZE) break;
+    }
+    return { success: true, data: users };
   } catch (error) {
-    logError(error, { action: 'fetchUsersForAdmin' });
+    logError(error, { action: 'fetchUsersForEmailJobs' });
     return { success: false, error: 'Failed to fetch users' };
   }
 }
