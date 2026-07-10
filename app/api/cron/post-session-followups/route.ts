@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaToday } from '@/lib/time/bogotaDate';
@@ -24,7 +24,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Backend batch cron: service-role. As an anon cron it read a dead creator
+    // email embed (fetchSessionsWithCreator) that the T-SEC5 revoke would break;
+    // service-role is the correct level and matches /api/cron/session-reminders.
+    const supabase = getServiceRoleClient();
 
     // Get sessions that ended in the last 2 hours and haven't sent follow-ups
     const now = new Date();
@@ -46,7 +49,7 @@ export async function GET(request: Request) {
       date: string;
       start_time: string;
       duration: number;
-      creator: { id: string; name: string; email: string; preferred_language: string | null } | null;
+      creator: { id: string; name: string; preferred_language: string | null } | null;
     }>;
 
     if (sessions.length === 0) {
@@ -67,6 +70,12 @@ export async function GET(request: Request) {
     // Send follow-up emails to participants who attended
     for (const session of endedSessions) {
       const attendanceResult = await fetchSessionAttendance(supabase, session.id);
+      // Log a failed attendance read rather than silently treating it as "no
+      // attendees"; skip this session but keep the batch going.
+      if (!attendanceResult.success) {
+        logError(attendanceResult.error, { action: 'post_session_followups.attendance', sessionId: session.id });
+        continue;
+      }
       const attendees = (attendanceResult.data || []).filter((a) => a.attended);
 
       if (attendees.length === 0) continue;

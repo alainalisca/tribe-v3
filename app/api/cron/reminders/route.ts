@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaToday } from '@/lib/time/bogotaDate';
@@ -50,7 +50,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Backend batch cron: service-role. A cron request carries no session
+    // cookie, so the anon server client ran as `anon` — which cannot read the
+    // participant/creator emails this job sends to (T-SEC5 revoke) nor the push
+    // tokens it reads (revoked by 067). Service-role is the correct level and
+    // matches /api/cron/session-reminders.
+    const supabase = getServiceRoleClient();
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const colombiaHour = getColombiaHour();
 
@@ -68,6 +73,11 @@ export async function GET(request: Request) {
       dateGte: bogotaToday(now),
       dateLte: bogotaToday(twoHoursFifteenMinsFromNow),
     });
+    // Surface a failed read instead of swallowing it into "0 reminders": a
+    // failure here (e.g. a permission error) must not look like "nothing to do".
+    if (!sessionsResult.success) {
+      throw new Error(sessionsResult.error ?? 'fetchSessionsWithCreator failed');
+    }
     const sessions = sessionsResult.data as SessionWithCreator[] | null;
 
     let remindersSent = 0;
@@ -84,6 +94,12 @@ export async function GET(request: Request) {
           session.id,
           'id, name, email, preferred_language'
         );
+        // Don't silently skip a session on a failed read — log it and move on so
+        // the failure is visible without aborting the whole batch.
+        if (!participantsResult.success) {
+          logError(participantsResult.error, { action: 'reminders.participants', sessionId: session.id });
+          continue;
+        }
         const participants = (participantsResult.data || []) as Array<{
           user_id: string;
           user: { id: string; name: string; email: string; preferred_language: string | null } | null;
