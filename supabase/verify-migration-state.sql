@@ -416,4 +416,16 @@ select '114_users_discoverable_and_self_location',
          where proname = 'get_my_location'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '115_revoke_users_coords',
+       -- T-SEC4 Gate 3: SELECT on location_lat/location_lng revoked from
+       -- anon/authenticated. Applied once location_lat is no longer granted to
+       -- either role (location_lng is revoked in the same statement).
+       case when not exists (
+         select 1 from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'users'
+           and column_name = 'location_lat'
+           and privilege_type = 'SELECT'
+           and grantee in ('anon', 'authenticated')
+       ) then 'applied' else 'MISSING' end
 order by migration;
