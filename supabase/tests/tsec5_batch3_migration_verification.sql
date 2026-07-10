@@ -53,7 +53,7 @@ BEGIN
   END IF;
 
   -- make the host premium
-  UPDATE public.users SET tribe_os_tier = 'pro', tribe_os_status = 'active' WHERE id = v_host;
+  UPDATE public.users SET tribe_os_tier = 'solo', tribe_os_status = NULL WHERE id = v_host;
 
   INSERT INTO public.sessions (id, creator_id, sport, location, date, start_time, duration, max_participants, title, status)
   VALUES (gen_random_uuid(), v_host, 'running', 'x', current_date, '08:00', 60, 10, 'probe', 'active')
