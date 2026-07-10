@@ -438,4 +438,13 @@ select '116_get_admin_ids_by_email',
          where proname = 'get_admin_ids_by_email'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '117_get_session_attendance',
+       -- T-SEC5 Batch 3 (additive): server-side attendance matcher definer.
+       -- Applied once the function exists.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'get_session_attendance'
+           and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;

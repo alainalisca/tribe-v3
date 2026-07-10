@@ -17,13 +17,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { listPayments, listPaymentsForGym } from '@/lib/dal/revenue';
 import { revenuePaymentsQuerySchema } from '@/lib/validations/revenue';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId, gymId } = gate;
+  const { userId, gymId } = gate;
+  // Service-role for the read: these payments queries embed participant emails
+  // (users.email), which the session client can no longer select after the
+  // T-SEC5 revoke. Safe because userId/gymId come from the gate's own-gym
+  // resolution (never a client param), so every query stays owner-scoped.
+  const supabase = getServiceRoleClient();
 
   try {
     const { searchParams } = new URL(request.url);
