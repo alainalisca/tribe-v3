@@ -70,8 +70,11 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
         .lte('starts_at', now)
         .gte('ends_at', now);
 
+      // users_discoverable (migration 114): coords rounded to 2dp server-side.
+      // The view also excludes soft-deleted/banned/test accounts, so a deleted
+      // instructor can no longer appear in the featured carousel.
       const { data: proData } = await supabase
-        .from('users')
+        .from('users_discoverable')
         .select(SELECT_COLS)
         .eq('is_instructor', true)
         .eq('storefront_tier', 'pro');
@@ -84,7 +87,7 @@ export default function FeaturedInstructorCarousel({ language }: Props) {
       let boostedProfiles: InstructorProfile[] = [];
       if (missingIds.length > 0) {
         const { data } = await supabase
-          .from('users')
+          .from('users_discoverable')
           .select(SELECT_COLS)
           .in('id', missingIds)
           .eq('is_instructor', true);

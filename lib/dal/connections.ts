@@ -397,11 +397,12 @@ export async function fetchTrainingPartners(
         return { success: true, data: [] };
       }
 
+      // users_discoverable (migration 114): coords rounded to 2dp server-side,
+      // soft-deleted/banned/test accounts already filtered out by the view.
       const { data: users, error: usersError } = await supabase
-        .from('users')
+        .from('users_discoverable')
         .select('id, name, avatar_url, sports, location_lat, location_lng')
-        .in('id', potentialPartners)
-        .is('deleted_at', null);
+        .in('id', potentialPartners);
 
       if (usersError) return { success: false, error: usersError.message };
 
@@ -475,11 +476,12 @@ export async function fetchTrainingPartners(
       return { success: true, data: [] };
     }
 
+    // users_discoverable (migration 114): coords rounded to 2dp server-side,
+    // soft-deleted/banned/test accounts already filtered out by the view.
     const { data: users, error: usersError } = await supabase
-      .from('users')
+      .from('users_discoverable')
       .select('id, name, avatar_url, sports, location_lat, location_lng')
-      .in('id', partnerIds)
-      .is('deleted_at', null);
+      .in('id', partnerIds);
 
     if (usersError) return { success: false, error: usersError.message };
 
@@ -559,12 +561,15 @@ export async function fetchNearbyAthletes(
   limit: number = 30
 ): Promise<DalResult<TrainingPartner[]>> {
   try {
-    // Only query users who have coordinates set
+    // Only query users who have coordinates set. users_discoverable (migration
+    // 114) returns coords rounded to 2dp server-side and already excludes
+    // soft-deleted/banned/test accounts, so no deleted_at filter here.
+    // Distance below is therefore computed on rounded coords: accurate to
+    // ~1.1km, and two users in the same cell can read as 0.0km apart.
     let query = supabase
-      .from('users')
+      .from('users_discoverable')
       .select('id, name, avatar_url, sports, location_lat, location_lng')
       .neq('id', userId)
-      .is('deleted_at', null)
       .not('location_lat', 'is', null)
       .not('location_lng', 'is', null);
 

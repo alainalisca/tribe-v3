@@ -24,10 +24,14 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     //     total_earnings_cents (revoked in 113). Self reads its own admin status
     //     via is_app_admin() and its payout/earnings via fetchMyBillingProfile();
     //     no page reads these off a foreign profile.
+    //   - location_lat, location_lng (revoked in 115). Cross-user coords come
+    //     from users_discoverable (rounded to 2dp); self reads its own raw
+    //     coords via fetchMyLocation(). This function is used cross-user by
+    //     /profile/[userId], which renders no map or pin.
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, email, avatar_url, bio, location, location_lat, location_lng, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
+        'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .eq('id', userId)
       .maybeSingle();
@@ -104,6 +108,35 @@ const EMPTY_BILLING_PROFILE: MyBillingProfile = {
   total_earnings_cents: null,
   earnings_currency: null,
 };
+
+export interface MyLocation {
+  location_lat: number | null;
+  location_lng: number | null;
+}
+
+const EMPTY_LOCATION: MyLocation = { location_lat: null, location_lng: null };
+
+/**
+ * Fetch the CURRENT user's own RAW coordinates. `users.location_lat/lng` are no
+ * longer client-readable (migration 115); cross-user coords come from the
+ * users_discoverable view rounded to 2dp, while the owner may see their own
+ * exact values. Backed by the get_my_location() SECURITY DEFINER RPC, scoped
+ * strictly to auth.uid().
+ */
+export async function fetchMyLocation(supabase: SupabaseClient): Promise<DalResult<MyLocation>> {
+  try {
+    const { data, error } = await supabase.rpc('get_my_location');
+    if (error) {
+      logError(error, { action: 'fetchMyLocation' });
+      return { success: false, error: error.message };
+    }
+    // Returns a jsonb object, or null when unauthenticated.
+    return { success: true, data: (data as MyLocation | null) ?? { ...EMPTY_LOCATION } };
+  } catch (error) {
+    logError(error, { action: 'fetchMyLocation' });
+    return { success: false, error: 'Failed to fetch location' };
+  }
+}
 
 /**
  * Fetch the CURRENT user's own payout/earnings fields, which live on `users`
