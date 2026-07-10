@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import { fetchUpcomingSessions, fetchUserProfileMaybe } from '@/lib/dal';
+import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
@@ -253,9 +253,22 @@ export function useHomeFeed() {
     const result = await fetchUserProfileMaybe(
       supabase,
       user.id,
-      'name, avatar_url, bio, sports, safety_waiver_accepted, is_instructor, location_lat, location_lng'
+      'name, avatar_url, bio, sports, safety_waiver_accepted, is_instructor'
     );
-    setUserProfile((result.data as UserProfile | null) ?? null);
+    const profile = (result.data as UserProfile | null) ?? null;
+    if (!profile) {
+      setUserProfile(null);
+      return;
+    }
+    // location_lat/lng are no longer readable off `users` (migration 115). The
+    // owner reads their own raw coords via the get_my_location() RPC; they feed
+    // computeLocationKnown, which only checks presence (BUG-008).
+    const locationResult = await fetchMyLocation(supabase);
+    setUserProfile({
+      ...profile,
+      location_lat: locationResult.data?.location_lat ?? null,
+      location_lng: locationResult.data?.location_lng ?? null,
+    });
   }
 
   // --- Return (identical public API as before) ---

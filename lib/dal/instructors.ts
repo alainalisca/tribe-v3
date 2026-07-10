@@ -3,7 +3,6 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { fuzzLocation } from '@/lib/location';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
@@ -42,19 +41,18 @@ export async function fetchInstructors(
   }
 ): Promise<DalResult<InstructorProfile[]>> {
   try {
+    // Reads users_discoverable (migration 114), not `users`: coords come back
+    // already rounded to 2dp server-side, so raw coords never reach the client
+    // once migration 115 revokes them. The view also bakes in the test-account
+    // (migration 052) and soft-delete filters — they are no longer applied here,
+    // and cannot be, since the view does not expose those columns.
     let query = supabase
-      .from('users')
+      .from('users_discoverable')
       .select(
         // bio + instructor_bio are needed for the T-PROF1 completeness filter.
         'id, name, avatar_url, photos, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience, bio, instructor_bio'
       )
-      .eq('is_instructor', true)
-      // Hide seeded/test accounts from any public instructor listing
-      // (Browse Instructors, sport-specific matchmaking, etc.). Migration 052.
-      .eq('is_test_account', false)
-      // Hide soft-deleted accounts (admin_delete_user sets deleted_at). Without
-      // this a "deleted" instructor still showed in Descubre Instructores.
-      .is('deleted_at', null);
+      .eq('is_instructor', true);
 
     // Filter by sport in specialties array
     if (options?.sport) {
@@ -96,12 +94,10 @@ export async function fetchInstructors(
     const complete = (data || []).filter((row) => isInstructorProfileComplete(row));
 
     const instructors: InstructorProfile[] = complete.map((row) => {
-      // Fuzz user coords to ~500m before sending to client. Browse Instructors
-      // is a public-facing listing; raw coords would let anyone reverse-
-      // geocode an instructor's home address. 500m precision is plenty for
-      // map markers and "instructors near me" sorting.
-      const fuzzed =
-        row.location_lat != null && row.location_lng != null ? fuzzLocation(row.location_lat, row.location_lng) : null;
+      // Coords arrive pre-rounded to 2dp (~1.1km) from users_discoverable. The
+      // old client-side fuzzLocation() call was cosmetic — the raw coords had
+      // already left the database by then. Rounding now happens server-side, so
+      // raw coords never reach the client at all.
       return {
         id: row.id,
         name: row.name,
@@ -115,8 +111,8 @@ export async function fetchInstructors(
         total_sessions: row.total_sessions_hosted ?? 0,
         is_instructor: true,
         created_at: row.created_at,
-        location_lat: fuzzed?.lat ?? null,
-        location_lng: fuzzed?.lng ?? null,
+        location_lat: row.location_lat ?? null,
+        location_lng: row.location_lng ?? null,
         years_experience: row.years_experience ?? 0,
       };
     });
