@@ -402,4 +402,18 @@ select '112_users_private_fields',
          where proname = 'get_admin_user_ids'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '114_users_discoverable_and_self_location',
+       -- T-SEC4 Gate 1 (additive): fuzzed users_discoverable view + the
+       -- get_my_location() self accessor, added ahead of the Gate 3 coord
+       -- revoke. Applied once BOTH objects exist.
+       case when exists (
+         select 1 from pg_class c
+         join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname = 'users_discoverable' and c.relkind = 'v'
+       ) and exists (
+         select 1 from pg_proc
+         where proname = 'get_my_location'
+           and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
