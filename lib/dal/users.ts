@@ -28,10 +28,13 @@ export async function fetchUserProfile(supabase: SupabaseClient, userId: string)
     //     from users_discoverable (rounded to 2dp); self reads its own raw
     //     coords via fetchMyLocation(). This function is used cross-user by
     //     /profile/[userId], which renders no map or pin.
+    //   - email (revoked in the T-SEC5 revoke). No caller reads email off this
+    //     result: /profile/[userId] never renders it, and self-views read their
+    //     own email from the auth session (auth.users), not public.users.
     const { data, error } = await supabase
       .from('users')
       .select(
-        'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
+        'id, name, avatar_url, bio, location, sports, preferred_sports, specialties, certifications, years_experience, instructor_bio, is_instructor, is_verified_instructor, banned, photos, username, website_url, instagram_username, facebook_url, storefront_tagline, storefront_banner_url, storefront_video_url, storefront_tier, storefront_pro_since, storefront_pro_expires, banner_url, preferred_language, session_reminders_enabled, terms_accepted, terms_accepted_at, safety_waiver_accepted, safety_waiver_accepted_at, average_rating, total_reviews, rating, show_rate, sessions_completed, total_sessions_hosted, total_participants_served, earnings_currency, follower_count, following_count, verified_credentials, last_login_at, last_motivation_sent, last_motivation_message_id, last_reengagement_sent, last_weekly_recap_sent, welcome_email_sent_at, created_at, updated_at'
       )
       .eq('id', userId)
       .maybeSingle();

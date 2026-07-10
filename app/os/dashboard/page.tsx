@@ -178,11 +178,13 @@ export default function TribeOSDashboardPage() {
         setPageState({ kind: 'not_premium' });
         return;
       }
-      // Display-only name/email for the greeting. A failure here is
-      // non-blocking — fall back to email local-part, then "there".
-      const { data: profile } = await supabase.from('users').select('name, email').eq('id', user.id).single();
+      // Display-only name for the greeting. A failure here is non-blocking —
+      // fall back to the email local-part, then "there". The email comes from
+      // the auth session (auth.users), the caller's own address, so this no
+      // longer reads public.users.email (T-SEC5).
+      const { data: profile } = await supabase.from('users').select('name').eq('id', user.id).single();
       if (cancelled) return;
-      const rawName = profile?.name ?? profile?.email?.split('@')[0] ?? 'there';
+      const rawName = profile?.name ?? user.email?.split('@')[0] ?? 'there';
       const firstName = rawName.trim().split(/\s+/)[0] || rawName;
       // Premium via the legacy users.tribe_os_* path resolves with no
       // gym. Show a "set up your gym" prompt instead of misleading zeros.

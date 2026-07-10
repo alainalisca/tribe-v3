@@ -46,7 +46,6 @@ import { getTribeOSPremiumStatusForUser } from '@/lib/dal/tribeOSPremium';
 
 type ProfileProbe = {
   name?: string | null;
-  email?: string | null;
 };
 
 type PremiumStatus = 'unknown' | 'premium' | 'not_premium';
@@ -156,11 +155,13 @@ export default function OSShell({ children }: { children: React.ReactNode }) {
       // page-level gates make the authoritative per-route decision.
       const premium = await getTribeOSPremiumStatusForUser(supabase, authUser.id);
       if (cancelled) return;
-      const { data: profile } = await supabase.from('users').select('name, email').eq('id', authUser.id).single();
+      // name from public.users; email from the auth session (auth.users), the
+      // caller's own address — no longer reads public.users.email (T-SEC5).
+      const { data: profile } = await supabase.from('users').select('name').eq('id', authUser.id).single();
       if (cancelled) return;
       const p = (profile ?? null) as ProfileProbe | null;
       setPremiumStatus(premium.success && premium.data?.active ? 'premium' : 'not_premium');
-      setUser({ email: p?.email ?? authUser.email ?? null, name: p?.name ?? null });
+      setUser({ email: authUser.email ?? null, name: p?.name ?? null });
     })();
     return () => {
       cancelled = true;
