@@ -57,7 +57,12 @@ SELECT
   u.years_experience,
   u.bio,
   u.instructor_bio,
-  u.created_at
+  u.created_at,
+  -- Appended for FeaturedInstructorCarousel, which filters on
+  -- storefront_tier = 'pro'. PostgREST cannot filter on a column a view does
+  -- not expose. Not sensitive (already anon-readable on `users`, not in any
+  -- revoke set). Appended LAST so CREATE OR REPLACE VIEW stays valid.
+  u.storefront_tier
 FROM public.users u
 WHERE u.deleted_at IS NULL
   AND u.banned IS NOT TRUE
