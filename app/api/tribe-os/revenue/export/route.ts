@@ -25,13 +25,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { generatePaymentsCsv, generatePaymentsCsvForGym } from '@/lib/dal/revenue';
 import { revenueExportQuerySchema } from '@/lib/validations/revenue';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const gate = await requireTribeOSPremium();
   if (!gate.ok) return gate.response;
-  const { supabase, userId, gymId } = gate;
+  const { userId, gymId } = gate;
+  // Service-role for the read: the payments CSV embeds participant emails
+  // (users.email), no longer session-readable after the T-SEC5 revoke. Safe —
+  // userId/gymId come from the gate's own-gym resolution, so all queries stay
+  // owner-scoped.
+  const supabase = getServiceRoleClient();
 
   try {
     const { searchParams } = new URL(request.url);

@@ -30,14 +30,15 @@ import { formatCents } from '@/lib/format/currency';
 import type { ClientRow, AttendanceRow, Currency, PaymentMethod } from '@/lib/dal/clients';
 import { isTribeOSPremiumActive, type TribeOSPremiumFields } from '@/lib/dal/tribeOSPremium';
 
+// Shape returned by the get_session_attendance() RPC (migration 117). The match
+// is computed server-side; email is present ONLY for unmatched participants (for
+// the Add-as-client prefill), so raw participant emails never reach the client.
 interface ParticipantRow {
   user_id: string;
-  user: {
-    id: string;
-    name: string | null;
-    email: string | null;
-    avatar_url: string | null;
-  } | null;
+  name: string | null;
+  avatar_url: string | null;
+  matched_client_id: string | null;
+  email: string | null;
 }
 
 type PremiumRow = Pick<TribeOSPremiumFields, 'tribe_os_tier' | 'tribe_os_status'>;
@@ -155,12 +156,13 @@ export default function SessionAttendanceSection({ sessionId, isCreator }: Props
           return;
         }
 
-        // Fetch participants joined to users (with email — needed for client matching).
-        const { data: participantRows, error: pErr } = await supabase
-          .from('session_participants')
-          .select('user_id, user:users(id, name, email, avatar_url)')
-          .eq('session_id', sessionId)
-          .eq('status', 'confirmed');
+        // Participants + server-side client match via the get_session_attendance
+        // RPC (migration 117). The RPC verifies creator + premium and computes the
+        // email->client match in-DB, so raw participant emails are never sent to
+        // the browser (T-SEC5). email is returned only for unmatched participants.
+        const { data: participantRows, error: pErr } = await supabase.rpc('get_session_attendance', {
+          p_session_id: sessionId,
+        });
         if (cancelled) return;
         if (pErr) {
           setState({ kind: 'error', message: s.errorTitle });
@@ -191,20 +193,8 @@ export default function SessionAttendanceSection({ sessionId, isCreator }: Props
         const attendanceByClient = new Map<string, AttendanceRow>();
         for (const a of attendanceList) attendanceByClient.set(a.client_id, a);
 
-        // The supabase nested-select returns user as either an object or
-        // an array depending on PostgREST FK detection. Normalize to object.
-        const participants = (
-          (participantRows ?? []) as Array<{
-            user_id: string;
-            user:
-              | { id: string; name: string | null; email: string | null; avatar_url: string | null }
-              | { id: string; name: string | null; email: string | null; avatar_url: string | null }[]
-              | null;
-          }>
-        ).map((p) => ({
-          user_id: p.user_id,
-          user: Array.isArray(p.user) ? (p.user[0] ?? null) : p.user,
-        }));
+        // The RPC returns flat rows already in ParticipantRow shape.
+        const participants = (participantRows ?? []) as ParticipantRow[];
 
         setState({ kind: 'ready', participants, clients, attendanceByClient });
       } catch {
@@ -292,28 +282,30 @@ function ParticipantAttendanceCard({
   copy: typeof copy.en | typeof copy.es;
   language: 'en' | 'es';
 }) {
-  const matchedClient = useMemo(() => {
-    const email = participant.user?.email?.trim().toLowerCase();
-    if (!email) return null;
-    return clients.find((c) => (c.email ?? '').trim().toLowerCase() === email) ?? null;
-  }, [clients, participant.user?.email]);
+  // The match is computed server-side (RPC returns matched_client_id); resolve it
+  // against the roster to reach the client's id-keyed attendance row.
+  const matchedClient = useMemo(
+    () => (participant.matched_client_id ? (clients.find((c) => c.id === participant.matched_client_id) ?? null) : null),
+    [clients, participant.matched_client_id]
+  );
 
   const existing = matchedClient ? existingAttendanceByClient.get(matchedClient.id) : undefined;
 
   const [adding, setAdding] = useState(false);
-  const displayName = participant.user?.name ?? '—';
-  const avatarUrl = participant.user?.avatar_url ?? null;
+  const displayName = participant.name ?? '—';
+  const avatarUrl = participant.avatar_url ?? null;
 
   async function handleAddAsClient() {
-    if (!participant.user) return;
     setAdding(true);
     try {
       const res = await fetch('/api/tribe-os/clients/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: participant.user.name ?? 'Unnamed',
-          email: participant.user.email ?? null,
+          name: participant.name ?? 'Unnamed',
+          // email is populated by the RPC only for unmatched participants — the
+          // exact case where Add-as-client renders — scoped to this session's host.
+          email: participant.email ?? null,
         }),
       });
       const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
@@ -341,8 +333,10 @@ function ParticipantAttendanceCard({
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-stone-900 dark:text-white truncate">{displayName}</p>
-          {participant.user?.email ? (
-            <p className="text-xs text-stone-500 dark:text-white/60 truncate">{participant.user.email}</p>
+          {/* email is present only for unmatched participants (the Add-as-client
+              case); matched participants show their attendance form instead. */}
+          {participant.email ? (
+            <p className="text-xs text-stone-500 dark:text-white/60 truncate">{participant.email}</p>
           ) : null}
 
           {matchedClient ? (

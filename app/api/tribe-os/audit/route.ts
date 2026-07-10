@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { requireTribeOSPremium } from '@/lib/auth/premium';
 import { getGym, getGymForUser } from '@/lib/dal/gyms';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { listAuditEntries } from '@/lib/dal/auditLog';
 
 /**
@@ -48,10 +49,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { supabase, userId, gymId } = gate;
 
   try {
+    // Gym resolution stays on the session client (RLS-enforced): the caller can
+    // only resolve a gym they own/coach.
     const gymRes = gymId ? await getGym(supabase, gymId) : await getGymForUser(supabase, userId);
     if (!gymRes.success || !gymRes.data) {
       return NextResponse.json({ success: false, error: 'no_gym' }, { status: 404 });
     }
+    // The audit read embeds actor emails (users.email), no longer session-
+    // readable after the T-SEC5 revoke, so it runs under service-role — scoped
+    // to the gym just resolved above (the caller's own).
+    const service = getServiceRoleClient();
 
     const url = new URL(request.url);
     const action = url.searchParams.get('action')?.trim() || undefined;
@@ -68,7 +75,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const toIso = parseIsoLoose(url.searchParams.get('to'));
     const actorUserId = url.searchParams.get('actor_user_id')?.trim() || undefined;
 
-    const result = await listAuditEntries(supabase, gymRes.data.id, {
+    const result = await listAuditEntries(service, gymRes.data.id, {
       action,
       targetType,
       limit: Number.isFinite(limit) ? limit : undefined,
