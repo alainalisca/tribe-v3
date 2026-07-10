@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Wallet } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
+import { fetchMyBillingProfile } from '@/lib/dal';
 
 const CONFIGURED_METHODS = new Set(['wompi', 'stripe_connect']);
 
@@ -34,13 +35,17 @@ export default function PayoutSetupBanner() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+      // is_instructor stays on users; payout_method is no longer client-readable
+      // (migration 113) so it comes from the self-scoped billing RPC.
       const { data, error } = await supabase
         .from('users')
-        .select('is_instructor, payout_method')
+        .select('is_instructor')
         .eq('id', user.id)
         .single();
-      if (cancelled || error) return;
-      const needsSetup = !!data?.is_instructor && !CONFIGURED_METHODS.has(data?.payout_method ?? '');
+      if (cancelled || error || !data?.is_instructor) return;
+      const billing = await fetchMyBillingProfile(supabase);
+      if (cancelled || !billing.success) return;
+      const needsSetup = !CONFIGURED_METHODS.has(billing.data?.payout_method ?? '');
       setShow(needsSetup);
     })();
     return () => {

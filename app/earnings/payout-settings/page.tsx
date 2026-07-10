@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fetchMyPrivateProfile, upsertMyPrivateProfile } from '@/lib/dal/userPrivate';
+import { fetchMyBillingProfile } from '@/lib/dal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -196,11 +197,12 @@ export default function PayoutSettingsPage() {
 
       setUser(authUser);
 
-      // is_instructor + payout_method stay on users; the sensitive bank/document
-      // detail fields now live in user_private (T1-1). Fetch both.
+      // is_instructor stays on users. payout_method is no longer client-readable
+      // (migration 113) so it comes from the self-scoped billing RPC; the
+      // sensitive bank/document detail fields live in user_private (T1-1).
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('is_instructor, payout_method')
+        .select('is_instructor')
         .eq('id', authUser.id)
         .single();
 
@@ -218,6 +220,13 @@ export default function PayoutSettingsPage() {
 
       setIsInstructor(true);
 
+      const billingResult = await fetchMyBillingProfile(supabase);
+      if (!billingResult.success) {
+        logError(billingResult.error, { action: 'loadSettings.billing' });
+        setError('load_failed');
+        return;
+      }
+
       const privateResult = await fetchMyPrivateProfile(supabase, authUser.id);
       if (!privateResult.success) {
         logError(privateResult.error, { action: 'loadSettings.private' });
@@ -228,7 +237,7 @@ export default function PayoutSettingsPage() {
 
       // Populate form with existing data
       setFormData({
-        payout_method: profileData.payout_method || 'manual',
+        payout_method: (billingResult.data?.payout_method as PayoutMethod) || 'manual',
         payout_bank_name: priv?.payout_bank_name || '',
         payout_account_type: (priv?.payout_account_type as 'savings' | 'checking') || 'savings',
         payout_account_number: priv?.payout_account_number || '',
