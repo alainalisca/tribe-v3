@@ -110,21 +110,26 @@ export async function createBulletinPost(
 
 /**
  * In-app notification to every admin when a user submits a bulletin post
- * that needs review. Resolves admin user ids by looking up the admin email
- * whitelist in the users table. Never throws (caller uses .catch).
+ * that needs review. Resolves admin user ids from the ADMIN_EMAILS whitelist
+ * via the get_admin_ids_by_email() SECURITY DEFINER RPC (migration 116) — this
+ * runs client-side as `authenticated`, which can no longer read
+ * public.users.email directly after the T-SEC5 revoke. Returns ids only, no
+ * email. Never throws (caller uses .catch).
  */
 async function notifyAdminsOfPendingBulletin(supabase: SupabaseClient, post: BulletinPost): Promise<void> {
   if (!ADMIN_EMAILS.length) return;
 
-  const { data: admins, error } = await supabase.from('users').select('id, email').in('email', ADMIN_EMAILS);
+  const { data: adminIds, error } = await supabase.rpc('get_admin_ids_by_email', {
+    p_emails: ADMIN_EMAILS,
+  });
 
-  if (error || !admins) return;
+  if (error || !adminIds) return;
 
-  const adminRows = admins as Array<{ id: string; email: string }>;
+  const ids = adminIds as string[];
   await Promise.all(
-    adminRows.map((admin) =>
+    ids.map((adminId) =>
       createNotification(supabase, {
-        recipient_id: admin.id,
+        recipient_id: adminId,
         actor_id: post.author_id,
         type: 'bulletin_pending',
         entity_type: 'community_bulletin',

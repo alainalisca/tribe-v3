@@ -127,7 +127,9 @@ export async function fetchAdminReports(supabase: SupabaseClient): Promise<DalRe
     const { data, error } = await supabase
       .from('reported_users')
       .select(
-        `*, reporter:users!reported_users_reporter_id_fkey(id, name, email), reported:users!reported_users_reported_user_id_fkey(id, name, email)`
+        // reporter email is never displayed (only reported.email is shown), so
+        // it is not selected. reported.email is rendered in ReportedMessages.
+        `*, reporter:users!reported_users_reporter_id_fkey(id, name), reported:users!reported_users_reported_user_id_fkey(id, name, email)`
       )
       .order('created_at', { ascending: false });
     if (error) return { success: false, error: error.message };
@@ -211,7 +213,10 @@ export async function fetchAdminSessions(
   try {
     let query = supabase
       .from('sessions')
-      .select(`*, creator:users!sessions_creator_id_fkey(id, name, email)`)
+      // creator email is never displayed (SessionManagement shows creator.name
+      // only), so it is not selected — this keeps fetchAdminSessions off the
+      // email column and runnable on the browser client after the revoke.
+      .select(`*, creator:users!sessions_creator_id_fkey(id, name)`)
       .order('date', { ascending: false })
       .limit(50);
 

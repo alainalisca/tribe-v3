@@ -428,4 +428,14 @@ select '115_revoke_users_coords',
            and privilege_type = 'SELECT'
            and grantee in ('anon', 'authenticated')
        ) then 'applied' else 'MISSING' end
+union all
+select '116_get_admin_ids_by_email',
+       -- T-SEC5 Batch 2 (additive): definer that resolves the ADMIN_EMAILS
+       -- whitelist to user-ids for the bulletin notify path. Applied once the
+       -- function exists.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'get_admin_ids_by_email'
+           and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
