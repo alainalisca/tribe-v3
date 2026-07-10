@@ -3,15 +3,7 @@
 import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import {
-  fetchAdminStatsRaw,
-  fetchAdminUsersWithCounts,
-  fetchAdminReports,
-  fetchAdminFeedback,
-  fetchAdminBugs,
-  fetchAdminMessages,
-  fetchAdminSessions,
-} from '@/lib/dal';
+import { fetchAdminStatsRaw, fetchAdminSessions } from '@/lib/dal';
 import type {
   AdminStatsData,
   AdminUser,
@@ -21,6 +13,25 @@ import type {
   AdminSession,
   AdminMessage,
 } from './types';
+
+/**
+ * Fetch an admin list tab through the service-role admin API (T-SEC5 Batch 2).
+ * These lists include user emails / is_admin, which the browser client can no
+ * longer read; the API gates on is_app_admin() and reads under service-role.
+ * Returns a DalResult-shaped object so the loaders keep their existing handling.
+ */
+async function fetchAdminApi<T>(tab: string): Promise<{ success: boolean; data?: T; error?: string }> {
+  try {
+    const res = await fetch(`/api/admin/data?tab=${encodeURIComponent(tab)}`);
+    if (!res.ok) {
+      return { success: false, error: `admin_api_${res.status}` };
+    }
+    const json = (await res.json()) as { data?: T };
+    return { success: true, data: json.data };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'admin_api_fetch_failed' };
+  }
+}
 
 const defaultStats: AdminStatsData = {
   totalUsers: 0,
@@ -143,7 +154,11 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadUsers() {
     setLoadingUsers(true);
     try {
-      const result = await fetchAdminUsersWithCounts(supabase);
+      const result = await fetchAdminApi<{
+        users: Array<{ id: string } & Record<string, unknown>>;
+        sessionCounts: Array<{ creator_id: string }>;
+        participantCounts: Array<{ user_id: string | null }>;
+      }>('users');
       if (!result.success || !result.data) throw new Error(result.error);
 
       const { users: data, sessionCounts, participantCounts } = result.data;
@@ -172,7 +187,7 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadReports() {
     setLoadingReports(true);
     try {
-      const result = await fetchAdminReports(supabase);
+      const result = await fetchAdminApi<AdminReport[]>('reports');
       if (!result.success) throw new Error(result.error);
       setReports(result.data || []);
     } catch (error) {
@@ -185,7 +200,7 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadFeedback() {
     setLoadingFeedback(true);
     try {
-      const result = await fetchAdminFeedback(supabase);
+      const result = await fetchAdminApi<AdminFeedback[]>('feedback');
       if (!result.success) throw new Error(result.error);
       setFeedback(result.data || []);
     } catch (error) {
@@ -198,7 +213,7 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadBugs() {
     setLoadingBugs(true);
     try {
-      const result = await fetchAdminBugs(supabase);
+      const result = await fetchAdminApi<AdminBug[]>('bugs');
       if (!result.success) throw new Error(result.error);
       setBugs(result.data || []);
     } catch (error) {
@@ -211,7 +226,7 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadMessages() {
     setLoadingMessages(true);
     try {
-      const result = await fetchAdminMessages(supabase);
+      const result = await fetchAdminApi<AdminMessage[]>('messages');
       if (!result.success) throw new Error(result.error);
       setMessages(result.data || []);
     } catch (error) {
