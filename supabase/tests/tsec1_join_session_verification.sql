@@ -53,7 +53,7 @@ BEGIN
   INSERT INTO public.sessions (id, creator_id, sport, location, date, start_time, duration, max_participants, title, status, join_policy, is_paid, price_cents)
   VALUES (gen_random_uuid(), v_b, 'running', 'x', current_date, '08:00', 60, 10, 'invite probe', 'active', 'invite_only', false, 0)
   RETURNING id INTO v_invite;
-  INSERT INTO public.invite_tokens (token, session_id, expires_at) VALUES (v_tok, v_invite, now() + interval '1 day');
+  INSERT INTO public.invite_tokens (token, session_id, created_by, expires_at) VALUES (v_tok, v_invite, v_b, now() + interval '1 day');
 
   -- impersonate user A for the RPC calls
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_a::text)::text, true);
