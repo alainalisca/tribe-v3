@@ -6,7 +6,6 @@ import { formatPrice } from '@/lib/formatCurrency';
 import { getPaymentGateway } from '@/lib/payments/config';
 import type { Currency } from '@/lib/payments/config';
 import { createClient } from '@/lib/supabase/client';
-import { insertParticipant } from '@/lib/dal/participants';
 import { showSuccess, showError } from '@/lib/toast';
 import { celebrateJoin } from '@/lib/confetti';
 import BookingConfirmModal from '@/components/BookingConfirmModal';
@@ -103,14 +102,31 @@ export default function StorefrontSessionCard({
         return;
       }
 
-      const result = await insertParticipant(supabase, {
-        session_id: session.id,
-        user_id: currentUserId,
-        status: session.join_policy === 'curated' ? 'pending' : 'confirmed',
+      // T-SEC1 Gate 2.5a: join via the SECURITY DEFINER RPC, not a direct insert
+      // (Gate 3 removes the direct-insert RLS). The RPC derives status from the
+      // session's join_policy server-side, enforces capacity atomically, requires
+      // p_user_id = auth.uid() (satisfied — currentUserId is the logged-in user),
+      // and is idempotent. p_status is ignored server-side; kept for compat.
+      const { data: joinResult, error: joinError } = await supabase.rpc('join_session', {
+        p_session_id: session.id,
+        p_user_id: currentUserId,
+        p_status: session.join_policy === 'curated' ? 'pending' : 'confirmed',
+        p_invite_token: null,
       });
 
-      if (!result.success) {
-        showError(result.error || (language === 'es' ? 'No se pudo unir' : 'Could not join'));
+      if (joinError) {
+        showError(joinError.message || (language === 'es' ? 'No se pudo unir' : 'Could not join'));
+        return;
+      }
+      const joinData = typeof joinResult === 'string' ? JSON.parse(joinResult) : joinResult;
+      if (!joinData?.success) {
+        showError(
+          joinData?.error === 'Session is full'
+            ? language === 'es'
+              ? 'La sesion esta llena'
+              : 'Session is full'
+            : joinData?.error || (language === 'es' ? 'No se pudo unir' : 'Could not join')
+        );
         return;
       }
 

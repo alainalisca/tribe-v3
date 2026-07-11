@@ -222,30 +222,20 @@ export async function acceptWaitlistOffer(
   userId: string
 ): Promise<DalResult<void>> {
   try {
-    const { data, error } = await supabase
-      .from('session_waitlist')
-      .select('id, status, offer_expires_at')
-      .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .maybeSingle();
+    // T-SEC1 Gate 2.5b: accept via the SECURITY DEFINER RPC, not a direct insert
+    // (Gate 3 removes the direct-insert RLS). The RPC locks the offer row,
+    // re-validates status/expiry/ownership server-side, inserts the reserved seat
+    // (skipping capacity — the seat was already held), flips the offer to
+    // accepted, and recomputes the count, all in one transaction. This replaces
+    // the previous non-atomic read + insert + update.
+    const { data, error } = await supabase.rpc('accept_waitlist_offer', {
+      p_session_id: sessionId,
+      p_user_id: userId,
+    });
     if (error) return { success: false, error: error.message };
-    if (!data) return { success: false, error: 'No waitlist entry' };
 
-    const row = data as { id: string; status: WaitlistStatus; offer_expires_at: string | null };
-    if (row.status !== 'offered') {
-      return { success: false, error: 'No active offer' };
-    }
-    if (row.offer_expires_at && new Date(row.offer_expires_at) < new Date()) {
-      return { success: false, error: 'Offer has expired' };
-    }
-
-    const { error: partErr } = await supabase
-      .from('session_participants')
-      .insert({ session_id: sessionId, user_id: userId, status: 'confirmed' });
-    if (partErr) return { success: false, error: partErr.message };
-
-    const { error: updErr } = await supabase.from('session_waitlist').update({ status: 'accepted' }).eq('id', row.id);
-    if (updErr) return { success: false, error: updErr.message };
+    const body = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!body?.success) return { success: false, error: body?.error || 'Failed to accept offer' };
 
     return { success: true };
   } catch (error) {

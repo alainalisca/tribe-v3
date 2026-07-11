@@ -2,8 +2,6 @@ import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { SupabaseClient } from '@supabase/supabase-js';
 import {
-  fetchConfirmedCount,
-  insertParticipantReturning,
   deleteGuestParticipant,
   fetchGuestParticipant,
   deleteParticipantBySessionAndUser,
@@ -11,33 +9,36 @@ import {
 import type { Session } from '@/lib/database.types';
 import type { GuestData } from './sessionActionTypes';
 
-/** Insert a guest participant and update session count */
+/** Add a guest participant via the SECURITY DEFINER guest RPC. */
 export async function insertGuestParticipant(
   supabase: SupabaseClient,
   session: Session,
   guestData: GuestData
 ): Promise<{ id: string; guest_token: string | null }> {
-  const countResult = await fetchConfirmedCount(supabase, session.id);
-  if (countResult.success && (countResult.data ?? 0) >= session.max_participants) {
-    throw new Error('SESSION_FULL');
+  // T-SEC1 Gate 2.5b: join via join_session_as_guest, not a direct insert
+  // (Gate 3 removes the direct-insert RLS). This is the in-app guest modal, which
+  // has no invite token — the RPC allows a token-less guest ONLY when the session
+  // is open (curated/invite_only fail closed server-side). The RPC also derives
+  // status, enforces capacity atomically, and returns guest_token (needed by the
+  // guest-leave flow). Running as owner, it sidesteps the challenge_participants
+  // recursion that 500s the current direct guest insert.
+  const { data: rpcResult, error } = await supabase.rpc('join_session_as_guest', {
+    p_session_id: session.id,
+    p_invite_token: null,
+    p_guest_name: guestData.name,
+    p_guest_phone: guestData.phone,
+    p_guest_email: guestData.email || null,
+  });
+  if (error) throw new Error(error.message);
+
+  const body = typeof rpcResult === 'string' ? JSON.parse(rpcResult) : rpcResult;
+  if (!body?.success) {
+    // Preserve the caller's full-session UX (it maps SESSION_FULL to a toast).
+    if (body?.error === 'Session is full') throw new Error('SESSION_FULL');
+    throw new Error(body?.error || 'join_failed');
   }
 
-  const result = await insertParticipantReturning(supabase, {
-    session_id: session.id,
-    user_id: null,
-    is_guest: true,
-    guest_name: guestData.name,
-    guest_phone: guestData.phone,
-    guest_email: guestData.email || null,
-    status: 'confirmed',
-  });
-
-  if (!result.success) throw new Error(result.error);
-  const data = result.data as unknown as { id: string; guest_token: string | null };
-
-  // No manual count write: the 087 trigger recomputes
-  // sessions.current_participants from the confirmed rows on the insert above.
-  return data;
+  return { id: body.participant_id as string, guest_token: (body.guest_token as string) ?? null };
 }
 
 /** Store guest identifiers in localStorage after a successful join */

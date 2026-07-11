@@ -6,7 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { log, logError } from '@/lib/logger';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
-import { insertParticipant, insertSession } from '@/lib/dal';
+import { insertSession } from '@/lib/dal';
 
 interface TrainingNowFormData {
   sport: string;
@@ -114,13 +114,21 @@ export function useTrainingNowForm({ isOpen, userId, language, onSessionCreated,
       if (!sessionResult.success) throw new Error(sessionResult.error);
       const session = sessionResult.data!;
 
-      // Add creator as participant
-      const participantResult = await insertParticipant(supabase, {
-        session_id: session.id,
-        user_id: userId,
-        status: 'confirmed',
+      // Add creator as participant. T-SEC1 Gate 2.5a: join via the SECURITY
+      // DEFINER RPC, not a direct insert (Gate 3 removes the direct-insert RLS).
+      // The creator self-joins their own open session; the RPC requires
+      // p_user_id = auth.uid() (satisfied — userId is the authenticated creator)
+      // and, running as owner, sidesteps the challenge_participants recursion
+      // that 500s direct inserts today.
+      const { data: joinResult, error: joinError } = await supabase.rpc('join_session', {
+        p_session_id: session.id,
+        p_user_id: userId,
+        p_status: 'confirmed',
+        p_invite_token: null,
       });
-      if (!participantResult.success) throw new Error(participantResult.error);
+      if (joinError) throw new Error(joinError.message);
+      const joinData = typeof joinResult === 'string' ? JSON.parse(joinResult) : joinResult;
+      if (!joinData?.success) throw new Error(joinData?.error || 'join_failed');
 
       // Fire-and-forget: don't block UI waiting for notifications
       if (formData.latitude && formData.longitude) {
