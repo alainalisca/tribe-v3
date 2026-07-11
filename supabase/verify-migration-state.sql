@@ -471,4 +471,14 @@ select '119_join_session_enforce_policy_and_owner',
          select 1 from pg_proc where proname='join_session_as_guest'
            and pronamespace='public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '120_guest_tokenless_open_and_waitlist_accept',
+       -- T-SEC1 Gate 2.5b: guest RPC token made optional (open-only when absent)
+       -- and now returns guest_token, plus the new accept_waitlist_offer
+       -- reserved-seat definer. Both ship together; applied once
+       -- accept_waitlist_offer exists.
+       case when exists (
+         select 1 from pg_proc where proname='accept_waitlist_offer'
+           and pronamespace='public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
