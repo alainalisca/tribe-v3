@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
 import { isValidCronAuth } from '@/lib/auth/cron';
-import { fetchSessionFields, fetchUserProfileMaybe } from '@/lib/dal';
+import { fetchSessionFields, fetchUserProfileMaybe, checkExistingParticipation } from '@/lib/dal';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 
 function getResendClient() {
@@ -23,39 +24,71 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://tribe-v3.vercel.ap
 export async function POST(request: Request) {
   try {
     const resend = getResendClient();
+
     // AUTH: allow EITHER a server-to-server cron call (CRON_SECRET bearer — the
-    // post-session-followups cron) OR an authenticated user session
-    // (AttendanceTracker calls this client-side when an instructor marks
-    // attendance). The cron has no session cookie, so it must authenticate via
-    // the secret.
-    const supabase = await createClient();
-    if (!isValidCronAuth(request.headers.get('authorization'))) {
-      const {
-        data: { user: authUser },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !authUser) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-    }
+    // post-session-followups cron, a trusted caller) OR an authenticated user
+    // who is the session's creator/admin. The session client identifies the
+    // caller; all data reads + the send use service-role so they survive the
+    // users.email revoke (T-SEC5).
+    const sessionClient = await createClient();
+    const isCron = isValidCronAuth(request.headers.get('authorization'));
 
     const { sessionId, userId } = await request.json();
+    if (!sessionId || !userId) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
+    }
 
-    // Get session details
-    const sessionResult = await fetchSessionFields(supabase, sessionId, '*, creator:users!creator_id(name)');
+    const service = getServiceRoleClient();
+
+    // Load the session once: creator_id drives the ownership check below, and the
+    // same row feeds the email template.
+    const sessionResult = await fetchSessionFields(service, sessionId, '*, creator:users!creator_id(name)');
     const session = sessionResult.data as {
       id: string;
       sport: string;
       location: string;
       date: string;
+      creator_id: string;
       creator: { name: string } | null;
     } | null;
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
+    }
 
-    // Get user details including language preference
-    const userResult = await fetchUserProfileMaybe(supabase, userId, 'name, email, preferred_language');
+    // SESSION-PATH AUTHORIZATION — the cron is a trusted server caller and skips
+    // this. FAIL CLOSED: not logged in -> 401; not the session creator or an
+    // admin -> 403; recipient not a confirmed participant of this session -> 403.
+    // Nothing is sent until all three pass. Service-role bypasses RLS, so this
+    // check (not RLS) is the authorization backstop.
+    if (!isCron) {
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await sessionClient.auth.getUser();
+      if (authError || !authUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      let authorized = session.creator_id === authUser.id;
+      if (!authorized) {
+        const { data: isAdmin } = await sessionClient.rpc('is_app_admin');
+        authorized = isAdmin === true;
+      }
+      if (!authorized) {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      }
+
+      const membership = await checkExistingParticipation(service, sessionId, userId);
+      if (!membership.success || membership.data?.status !== 'confirmed') {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      }
+    }
+
+    // Recipient details (service-role — email survives the revoke).
+    const userResult = await fetchUserProfileMaybe(service, userId, 'name, email, preferred_language');
     const user = userResult.data as { name: string; email: string; preferred_language: string | null } | null;
 
-    if (!session || !user?.email) {
+    if (!user?.email) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
