@@ -458,4 +458,17 @@ select '118_revoke_users_email',
            and privilege_type = 'SELECT'
            and grantee in ('anon', 'authenticated')
        ) then 'applied' else 'MISSING' end
+union all
+select '119_join_session_enforce_policy_and_owner',
+       -- T-SEC1 Gate 1: join_session hardened (server-side policy + token +
+       -- p_user_id=auth.uid()). Applied once join_session has the 4-arg
+       -- (uuid,uuid,text,text) signature with p_invite_token.
+       case when exists (
+         select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname='public' and p.proname='join_session'
+           and pg_get_function_identity_arguments(p.oid) = 'uuid, uuid, text, text'
+       ) and exists (
+         select 1 from pg_proc where proname='join_session_as_guest'
+           and pronamespace='public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
