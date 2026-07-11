@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchInviteWithSession, fetchUsersByIds, insertParticipant } from '@/lib/dal';
+import { fetchInviteWithSession, fetchUsersByIds } from '@/lib/dal';
 import { joinSession } from '@/lib/sessions';
 import { getJoinErrorMessages } from '@/hooks/sessionActionTypes';
 import { useTranslations } from '@/lib/i18n/useTranslations';
@@ -115,25 +115,29 @@ export default function InvitePage() {
         return;
       }
 
-      // Add guest to athletes
-      const result = await insertParticipant(supabase, {
-        session_id: session.id,
-        user_id: null,
-        is_guest: true,
-        guest_name: guestData.name,
-        guest_phone: guestData.phone,
-        guest_email: guestData.email || null,
-        status: 'confirmed',
+      // T-SEC1: add the guest via the SECURITY DEFINER guest RPC, not a direct
+      // insert (Gate 3 removes the direct-insert RLS). The invite token is the
+      // credential — the RPC validates it (exists, matches this session,
+      // unexpired), derives status from join_policy, and enforces capacity
+      // server-side. Running as owner, it also fixes the challenge_participants
+      // recursion that 500s the current direct guest insert.
+      const { data: guestResult, error: guestError } = await supabase.rpc('join_session_as_guest', {
+        p_session_id: session.id,
+        p_invite_token: token,
+        p_guest_name: guestData.name,
+        p_guest_phone: guestData.phone,
+        p_guest_email: guestData.email || null,
       });
+      if (guestError) throw new Error(guestError.message);
+      const guestBody = typeof guestResult === 'string' ? JSON.parse(guestResult) : guestResult;
+      if (!guestBody?.success) {
+        showError(
+          guestBody?.error === 'Session is full' ? t('sessionFullMsg') : getErrorMessage(guestBody?.error, 'accept_invite', language)
+        );
+        return;
+      }
 
-      if (!result.success) throw new Error(result.error);
-
-      // No manual count bump: the 087 AFTER trigger
-      // (trg_sync_session_participant_count) recomputes
-      // sessions.current_participants from the confirmed rows on the
-      // insertParticipant write above. A hand-rolled +1 here would race
-      // that authoritative recompute (and read a possibly-stale cached
-      // value), so it is intentionally gone.
+      // sessions.current_participants is recomputed inside the RPC.
 
       showSuccess(t('confirmedSeeYou'));
 

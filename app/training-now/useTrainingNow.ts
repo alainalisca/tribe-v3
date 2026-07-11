@@ -7,7 +7,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
-import { insertParticipant, insertSession } from '@/lib/dal';
+import { insertSession } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
 export interface TrainingNowFormData {
@@ -120,12 +120,21 @@ export function useTrainingNow(language: 'en' | 'es') {
       if (!sessionResult.success || !sessionResult.data) throw new Error(sessionResult.error);
       const session = sessionResult.data;
 
-      const participantResult = await insertParticipant(supabase, {
-        session_id: session.id,
-        user_id: user.id,
-        status: 'confirmed',
+      // T-SEC1: join via the SECURITY DEFINER RPC, not a direct insert (Gate 3
+      // removes the direct-insert RLS). The creator auto-joins their own open
+      // session; the RPC allows self-join and requires p_user_id = auth.uid()
+      // (satisfied — user.id is the authenticated creator). Running as owner,
+      // it also sidesteps the challenge_participants recursion that 500s direct
+      // inserts today.
+      const { data: joinResult, error: joinError } = await supabase.rpc('join_session', {
+        p_session_id: session.id,
+        p_user_id: user.id,
+        p_status: 'confirmed',
+        p_invite_token: null,
       });
-      if (!participantResult.success) throw new Error(participantResult.error);
+      if (joinError) throw new Error(joinError.message);
+      const joinData = typeof joinResult === 'string' ? JSON.parse(joinResult) : joinResult;
+      if (!joinData?.success) throw new Error(joinData?.error || 'join_failed');
 
       // Fire-and-forget: don't block navigation waiting for notifications
       notifyNearbyUsers(

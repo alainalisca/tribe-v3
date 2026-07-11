@@ -166,6 +166,7 @@ describe('joinSession', () => {
         p_session_id: 'sess-1',
         p_user_id: 'user-1',
         p_status: 'confirmed',
+        p_invite_token: 'tok-valid',
       });
     });
 
@@ -244,6 +245,7 @@ describe('joinSession', () => {
         p_session_id: 'sess-1',
         p_user_id: 'user-1',
         p_status: 'pending',
+        p_invite_token: 'tok-valid',
       });
     });
 
@@ -280,6 +282,7 @@ describe('joinSession', () => {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
       p_status: 'confirmed',
+      p_invite_token: null,
     });
   });
 
@@ -303,6 +306,7 @@ describe('joinSession', () => {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
       p_status: 'pending',
+      p_invite_token: null,
     });
   });
 
@@ -328,6 +332,7 @@ describe('joinSession', () => {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
       p_status: 'pending',
+      p_invite_token: null,
     });
   });
 
@@ -352,6 +357,7 @@ describe('joinSession', () => {
       p_session_id: 'sess-1',
       p_user_id: 'user-1',
       p_status: 'confirmed',
+      p_invite_token: null,
     });
   });
 

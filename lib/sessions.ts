@@ -73,9 +73,11 @@ export async function joinSession({
     // gate closed. "Already used" is not a token state — tokens are
     // multi-use, and a repeat acceptance is caught by the already_joined
     // check above.
-    // FOLLOW-UP (T-INV1 Break 3): this gate is client-side only — the
-    // join_session RPC does not check join_policy, so a direct RPC call
-    // bypasses it. Server-side enforcement is tracked as a separate ticket.
+    // T-SEC1: the join_session RPC now enforces this server-side (validates the
+    // token against the session's join_policy), so a direct RPC call can no
+    // longer bypass it. This client check stays as a fast pre-check that returns
+    // friendly errors before the round-trip; the token is also passed to the RPC
+    // below, which is the authoritative gate.
     if (session.join_policy === 'invite_only') {
       if (!inviteToken) {
         return { success: false, error: 'invite_only' };
@@ -107,7 +109,11 @@ export async function joinSession({
     const { data: rpcResult, error: rpcError } = await supabase.rpc('join_session', {
       p_session_id: sessionId,
       p_user_id: userId,
+      // p_status is ignored by the RPC now (status is derived server-side from
+      // join_policy); kept for the rolling-deploy window. p_invite_token is the
+      // real addition — the RPC validates it server-side for invite_only.
       p_status: status,
+      p_invite_token: inviteToken ?? null,
     });
 
     if (rpcError) {
