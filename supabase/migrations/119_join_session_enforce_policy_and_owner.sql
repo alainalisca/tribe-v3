@@ -150,6 +150,11 @@ BEGIN
 END;
 $$;
 
+-- Supabase's ALTER DEFAULT PRIVILEGES grants EXECUTE to anon on new public
+-- functions, so revoke it explicitly — join_session is for authenticated joins
+-- only (it fails closed for a null auth.uid(), but anon should not hold the
+-- grant). The guest door, join_session_as_guest, intentionally keeps anon below.
+REVOKE EXECUTE ON FUNCTION public.join_session(uuid, uuid, text, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.join_session(uuid, uuid, text, text) TO authenticated;
 
 -- ---------------------------------------------------------------------------
