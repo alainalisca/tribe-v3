@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const {
     txt,
     profile,
+    profileError,
     stats,
     loading,
     showAllSports,
@@ -47,6 +48,38 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-theme-page">
         <LoadingSpinner className="flex items-center justify-center min-h-screen" />
+      </div>
+    );
+  }
+
+  // BUG-010: a failed profile load must NOT render as a blank "User" profile.
+  // Distinguish a real/transient failure (offer reload) from a genuinely
+  // missing row.
+  if (profileError) {
+    const es = language === 'es';
+    const isLoadFailed = profileError === 'load_failed';
+    return (
+      <div className="min-h-screen bg-theme-page flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-theme-primary font-semibold mb-2">
+            {isLoadFailed
+              ? es
+                ? 'No pudimos cargar tu perfil'
+                : "We couldn't load your profile"
+              : es
+                ? 'Perfil no encontrado'
+                : 'Profile not found'}
+          </p>
+          {isLoadFailed && (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 rounded-lg bg-tribe-green text-slate-900 font-bold text-sm"
+            >
+              {es ? 'Reintentar' : 'Retry'}
+            </button>
+          )}
+        </div>
       </div>
     );
   }

@@ -105,8 +105,11 @@ function CreateSessionPageInner() {
         return;
       }
       setUser(user);
+      // BUG-010: honor .success — treat a failed load as "unknown", not
+      // implicitly non-instructor. Display-only here (toggles instructor UI),
+      // no write, but we don't leave the discard-.success anti-pattern behind.
       const profileResult = await fetchUserProfile(supabase, user.id);
-      if (profileResult.data?.is_instructor) {
+      if (profileResult.success && profileResult.data?.is_instructor) {
         setIsInstructor(true);
       }
     });

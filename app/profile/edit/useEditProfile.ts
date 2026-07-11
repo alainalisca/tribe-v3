@@ -92,6 +92,11 @@ export function useEditProfile(language: 'en' | 'es') {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // BUG-010: true only once the profile row has SUCCESSFULLY loaded into the
+  // form. handleSave refuses to write while this is false, so a transient load
+  // failure (which leaves the form at its empty initial state) can never
+  // overwrite the real row with blanks.
+  const [loadedOk, setLoadedOk] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -140,11 +145,22 @@ export function useEditProfile(language: 'en' | 'es') {
         fetchUserProfile(supabase, authUser.id),
         fetchMyPrivateProfile(supabase, authUser.id),
       ]);
+      // BUG-010: gate on .success, not just truthy data. fetchUserProfile
+      // RETURNS its error (never throws), so the catch below won't fire on a
+      // failed load — we must inspect .success here. loadedOk stays false on a
+      // transient failure OR a missing row, which blocks handleSave from
+      // writing the empty form over the real profile.
+      if (!profileResult.success) {
+        setLoadedOk(false);
+        setError('load_failed');
+        return;
+      }
       const profileData = profileResult.data;
       // Emergency contact moved to user_private (T1-1).
       const priv = privateResult.success ? privateResult.data : null;
 
       if (profileData) {
+        setLoadedOk(true);
         setFormData({
           name: profileData.name || '',
           username: profileData.username || '',
@@ -313,6 +329,17 @@ export function useEditProfile(language: 'en' | 'es') {
 
   async function handleSave(overrides?: { specialties?: string[]; certifications?: string[] }) {
     if (!user) return;
+    // BUG-010: never write from a form that never successfully loaded. Without
+    // this, a transient load failure leaves the form empty and a Save would
+    // overwrite the real profile with blanks (name/bio/location/sports/photos).
+    if (!loadedOk) {
+      showError(
+        language === 'es'
+          ? 'No se pudo cargar tu perfil. Recarga la página antes de guardar.'
+          : 'Could not load your profile. Reload the page before saving.'
+      );
+      return;
+    }
 
     try {
       setSaving(true);
@@ -410,6 +437,7 @@ export function useEditProfile(language: 'en' | 'es') {
     user,
     loading,
     error,
+    loadedOk,
     saving,
     uploadingPhoto,
     uploadingBanner,
