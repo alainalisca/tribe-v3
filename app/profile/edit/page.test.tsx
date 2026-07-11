@@ -39,7 +39,11 @@ vi.mock('@/lib/supabase/client', () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
+          // fetchUserProfile uses .maybeSingle(); provide it so the load
+          // SUCCEEDS (success:true). Without it the DAL returned success:false
+          // and BUG-010's guard now correctly shows an error instead of a form.
           single: async () => ({ data: mockProfileData, error: null }),
+          maybeSingle: async () => ({ data: mockProfileData, error: null }),
         }),
       }),
       update: () => ({

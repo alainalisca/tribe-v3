@@ -21,6 +21,10 @@ export function useProfile(language: 'en' | 'es') {
 
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  // BUG-010: distinguish a genuine empty profile ('not_found') from a real/
+  // transient load failure ('load_failed'). Previously a failed fetch was
+  // rendered as a blank "User" profile with no error.
+  const [profileError, setProfileError] = useState<'not_found' | 'load_failed' | null>(null);
   const [stats, setStats] = useState({
     sessionsCreated: 0,
     sessionsJoined: 0,
@@ -80,7 +84,17 @@ export function useProfile(language: 'en' | 'es') {
       setUser(authUser);
 
       const profileResult = await fetchUserProfile(supabase, authUser.id);
-      setProfile(profileResult.data ?? null);
+      // BUG-010: honor .success. fetchUserProfile returns success=false with
+      // error 'user_not_found' for a genuinely missing row, vs a message for a
+      // real/transient failure — surface them differently instead of showing a
+      // blank profile.
+      if (profileResult.success) {
+        setProfile(profileResult.data ?? null);
+        setProfileError(null);
+      } else {
+        setProfile(null);
+        setProfileError(profileResult.error === 'user_not_found' ? 'not_found' : 'load_failed');
+      }
 
       const createdResult = await fetchSessionsByCreatorCount(supabase, authUser.id);
       const created = createdResult.success ? (createdResult.data ?? 0) : 0;
@@ -222,6 +236,7 @@ export function useProfile(language: 'en' | 'es') {
     txt,
     user,
     profile,
+    profileError,
     stats,
     loading,
     showAllSports,

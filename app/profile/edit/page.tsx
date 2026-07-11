@@ -42,6 +42,7 @@ export default function EditProfilePage() {
     tr,
     loading,
     error,
+    loadedOk,
     saving,
     uploadingPhoto,
     uploadingBanner,
@@ -121,7 +122,9 @@ export default function EditProfilePage() {
           </div>
           <Button
             onClick={handleSaveWithFlush}
-            disabled={saving}
+            // BUG-010: disabled until the profile has successfully loaded, so a
+            // blank form from a failed load never looks saveable.
+            disabled={saving || !loadedOk}
             className="flex items-center gap-2 px-4 py-2 font-semibold"
           >
             <Save className="w-4 h-4" />

@@ -174,6 +174,10 @@ export default function InstructorOnboardingPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerUseUrl, setBannerUseUrl] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  // BUG-010: true only once the profile row has SUCCESSFULLY loaded. handleFinish
+  // refuses to write while false, so a transient load failure (empty form) can't
+  // overwrite an existing instructor's name/bio/specialties/photos with blanks.
+  const [loadedOk, setLoadedOk] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Form state
@@ -211,6 +215,12 @@ export default function InstructorOnboardingPage() {
       setAvatarUrl(user.user_metadata?.avatar_url || null);
 
       const profileResult = await fetchUserProfile(supabase, user.id);
+      // BUG-010: gate the save on a successful load. fetchUserProfile returns
+      // success=false for BOTH a transient failure and a missing row (never
+      // throws), so inspect .success — the catch below won't catch a returned
+      // error. A signed-up user always has a row, so a new instructor still
+      // gets loadedOk=true and can finish; only a failed load blocks the write.
+      setLoadedOk(profileResult.success);
       if (profileResult.data) {
         const p = profileResult.data;
         setForm({
@@ -333,6 +343,17 @@ export default function InstructorOnboardingPage() {
 
   async function handleFinish() {
     if (!userId || saving) return;
+    // BUG-010: never write from a form that never successfully loaded, or a
+    // transient load failure would overwrite the real instructor profile with
+    // the empty initial form.
+    if (!loadedOk) {
+      showError(
+        language === 'es'
+          ? 'No se pudo cargar tu perfil. Recarga la página antes de continuar.'
+          : 'Could not load your profile. Reload the page before continuing.'
+      );
+      return;
+    }
     setSaving(true);
 
     try {
@@ -864,7 +885,10 @@ export default function InstructorOnboardingPage() {
               ) : (
                 <button
                   onClick={handleFinish}
-                  disabled={saving}
+                  // BUG-010: disabled until the profile loaded, so a blank form
+                  // from a failed load never looks finishable. (The secondary
+                  // link below is guarded inside handleFinish.)
+                  disabled={saving || !loadedOk}
                   className="flex-1 py-3 rounded-xl font-bold text-sm bg-tribe-green text-slate-900 hover:bg-tribe-green flex items-center justify-center gap-2"
                 >
                   {saving ? (
