@@ -447,4 +447,15 @@ select '117_get_session_attendance',
          where proname = 'get_session_attendance'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '118_revoke_users_email',
+       -- T-SEC5 final: SELECT on users.email revoked from anon/authenticated.
+       -- Applied once email is no longer granted to either role.
+       case when not exists (
+         select 1 from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'users'
+           and column_name = 'email'
+           and privilege_type = 'SELECT'
+           and grantee in ('anon', 'authenticated')
+       ) then 'applied' else 'MISSING' end
 order by migration;
