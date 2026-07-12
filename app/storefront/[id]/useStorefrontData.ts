@@ -282,11 +282,16 @@ export function useStorefrontData(instructorId: string) {
         if (postsResult.data) setPosts(postsResult.data);
         setProductCount(productsResult.error ? null : (productsResult.count ?? 0));
 
-        setFollowState({
-          isFollowing: false,
+        // Follow-count refresh only. `isFollowing` is owned by the viewer
+        // follow-state effect below; clobbering it to false here was a race —
+        // a re-fetch (e.g. on a language change) reset the button to "Follow"
+        // for an already-followed instructor, and the next click hit the
+        // (follower_id, following_id) unique constraint and failed. Preserve it.
+        setFollowState((prev) => ({
+          ...prev,
           followerCount: followersResult.count || 0,
           followingCount: followingResult.count || 0,
-        });
+        }));
 
         setLoading(false);
       } catch (err) {
