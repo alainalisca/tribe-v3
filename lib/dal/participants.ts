@@ -8,21 +8,14 @@ import type {
   ParticipationWithSession,
   PendingParticipantWithUser,
 } from './types';
-import type { SessionParticipant, SessionParticipantInsert } from '@/lib/database.types';
+import type { SessionParticipant } from '@/lib/database.types';
 
-export async function insertParticipant(
-  supabase: SupabaseClient,
-  data: SessionParticipantInsert
-): Promise<DalResult<null>> {
-  try {
-    const { error } = await supabase.from('session_participants').insert(data);
-    if (error) return { success: false, error: error.message };
-    return { success: true };
-  } catch (error) {
-    logError(error, { action: 'insertParticipant' });
-    return { success: false, error: 'Failed to insert participant' };
-  }
-}
+// T-SEC1 Gate 3: insertParticipant / insertParticipantReturning were deleted here.
+// After every join path moved onto the SECURITY DEFINER RPCs (join_session,
+// join_session_as_guest, accept_waitlist_offer), these direct-insert helpers had
+// zero callers, and migration 121 removes the direct-insert RLS that made them
+// work at all. They are gone so nothing can accidentally reintroduce a direct
+// session_participants insert that RLS now denies.
 
 export async function updateParticipantStatus(
   supabase: SupabaseClient,
@@ -252,21 +245,6 @@ export async function deleteParticipantBySessionAndUser(
     return { success: true };
   } catch (error) {
     logError(error, { action: 'deleteParticipantBySessionAndUser' });
-    return { success: false, error: 'Failed' };
-  }
-}
-
-/** Insert a participant and return the created row. */
-export async function insertParticipantReturning(
-  supabase: SupabaseClient,
-  data: SessionParticipantInsert
-): Promise<DalResult<SessionParticipant>> {
-  try {
-    const { data: row, error } = await supabase.from('session_participants').insert(data).select().single();
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: row };
-  } catch (error) {
-    logError(error, { action: 'insertParticipantReturning' });
     return { success: false, error: 'Failed' };
   }
 }
