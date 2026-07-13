@@ -35,6 +35,10 @@ vi.mock('@/lib/supabase/client', () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'current-user-id' } } }),
     },
+    // useMessages subscribes to chat_messages for live list updates; stub the
+    // realtime channel API so the subscription effect doesn't throw.
+    channel: () => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn().mockReturnThis() }),
+    removeChannel: vi.fn(),
   }),
 }));
 
