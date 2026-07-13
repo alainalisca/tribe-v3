@@ -507,4 +507,13 @@ select '123_conversation_participant_join_guard',
          select 1 from pg_trigger
          where tgname = 'trg_guard_conversation_participant_insert'
        ) then 'applied' else 'MISSING' end
+union all
+select '124_get_or_create_direct_conversation_rpc',
+       -- Permanent DM fix Gate 1: the atomic, self-inclusion-enforcing DM RPC.
+       -- Applied once the function exists.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'get_or_create_direct_conversation'
+           and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
