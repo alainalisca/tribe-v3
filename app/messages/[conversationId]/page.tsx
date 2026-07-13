@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -19,11 +19,9 @@ import {
 } from '@/lib/dal/conversations';
 import type { User } from '@supabase/supabase-js';
 
-interface PageProps {
-  params: {
-    conversationId: string;
-  };
-}
+// Guard so a bad/missing path param never becomes an `eq.undefined` query —
+// it must surface as a real "not found" error instead (see the loaders below).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface ConversationInfo {
   otherUserName: string;
@@ -39,11 +37,16 @@ interface ChatMessagePayload {
   is_system?: boolean;
 }
 
-export default function ConversationPage({ params }: PageProps) {
+export default function ConversationPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language } = useLanguage();
-  const conversationId = params.conversationId;
+  // Next 16: `params` is a Promise, so reading it as a synchronous prop yielded
+  // `undefined` — which became conversation_id=eq.undefined and broke every DM
+  // thread (the "DMs don't exist" bug). Read the path segment via useParams(),
+  // matching session/[id], storefront/[id], invite/[token].
+  const params = useParams();
+  const conversationId = typeof params?.conversationId === 'string' ? params.conversationId : '';
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -58,7 +61,7 @@ export default function ConversationPage({ params }: PageProps) {
 
   // Subscribe to new messages in this conversation
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || !conversationId) return;
 
     const channel = supabase
       .channel(`dm-${conversationId}`)
@@ -165,6 +168,14 @@ export default function ConversationPage({ params }: PageProps) {
   }
 
   async function loadConversationData(userId: string) {
+    // Never fire a query with a missing/invalid id (would send eq.undefined and
+    // surface as an opaque 22P02). Fail loudly with a real error instead.
+    if (!conversationId || !UUID_RE.test(conversationId)) {
+      logError(new Error('Missing/invalid conversationId in path'), { action: 'loadConversationData', conversationId });
+      showError(language === 'es' ? 'Conversación no encontrada' : 'Conversation not found');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
 
@@ -198,6 +209,10 @@ export default function ConversationPage({ params }: PageProps) {
 
   async function handleSendMessage(text: string): Promise<boolean> {
     if (!currentUser) return false;
+    if (!conversationId || !UUID_RE.test(conversationId)) {
+      showError(language === 'es' ? 'Conversación no encontrada' : 'Conversation not found');
+      return false;
+    }
 
     try {
       const result = await sendDirectMessage(supabase, conversationId, currentUser.id, text);
