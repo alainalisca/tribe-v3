@@ -499,4 +499,12 @@ select '122_notifications_realtime',
          select 1 from pg_publication_tables
          where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
        ) then 'applied' else 'MISSING' end
+union all
+select '123_conversation_participant_join_guard',
+       -- Interim DM-vuln mitigation: BEFORE INSERT trigger blocks joining a
+       -- conversation you are not part of. Applied once the trigger exists.
+       case when exists (
+         select 1 from pg_trigger
+         where tgname = 'trg_guard_conversation_participant_insert'
+       ) then 'applied' else 'MISSING' end
 order by migration;
