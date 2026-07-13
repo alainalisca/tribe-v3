@@ -481,4 +481,13 @@ select '120_guest_tokenless_open_and_waitlist_accept',
          select 1 from pg_proc where proname='accept_waitlist_offer'
            and pronamespace='public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '121_gate3_drop_session_participants_insert_rls',
+       -- T-SEC1 Gate 3: the four permissive INSERT policies on
+       -- session_participants are dropped; direct inserts now default-deny.
+       -- Applied once zero INSERT policies remain on the table.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname='public' and tablename='session_participants' and cmd='INSERT'
+       ) then 'applied' else 'MISSING' end
 order by migration;
