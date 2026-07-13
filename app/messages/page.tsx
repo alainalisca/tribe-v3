@@ -16,7 +16,10 @@ type Tab = 'sessions' | 'direct';
 
 function MessagesContent() {
   const searchParams = useSearchParams();
-  const targetUserId = searchParams.get('user');
+  // Accept both ?user= and ?to= — several entry points (instructor discover,
+  // leads, storefront package) link with ?to=, which was silently ignored, so
+  // those never opened a DM. Reading both makes the Gate 2 swap cover every path.
+  const targetUserId = searchParams.get('user') ?? searchParams.get('to');
   const [activeTab, setActiveTab] = useState<Tab>(targetUserId ? 'direct' : 'sessions');
   const { t, language, conversations, directConversations, loading, error, formatTime, getTranslatedSport, retry } =
     useMessages({ targetUserId });
