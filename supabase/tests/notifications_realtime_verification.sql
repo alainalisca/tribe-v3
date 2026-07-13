@@ -25,6 +25,7 @@ DECLARE
   v_relid oid := 'public.notifications'::regclass;
   v_bad int;
   v_sel int;
+  v_ri text;
 BEGIN
   -- 1. notifications is now in the supabase_realtime publication
   check_name := '1. notifications in supabase_realtime publication';
@@ -57,11 +58,11 @@ BEGIN
                  ELSE 'FAIL (' || v_bad || ' of ' || v_sel || ' SELECT policies not recipient-scoped)' END;
   RETURN NEXT;
 
-  -- 4. REPLICA IDENTITY FULL (relreplident = 'f')
+  -- 4. REPLICA IDENTITY FULL (relreplident = 'f'). Cast the internal "char"
+  -- column to text so string concatenation has an unambiguous operator.
+  SELECT relreplident::text INTO v_ri FROM pg_class WHERE oid = v_relid;
   check_name := '4. notifications REPLICA IDENTITY = FULL';
-  result := CASE WHEN (SELECT relreplident FROM pg_class WHERE oid = v_relid) = 'f'
-                 THEN 'PASS'
-                 ELSE 'FAIL (relreplident=' || (SELECT relreplident FROM pg_class WHERE oid = v_relid) || ')' END;
+  result := CASE WHEN v_ri = 'f' THEN 'PASS' ELSE 'FAIL (relreplident=' || v_ri || ')' END;
   RETURN NEXT;
 
   RETURN;
