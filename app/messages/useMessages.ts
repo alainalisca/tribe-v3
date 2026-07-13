@@ -48,7 +48,9 @@ interface UseMessagesOptions {
 
 export function useMessages({ targetUserId }: UseMessagesOptions = {}) {
   const router = useRouter();
-  const supabase = createClient();
+  // Stable client instance (createClient() returns a new client per call) so the
+  // realtime subscription below doesn't churn on every render.
+  const [supabase] = useState(() => createClient());
   const { t, language } = useLanguage();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -68,6 +70,25 @@ export function useMessages({ targetUserId }: UseMessagesOptions = {}) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: run when both are ready
   }, [targetUserId, currentUser]);
+
+  // Live-update the list off chat_messages inserts. chat_messages IS in the
+  // realtime publication; conversations is not (and its updated_at doesn't move),
+  // so we drive the list from message activity. RLS scopes delivery to the
+  // current user's conversations/sessions, so reloading here refreshes the
+  // affected thread's preview / timestamp / unread without a page refresh.
+  useEffect(() => {
+    if (!currentUser) return;
+    const channel = supabase
+      .channel(`messages-list-${currentUser.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+        loadConversations(currentUser.id);
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-subscribe only when the user or client changes
+  }, [currentUser, supabase]);
 
   async function openDirectMessage(userId: string, targetId: string) {
     // Do nothing if trying to message yourself
