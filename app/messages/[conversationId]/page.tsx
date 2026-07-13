@@ -39,7 +39,12 @@ interface ChatMessagePayload {
 
 export default function ConversationPage() {
   const router = useRouter();
-  const supabase = createClient();
+  // Stable client instance: createClient() returns a NEW client per call, so a
+  // bare `const supabase = createClient()` here changed identity every render and
+  // (being in the realtime effect's deps) tore down + re-created the subscription
+  // on every render — it never stabilized, so live messages never arrived. Memoize
+  // it once, matching the pattern the working NotificationBell relies on.
+  const [supabase] = useState(() => createClient());
   const { language } = useLanguage();
   // Next 16: `params` is a Promise, so reading it as a synchronous prop yielded
   // `undefined` — which became conversation_id=eq.undefined and broke every DM
