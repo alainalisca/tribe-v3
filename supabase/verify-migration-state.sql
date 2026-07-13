@@ -490,4 +490,13 @@ select '121_gate3_drop_session_participants_insert_rls',
          select 1 from pg_policies
          where schemaname='public' and tablename='session_participants' and cmd='INSERT'
        ) then 'applied' else 'MISSING' end
+union all
+select '122_notifications_realtime',
+       -- QA realtime fix: notifications added to the supabase_realtime
+       -- publication (+ REPLICA IDENTITY FULL). Applied once the table is
+       -- a member of the publication.
+       case when exists (
+         select 1 from pg_publication_tables
+         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+       ) then 'applied' else 'MISSING' end
 order by migration;
