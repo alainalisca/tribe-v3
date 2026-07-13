@@ -516,4 +516,14 @@ select '124_get_or_create_direct_conversation_rpc',
          where proname = 'get_or_create_direct_conversation'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '125_consolidate_chat_messages_rls',
+       -- chat_messages RLS consolidated to one policy per action (session + DM
+       -- escape hatch). Applied once the four named policies exist.
+       case when (
+         select count(*) from pg_policies
+         where schemaname='public' and tablename='chat_messages'
+           and policyname in ('chat_messages_select','chat_messages_insert',
+                              'chat_messages_update','chat_messages_delete')
+       ) = 4 then 'applied' else 'MISSING' end
 order by migration;
