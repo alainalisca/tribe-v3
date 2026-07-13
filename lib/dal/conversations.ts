@@ -40,9 +40,20 @@ export interface DirectMessage {
 }
 
 /**
- * Get or create a direct conversation between two users.
- * If it exists, returns the conversation_id.
- * If not, creates it with both users as participants and returns the id.
+ * Get or create a 1:1 direct conversation between the caller and a target user.
+ * Returns the conversation_id.
+ *
+ * T-DM Gate 2: delegates to the SECURITY DEFINER RPC get_or_create_direct_conversation
+ * (migration 124) instead of a client-side create + two-row insert. The RPC:
+ *   - creates the conversation + both participant rows ATOMICALLY (no orphan/
+ *     duplicate rows on partial failure),
+ *   - enforces that the caller (auth.uid()) is ALWAYS one of the two participants,
+ *   - dedupes by exact-2-participants {caller, target} — fixing the thread-hijack
+ *     privacy bug in the old .in().in() intersection (a DM to a different person
+ *     could return an existing thread with someone else).
+ * userId1 is the authenticated caller; the RPC derives it from auth.uid(), so only
+ * the target is passed. userId1 is kept in the signature for the existing callers
+ * and for log context.
  */
 export async function getOrCreateDirectConversation(
   supabase: SupabaseClient,
@@ -50,55 +61,12 @@ export async function getOrCreateDirectConversation(
   userId2: string
 ): Promise<DalResult<string>> {
   try {
-    // T3 (perf audit H-4): find an existing direct conversation in TWO queries
-    // instead of one-query-per-conversation. (1) userId1's direct
-    // conversations, (2) which of those userId2 is also in — the intersection
-    // is the existing 1:1 thread (direct conversations have exactly 2 members).
-    const { data: myDirect, error: queryError } = await supabase
-      .from('conversation_participants')
-      .select('conversation_id, conversations!inner(type)')
-      .eq('user_id', userId1)
-      .eq('conversations.type', 'direct');
-
-    if (queryError) return { success: false, error: queryError.message };
-
-    const myDirectIds = (myDirect || []).map((r) => r.conversation_id);
-    if (myDirectIds.length > 0) {
-      const { data: shared, error: sharedError } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id')
-        .eq('user_id', userId2)
-        .in('conversation_id', myDirectIds)
-        .limit(1);
-
-      if (sharedError) return { success: false, error: sharedError.message };
-      if (shared && shared.length > 0) {
-        return { success: true, data: shared[0].conversation_id };
-      }
-    }
-
-    // Create new conversation
-    const { data: newConv, error: createError } = await supabase
-      .from('conversations')
-      .insert({ type: 'direct' })
-      .select('id')
-      .single();
-
-    if (createError || !newConv) {
-      return { success: false, error: createError?.message || 'Failed to create conversation' };
-    }
-
-    // Add both users as participants
-    const { error: participantError } = await supabase.from('conversation_participants').insert([
-      { conversation_id: newConv.id, user_id: userId1, last_read_at: new Date().toISOString() },
-      { conversation_id: newConv.id, user_id: userId2, last_read_at: new Date().toISOString() },
-    ]);
-
-    if (participantError) {
-      return { success: false, error: participantError.message };
-    }
-
-    return { success: true, data: newConv.id };
+    const { data, error } = await supabase.rpc('get_or_create_direct_conversation', {
+      p_target_user_id: userId2,
+    });
+    if (error) return { success: false, error: error.message };
+    if (!data) return { success: false, error: 'Failed to get or create conversation' };
+    return { success: true, data: data as string };
   } catch (error) {
     logError(error, { action: 'getOrCreateDirectConversation', userId1, userId2 });
     return { success: false, error: 'Failed to get or create conversation' };

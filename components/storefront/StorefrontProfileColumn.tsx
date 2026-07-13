@@ -1,6 +1,7 @@
 'use client';
 
-import { Share2, CalendarCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Share2, CalendarCheck, MessageCircle } from 'lucide-react';
 import { getInstructorShareUrl, copyToClipboard } from '@/lib/share';
 import { showSuccess } from '@/lib/toast';
 import CredentialsBadges from '@/components/instructor/CredentialsBadges';
@@ -68,6 +69,19 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
         language={lang}
       />
       <AvailabilityPreview instructorId={instructorId} language={lang} />
+      {isAthleteViewer && (
+        // T-DM Gate 2: instructors are publicly soliciting business, so an athlete
+        // can message them directly from a cold storefront — no connection needed.
+        // Opens /messages?user=, which creates the DM via the get_or_create_direct_
+        // conversation RPC. "Estoy Interesado" below stays as a separate lead flow.
+        <Link
+          href={`/messages?user=${instructorId}`}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm bg-tribe-green text-slate-900 hover:opacity-90 transition-all"
+        >
+          <MessageCircle className="w-4 h-4" aria-hidden="true" />
+          {lang === 'es' ? 'Enviar mensaje' : 'Message'}
+        </Link>
+      )}
       {isAthleteViewer && (
         <InterestButton
           athleteId={currentUserId!}
