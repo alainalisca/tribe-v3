@@ -40,14 +40,34 @@ export async function followUser(
       follower_id: followerId,
       following_id: followingId,
     };
-    const { data: inserted, error } = await supabase.from('user_follows').insert(data).select();
+    // Idempotent: a repeat follow must not fail on the (follower_id,
+    // following_id) unique constraint (23505). ignoreDuplicates turns a
+    // re-follow into a no-op insert (0 rows) instead of an error — the root of
+    // the "followed once, then follow stopped working" bug.
+    const { data: inserted, error } = await supabase
+      .from('user_follows')
+      .upsert(data, { onConflict: 'follower_id,following_id', ignoreDuplicates: true })
+      .select();
     if (error) return { success: false, error: error.message };
-    // RLS-blocked insert returns no error but 0 rows — treat that as failure.
-    if (!inserted || inserted.length === 0) {
-      return { success: false, error: 'Follow was blocked — no row written' };
+
+    const newlyFollowed = !!inserted && inserted.length > 0;
+    if (!newlyFollowed) {
+      // 0 rows is ambiguous: either already following (idempotent success) or an
+      // RLS-blocked write. Disambiguate with an existence check so a real RLS
+      // block still surfaces as a failure (BUG-215), not a silent success.
+      const { count } = await supabase
+        .from('user_follows')
+        .select('follower_id', { count: 'exact', head: true })
+        .eq('follower_id', followerId)
+        .eq('following_id', followingId);
+      if ((count ?? 0) === 0) {
+        return { success: false, error: 'Follow was blocked — no row written' };
+      }
+      // Already following — succeed without re-notifying.
+      return { success: true, data: null };
     }
 
-    // Create notification for the followed user
+    // Notify the followed user only on a NEW follow (no duplicate spam on retries).
     if (notificationMessage) {
       await createNotification(supabase, {
         recipient_id: followingId,
@@ -146,13 +166,16 @@ export async function isFollowing(
   followingId: string
 ): Promise<DalResult<boolean>> {
   try {
-    const { data, error } = await supabase
+    // head:true returns NO rows (data is always null); read the exact `count`.
+    // The old `(data?.length ?? 0) > 0` was always false, so isFollowing()
+    // always reported "not following" regardless of reality.
+    const { count, error } = await supabase
       .from('user_follows')
       .select('id', { count: 'exact', head: true })
       .eq('follower_id', followerId)
       .eq('following_id', followingId);
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data?.length ?? 0) > 0 };
+    return { success: true, data: (count ?? 0) > 0 };
   } catch (error) {
     logError(error, { action: 'isFollowing', followerId, followingId });
     return { success: false, error: 'Failed to check follow status' };
@@ -562,13 +585,16 @@ export async function hasLikedPost(
   userId: string
 ): Promise<DalResult<boolean>> {
   try {
-    const { data, error } = await supabase
+    // head:true returns NO rows (data is always null); read the exact `count`.
+    // The old `(data?.length ?? 0) > 0` was always false, so hasLikedPost()
+    // always reported "not liked" regardless of reality.
+    const { count, error } = await supabase
       .from('post_likes')
       .select('id', { count: 'exact', head: true })
       .eq('post_id', postId)
       .eq('user_id', userId);
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data?.length ?? 0) > 0 };
+    return { success: true, data: (count ?? 0) > 0 };
   } catch (error) {
     logError(error, { action: 'hasLikedPost', postId, userId });
     return { success: false, error: 'Failed to check like status' };

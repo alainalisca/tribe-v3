@@ -25,56 +25,76 @@ function makeSupabaseMock(overrides: { data?: Record<string, unknown> | null; er
   };
 }
 
-/** Build a mock for insert().select() or delete().eq().eq().select() chains */
+/**
+ * Build a mock for the follow/unfollow chains.
+ * followUser now: .upsert(data, opts).select()  then (on 0 rows) an existence
+ * check .select('follower_id', {count,head}).eq().eq() -> { count }.
+ * unfollowUser: .delete().eq().eq().select().
+ */
 function makeFollowMock({
-  insertData,
-  insertError,
+  upsertData,
+  upsertError,
+  existsCount,
   deleteData,
   deleteError,
 }: {
-  insertData?: unknown[] | null;
-  insertError?: { message: string } | null;
+  upsertData?: unknown[] | null;
+  upsertError?: { message: string } | null;
+  existsCount?: number | null;
   deleteData?: unknown[] | null;
   deleteError?: { message: string } | null;
 }) {
+  // upsert chain: .upsert().select()
+  const upsertSelect = vi.fn().mockResolvedValue({ data: upsertData ?? null, error: upsertError ?? null });
+  const upsertFn = vi.fn().mockReturnValue({ select: upsertSelect });
+
+  // existence-check chain: .select('follower_id', {count,head}).eq().eq() -> { count }
+  const existsEq2 = vi.fn().mockResolvedValue({ count: existsCount ?? null, error: null });
+  const existsEq1 = vi.fn().mockReturnValue({ eq: existsEq2 });
+  const selectForCount = vi.fn().mockReturnValue({ eq: existsEq1 });
+
   // delete chain: .delete().eq().eq().select()
   const deletedSelect = vi.fn().mockResolvedValue({ data: deleteData ?? null, error: deleteError ?? null });
   const deleteEq2 = vi.fn().mockReturnValue({ select: deletedSelect });
   const deleteEq1 = vi.fn().mockReturnValue({ eq: deleteEq2 });
   const deleteFn = vi.fn().mockReturnValue({ eq: deleteEq1 });
 
-  // insert chain: .insert().select()
-  const insertSelect = vi.fn().mockResolvedValue({ data: insertData ?? null, error: insertError ?? null });
-  const insertFn = vi.fn().mockReturnValue({ select: insertSelect });
-
-  const from = vi.fn().mockReturnValue({ insert: insertFn, delete: deleteFn });
-  return { from, insertFn, deleteFn } as unknown as SupabaseClient & { from: typeof from };
+  const from = vi.fn().mockReturnValue({ upsert: upsertFn, select: selectForCount, delete: deleteFn });
+  return { from, upsertFn, deleteFn } as unknown as SupabaseClient & { from: typeof from };
 }
 
 // ─── BUG-215: followUser / unfollowUser 0-row detection ──────────────────────
 
 describe('followUser', () => {
-  it('returns success when insert writes ≥1 row', async () => {
-    const mock = makeFollowMock({ insertData: [{ follower_id: 'u1', following_id: 'u2' }] });
+  it('returns success when upsert writes ≥1 row (new follow)', async () => {
+    const mock = makeFollowMock({ upsertData: [{ follower_id: 'u1', following_id: 'u2' }] });
     const result = await followUser(mock as unknown as SupabaseClient, 'u1', 'u2');
     expect(result).toEqual({ success: true, data: null });
   });
 
-  it('returns failure when insert is RLS-blocked (0 rows, no error)', async () => {
-    const mock = makeFollowMock({ insertData: [] });
+  it('is idempotent: 0 rows but the follow already exists -> success (no 23505)', async () => {
+    // ignoreDuplicates makes a re-follow a no-op insert (0 rows); the existence
+    // check finds the row, so it succeeds instead of failing on the unique key.
+    const mock = makeFollowMock({ upsertData: [], existsCount: 1 });
+    const result = await followUser(mock as unknown as SupabaseClient, 'u1', 'u2');
+    expect(result).toEqual({ success: true, data: null });
+  });
+
+  it('returns failure when RLS-blocked (0 rows AND row does not exist)', async () => {
+    const mock = makeFollowMock({ upsertData: [], existsCount: 0 });
     const result = await followUser(mock as unknown as SupabaseClient, 'u1', 'u2');
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/blocked/i);
   });
 
-  it('returns failure when insert returns null data (RLS-blocked edge case)', async () => {
-    const mock = makeFollowMock({ insertData: null });
+  it('returns failure when null data and no existing row (RLS-blocked edge case)', async () => {
+    const mock = makeFollowMock({ upsertData: null, existsCount: 0 });
     const result = await followUser(mock as unknown as SupabaseClient, 'u1', 'u2');
     expect(result.success).toBe(false);
   });
 
   it('returns failure when supabase returns an error', async () => {
-    const mock = makeFollowMock({ insertError: { message: 'unique constraint' } });
+    const mock = makeFollowMock({ upsertError: { message: 'unique constraint' } });
     const result = await followUser(mock as unknown as SupabaseClient, 'u1', 'u2');
     expect(result).toEqual({ success: false, error: 'unique constraint' });
   });
