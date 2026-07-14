@@ -575,4 +575,18 @@ select '130_rls_h3_gate3_column_level_grants',
        -- longer holds SELECT on guest_phone.
        case when not has_column_privilege('authenticated','public.session_participants','guest_phone','SELECT')
             then 'applied' else 'MISSING' end
+union all
+select '131_rls_h2_gate1_invite_token_backfill_and_rpcs',
+       -- RLS-H2 Gate 1: invite_tokens backfill + validate_invite_token /
+       -- create_session_invite RPCs. Applied once both functions exist.
+       case when (
+         select count(*) from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname='public' and p.proname in ('validate_invite_token','create_session_invite')
+       ) = 2 then 'applied' else 'MISSING' end
+union all
+select '132_rls_h2_gate2_invite_notification_rpc',
+       -- RLS-H2 Gate 2: caller-scoped notification-resolution RPC. Applied once it exists.
+       case when (select to_regprocedure('public.get_invite_token_for_notification(uuid)')) is not null
+            then 'applied' else 'MISSING' end
 order by migration;

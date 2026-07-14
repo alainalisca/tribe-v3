@@ -8,7 +8,6 @@ import { ArrowLeft, Bell, Calendar, MessageCircle, Users, Star, Gift, Zap, Check
 import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
-import { fetchLatestInviteTokenForSession } from '@/lib/dal';
 import { useNotifications } from './useNotifications';
 import type { NotificationWithActor } from '@/lib/dal/notifications';
 
@@ -72,16 +71,15 @@ export default function NotificationsPage() {
     // resolve the inviter's latest unexpired token for this session; fall back
     // to the session page if none is left.
     if (notification.type === 'session_invite' && notification.entity_type === 'session' && notification.entity_id) {
-      if (notification.actor_id) {
-        const result = await fetchLatestInviteTokenForSession(
-          createClient(),
-          notification.entity_id,
-          notification.actor_id
-        );
-        if (result.success && result.data?.token) {
-          router.push(`/invite/${result.data.token}`);
-          return;
-        }
+      // RLS-H2: resolve the token via the caller-scoped definer RPC (no raw
+      // invite_tokens read). It returns the token only because THIS caller holds a
+      // session_invite notification for the session; token stays in one place.
+      const { data: token } = await createClient().rpc('get_invite_token_for_notification', {
+        p_session_id: notification.entity_id,
+      });
+      if (token) {
+        router.push(`/invite/${token}`);
+        return;
       }
       router.push(`/session/${notification.entity_id}`);
       return;

@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { fetchSessionFields, checkExistingParticipation, fetchInviteTokenForJoin } from '@/lib/dal';
+import { fetchSessionFields, checkExistingParticipation } from '@/lib/dal';
 
 interface JoinSessionParams {
   supabase: SupabaseClient;
@@ -82,12 +82,23 @@ export async function joinSession({
       if (!inviteToken) {
         return { success: false, error: 'invite_only' };
       }
-      const inviteResult = await fetchInviteTokenForJoin(supabase, inviteToken);
-      if (!inviteResult.success || !inviteResult.data || inviteResult.data.session_id !== sessionId) {
-        return { success: false, error: 'invite_invalid' };
+      // RLS-H2: validate via the definer RPC (no raw invite_tokens read). The RPC
+      // checks existence + expiry as owner; join_session server-side is still the
+      // authoritative gate (this is a fast, friendly pre-check).
+      const { data: inviteRaw, error: inviteError } = await supabase.rpc('validate_invite_token', {
+        p_token: inviteToken,
+      });
+      if (inviteError) return { success: false, error: 'invite_invalid' };
+      const invite = (typeof inviteRaw === 'string' ? JSON.parse(inviteRaw) : inviteRaw) as {
+        valid: boolean;
+        reason?: string;
+        session_id?: string;
+      } | null;
+      if (!invite?.valid) {
+        return { success: false, error: invite?.reason === 'expired' ? 'invite_expired' : 'invite_invalid' };
       }
-      if (inviteResult.data.expires_at && new Date(inviteResult.data.expires_at) < new Date()) {
-        return { success: false, error: 'invite_expired' };
+      if (invite.session_id !== sessionId) {
+        return { success: false, error: 'invite_invalid' };
       }
     }
 

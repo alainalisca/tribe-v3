@@ -10,7 +10,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchInviteWithSession, fetchUsersByIds } from '@/lib/dal';
+import { fetchUsersByIds } from '@/lib/dal';
 import { joinSession } from '@/lib/sessions';
 import { getJoinErrorMessages } from '@/hooks/sessionActionTypes';
 import { useTranslations } from '@/lib/i18n/useTranslations';
@@ -72,22 +72,34 @@ export default function InvitePage() {
         });
       }
 
-      // Load invite token
-      const inviteResult = await fetchInviteWithSession(supabase, token);
-      if (!inviteResult.success) throw new Error(inviteResult.error);
+      // RLS-H2: validate the token via the definer RPC (possessing the token IS
+      // the authorization) instead of reading invite_tokens directly — Gate 3
+      // makes the raw table unreadable. The RPC checks existence + expiry as owner.
+      const { data: inviteRaw, error: inviteError } = await supabase.rpc('validate_invite_token', {
+        p_token: token,
+      });
+      if (inviteError) throw new Error(inviteError.message);
+      const inviteData = (typeof inviteRaw === 'string' ? JSON.parse(inviteRaw) : inviteRaw) as {
+        valid: boolean;
+        reason?: string;
+        session?: SessionRow;
+        created_by?: string;
+        expires_at?: string | null;
+      } | null;
 
-      const inviteData = inviteResult.data as { expires_at: string | null; session: SessionRow; created_by: string };
-
-      // Check if token expired — dedicated screen, not the "not found" fallthrough (T-INV1).
-      if (inviteData.expires_at && new Date(inviteData.expires_at) < new Date()) {
+      // Expired token gets the dedicated screen (T-INV1), not the "not found" fallthrough.
+      if (inviteData && !inviteData.valid && inviteData.reason === 'expired') {
         setExpired(true);
         return;
+      }
+      if (!inviteData?.valid || !inviteData.session) {
+        throw new Error('invalid_invite');
       }
 
       setSession(inviteData.session);
 
       // Load inviter info
-      const usersResult = await fetchUsersByIds(supabase, [inviteData.created_by]);
+      const usersResult = await fetchUsersByIds(supabase, [inviteData.created_by as string]);
       if (usersResult.success && usersResult.data && usersResult.data.length > 0) {
         setInviter({ name: usersResult.data[0].name, avatar_url: usersResult.data[0].avatar_url });
       }

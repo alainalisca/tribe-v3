@@ -3,22 +3,17 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 
-// REASON: returns raw Supabase join shape — callers handle type narrowing
-export async function fetchInviteWithSession(supabase: SupabaseClient, token: string): Promise<DalResult<unknown>> {
-  try {
-    const { data, error } = await supabase
-      .from('invite_tokens')
-      .select('*, session:sessions(*)')
-      .eq('token', token)
-      .single();
-    if (error) return { success: false, error: error.message };
-    return { success: true, data };
-  } catch (error) {
-    logError(error, { action: 'fetchInviteWithSession' });
-    return { success: false, error: 'Failed to fetch invite' };
-  }
-}
-
+// RLS-H2: fetchInviteWithSession, fetchInviteTokenForJoin, and
+// fetchLatestInviteTokenForSession were deleted here. All three read the raw
+// invite_tokens table (which Gate 3 makes unreadable to anon/authenticated) and
+// were rerouted onto definer RPCs: validate_invite_token (acceptance page + join
+// pre-check) and get_invite_token_for_notification (notification tap). Leaving dead
+// raw readers around is a trap — someone rewires one and reopens the scrape hole —
+// so they are removed, same as the T-SEC1 insertParticipant helpers.
+//
+// insertInviteToken is KEPT: the /api/invites/session route still uses it with a
+// service-role client (RLS-bypassing) to mint the in-app invite token. The
+// shareable-link path now mints server-side via the create_session_invite RPC.
 export async function insertInviteToken(
   supabase: SupabaseClient,
   data: Record<string, unknown>
@@ -30,58 +25,5 @@ export async function insertInviteToken(
   } catch (error) {
     logError(error, { action: 'insertInviteToken' });
     return { success: false, error: 'Failed to create invite' };
-  }
-}
-
-/** Minimal token lookup for join-time validation (T-INV1). */
-export interface InviteTokenRow {
-  session_id: string;
-  expires_at: string | null;
-}
-
-export async function fetchInviteTokenForJoin(
-  supabase: SupabaseClient,
-  token: string
-): Promise<DalResult<InviteTokenRow | null>> {
-  try {
-    const { data, error } = await supabase
-      .from('invite_tokens')
-      .select('session_id, expires_at')
-      .eq('token', token)
-      .maybeSingle();
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data as InviteTokenRow | null };
-  } catch (error) {
-    logError(error, { action: 'fetchInviteTokenForJoin' });
-    return { success: false, error: 'Failed to fetch invite token' };
-  }
-}
-
-/**
- * Latest unexpired invite token an inviter created for a session (T-INV1).
- * Used to resolve a session_invite notification tap to the /invite/{token}
- * acceptance page; invite_tokens is publicly readable so the recipient's
- * client can run this.
- */
-export async function fetchLatestInviteTokenForSession(
-  supabase: SupabaseClient,
-  sessionId: string,
-  createdBy: string
-): Promise<DalResult<{ token: string } | null>> {
-  try {
-    const { data, error } = await supabase
-      .from('invite_tokens')
-      .select('token')
-      .eq('session_id', sessionId)
-      .eq('created_by', createdBy)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data as { token: string } | null };
-  } catch (error) {
-    logError(error, { action: 'fetchLatestInviteTokenForSession' });
-    return { success: false, error: 'Failed to fetch invite token' };
   }
 }
