@@ -150,12 +150,29 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       }
       setSession(result.data.session);
       setCreator(result.data.creator);
-      setParticipants(result.data.participants);
+      let participantsList = result.data.participants;
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      // RLS-H3: payment_status is creator-only. It is NOT in the shared roster;
+      // the creator merges it in from the creator/admin-scoped RPC.
+      if (user && result.data.session.creator_id === user.id) {
+        const { data: payRows } = await supabase.rpc('session_payment_roster', { p_session_id: sessionId });
+        if (Array.isArray(payRows)) {
+          const payByUser = new Map(
+            (payRows as Array<{ user_id: string | null; payment_status: string | null }>).map((p) => [
+              p.user_id,
+              p.payment_status,
+            ])
+          );
+          participantsList = participantsList.map((p) =>
+            payByUser.has(p.user_id) ? { ...p, payment_status: payByUser.get(p.user_id) ?? null } : p
+          );
+        }
+      }
+      setParticipants(participantsList);
       if (user) {
-        const userParticipant = result.data.participants.find((p) => p.user_id === user.id);
+        const userParticipant = participantsList.find((p) => p.user_id === user.id);
         setHasJoined(!!userParticipant && userParticipant.status === 'confirmed');
         setIsPending(!!userParticipant && userParticipant.status === 'pending');
       }

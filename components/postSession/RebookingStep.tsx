@@ -129,7 +129,7 @@ export default function RebookingStep({ instructorId, instructorName, sport, lan
       const selectFields = `
         id, title, sport, date, start_time, location, neighborhood,
         is_paid, price_cents, currency, max_participants, creator_id,
-        session_participants(count),
+        current_participants,
         creator:creator_id(name)
       `;
 
@@ -158,7 +158,6 @@ export default function RebookingStep({ instructorId, instructorName, sport, lan
       if (cancelled) return;
 
       const mapRow = (row: Record<string, unknown>): UpcomingSessionCard => {
-        const countArr = row.session_participants as unknown as { count: number }[] | null;
         const creatorRel = row.creator as { name: string | null } | null;
         return {
           id: row.id as string,
@@ -172,7 +171,7 @@ export default function RebookingStep({ instructorId, instructorName, sport, lan
           price_cents: (row.price_cents as number | null) ?? null,
           currency: (row.currency as string | null) ?? null,
           max_participants: (row.max_participants as number | null) ?? null,
-          participant_count: countArr?.[0]?.count ?? 0,
+          participant_count: (row.current_participants as number | null) ?? 0,
           creator_id: row.creator_id as string,
           creator_name: creatorRel?.name ?? null,
         };

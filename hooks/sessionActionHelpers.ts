@@ -1,11 +1,7 @@
 import { logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { SupabaseClient } from '@supabase/supabase-js';
-import {
-  deleteGuestParticipant,
-  fetchGuestParticipant,
-  deleteParticipantBySessionAndUser,
-} from '@/lib/dal';
+import { deleteParticipantBySessionAndUser } from '@/lib/dal';
 import type { Session } from '@/lib/database.types';
 import type { GuestData } from './sessionActionTypes';
 
@@ -115,23 +111,22 @@ export async function removeGuestParticipant(
   language: 'en' | 'es'
 ): Promise<boolean> {
   const storedGuestToken = localStorage.getItem(`guest_token_${sessionId}`);
-  const storedGuestPhone = localStorage.getItem(`guest_phone_${sessionId}`);
 
-  if (!storedGuestToken && !storedGuestPhone) {
+  // RLS-H3 Gate 2: the unjoin credential (guest_token) is verified SERVER-SIDE
+  // inside the guest_leave_session definer RPC — the client never reads it from a
+  // table, and no read path ever returns it. The token is required: it is the
+  // guest's proof of ownership (phone alone is enumerable, so it is not accepted).
+  if (!storedGuestToken) {
     showError(language === 'es' ? 'No se encontro la informacion del invitado' : 'Guest information not found');
     return false;
   }
 
-  // Use a client with x-guest-token header for RLS verification
-  let deleteClient = supabase;
-  if (storedGuestToken) {
-    const { createClientWithHeaders } = await import('@/lib/supabase/client');
-    deleteClient = createClientWithHeaders({ 'x-guest-token': storedGuestToken });
-  }
-
-  const filter = storedGuestToken ? { guest_token: storedGuestToken } : { guest_phone: storedGuestPhone! };
-  const deleteResult = await deleteGuestParticipant(deleteClient, sessionId, filter);
-  if (!deleteResult.success) throw new Error(deleteResult.error);
+  const { data: removed, error } = await supabase.rpc('guest_leave_session', {
+    p_session_id: sessionId,
+    p_guest_token: storedGuestToken,
+  });
+  if (error) throw new Error(error.message);
+  if (!removed) throw new Error('not_removed');
 
   // The 087 trigger recomputes the count from the delete above.
   localStorage.removeItem(`guest_phone_${sessionId}`);
@@ -153,12 +148,21 @@ export async function checkGuestStatus(
   }
 
   try {
-    const filter = storedGuestPhone ? { guest_phone: storedGuestPhone } : { guest_email: storedGuestEmail! };
-    const guestResult = await fetchGuestParticipant(supabase, sessionId, filter);
-    const data = guestResult.data as { id: string; guest_token: string | null } | null;
-    if (guestResult.success && data) {
-      if (data.guest_token) localStorage.setItem(`guest_token_${sessionId}`, data.guest_token);
-      return { hasJoined: true, participantId: data.id };
+    // RLS-H3 Gate 2: server-side status check that returns ONLY { has_joined,
+    // participant_id } — never guest_token or any PII. The token was already
+    // stored at join (storeGuestLocally), so there is nothing to re-fetch here.
+    const { data, error } = await supabase.rpc('guest_participation_status', {
+      p_session_id: sessionId,
+      p_guest_phone: storedGuestPhone,
+      p_guest_email: storedGuestEmail,
+    });
+    if (error) throw new Error(error.message);
+    const status = (typeof data === 'string' ? JSON.parse(data) : data) as {
+      has_joined: boolean;
+      participant_id: string | null;
+    } | null;
+    if (status?.has_joined && status.participant_id) {
+      return { hasJoined: true, participantId: status.participant_id };
     } else {
       localStorage.removeItem(`guest_phone_${sessionId}`);
       localStorage.removeItem(`guest_email_${sessionId}`);

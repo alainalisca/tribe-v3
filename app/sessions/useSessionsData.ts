@@ -90,9 +90,11 @@ export function useSessionsData() {
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       // Load sessions I'm hosting (upcoming) - include today's sessions
+      // RLS-H3: drop the participants embed (unused here; sessions.current_participants
+      // already carries the confirmed count). Gate 3 makes the raw table unreadable.
       const hostingResult = await fetchSessionsByCreator(supabase, userId, {
         dateGte: today,
-        fields: '*, participants:session_participants(user_id, status)',
+        fields: '*',
       });
       // REASON: DAL returns unknown[] — cast for field access on hosting session rows
       const hostingRaw = (hostingResult.success ? hostingResult.data : []) as HostingSession[];
