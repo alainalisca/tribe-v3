@@ -46,7 +46,9 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
 
       const { data, error } = await supabase
         .from('sessions')
-        .select('id, date, start_time, sport, title, max_participants, session_participants(count)')
+        // RLS-H3: current_participants counter (087 trigger = confirmed count) instead
+        // of embedding session_participants, which Gate 3 makes unreadable.
+        .select('id, date, start_time, sport, title, max_participants, current_participants')
         .eq('creator_id', instructorId)
         .eq('status', 'active')
         .gte('date', today)
@@ -58,7 +60,6 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
       if (cancelled) return;
       if (!error && data) {
         const mapped: UpcomingSession[] = (data as Array<Record<string, unknown>>).map((row) => {
-          const countArr = row.session_participants as unknown as { count: number }[] | null;
           return {
             id: row.id as string,
             date: row.date as string,
@@ -66,7 +67,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
             sport: (row.sport as string | null) ?? null,
             title: (row.title as string | null) ?? null,
             max_participants: (row.max_participants as number | null) ?? null,
-            participant_count: countArr?.[0]?.count ?? 0,
+            participant_count: (row.current_participants as number | null) ?? 0,
           };
         });
         setSessions(mapped);

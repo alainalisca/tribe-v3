@@ -142,7 +142,7 @@ export default function SearchPage() {
         // Search sessions
         const { data: sessionsData } = await supabase
           .from('sessions')
-          .select('id, sport, location, date, price_cents, currency, status, session_participants(id)')
+          .select('id, sport, location, date, price_cents, currency, status, current_participants')
           .or(`sport.ilike.${query},location.ilike.${query}`)
           .eq('status', 'scheduled')
           .limit(10);

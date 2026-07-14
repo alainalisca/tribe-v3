@@ -158,17 +158,38 @@ export async function fetchParticipantsForSessions(
   status: string
 ): Promise<DalResult<PendingParticipantWithUser[]>> {
   try {
+    // RLS-H3: cross-user roster → owner-executed roster view (no guest PII/token),
+    // mapped back to the nested {user} shape.
     const { data, error } = await supabase
-      .from('session_participants')
+      .from('session_participants_roster')
       .select(
-        `id, user_id, session_id, joined_at, status,
-         user:users!session_participants_user_id_fkey(id, name, avatar_url)`
+        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language'
       )
       .in('session_id', sessionIds)
       .eq('status', status)
       .order('joined_at', { ascending: false });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as unknown as PendingParticipantWithUser[] };
+    return {
+      success: true,
+      data: (data || []).map((r) => {
+        const row = r as Record<string, unknown>;
+        return {
+          id: row.id as string,
+          user_id: row.user_id as string,
+          session_id: row.session_id as string,
+          joined_at: (row.joined_at as string | null) ?? null,
+          status: row.status as string,
+          user: row.user_profile_id
+            ? {
+                id: row.user_profile_id as string,
+                name: row.user_name as string,
+                avatar_url: (row.user_avatar_url as string | null) ?? null,
+                preferred_language: (row.user_preferred_language as string | null) ?? null,
+              }
+            : null,
+        };
+      }) as PendingParticipantWithUser[],
+    };
   } catch (error) {
     logError(error, { action: 'fetchParticipantsForSessions' });
     return { success: false, error: 'Failed to fetch participants' };

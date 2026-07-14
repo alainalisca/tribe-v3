@@ -50,15 +50,18 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const [{ count }, userRes] = await Promise.all([
+      // RLS-H3: read the confirmed count from the anon-safe aggregate view, not
+      // the raw table (which Gate 3 makes unreadable to anon). Counts only — no
+      // identities cross the wire on the public share page.
+      const [publicRes, userRes] = await Promise.all([
         supabase
-          .from('session_participants')
-          .select('*', { count: 'exact', head: true })
+          .from('session_participants_public')
+          .select('confirmed_count')
           .eq('session_id', sessionId)
-          .eq('status', 'confirmed'),
+          .maybeSingle(),
         supabase.auth.getUser(),
       ]);
-      setConfirmedCount(count ?? 0);
+      setConfirmedCount((publicRes.data as { confirmed_count: number } | null)?.confirmed_count ?? 0);
       if (userRes.data?.user) setUserId(userRes.data.user.id);
       trackEvent('session_viewed', { session_id: sessionId, source: 'public_share' });
     })();

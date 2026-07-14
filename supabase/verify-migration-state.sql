@@ -549,4 +549,15 @@ select '127_rls_h3_gate1_participant_views',
          where schemaname = 'public'
            and viewname in ('session_participants_public', 'session_participants_roster')
        ) = 2 then 'applied' else 'MISSING' end
+union all
+select '128_rls_h3_gate2_guest_and_payment_rpcs',
+       -- RLS-H3 Gate 2: guest leave/status + host payment definer RPCs. Applied
+       -- once all three functions exist.
+       case when (
+         select count(*) from pg_proc p
+         join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public'
+           and p.proname in ('guest_leave_session', 'guest_participation_status',
+                             'session_payment_roster', 'count_active_athletes')
+       ) = 4 then 'applied' else 'MISSING' end
 order by migration;

@@ -17,18 +17,44 @@ import type { SessionParticipant } from '@/lib/database.types';
 // work at all. They are gone so nothing can accidentally reintroduce a direct
 // session_participants insert that RLS now denies.
 
+// RLS-H3: session_participants_roster flattens the users join; map its rows back
+// to the nested PendingParticipantWithUser shape so callers stay unchanged.
+function mapRosterRowToPending(r: unknown): PendingParticipantWithUser {
+  const row = r as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    user_id: row.user_id as string,
+    session_id: row.session_id as string,
+    joined_at: (row.joined_at as string | null) ?? null,
+    status: row.status as string,
+    user: row.user_profile_id
+      ? {
+          id: row.user_profile_id as string,
+          name: row.user_name as string,
+          avatar_url: (row.user_avatar_url as string | null) ?? null,
+          preferred_language: (row.user_preferred_language as string | null) ?? null,
+        }
+      : null,
+  };
+}
+
 export async function updateParticipantStatus(
   supabase: SupabaseClient,
   id: string,
   status: string
 ): Promise<DalResult<null>> {
   try {
-    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
-    // write returns no error but also 0 rows — treat that as a failure so the
-    // host sees the real outcome instead of a silent fake-success.
-    const { data, error } = await supabase.from('session_participants').update({ status }).eq('id', id).select('id');
+    // BUG-206 + RLS-H3: detect a 0-row write via the affected-row COUNT, not a
+    // RETURNING readback. A host approving a participant does not OWN that row, so
+    // under the narrow sp_select_own policy a `.select('id')` RETURNING would fail
+    // the SELECT check even on a successful UPDATE. count=exact is governed by the
+    // UPDATE policy, not SELECT, so it reports the real outcome without a readback.
+    const { count, error } = await supabase
+      .from('session_participants')
+      .update({ status }, { count: 'exact' })
+      .eq('id', id);
     if (error) return { success: false, error: error.message };
-    if (!data || data.length === 0) {
+    if (!count) {
       return { success: false, error: 'No rows updated — RLS may have blocked the write' };
     }
     return { success: true };
@@ -40,11 +66,14 @@ export async function updateParticipantStatus(
 
 export async function deleteParticipant(supabase: SupabaseClient, id: string): Promise<DalResult<null>> {
   try {
-    // BUG-206: append .select() so Supabase returns affected rows. An RLS-blocked
-    // delete returns no error but also 0 rows — treat that as a failure.
-    const { data, error } = await supabase.from('session_participants').delete().eq('id', id).select('id');
+    // BUG-206 + RLS-H3: use affected-row COUNT, not a RETURNING readback — a host
+    // removing another user's row cannot SELECT it back under sp_select_own.
+    const { count, error } = await supabase
+      .from('session_participants')
+      .delete({ count: 'exact' })
+      .eq('id', id);
     if (error) return { success: false, error: error.message };
-    if (!data || data.length === 0) {
+    if (!count) {
       return { success: false, error: 'No rows deleted — RLS may have blocked the write' };
     }
     return { success: true };
@@ -65,31 +94,39 @@ export async function deleteParticipantsByUser(supabase: SupabaseClient, userId:
   }
 }
 
-export async function fetchParticipantUserIds(supabase: SupabaseClient): Promise<DalResult<string[]>> {
-  try {
-    const { data, error } = await supabase.from('session_participants').select('user_id');
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []).map((d) => d.user_id).filter(Boolean) as string[] };
-  } catch (error) {
-    logError(error, { action: 'fetchParticipantUserIds' });
-    return { success: false, error: 'Failed to fetch participant user IDs' };
-  }
-}
+// RLS-H3: fetchParticipantUserIds + fetchParticipantUserIdsForSession deleted —
+// both were unreferenced (dead) and read session_participants cross-user with no
+// user_id=auth.uid() filter, i.e. raw reads that the narrow sp_select_own policy
+// would break. Orphaned raw readers are a trap (someone rewires them and reopens
+// the hole), so they are removed, same as the T-SEC1 insertParticipant helpers.
 
 export async function fetchConfirmedParticipantsWithUsers(
   supabase: SupabaseClient,
   sessionId: string
 ): Promise<DalResult<ParticipantWithUser[]>> {
   try {
+    // RLS-H3: cross-user roster → owner-executed session_participants_roster view
+    // (no guest PII, no token). Map the flat view rows back to the nested {user}
+    // shape so callers are unchanged.
     const { data, error } = await supabase
-      .from('session_participants')
-      .select(
-        'user_id, status, is_guest, guest_name, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
-      )
+      .from('session_participants_roster')
+      .select('user_id, status, is_guest, guest_name, user_profile_id, user_name, user_avatar_url')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as unknown as ParticipantWithUser[] };
+    const mapped = (data || []).map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        user_id: row.user_id,
+        status: row.status,
+        is_guest: row.is_guest,
+        guest_name: row.guest_name,
+        user: row.user_profile_id
+          ? { id: row.user_profile_id, name: row.user_name, avatar_url: row.user_avatar_url }
+          : null,
+      };
+    });
+    return { success: true, data: mapped as unknown as ParticipantWithUser[] };
   } catch (error) {
     logError(error, { action: 'fetchConfirmedParticipantsWithUsers' });
     return { success: false, error: 'Failed' };
@@ -122,26 +159,6 @@ export async function fetchParticipantCountForUser(
 }
 
 /** Get confirmed participant user IDs for a session, optionally excluding one user. */
-export async function fetchParticipantUserIdsForSession(
-  supabase: SupabaseClient,
-  sessionId: string,
-  excludeUserId?: string
-): Promise<DalResult<string[]>> {
-  try {
-    let query = supabase
-      .from('session_participants')
-      .select('user_id')
-      .eq('session_id', sessionId)
-      .eq('status', 'confirmed');
-    if (excludeUserId) query = query.neq('user_id', excludeUserId);
-    const { data, error } = await query;
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []).map((d) => d.user_id).filter(Boolean) as string[] };
-  } catch (error) {
-    logError(error, { action: 'fetchParticipantUserIdsForSession' });
-    return { success: false, error: 'Failed' };
-  }
-}
 
 /** Delete guest participants for a session. */
 export async function deleteGuestParticipantsForSession(
@@ -229,17 +246,17 @@ export async function deleteParticipantBySessionAndUser(
   userId: string
 ): Promise<DalResult<null>> {
   try {
-    // T-NOTIF1: return the deleted rows so a 0-row delete (RLS block or no
-    // matching participant) surfaces as a real failure instead of a fake
-    // success — the leave must actually remove the participant.
-    const { data, error } = await supabase
+    // T-NOTIF1 + RLS-H3: affected-row COUNT surfaces a 0-row delete (RLS block or
+    // no match) without a RETURNING readback. Covers self-leave (own row) AND host
+    // kick (another user's row, unreadable under sp_select_own) — count is governed
+    // by the DELETE policy, not SELECT.
+    const { count, error } = await supabase
       .from('session_participants')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('session_id', sessionId)
-      .eq('user_id', userId)
-      .select('id');
+      .eq('user_id', userId);
     if (error) return { success: false, error: error.message };
-    if (!data || data.length === 0) {
+    if (!count) {
       return { success: false, error: 'not_removed' };
     }
     return { success: true };
@@ -256,9 +273,12 @@ export async function checkExistingParticipation(
   userId: string
 ): Promise<DalResult<SessionParticipant | null>> {
   try {
+    // RLS-H3: this checks a REGISTERED user's own participation (filtered by
+    // user_id), so guest_token/guest_phone/guest_email are never relevant here and
+    // are not selected — Gate 3 revokes SELECT on those columns anyway.
     const { data, error } = await supabase
       .from('session_participants')
-      .select('id, session_id, user_id, status, is_guest, guest_token, joined_at, guest_name, guest_phone, guest_email')
+      .select('id, session_id, user_id, status, is_guest, joined_at, guest_name')
       .eq('session_id', sessionId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -318,13 +338,15 @@ export async function fetchPendingParticipantsForSessions(
   sessionIds: string[]
 ): Promise<DalResult<PendingParticipantWithUser[]>> {
   try {
+    // RLS-H3: cross-user roster → owner-executed roster view (no guest PII/token),
+    // mapped back to the nested {user} shape.
     const { data, error } = await supabase
-      .from('session_participants')
-      .select('*, user:users!session_participants_user_id_fkey(id, name, avatar_url)')
+      .from('session_participants_roster')
+      .select('id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language')
       .in('session_id', sessionIds)
       .eq('status', 'pending');
     if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []).map(mapRosterRowToPending) };
   } catch (error) {
     logError(error, { action: 'fetchPendingParticipantsForSessions' });
     return { success: false, error: 'Failed' };
@@ -337,18 +359,17 @@ export async function fetchPendingParticipantsForSession(
   sessionId: string
 ): Promise<DalResult<PendingParticipantWithUser[]>> {
   try {
+    // RLS-H3: cross-user roster → owner-executed roster view (no guest PII/token).
+    // T-NOTIF1: user_preferred_language so the approve/decline notification is in
+    // the athlete's language. Flat view rows mapped back to the nested {user} shape.
     const { data, error } = await supabase
-      .from('session_participants')
-      .select(
-        // T-NOTIF1: preferred_language so the approve/decline notification can
-        // be composed in the athlete's (recipient's) language, not the host's.
-        'id, user_id, session_id, joined_at, status, user:users!session_participants_user_id_fkey(id, name, avatar_url, preferred_language)'
-      )
+      .from('session_participants_roster')
+      .select('id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language')
       .eq('session_id', sessionId)
       .eq('status', 'pending')
       .order('joined_at', { ascending: true });
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as unknown as PendingParticipantWithUser[] };
+    return { success: true, data: (data || []).map(mapRosterRowToPending) };
   } catch (error) {
     logError(error, { action: 'fetchPendingParticipantsForSession' });
     return { success: false, error: 'Failed' };

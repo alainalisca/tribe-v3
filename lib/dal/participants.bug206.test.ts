@@ -50,9 +50,13 @@ function makeMockSupabase(opts: {
     deleteError = null,
   } = opts;
 
+  // RLS-H3: writes now detect success via affected-row COUNT (no RETURNING
+  // readback), and fetchPendingParticipantsForSession reads the flat roster view.
+  // `updateData`/`deleteData` length simulates the affected-row count (empty = 0,
+  // an RLS-blocked or no-match write).
   return {
     from: (_table: string) => ({
-      // select chain used by fetchPendingParticipantsForSession
+      // select chain used by fetchPendingParticipantsForSession (roster view)
       select: (_cols: string) => ({
         eq: (_col: string, _val: unknown) => ({
           eq: (_col2: string, _val2: unknown) => ({
@@ -60,23 +64,18 @@ function makeMockSupabase(opts: {
           }),
         }),
       }),
-      // update chain used by updateParticipantStatus (.update().eq().select())
-      update: (_payload: unknown) => ({
-        eq: (_col: string, _val: unknown) => ({
-          select: (_cols2: string) => Promise.resolve({ data: updateData, error: updateError }),
-        }),
+      // update chain: .update(payload, { count: 'exact' }).eq(id) → { count, error }
+      update: (_payload: unknown, _opts?: unknown) => ({
+        eq: (_col: string, _val: unknown) => Promise.resolve({ count: updateData.length, error: updateError }),
       }),
-      // delete chain — supports deleteParticipant (.delete().eq().select())
-      // AND deleteParticipantBySessionAndUser (.delete().eq().eq().select()).
-      delete: () => {
-        const node: {
-          eq: () => typeof node;
-          select: (cols: string) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
-        } = {
+      // delete chain (thenable node): .delete({ count }).eq()[.eq()] → { count, error }
+      delete: (_opts?: unknown) => {
+        const node = {
           eq: () => node,
-          select: (_cols2: string) => Promise.resolve({ data: deleteData, error: deleteError }),
+          then: (resolve: (v: { count: number; error: { message: string } | null }) => unknown) =>
+            resolve({ count: deleteData.length, error: deleteError }),
         };
-        return { eq: () => node };
+        return node;
       },
     }),
   } as unknown as SupabaseClient;
@@ -87,6 +86,7 @@ function makeMockSupabase(opts: {
 // ---------------------------------------------------------------------------
 describe('fetchPendingParticipantsForSession', () => {
   it('returns pending participants when DB returns rows', async () => {
+    // Flat session_participants_roster rows; the DAL maps them back to nested {user}.
     const rows = [
       {
         id: 'part-1',
@@ -94,7 +94,10 @@ describe('fetchPendingParticipantsForSession', () => {
         session_id: 'session-a',
         joined_at: '2026-01-01T00:00:00Z',
         status: 'pending',
-        user: { id: 'user-1', name: 'Ana Restrepo', avatar_url: null },
+        user_profile_id: 'user-1',
+        user_name: 'Ana Restrepo',
+        user_avatar_url: null,
+        user_preferred_language: 'es',
       },
       {
         id: 'part-2',
@@ -102,7 +105,10 @@ describe('fetchPendingParticipantsForSession', () => {
         session_id: 'session-a',
         joined_at: '2026-01-01T01:00:00Z',
         status: 'pending',
-        user: { id: 'user-2', name: 'Carlos Gómez', avatar_url: 'https://example.com/c.jpg' },
+        user_profile_id: 'user-2',
+        user_name: 'Carlos Gómez',
+        user_avatar_url: 'https://example.com/c.jpg',
+        user_preferred_language: 'en',
       },
     ];
     const supabase = makeMockSupabase({ selectData: rows });

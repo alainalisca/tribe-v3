@@ -97,20 +97,37 @@ export async function fetchSessionWithDetails(
       .eq('id', session.creator_id)
       .maybeSingle();
 
-    const { data: participants } = await supabase
-      .from('session_participants')
-      .select(
-        'user_id, status, is_guest, guest_name, payment_status, user:users!session_participants_user_id_fkey(id, name, avatar_url)'
-      )
+    // RLS-H3: identities via the owner-executed roster view (no guest PII, no
+    // payment_status). Anon has no grant on the view, so a logged-out viewer gets
+    // an empty roster (correct — anon sees counts, not who). payment_status is
+    // creator-only and merged separately via session_payment_roster (see
+    // useSessionDetail).
+    const { data: rosterRows } = await supabase
+      .from('session_participants_roster')
+      .select('user_id, status, is_guest, guest_name, user_profile_id, user_name, user_avatar_url')
       .eq('session_id', sessionId)
       .eq('status', 'confirmed');
+
+    const participants = (rosterRows || []).map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        user_id: row.user_id,
+        status: row.status,
+        is_guest: row.is_guest,
+        guest_name: row.guest_name,
+        payment_status: null,
+        user: row.user_profile_id
+          ? { id: row.user_profile_id, name: row.user_name, avatar_url: row.user_avatar_url }
+          : null,
+      };
+    });
 
     return {
       success: true,
       data: {
         session,
         creator: creator || null,
-        participants: (participants || []) as unknown as SessionParticipantWithUser[],
+        participants: participants as unknown as SessionParticipantWithUser[],
       },
     };
   } catch (error) {
@@ -128,16 +145,14 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+    // RLS-H3: the home feed does not render attendee identities, so drop the
+    // participants embed (it reads the raw table, which Gate 3 locks) and rely on
+    // sessions.current_participants (087 trigger = confirmed count) for any count.
     const { data, error } = await supabase
       .from('sessions')
       .select(
         `
         *,
-        participants:session_participants(
-          user_id,
-          status,
-          user:users!session_participants_user_id_fkey(id, name, avatar_url)
-        ),
         creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
       `
       )
@@ -147,7 +162,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .order('start_time', { ascending: true });
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: (data || []) as SessionWithRelations[] };
+    return { success: true, data: (data || []).map((s) => ({ ...s, participants: [] })) as SessionWithRelations[] };
   } catch (error) {
     logError(error, { action: 'fetchUpcomingSessions' });
     return { success: false, error: 'Failed to fetch sessions' };
@@ -420,11 +435,9 @@ export async function fetchActivityStats(
 
     // Run all three queries in parallel
     const [athletesResult, weekResult, totalResult] = await Promise.all([
-      // Distinct users from session_participants in last 7 days
-      supabase
-        .from('session_participants')
-        .select('user_id', { count: 'exact', head: false })
-        .gte('joined_at', sevenDaysAgoISO),
+      // RLS-H3: distinct active users in last 7 days via the anon-safe definer
+      // count RPC (the landing page is public; anon cannot read the raw table).
+      supabase.rpc('count_active_athletes', { p_since: sevenDaysAgoISO }),
 
       // Active sessions this week
       supabase
@@ -441,15 +454,13 @@ export async function fetchActivityStats(
     if (weekResult.error) return { success: false, error: weekResult.error.message };
     if (totalResult.error) return { success: false, error: totalResult.error.message };
 
-    // Count distinct user_ids from participants result
-    const distinctUsers = new Set(
-      (athletesResult.data || []).map((row: { user_id: string | null }) => row.user_id).filter(Boolean)
-    );
+    // The RPC returns the distinct-user count directly.
+    const activeAthletes = (athletesResult.data as number | null) ?? 0;
 
     return {
       success: true,
       data: {
-        activeAthletes: distinctUsers.size,
+        activeAthletes,
         sessionsThisWeek: weekResult.count ?? 0,
         totalSessions: totalResult.count ?? 0,
       },

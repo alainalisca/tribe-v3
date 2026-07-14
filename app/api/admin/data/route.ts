@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAdmin } from '@/lib/auth/adminApi';
 import { logError } from '@/lib/logger';
 import {
+  fetchAdminStatsRaw,
   fetchAdminUsersWithCounts,
   fetchAdminReports,
   fetchAdminFeedback,
@@ -17,7 +18,7 @@ import {
  * @method GET
  * @auth Admin only. requireApiAdmin() verifies is_app_admin() and fails closed
  *   (403) on missing auth / non-admin / error BEFORE any data is read.
- * @query tab - one of: users | reports | feedback | bugs | messages
+ * @query tab - one of: stats | users | reports | feedback | bugs | messages
  */
 export async function GET(request: NextRequest) {
   // GATE FIRST — nothing is read until the caller is a confirmed admin.
@@ -30,6 +31,13 @@ export async function GET(request: NextRequest) {
   try {
     let result;
     switch (tab) {
+      case 'stats':
+        // RLS-H3: this reads ALL participants' user_ids (cross-user aggregate for
+        // the dashboard). The narrow sp_select_own policy would silently return
+        // only the admin's own rows on a browser client, so it runs here under
+        // service-role behind the is_app_admin() gate.
+        result = await fetchAdminStatsRaw(service);
+        break;
       case 'users':
         result = await fetchAdminUsersWithCounts(service);
         break;

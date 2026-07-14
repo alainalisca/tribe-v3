@@ -56,19 +56,20 @@ export async function fetchInstructorSessions(
   try {
     const today = new Date().toISOString().split('T')[0];
 
+    // RLS-H3: use the sessions.current_participants counter (087 trigger keeps it =
+    // confirmed count) instead of embedding session_participants, which Gate 3 makes
+    // unreadable.
     const { data: sessions, error } = await supabase
       .from('sessions')
-      .select('*, session_participants(count)')
+      .select('*')
       .eq('creator_id', userId)
       .order('date', { ascending: true });
 
     if (error) return { success: false, error: error.message };
 
     const mapped = (sessions || []).map((s) => {
-      const countArr = s.session_participants as unknown as { count: number }[];
-      const participant_count = countArr?.[0]?.count ?? 0;
-      const { session_participants: _drop, ...rest } = s;
-      return { ...rest, participant_count } as InstructorSessionRow;
+      const participant_count = (s.current_participants as number | null) ?? 0;
+      return { ...s, participant_count } as InstructorSessionRow;
     });
 
     const upcoming = mapped.filter((s) => s.date >= today && s.status !== 'cancelled');

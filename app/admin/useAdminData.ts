@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
-import { fetchAdminStatsRaw, fetchAdminSessions } from '@/lib/dal';
+import { fetchAdminSessions, type AdminStatsRaw } from '@/lib/dal';
 import type {
   AdminStatsData,
   AdminUser,
@@ -72,7 +72,10 @@ export function useAdminData(supabase: SupabaseClient) {
   async function loadStats() {
     try {
       setError(null);
-      const result = await fetchAdminStatsRaw(supabase);
+      // RLS-H3: stats aggregate over ALL participants — read under service-role via
+      // the is_app_admin()-gated admin API, not the browser client (which the narrow
+      // sp_select_own policy would restrict to the admin's own rows).
+      const result = await fetchAdminApi<AdminStatsRaw>('stats');
       if (!result.success || !result.data) return;
 
       const {

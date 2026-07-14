@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaToday, bogotaDateOffset } from '@/lib/time/bogotaDate';
@@ -53,7 +53,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // RLS-H3: service-role — this cron has no user cookie, so a server anon client
+    // loses all session_participants rows once Gate 3 revokes anon. Service-role
+    // bypasses RLS (as the other crons do).
+    const supabase = getServiceRoleClient();
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
     const now = new Date();
     const { hour, dayOfWeek } = getColombiaTime();
