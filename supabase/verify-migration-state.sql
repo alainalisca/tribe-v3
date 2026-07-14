@@ -517,6 +517,16 @@ select '124_get_or_create_direct_conversation_rpc',
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
 union all
+select '125_consolidate_chat_messages_rls',
+       -- chat_messages RLS consolidated to one policy per action (session + DM
+       -- escape hatch). Applied once the four named policies exist.
+       case when (
+         select count(*) from pg_policies
+         where schemaname='public' and tablename='chat_messages'
+           and policyname in ('chat_messages_select','chat_messages_insert',
+                              'chat_messages_update','chat_messages_delete')
+       ) = 4 then 'applied' else 'MISSING' end
+union all
 select '126_gate3_drop_conversation_insert_rls',
        -- DM Gate 3: the direct-INSERT door is gone — the get_or_create RPC is the
        -- only write path. Applied once NO INSERT-command policy (polcmd 'a') remains
