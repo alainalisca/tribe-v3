@@ -560,4 +560,19 @@ select '128_rls_h3_gate2_guest_and_payment_rpcs',
            and p.proname in ('guest_leave_session', 'guest_participation_status',
                              'session_payment_roster', 'count_active_athletes')
        ) = 4 then 'applied' else 'MISSING' end
+union all
+select '129_rls_h3_gate3_lock_session_participants',
+       -- Gate 3: raw session_participants locked. Applied once the narrow
+       -- sp_select_own policy exists (the only SELECT policy on the table).
+       case when exists (
+         select 1 from pg_policies
+         where schemaname='public' and tablename='session_participants' and policyname='sp_select_own'
+       ) then 'applied' else 'MISSING' end
+union all
+select '130_rls_h3_gate3_column_level_grants',
+       -- Gate 3b: the guest-PII column revoke made effective (table SELECT dropped,
+       -- column-level SELECT re-granted minus the 3). Applied once authenticated no
+       -- longer holds SELECT on guest_phone.
+       case when not has_column_privilege('authenticated','public.session_participants','guest_phone','SELECT')
+            then 'applied' else 'MISSING' end
 order by migration;
