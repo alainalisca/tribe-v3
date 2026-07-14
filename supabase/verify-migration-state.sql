@@ -540,4 +540,13 @@ select '126_gate3_drop_conversation_insert_rls',
            and cls.relname = 'conversation_participants'
            and pol.polcmd = 'a'
        ) then 'applied' else 'MISSING' end
+union all
+select '127_rls_h3_gate1_participant_views',
+       -- RLS-H3 Gate 1 (additive): the two read surfaces that consumers move onto
+       -- before the raw table is locked. Applied once both views exist.
+       case when (
+         select count(*) from pg_views
+         where schemaname = 'public'
+           and viewname in ('session_participants_public', 'session_participants_roster')
+       ) = 2 then 'applied' else 'MISSING' end
 order by migration;
