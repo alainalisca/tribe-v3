@@ -516,4 +516,18 @@ select '124_get_or_create_direct_conversation_rpc',
          where proname = 'get_or_create_direct_conversation'
            and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '126_gate3_drop_conversation_insert_rls',
+       -- DM Gate 3: the direct-INSERT door is gone — the get_or_create RPC is the
+       -- only write path. Applied once NO INSERT-command policy (polcmd 'a') remains
+       -- on conversation_participants (the vuln table); the RPC bypasses RLS as owner.
+       case when not exists (
+         select 1
+         from pg_policy pol
+         join pg_class cls on cls.oid = pol.polrelid
+         join pg_namespace ns on ns.oid = cls.relnamespace
+         where ns.nspname = 'public'
+           and cls.relname = 'conversation_participants'
+           and pol.polcmd = 'a'
+       ) then 'applied' else 'MISSING' end
 order by migration;
