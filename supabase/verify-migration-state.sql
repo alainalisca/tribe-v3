@@ -589,4 +589,12 @@ select '132_rls_h2_gate2_invite_notification_rpc',
        -- RLS-H2 Gate 2: caller-scoped notification-resolution RPC. Applied once it exists.
        case when (select to_regprocedure('public.get_invite_token_for_notification(uuid)')) is not null
             then 'applied' else 'MISSING' end
+union all
+select '133_rls_h2_gate2_invite_notification_rpc_fix',
+       -- Fix: entity_id is uuid, so the body must compare uuid=uuid (was ::text,
+       -- which threw at runtime). Applied once the function body no longer casts
+       -- p_session_id to text.
+       case when (select to_regprocedure('public.get_invite_token_for_notification(uuid)')) is not null
+              and pg_get_functiondef('public.get_invite_token_for_notification(uuid)'::regprocedure) not like '%p_session_id::text%'
+            then 'applied' else 'MISSING' end
 order by migration;
