@@ -14,7 +14,6 @@ import {
   fetchAllRecapPhotosForSession,
   fetchActiveStoriesForSession,
   fetchUserReviewExists,
-  insertInviteToken,
 } from '@/lib/dal';
 import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
@@ -239,9 +238,12 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     if (!user || !session) return;
     try {
       setCreatingInvite(true);
-      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const result = await insertInviteToken(supabase, { session_id: session.id, token, created_by: user.id });
-      if (!result.success) throw new Error(result.error);
+      // RLS-H2: token generated SERVER-SIDE (crypto-secure) via the definer RPC,
+      // not client-side Math.random() (predictable PRNG). The RPC enforces that the
+      // caller is the session creator and returns the token to its creator only.
+      const { data: token, error } = await supabase.rpc('create_session_invite', { p_session_id: session.id });
+      if (error) throw new Error(error.message);
+      if (!token) throw new Error('create_invite_failed');
       setInviteLink(`${window.location.origin}/invite/${token}`);
       setShowInviteModal(true);
     } catch (error) {
