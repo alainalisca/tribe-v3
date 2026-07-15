@@ -597,4 +597,10 @@ select '133_rls_h2_gate2_invite_notification_rpc_fix',
        case when (select to_regprocedure('public.get_invite_token_for_notification(uuid)')) is not null
               and pg_get_functiondef('public.get_invite_token_for_notification(uuid)'::regprocedure) not like '%p_session_id::text%'
             then 'applied' else 'MISSING' end
+union all
+select '134_rls_h2_gate3_lock_invite_tokens',
+       -- Gate 3: raw invite_tokens locked. Applied once anon no longer holds a
+       -- table SELECT grant (the revoke, not just the policy drop).
+       case when not has_table_privilege('anon','public.invite_tokens','SELECT')
+            then 'applied' else 'MISSING' end
 order by migration;
