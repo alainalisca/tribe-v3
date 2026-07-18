@@ -603,4 +603,13 @@ select '134_rls_h2_gate3_lock_invite_tokens',
        -- table SELECT grant (the revoke, not just the policy drop).
        case when not has_table_privilege('anon','public.invite_tokens','SELECT')
             then 'applied' else 'MISSING' end
+union all
+select '135_fix_instructor_participant_visibility',
+       -- Hotfix for 129: host row VISIBILITY that approve/decline/kick depend on.
+       -- Applied once sp_select_by_instructor exists.
+       case when exists (
+         select 1 from pg_policies
+         where schemaname='public' and tablename='session_participants'
+           and policyname='sp_select_by_instructor'
+       ) then 'applied' else 'MISSING' end
 order by migration;
