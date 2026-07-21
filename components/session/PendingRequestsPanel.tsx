@@ -109,6 +109,15 @@ export default function PendingRequestsPanel({
           entity_id: sessionId,
           message: body,
         }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_approve', sessionId }));
+
+        // Push to the approved athlete (fire-and-forget; the bell above already
+        // landed). The browser sends ONLY the session + participant row ids —
+        // notify-approval derives the recipient and composes the copy server-side.
+        fetch('/api/sessions/notify-approval/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, participant_id: req.id }),
+        }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_approve_push', sessionId }));
       }
       onApproved?.();
     } finally {
