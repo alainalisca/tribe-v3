@@ -126,7 +126,7 @@ async function notifyAdminsOfPendingBulletin(supabase: SupabaseClient, post: Bul
   if (error || !adminIds) return;
 
   const ids = adminIds as string[];
-  await Promise.all(
+  const bells = await Promise.all(
     ids.map((adminId) =>
       createNotification(supabase, {
         recipient_id: adminId,
@@ -138,6 +138,15 @@ async function notifyAdminsOfPendingBulletin(supabase: SupabaseClient, post: Bul
       })
     )
   );
+  bells.forEach((bell, i) => {
+    if (!bell.success) {
+      logError(new Error(bell.error ?? 'createNotification failed'), {
+        action: 'notifyAdminsOfPendingBulletin',
+        postId: post.id,
+        adminId: ids[i],
+      });
+    }
+  });
 }
 
 /**

@@ -7,6 +7,7 @@ import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
+import { logError } from '@/lib/logger';
 import { expressInterest, withdrawInterest, hasExpressedInterest, createNotification } from '@/lib/dal';
 import { sportTranslations } from '@/lib/translations';
 
@@ -108,7 +109,7 @@ export default function InterestButton({
       language === 'es'
         ? 'Un atleta está interesado en entrenar contigo'
         : 'An athlete is interested in training with you';
-    await createNotification(supabase, {
+    const bell = await createNotification(supabase, {
       recipient_id: instructorId,
       actor_id: athleteId,
       type: 'training_interest',
@@ -116,6 +117,12 @@ export default function InterestButton({
       entity_id: athleteId,
       message: notifMessage,
     });
+    if (!bell.success) {
+      logError(new Error(bell.error ?? 'createNotification failed'), {
+        action: 'InterestButton.notify_interest',
+        instructorId,
+      });
+    }
 
     // Device push (the createNotification above is the in-app bell; this is the
     // ping). The server route templates the message and verifies the recipient

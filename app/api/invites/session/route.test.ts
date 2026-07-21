@@ -216,10 +216,8 @@ describe('POST /api/invites/session', () => {
     vi.mocked(createServiceClient).mockReturnValue(serviceSupabaseMock as never);
     vi.mocked(insertInviteToken).mockResolvedValue({ success: true } as never);
 
-    vi.mocked(createNotification).mockResolvedValue({
-      success: true,
-      data: { id: 'notif-1' },
-    } as never);
+    // createNotification never returns a row (no RETURNING read) — success only.
+    vi.mocked(createNotification).mockResolvedValue({ success: true, data: null } as never);
 
     const req = createMockRequest({
       session_id: SESSION_ID,
