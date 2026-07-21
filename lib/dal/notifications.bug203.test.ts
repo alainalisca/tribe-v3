@@ -4,7 +4,11 @@
  * notification regardless of whether push/VAPID is configured.
  *
  * These tests verify:
- *  - createNotification inserts a row and returns success + data
+ *  - createNotification inserts a row and returns success
+ *  - createNotification does NOT read the row back (no RETURNING) — a
+ *    recipient-scoped SELECT policy denies the read-back on every cross-user
+ *    bell and rolls the INSERT back with it, which is how approve/decline/
+ *    follow/like/interest bells were being silently dropped
  *  - createNotification skips self-notifications (actor === recipient)
  *  - createNotification surfaces DB errors correctly
  *  - createNotification handles actor_id === null (guest join path)
@@ -25,16 +29,25 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 // Mock builder
 // ---------------------------------------------------------------------------
 
-type InsertResult = { data: unknown | null; error: { message: string } | null };
+type InsertResult = { error: { message: string } | null };
 
-function makeMockSupabase(insertResult: InsertResult): SupabaseClient {
+/**
+ * `insert()` resolves directly — there is no `.select().single()` chain. The
+ * `select` property is a booby trap: if the DAL ever re-adds the RETURNING
+ * read, these tests fail loudly rather than the bells silently disappearing
+ * in production again.
+ */
+function makeMockSupabase(insertResult: InsertResult, insertedRows: unknown[] = []): SupabaseClient {
   return {
     from: (_table: string) => ({
-      insert: (_data: unknown) => ({
-        select: () => ({
-          single: () => Promise.resolve(insertResult),
-        }),
-      }),
+      insert: (data: unknown) => {
+        insertedRows.push(data);
+        const promise = Promise.resolve(insertResult) as Promise<InsertResult> & { select: () => never };
+        promise.select = () => {
+          throw new Error('createNotification must not read the inserted row back (.select())');
+        };
+        return promise;
+      },
     }),
   } as unknown as SupabaseClient;
 }
@@ -43,21 +56,10 @@ function makeMockSupabase(insertResult: InsertResult): SupabaseClient {
 // Tests
 // ---------------------------------------------------------------------------
 
-const NOTIFICATION_ROW = {
-  id: 'notif-1',
-  recipient_id: 'host-uuid',
-  actor_id: 'joiner-uuid',
-  type: 'join',
-  entity_type: 'session',
-  entity_id: 'session-uuid',
-  message: 'Ana joined your Running session',
-  is_read: false,
-  created_at: '2026-06-28T10:00:00Z',
-};
-
 describe('createNotification (BUG-203: in-app join notification)', () => {
-  it('inserts a notification row and returns success', async () => {
-    const supabase = makeMockSupabase({ data: NOTIFICATION_ROW, error: null });
+  it('inserts a notification row and returns success, without reading it back', async () => {
+    const inserted: unknown[] = [];
+    const supabase = makeMockSupabase({ error: null }, inserted);
 
     const result = await createNotification(supabase, {
       recipient_id: 'host-uuid',
@@ -69,7 +71,18 @@ describe('createNotification (BUG-203: in-app join notification)', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.data).toMatchObject({ id: 'notif-1', type: 'join' });
+    // No RETURNING read: the caller gets success, never a row.
+    expect(result.data).toBeNull();
+    expect(inserted).toEqual([
+      {
+        recipient_id: 'host-uuid',
+        actor_id: 'joiner-uuid',
+        type: 'join',
+        entity_type: 'session',
+        entity_id: 'session-uuid',
+        message: 'Ana joined your Running session',
+      },
+    ]);
   });
 
   it('skips insert and returns success when actor_id === recipient_id (no self-notify)', async () => {
@@ -95,7 +108,7 @@ describe('createNotification (BUG-203: in-app join notification)', () => {
   });
 
   it('returns failure when the DB insert errors', async () => {
-    const supabase = makeMockSupabase({ data: null, error: { message: 'unique_violation' } });
+    const supabase = makeMockSupabase({ error: { message: 'unique_violation' } });
 
     const result = await createNotification(supabase, {
       recipient_id: 'host-uuid',
@@ -111,8 +124,8 @@ describe('createNotification (BUG-203: in-app join notification)', () => {
   });
 
   it('handles null actor_id (guest join path) without throwing', async () => {
-    const guestRow = { ...NOTIFICATION_ROW, actor_id: null, type: 'join_guest' };
-    const supabase = makeMockSupabase({ data: guestRow, error: null });
+    const inserted: unknown[] = [];
+    const supabase = makeMockSupabase({ error: null }, inserted);
 
     const result = await createNotification(supabase, {
       recipient_id: 'host-uuid',
@@ -124,6 +137,6 @@ describe('createNotification (BUG-203: in-app join notification)', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.data).toMatchObject({ actor_id: null, type: 'join_guest' });
+    expect(inserted).toEqual([expect.objectContaining({ actor_id: null, type: 'join_guest' })]);
   });
 });

@@ -104,7 +104,7 @@ export default function PartnerApplyPage() {
       const adminResult = await fetchAdminUserIds(supabase);
       if (adminResult.success && adminResult.data) {
         for (const adminId of adminResult.data) {
-          await createNotification(supabase, {
+          const bell = await createNotification(supabase, {
             recipient_id: adminId,
             actor_id: userId,
             type: 'partner_application',
@@ -112,6 +112,13 @@ export default function PartnerApplyPage() {
             entity_id: result.data?.id ?? null,
             message: `New partner application: ${businessName.trim()}`,
           });
+          // Non-fatal: the application itself was submitted.
+          if (!bell.success) {
+            logError(new Error(bell.error ?? 'createNotification failed'), {
+              action: 'partners_apply_notify_admin',
+              adminId,
+            });
+          }
         }
       }
     } else {

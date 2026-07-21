@@ -140,14 +140,22 @@ export default function RequestsPage() {
         const { body } = notificationCopy('request_approved', toLang(request.users?.preferred_language), {
           session: sessionLabel,
         });
-        await createNotification(supabase, {
+        // createNotification resolves {success:false} instead of throwing, so a
+        // .catch() here could never fire. Check the result explicitly.
+        const bell = await createNotification(supabase, {
           recipient_id: request.user_id,
           actor_id: user!.id,
           type: 'join_request_approved',
           entity_type: 'session',
           entity_id: sessionId,
           message: body,
-        }).catch((err) => logError(err, { action: 'requests.notify_approve', sessionId }));
+        });
+        if (!bell.success) {
+          logError(new Error(bell.error ?? 'createNotification failed'), {
+            action: 'requests.notify_approve',
+            sessionId,
+          });
+        }
 
         // Push to the approved athlete (fire-and-forget). The browser sends ONLY the
         // session + participant row ids — notify-approval derives the recipient and

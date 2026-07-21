@@ -69,7 +69,7 @@ export async function followUser(
 
     // Notify the followed user only on a NEW follow (no duplicate spam on retries).
     if (notificationMessage) {
-      await createNotification(supabase, {
+      const bell = await createNotification(supabase, {
         recipient_id: followingId,
         actor_id: followerId,
         type: 'follow',
@@ -77,6 +77,15 @@ export async function followUser(
         entity_id: null,
         message: notificationMessage,
       });
+      // Non-fatal: the follow itself succeeded. But a silent bell failure is how
+      // this class of bug hid, so surface it.
+      if (!bell.success) {
+        logError(new Error(bell.error ?? 'createNotification failed'), {
+          action: 'followUser.notify',
+          followerId,
+          followingId,
+        });
+      }
     }
 
     return { success: true, data: null };
@@ -544,7 +553,7 @@ export async function likePost(
         .single();
 
       if (!postError && post) {
-        await createNotification(supabase, {
+        const bell = await createNotification(supabase, {
           recipient_id: post.author_id,
           actor_id: userId,
           type: 'like',
@@ -552,6 +561,14 @@ export async function likePost(
           entity_id: postId,
           message: notificationMessage,
         });
+        // Non-fatal: the like itself succeeded.
+        if (!bell.success) {
+          logError(new Error(bell.error ?? 'createNotification failed'), {
+            action: 'likePost.notify',
+            postId,
+            userId,
+          });
+        }
       }
     }
 

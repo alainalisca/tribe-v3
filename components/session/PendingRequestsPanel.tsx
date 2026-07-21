@@ -101,14 +101,22 @@ export default function PendingRequestsPanel({
           toLang(req.user?.preferred_language),
           { session: sessionTitle }
         );
-        await createNotification(supabase, {
+        // createNotification resolves {success:false} instead of throwing, so a
+        // .catch() here could never fire. Check the result explicitly.
+        const bell = await createNotification(supabase, {
           recipient_id: req.user_id,
           actor_id: hostId,
           type: 'join_request_approved',
           entity_type: 'session',
           entity_id: sessionId,
           message: body,
-        }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_approve', sessionId }));
+        });
+        if (!bell.success) {
+          logError(new Error(bell.error ?? 'createNotification failed'), {
+            action: 'PendingRequestsPanel.notify_approve',
+            sessionId,
+          });
+        }
 
         // Push to the approved athlete (fire-and-forget; the bell above already
         // landed). The browser sends ONLY the session + participant row ids —
@@ -144,14 +152,20 @@ export default function PendingRequestsPanel({
         const { body } = notificationCopy('request_declined', toLang(req.user?.preferred_language), {
           session: sessionTitle,
         });
-        await createNotification(supabase, {
+        const bell = await createNotification(supabase, {
           recipient_id: req.user_id,
           actor_id: hostId,
           type: 'join_request_declined',
           entity_type: 'session',
           entity_id: sessionId,
           message: body,
-        }).catch((err) => logError(err, { action: 'PendingRequestsPanel.notify_decline', sessionId }));
+        });
+        if (!bell.success) {
+          logError(new Error(bell.error ?? 'createNotification failed'), {
+            action: 'PendingRequestsPanel.notify_decline',
+            sessionId,
+          });
+        }
       }
     } finally {
       setBusy((prev) => {

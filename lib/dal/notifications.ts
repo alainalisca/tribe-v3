@@ -14,6 +14,14 @@ export interface NotificationWithActor extends NotificationRow {
 
 /**
  * Create a notification. Does NOT notify if actor_id === recipient_id.
+ *
+ * Deliberately does NOT read the inserted row back. `notifications` is
+ * recipient-scoped for SELECT, so when the actor and the recipient are
+ * different people (every cross-user bell: approve, decline, follow, like,
+ * training interest, bulletin, partner application) a `.select()` RETURNING
+ * read is denied — and a blocked RETURNING rolls the INSERT back with it, so
+ * no bell was ever written. The write itself is permitted; only the read-back
+ * was not. Returns DalResult<null>: callers get success/error, never a row.
  */
 export async function createNotification(
   supabase: SupabaseClient,
@@ -32,11 +40,11 @@ export async function createNotification(
     entity_id?: string | null;
     message: string;
   }
-): Promise<DalResult<NotificationRow>> {
+): Promise<DalResult<null>> {
   try {
     // Don't notify if actor is the recipient
     if (actor_id && actor_id === recipient_id) {
-      return { success: true, data: null as any };
+      return { success: true, data: null };
     }
 
     const data: NotificationInsert = {
@@ -48,10 +56,11 @@ export async function createNotification(
       message,
     };
 
-    const { data: notification, error } = await supabase.from('notifications').insert(data).select().single();
+    // No .select()/.single() — see the note above.
+    const { error } = await supabase.from('notifications').insert(data);
 
     if (error) return { success: false, error: error.message };
-    return { success: true, data: notification };
+    return { success: true, data: null };
   } catch (error) {
     logError(error, { action: 'createNotification', recipient_id });
     return { success: false, error: 'Failed to create notification' };
