@@ -21,7 +21,9 @@ import {
   deleteParticipant,
   fetchSessionsByCreator,
   fetchPendingParticipantsForSessions,
+  createNotification,
 } from '@/lib/dal';
+import { notificationCopy, toLang } from '@/lib/notification-i18n';
 import type { User as AuthUser } from '@supabase/supabase-js';
 
 interface JoinRequest {
@@ -33,10 +35,12 @@ interface JoinRequest {
     name: string | null;
     avatar_url: string | null;
     sports: string[] | null;
+    preferred_language: string | null;
   } | null;
   session:
     | {
         id: string;
+        title: string | null;
         sport: string;
         date: string;
         start_time: string;
@@ -72,12 +76,15 @@ export default function RequestsPage() {
 
   async function loadRequests(userId: string) {
     try {
+      // `title` is fetched so the approval bell can name the session the same way
+      // PendingRequestsPanel does (title, falling back to sport).
       const sessionsResult = await fetchSessionsByCreator(supabase, userId, {
-        fields: 'id, sport, date, start_time, location',
+        fields: 'id, title, sport, date, start_time, location',
       });
 
       const mySessions = (sessionsResult.data || []) as {
         id: string;
+        title: string | null;
         sport: string;
         date: string;
         start_time: string;
@@ -96,7 +103,16 @@ export default function RequestsPage() {
       const requestsWithSessions =
         pendingRequests?.map((req) => ({
           ...req,
-          users: req.user ? { name: req.user.name, avatar_url: req.user.avatar_url, sports: null } : null,
+          users: req.user
+            ? {
+                name: req.user.name,
+                avatar_url: req.user.avatar_url,
+                sports: null,
+                // Carried through so the approval bell is composed in the
+                // ATHLETE's language, not the host's UI locale.
+                preferred_language: req.user.preferred_language ?? null,
+              }
+            : null,
           session: mySessions.find((s) => s.id === req.session_id),
         })) || [];
 
@@ -108,11 +124,40 @@ export default function RequestsPage() {
     }
   }
 
-  async function handleAccept(requestId: string) {
+  async function handleAccept(request: JoinRequest) {
+    const requestId = request.id;
+    const sessionId = request.session_id;
     try {
       const result = await updateParticipantStatus(supabase, requestId, 'confirmed');
 
       if (!result.success) throw new Error(result.error);
+
+      // Bell + push, matching PendingRequestsPanel exactly. Both, not either/or:
+      // the bell is the durable in-app record, the push is the live alert.
+      // Guest rows have no user_id and no account to notify.
+      if (request.user_id) {
+        const sessionLabel = request.session?.title || request.session?.sport || '';
+        const { body } = notificationCopy('request_approved', toLang(request.users?.preferred_language), {
+          session: sessionLabel,
+        });
+        await createNotification(supabase, {
+          recipient_id: request.user_id,
+          actor_id: user!.id,
+          type: 'join_request_approved',
+          entity_type: 'session',
+          entity_id: sessionId,
+          message: body,
+        }).catch((err) => logError(err, { action: 'requests.notify_approve', sessionId }));
+
+        // Push to the approved athlete (fire-and-forget). The browser sends ONLY the
+        // session + participant row ids — notify-approval derives the recipient and
+        // composes the copy server-side.
+        fetch('/api/sessions/notify-approval/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, participant_id: requestId }),
+        }).catch((err) => logError(err, { action: 'requests.notify_approve_push', sessionId }));
+      }
 
       showSuccess(t('requestAccepted'));
       loadRequests(user!.id);
@@ -227,7 +272,7 @@ export default function RequestsPage() {
 
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => handleAccept(request.id)}
+                      onClick={() => handleAccept(request)}
                       className="flex-1 flex items-center justify-center gap-2 font-semibold"
                     >
                       <Check className="w-4 h-4" />
