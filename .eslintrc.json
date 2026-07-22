@@ -19,5 +19,5 @@
       }
     ]
   },
-  "ignorePatterns": [".next/", "node_modules/", "lib/database.types.ts"]
+  "ignorePatterns": [".next/", "node_modules/", "lib/database.types.ts", "supabase/functions/send-push-notification/"]
 }
