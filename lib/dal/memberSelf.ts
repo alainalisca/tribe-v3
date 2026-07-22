@@ -23,6 +23,7 @@
 
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
+import { escapeLikePattern } from '@/lib/emailMatch';
 import type { DalResult } from './types';
 
 /** A single (member, gym) record the signed-in user can see. */
@@ -180,7 +181,10 @@ export async function listMyMemberships(userEmail: string): Promise<DalResult<My
           gym:gyms(id, name, slug)
         `
       )
-      .ilike('email', normalized)
+      // ilike (not eq) so a coach-typed `John@Gym.com` still matches the
+      // caller's lowercased auth email. Escaped so the address cannot act as
+      // a wildcard pattern and match another member's row.
+      .ilike('email', escapeLikePattern(normalized))
       .eq('archived', false)
       .not('gym_id', 'is', null);
     if (error) {
@@ -834,7 +838,10 @@ export async function buildMyDataExport(userEmail: string): Promise<DalResult<My
           gym:gyms(id, name, slug, timezone)
         `
       )
-      .ilike('email', normalized)
+      // Escaped: an unescaped address is a LIKE pattern, so `a_b@x.com` would
+      // also match `axb@x.com` and pull that member's name, email, attendance
+      // and payment rows into this export. ilike is kept for case-insensitivity.
+      .ilike('email', escapeLikePattern(normalized))
       .not('gym_id', 'is', null);
     if (clientErr) {
       logError(clientErr, { action: 'buildMyDataExport.clients' });

@@ -30,6 +30,7 @@
 
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { log, logError } from '@/lib/logger';
+import { escapeLikePattern } from '@/lib/emailMatch';
 import { sendCoachAddedYouWelcome } from './coachAddedYouWelcome';
 import { sendSignUpInvite } from './signUpInvite';
 
@@ -101,7 +102,10 @@ async function buildPayload(params: NotifyParams): Promise<EmailDispatch | null>
   const { data: userRow, error: userErr } = await service
     .from('users')
     .select('id, preferred_language')
-    .ilike('email', normalized)
+    // Escaped: unescaped, a coach-typed `a_b@x.com` would also match the user
+    // `axb@x.com` and send that person the welcome email instead. ilike is kept
+    // because coaches type these addresses by hand, in any case.
+    .ilike('email', escapeLikePattern(normalized))
     .maybeSingle();
   if (userErr) {
     logError(userErr, { action: 'notifyClientAdded.user_lookup' });
