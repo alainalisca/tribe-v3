@@ -65,7 +65,11 @@ export default function InstructorShareClient() {
           .gte('date', today)
           .order('date', { ascending: true })
           .limit(5),
-        supabase.from('sessions').select('*', { count: 'exact', head: true }).eq('creator_id', instructorId),
+        // select('id'), not '*': this page is a public share route, and once anon
+        // loses SELECT on payment_instructions, '*' expands to a column anon
+        // cannot read and 401s — head:true does not exempt it. Only the count is
+        // used here, so naming one readable column is both narrower and safe.
+        supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('creator_id', instructorId),
         supabase.auth.getUser(),
       ]);
 

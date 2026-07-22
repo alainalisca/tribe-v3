@@ -8,6 +8,7 @@ import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
   fetchSessionWithDetails,
+  fetchSessionPaymentInstructions,
   fetchUserIsAdmin,
   fetchUsersByIds,
   fetchAttendanceForSession,
@@ -36,6 +37,9 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
   const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  // Kept out of the session object on purpose: it is fetched separately and only
+  // for the host or a participant, so it never enters the public page payload.
+  const [paymentInstructions, setPaymentInstructions] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoType, setPhotoType] = useState<'location' | 'recap'>('location');
@@ -174,6 +178,22 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
         const userParticipant = participantsList.find((p) => p.user_id === user.id);
         setHasJoined(!!userParticipant && userParticipant.status === 'confirmed');
         setIsPending(!!userParticipant && userParticipant.status === 'pending');
+
+        // Paid sessions only, and only for someone entitled to see it. The DAL
+        // re-checks host-or-participant itself; this just avoids a pointless
+        // round trip. A failure is non-fatal — the rest of the page still
+        // renders — but must be surfaced, not swallowed.
+        if (result.data.session.is_paid) {
+          const piResult = await fetchSessionPaymentInstructions(supabase, sessionId, user.id);
+          if (piResult.success) {
+            setPaymentInstructions(piResult.data ?? null);
+          } else {
+            logError(new Error(piResult.error ?? 'fetchSessionPaymentInstructions failed'), {
+              action: 'loadSession.payment_instructions',
+              sessionId,
+            });
+          }
+        }
       }
       await checkAttendance();
       await loadRecapPhotos();
@@ -271,6 +291,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     userIsAdmin,
     hasJoined,
     isPending,
+    paymentInstructions,
     lightboxOpen,
     currentPhotoIndex,
     photoType,

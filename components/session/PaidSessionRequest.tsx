@@ -22,6 +22,15 @@ interface PaidSessionRequestProps {
   priceCents: number;
   currency: string;
   paymentInstructions: string | null;
+  /**
+   * Whether the viewer is allowed to see paymentInstructions at all (host or
+   * participant-row holder). Distinct from `paymentInstructions === null`:
+   * this modal opens BEFORE the request exists, so a first-time requester is
+   * not yet a participant. Without this flag we would tell them the instructor
+   * "hasn't added payment instructions", which is false when they simply
+   * aren't visible yet.
+   */
+  canViewPaymentInstructions?: boolean;
   /** Creates the pending "awaiting payment" request (reuses the manual-approval join). */
   onRequest: () => void;
   requesting: boolean;
@@ -32,6 +41,7 @@ export default function PaidSessionRequest({
   priceCents,
   currency,
   paymentInstructions,
+  canViewPaymentInstructions = false,
   onRequest,
   requesting,
   language,
@@ -53,6 +63,9 @@ export default function PaidSessionRequest({
     noInstructions: es
       ? 'El instructor aún no agregó instrucciones de pago. Coordina el pago directamente con el instructor.'
       : "The instructor hasn't added payment instructions yet. Arrange payment directly with the instructor.",
+    instructionsAfterRequest: es
+      ? 'Verás los datos de pago del instructor apenas envíes tu solicitud.'
+      : "You'll see the instructor's payment details as soon as you send your request.",
     disclaimer: es
       ? 'El pago se coordina directamente entre tú y el instructor. Tribe no procesa, retiene ni reembolsa este pago.'
       : 'Payment is arranged directly between you and the instructor. Tribe does not process, hold, or refund it.',
@@ -97,8 +110,12 @@ export default function PaidSessionRequest({
                 <p className="text-sm text-theme-secondary whitespace-pre-wrap rounded-lg bg-stone-100 dark:bg-tribe-mid px-3 py-2">
                   {paymentInstructions}
                 </p>
-              ) : (
+              ) : canViewPaymentInstructions ? (
+                // Visible to this viewer, and genuinely empty.
                 <p className="text-sm text-theme-tertiary">{copy.noInstructions}</p>
+              ) : (
+                // Withheld, not absent — do not claim the instructor left it blank.
+                <p className="text-sm text-theme-tertiary">{copy.instructionsAfterRequest}</p>
               )}
             </div>
 

@@ -18,7 +18,10 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
-type SessionRow = Database['public']['Tables']['sessions']['Row'];
+// Omit matches what fetchSession returns: payment_instructions is not on the
+// public read path (host/participant only, via fetchSessionPaymentInstructions).
+// The chat page never needed it.
+type SessionRow = Omit<Database['public']['Tables']['sessions']['Row'], 'payment_instructions'>;
 
 export default function ChatPage() {
   const params = useParams();

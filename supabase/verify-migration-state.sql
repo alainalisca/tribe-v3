@@ -623,4 +623,12 @@ select '136_retire_edge_function_push_triggers',
              and (select to_regprocedure('public.send_push_notification_webhook()'))  is null
              and (select to_regprocedure('public.notify_chat_message_webhook()'))     is not null
             then 'applied' else 'MISSING' end
+union all
+select '137_lock_payment_instructions_from_anon',
+       -- Applied once anon no longer holds SELECT on the column. Reports
+       -- MISSING while the table-level grant is in place, which is correct:
+       -- a table grant overrides the column grants and re-exposes the field
+       -- (that is exactly what the 2026-07-22 outage rollback restored).
+       case when not has_column_privilege('anon','public.sessions','payment_instructions','SELECT')
+            then 'applied' else 'MISSING' end
 order by migration;

@@ -33,7 +33,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    const sessionResult = await fetchSessionFields(supabase, sessionId, '*, creator:users!creator_id(name)');
+    // Explicit columns, not '*'. Two reasons: (1) this route is unauthenticated
+    // (middleware public path), so '*' pulled all 50 columns — including
+    // payment_instructions — to build a calendar file that needs eight of them;
+    // (2) once anon loses SELECT on payment_instructions, '*' expands to a
+    // column anon cannot read and the whole request 401s. Verified against
+    // public.users, which already has that column-level treatment: anon
+    // select=id returns 200 while select=* returns 42501.
+    const sessionResult = await fetchSessionFields(
+      supabase,
+      sessionId,
+      'id, sport, location, date, start_time, duration, description, creator:users!creator_id(name)'
+    );
     const session = sessionResult.data as {
       id: string;
       sport: string;

@@ -21,6 +21,10 @@ interface ActionButtonsProps {
   isPending: boolean;
   isPast: boolean;
   isFull: boolean;
+  /** Host or participant-row holder only; see page.tsx. */
+  canViewPaymentInstructions?: boolean;
+  /** Fetched via the gated DAL read, not off `session`. */
+  paymentInstructions?: string | null;
   sessionActions: {
     guestHasJoined: boolean;
     joining: boolean;
@@ -44,6 +48,8 @@ export default function ActionButtons({
   isPending,
   isPast,
   isFull,
+  canViewPaymentInstructions = false,
+  paymentInstructions = null,
   sessionActions,
   onEdit,
   onInvite,
@@ -178,7 +184,8 @@ export default function ActionButtons({
         <PaidSessionRequest
           priceCents={session.price_cents}
           currency={session.currency || 'COP'}
-          paymentInstructions={session.payment_instructions ?? null}
+          paymentInstructions={canViewPaymentInstructions ? paymentInstructions : null}
+          canViewPaymentInstructions={canViewPaymentInstructions}
           onRequest={sessionActions.handleJoin}
           requesting={sessionActions.joining}
           language={_language}
