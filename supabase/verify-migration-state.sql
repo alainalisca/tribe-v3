@@ -612,4 +612,15 @@ select '135_fix_instructor_participant_visibility',
          where schemaname='public' and tablename='session_participants'
            and policyname='sp_select_by_instructor'
        ) then 'applied' else 'MISSING' end
+union all
+select '136_retire_edge_function_push_triggers',
+       -- Retirement of the dead Edge Function push triggers. Applied once all
+       -- four functions are gone AND the kept chat function still exists, so a
+       -- run that over-dropped reports MISSING rather than applied.
+       case when (select to_regprocedure('public.notify_join_accepted()'))            is null
+             and (select to_regprocedure('public.notify_join_request()'))             is null
+             and (select to_regprocedure('public.notify_new_message()'))              is null
+             and (select to_regprocedure('public.send_push_notification_webhook()'))  is null
+             and (select to_regprocedure('public.notify_chat_message_webhook()'))     is not null
+            then 'applied' else 'MISSING' end
 order by migration;
