@@ -35,6 +35,21 @@ interface SessionDetailsProps {
   isFull: boolean;
   language: 'en' | 'es';
   isCreator?: boolean;
+  /**
+   * Gates the payment_instructions block. True only for the host or a viewer
+   * who holds a participant row (pending or confirmed). Anonymous visitors and
+   * non-participants must never see it: the field is free-text where
+   * instructors put personal payment rails (Nequi/Daviplata/account numbers),
+   * and /session/[id] is a PUBLIC route (middleware.ts:54), so this block was
+   * rendering those numbers to the logged-out internet.
+   */
+  canViewPaymentInstructions?: boolean;
+  /**
+   * Fetched separately by fetchSessionPaymentInstructions, NOT read off
+   * `session` — the field is no longer in the default select list, so it never
+   * reaches an anonymous visitor's page payload.
+   */
+  paymentInstructions?: string | null;
   onOpenLightbox: (index: number, type: 'location' | 'recap') => void;
 }
 
@@ -45,6 +60,8 @@ export default function SessionDetails({
   isFull,
   language,
   isCreator = false,
+  canViewPaymentInstructions = false,
+  paymentInstructions = null,
   onOpenLightbox,
 }: SessionDetailsProps) {
   const { t } = useLanguage();
@@ -187,13 +204,16 @@ export default function SessionDetails({
                 {language === 'es' ? 'Sesión de pago' : 'Paid Session'}
               </Badge>
             </div>
-            {session.payment_instructions && (
+            {/* Host or participant only. Two independent conditions on purpose:
+                the value now arrives only via the gated DAL read, and the flag
+                is a second barrier if it ever arrives some other way. */}
+            {canViewPaymentInstructions && paymentInstructions && (
               <div className="mt-2">
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
                   {language === 'es' ? 'Instrucciones de pago:' : 'Payment Instructions:'}
                 </p>
                 <p className="text-sm text-emerald-900 dark:text-emerald-200 whitespace-pre-line">
-                  {session.payment_instructions}
+                  {paymentInstructions}
                 </p>
               </div>
             )}

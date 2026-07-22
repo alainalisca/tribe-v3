@@ -191,6 +191,13 @@ export default function SessionDetailPage() {
     );
   })();
   const canGoLive = !!d.user && (d.hasJoined || isCreator) && isToday && !isPast;
+  // payment_instructions is free-text where instructors put personal payment
+  // rails (Nequi/Daviplata/account numbers). /session/[id] is a PUBLIC route,
+  // so it must never render for a logged-out visitor. Host, or any viewer
+  // holding a participant row — hasJoined is confirmed-only, so isPending is
+  // included deliberately: with no enforced payment step there is no reason to
+  // withhold it from someone who has already requested.
+  const canViewPaymentInstructions = !!d.user && (isCreator || d.hasJoined || d.isPending);
   const currentPhotos =
     d.photoType === 'location' ? d.session.photos : d.recapPhotos.map((p: RecapPhotoWithUser) => p.photo_url);
 
@@ -217,6 +224,8 @@ export default function SessionDetailPage() {
           isFull={isFull}
           language={language}
           isCreator={isCreator}
+          canViewPaymentInstructions={canViewPaymentInstructions}
+          paymentInstructions={d.paymentInstructions}
           onOpenLightbox={d.openLightbox}
         />
 
@@ -263,6 +272,8 @@ export default function SessionDetailPage() {
           isPending={d.isPending}
           isPast={isPast}
           isFull={isFull}
+          canViewPaymentInstructions={canViewPaymentInstructions}
+          paymentInstructions={d.paymentInstructions}
           sessionActions={d.sessionActions}
           onEdit={() => router.push(`/session/${params.id}/edit`)}
           onInvite={d.generateInviteLink}

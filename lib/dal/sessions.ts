@@ -11,6 +11,20 @@ export type { DalResult } from './types';
 
 // --- Query return types (with joined relations) ---
 
+/**
+ * A session as read on the PUBLIC path — every column except
+ * payment_instructions.
+ *
+ * /session/[id] is a public route, so the default reads run for anonymous
+ * visitors. payment_instructions is free-text where instructors put personal
+ * payment rails, so it is fetched separately and only for the host or a
+ * participant (fetchSessionPaymentInstructions). Encoding that in the type
+ * rather than only in the select string means a caller that tries to read the
+ * field off a default fetch fails to compile, instead of silently getting
+ * undefined at runtime.
+ */
+export type SessionPublic = Omit<Session, 'payment_instructions'>;
+
 export interface SessionParticipantWithUser {
   user_id: string | null;
   status: string | null;
@@ -36,12 +50,20 @@ export interface SessionWithRelations extends Session {
 /**
  * Fetches a single session by ID with all columns.
  */
-export async function fetchSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<Session>> {
+export async function fetchSession(supabase: SupabaseClient, sessionId: string): Promise<DalResult<SessionPublic>> {
   try {
     const { data, error } = await supabase
       .from('sessions')
       .select(
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        // payment_instructions is deliberately ABSENT. /session/[id] is a public
+        // route, so this list is executed for anonymous visitors — naming the
+        // column here put instructors' personal payment rails (Nequi/Daviplata/
+        // account numbers) in the page payload for anyone to harvest. It is read
+        // separately, and only for the host or a participant, via
+        // fetchSessionPaymentInstructions. Keeping it out of this list is also
+        // what makes the anon column REVOKE safe: after the revoke, any select
+        // naming the column fails for anon and would break the whole page.
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
       )
       .eq('id', sessionId)
       .single();
@@ -63,7 +85,7 @@ export async function fetchSessionWithDetails(
   sessionId: string
 ): Promise<
   DalResult<{
-    session: Session;
+    session: SessionPublic;
     creator: SessionWithRelations['creator'];
     participants: SessionWithRelations['participants'];
   }>
@@ -76,7 +98,15 @@ export async function fetchSessionWithDetails(
     const { data: session, error } = await supabase
       .from('sessions')
       .select(
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, payment_instructions, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        // payment_instructions is deliberately ABSENT. /session/[id] is a public
+        // route, so this list is executed for anonymous visitors — naming the
+        // column here put instructors' personal payment rails (Nequi/Daviplata/
+        // account numbers) in the page payload for anyone to harvest. It is read
+        // separately, and only for the host or a participant, via
+        // fetchSessionPaymentInstructions. Keeping it out of this list is also
+        // what makes the anon column REVOKE safe: after the revoke, any select
+        // naming the column fails for anon and would break the whole page.
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
       )
       .eq('id', sessionId)
       .maybeSingle();
@@ -133,6 +163,76 @@ export async function fetchSessionWithDetails(
   } catch (error) {
     logError(error, { action: 'fetchSessionWithDetails', sessionId });
     return { success: false, error: 'Failed to fetch session details' };
+  }
+}
+
+/**
+ * Reads sessions.payment_instructions for one session, but ONLY for the host or
+ * a viewer holding a participant row (pending or confirmed).
+ *
+ * Why this is separate from fetchSessionWithDetails: the field is voluntary
+ * free-text where instructors put personal payment rails (Nequi/Daviplata,
+ * account numbers). /session/[id] is a public route, so anything in the default
+ * select list is served to anonymous visitors. Splitting it out keeps it off the
+ * public payload and lets the anon column REVOKE land without breaking the page.
+ *
+ * Scope of the guarantee: the REVOKE stops anonymous reads at the database.
+ * `authenticated` deliberately retains SELECT on the column, so this check is a
+ * correctness/consistency gate for the UI, NOT a security boundary against a
+ * logged-in user issuing their own query. That matches the agreed threat model
+ * (exclude anonymous scraping and public-page rendering); revisit if real
+ * payments are ever processed in-app.
+ *
+ * Returns data: null for a viewer who is not entitled — deliberately
+ * indistinguishable from an instructor who left the field blank, so the response
+ * is not an entitlement oracle.
+ */
+export async function fetchSessionPaymentInstructions(
+  supabase: SupabaseClient,
+  sessionId: string,
+  userId: string
+): Promise<DalResult<string | null>> {
+  try {
+    const { data: sessionRow, error: sessionErr } = await supabase
+      .from('sessions')
+      .select('creator_id')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (sessionErr) return { success: false, error: sessionErr.message };
+    if (!sessionRow) return { success: false, error: 'session_not_found' };
+
+    let entitled = (sessionRow as { creator_id: string }).creator_id === userId;
+
+    if (!entitled) {
+      // Pending counts: with no enforced in-app payment step there is no reason
+      // to withhold the instructions from someone who has already requested.
+      const { data: participantRow, error: participantErr } = await supabase
+        .from('session_participants')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .in('status', ['pending', 'confirmed'])
+        .maybeSingle();
+      if (participantErr) return { success: false, error: participantErr.message };
+      entitled = !!participantRow;
+    }
+
+    if (!entitled) return { success: true, data: null };
+
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('payment_instructions')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (error) return { success: false, error: error.message };
+
+    return {
+      success: true,
+      data: (data as { payment_instructions: string | null } | null)?.payment_instructions ?? null,
+    };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionPaymentInstructions', sessionId });
+    return { success: false, error: 'Failed to fetch payment instructions' };
   }
 }
 
