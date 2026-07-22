@@ -1,3 +1,7 @@
 .next
 node_modules
 lib/database.types.ts
+
+# Archived source of a retired Edge Function, kept verbatim as a record of what
+# actually ran. Formatting it would defeat the point of archiving it.
+supabase/functions/send-push-notification/
