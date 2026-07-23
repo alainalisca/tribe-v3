@@ -11,6 +11,8 @@ import { getSettingsTranslations } from './translations';
 import { fetchUserField, fetchUserIsAdmin, updateUser } from '@/lib/dal';
 import { requestUserLocation } from '@/lib/location';
 import { resetUser } from '@/lib/analytics';
+import { changePassword, type PasswordChangeError } from '@/lib/auth/passwordChange';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { User } from '@supabase/supabase-js';
 
 /**
@@ -37,6 +39,7 @@ export function useSettings(language: 'en' | 'es') {
   const router = useRouter();
   const supabase = createClient();
   const txt = getSettingsTranslations(language);
+  const tAccount = useTranslations('settings.account');
 
   const [user, setUser] = useState<User | null>(null);
   const [userIsAdmin, setUserIsAdmin] = useState(false);
@@ -162,6 +165,33 @@ export function useSettings(language: 'en' | 'es') {
     resetUser();
     await supabase.auth.signOut();
     router.push('/auth');
+  }
+
+  /**
+   * Change the signed-in user's password. Returns null on success or the error
+   * key for the dialog to render; the dialog owns the field-level messaging, so
+   * this deliberately does not toast on failure.
+   *
+   * changePassword verifies the current password, sets the new one, then signs
+   * out the user's OTHER sessions (Supabase does not revoke them on a password
+   * change). Success is toasted here because the dialog closes on success and
+   * would otherwise take its own confirmation with it.
+   */
+  async function handleChangePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<PasswordChangeError | null> {
+    const result = await changePassword(supabase, user?.email, currentPassword, newPassword, confirmPassword);
+    if (!result.success) {
+      logError(new Error(result.error ?? 'change_password_failed'), {
+        action: 'handleChangePassword',
+        reason: result.error,
+      });
+      return result.error ?? 'generic';
+    }
+    showSuccess(tAccount('success'));
+    return null;
   }
 
   async function handleDeleteAccount() {
@@ -441,6 +471,7 @@ export function useSettings(language: 'en' | 'es') {
     sessionRemindersEnabled,
     loadingReminders,
     handleSignOut,
+    handleChangePassword,
     handleDeleteAccount,
     toggleSessionReminders,
     toggleNotifications,
