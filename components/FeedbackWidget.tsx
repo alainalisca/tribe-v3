@@ -202,19 +202,14 @@ function FeedbackWidgetInner({ appVersion, bottomOffset = 80 }: FeedbackWidgetPr
         appVersion,
       };
 
-      // The app runs on Vercel's Node runtime (NOT static export), so the
-      // Next.js API route works in production web too. Only the Capacitor
-      // NATIVE build has no Next server and must use the Supabase Edge
-      // Function. The old `NODE_ENV === 'development'` split sent ALL
-      // production web traffic to an Edge Function that isn't deployed —
-      // every web feedback submit failed with "Network error".
-      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-      const isNativeApp = typeof cap?.isNativePlatform === 'function' && cap.isNativePlatform();
-      const feedbackUrl = isNativeApp
-        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/feedback-widget`
-        : '/api/feedback/widget';
-
-      const response = await fetch(feedbackUrl, {
+      // One path for web and native alike. capacitor.config.ts sets
+      // server.url to the Vercel origin, so the native shell loads the same
+      // deployed app and a relative /api/... fetch resolves there over HTTPS —
+      // exactly as it already does for the other 15+ API routes. The previous
+      // native branch pointed at a feedback-widget Edge Function that was
+      // never deployed (functions list is empty), so a Capacitor build would
+      // have 404'd on every submit.
+      const response = await fetch('/api/feedback/widget', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
