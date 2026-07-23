@@ -109,6 +109,25 @@
     "location": {
       "deniedGuidance": "Location is blocked. To use nearby features, allow location for Tribe in your device settings, then reopen this screen.",
       "unsupportedHint": "Location isn't available on this device or browser."
+    },
+    "account": {
+      "changePassword": "Change password",
+      "changePasswordSubtitle": "Update the password you use to sign in",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "save": "Update password",
+      "saving": "Updating...",
+      "cancel": "Cancel",
+      "success": "Your password has been updated. We signed out your other devices.",
+      "errorCurrentWrong": "That current password is not correct.",
+      "errorMismatch": "The new passwords do not match.",
+      "errorTooShort": "Your new password needs at least 8 characters.",
+      "errorSameAsCurrent": "Your new password has to be different from the current one.",
+      "errorGeneric": "We could not update your password. Please try again.",
+      "oauthApple": "You sign in with Apple, so your password is managed by Apple.",
+      "oauthGoogle": "You sign in with Google, so your password is managed by Google.",
+      "oauthGeneric": "You sign in with an external provider, so your password is managed there."
     }
   },
   "postSession": {

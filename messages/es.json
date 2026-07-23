@@ -109,6 +109,25 @@
     "location": {
       "deniedGuidance": "La ubicación está bloqueada. Para ver funciones cercanas, permite la ubicación para Tribe en los ajustes de tu dispositivo y vuelve a abrir esta pantalla.",
       "unsupportedHint": "La ubicación no está disponible en este dispositivo o navegador."
+    },
+    "account": {
+      "changePassword": "Cambiar contraseña",
+      "changePasswordSubtitle": "Actualiza la contraseña que usas para entrar",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirma la nueva contraseña",
+      "save": "Actualizar contraseña",
+      "saving": "Actualizando...",
+      "cancel": "Cancelar",
+      "success": "Tu contraseña quedó actualizada. Cerramos la sesión en tus otros dispositivos.",
+      "errorCurrentWrong": "Esa contraseña actual no es correcta.",
+      "errorMismatch": "Las contraseñas nuevas no coinciden.",
+      "errorTooShort": "Tu nueva contraseña necesita al menos 8 caracteres.",
+      "errorSameAsCurrent": "Tu nueva contraseña tiene que ser diferente a la actual.",
+      "errorGeneric": "No pudimos actualizar tu contraseña. Intenta de nuevo.",
+      "oauthApple": "Entras con Apple, así que tu contraseña la maneja Apple.",
+      "oauthGoogle": "Entras con Google, así que tu contraseña la maneja Google.",
+      "oauthGeneric": "Entras con un proveedor externo, así que tu contraseña se maneja allá."
     }
   },
   "postSession": {

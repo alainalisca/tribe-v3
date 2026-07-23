@@ -30,6 +30,7 @@ import ReplayToursButton from '@/components/ReplayToursButton';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog';
 import { useSettings } from './useSettings';
 import { useRouter } from 'next/navigation';
 import TrainingPreferencesForm from '@/components/TrainingPreferencesForm';
@@ -61,6 +62,7 @@ export default function SettingsPage() {
     sessionRemindersEnabled,
     loadingReminders,
     handleSignOut,
+    handleChangePassword,
     handleDeleteAccount,
     toggleSessionReminders,
     toggleNotifications,
@@ -451,10 +453,13 @@ export default function SettingsPage() {
         {/* Account Section */}
         <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
           <h2 className="text-lg font-bold text-theme-primary mb-4">{txt.account}</h2>
+          {/* Password change sits above Sign out: it is the action a user is
+              most likely to want, and it must not be adjacent to Delete. */}
+          <ChangePasswordDialog provider={user?.app_metadata?.provider} onSubmit={handleChangePassword} />
           <Button
             variant="destructive"
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-3 font-semibold rounded-xl"
+            className="w-full flex items-center justify-center gap-2 py-3 mt-3 font-semibold rounded-xl"
           >
             <LogOut className="w-5 h-5" />
             {txt.signOut}
