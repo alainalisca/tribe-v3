@@ -201,5 +201,28 @@
       "location": "Ubicacion",
       "years_experience": "Anos de experiencia"
     }
+  },
+  "tribeOs": {
+    "waitlist": {
+      "cardTitle": "Únete a la lista de espera de Tribe.OS",
+      "cardSub": "Tribe.OS todavía no está abierto. Cuéntanos sobre tu trabajo y el modelo de precios que te funcionaría, y te escribimos apenas abramos el acceso anticipado.",
+      "nameLabel": "Tu nombre",
+      "emailLabel": "Correo",
+      "teachLabel": "¿Qué enseñas?",
+      "teachPh": "Yoga, running, boxeo, danza, BJJ",
+      "sessionsLabel": "¿Cuántas sesiones dictas por semana?",
+      "sessionsPh": "Por ejemplo, 5",
+      "pricingHeading": "¿Cuál modelo de precios te funcionaría?",
+      "pricingMonthly": "Treinta dólares al mes para crear sesiones pagas sin límite.",
+      "pricingRevShare": "Gratis. Tribe se queda con el quince por ciento de los ingresos de las sesiones pagas.",
+      "commentsLabel": "¿Algo más que debamos saber?",
+      "commentsPh": "Opcional. Cuéntanos sobre tu práctica, tus clientes y qué te ayudaría más.",
+      "submit": "Unirme a la lista",
+      "submitting": "Guardando tus datos",
+      "successTitle": "Listo. Ya estás en la lista.",
+      "successSub": "Te escribimos apenas Tribe.OS abra el acceso anticipado. Mientras tanto, sigue usando la app de Tribe gratis.",
+      "pricingMissing": "Elige el modelo de precios que te funciona.",
+      "networkError": "Algo falló de nuestro lado. Intenta de nuevo."
+    }
   }
 }
