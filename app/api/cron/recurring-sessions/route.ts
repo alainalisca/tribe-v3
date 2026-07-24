@@ -1,12 +1,15 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { log, logError } from '@/lib/logger';
-import { childSessionExists, createChildSession } from '@/lib/dal/sessions';
+import {
+  childSessionExists,
+  createChildSession,
+  RECURRING_PARENT_COLUMNS,
+  type RecurringParentSession,
+} from '@/lib/dal/sessions';
 import { enrollSubscribersInChildSession } from '@/lib/dal/sessionSubscriptions';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { computeRecurrenceDates } from '@/lib/recurrence';
-import type { Session } from '@/lib/database.types';
 
 /** Number of days ahead to generate child sessions */
 const LOOKAHEAD_DAYS = 7;
@@ -30,12 +33,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Service-role for the READ as well as the writes below. A cron carries no
+    // cookie, so the cookie client runs as `anon` — and migration 137 revoked
+    // anon's SELECT on sessions.payment_instructions, which select('*') expands
+    // to include. The result was a 42501 that failed the whole job. The writes
+    // at the bottom of this file were already moved to service-role for the
+    // same class of reason; the read was left behind.
+    const serviceClient = getServiceRoleClient();
 
-    // 1. Fetch all active recurring parent sessions
-    const { data: parents, error: fetchError } = await supabase
+    // 1. Fetch all active recurring parent sessions.
+    // Explicit columns, never select('*'): the wildcard is what turned one
+    // revoked column into a total failure, and it will do so again the next
+    // time a column is locked down. RECURRING_PARENT_COLUMNS is kept in step
+    // with RecurringParentSession, which createChildSession consumes, so a new
+    // field cannot be read without being selected.
+    const { data: parents, error: fetchError } = await serviceClient
       .from('sessions')
-      .select('*')
+      .select(RECURRING_PARENT_COLUMNS)
       .eq('is_recurring', true)
       .eq('status', 'active')
       .is('recurring_parent_id', null);
@@ -45,18 +59,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch recurring parents' }, { status: 500 });
     }
 
-    const parentSessions = (parents || []) as Session[];
+    const parentSessions = (parents || []) as unknown as RecurringParentSession[];
     let childrenCreated = 0;
     let subscribersEnrolled = 0;
     let errorCount = 0;
 
-    // Service-role client for all writes in this cron. The sessions INSERT
-    // policy is `auth.uid() = creator_id`, but a cron has no auth user
-    // (auth.uid() is null), so the cookie/anon client's child-session inserts
-    // were SILENTLY BLOCKED BY RLS — which is why 0 recurring children had
-    // ever been created. Service role bypasses RLS. (Also used for the
-    // subscriber fan-out, which writes session_participants for other users.)
-    const serviceClient = getServiceRoleClient();
+    // NOTE: serviceClient (created above) is used for every write too. The
+    // sessions INSERT policy is `auth.uid() = creator_id`, and a cron has no
+    // auth user, so anon inserts were silently RLS-blocked — which is why 0
+    // recurring children had ever been created before that was fixed.
 
     // 2. For each parent, compute upcoming dates and create missing children
     for (const parent of parentSessions) {
