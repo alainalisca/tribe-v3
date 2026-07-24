@@ -45,6 +45,51 @@ export interface SessionWithRelations extends Session {
   } | null;
 }
 
+/**
+ * The parent-session fields the recurring generator actually needs: the three
+ * recurrence inputs plus every column createChildSession copies onto the child.
+ *
+ * Declared as a Pick rather than the full Session row so the cron's SELECT list
+ * and this consumer are bound together by the compiler. Adding a field to
+ * createChildSession without adding it here is a type error, instead of an
+ * undefined that silently lands on a generated session. It also lets the cron
+ * stop using select('*'), which is what turned migration 137's single revoked
+ * column into a total failure of the job.
+ */
+export type RecurringParentSession = Pick<
+  Session,
+  | 'id'
+  | 'date'
+  | 'recurrence_pattern'
+  | 'recurrence_end_date'
+  | 'creator_id'
+  | 'currency'
+  | 'description'
+  | 'duration'
+  | 'equipment'
+  | 'gender_preference'
+  | 'is_paid'
+  | 'join_policy'
+  | 'latitude'
+  | 'location'
+  | 'location_lat'
+  | 'location_lng'
+  | 'longitude'
+  | 'max_participants'
+  | 'photos'
+  | 'platform_fee_percent'
+  | 'price_cents'
+  | 'skill_level'
+  | 'sport'
+  | 'start_time'
+  | 'title'
+  | 'visibility'
+>;
+
+/** Column list matching RecurringParentSession, for the cron's SELECT. */
+export const RECURRING_PARENT_COLUMNS =
+  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility';
+
 // --- Read operations ---
 
 /**
@@ -757,7 +802,7 @@ export async function childSessionExists(
  */
 export async function createChildSession(
   supabase: SupabaseClient,
-  parent: Session,
+  parent: RecurringParentSession,
   targetDate: string
 ): Promise<DalResult<string>> {
   try {

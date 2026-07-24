@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaToday } from '@/lib/time/bogotaDate';
@@ -25,7 +25,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = await createClient();
+    // Service-role, not the cookie client: a cron carries no cookie, so the
+    // cookie client runs as `anon` and the users UPDATE below (stamping
+    // last_motivation_sent) is silently RLS-blocked. Same defect as
+    // recurring-sessions. NOTE: this route is not currently in vercel.json, so
+    // it does not fire on a schedule today.
+    const supabase = getServiceRoleClient();
 
     // Get users who haven't received motivation today (Bogota-local day, so the
     // "once per day" dedup tracks the user's actual calendar day, not UTC).
