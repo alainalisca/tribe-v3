@@ -101,6 +101,44 @@ describe('useAuthHandlers — OTP verify', () => {
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
+  it('handleForgotPassword enters recovery verify mode and calls resetPasswordForEmail without redirectTo', async () => {
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    act(() => {
+      result.current.setEmail('ana@example.com');
+    });
+    await act(async () => {
+      await result.current.handleForgotPassword();
+    });
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('ana@example.com');
+    // Must NOT pass a redirectTo — 6-digit code flow, not magic link
+    const callArg = resetPasswordForEmail.mock.calls[0];
+    expect(callArg).toHaveLength(1);
+    expect(result.current.verifyMode).toBe('recovery');
+    expect(result.current.otpEmail).toBe('ana@example.com');
+  });
+
+  it('handleVerifyCode in recovery mode establishes session and shows reset-password form', async () => {
+    verifyOtp.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    const { result } = renderHook(() => useAuthHandlers('en'));
+    // Land in recovery verify mode
+    act(() => {
+      result.current.setEmail('ana@example.com');
+    });
+    await act(async () => {
+      await result.current.handleForgotPassword();
+    });
+    expect(result.current.verifyMode).toBe('recovery');
+    act(() => {
+      result.current.setOtpCode('654321');
+    });
+    await act(async () => {
+      await result.current.handleVerifyCode({ preventDefault() {} } as React.FormEvent);
+    });
+    expect(verifyOtp).toHaveBeenCalledWith({ email: 'ana@example.com', token: '654321', type: 'recovery' });
+    expect(result.current.verifyMode).toBeNull();
+    expect(result.current.isResetPassword).toBe(true);
+  });
+
   it('handleResendVerification in recovery mode calls resetPasswordForEmail and not resend', async () => {
     const { result } = renderHook(() => useAuthHandlers('en'));
     // Go through the forgot-password flow to land in recovery verify mode
