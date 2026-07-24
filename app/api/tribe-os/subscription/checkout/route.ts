@@ -28,7 +28,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { createTribeOSStripeCustomer, createTribeOSCheckoutSession } from '@/lib/payments/stripe';
 import { setTribeOSStripeCustomerId } from '@/lib/dal/tribeOSSubscription';
 import { isTribeOSPremiumActive } from '@/lib/dal/tribeOSPremium';
@@ -41,8 +41,34 @@ interface PremiumRow {
   tribe_os_stripe_customer_id: string | null;
 }
 
+/**
+ * Tribe.OS billing is OFF until the product is released.
+ *
+ * This gate is on the ROUTE, not just the UI, because the route is the part
+ * that takes money: hiding the Subscribe button would leave this endpoint
+ * reachable by anyone who can POST. Until TRIBE_OS_BILLING_ENABLED is set to
+ * 'true' in the environment, no Stripe Checkout Session can be created and
+ * therefore no card can be charged.
+ *
+ * Flip it by setting TRIBE_OS_BILLING_ENABLED=true on Vercel when Tribe.OS
+ * actually launches. Nothing else needs to change to re-enable checkout.
+ */
+function isBillingEnabled(): boolean {
+  return process.env.TRIBE_OS_BILLING_ENABLED === 'true';
+}
+
 export async function POST(_request: NextRequest): Promise<NextResponse> {
   try {
+    if (!isBillingEnabled()) {
+      // 503, not 403: this is "not open yet", not "you may not". Logged so an
+      // unexpected attempt after launch is visible rather than silent.
+      log('warn', 'tribe_os_checkout_blocked', {
+        route: 'POST /api/tribe-os/subscription/checkout',
+        action: 'billing_disabled',
+      });
+      return NextResponse.json({ success: false, error: 'billing_disabled' }, { status: 503 });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },

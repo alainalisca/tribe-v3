@@ -25,7 +25,13 @@ import { sendWeeklySummary, type WeeklySummaryParams } from './weeklySummary';
 export interface WeeklySummarySendResult {
   attempted: boolean;
   sent: boolean;
-  skip_reason?: 'service_role_missing' | 'toggle_off' | 'no_owner_email' | 'resend_not_configured' | 'send_failed';
+  skip_reason?:
+    | 'service_role_missing'
+    | 'toggle_off'
+    | 'no_owner_email'
+    | 'resend_not_configured'
+    | 'no_activity'
+    | 'send_failed';
 }
 
 function buildServiceClient(): SupabaseClient | null {
@@ -194,6 +200,25 @@ export async function maybeSendWeeklySummary(gymId: string, siteUrl: string): Pr
   const { fromIso, toIso } = previousWeekRange();
   try {
     const stats = await buildStats(service, gymId, fromIso, toIso);
+
+    // Nothing happened and nothing needs acting on: send no email at all.
+    // Without this the summary still goes out reading "No attendance recorded
+    // this week. If that's a surprise, head to /os/dashboard to investigate."
+    // with revenue as an em dash, which is a weekly nag for a gym that is
+    // simply idle, and would be a brand-new customer's first impression.
+    //
+    // at_risk and active insights are checked as well as attendance because
+    // they are current-state, not window-state: a gym with no sessions this
+    // week but three clients drifting toward churn DOES have something worth
+    // reading, and suppressing that would hide the most useful email we send.
+    if (stats.sessionsRecorded === 0 && stats.atRiskCount === 0 && stats.activeInsights === 0) {
+      log('info', 'weekly_summary_skipped', {
+        action: 'weeklySummary.no_activity',
+        gymId,
+      });
+      return { attempted: false, sent: false, skip_reason: 'no_activity' };
+    }
+
     await sendWeeklySummary(
       {
         ownerName: (ownerRow.name as string) ?? 'there',

@@ -25,7 +25,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
-import UpgradeCard from '@/components/tribe-os/UpgradeCard';
+import TribeOSWaitlistCard from '@/components/tribe-os/TribeOSWaitlistCard';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import AtRiskClientsWidget from '@/components/tribe-os/AtRiskClientsWidget';
 import CelebrateWinsWidget from '@/components/tribe-os/CelebrateWinsWidget';
 import RecentActivityWidget from '@/components/tribe-os/RecentActivityWidget';
@@ -135,6 +136,28 @@ function pickGreeting(s: typeof copy.en | typeof copy.es, name: string): string 
 
 export default function TribeOSDashboardPage() {
   const { language } = useLanguage();
+  const tWaitlist = useTranslations('tribeOs.waitlist');
+  const waitlistCopy = {
+    cardTitle: tWaitlist('cardTitle'),
+    cardSub: tWaitlist('cardSub'),
+    nameLabel: tWaitlist('nameLabel'),
+    emailLabel: tWaitlist('emailLabel'),
+    teachLabel: tWaitlist('teachLabel'),
+    teachPh: tWaitlist('teachPh'),
+    sessionsLabel: tWaitlist('sessionsLabel'),
+    sessionsPh: tWaitlist('sessionsPh'),
+    pricingHeading: tWaitlist('pricingHeading'),
+    pricingMonthly: tWaitlist('pricingMonthly'),
+    pricingRevShare: tWaitlist('pricingRevShare'),
+    commentsLabel: tWaitlist('commentsLabel'),
+    commentsPh: tWaitlist('commentsPh'),
+    submit: tWaitlist('submit'),
+    submitting: tWaitlist('submitting'),
+    successTitle: tWaitlist('successTitle'),
+    successSub: tWaitlist('successSub'),
+    pricingMissing: tWaitlist('pricingMissing'),
+    networkError: tWaitlist('networkError'),
+  };
   const s = copy[language];
   const router = useRouter();
 
@@ -252,17 +275,10 @@ export default function TribeOSDashboardPage() {
           </h1>
           <p className="text-base sm:text-lg text-gray-700 leading-relaxed mb-10">{s.upgradeIntro}</p>
           <div className="bg-white rounded-2xl p-7 sm:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.08)] border border-gray-200">
-            <UpgradeCard
-              copy={{
-                upgradeTitle: s.upgradeTitle,
-                upgradePrice: s.upgradePrice,
-                upgradePriceHint: s.upgradePriceHint,
-                upgradeBenefits: s.upgradeBenefits,
-                subscribeButton: s.subscribeButton,
-                subscribingLabel: s.subscribingLabel,
-                subscribeError: s.subscribeError,
-              }}
-            />
+            {/* Billing is disabled until launch (TRIBE_OS_BILLING_ENABLED), so
+                this captures intent instead of payment. Same form the public
+                landing page uses. */}
+            <TribeOSWaitlistCard copy={waitlistCopy} language={language} />
           </div>
         </div>
       </main>
