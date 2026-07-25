@@ -112,8 +112,10 @@ describe('migration 138 — the leak-closing contract', () => {
     }
   });
 
-  it('the view stubs invite_only location', () => {
-    expect(sql).toContain("join_policy = 'invite_only' THEN NULL");
+  it('EXCLUDES invite_only sessions entirely (not just location-stubbed)', () => {
+    expect(sql).toMatch(/WHERE s\.\join_policy IS DISTINCT FROM 'invite_only'/);
+    // The old stub approach must be gone.
+    expect(sql).not.toContain("join_policy = 'invite_only' THEN NULL");
   });
 
   it('revokes from anon explicitly, not just PUBLIC (the repeated trap)', () => {

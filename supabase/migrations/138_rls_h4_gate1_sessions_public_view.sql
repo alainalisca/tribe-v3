@@ -17,7 +17,13 @@
 -- Product decisions baked in:
 --   * coordinates rounded to 3 dp (~78 m at Medellin) for anon; exact stays
 --     behind the base table, which only authenticated/service-role read
---   * invite_only rows are location-stubbed for a no-token anon viewer
+--   * invite_only sessions are EXCLUDED entirely (not just location-stubbed):
+--     "invite_only" means "private, requires direct invitation" (CLAUDE.md), so
+--     it must be genuinely undiscoverable, not merely location-hidden. The row's
+--     existence, sport, date and host are private too. The ONLY anon path that
+--     renders an invite_only session is /invite/[token] via validate_invite_token
+--     (token possession = authorization). A /s/[session-id] share link to an
+--     invite_only session therefore returns "not found" for anon, by design.
 --   * host flattened to name/avatar/id (a view has no FK, so the
 --     creator:users!fk embed callers use today cannot resolve against it)
 --
@@ -57,17 +63,20 @@ SELECT
   u.name AS creator_name,
   u.avatar_url AS creator_avatar_url,
   u.average_rating AS creator_average_rating,
-  -- invite_only STUB: a no-token anonymous viewer sees sport/date/host but no
-  -- location. round() has no (double precision, int) overload -> ::numeric cast.
-  -- BOTH coordinate pairs are rounded; different consumers read different pairs,
-  -- so rounding only one would leak precise coords through the other.
-  CASE WHEN s.join_policy = 'invite_only' THEN NULL ELSE s.location END AS location,
-  CASE WHEN s.join_policy = 'invite_only' THEN NULL ELSE round(s.latitude::numeric, 3) END AS latitude,
-  CASE WHEN s.join_policy = 'invite_only' THEN NULL ELSE round(s.longitude::numeric, 3) END AS longitude,
-  CASE WHEN s.join_policy = 'invite_only' THEN NULL ELSE round(s.location_lat::numeric, 3) END AS location_lat,
-  CASE WHEN s.join_policy = 'invite_only' THEN NULL ELSE round(s.location_lng::numeric, 3) END AS location_lng
+  s.location,
+  -- BOTH coordinate pairs rounded to 3dp; different consumers read different
+  -- pairs, so rounding only one would leak precise coords through the other.
+  -- round() has no (double precision, int) overload -> ::numeric cast.
+  round(s.latitude::numeric, 3) AS latitude,
+  round(s.longitude::numeric, 3) AS longitude,
+  round(s.location_lat::numeric, 3) AS location_lat,
+  round(s.location_lng::numeric, 3) AS location_lng
 FROM public.sessions s
-LEFT JOIN public.users u ON u.id = s.creator_id;
+LEFT JOIN public.users u ON u.id = s.creator_id
+-- invite_only sessions are EXCLUDED from the anon view (see header). IS DISTINCT
+-- FROM (not <>) so a NULL join_policy — an unset, non-private session — stays
+-- discoverable rather than being dropped by NULL-comparison semantics.
+WHERE s.join_policy IS DISTINCT FROM 'invite_only';
 
 COMMENT ON VIEW public.sessions_public IS
   'RLS-H4 anon-facing projection of public.sessions. Coordinates rounded to 3dp; '
