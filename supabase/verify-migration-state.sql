@@ -631,4 +631,11 @@ select '137_lock_payment_instructions_from_anon',
        -- (that is exactly what the 2026-07-22 outage rollback restored).
        case when not has_column_privilege('anon','public.sessions','payment_instructions','SELECT')
             then 'applied' else 'MISSING' end
+union all
+select '138_rls_h4_gate1_sessions_public_view',
+       -- Gate 1: the anon-facing view exists AND validate_invite_token no longer
+       -- returns to_jsonb of the whole row (its body must not contain to_jsonb).
+       case when (select to_regclass('public.sessions_public')) is not null
+             and pg_get_functiondef('public.validate_invite_token(text)'::regprocedure) not like '%to_jsonb(s)%'
+            then 'applied' else 'MISSING' end
 order by migration;

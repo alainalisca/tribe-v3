@@ -85,6 +85,16 @@ export function useHomeFeed() {
   const liveStatus = useLiveStatus(supabase);
 
   const loadSessions = useCallback(async () => {
+    // RLS-H4: a logged-out visitor renders <LandingPage> (app/page.tsx) and never
+    // sees this list, so fetching it as anon was pure waste — and it was the last
+    // anon-reachable select('*') on the base table, silently 401ing since the 137
+    // revoke. Guarding on user both removes that 401 and keeps fetchUpcomingSessions
+    // (a base-table read with full precision) exclusively on the authenticated path,
+    // so authed users are NOT downgraded to the rounded anon view.
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setFetchError(false);
@@ -101,8 +111,9 @@ export function useHomeFeed() {
     } finally {
       setLoading(false);
     }
+    // user is a real dep now (the guard above reads it); supabase is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
-  }, [supabase]);
+  }, [supabase, user]);
 
   const actions = useSessionActions({
     supabase,
