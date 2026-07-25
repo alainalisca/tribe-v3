@@ -8,6 +8,7 @@ import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
   fetchSessionWithDetails,
+  fetchSessionPublicView,
   fetchSessionPaymentInstructions,
   fetchUserIsAdmin,
   fetchUsersByIds,
@@ -146,7 +147,17 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     try {
       setLoading(true);
       setLoadError(null);
-      const result = await fetchSessionWithDetails(supabase, sessionId);
+      // RLS-H4: authed viewers read the base table (full precision, all columns);
+      // a logged-out viewer reads the anon view (3dp coords, invite_only stubbed),
+      // which survives the Gate 3 revoke. Auth is resolved freshly here rather than
+      // from `user` state, because checkUser() and loadSession() run in parallel
+      // (same mount effect), so `user` is not yet set on the first pass.
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+      const result = authUser
+        ? await fetchSessionWithDetails(supabase, sessionId)
+        : await fetchSessionPublicView(supabase, sessionId);
       if (!result.success || !result.data) {
         setLoadError(result.error || 'unknown');
         return;

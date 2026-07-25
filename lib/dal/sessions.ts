@@ -212,6 +212,78 @@ export async function fetchSessionWithDetails(
 }
 
 /**
+ * RLS-H4: the ANONYMOUS read path for /session/[id].
+ *
+ * Reads sessions_public (the anon-facing view) instead of the base table, so a
+ * logged-out visitor's session-detail page survives the Gate 3 anon revoke.
+ * Coordinates come back rounded to 3dp and invite_only rows are
+ * location-stubbed by the view; the host is flattened (creator_name etc.) and
+ * remapped here to the { creator } shape the page already consumes.
+ *
+ * Authenticated viewers must NOT use this — they call fetchSessionWithDetails
+ * against the base table for full precision and every column. useSessionDetail
+ * picks the path by auth state.
+ *
+ * Returns the same { session, creator, participants } shape. participants is
+ * always [] here: the roster view is authenticated-only (127), and anon renders
+ * counts, not identities, exactly as fetchSessionWithDetails already yields for
+ * a logged-out caller.
+ */
+export async function fetchSessionPublicView(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<
+  DalResult<{
+    session: SessionPublic;
+    creator: SessionWithRelations['creator'];
+    participants: SessionParticipantWithUser[];
+  }>
+> {
+  try {
+    const { data: row, error } = await supabase
+      .from('sessions_public')
+      .select(
+        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng'
+      )
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (error) {
+      logError(error, { action: 'fetchSessionPublicView.fetch', sessionId });
+      return { success: false, error: error.message };
+    }
+    if (!row) return { success: false, error: 'session_not_found' };
+
+    const v = row as Record<string, unknown>;
+    const creator = v.creator_id
+      ? {
+          id: v.creator_id as string,
+          name: (v.creator_name as string) ?? '',
+          avatar_url: (v.creator_avatar_url as string | null) ?? null,
+          average_rating: (v.creator_average_rating as number | null) ?? null,
+          total_reviews: null,
+        }
+      : null;
+
+    // The view exposes the anon-safe subset of session columns; base-only
+    // columns (recurrence, verification, operational flags, exact coords) are
+    // absent and are never read on the anon detail path — they render only
+    // inside d.user-gated branches. Cast is documented, not a type escape hatch.
+    return {
+      success: true,
+      data: {
+        session: v as unknown as SessionPublic,
+        creator,
+        participants: [],
+      },
+    };
+  } catch (error) {
+    logError(error, { action: 'fetchSessionPublicView', sessionId });
+    return { success: false, error: 'Failed to fetch session' };
+  }
+}
+
+/**
  * Reads sessions.payment_instructions for one session, but ONLY for the host or
  * a viewer holding a participant row (pending or confirmed).
  *
@@ -760,10 +832,13 @@ export async function fetchUpcomingSessionsByUser(
 export async function fetchSessionFields(
   supabase: SupabaseClient,
   sessionId: string,
-  fields: string
+  fields: string,
+  // RLS-H4: anon-reachable callers pass 'sessions_public' so their read survives
+  // the Gate 3 anon revoke. Authed/service-role callers keep the default base table.
+  table: 'sessions' | 'sessions_public' = 'sessions'
 ): Promise<DalResult<unknown>> {
   try {
-    const { data, error } = await supabase.from('sessions').select(fields).eq('id', sessionId).single();
+    const { data, error } = await supabase.from(table).select(fields).eq('id', sessionId).single();
     if (error) return { success: false, error: error.message };
     return { success: true, data };
   } catch (error) {

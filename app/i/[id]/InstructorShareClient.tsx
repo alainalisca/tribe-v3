@@ -59,7 +59,9 @@ export default function InstructorShareClient() {
           .eq('id', instructorId)
           .single(),
         supabase
-          .from('sessions')
+          // RLS-H4: read the anon-facing view, not the base table, so this public
+          // share page survives the Gate 3 anon revoke.
+          .from('sessions_public')
           .select('id, title, sport, date, start_time, location')
           .eq('creator_id', instructorId)
           .gte('date', today)
@@ -69,7 +71,7 @@ export default function InstructorShareClient() {
         // loses SELECT on payment_instructions, '*' expands to a column anon
         // cannot read and 401s — head:true does not exempt it. Only the count is
         // used here, so naming one readable column is both narrower and safe.
-        supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('creator_id', instructorId),
+        supabase.from('sessions_public').select('id', { count: 'exact', head: true }).eq('creator_id', instructorId),
         supabase.auth.getUser(),
       ]);
 

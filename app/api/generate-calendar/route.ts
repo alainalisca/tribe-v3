@@ -40,10 +40,12 @@ export async function GET(request: Request) {
     // column anon cannot read and the whole request 401s. Verified against
     // public.users, which already has that column-level treatment: anon
     // select=id returns 200 while select=* returns 42501.
+    // RLS-H4: read the anon view (creator flattened; no FK embed against a view).
     const sessionResult = await fetchSessionFields(
       supabase,
       sessionId,
-      'id, sport, location, date, start_time, duration, description, creator:users!creator_id(name)'
+      'id, sport, location, date, start_time, duration, description, creator_name',
+      'sessions_public'
     );
     const session = sessionResult.data as {
       id: string;
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
       start_time: string;
       duration: number | null;
       description: string | null;
-      creator: { name: string } | null;
+      creator_name: string | null;
     } | null;
 
     if (!session) {
@@ -87,12 +89,12 @@ export async function GET(request: Request) {
         endDateTime.getMinutes(),
       ] as [number, number, number, number, number],
       title: `${session.sport} - Tribe`,
-      description: `${session.description || ''}\n\nHosted by: ${session.creator?.name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
+      description: `${session.description || ''}\n\nHosted by: ${session.creator_name || 'Tribe Community'}\n\nNever Train Alone!\n\n${SITE_URL}/session/${sessionId}`,
       location: session.location,
       url: `${SITE_URL}/session/${sessionId}`,
       status: 'CONFIRMED' as const,
       busyStatus: 'BUSY' as const,
-      organizer: { name: session.creator?.name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },
+      organizer: { name: session.creator_name || 'Tribe', email: 'tribe@aplusfitnessllc.com' },
     };
 
     const { error: icsError, value } = createEvents([event]);

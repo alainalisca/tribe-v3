@@ -21,10 +21,13 @@ async function fetchSession(id: string) {
   // The old select referenced non-existent columns; PostgREST returned an
   // error that this code silently dropped, so every shared link rendered
   // "Session not found".
+  // RLS-H4: read the anon-facing view. It has no FK, so the
+  // creator:users!fk embed cannot resolve — the host is exposed as the flattened
+  // creator_* columns and remapped to the { creator } shape the client expects.
   const { data, error } = await supabase
-    .from('sessions')
+    .from('sessions_public')
     .select(
-      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, photos, creator_id, creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating)'
+      'id, title, sport, date, start_time, location, location_lat, location_lng, price_cents, currency, max_participants, photos, creator_id, creator_name, creator_avatar_url, creator_average_rating'
     )
     .eq('id', id)
     .maybeSingle();
@@ -34,12 +37,20 @@ async function fetchSession(id: string) {
   }
   if (!data) return null;
   const raw = data as Record<string, unknown> & {
-    creator: unknown;
+    creator_id: string | null;
+    creator_name: string | null;
+    creator_avatar_url: string | null;
+    creator_average_rating: number | null;
   };
   return {
     ...raw,
-    creator: Array.isArray(raw.creator) ? raw.creator[0] : raw.creator,
-  } as InitialSession;
+    creator: {
+      id: raw.creator_id,
+      name: raw.creator_name,
+      avatar_url: raw.creator_avatar_url,
+      average_rating: raw.creator_average_rating,
+    },
+  } as unknown as InitialSession;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
