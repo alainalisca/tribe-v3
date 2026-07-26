@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 import type { Session, UserUpdate } from '@/lib/database.types';
+import { SESSION_ALL_COLUMNS } from './sessions';
 
 export interface InstructorSessionRow extends Session {
   participant_count: number;
@@ -61,7 +62,11 @@ export async function fetchInstructorSessions(
     // unreadable.
     const { data: sessions, error } = await supabase
       .from('sessions')
-      .select('*')
+      // Explicit column list, not select('*'): InstructorSessionRow extends the
+      // full Session type, so the consumer may read any column. SESSION_ALL_COLUMNS
+      // covers all 49 non-payment_instructions columns — removes the select('*')
+      // latent-401 risk without narrowing what the dashboard can render.
+      .select(SESSION_ALL_COLUMNS)
       .eq('creator_id', userId)
       .order('date', { ascending: true });
 
@@ -69,7 +74,12 @@ export async function fetchInstructorSessions(
 
     const mapped = (sessions || []).map((s) => {
       const participant_count = (s.current_participants as number | null) ?? 0;
-      return { ...s, participant_count } as InstructorSessionRow;
+      // `as unknown as`: selecting an explicit column-list STRING (rather than a
+      // string literal) loses PostgREST's row-type inference, so `s` is a bag of
+      // `any` columns. The row intentionally omits payment_instructions (host-only,
+      // not read here), which InstructorSessionRow's base type marks required — so
+      // the direct cast no longer overlaps. No consumer reads payment_instructions.
+      return { ...s, participant_count } as unknown as InstructorSessionRow;
     });
 
     const upcoming = mapped.filter((s) => s.date >= today && s.status !== 'cancelled');

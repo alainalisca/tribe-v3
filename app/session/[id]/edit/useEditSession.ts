@@ -71,12 +71,23 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch current user and session in parallel so the photo uploader has a
-    // userId as soon as the data is ready.
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-    });
-    loadSession();
+    // RLS-H4: resolve auth BEFORE any fetch. Edit is host-only — a logged-out
+    // visitor can't save (RLS blocks it) and shouldn't read the base table for a
+    // form they can't use. Bounce anon to /auth instead of firing an anon
+    // base-table fetchSession, keeping "zero anon base-table reads on sessions"
+    // true ahead of the Gate 3 revoke. (Previously getUser + loadSession raced,
+    // so the base-table read fired for anon before auth resolved.)
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace(`/auth?returnTo=/session/${params.id as string}/edit`);
+        return;
+      }
+      setUserId(user.id);
+      loadSession();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 

@@ -90,6 +90,27 @@ export type RecurringParentSession = Pick<
 export const RECURRING_PARENT_COLUMNS =
   'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility';
 
+/**
+ * Every column on public.sessions EXCEPT payment_instructions — enumerated from
+ * the live catalog (identical to migration 137's grant-back list, the 49 of 50
+ * live columns). This is the explicit stand-in for select('*') on
+ * authenticated-only reads whose consumers may touch any session field
+ * (instructor dashboard, storefront).
+ *
+ * WHY it exists: select('*') on a table that has ANY column-level grant is a
+ * latent 401 — the moment one column is revoked from a role, * expands to
+ * include it and the whole read fails for that role (exactly what turned
+ * migration 137's single revoked column into a total failure of a select('*')
+ * job). RLS-H4 Gate 3 revokes anon from the base table entirely; these callers
+ * are authenticated-only so they are not broken by that revoke, but keeping the
+ * invariant "zero select('*') on sessions, anywhere" removes the whole class of
+ * latent-401 risk for any future column-level change. payment_instructions is
+ * omitted deliberately (host-only, read via fetchSessionPaymentInstructions);
+ * no consumer of these lists reads it.
+ */
+export const SESSION_ALL_COLUMNS =
+  'community_id, created_at, creator_id, currency, current_participants, date, description, duration, early_access_only_until, end_time, equipment, followup_sent, gender_preference, id, is_immediate, is_paid, is_recurring, is_training_now, join_policy, latitude, location, location_lat, location_lng, longitude, max_paid_spots, max_participants, payment_gateway, photo_verified, photos, platform_fee_percent, price_cents, recap_photos, recurrence_days, recurrence_end_date, recurrence_pattern, recurring_parent_id, reminder_15min_sent, reminder_1hr_sent, reminder_sent, skill_level, sport, start_time, status, title, updated_at, verified_at, verified_by, visibility, waitlist_count';
+
 // --- Read operations ---
 
 /**

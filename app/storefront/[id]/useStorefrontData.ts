@@ -10,6 +10,7 @@ import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/feature
 import { followUser, unfollowUser } from '@/lib/dal/promote';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
 import { togglePostLike } from '@/lib/dal/instructorPosts';
+import { SESSION_ALL_COLUMNS } from '@/lib/dal/sessions';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError, showSuccess } from '@/lib/toast';
@@ -222,7 +223,11 @@ export function useStorefrontData(instructorId: string) {
         ] = await Promise.all([
           supabase
             .from('sessions')
-            .select('*')
+            // Explicit column list, not select('*'): the storefront session cards
+            // read raw DB columns off the spread row (the local Session interface
+            // is a loose cast), so SESSION_ALL_COLUMNS keeps full coverage while
+            // removing the select('*') latent-401 risk.
+            .select(SESSION_ALL_COLUMNS)
             .eq('creator_id', instructorId)
             .eq('status', 'open')
             .gte('date', todayStr)
@@ -275,7 +280,14 @@ export function useStorefrontData(instructorId: string) {
           const boostedSessionIds = new Set(
             boostsResult.data?.map((b: { boosted_session_id: string }) => b.boosted_session_id) || []
           );
-          setSessions(sessionsResult.data.map((s: Session) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })));
+          // `as unknown as Session[]`: the explicit column-list string loses
+          // PostgREST row-type inference (columns come back as `any`), and the
+          // local Session interface carries display-only fields (time, price,
+          // spots_available, spots_total) that aren't DB columns. The cards read
+          // raw columns off the spread, so cast the mapped rows to the local shape.
+          setSessions(
+            sessionsResult.data.map((s) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })) as unknown as Session[]
+          );
         }
         if (packagesResult.data) setPackages(packagesResult.data);
         if (mediaResult.data) setMedia(mediaResult.data);
