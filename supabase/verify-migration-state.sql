@@ -639,6 +639,13 @@ select '138_rls_h4_gate1_sessions_public_view',
              and pg_get_functiondef('public.validate_invite_token(text)'::regprocedure) not like '%to_jsonb(s)%'
             then 'applied' else 'MISSING' end
 union all
+select '139_fix_sessions_public_comment',
+       -- Cosmetic: corrects the sessions_public COMMENT so it says invite_only is
+       -- EXCLUDED, not location-stubbed. Applied once the live view comment carries
+       -- the corrected wording.
+       case when obj_description('public.sessions_public'::regclass, 'pg_class') like '%EXCLUDED entirely%'
+            then 'applied' else 'MISSING' end
+union all
 select '140_rls_h4_gate3_revoke_sessions_from_anon',
        -- Gate 3 (DRAFT — staged, not yet applied): revokes anon SELECT on the
        -- whole public.sessions table. Correctly reads MISSING until the revoke
