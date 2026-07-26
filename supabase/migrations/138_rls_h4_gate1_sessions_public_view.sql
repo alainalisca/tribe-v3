@@ -78,6 +78,10 @@ LEFT JOIN public.users u ON u.id = s.creator_id
 -- discoverable rather than being dropped by NULL-comparison semantics.
 WHERE s.join_policy IS DISTINCT FROM 'invite_only';
 
+-- NOTE: the "location-stubbed" wording below is STALE — the view actually
+-- EXCLUDES invite_only entirely (see the WHERE clause above and the header).
+-- Left unchanged here because 138 is already applied and its SQL is the record
+-- of what ran; the live comment is corrected forward in migration 139.
 COMMENT ON VIEW public.sessions_public IS
   'RLS-H4 anon-facing projection of public.sessions. Coordinates rounded to 3dp; '
   'invite_only rows location-stubbed; payment_instructions, verification, and '

@@ -49,10 +49,15 @@ export default function ChatPage() {
       } = await supabase.auth.getUser();
       setUser(user);
 
-      if (user) {
-        const result = await fetchUserIsAdmin(supabase, user.id);
-        setUserIsAdmin(result.success ? !!result.data : false);
-      }
+      // RLS-H4: chat is athletes-only. A logged-out visitor can't participate,
+      // and the render below already shows the signed-out/error state when
+      // !user — so skip the base-table fetchSession entirely rather than firing
+      // a read anon shouldn't make. Keeps "zero anon base-table reads on
+      // sessions" true ahead of the Gate 3 revoke (finally{} clears loading).
+      if (!user) return;
+
+      const adminResult = await fetchUserIsAdmin(supabase, user.id);
+      setUserIsAdmin(adminResult.success ? !!adminResult.data : false);
 
       const sessionResult = await fetchSession(supabase, sessionId);
       if (!sessionResult.success || !sessionResult.data) {
