@@ -188,7 +188,10 @@
   "invite": {
     "requestSentPaid": "Request sent! Pay the instructor directly and they will confirm your spot.",
     "requestSentCurated": "Request sent! The host will review your profile and decide.",
-    "acceptFailed": "Could not accept the invitation"
+    "acceptFailed": "Could not accept the invitation",
+    "signInToAccept": "Sign in to accept",
+    "signInToAcceptHint": "Use your Tribe account so this session appears in your profile.",
+    "joinWithoutAccount": "Or join as a guest without an account."
   },
   "instructorIncomplete": {
     "title": "Complete your instructor profile",
