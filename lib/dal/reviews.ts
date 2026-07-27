@@ -49,7 +49,6 @@ export async function fetchReviewsByHost(
         comment,
         created_at,
         session_id,
-        sessions:session_id(sport),
         reviewer:reviewer_id(id, name, avatar_url)
       `
       )
@@ -59,8 +58,26 @@ export async function fetchReviewsByHost(
 
     if (error) return { success: false, error: error.message };
 
+    // RLS-H4 Gate 3 revoked anon SELECT on public.sessions, so we can no longer
+    // embed sessions:session_id(sport) — an FK join into the base table 401s for
+    // logged-out viewers. Resolve sport from the anon-readable sessions_public
+    // view instead (a view has no FK to embed against, so this is a separate
+    // batched lookup joined in JS). invite_only sessions are absent from the view,
+    // so their sport shows as null — an acceptable minor gap on those rare reviews.
+    const sessionIds = [...new Set((data || []).map((r) => (r as { session_id: string }).session_id).filter(Boolean))];
+    const sportBySession = new Map<string, string | null>();
+    if (sessionIds.length > 0) {
+      const { data: sportRows, error: sportErr } = await supabase
+        .from('sessions_public')
+        .select('id, sport')
+        .in('id', sessionIds);
+      if (sportErr) return { success: false, error: sportErr.message };
+      for (const row of (sportRows || []) as Array<{ id: string; sport: string | null }>) {
+        sportBySession.set(row.id, row.sport ?? null);
+      }
+    }
+
     const reviews: ReviewWithReviewer[] = (data || []).map((row: Record<string, unknown>) => {
-      const sessionRel = row.sessions as { sport: string | null } | null;
       const reviewerRel = row.reviewer as { id: string; name: string; avatar_url: string | null } | null;
       return {
         id: row.id as string,
@@ -68,7 +85,7 @@ export async function fetchReviewsByHost(
         comment: (row.comment as string | null) ?? null,
         created_at: row.created_at as string,
         session_id: row.session_id as string,
-        session_sport: sessionRel?.sport ?? null,
+        session_sport: sportBySession.get(row.session_id as string) ?? null,
         reviewer: reviewerRel
           ? { id: reviewerRel.id, name: reviewerRel.name, avatar_url: reviewerRel.avatar_url }
           : null,
@@ -130,7 +147,6 @@ export async function fetchReviewsBySession(
         comment,
         created_at,
         session_id,
-        sessions:session_id(sport),
         reviewer:reviewer_id(id, name, avatar_url)
       `
       )
@@ -139,8 +155,21 @@ export async function fetchReviewsBySession(
 
     if (error) return { success: false, error: error.message };
 
+    // RLS-H4 Gate 3: sport comes from the anon-readable sessions_public view, not
+    // an FK embed into the anon-locked base table. Every row shares this sessionId,
+    // so one lookup suffices (null if the session is invite_only / not in the view).
+    let sessionSport: string | null = null;
+    if ((data || []).length > 0) {
+      const { data: sportRow, error: sportErr } = await supabase
+        .from('sessions_public')
+        .select('sport')
+        .eq('id', sessionId)
+        .maybeSingle();
+      if (sportErr) return { success: false, error: sportErr.message };
+      sessionSport = (sportRow as { sport: string | null } | null)?.sport ?? null;
+    }
+
     const reviews: ReviewWithReviewer[] = (data || []).map((row: Record<string, unknown>) => {
-      const sessionRel = row.sessions as { sport: string | null } | null;
       const reviewerRel = row.reviewer as { id: string; name: string; avatar_url: string | null } | null;
       return {
         id: row.id as string,
@@ -148,7 +177,7 @@ export async function fetchReviewsBySession(
         comment: (row.comment as string | null) ?? null,
         created_at: row.created_at as string,
         session_id: row.session_id as string,
-        session_sport: sessionRel?.sport ?? null,
+        session_sport: sessionSport,
         reviewer: reviewerRel
           ? { id: reviewerRel.id, name: reviewerRel.name, avatar_url: reviewerRel.avatar_url }
           : null,
