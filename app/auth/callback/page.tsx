@@ -8,7 +8,7 @@ import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
 import { applyReferralCode } from '@/lib/dal/referrals';
 import { trackEvent } from '@/lib/analytics';
-import { decodeReturnToParam, storePendingReturnTo } from '@/lib/pendingReturnTo';
+import { decodeReturnToParam, sanitizeReturnTo, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AuthCallbackPage() {
@@ -114,9 +114,10 @@ export default function AuthCallbackPage() {
       logError(err, { action: 'getUser', route: '/auth/callback' });
     }
 
-    // Existing user — go home (validate returnTo to prevent open redirect)
-    const decoded = returnTo ? decodeURIComponent(returnTo) : '/';
-    const safeReturnTo = decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : '/';
+    // Existing user — go to returnTo, validated by the shared helpers (open
+    // redirect + malformed percent-encoding: this line runs OUTSIDE the try
+    // above, so a bare decodeURIComponent throw would strand the user here).
+    const safeReturnTo = sanitizeReturnTo(decodeReturnToParam(returnTo)) ?? '/';
     window.location.href = safeReturnTo;
   }
 

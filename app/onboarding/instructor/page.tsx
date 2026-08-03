@@ -398,8 +398,10 @@ export default function InstructorOnboardingPage() {
       // any paid session would fail at checkout time. They can navigate to
       // their storefront from the dashboard once payouts are wired.
       // T-C1 Gate 2: unless this signup started from a destination (an invite
-      // or shared link) — that parked returnTo wins; payout setup stays
-      // reachable from the earnings dashboard.
+      // or shared link) — that parked returnTo wins. The path back to payout
+      // setup is PayoutSetupBanner on the instructor dashboard, which renders
+      // persistently until payout_method is set (the earnings page itself has
+      // no link to /earnings/payout-settings).
       router.push(consumePendingReturnTo() ?? '/earnings/payout-settings');
     } catch (err) {
       logError(err, { action: 'instructorOnboarding.handleFinish' });
