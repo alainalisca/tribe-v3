@@ -128,3 +128,21 @@ The app is deployed to Vercel with the Node.js runtime (NOT static export). All 
 - API routes work in both development and production on Vercel
 - Images are unoptimized (`images: { unoptimized: true }`)
 - For Capacitor mobile builds, the static HTML pages are bundled into the native app
+
+## Product context and decision filter
+
+Before implementing anything, understand the product intent in `docs/`:
+
+- `docs/Tribe_Founding_Document.md` — the north star. Tribe is the home of the
+  everyday athlete; its niche is promoting other people and making them visible.
+- `docs/Tribe_Strategy_Reconciliation_Spec.md` — how the promotion posture and the
+  two-sided marketplace fit together (they are two halves of one flywheel).
+- `docs/Tribe_Founding_Doc_Tickets.md` — the small, phased task list.
+
+Master filter for any change: does this make a user (instructor or athlete) more
+visible, more seen, or more backed? If not, question whether it belongs now.
+
+Discipline rule: these docs change defaults, not the backlog. Do NOT expand them
+into new build work. Implement only the specific ticket I hand you, scoped as written.
+Layer 3 items (Tribe.TV, sponsorship marketplace, events, media production) are
+PARKED and must not be built during validation.

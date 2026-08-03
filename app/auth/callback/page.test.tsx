@@ -45,3 +45,25 @@ describe('AuthCallbackPage — duplicate code', () => {
     await waitFor(() => expect(window.location.href).toContain('/auth?error'));
   });
 });
+
+describe('AuthCallbackPage — returnTo validation (T-C1 Gate 2)', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', { value: { href: '' }, writable: true });
+  });
+
+  afterEach(() => {
+    params.delete('returnTo');
+    vi.clearAllMocks();
+  });
+
+  it('existing user with a malformed returnTo falls back to / instead of throwing', async () => {
+    // '%E0%A4%A' makes decodeURIComponent throw a URIError. This line sits
+    // OUTSIDE the callback's try block, so before the shared helpers it
+    // stranded the user on the callback page with an uncaught throw.
+    params.set('returnTo', '%E0%A4%A');
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    render(<AuthCallbackPage />);
+    await waitFor(() => expect(window.location.href).toBe('/'));
+  });
+});

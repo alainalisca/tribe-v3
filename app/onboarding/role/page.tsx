@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
+import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Dumbbell,
@@ -106,8 +107,10 @@ export default function OnboardingRolePage() {
         }
         router.push('/onboarding/instructor');
       } else {
-        // Participant — go to regular profile edit
-        router.push('/profile/edit');
+        // Participant — onboarding ends here. A parked returnTo (T-C1 Gate 2:
+        // the invite or shared link this signup started from) wins over the
+        // default profile-edit landing; consuming clears it either way.
+        router.push(consumePendingReturnTo() ?? '/profile/edit');
       }
     } catch (err) {
       logError(err, { action: 'onboardingRoleSelection' });

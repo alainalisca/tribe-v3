@@ -29,6 +29,11 @@ export default defineConfig({
       // Excluded here so vitest doesn't try to import @playwright/test
       // and choke when the package isn't installed.
       'e2e/**',
+      // 2026-08-02 (T-C1 Gate 2 housekeeping): .claude/worktrees/ holds
+      // leftover git worktrees — full second copies of the repo — and vitest
+      // was collecting their test files too (the stale tdisc1 copy alone
+      // added 22 failures against fixtures that have since moved on).
+      '**/.claude/worktrees/**',
       // All LOGIC-04 webhook fixtures (stripe, wompi, payment/create) were
       // rewritten 2026-04-21 against the current contracts and are no
       // longer excluded. Kept this header block for future refactor
