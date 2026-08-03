@@ -11,6 +11,7 @@ import { logError } from '@/lib/logger';
 import { trackEvent } from '@/lib/analytics';
 import { applyReferralCode } from '@/lib/dal/referrals';
 import { haptic } from '@/lib/haptics';
+import { decodeReturnToParam, sanitizeReturnTo, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import { getAuthTranslations } from './translations';
 
 export function useAuthHandlers(language: 'en' | 'es') {
@@ -41,17 +42,18 @@ export function useAuthHandlers(language: 'en' | 'es') {
   const [otpEmail, setOtpEmail] = useState('');
 
   function getSafeReturnTo(): string {
-    const returnTo = searchParams.get('returnTo');
-    if (!returnTo) return '/';
-    const decoded = decodeURIComponent(returnTo);
-    return decoded.startsWith('/') && !decoded.startsWith('//') ? decoded : '/';
+    // decodeReturnToParam never throws on malformed input; sanitizeReturnTo is
+    // the shared rule (single leading slash, never "//").
+    return sanitizeReturnTo(decodeReturnToParam(searchParams.get('returnTo'))) ?? '/';
   }
 
   useEffect(() => {
     supabase.auth
       .getUser()
       .then(({ data: { user } }) => {
-        if (user && !mode) router.replace('/');
+        // T-C1 Gate 2: an already-signed-in visitor with a returnTo (e.g. an
+        // invite link that sent them here) goes to that destination, not home.
+        if (user && !mode) router.replace(getSafeReturnTo());
         else setCheckingAuth(false);
       })
       .catch(() => setCheckingAuth(false));
@@ -115,6 +117,9 @@ export function useAuthHandlers(language: 'en' | 'es') {
               trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
             }
           }
+          // T-C1 Gate 2: onboarding used to swallow returnTo for new users.
+          // Park it for the final onboarding step to consume.
+          if (isNewUser) storePendingReturnTo(getSafeReturnTo());
           window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
         }
       } else {
@@ -327,6 +332,9 @@ export function useAuthHandlers(language: 'en' | 'es') {
           trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
         }
         await haptic('success');
+        // T-C1 Gate 2: same as the native Google path — a new user's returnTo
+        // is parked for the final onboarding step instead of being dropped.
+        if (isNewUser) storePendingReturnTo(getSafeReturnTo());
         window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
       } else {
         setMessage('❌ ' + getErrorMessage(new Error('otp_expired'), 'verify_code', language));

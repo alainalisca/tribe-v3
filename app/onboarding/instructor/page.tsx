@@ -10,6 +10,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
 import { haptic } from '@/lib/haptics';
+import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -396,7 +397,10 @@ export default function InstructorOnboardingPage() {
       // this, they'd land with payout_method = NULL / no Stripe Connect, and
       // any paid session would fail at checkout time. They can navigate to
       // their storefront from the dashboard once payouts are wired.
-      router.push('/earnings/payout-settings');
+      // T-C1 Gate 2: unless this signup started from a destination (an invite
+      // or shared link) — that parked returnTo wins; payout setup stays
+      // reachable from the earnings dashboard.
+      router.push(consumePendingReturnTo() ?? '/earnings/payout-settings');
     } catch (err) {
       logError(err, { action: 'instructorOnboarding.handleFinish' });
       showError(getErrorMessage(err, 'update_profile', language));

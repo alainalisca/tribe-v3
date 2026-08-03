@@ -8,6 +8,7 @@ import { upsertUserProfile } from '@/lib/auth-helpers';
 import { logError } from '@/lib/logger';
 import { applyReferralCode } from '@/lib/dal/referrals';
 import { trackEvent } from '@/lib/analytics';
+import { decodeReturnToParam, storePendingReturnTo } from '@/lib/pendingReturnTo';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function AuthCallbackPage() {
@@ -102,6 +103,9 @@ export default function AuthCallbackPage() {
             localStorage.removeItem('tribe_referral_code');
             trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
           }
+          // T-C1 Gate 2: OAuth signups had the same returnTo drop as the
+          // email path — park the destination for onboarding to consume.
+          storePendingReturnTo(decodeReturnToParam(returnTo));
           window.location.href = '/onboarding/role';
           return;
         }
