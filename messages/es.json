@@ -188,7 +188,10 @@
   "invite": {
     "requestSentPaid": "¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.",
     "requestSentCurated": "¡Solicitud enviada! El organizador revisará tu perfil.",
-    "acceptFailed": "No se pudo aceptar la invitacion"
+    "acceptFailed": "No se pudo aceptar la invitacion",
+    "signInToAccept": "Inicia sesión para aceptar",
+    "signInToAcceptHint": "Usa tu cuenta de Tribe para que esta sesión aparezca en tu perfil.",
+    "joinWithoutAccount": "O únete como invitado sin una cuenta."
   },
   "instructorIncomplete": {
     "title": "Completa tu perfil de instructor",

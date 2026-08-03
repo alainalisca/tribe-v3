@@ -59,8 +59,11 @@ export default function InvitePage() {
   }, [token]);
 
   async function loadInvite() {
+    // T-C1 Gate 1: login detection is isolated from token validation. getUser()
+    // rejects on network failure, and sharing one try/catch painted a valid
+    // invite as invalid. A failed check degrades to the logged-out branch,
+    // which now offers sign-in anyway.
     try {
-      // Check if user is logged in
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -71,7 +74,11 @@ export default function InvitePage() {
           name: (user.user_metadata?.name as string | undefined) || user.email || 'Someone',
         });
       }
+    } catch (error) {
+      logError(error, { action: 'loadInvite.getUser' });
+    }
 
+    try {
       // RLS-H2: validate the token via the definer RPC (possessing the token IS
       // the authorization) instead of reading invite_tokens directly — Gate 3
       // makes the raw table unreadable. The RPC checks existence + expiry as owner.
@@ -144,7 +151,9 @@ export default function InvitePage() {
       const guestBody = typeof guestResult === 'string' ? JSON.parse(guestResult) : guestResult;
       if (!guestBody?.success) {
         showError(
-          guestBody?.error === 'Session is full' ? t('sessionFullMsg') : getErrorMessage(guestBody?.error, 'accept_invite', language)
+          guestBody?.error === 'Session is full'
+            ? t('sessionFullMsg')
+            : getErrorMessage(guestBody?.error, 'accept_invite', language)
         );
         return;
       }
@@ -301,54 +310,71 @@ export default function InvitePage() {
 
         {/* Join Form */}
         {isGuest ? (
-          <Card className="dark:bg-tribe-card">
-            <CardContent className="p-4">
-              <h3 className="text-lg font-bold text-theme-primary mb-3">{t('confirmYourSpot')}</h3>
-
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-theme-primary mb-1">{t('fullName')}</Label>
-                  <Input
-                    type="text"
-                    value={guestData.name}
-                    onChange={(e) => setGuestData({ ...guestData, name: e.target.value })}
-                    placeholder={language === 'es' ? 'Juan Pérez' : 'John Smith'}
-                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-theme-primary mb-1">{t('phone')}</Label>
-                  <Input
-                    type="tel"
-                    value={guestData.phone}
-                    onChange={(e) => setGuestData({ ...guestData, phone: e.target.value })}
-                    placeholder="+57 300 123 4567"
-                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-theme-primary mb-1">{t('emailOptional')}</Label>
-                  <Input
-                    type="email"
-                    value={guestData.email}
-                    onChange={(e) => setGuestData({ ...guestData, email: e.target.value })}
-                    placeholder="email@example.com"
-                    className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
-                  />
-                </div>
-
-                <Button onClick={handleGuestJoin} disabled={joining} className="w-full font-bold">
-                  {joining ? t('confirming') : t('confirmAttendance')}
+          <>
+            {/* T-C1 Gate 1: signed-out visitors get both doors. Sign-in is the
+                primary action so account holders stop landing in unlinked guest
+                rows; the guest form stays for people without an account. No
+                account detection here: getUser() cannot tell "logged out" from
+                "no account", and probing for one would be an enumeration oracle. */}
+            <Card className="dark:bg-tribe-card mb-4">
+              <CardContent className="p-4 text-center">
+                <Button asChild className="w-full py-3 font-bold">
+                  <Link href={`/auth?returnTo=${encodeURIComponent(`/invite/${token}`)}`}>{ti('signInToAccept')}</Link>
                 </Button>
+                <p className="text-xs text-stone-500 dark:text-gray-400 mt-2">{ti('signInToAcceptHint')}</p>
+              </CardContent>
+            </Card>
 
-                <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
-                  {t('infoSharedWithOrganizer')}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="dark:bg-tribe-card">
+              <CardContent className="p-4">
+                <h3 className="text-lg font-bold text-theme-primary mb-1">{t('confirmYourSpot')}</h3>
+                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">{ti('joinWithoutAccount')}</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-theme-primary mb-1">{t('fullName')}</Label>
+                    <Input
+                      type="text"
+                      value={guestData.name}
+                      onChange={(e) => setGuestData({ ...guestData, name: e.target.value })}
+                      placeholder={language === 'es' ? 'Juan Pérez' : 'John Smith'}
+                      className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-theme-primary mb-1">{t('phone')}</Label>
+                    <Input
+                      type="tel"
+                      value={guestData.phone}
+                      onChange={(e) => setGuestData({ ...guestData, phone: e.target.value })}
+                      placeholder="+57 300 123 4567"
+                      className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-theme-primary mb-1">{t('emailOptional')}</Label>
+                    <Input
+                      type="email"
+                      value={guestData.email}
+                      onChange={(e) => setGuestData({ ...guestData, email: e.target.value })}
+                      placeholder="email@example.com"
+                      className="h-auto py-3 dark:border-tribe-mid bg-white dark:bg-tribe-mid text-theme-primary"
+                    />
+                  </div>
+
+                  <Button onClick={handleGuestJoin} disabled={joining} className="w-full font-bold">
+                    {joining ? t('confirming') : t('confirmAttendance')}
+                  </Button>
+
+                  <p className="text-xs text-center text-stone-500 dark:text-gray-400 mt-3">
+                    {t('infoSharedWithOrganizer')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         ) : (
           /* T-INV1: registered users accept here — the session page's
              invite-only lock never offers a join button. */
