@@ -23,10 +23,25 @@ const KEY = 'tribe_pending_return_to';
  * The one returnTo validation rule: a same-app path ("/x..."), never
  * protocol-relative ("//evil.com"), never absolute ("https://...").
  * Returns null for anything unsafe so callers fall back to their default.
+ *
+ * A leading-slash check alone is NOT enough. Per the WHATWG URL spec, browsers
+ * normalize backslashes to forward slashes inside the authority, so "/\evil.com",
+ * "/\/evil.com", and "/\\evil.com" all resolve off-origin despite starting with a
+ * single "/". Browsers also strip tab, newline, and carriage return before
+ * parsing, so a decoded "/\t/evil.com" collapses to protocol-relative "//evil.com".
+ *
+ * Safe means: exactly "/", or a leading "/" whose second character is neither "/"
+ * nor "\", with no tab, newline, or carriage return anywhere in the value.
  */
 export function sanitizeReturnTo(value: string | null | undefined): string | null {
   if (!value) return null;
-  return value.startsWith('/') && !value.startsWith('//') ? value : null;
+  if (value === '/') return value;
+  if (!value.startsWith('/')) return null;
+  // Second char decides origin: "/" or "\" both open an authority to another host.
+  if (value[1] === '/' || value[1] === '\\') return null;
+  // Stripped by the browser before parsing, so they can smuggle the above past us.
+  if (/[\t\n\r]/.test(value)) return null;
+  return value;
 }
 
 /**

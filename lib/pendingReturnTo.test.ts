@@ -22,6 +22,43 @@ describe('sanitizeReturnTo', () => {
     expect(sanitizeReturnTo(null)).toBeNull();
     expect(sanitizeReturnTo(undefined)).toBeNull();
   });
+
+  // Browsers normalize backslashes to forward slashes in the URL authority per
+  // the WHATWG URL spec, so each of these resolves off-origin despite passing a
+  // naive "starts with / but not //" check.
+  it('rejects backslash authority bypasses', () => {
+    expect(sanitizeReturnTo(String.raw`/\evil.com`)).toBeNull();
+    expect(sanitizeReturnTo(String.raw`/\/evil.com`)).toBeNull();
+    expect(sanitizeReturnTo(String.raw`/\\evil.com`)).toBeNull();
+  });
+
+  // Browsers strip tab/newline/CR before parsing, so "/\t/evil.com" collapses to
+  // the protocol-relative "//evil.com".
+  it('rejects a decoded tab that smuggles a protocol-relative path', () => {
+    const decoded = decodeReturnToParam('/%09/evil.com');
+    expect(decoded).toBe('/\t/evil.com');
+    expect(sanitizeReturnTo(decoded)).toBeNull();
+  });
+
+  it('rejects control characters anywhere in the value', () => {
+    expect(sanitizeReturnTo('/invite\n//evil.com')).toBeNull();
+    expect(sanitizeReturnTo('/invite\r/abc')).toBeNull();
+    expect(sanitizeReturnTo('/invite\tabc')).toBeNull();
+  });
+
+  // A malformed percent sequence makes decodeReturnToParam hand back the raw
+  // string; the backslash bypass must still be caught on that path.
+  it('rejects a malformed percent value carrying a backslash', () => {
+    const decoded = decodeReturnToParam(String.raw`/\evil.com%A`);
+    expect(decoded).toBe(String.raw`/\evil.com%A`);
+    expect(sanitizeReturnTo(decoded)).toBeNull();
+  });
+
+  it('still accepts the real destinations these guards must not break', () => {
+    expect(sanitizeReturnTo('/')).toBe('/');
+    expect(sanitizeReturnTo('/invite/abc123')).toBe('/invite/abc123');
+    expect(sanitizeReturnTo('/training-partners?sport=running')).toBe('/training-partners?sport=running');
+  });
 });
 
 describe('decodeReturnToParam', () => {
