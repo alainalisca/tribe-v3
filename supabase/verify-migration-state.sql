@@ -652,4 +652,21 @@ select '140_rls_h4_gate3_revoke_sessions_from_anon',
        -- runs; applied once anon no longer holds table-level SELECT on sessions.
        case when not has_table_privilege('anon','public.sessions','SELECT')
             then 'applied' else 'MISSING' end
+union all
+select '141_tc1_gate4_widen_invite_mint',
+       -- T-C1 Gate 4 (D7 Option B): invite minting widened to creator OR
+       -- confirmed participant; validate_invite_token projects the HOST
+       -- (creator_id). Applied once create_session_invite references
+       -- session_participants AND the renamed policy exists. (Companion
+       -- dry-run lives at supabase/141_..REHEARSAL.sql, outside migrations/.)
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'create_session_invite'
+           and pronamespace = 'public'::regnamespace
+           and pg_get_functiondef(oid) like '%session_participants%'
+       ) and exists (
+         select 1 from pg_policies
+         where schemaname = 'public' and tablename = 'invite_tokens'
+           and policyname = 'Creator or confirmed participant can create invite tokens'
+       ) then 'applied' else 'MISSING' end
 order by migration;

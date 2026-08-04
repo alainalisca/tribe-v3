@@ -2638,3 +2638,37 @@ export interface PartnerInstructorInsert {
   role?: string;
   is_active?: boolean;
 }
+
+// T-C1 Gate 4 (migration 141): result contract for the validate_invite_token
+// RPC. The session object is the RPC's explicit projection (NOT the full
+// sessions Row). creator_id is the session HOST; the top-level created_by is
+// the INVITER who minted the token — under D7 Option B they differ routinely.
+export type ValidateInviteTokenSession = Pick<
+  Session,
+  | 'id'
+  | 'creator_id'
+  | 'sport'
+  | 'title'
+  | 'date'
+  | 'start_time'
+  | 'duration'
+  | 'description'
+  | 'location'
+  | 'location_lat'
+  | 'location_lng'
+  | 'is_paid'
+  | 'price_cents'
+  | 'currency'
+  | 'current_participants'
+  | 'max_participants'
+  | 'join_policy'
+>;
+
+export interface ValidateInviteTokenResult {
+  valid: boolean;
+  reason?: 'not_found' | 'expired';
+  session_id?: string;
+  created_by?: string;
+  expires_at?: string | null;
+  session?: ValidateInviteTokenSession;
+}

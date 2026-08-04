@@ -38,6 +38,38 @@ describe('getErrorMessage', () => {
     expect(result).toBe('Algo salió mal. Por favor inténtalo de nuevo.');
   });
 
+  // T-C1 Gate 4 (migration 141): invite minting is creator-or-confirmed-
+  // participant. The RPC's insufficient_privilege message maps to specific
+  // copy; anything else in the create_invite context gets the invite fallback,
+  // never the old session-creation copy from the original ticket.
+  describe('create_invite context', () => {
+    const authzError = new Error('not authorized to create an invite for this session');
+
+    it('maps the RPC authorization message to the host-or-participant copy (en)', () => {
+      expect(getErrorMessage(authzError, 'create_invite', 'en')).toBe(
+        'Only the host or a confirmed participant can invite someone to this session.'
+      );
+    });
+
+    it('maps the RPC authorization message to the host-or-participant copy (es)', () => {
+      expect(getErrorMessage(authzError, 'create_invite', 'es')).toBe(
+        'Solo el organizador o un participante confirmado puede invitar a alguien a esta sesión.'
+      );
+    });
+
+    it('falls back to invite copy, not session-creation copy, for other failures (en)', () => {
+      const result = getErrorMessage(new Error('fetch failed'), 'create_invite', 'en');
+      expect(result).toBe('Could not create the invite link. Please try again.');
+      expect(result).not.toContain('Could not create session');
+    });
+
+    it('falls back to invite copy, not session-creation copy, for other failures (es)', () => {
+      expect(getErrorMessage(new Error('fetch failed'), 'create_invite', 'es')).toBe(
+        'No se pudo crear el enlace de invitación. Inténtalo de nuevo.'
+      );
+    });
+  });
+
   it('handles null error gracefully', () => {
     const result = getErrorMessage(null, 'join_session', 'en');
     expect(result).toBe('Could not join session. Please try again.');
