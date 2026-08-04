@@ -270,15 +270,17 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     try {
       setCreatingInvite(true);
       // RLS-H2: token generated SERVER-SIDE (crypto-secure) via the definer RPC,
-      // not client-side Math.random() (predictable PRNG). The RPC enforces that the
-      // caller is the session creator and returns the token to its creator only.
+      // not client-side Math.random() (predictable PRNG). T-C1 Gate 4 (D7
+      // Option B, migration 141): the RPC permits the session creator OR a
+      // confirmed participant — matching the (hasJoined || isCreator) button
+      // visibility. Anyone else gets insufficient_privilege.
       const { data: token, error } = await supabase.rpc('create_session_invite', { p_session_id: session.id });
       if (error) throw new Error(error.message);
       if (!token) throw new Error('create_invite_failed');
       setInviteLink(`${window.location.origin}/invite/${token}`);
       setShowInviteModal(true);
     } catch (error) {
-      showError(getErrorMessage(error, 'create_session', language));
+      showError(getErrorMessage(error, 'create_invite', language));
     } finally {
       setCreatingInvite(false);
     }

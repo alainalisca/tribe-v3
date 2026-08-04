@@ -42,6 +42,15 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       es: 'El código es incorrecto o ya expiró. Pide uno nuevo.',
     },
 
+    // create_session_invite RPC (T-C1 Gate 4, migration 141): raised when the
+    // caller is neither the session creator nor a confirmed participant. Keyed
+    // on the RPC's own message — the PostgREST code (42501) is too generic to
+    // map globally without mislabeling other insufficient_privilege errors.
+    'not authorized to create an invite': {
+      en: 'Only the host or a confirmed participant can invite someone to this session.',
+      es: 'Solo el organizador o un participante confirmado puede invitar a alguien a esta sesión.',
+    },
+
     // Database errors
     '23505': {
       // Unique constraint violation
@@ -106,6 +115,10 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
     accept_invite: {
       en: 'Could not accept invitation. Please try again.',
       es: 'No se pudo aceptar la invitación. Inténtalo de nuevo.',
+    },
+    create_invite: {
+      en: 'Could not create the invite link. Please try again.',
+      es: 'No se pudo crear el enlace de invitación. Inténtalo de nuevo.',
     },
     handle_request: {
       en: 'Could not process request. Please try again.',
