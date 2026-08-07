@@ -73,7 +73,6 @@ export function useHomeFeed() {
   // before the deferred silent fetch resolves — so the banner shouldn't show.
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [editingSession, setEditingSession] = useState<SessionWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [fixedHeight, setFixedHeight] = useState(0);
@@ -298,8 +297,6 @@ export function useHomeFeed() {
     locationKnown: computeLocationKnown(userLocation, locationPermission, userProfile),
     showOnboarding,
     setShowOnboarding,
-    editingSession,
-    setEditingSession,
     filteredSessions: filtering.filteredSessions,
     liveNowSessions: filtering.liveNowSessions,
     loading,

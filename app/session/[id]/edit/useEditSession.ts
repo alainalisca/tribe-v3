@@ -5,7 +5,23 @@ import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
-import { fetchSession, updateSession } from '@/lib/dal';
+import {
+  fetchSession,
+  fetchSessionPaymentInstructions,
+  fetchConfirmedCount,
+  fetchUserProfile,
+  updateSessionAsHost,
+} from '@/lib/dal';
+import { useConfirm } from '@/components/ConfirmProvider';
+import {
+  isEditLocked,
+  needsPriceChangeConfirmation,
+  buildPriceFields,
+  validatePriceInput,
+  type PriceFormInput,
+  type PriceSnapshot,
+  type PriceValidationError,
+} from './editGuards';
 import type { EditSessionTranslations } from './translations';
 
 export interface EditSessionFormData {
@@ -24,7 +40,7 @@ export interface EditSessionFormData {
   join_policy: string;
 }
 
-/** Shape expected by RecurringSessionToggle \u2014 kept separate from formData so
+/** Shape expected by RecurringSessionToggle — kept separate from formData so
  *  the toggle component can own its pattern string rather than forcing a flat
  *  field into the main form.  Mirrors the shape used on the create page. */
 export interface EditRecurringValue {
@@ -55,6 +71,13 @@ const defaultRecurring: EditRecurringValue = {
   recurrence_end_date: '',
 };
 
+const defaultPrice: PriceFormInput = {
+  is_paid: false,
+  price_display: '',
+  currency: 'COP',
+  payment_instructions: '',
+};
+
 // photos is managed separately (not in formData) because PhotoUploadSection
 // owns its own state shape: string[] rather than a form field value.
 export type EditSessionPhotos = string[];
@@ -63,12 +86,19 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const router = useRouter();
   const params = useParams();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<EditSessionFormData>(defaultFormData);
   const [recurringValue, setRecurringValue] = useState<EditRecurringValue>(defaultRecurring);
   const [photos, setPhotos] = useState<EditSessionPhotos>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [priceValue, setPriceValue] = useState<PriceFormInput>(defaultPrice);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [originalPrice, setOriginalPrice] = useState<PriceSnapshot>({ is_paid: false, price_cents: null });
+  // null = count fetch failed; the price-change dialog then fails safe (shows).
+  const [confirmedCount, setConfirmedCount] = useState<number | null>(0);
 
   useEffect(() => {
     // RLS-H4: resolve auth BEFORE any fetch. Edit is host-only — a logged-out
@@ -86,17 +116,34 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
         return;
       }
       setUserId(user.id);
-      loadSession();
+      loadSession(user.id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
-  async function loadSession() {
+  async function loadSession(uid: string) {
     try {
       const result = await fetchSession(supabase, params.id as string);
       if (!result.success || !result.data) throw new Error(result.error);
 
       const session = result.data;
+
+      // Owner guard: only the host may open the edit form. RLS would reject
+      // the save anyway, but bouncing here beats a generic error at submit.
+      if (session.creator_id !== uid) {
+        showError(txt.notOwner);
+        router.replace(`/session/${params.id}`);
+        return;
+      }
+
+      // Past sessions are read only; recurring parents stay editable because
+      // they define what future occurrences inherit.
+      if (isEditLocked(session, new Date())) {
+        showError(txt.pastLocked);
+        router.replace(`/session/${params.id}`);
+        return;
+      }
+
       setFormData({
         sport: session.sport,
         location: session.location,
@@ -126,18 +173,64 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
 
       // Initialise photo state from the existing session photos (may be null)
       setPhotos(session.photos ?? []);
+
+      // Price state. payment_instructions is not on fetchSession's public
+      // column list; it is host-only and fetched separately.
+      setOriginalPrice({ is_paid: session.is_paid ?? false, price_cents: session.price_cents ?? null });
+      const instructionsResult = await fetchSessionPaymentInstructions(supabase, params.id as string, uid);
+      setPriceValue({
+        is_paid: session.is_paid ?? false,
+        price_display: session.price_cents ? String(session.price_cents / 100) : '',
+        currency: session.currency === 'USD' ? 'USD' : 'COP',
+        payment_instructions: instructionsResult.success ? (instructionsResult.data ?? '') : '',
+      });
+
+      const countResult = await fetchConfirmedCount(supabase, params.id as string);
+      setConfirmedCount(countResult.success ? (countResult.data ?? 0) : null);
+
+      const profileResult = await fetchUserProfile(supabase, uid);
+      setIsInstructor(profileResult.success && !!profileResult.data?.is_instructor);
     } catch {
-      showError(language === 'es' ? 'Error al cargar sesi\u00f3n' : 'Error loading session');
+      showError(language === 'es' ? 'Error al cargar sesión' : 'Error loading session');
       router.back();
     } finally {
       setLoading(false);
     }
   }
 
+  const priceErrorText: Record<PriceValidationError, string> = {
+    price_required: txt.priceRequired,
+    min_usd: txt.minUsd,
+    min_cop: txt.minCop,
+    instructions_required: txt.instructionsRequired,
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
 
+    if (isInstructor) {
+      const validationError = validatePriceInput(priceValue);
+      if (validationError) {
+        const message = priceErrorText[validationError];
+        setPriceError(message);
+        showError(message);
+        return;
+      }
+      setPriceError(null);
+
+      // Spec 7.5: never silently flip a joined free session to paid.
+      if (needsPriceChangeConfirmation(originalPrice, priceValue.is_paid, confirmedCount ?? 1)) {
+        const proceed = await confirm({
+          title: txt.confirmPriceTitle,
+          message: txt.confirmPriceMessage,
+          confirmLabel: txt.confirmPriceYes,
+          cancelLabel: txt.confirmPriceNo,
+        });
+        if (!proceed) return;
+      }
+    }
+
+    setSaving(true);
     try {
       // Build recurrence fields mirroring the create-page convention.
       // When turning off, null out the pattern and end_date so the DB row
@@ -156,15 +249,24 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
             recurrence_end_date: null,
           };
 
+      // Non-instructors never touch the price columns: their sessions are
+      // free and omitting the fields leaves the row's price state untouched.
+      const priceFields = isInstructor ? buildPriceFields(priceValue) : {};
+
       // Persist photos alongside the other edited fields. Passing null when
       // the array is empty clears any previously stored photos (matches the
       // create-flow convention in insertSession).
-      const result = await updateSession(supabase, params.id as string, {
+      const result = await updateSessionAsHost(supabase, params.id as string, {
         ...formData,
         ...recurringFields,
+        ...priceFields,
         photos: photos.length > 0 ? photos : null,
       });
       if (!result.success) throw new Error(result.error);
+
+      // Cross-page invalidation: the home feed caches its session list and
+      // refetches when this flag is set (same convention as join/leave/cancel).
+      sessionStorage.setItem('tribe_sessions_dirty', '1');
 
       showSuccess(txt.updated);
       router.push(`/session/${params.id}`);
@@ -184,6 +286,10 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     setRecurringValue,
     photos,
     setPhotos,
+    priceValue,
+    setPriceValue,
+    priceError,
+    isInstructor,
     handleSubmit,
     params,
     router,

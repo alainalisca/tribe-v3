@@ -23,7 +23,6 @@ import { SkeletonCard } from '@/components/Skeleton';
  * overlays that only mount after a user action or auth-state change.
  */
 const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
-const EditSessionModal = dynamic(() => import('@/components/EditSessionModal'), { ssr: false });
 const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal'), { ssr: false });
 // Auto-shown welcome tour for signed-in users on first feed visit.
 // Distinct from OnboardingModal (which collects profile data); this
@@ -135,17 +134,6 @@ export default function HomePage() {
       >
         <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} threshold={80} />
         <div className="max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6">
-          {f.editingSession && (
-            <EditSessionModal
-              session={f.editingSession}
-              onClose={() => f.setEditingSession(null)}
-              onSave={() => {
-                f.loadSessions();
-                f.setEditingSession(null);
-              }}
-            />
-          )}
-
           {/* ── Stories ── */}
           <div className="mb-2">
             <StoriesRow
@@ -379,10 +367,7 @@ export default function HomePage() {
                         onJoin={f.handleJoinSession}
                         userLocation={f.userLocation}
                         currentUserId={f.user?.id}
-                        onEdit={(id: string) => {
-                          const s = f.sessions.find((s) => s.id === id);
-                          if (s) f.setEditingSession(s);
-                        }}
+                        onEdit={(id: string) => f.router.push(`/session/${id}/edit`)}
                         onDelete={f.handleDeleteSession}
                         onShare={f.handleShareSession}
                         distance={f.getDistanceText(session)}
