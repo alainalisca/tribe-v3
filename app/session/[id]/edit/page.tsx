@@ -14,6 +14,7 @@ import { getEditSessionTranslations } from './translations';
 import { useEditSession } from './useEditSession';
 import PhotoUploadSection from '@/app/create/PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
+import PriceSection from './PriceSection';
 
 export default function EditSessionPage() {
   const { language } = useLanguage();
@@ -27,6 +28,10 @@ export default function EditSessionPage() {
     setRecurringValue,
     photos,
     setPhotos,
+    priceValue,
+    setPriceValue,
+    priceError,
+    isInstructor,
     handleSubmit,
     params,
     router,
@@ -225,6 +230,9 @@ export default function EditSessionPage() {
               className="h-auto py-3 border-theme bg-theme-card text-theme-primary"
             />
           </div>
+
+          {/* ─── Paid Session (instructors only) ─── */}
+          {isInstructor && <PriceSection value={priceValue} onChange={setPriceValue} error={priceError} txt={txt} />}
 
           {/* ─── Recurrence ─── */}
           <div className="border border-theme rounded-lg p-4 bg-theme-card">

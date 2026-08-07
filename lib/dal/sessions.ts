@@ -584,6 +584,104 @@ export async function updateSession(
   }
 }
 
+/**
+ * The fields a host may change through the session edit form. A Pick keeps
+ * status, creator_id, counters, and reminder flags out of this path at the
+ * type level — those belong to cancelSession, crons, and admin flows.
+ */
+export type HostEditableSessionUpdate = Pick<
+  SessionUpdate,
+  | 'sport'
+  | 'location'
+  | 'latitude'
+  | 'longitude'
+  | 'location_lat'
+  | 'location_lng'
+  | 'date'
+  | 'start_time'
+  | 'duration'
+  | 'max_participants'
+  | 'description'
+  | 'skill_level'
+  | 'gender_preference'
+  | 'equipment'
+  | 'join_policy'
+  | 'photos'
+  | 'is_recurring'
+  | 'recurrence_pattern'
+  | 'recurrence_end_date'
+  | 'is_paid'
+  | 'price_cents'
+  | 'currency'
+  | 'payment_instructions'
+>;
+
+/**
+ * Updates a session on behalf of its host, with the guards updateSession
+ * deliberately lacks (updateSession stays a bare passthrough for cron and
+ * admin callers). Enforces: signed-in owner, past sessions read only (recurring
+ * parents exempt — their past date is by design while they generate future
+ * occurrences), and the same paid-session rules as insertSession so the edit
+ * path cannot be used to bypass create-time validation.
+ */
+export async function updateSessionAsHost(
+  supabase: SupabaseClient,
+  sessionId: string,
+  data: HostEditableSessionUpdate
+): Promise<DalResult<null>> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'You must be signed in to edit a session' };
+
+    const { data: session, error: fetchError } = await supabase
+      .from('sessions')
+      .select('creator_id, date, start_time, is_recurring')
+      .eq('id', sessionId)
+      .single();
+    if (fetchError || !session) return { success: false, error: fetchError?.message || 'Session not found' };
+
+    if (session.creator_id !== user.id) {
+      return { success: false, error: 'Only the session host can edit this session' };
+    }
+
+    const startsAt = new Date(`${session.date}T${session.start_time}`);
+    if (!session.is_recurring && startsAt.getTime() < Date.now()) {
+      return { success: false, error: 'Past sessions cannot be edited' };
+    }
+
+    const update: HostEditableSessionUpdate = { ...data };
+    if (update.is_paid === true) {
+      const { data: profile } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
+      if (!profile?.is_instructor) {
+        return { success: false, error: 'Only instructors can set a price on sessions' };
+      }
+      if (typeof update.price_cents !== 'number' || update.price_cents <= 0) {
+        return { success: false, error: 'Paid sessions must have a price greater than zero' };
+      }
+      if (update.price_cents > 100000000) {
+        return { success: false, error: 'Price exceeds maximum allowed amount' };
+      }
+      const validCurrencies = ['USD', 'COP'];
+      if (!update.currency || !validCurrencies.includes(update.currency)) {
+        return { success: false, error: 'Invalid currency. Must be USD or COP' };
+      }
+    } else if (update.is_paid === false) {
+      // sessions_price_check allows a stale price to survive is_paid=false,
+      // and the feed card displays any non-null price — free means null.
+      update.price_cents = null;
+    }
+
+    const { error } = await supabase.from('sessions').update(update).eq('id', sessionId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'updateSessionAsHost', sessionId });
+    return { success: false, error: 'Failed to update session' };
+  }
+}
+
 /** Deletes all sessions created by a specific user. Used by admin delete-user flow. */
 export async function deleteSessionsByCreator(supabase: SupabaseClient, creatorId: string): Promise<DalResult<null>> {
   try {
