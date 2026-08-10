@@ -57,6 +57,7 @@ const publicPaths = [
   '/about',
   '/faq',
   '/for-instructors',
+  '/download', // static app-download page (public/download/index.html) — must be reachable without auth
   '/_next',
   '/sw.js',
   '/manifest.json',

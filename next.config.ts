@@ -22,6 +22,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      // Next.js does not serve public/<dir>/index.html at the directory path,
+      // so the static app-download page 404s at /download without this.
+      // Middleware lists /download as a public path; keep the two in sync.
+      {
+        source: '/download',
+        destination: '/download/index.html',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
