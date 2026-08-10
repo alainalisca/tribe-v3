@@ -40,12 +40,25 @@
   a.store.alt{background:var(--card);color:#fff;border:1px solid #3d454e}
   a.web{color:var(--muted);text-decoration:underline;font-size:14px}
   .redir{color:var(--muted);font-size:14px;margin-top:8px}
-  .banner{
-    background:var(--card);border:1px solid var(--lime);border-radius:14px;
-    padding:24px 20px;text-align:center;
+  /* Copy-paste fallback: deliberately quiet so the store buttons stay primary. */
+  .copyfb{padding-top:18px;margin-bottom:20px;border-top:1px solid #3d454e}
+  .copyfb-hint{color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:10px}
+  .copyfb-row{display:flex;gap:8px;align-items:stretch}
+  .copyfb-url{
+    flex:1;min-width:0;
+    background:var(--ink);color:var(--muted);
+    border:1px solid #3d454e;border-radius:10px;
+    padding:10px 12px;font:inherit;font-size:13px;
+    text-overflow:ellipsis;
   }
-  .banner .banner-title{color:var(--lime);font-size:19px;font-weight:700;line-height:1.3;margin-bottom:10px}
-  .banner p{color:#fff;font-size:15px;line-height:1.5}
+  .copyfb-btn{
+    flex:none;min-width:116px;
+    background:transparent;color:var(--lime);
+    border:1px solid var(--lime);border-radius:10px;
+    padding:10px 12px;font:inherit;font-size:13px;font-weight:700;
+    cursor:pointer;white-space:nowrap;
+  }
+  .copyfb-btn:active{opacity:.7}
   .qrwrap{margin-top:26px}
   .qrbox{display:inline-block;background:#fff;padding:14px;border-radius:16px;line-height:0}
   .qrcap{color:var(--muted);font-size:13px;margin-top:10px}
@@ -57,15 +70,6 @@
     <img class="logo" src="tribe-wordmark-light.png" alt="Tribe" />
     <div class="tag">Never Train Alone</div>
 
-    <!-- Inside in-app browsers (Instagram, Facebook) this replaces the whole page:
-         the store handoff doesn't work there, so one instruction beats a screen of
-         buttons that lead nowhere. -->
-    <div id="inapp" class="banner hidden">
-      <div class="banner-title">Para descargar Tribe, abre este enlace en tu navegador</div>
-      <p>Toca ••• arriba y elige «Abrir en el navegador».</p>
-    </div>
-
-    <!-- Everything below is hidden in in-app browsers (see the script) -->
     <div id="choices">
       <h1>Descarga Tribe</h1>
       <p class="sub">Encuentra y únete a sesiones de entrenamiento cerca de ti en Medellín.</p>
@@ -73,6 +77,18 @@
         <a class="store" id="playBtn" href="#">Descargar en Google Play</a>
         <a class="store alt" id="appleBtn" href="#">Descargar en App Store</a>
       </div>
+
+      <!-- Mobile-only escape hatch: in-app browsers (Instagram, Facebook) sometimes
+           swallow the store handoff, so give people the raw link to paste. -->
+      <div id="copyfb" class="copyfb hidden">
+        <p class="copyfb-hint">¿El botón no abre la tienda? Copia y pega este enlace en tu navegador 👇</p>
+        <div class="copyfb-row">
+          <input id="copyUrl" class="copyfb-url" type="text" readonly
+                 value="tribe-v3.vercel.app/download" aria-label="Enlace de descarga" />
+          <button id="copyBtn" class="copyfb-btn" type="button">Copiar enlace</button>
+        </div>
+      </div>
+
       <a class="web" id="webBtn" href="#">Prefiero verla en la web</a>
 
       <!-- QR only shown on desktop -->
@@ -116,21 +132,60 @@
   document.getElementById("appleBtn").href = APPLE_WEB;
   document.getElementById("webBtn").href   = WEB;
 
-  if(isInApp){
-    // In-app browsers swallow the store handoff, so there's nothing useful to tap
-    // here. Show the escape instruction alone — no buttons, no QR, no redirect.
-    document.getElementById("inapp").classList.remove("hidden");
-    document.getElementById("choices").classList.add("hidden");
+  // ---- Copy-paste fallback ----
+  // The box shows a short, readable host+path; the clipboard gets the full https URL.
+  var COPY_URL   = WEB + "/download";
+  var copyBtn    = document.getElementById("copyBtn");
+  var copyUrlEl  = document.getElementById("copyUrl");
+  var COPY_LABEL = copyBtn.textContent;
+  var copyTimer;
+
+  function flashLabel(text){
+    clearTimeout(copyTimer);
+    copyBtn.textContent = text;
+    copyTimer = setTimeout(function(){ copyBtn.textContent = COPY_LABEL; }, 2000);
   }
-  else if(isAndroid || isIOS){
-    // Normal mobile browser: jump straight to the store, buttons stay visible
-    // as a fallback if the jump is blocked.
-    var target = isAndroid ? playWeb : APPLE_WEB;
-    setTimeout(function(){
-      // Swallowed on purpose: if the browser blocks the auto-navigation there is
-      // nothing to recover from — the store buttons below are the fallback.
-      try { window.location.href = target; } catch(e){}
-    }, 300);
+
+  // If the clipboard API is unavailable or blocked (some webviews refuse it),
+  // select the text so the user can copy it with a long-press instead.
+  function selectForManualCopy(){
+    try {
+      copyUrlEl.focus();
+      copyUrlEl.setSelectionRange(0, copyUrlEl.value.length);
+    } catch(e){ /* selection is a nicety; the text is on screen either way */ }
+    flashLabel("Copia manual");
+  }
+
+  copyBtn.addEventListener("click", function(){
+    try {
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(COPY_URL).then(
+          function(){ flashLabel("¡Copiado!"); },
+          function(){ selectForManualCopy(); }
+        );
+      } else {
+        selectForManualCopy();
+      }
+    } catch(e){
+      selectForManualCopy();
+    }
+  });
+
+  if(isAndroid || isIOS){
+    // The buttons are the primary action everywhere, in-app browsers included.
+    // The copy fallback is the recovery path when a tap doesn't reach the store.
+    document.getElementById("copyfb").classList.remove("hidden");
+
+    if(!isInApp){
+      // Normal mobile browser: jump straight to the store. In-app browsers are
+      // left alone — bouncing them lands nowhere and hides the page they need.
+      var target = isAndroid ? playWeb : APPLE_WEB;
+      setTimeout(function(){
+        // Swallowed on purpose: if the browser blocks the auto-navigation there is
+        // nothing to recover from — the store buttons are already on screen.
+        try { window.location.href = target; } catch(e){}
+      }, 300);
+    }
   }
   else {
     // Desktop: show a QR of this same page so people can scan and continue on their phone.
