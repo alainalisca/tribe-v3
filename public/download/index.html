@@ -80,41 +80,40 @@
 <script>
 (function(){
   // ---- Configure your links here ----
-  var PLAY   = "https://play.google.com/store/apps/details?id=prod.tribe.android";
-  var APPLE  = "https://apps.apple.com/co/app/tribe-never-train-alone/id6458219258"; // full path resolves reliably; app is region-wide so this works across LatAm/US
-  var WEB    = "https://tribe-v3.vercel.app";
+  var PLAY_WEB  = "https://play.google.com/store/apps/details?id=prod.tribe.android";
+  var PLAY_APP  = "market://details?id=prod.tribe.android";
+  var APPLE_WEB = "https://apps.apple.com/co/app/tribe-never-train-alone/id6458219258";
+  var APPLE_APP = "itms-apps://apps.apple.com/co/app/tribe-never-train-alone/id6458219258";
+  var WEB       = "https://tribe-v3.vercel.app";
 
   // ---- Basic attribution: pass any ?utm_* through to the Play referrer ----
   var qs = window.location.search || "";
   var params = new URLSearchParams(qs);
   var utm = [];
   params.forEach(function(v,k){ if(k.indexOf("utm_")===0) utm.push(k+"="+v); });
-  var playUrl = PLAY;
-  if(utm.length){ playUrl += "&referrer=" + encodeURIComponent(utm.join("&")); }
-
-  // Wire up the buttons
-  document.getElementById("playBtn").href  = playUrl;
-  document.getElementById("appleBtn").href = APPLE;
-  document.getElementById("webBtn").href   = WEB;
+  var playWeb = PLAY_WEB;
+  if(utm.length){ playWeb += "&referrer=" + encodeURIComponent(utm.join("&")); }
 
   // ---- Device detection ----
-  var ua = navigator.userAgent || navigator.vendor || window.opera;
+  var ua = navigator.userAgent || navigator.vendor || window.opera || "";
   var isAndroid = /android/i.test(ua);
   var isIOS = /iphone|ipad|ipod/i.test(ua) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
 
+  // On mobile, point the store buttons at the native app scheme so ONE tap opens
+  // the store app directly. In-app browsers (Instagram, Facebook) don't hand off
+  // an https store link cleanly, which is why a normal tap felt stuck before.
+  // Desktop keeps the standard web links.
+  document.getElementById("playBtn").href  = isAndroid ? PLAY_APP  : playWeb;
+  document.getElementById("appleBtn").href = isIOS     ? APPLE_APP : APPLE_WEB;
+  document.getElementById("webBtn").href   = WEB;
+
   if(isAndroid || isIOS){
-    // Show the "redirecting" state, then send them to the right store
-    document.getElementById("choices").classList.add("hidden");
-    document.getElementById("redirecting").classList.remove("hidden");
-    var target = isAndroid ? playUrl : APPLE;
-    // small delay so the page can paint before the jump
-    setTimeout(function(){ window.location.replace(target); }, 400);
-    // keep the fallback visible in case the redirect is blocked
-    setTimeout(function(){
-      document.getElementById("redirecting").classList.add("hidden");
-      document.getElementById("choices").classList.remove("hidden");
-    }, 2500);
+    // Keep the buttons visible (so a tap always works) AND try to jump straight
+    // to the store app. If the in-app browser blocks the auto-jump, the big
+    // button is right there to tap.
+    var target = isAndroid ? PLAY_APP : APPLE_APP;
+    setTimeout(function(){ try { window.location.href = target; } catch(e){} }, 300);
   }
   else {
     // Desktop: show a QR of this same page so people can scan and continue on their phone.
