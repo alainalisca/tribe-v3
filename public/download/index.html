@@ -42,10 +42,10 @@
   .redir{color:var(--muted);font-size:14px;margin-top:8px}
   .banner{
     background:var(--card);border:1px solid var(--lime);border-radius:14px;
-    padding:14px 16px;margin-bottom:22px;text-align:left;
+    padding:24px 20px;text-align:center;
   }
-  .banner .banner-title{color:var(--lime);font-size:15px;font-weight:700;margin-bottom:6px}
-  .banner p{color:#fff;font-size:14px;line-height:1.5}
+  .banner .banner-title{color:var(--lime);font-size:19px;font-weight:700;line-height:1.3;margin-bottom:10px}
+  .banner p{color:#fff;font-size:15px;line-height:1.5}
   .qrwrap{margin-top:26px}
   .qrbox{display:inline-block;background:#fff;padding:14px;border-radius:16px;line-height:0}
   .qrcap{color:var(--muted);font-size:13px;margin-top:10px}
@@ -57,14 +57,15 @@
     <img class="logo" src="tribe-wordmark-light.png" alt="Tribe" />
     <div class="tag">Never Train Alone</div>
 
-    <!-- Shown only inside in-app browsers (Instagram, Facebook), which can't hand
-         off to the store apps. Tells the user how to escape to a real browser. -->
+    <!-- Inside in-app browsers (Instagram, Facebook) this replaces the whole page:
+         the store handoff doesn't work there, so one instruction beats a screen of
+         buttons that lead nowhere. -->
     <div id="inapp" class="banner hidden">
-      <div class="banner-title">Para descargar, abre este enlace en tu navegador</div>
+      <div class="banner-title">Para descargar Tribe, abre este enlace en tu navegador</div>
       <p>Toca ••• arriba y elige «Abrir en el navegador».</p>
     </div>
 
-    <!-- The always-available fallback (and the whole page on desktop) -->
+    <!-- Everything below is hidden in in-app browsers (see the script) -->
     <div id="choices">
       <h1>Descarga Tribe</h1>
       <p class="sub">Encuentra y únete a sesiones de entrenamiento cerca de ti en Medellín.</p>
@@ -115,22 +116,21 @@
   document.getElementById("appleBtn").href = APPLE_WEB;
   document.getElementById("webBtn").href   = WEB;
 
-  if(isAndroid || isIOS){
-    if(isInApp){
-      // In-app browsers swallow the store handoff, so don't auto-redirect —
-      // that just strands the user. Tell them how to get to a real browser
-      // and leave the store buttons right below.
-      document.getElementById("inapp").classList.remove("hidden");
-    } else {
-      // Normal mobile browser: jump straight to the store, buttons stay visible
-      // as a fallback if the jump is blocked.
-      var target = isAndroid ? playWeb : APPLE_WEB;
-      setTimeout(function(){
-        // Swallowed on purpose: if the browser blocks the auto-navigation there is
-        // nothing to recover from — the store buttons below are the fallback.
-        try { window.location.href = target; } catch(e){}
-      }, 300);
-    }
+  if(isInApp){
+    // In-app browsers swallow the store handoff, so there's nothing useful to tap
+    // here. Show the escape instruction alone — no buttons, no QR, no redirect.
+    document.getElementById("inapp").classList.remove("hidden");
+    document.getElementById("choices").classList.add("hidden");
+  }
+  else if(isAndroid || isIOS){
+    // Normal mobile browser: jump straight to the store, buttons stay visible
+    // as a fallback if the jump is blocked.
+    var target = isAndroid ? playWeb : APPLE_WEB;
+    setTimeout(function(){
+      // Swallowed on purpose: if the browser blocks the auto-navigation there is
+      // nothing to recover from — the store buttons below are the fallback.
+      try { window.location.href = target; } catch(e){}
+    }, 300);
   }
   else {
     // Desktop: show a QR of this same page so people can scan and continue on their phone.
