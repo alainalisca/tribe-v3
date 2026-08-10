@@ -40,6 +40,12 @@
   a.store.alt{background:var(--card);color:#fff;border:1px solid #3d454e}
   a.web{color:var(--muted);text-decoration:underline;font-size:14px}
   .redir{color:var(--muted);font-size:14px;margin-top:8px}
+  .banner{
+    background:var(--card);border:1px solid var(--lime);border-radius:14px;
+    padding:14px 16px;margin-bottom:22px;text-align:left;
+  }
+  .banner .banner-title{color:var(--lime);font-size:15px;font-weight:700;margin-bottom:6px}
+  .banner p{color:#fff;font-size:14px;line-height:1.5}
   .qrwrap{margin-top:26px}
   .qrbox{display:inline-block;background:#fff;padding:14px;border-radius:16px;line-height:0}
   .qrcap{color:var(--muted);font-size:13px;margin-top:10px}
@@ -51,10 +57,11 @@
     <img class="logo" src="tribe-wordmark-light.png" alt="Tribe" />
     <div class="tag">Never Train Alone</div>
 
-    <!-- Shown while we redirect on mobile -->
-    <div id="redirecting" class="hidden">
-      <h1>Abriendo tu tienda de apps…</h1>
-      <p class="sub">Si no abre sola en unos segundos, toca tu tienda abajo.</p>
+    <!-- Shown only inside in-app browsers (Instagram, Facebook), which can't hand
+         off to the store apps. Tells the user how to escape to a real browser. -->
+    <div id="inapp" class="banner hidden">
+      <div class="banner-title">Para descargar, abre este enlace en tu navegador</div>
+      <p>Toca ••• arriba y elige «Abrir en el navegador».</p>
     </div>
 
     <!-- The always-available fallback (and the whole page on desktop) -->
@@ -80,10 +87,11 @@
 <script>
 (function(){
   // ---- Configure your links here ----
+  // https only. Custom schemes (market://, itms-apps://) are blocked inside
+  // Instagram/Facebook webviews: the tap does nothing and the href can't even
+  // be copied, which is worse than a link that at least resolves.
   var PLAY_WEB  = "https://play.google.com/store/apps/details?id=prod.tribe.android";
-  var PLAY_APP  = "market://details?id=prod.tribe.android";
   var APPLE_WEB = "https://apps.apple.com/co/app/tribe-never-train-alone/id6458219258";
-  var APPLE_APP = "itms-apps://apps.apple.com/co/app/tribe-never-train-alone/id6458219258";
   var WEB       = "https://tribe-v3.vercel.app";
 
   // ---- Basic attribution: pass any ?utm_* through to the Play referrer ----
@@ -99,21 +107,30 @@
   var isAndroid = /android/i.test(ua);
   var isIOS = /iphone|ipad|ipod/i.test(ua) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+  // Instagram and Facebook webviews (FBAN = app, FBAV = app version).
+  var isInApp = /instagram|fban|fbav/i.test(ua);
 
-  // On mobile, point the store buttons at the native app scheme so ONE tap opens
-  // the store app directly. In-app browsers (Instagram, Facebook) don't hand off
-  // an https store link cleanly, which is why a normal tap felt stuck before.
-  // Desktop keeps the standard web links.
-  document.getElementById("playBtn").href  = isAndroid ? PLAY_APP  : playWeb;
-  document.getElementById("appleBtn").href = isIOS     ? APPLE_APP : APPLE_WEB;
+  // Always https, on every platform, so the link works and stays copyable.
+  document.getElementById("playBtn").href  = playWeb;
+  document.getElementById("appleBtn").href = APPLE_WEB;
   document.getElementById("webBtn").href   = WEB;
 
   if(isAndroid || isIOS){
-    // Keep the buttons visible (so a tap always works) AND try to jump straight
-    // to the store app. If the in-app browser blocks the auto-jump, the big
-    // button is right there to tap.
-    var target = isAndroid ? PLAY_APP : APPLE_APP;
-    setTimeout(function(){ try { window.location.href = target; } catch(e){} }, 300);
+    if(isInApp){
+      // In-app browsers swallow the store handoff, so don't auto-redirect —
+      // that just strands the user. Tell them how to get to a real browser
+      // and leave the store buttons right below.
+      document.getElementById("inapp").classList.remove("hidden");
+    } else {
+      // Normal mobile browser: jump straight to the store, buttons stay visible
+      // as a fallback if the jump is blocked.
+      var target = isAndroid ? playWeb : APPLE_WEB;
+      setTimeout(function(){
+        // Swallowed on purpose: if the browser blocks the auto-navigation there is
+        // nothing to recover from — the store buttons below are the fallback.
+        try { window.location.href = target; } catch(e){}
+      }, 300);
+    }
   }
   else {
     // Desktop: show a QR of this same page so people can scan and continue on their phone.
