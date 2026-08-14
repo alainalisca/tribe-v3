@@ -88,7 +88,10 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
-      {f.showOnboarding && f.user && (
+      {/* T-C1: `suppressOnboarding` hides both onboarding systems when a pending
+          destination (a shared /s/[id] link the user signed in from) is in flight,
+          so the user lands on the session, not the onboarding gauntlet. */}
+      {f.showOnboarding && f.user && !f.suppressOnboarding && (
         <OnboardingModal
           onComplete={() => {
             localStorage.setItem(`hasSeenOnboarding_${f.user!.id}`, 'true');
@@ -102,7 +105,7 @@ export default function HomePage() {
           so we don't stack two modals. Independent seen-flag from
           the onboarding modal — this one is "have you seen the app
           tour", not "have you completed your profile". */}
-      {f.user && !f.showOnboarding ? <TribeWelcomeGuide enabled /> : null}
+      {f.user && !f.showOnboarding && !f.suppressOnboarding ? <TribeWelcomeGuide enabled /> : null}
 
       <FilterBar
         searchQuery={f.searchQuery}

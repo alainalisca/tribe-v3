@@ -18,6 +18,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
 import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation } from '@/lib/dal';
+import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
 import type { SessionWithRelations } from '@/lib/dal';
@@ -73,6 +74,11 @@ export function useHomeFeed() {
   // before the deferred silent fetch resolves — so the banner shouldn't show.
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // T-C1: true when a pending destination (a shared /s/[id] link the user signed
+  // in from) is in flight. It suppresses BOTH the onboarding modal and the welcome
+  // tour so a fresh localStorage context (e.g. the WhatsApp in-app browser) can't
+  // trap the user in the onboarding gauntlet instead of the session they tapped.
+  const [suppressOnboarding, setSuppressOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [fixedHeight, setFixedHeight] = useState(0);
@@ -194,15 +200,30 @@ export function useHomeFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSessions is stable
   }, [userChecked]);
 
+  // T-C1: honor a pending destination before anything else on the home feed. If
+  // the user signed in from a shared /s/[id] link, deliver them to that session
+  // and suppress onboarding — a fresh localStorage context must not re-run the
+  // onboarding gauntlet in place of the session they tapped. Single-use consume,
+  // so it never fires on an ordinary app open (nothing parked → null → no-op).
+  useEffect(() => {
+    const dest = consumePendingReturnTo();
+    if (dest) {
+      setSuppressOnboarding(true);
+      router.replace(dest);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
+
   useEffect(() => {
     if (!user || !userProfile) return;
+    if (suppressOnboarding) return; // T-C1: a pending destination wins over onboarding.
     const isProfileComplete = userProfile.avatar_url && (userProfile.sports?.length ?? 0) > 0;
     if (isProfileComplete) {
       setShowOnboarding(false);
       return;
     }
     if (!localStorage.getItem(`hasSeenOnboarding_${user.id}`)) setShowOnboarding(true);
-  }, [user, userProfile]);
+  }, [user, userProfile, suppressOnboarding]);
 
   // --- Analytics: identify user + session context + app_opened ---
   useEffect(() => {
@@ -297,6 +318,7 @@ export function useHomeFeed() {
     locationKnown: computeLocationKnown(userLocation, locationPermission, userProfile),
     showOnboarding,
     setShowOnboarding,
+    suppressOnboarding,
     filteredSessions: filtering.filteredSessions,
     liveNowSessions: filtering.liveNowSessions,
     loading,
