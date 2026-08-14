@@ -110,7 +110,12 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
     : null;
 
   const rating = session.creator?.average_rating;
-  const ctaHref = userId ? `/session/${session.id}` : `/auth?session=${session.id}`;
+  // T-C1: a logged-out visitor is sent to /auth with a validated returnTo so that
+  // after sign-in (or signup → onboarding) they land back on THIS session, not the
+  // home feed. Encoded the same way middleware encodes returnTo, so the existing,
+  // tested getSafeReturnTo()/pendingReturnTo machinery decodes and validates it.
+  // The previous `?session=` param was read by nothing and silently dropped.
+  const ctaHref = userId ? `/session/${session.id}` : `/auth?returnTo=${encodeURIComponent(`/session/${session.id}`)}`;
   const ctaLabel = userId
     ? language === 'es'
       ? 'Reservar Ahora'
