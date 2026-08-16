@@ -669,4 +669,14 @@ select '141_tc1_gate4_widen_invite_mint',
          where schemaname = 'public' and tablename = 'invite_tokens'
            and policyname = 'Creator or confirmed participant can create invite tokens'
        ) then 'applied' else 'MISSING' end
+union all
+select '142_flag_founder_test_accounts',
+       -- Additive data migration (applied by hand 2026-08-08, verified live
+       -- 2026-08-14): flags the 13 founder/test accounts enumerated in the
+       -- file. Structural artifact check pinned to the migration's own
+       -- "exactly 13" expectation — if this reads MISSING after more accounts
+       -- are legitimately flagged by a LATER migration, update both counts
+       -- together.
+       case when (select count(*) from public.users where is_test_account = true) = 13
+            then 'applied' else 'MISSING' end
 order by migration;
