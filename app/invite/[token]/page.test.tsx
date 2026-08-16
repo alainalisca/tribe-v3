@@ -43,7 +43,15 @@ vi.mock('@/lib/LanguageContext', () => ({
 }));
 vi.mock('@/lib/i18n/useTranslations', () => ({ useTranslations: () => (k: string) => k }));
 
-import InvitePage from './page';
+// The Gate 1 behavior moved into the client half when page.tsx became a
+// server component (invite preview metadata). These tests mount InviteClient
+// with initialInvite={null} — the server-fetch-failed fallback path — which is
+// byte-equal to the pre-split client behavior the tests were written against.
+import InviteClient from './InviteClient';
+
+function renderInvitePage() {
+  return render(<InviteClient token={TOKEN} initialInvite={null} />);
+}
 
 const VALID_INVITE = {
   valid: true,
@@ -78,7 +86,7 @@ describe('InvitePage — T-C1 Gate 1', () => {
 
   it('logged-out branch links sign-in to /auth with the URL-encoded invite returnTo', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
-    render(<InvitePage />);
+    renderInvitePage();
 
     const signIn = await screen.findByText('signInToAccept');
     const link = signIn.closest('a');
@@ -94,7 +102,7 @@ describe('InvitePage — T-C1 Gate 1', () => {
 
   it('getUser() rejection degrades to the logged-out branch, not the error state', async () => {
     mockGetUser.mockRejectedValue(new Error('network down'));
-    render(<InvitePage />);
+    renderInvitePage();
 
     // The valid invite renders with both logged-out options...
     await screen.findByText('signInToAccept');
@@ -111,7 +119,7 @@ describe('InvitePage — T-C1 Gate 1', () => {
       data: { user: { id: 'u1', email: 'a@b.co', user_metadata: { name: 'Ana' } } },
       error: null,
     });
-    render(<InvitePage />);
+    renderInvitePage();
 
     await screen.findByText('acceptInvitation');
     expect(screen.queryByText('signInToAccept')).toBeNull();

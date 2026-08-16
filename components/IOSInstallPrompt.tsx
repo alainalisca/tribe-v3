@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -13,8 +14,15 @@ const DISMISS_DAYS = 7;
 export default function AppStoreBanner() {
   const { t } = useLanguage();
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
+  // Invite links are the growth mechanic's front door: a recipient deciding
+  // whether to accept must not get a store modal 3 seconds in (WhatsApp and
+  // Instagram webviews match the iOS/Android UA test below). The banner
+  // returns on whatever page they visit next.
+  const onInviteRoute = pathname?.startsWith('/invite/') ?? false;
 
   useEffect(() => {
+    if (onInviteRoute) return;
     try {
       const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const android = /Android/.test(navigator.userAgent);
@@ -37,7 +45,7 @@ export default function AppStoreBanner() {
     } catch (error) {
       logError(error, { action: 'AppStoreBanner.init' });
     }
-  }, []);
+  }, [onInviteRoute]);
 
   const handleDismiss = () => {
     setShow(false);
@@ -48,7 +56,7 @@ export default function AppStoreBanner() {
     }
   };
 
-  if (!show) return null;
+  if (!show || onInviteRoute) return null;
 
   return (
     <Dialog open={show} onOpenChange={(open) => !open && handleDismiss()}>
