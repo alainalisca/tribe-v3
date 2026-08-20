@@ -131,7 +131,7 @@ export async function POST(request: Request) {
 
     // Build per-language notification groups and send via the unified endpoint
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || `https://${request.headers.get('host')}`;
-    const url = `/session/${sessionId}`;
+    const url = `/session/${sessionId}/`;
     let notifiedCount = 0;
 
     // Batch users by language to minimize request payloads
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         : `Starting ${startText} at ${location}. Join now!`;
 
       // Use PUT for batch send to the unified notification endpoint
-      const response = await fetch(`${SITE_URL}/api/notifications/send`, {
+      const response = await fetch(`${SITE_URL}/api/notifications/send/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
         body: JSON.stringify({ userIds, title, body, url }),

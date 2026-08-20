@@ -156,9 +156,9 @@ function setupNotificationTapListener(): void {
     if (data?.url) {
       window.location.href = data.url;
     } else if (data?.type === 'chat_message' && data.sessionId) {
-      window.location.href = `/session/${data.sessionId}`;
+      window.location.href = `/session/${data.sessionId}/`;
     } else if (data?.sessionId) {
-      window.location.href = `/session/${data.sessionId}`;
+      window.location.href = `/session/${data.sessionId}/`;
     }
   });
 }

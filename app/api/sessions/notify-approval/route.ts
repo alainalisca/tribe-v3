@@ -156,7 +156,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           userId: recipientId,
           title,
           body,
-          url: `/session/${session_id}`,
+          url: `/session/${session_id}/`,
           data: { sessionId: session_id, type: 'request_approved' },
         }),
       });

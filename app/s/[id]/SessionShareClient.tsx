@@ -115,7 +115,9 @@ export default function SessionShareClient({ initialSession, sessionId }: Props)
   // home feed. Encoded the same way middleware encodes returnTo, so the existing,
   // tested getSafeReturnTo()/pendingReturnTo machinery decodes and validates it.
   // The previous `?session=` param was read by nothing and silently dropped.
-  const ctaHref = userId ? `/session/${session.id}` : `/auth?returnTo=${encodeURIComponent(`/session/${session.id}`)}`;
+  const ctaHref = userId
+    ? `/session/${session.id}/`
+    : `/auth/?returnTo=${encodeURIComponent(`/session/${session.id}/`)}`;
   const ctaLabel = userId
     ? language === 'es'
       ? 'Reservar Ahora'

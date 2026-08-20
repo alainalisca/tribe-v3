@@ -107,7 +107,7 @@ function renderHtml(params: CoachAddedYouParams, siteUrl: string): string {
   // ?welcome=1 lets /my-coach show a one-time welcome banner so the
   // email-to-app handoff feels intentional. Page reads + clears
   // localStorage on mount so a repeat visit doesn't show it twice.
-  const ctaUrl = `${siteUrl}/my-coach?welcome=1`;
+  const ctaUrl = `${siteUrl}/my-coach/?welcome=1`;
 
   const itemsHtml = c.whatYouSeeItems
     .map(
@@ -154,7 +154,7 @@ function renderText(params: CoachAddedYouParams, siteUrl: string): string {
   // ?welcome=1 lets /my-coach show a one-time welcome banner so the
   // email-to-app handoff feels intentional. Page reads + clears
   // localStorage on mount so a repeat visit doesn't show it twice.
-  const ctaUrl = `${siteUrl}/my-coach?welcome=1`;
+  const ctaUrl = `${siteUrl}/my-coach/?welcome=1`;
   const items = c.whatYouSeeItems.map((line) => `  - ${line}`).join('\n');
 
   return [

@@ -165,14 +165,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const cronSecret = process.env.CRON_SECRET;
     if (siteUrl && cronSecret) {
-      fetch(`${siteUrl}/api/notifications/send`, {
+      fetch(`${siteUrl}/api/notifications/send/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
         body: JSON.stringify({
           userId: session.creator_id,
           title,
           body,
-          url: `/session/${session_id}`,
+          url: `/session/${session_id}/`,
           data: { sessionId: session_id, type: kind === 'leave' ? 'leave' : 'join' },
         }),
       })

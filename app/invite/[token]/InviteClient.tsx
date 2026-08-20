@@ -372,7 +372,9 @@ export default function InviteClient({ token, initialInvite }: Props) {
             <Card className="dark:bg-tribe-card mb-4">
               <CardContent className="p-4 text-center">
                 <Button asChild className="w-full py-3 font-bold">
-                  <Link href={`/auth?returnTo=${encodeURIComponent(`/invite/${token}`)}`}>{ti('signInToAccept')}</Link>
+                  <Link href={`/auth/?returnTo=${encodeURIComponent(`/invite/${token}/`)}`}>
+                    {ti('signInToAccept')}
+                  </Link>
                 </Button>
                 <p className="text-xs text-stone-500 dark:text-gray-400 mt-2">{ti('signInToAcceptHint')}</p>
               </CardContent>

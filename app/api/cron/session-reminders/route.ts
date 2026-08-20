@@ -162,14 +162,14 @@ export async function GET(request: Request) {
               );
               const body = (messages[lang]?.body || messages.en.body)(session.sport, safeLocation);
 
-              return fetch(`${SITE_URL}/api/notifications/send`, {
+              return fetch(`${SITE_URL}/api/notifications/send/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
                 body: JSON.stringify({
                   userId: userInfo.id,
                   title,
                   body,
-                  url: `/session/${session.id}`,
+                  url: `/session/${session.id}/`,
                 }),
               });
             })

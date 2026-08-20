@@ -128,14 +128,14 @@ export async function GET(request: Request) {
               : `${session.sport} starts in 2 hours at ${safeLocation}`;
 
           try {
-            const res = await fetch(`${SITE_URL}/api/notifications/send`, {
+            const res = await fetch(`${SITE_URL}/api/notifications/send/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
                 userId: session.creator.id,
                 title: hostTitle,
                 body: hostBody,
-                url: `/session/${session.id}`,
+                url: `/session/${session.id}/`,
               }),
             });
             if (!res.ok) anySendFailed = true;
@@ -153,14 +153,14 @@ export async function GET(request: Request) {
               : `${session.sport} starts in 2 hours. Never train alone!`;
 
           try {
-            const res = await fetch(`${SITE_URL}/api/notifications/send`, {
+            const res = await fetch(`${SITE_URL}/api/notifications/send/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
                 userId: participant.user_id,
                 title: pTitle,
                 body: pBody,
-                url: `/session/${session.id}`,
+                url: `/session/${session.id}/`,
               }),
             });
             if (!res.ok) anySendFailed = true;
@@ -226,7 +226,7 @@ export async function GET(request: Request) {
           const content = getMessageContent(message, lang);
 
           try {
-            await fetch(`${SITE_URL}/api/notifications/send`, {
+            await fetch(`${SITE_URL}/api/notifications/send/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({

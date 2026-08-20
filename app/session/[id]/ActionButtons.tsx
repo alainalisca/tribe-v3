@@ -242,7 +242,7 @@ export default function ActionButtons({
             <a
               href={getGoogleCalendarUrl({
                 ...calendarData,
-                url: `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${session.id}`,
+                url: `${typeof window !== 'undefined' ? window.location.origin : ''}/session/${session.id}/`,
               })}
               target="_blank"
               rel="noopener noreferrer"
@@ -262,7 +262,7 @@ export default function ActionButtons({
             {/* Secondary: Apple Calendar via .ics — desktop Safari / macOS */}
             <button
               onClick={() => {
-                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}` });
+                downloadCalendarEvent({ ...calendarData, url: `${window.location.origin}/session/${session.id}/` });
                 showInfo(t('addToCalendarIcsDownloaded'));
                 trackEvent('session_calendar_added', {
                   session_id: session.id,

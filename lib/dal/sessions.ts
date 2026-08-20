@@ -528,7 +528,7 @@ export async function cancelSession(
     for (const p of participants || []) {
       try {
         const refundNote = session.is_paid ? ' Your payment will be refunded.' : '';
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send`, {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

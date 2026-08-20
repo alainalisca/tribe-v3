@@ -48,7 +48,7 @@ export function downloadICS(event: CalendarEvent): void {
     '',
     'Never Train Alone!',
     '',
-    `${siteUrl}/session/${event.sessionId}`,
+    `${siteUrl}/session/${event.sessionId}/`,
   ].join('\\n');
 
   const ics = [
@@ -63,7 +63,7 @@ export function downloadICS(event: CalendarEvent): void {
     `SUMMARY:${escapeICS(event.sport)} - Tribe`,
     `DESCRIPTION:${description}`,
     `LOCATION:${escapeICS(event.location)}`,
-    `URL:${siteUrl}/session/${event.sessionId}`,
+    `URL:${siteUrl}/session/${event.sessionId}/`,
     'STATUS:CONFIRMED',
     `UID:tribe-${event.sessionId}@tribe-app`,
     'END:VEVENT',

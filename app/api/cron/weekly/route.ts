@@ -23,10 +23,10 @@ export async function GET(request: Request) {
     const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
 
     const results = await Promise.allSettled([
-      fetch(`${SITE_URL}/api/send-weekly-recap`, {
+      fetch(`${SITE_URL}/api/send-weekly-recap/`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
       }),
-      fetch(`${SITE_URL}/api/send-inactive-nudge`, {
+      fetch(`${SITE_URL}/api/send-inactive-nudge/`, {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
       }),
     ]);

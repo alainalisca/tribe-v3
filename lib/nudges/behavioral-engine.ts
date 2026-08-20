@@ -176,7 +176,7 @@ export async function generateNudgesForUser(supabase: SupabaseClient, userId: st
             priority: 7,
             message: `${match.creator?.name ?? 'Your instructor'} has a ${match.sport ?? 'training'} session on your regular day.`,
             messageEs: `${match.creator?.name ?? 'Tu instructor'} tiene una sesión de ${match.sport ?? 'entrenamiento'} en tu día habitual.`,
-            actionUrl: `/session/${match.id}`,
+            actionUrl: `/session/${match.id}/`,
             data: { sessionId: match.id },
           });
         }
@@ -222,7 +222,7 @@ export async function generateNudgesForUser(supabase: SupabaseClient, userId: st
           priority: 4,
           message: `How was your session with ${unreviewed.sessions?.creator?.name ?? 'your instructor'}? Leave a quick review.`,
           messageEs: `¿Cómo estuvo tu sesión con ${unreviewed.sessions?.creator?.name ?? 'tu instructor'}? Deja una breve reseña.`,
-          actionUrl: `/session/${unreviewed.session_id}`,
+          actionUrl: `/session/${unreviewed.session_id}/`,
         });
       }
     }

@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         const batch = attendees.slice(i, i + BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map((attendee) =>
-            fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification`, {
+            fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/send-attendance-notification/`, {
               method: 'POST',
               // This is a server-to-server call with no session cookie; it must
               // authenticate via CRON_SECRET (the endpoint accepts cron OR

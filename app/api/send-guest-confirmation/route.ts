@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${SITE_URL}/session/${encodeURIComponent(sessionId)}"
+              <a href="${SITE_URL}/session/${encodeURIComponent(sessionId)}/"
                  style="display: inline-block; background: #9EE551; color: #1e293b; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                 ${buttonText}
               </a>

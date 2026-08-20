@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Fire-and-forget admin notification (email + in-app bell badge)
     const origin = request.nextUrl.origin;
-    fetch(`${origin}/api/notify-admin-signup`, {
+    fetch(`${origin}/api/notify-admin-signup/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userName: name, userEmail: email, signupMethod: 'Email' }),
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     // In-app bell badge for admins
     const adminSecret = process.env.ADMIN_NOTIFY_SECRET;
-    fetch(`${origin}/api/admin/notify`, {
+    fetch(`${origin}/api/admin/notify/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
