@@ -148,7 +148,7 @@ export async function GET(request: Request) {
           });
 
           try {
-            await fetch(`${SITE_URL}/api/notifications/send`, {
+            await fetch(`${SITE_URL}/api/notifications/send/`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
               body: JSON.stringify({
@@ -229,7 +229,7 @@ export async function GET(request: Request) {
       const batch = pendingReEngagements.slice(i, i + BATCH_SIZE);
       const results = await Promise.allSettled(
         batch.map(async (item) => {
-          await fetch(`${SITE_URL}/api/notifications/send`, {
+          await fetch(`${SITE_URL}/api/notifications/send/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({

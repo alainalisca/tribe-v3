@@ -132,7 +132,7 @@ function renderHtml(params: SignUpInviteParams, siteUrl: string): string {
   // users to /auth?returnTo=/my-coach today, a direct link to /my-coach
   // would also work — but routing them to /auth signals "this is a
   // sign-up flow" up front, which matches the email's framing.
-  const ctaUrl = `${siteUrl}/auth`;
+  const ctaUrl = `${siteUrl}/auth/`;
 
   const instructionsHtml = c
     .instructionsItems(params.memberEmail)
@@ -188,7 +188,7 @@ function renderHtml(params: SignUpInviteParams, siteUrl: string): string {
 
 function renderText(params: SignUpInviteParams, siteUrl: string): string {
   const c = copy[params.language];
-  const ctaUrl = `${siteUrl}/auth`;
+  const ctaUrl = `${siteUrl}/auth/`;
   const instructions = c
     .instructionsItems(params.memberEmail)
     .map((line, i) => `  ${i + 1}. ${line}`)

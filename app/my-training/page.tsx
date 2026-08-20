@@ -132,7 +132,7 @@ export default function MyTrainingPage() {
     setSharing(true);
     const shareText = t.shareMessage(stats.totalSessions);
     const shareUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}/my-training` : 'https://tribe.app/my-training';
+      typeof window !== 'undefined' ? `${window.location.origin}/my-training/` : 'https://tribe.app/my-training/';
     const nav = typeof navigator !== 'undefined' ? navigator : undefined;
 
     // Helper: copy to clipboard as the universal fallback.

@@ -14,6 +14,7 @@
 'use client';
 import { showSuccess } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
+import { getInstructorShareUrl } from '@/lib/share';
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -128,7 +129,7 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
   }
 
   async function shareInstructor() {
-    const shareUrl = `${window.location.origin}/i/${userId}`;
+    const shareUrl = getInstructorShareUrl(userId);
     const shareText =
       language === 'es' ? `${profile?.name} — Instructor en Tribe` : `${profile?.name} — Instructor on Tribe`;
     if (navigator.share) {

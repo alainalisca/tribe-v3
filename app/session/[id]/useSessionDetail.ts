@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
+import { getInviteShareUrl } from '@/lib/share';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
   fetchSessionWithDetails,
@@ -277,7 +278,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
       const { data: token, error } = await supabase.rpc('create_session_invite', { p_session_id: session.id });
       if (error) throw new Error(error.message);
       if (!token) throw new Error('create_invite_failed');
-      setInviteLink(`${window.location.origin}/invite/${token}`);
+      setInviteLink(getInviteShareUrl(token));
       setShowInviteModal(true);
     } catch (error) {
       showError(getErrorMessage(error, 'create_invite', language));

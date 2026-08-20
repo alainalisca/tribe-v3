@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
       try {
         // Send push notification
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/notifications/send`, {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL!}/api/notifications/send/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const cronSecret = process.env.CRON_SECRET;
     if (siteUrl && cronSecret) {
       // Fire-and-forget: a delivery hiccup must not fail the interest UX.
-      fetch(`${siteUrl}/api/notifications/send`, {
+      fetch(`${siteUrl}/api/notifications/send/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` },
         body: JSON.stringify({

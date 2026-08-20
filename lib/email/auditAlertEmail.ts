@@ -139,7 +139,7 @@ function formatTimestamp(iso: string, lang: 'en' | 'es'): string {
 function renderHtml(params: AuditAlertEmailParams, siteUrl: string): string {
   const c = copy[params.language];
   const gymName = escapeHtml(params.gymName);
-  const ctaUrl = `${siteUrl}/os/audit`;
+  const ctaUrl = `${siteUrl}/os/audit/`;
 
   const eventsHtml = params.alerts
     .map((alert) => {
@@ -198,7 +198,7 @@ function renderHtml(params: AuditAlertEmailParams, siteUrl: string): string {
 
 function renderText(params: AuditAlertEmailParams, siteUrl: string): string {
   const c = copy[params.language];
-  const ctaUrl = `${siteUrl}/os/audit`;
+  const ctaUrl = `${siteUrl}/os/audit/`;
   const events = params.alerts
     .map((alert) => {
       const actionLabel = c.actionLabel(alert.action);

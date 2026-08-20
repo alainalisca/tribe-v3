@@ -52,16 +52,25 @@ const BASE_URL =
     ? window.location.origin
     : process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
 
+// NOTE: every self-referencing URL carries a TRAILING SLASH. next.config.ts
+// sets `trailingSlash: true`, so a slash-less path 308-redirects to the slashed
+// one. Link-preview scrapers (WhatsApp, iMessage) do NOT follow that 308, so a
+// slash-less share link unfurls as a bare URL with no OG card. Keep the slash.
 export function getSessionShareUrl(sessionId: string): string {
-  return `${BASE_URL}/s/${sessionId}`;
+  return `${BASE_URL}/s/${sessionId}/`;
 }
 
 export function getInstructorShareUrl(instructorId: string): string {
-  return `${BASE_URL}/i/${instructorId}`;
+  return `${BASE_URL}/i/${instructorId}/`;
+}
+
+/** Invite-token acceptance link (the gated /invite/[token] flow). */
+export function getInviteShareUrl(token: string): string {
+  return `${BASE_URL}/invite/${token}/`;
 }
 
 export function getReferralShareUrl(referralCode: string): string {
-  return `${BASE_URL}/auth?ref=${referralCode}`;
+  return `${BASE_URL}/auth/?ref=${referralCode}`;
 }
 
 // ═══════════════════════════════════════════

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getOrCreateReferralCode, getReferralStats } from '@/lib/dal/referrals';
-import { shareViaWhatsApp } from '@/lib/share';
+import { shareViaWhatsApp, getReferralShareUrl } from '@/lib/share';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function ReferralPage() {
@@ -119,7 +119,7 @@ export default function ReferralPage() {
     }
   }
 
-  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/auth?ref=${referralCode}` : '';
+  const referralLink = typeof window !== 'undefined' ? getReferralShareUrl(referralCode) : '';
 
   const handleCopyCode = async () => {
     await navigator.clipboard.writeText(referralCode);

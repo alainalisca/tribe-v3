@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     const notificationData: Record<string, string> = {
       type: 'chat_message',
       sessionId: session_id,
-      url: `/session/${session_id}/chat`,
+      url: `/session/${session_id}/chat/`,
     };
 
     // Fan out notification sends with a concurrency cap. 10 in flight

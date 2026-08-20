@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       type: 'website',
       siteName: 'Tribe - Never Train Alone',
-      url: `${BASE_URL}/i/${id}`,
+      url: `${BASE_URL}/i/${id}/`,
       images: [{ url: ogImageUrl, width: 1200, height: 630, alt: instructor.name || 'Instructor' }],
     },
     twitter: {

@@ -25,7 +25,7 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
       .single();
 
     if (payment?.session_id && payment?.participant_user_id) {
-      fetch(`${siteUrl}/api/notifications/send`, {
+      fetch(`${siteUrl}/api/notifications/send/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
       .maybeSingle();
 
     if (order) {
-      fetch(`${siteUrl}/api/notifications/send`, {
+      fetch(`${siteUrl}/api/notifications/send/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ export async function notifyAfterFinalize(supabase: SupabaseClient, paymentId: s
         }),
       }).catch((err) => logError(err, { action: 'notifyAfterFinalize.productBuyer', paymentId }));
 
-      fetch(`${siteUrl}/api/notifications/send`, {
+      fetch(`${siteUrl}/api/notifications/send/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export async function notifyTipReceived(supabase: SupabaseClient, tipId: string)
         ? `$${((tip.amount_cents as number) / 100).toFixed(2)}`
         : `$${Math.round((tip.amount_cents as number) / 100).toLocaleString()} COP`;
 
-    fetch(`${siteUrl}/api/notifications/send`, {
+    fetch(`${siteUrl}/api/notifications/send/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

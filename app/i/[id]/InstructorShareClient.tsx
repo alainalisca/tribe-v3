@@ -222,7 +222,7 @@ export default function InstructorShareClient() {
                 return (
                   <Link
                     key={s.id}
-                    href={userId ? `/session/${s.id}` : `/s/${s.id}`}
+                    href={userId ? `/session/${s.id}/` : `/s/${s.id}/`}
                     className="block p-3 rounded-xl bg-tribe-dark/50 hover:bg-tribe-mid/50 transition border border-tribe-mid"
                   >
                     <div className="flex items-center justify-between">

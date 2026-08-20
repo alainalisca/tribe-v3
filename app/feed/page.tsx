@@ -315,7 +315,7 @@ export default function FeedPage() {
   };
 
   const sharePost = async (postId: string) => {
-    const url = `${window.location.origin}/feed/${postId}`;
+    const url = `${window.location.origin}/feed/${postId}/`;
     try {
       await navigator.clipboard.writeText(url);
       setShareMessage(postId);
