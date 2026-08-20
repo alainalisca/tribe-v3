@@ -26,6 +26,10 @@ export const metadata: Metadata = {
   description:
     "Find fitness sessions, instructors, and training partners in Medellín. Join the fitness community that's taking over the city.",
   manifest: '/manifest.json',
+  // Smart App Banner: Safari on iOS shows a native "open in App Store" bar on
+  // every page. In-app webviews (Instagram/Facebook) ignore it — the /download
+  // page carries its own escape hatch for those.
+  itunes: { appId: '6458219258' },
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
