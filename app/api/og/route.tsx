@@ -8,21 +8,76 @@ const GREEN = '#A3E635';
 const GRAY = '#9CA3AF';
 const WHITE = '#FFFFFF';
 
+// Split cache: short BROWSER max-age, long CDN s-maxage. The card is a pure
+// function of the query string — every displayed value (title, sport, date,
+// price, instructor, neighborhood, avatar, image) is a param — and Supabase
+// storage URLs are content-addressed (timestamped filenames), so any data edit
+// changes the URL and busts the cache. A stale hit is therefore impossible; the
+// first scrape generates, every repeat scrape is a CDN HIT. Browser max-age is
+// only 1h because a browser cache CANNOT be purged; the CDN s-maxage stays long
+// (and is purgeable). A change to the card TEMPLATE in this file: the browser
+// cache clears within an hour, but the long CDN s-maxage keeps serving the old
+// render until you purge the CDN or add a cache-bust param.
+const CACHE_CONTROL = 'public, no-transform, max-age=3600, s-maxage=31536000, stale-while-revalidate=604800';
+
+// Shared ImageResponse options: fixed 1200x630 card + the cache header above.
+const OG_OPTIONS = {
+  width: 1200,
+  height: 630,
+  headers: { 'Cache-Control': CACHE_CONTROL },
+} as const;
+
 /**
- * Confirm a URL actually resolves to an image before we hand it to Satori.
- * Satori fetches <img> sources itself and throws the WHOLE render if any one
- * 404s/times out — which silently produces a 0-byte image (the blank-card bug
- * we hit with the old /images/sports hero). Pre-validating means a dead photo
- * or avatar URL just falls back to a clean layout instead of breaking.
+ * Rewrite a Supabase public-object URL to the render/image transform endpoint
+ * so we fetch a DISPLAY-SIZED jpeg instead of the full-resolution original
+ * (e.g. a 1638px, 132KB avatar drawn as a 52px dot). Verified available on this
+ * project's plan. Non-Supabase URLs (the local /tribe-wordmark.png) pass
+ * through unchanged.
  */
-async function imageLoads(url: string): Promise<boolean> {
+function toTransformUrl(url: string, width: number, quality = 75): string {
+  if (!url.includes('/storage/v1/object/public/')) return url;
+  const base = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}width=${width}&quality=${quality}`;
+}
+
+/**
+ * Fetch an image ONCE and return it as a data URI that Satori embeds without a
+ * second network round-trip (the old imageLoads() did a full validation GET and
+ * then Satori re-fetched the same bytes — every source pulled twice). Returns
+ * '' on any failure or non-image response, so the caller falls back to a clean
+ * layout instead of a blank/errored card — Satori throws the whole render if an
+ * <img src> fails to load.
+ */
+async function fetchAsDataUri(url: string): Promise<string> {
   try {
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) return false;
-    return (res.headers.get('content-type') ?? '').startsWith('image/');
+    const res = await fetch(url);
+    if (!res.ok) return '';
+    const ct = res.headers.get('content-type') ?? '';
+    if (!ct.startsWith('image/')) return '';
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    return `data:${ct};base64,${btoa(binary)}`;
   } catch {
-    return false;
+    return '';
   }
+}
+
+/**
+ * Load a source image at display size: try the resized transform first; if the
+ * transform is unavailable (non-200) fall back to the ORIGINAL URL; if neither
+ * loads return '' (clean no-photo / initials fallback).
+ */
+async function loadImage(rawUrl: string, width: number): Promise<string> {
+  if (!rawUrl) return '';
+  const transformed = toTransformUrl(rawUrl, width);
+  const resized = await fetchAsDataUri(transformed);
+  if (resized) return resized;
+  return transformed === rawUrl ? '' : fetchAsDataUri(rawUrl);
 }
 
 export async function GET(request: NextRequest) {
@@ -43,17 +98,14 @@ export async function GET(request: NextRequest) {
   const logoUrl = `${new URL(request.url).origin}/tribe-wordmark.png`;
 
   if (type === 'session') {
-    // Validate the session photo, host avatar, and logo in parallel; drop any
-    // that won't load so the render can't blank out.
-    const [bg, av, logo] = await Promise.all([
-      image ? imageLoads(image).then((ok) => (ok ? image : '')) : Promise.resolve(''),
-      avatar ? imageLoads(avatar).then((ok) => (ok ? avatar : '')) : Promise.resolve(''),
-      imageLoads(logoUrl).then((ok) => (ok ? logoUrl : '')),
-    ]);
+    // Fetch the session photo, host avatar, and logo ONCE each, at display size,
+    // as embeddable data URIs. Any that won't load come back '' so the render
+    // can't blank out. Photo full-bleed at 1200px; avatar 104px (52 @2x).
+    const [bg, av, logo] = await Promise.all([loadImage(image, 1200), loadImage(avatar, 104), loadImage(logoUrl, 152)]);
     return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg, logo });
   }
   if (type === 'instructor') {
-    const av = avatar && (await imageLoads(avatar)) ? avatar : '';
+    const av = await loadImage(avatar, 280);
     return renderInstructor({ title: title || instructor, subtitle, avatar: av });
   }
   if (type === 'achievement') {
@@ -226,7 +278,7 @@ function renderSession(p: SessionParams) {
           </div>
         </div>
       </div>,
-      { width: 1200, height: 630 }
+      OG_OPTIONS
     );
   }
 
@@ -281,7 +333,7 @@ function renderSession(p: SessionParams) {
         <div style={{ display: 'flex', paddingTop: '24px', borderTop: '1px solid #374151' }}>{instructorRow}</div>
       )}
     </div>,
-    { width: 1200, height: 630 }
+    OG_OPTIONS
   );
 }
 
@@ -351,7 +403,7 @@ function renderInstructor(p: InstructorParams) {
         <span style={{ fontSize: '16px', color: GRAY, marginLeft: '12px' }}>Never Train Alone</span>
       </div>
     </div>,
-    { width: 1200, height: 630 }
+    OG_OPTIONS
   );
 }
 
@@ -409,7 +461,7 @@ function renderAchievement(p: AchievementParams) {
         <span style={{ fontSize: '16px', color: GRAY, marginLeft: '12px' }}>Never Train Alone</span>
       </div>
     </div>,
-    { width: 1200, height: 630 }
+    OG_OPTIONS
   );
 }
 
@@ -438,6 +490,6 @@ function renderDefault() {
       </div>
       <div style={{ fontSize: '28px', color: GRAY }}>Never Train Alone</div>
     </div>,
-    { width: 1200, height: 630 }
+    OG_OPTIONS
   );
 }
