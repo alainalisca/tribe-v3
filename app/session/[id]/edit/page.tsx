@@ -32,6 +32,7 @@ export default function EditSessionPage() {
     setPriceValue,
     priceError,
     isInstructor,
+    isSeriesChild,
     handleSubmit,
     params,
     router,
@@ -235,10 +236,15 @@ export default function EditSessionPage() {
           {isInstructor && <PriceSection value={priceValue} onChange={setPriceValue} error={priceError} txt={txt} />}
 
           {/* ─── Recurrence ─── */}
-          <div className="border border-theme rounded-lg p-4 bg-theme-card">
-            <Label className="mb-3 block text-theme-primary font-semibold">{txt.recurringSection}</Label>
-            <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
-          </div>
+          {/* Hidden for a child occurrence: one session in a series is never
+              independently recurring, so it must not expose the toggle
+              (T-RECUR1 Gate 2). The parent template owns the schedule. */}
+          {!isSeriesChild && (
+            <div className="border border-theme rounded-lg p-4 bg-theme-card">
+              <Label className="mb-3 block text-theme-primary font-semibold">{txt.recurringSection}</Label>
+              <RecurringSessionToggle value={recurringValue} onChange={setRecurringValue} />
+            </div>
+          )}
 
           {/* Cover photo — reuses the same upload component as the create flow */}
           {userId && (

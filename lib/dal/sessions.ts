@@ -638,7 +638,7 @@ export async function updateSessionAsHost(
 
     const { data: session, error: fetchError } = await supabase
       .from('sessions')
-      .select('creator_id, date, start_time, is_recurring')
+      .select('creator_id, date, start_time, is_recurring, recurring_parent_id')
       .eq('id', sessionId)
       .single();
     if (fetchError || !session) return { success: false, error: fetchError?.message || 'Session not found' };
@@ -653,6 +653,18 @@ export async function updateSessionAsHost(
     }
 
     const update: HostEditableSessionUpdate = { ...data };
+
+    // Gate 2 backstop: a child occurrence can never be independently recurring.
+    // Whatever the caller passed, normalize a row that carries a
+    // recurring_parent_id to the non-recurring shape so the is_recurring=true +
+    // parent-set nonsense state cannot be written server-side either. Loose
+    // `!= null` so only a real parent link counts (null / absent = not a child).
+    if (session.recurring_parent_id != null) {
+      update.is_recurring = false;
+      update.recurrence_pattern = null;
+      update.recurrence_end_date = null;
+    }
+
     if (update.is_paid === true) {
       const { data: profile } = await supabase.from('users').select('is_instructor').eq('id', user.id).single();
       if (!profile?.is_instructor) {
