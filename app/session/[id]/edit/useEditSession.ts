@@ -15,6 +15,7 @@ import {
 import { useConfirm } from '@/components/ConfirmProvider';
 import {
   isEditLocked,
+  isSeriesChild,
   needsPriceChangeConfirmation,
   buildPriceFields,
   validatePriceInput,
@@ -94,6 +95,10 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const [photos, setPhotos] = useState<EditSessionPhotos>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isInstructor, setIsInstructor] = useState(false);
+  // True when editing one occurrence of a series (recurring_parent_id set). A
+  // child is never independently recurring, so the recurrence toggle is hidden
+  // and the submit path forces the non-recurring shape (T-RECUR1 Gate 2).
+  const [seriesChild, setSeriesChild] = useState(false);
   const [priceValue, setPriceValue] = useState<PriceFormInput>(defaultPrice);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [originalPrice, setOriginalPrice] = useState<PriceSnapshot>({ is_paid: false, price_cents: null });
@@ -171,6 +176,10 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
         recurrence_end_date: endDateForInput,
       });
 
+      // A child occurrence (points at a parent) can never be independently
+      // recurring; remember it so the toggle is hidden and submit coerces.
+      setSeriesChild(isSeriesChild(session));
+
       // Initialise photo state from the existing session photos (may be null)
       setPhotos(session.photos ?? []);
 
@@ -235,19 +244,24 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       // Build recurrence fields mirroring the create-page convention.
       // When turning off, null out the pattern and end_date so the DB row
       // doesn't retain stale values from the previous schedule.
-      const recurringFields = recurringValue.is_recurring
-        ? {
-            is_recurring: true,
-            recurrence_pattern: recurringValue.recurrence_pattern || null,
-            recurrence_end_date: recurringValue.recurrence_end_date
-              ? new Date(recurringValue.recurrence_end_date + 'T00:00:00').toISOString()
-              : null,
-          }
-        : {
-            is_recurring: false,
-            recurrence_pattern: null,
-            recurrence_end_date: null,
-          };
+      // A child occurrence is never independently recurring: force the
+      // non-recurring shape regardless of what the (hidden) toggle held, so a
+      // child can never be written into the is_recurring=true + parent-set
+      // nonsense state (T-RECUR1 Gate 2).
+      const recurringFields =
+        !seriesChild && recurringValue.is_recurring
+          ? {
+              is_recurring: true,
+              recurrence_pattern: recurringValue.recurrence_pattern || null,
+              recurrence_end_date: recurringValue.recurrence_end_date
+                ? new Date(recurringValue.recurrence_end_date + 'T00:00:00').toISOString()
+                : null,
+            }
+          : {
+              is_recurring: false,
+              recurrence_pattern: null,
+              recurrence_end_date: null,
+            };
 
       // Non-instructors never touch the price columns: their sessions are
       // free and omitting the fields leaves the row's price state untouched.
@@ -290,6 +304,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     setPriceValue,
     priceError,
     isInstructor,
+    isSeriesChild: seriesChild,
     handleSubmit,
     params,
     router,

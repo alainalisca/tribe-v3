@@ -1,7 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { isEditLocked, needsPriceChangeConfirmation, buildPriceFields, validatePriceInput } from './editGuards';
+import {
+  isEditLocked,
+  isSeriesChild,
+  needsPriceChangeConfirmation,
+  buildPriceFields,
+  validatePriceInput,
+} from './editGuards';
 
 const NOW = new Date('2026-08-06T12:00:00');
+
+describe('isSeriesChild', () => {
+  it('is false for a true recurring parent (no parent link)', () => {
+    expect(isSeriesChild({ recurring_parent_id: null })).toBe(false);
+  });
+
+  it('is true for a child occurrence (parent link set)', () => {
+    expect(isSeriesChild({ recurring_parent_id: 'parent-1' })).toBe(true);
+  });
+
+  it('is false for a plain non-recurring one-off', () => {
+    expect(isSeriesChild({ recurring_parent_id: null })).toBe(false);
+  });
+
+  it('is true for the nonsense state (is_recurring true but parent set)', () => {
+    // isSeriesChild keys only on the parent link, so it flags the nonsense row
+    // that the guard exists to prevent.
+    expect(isSeriesChild({ recurring_parent_id: 'parent-1' })).toBe(true);
+  });
+});
 
 describe('isEditLocked', () => {
   it('locks a past non-recurring session', () => {

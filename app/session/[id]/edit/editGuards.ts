@@ -17,6 +17,21 @@ export function isEditLocked(session: EditLockSession, now: Date): boolean {
   return new Date(`${session.date}T${session.start_time}`).getTime() < now.getTime();
 }
 
+export interface SeriesMembership {
+  recurring_parent_id: string | null;
+}
+
+/**
+ * True when the session is one occurrence OF a recurring series, i.e. it points
+ * at a parent. A child is never independently recurring, so the edit form hides
+ * the recurrence toggle for it and the submit path forces the non-recurring
+ * shape. A true parent (recurring_parent_id null) and a plain one-off both
+ * return false — only rows with a parent link are children.
+ */
+export function isSeriesChild(session: SeriesMembership): boolean {
+  return session.recurring_parent_id != null;
+}
+
 export interface PriceSnapshot {
   is_paid: boolean | null;
   price_cents: number | null;

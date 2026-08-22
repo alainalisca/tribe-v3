@@ -26,6 +26,17 @@ const PAST_RECURRING_PARENT = {
   date: '2020-01-01',
   start_time: '19:00:00',
   is_recurring: true,
+  recurring_parent_id: null,
+};
+
+// A child occurrence: not recurring itself, points at a parent. Future-dated so
+// the past-edit guard does not intervene.
+const CHILD_OCCURRENCE = {
+  creator_id: 'host-1',
+  date: '2099-01-01',
+  start_time: '19:00:00',
+  is_recurring: false,
+  recurring_parent_id: 'parent-1',
 };
 
 interface MockOptions {
@@ -102,6 +113,23 @@ describe('updateSessionAsHost', () => {
     const result = await updateSessionAsHost(supabase, 's1', { sport: 'Yoga' });
     expect(result.success).toBe(true);
     expect(captured.updatePayload).toEqual({ sport: 'Yoga' });
+  });
+
+  it('normalizes a child occurrence to the non-recurring shape (Gate 2 backstop)', async () => {
+    const { supabase, captured } = createMockSupabase({ session: CHILD_OCCURRENCE });
+    // Even if a caller tries to flip the child to recurring, the backstop wins.
+    const result = await updateSessionAsHost(supabase, 'c1', {
+      sport: 'Yoga',
+      is_recurring: true,
+      recurrence_pattern: 'weekly_0',
+    });
+    expect(result.success).toBe(true);
+    expect(captured.updatePayload).toEqual({
+      sport: 'Yoga',
+      is_recurring: false,
+      recurrence_pattern: null,
+      recurrence_end_date: null,
+    });
   });
 
   it('rejects a paid update from a non-instructor', async () => {
