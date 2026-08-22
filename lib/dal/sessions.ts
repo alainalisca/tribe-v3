@@ -5,6 +5,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import type { Session, SessionUpdate, SessionInsert } from '@/lib/database.types';
 import { logError } from '@/lib/logger';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 
 import type { DalResult, SessionWithCreator } from './types';
 export type { DalResult } from './types';
@@ -679,6 +680,62 @@ export async function updateSessionAsHost(
   } catch (error) {
     logError(error, { action: 'updateSessionAsHost', sessionId });
     return { success: false, error: 'Failed to update session' };
+  }
+}
+
+/**
+ * Ends a recurring series by setting recurrence_end_date on the parent.
+ *
+ * The recurring-sessions cron's computeRecurrenceDates clamps generation to
+ * recurrence_end_date and only emits dates strictly after today, so setting it
+ * to today (Bogotá) stops all FUTURE occurrences while leaving the already
+ * generated children untouched. Single-purpose by design: it does NOT cancel
+ * existing future children — that is a caller decision (T-RECUR1 Gate 7).
+ *
+ * Authorization mirrors updateSessionAsHost: signed-in owner only, and the row
+ * must be a TRUE recurring parent (is_recurring = true AND recurring_parent_id
+ * IS NULL) so a child occurrence or a one-off can never be mistaken for a
+ * series. The sessions UPDATE RLS policy (auth.uid() = creator_id) is the
+ * backstop, not the gate.
+ *
+ * @param endDate - Bogotá calendar date 'YYYY-MM-DD' to end on. Defaults to
+ *   today in Bogotá, which stops all future occurrences immediately.
+ */
+export async function endRecurringSeries(
+  supabase: SupabaseClient,
+  parentId: string,
+  endDate: string = bogotaToday()
+): Promise<DalResult<null>> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'You must be signed in to end a series' };
+
+    const { data: session, error: fetchError } = await supabase
+      .from('sessions')
+      .select('creator_id, is_recurring, recurring_parent_id')
+      .eq('id', parentId)
+      .single();
+    if (fetchError || !session) return { success: false, error: fetchError?.message || 'Session not found' };
+
+    if (session.creator_id !== user.id) {
+      return { success: false, error: 'Only the session host can end this series' };
+    }
+
+    // Must be a true parent: a child occurrence (recurring_parent_id set) or a
+    // non-recurring one-off has no series to end.
+    if (!session.is_recurring || session.recurring_parent_id !== null) {
+      return { success: false, error: 'This session is not a recurring series' };
+    }
+
+    const patch: SessionUpdate = { recurrence_end_date: endDate };
+    const { error } = await supabase.from('sessions').update(patch).eq('id', parentId);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    logError(error, { action: 'endRecurringSeries', sessionId: parentId });
+    return { success: false, error: 'Failed to end recurring series' };
   }
 }
 
