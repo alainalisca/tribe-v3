@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRecurrenceDates, type RecurrenceInput } from './recurrence';
+import { computeRecurrenceDates, formatPattern, type RecurrenceInput } from './recurrence';
 
 // Fixed reference day: 2026-06-14 is a SUNDAY. The weekly window of 7 days
 // that follows is Mon 2026-06-15 .. Sun 2026-06-21.
@@ -83,5 +83,44 @@ describe('computeRecurrenceDates', () => {
     expect(out).not.toContain('2026-06-14');
     expect(out[0]).toBe('2026-06-15');
     expect(out).toHaveLength(7); // all 7 weekdays selected -> one each day Mon..Sun
+  });
+});
+
+describe('formatPattern', () => {
+  it('formats a single weekly day', () => {
+    expect(formatPattern('weekly_0', 'es')).toBe('Cada lunes');
+    expect(formatPattern('weekly_0', 'en')).toBe('Every Monday');
+    expect(formatPattern('weekly_2', 'en')).toBe('Every Wednesday');
+  });
+
+  it('formats a Monday-to-Friday weekly pattern', () => {
+    expect(formatPattern('weekly_0_1_2_3_4', 'es')).toBe('Lunes a viernes');
+    expect(formatPattern('weekly_0_1_2_3_4', 'en')).toBe('Monday to Friday');
+  });
+
+  it('formats a multi-day weekly pattern that is not Mon-Fri', () => {
+    expect(formatPattern('weekly_0_2', 'es')).toBe('Cada semana: lunes y miércoles');
+    expect(formatPattern('weekly_0_2', 'en')).toBe('Weekly: Monday and Wednesday');
+  });
+
+  it('formats monthly', () => {
+    expect(formatPattern('monthly', 'es')).toBe('Mensual');
+    expect(formatPattern('monthly', 'en')).toBe('Monthly');
+  });
+
+  it('formats biweekly with a specific day', () => {
+    expect(formatPattern('biweekly_0', 'en')).toBe('Every other week: Monday');
+    expect(formatPattern('biweekly_0', 'es')).toBe('Cada dos semanas: lunes');
+  });
+
+  it('handles legacy bare weekly / biweekly with no day suffix', () => {
+    expect(formatPattern('weekly', 'es')).toBe('Semanal');
+    expect(formatPattern('biweekly', 'en')).toBe('Biweekly');
+  });
+
+  it('falls back for null or unknown patterns', () => {
+    expect(formatPattern(null, 'es')).toBe('Recurrente');
+    expect(formatPattern('', 'en')).toBe('Recurring');
+    expect(formatPattern('yearly_3', 'en')).toBe('Recurring');
   });
 });
