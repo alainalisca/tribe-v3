@@ -57,6 +57,67 @@ function mondayOf(d: Date): Date {
  * session within `[today+1, today+lookaheadDays]`, honoring an optional end
  * date. Pure and deterministic given `today` — safe to unit test.
  */
+// Weekday names indexed by the toggle's convention (Mon=0 ... Sun=6), NOT
+// JS getDay(). Kept in step with computeRecurrenceDates' day indexing.
+const DAY_NAMES_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+const DAY_NAMES_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function joinDays(days: number[], es: boolean): string {
+  const names = es ? DAY_NAMES_ES : DAY_NAMES_EN;
+  const list = days.map((d) => names[d]);
+  if (list.length === 1) return list[0];
+  const sep = es ? ' y ' : ' and ';
+  return list.slice(0, -1).join(', ') + sep + list[list.length - 1];
+}
+
+/**
+ * Human-readable cadence for a recurring series, e.g. "Cada lunes" /
+ * "Every Monday", "Lunes a viernes" / "Monday to Friday", "Mensual" /
+ * "Monthly".
+ *
+ * CRITICAL: the cadence is derived from the PARENT'S recurrence_pattern ONLY.
+ * Never infer it from a child occurrence's date. H1 found live children whose
+ * weekday contradicts their parent's pattern (e.g. a weekly_0 Monday parent
+ * with a Wednesday child), so a date-derived label would be wrong. Do NOT
+ * "simplify" this to read a session's `date`.
+ */
+export function formatPattern(pattern: string | null, language: 'en' | 'es'): string {
+  const es = language === 'es';
+  if (!pattern) return es ? 'Recurrente' : 'Recurring';
+
+  const [freq, ...dayTokens] = pattern.split('_');
+  const days = dayTokens
+    .map((p) => parseInt(p, 10))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+    .sort((a, b) => a - b);
+
+  if (freq === 'monthly') return es ? 'Mensual' : 'Monthly';
+
+  const weekly = freq === 'weekly';
+  const biweekly = freq === 'biweekly';
+  if (!weekly && !biweekly) return es ? 'Recurrente' : 'Recurring';
+
+  // Legacy bare "weekly" / "biweekly" with no day suffix.
+  if (days.length === 0) {
+    if (biweekly) return es ? 'Quincenal' : 'Biweekly';
+    return es ? 'Semanal' : 'Weekly';
+  }
+
+  const monToFri = days.length === 5 && days.every((d, i) => d === i);
+  if (monToFri) {
+    const label = es ? 'Lunes a viernes' : 'Monday to Friday';
+    return biweekly ? (es ? `Cada dos semanas, ${label.toLowerCase()}` : `Every other week, ${label}`) : label;
+  }
+
+  const dayList = joinDays(days, es);
+  if (weekly) {
+    if (days.length === 1) return es ? `Cada ${dayList}` : `Every ${dayList}`;
+    return es ? `Cada semana: ${dayList}` : `Weekly: ${dayList}`;
+  }
+  // biweekly with specific days
+  return es ? `Cada dos semanas: ${dayList}` : `Every other week: ${dayList}`;
+}
+
 export function computeRecurrenceDates(parent: RecurrenceInput, today: Date, lookaheadDays: number): string[] {
   const pattern = parent.recurrence_pattern;
   if (!pattern) return [];

@@ -49,11 +49,19 @@ export interface ServicePackageUpsert {
 
 // --- Read operations ---
 
-/** Fetch upcoming + past sessions for an instructor, with participant counts */
+/** True when a row is a recurring series template (a true parent), not a child
+ *  occurrence or a one-off. Loose `!= null` so only a real parent link counts. */
+function isSeriesParent(s: InstructorSessionRow): boolean {
+  return s.is_recurring === true && s.recurring_parent_id == null;
+}
+
+/** Fetch upcoming + past + series buckets for an instructor, with participant counts */
 export async function fetchInstructorSessions(
   supabase: SupabaseClient,
   userId: string
-): Promise<DalResult<{ upcoming: InstructorSessionRow[]; past: InstructorSessionRow[] }>> {
+): Promise<
+  DalResult<{ upcoming: InstructorSessionRow[]; past: InstructorSessionRow[]; series: InstructorSessionRow[] }>
+> {
   try {
     const today = new Date().toISOString().split('T')[0];
 
@@ -82,12 +90,19 @@ export async function fetchInstructorSessions(
       return { ...s, participant_count } as unknown as InstructorSessionRow;
     });
 
+    // Series templates (true recurring parents) get their own always-visible
+    // bucket. A parent carries a past date by design, so it would otherwise sink
+    // into `past` and get hidden below the render cap — the exact reason
+    // instructors could not find their series (T-RECUR1 Gate 3). Pull them out
+    // of `past` so they are not double-counted; `upcoming` is left unchanged.
+    const series = mapped.filter(isSeriesParent).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
+
     const upcoming = mapped.filter((s) => s.date >= today && s.status !== 'cancelled');
     const past = mapped
-      .filter((s) => s.date < today || s.status === 'cancelled')
+      .filter((s) => (s.date < today || s.status === 'cancelled') && !isSeriesParent(s))
       .sort((a, b) => b.date.localeCompare(a.date));
 
-    return { success: true, data: { upcoming, past } };
+    return { success: true, data: { upcoming, past, series } };
   } catch (error) {
     logError(error, { action: 'fetchInstructorSessions', userId });
     return { success: false, error: 'Failed to fetch instructor sessions' };

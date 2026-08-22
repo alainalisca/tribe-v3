@@ -27,9 +27,12 @@ import {
   type ServicePackageRow,
 } from '@/lib/dal/instructorDashboard';
 import { fetchUserProfile } from '@/lib/dal/users';
+import { endRecurringSeries } from '@/lib/dal';
 import { createNotification, hasUnreadNotificationOfType } from '@/lib/dal/notifications';
 import { getMissingInstructorFields } from '@/lib/instructorProfile';
 import { notificationCopy, toLang } from '@/lib/notification-i18n';
+import { useConfirm } from '@/components/ConfirmProvider';
+import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 import type { User } from '@/lib/database.types';
 
@@ -39,12 +42,14 @@ export default function InstructorDashboardPage() {
   const router = useRouter();
   const { language } = useLanguage();
   const supabase = createClient();
+  const confirm = useConfirm();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('storefront');
   const [upcoming, setUpcoming] = useState<InstructorSessionRow[]>([]);
   const [past, setPast] = useState<InstructorSessionRow[]>([]);
+  const [series, setSeries] = useState<InstructorSessionRow[]>([]);
   const [stats, setStats] = useState<InstructorStats | null>(null);
   const [packages, setPackages] = useState<ServicePackageRow[]>([]);
   const [activeLeadCount, setActiveLeadCount] = useState(0);
@@ -66,6 +71,40 @@ export default function InstructorDashboardPage() {
     { key: 'packages', label: txt.packages, icon: Package },
     { key: 'leads', label: txt.leads, icon: UserCheck, badge: activeLeadCount },
   ];
+
+  // End a recurring series (Gate 5 action, Gate 1 DAL). Confirms first, then
+  // sets recurrence_end_date via endRecurringSeries and refetches so the row
+  // flips to its "ended" state in place. Already-published children are left
+  // untouched by design.
+  async function handleEndSeries(seriesId: string) {
+    const ok = await confirm({
+      title: language === 'es' ? '¿Terminar esta serie?' : 'End this series?',
+      message:
+        language === 'es'
+          ? 'No se crearán más sesiones de esta serie. Las sesiones ya publicadas no se cancelan.'
+          : 'No more sessions will be generated from this series. Already-published sessions are not cancelled.',
+      confirmLabel: language === 'es' ? 'Terminar serie' : 'End series',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    const uid = profile?.id;
+    if (!uid) return;
+
+    const result = await endRecurringSeries(supabase, seriesId);
+    if (!result.success) {
+      showError(language === 'es' ? 'No se pudo terminar la serie' : 'Could not end the series');
+      return;
+    }
+    showSuccess(language === 'es' ? 'Serie terminada' : 'Series ended');
+
+    const refreshed = await fetchInstructorSessions(supabase, uid);
+    if (refreshed.success && refreshed.data) {
+      setUpcoming(refreshed.data.upcoming);
+      setPast(refreshed.data.past);
+      setSeries(refreshed.data.series);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -126,6 +165,7 @@ export default function InstructorDashboardPage() {
       if (sessResult.success && sessResult.data) {
         setUpcoming(sessResult.data.upcoming);
         setPast(sessResult.data.past);
+        setSeries(sessResult.data.series);
       }
       if (statsResult.success && statsResult.data) setStats(statsResult.data);
       if (pkgResult.success && pkgResult.data) setPackages(pkgResult.data);
@@ -232,7 +272,13 @@ export default function InstructorDashboardPage() {
           )}
 
           {activeTab === 'sessions' && (
-            <SessionManager language={language as 'en' | 'es'} upcoming={upcoming} past={past} />
+            <SessionManager
+              language={language as 'en' | 'es'}
+              upcoming={upcoming}
+              past={past}
+              series={series}
+              onEndSeries={handleEndSeries}
+            />
           )}
 
           {activeTab === 'analytics' && stats && (
