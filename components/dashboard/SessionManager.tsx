@@ -36,6 +36,7 @@ export default function SessionManager({ language, upcoming, past, series, onEnd
     hidePast: language === 'es' ? 'Ocultar Pasadas' : 'Hide Past',
     seriesSectionTitle: language === 'es' ? 'Series Recurrentes' : 'Recurring Series',
     seriesTemplate: language === 'es' ? 'Plantilla de serie' : 'Series template',
+    seriesBadge: language === 'es' ? 'Serie' : 'Series',
     endSeries: language === 'es' ? 'Terminar serie' : 'End series',
     seriesEnded: language === 'es' ? 'Finalizada' : 'Ended',
   };
@@ -66,8 +67,16 @@ export default function SessionManager({ language, upcoming, past, series, onEnd
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge className="bg-tribe-green/20 text-tribe-green text-xs px-2 py-0.5 border-0">{sportLabel}</Badge>
+              {/* Gate 5: flag any row that belongs to a recurring series (a child
+                  occurrence, or a parent that surfaces outside the series section). */}
+              {(session.is_recurring || session.recurring_parent_id) && (
+                <Badge className="bg-tribe-sky text-tribe-dark text-xs px-2 py-0.5 border-0 flex items-center gap-1">
+                  <Repeat className="w-3 h-3" />
+                  {txt.seriesBadge}
+                </Badge>
+              )}
               {isCancelled && (
                 <Badge variant="destructive" className="text-xs px-2 py-0.5">
                   {txt.cancelled}

@@ -2,7 +2,7 @@
 
 import { formatTime12Hour } from '@/lib/utils';
 import Image from 'next/image';
-import { Calendar, Clock, MapPin, Users, Star, DollarSign } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Star, DollarSign, Repeat } from 'lucide-react';
 import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
@@ -109,6 +109,13 @@ export default function SessionDetails({
             >
               {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
               {session.gender_preference === 'women_only' ? t('womenOnly') : t('menOnly')}
+            </Badge>
+          )}
+          {/* Gate 5: mark a session that is part of a recurring series. */}
+          {(session.is_recurring || session.recurring_parent_id) && (
+            <Badge className="px-3 py-1 rounded-full text-sm border-transparent bg-tribe-sky text-tribe-dark flex items-center gap-1">
+              <Repeat className="w-3.5 h-3.5" />
+              {language === 'es' ? 'Parte de una serie' : 'Part of a series'}
             </Badge>
           )}
         </div>
