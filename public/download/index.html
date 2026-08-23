@@ -153,6 +153,19 @@
   document.getElementById("appleBtn").href = APPLE_WEB;
   document.getElementById("webBtn").href   = WEB;
 
+  // Platform-primary ordering. The static markup is Play-primary (lime, first)
+  // for Android; this page can't inherit any framework logic (it's served by a
+  // next.config rewrite), so on iOS we promote the App Store button to the lime
+  // primary and move it to the top, and demote Google Play to the charcoal
+  // secondary — so neither platform sees the wrong store as the primary CTA.
+  if(isIOS){
+    var playBtnEl  = document.getElementById("playBtn");
+    var appleBtnEl = document.getElementById("appleBtn");
+    appleBtnEl.className = "store";      // lime primary
+    playBtnEl.className  = "store alt";  // charcoal secondary
+    appleBtnEl.parentNode.insertBefore(appleBtnEl, playBtnEl); // App Store first
+  }
+
   // ---- Copy-paste fallback ----
   // The box shows a short, readable host+path; the clipboard gets the full https URL.
   var COPY_URL   = WEB + "/download";
