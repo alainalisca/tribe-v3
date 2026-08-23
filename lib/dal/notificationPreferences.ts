@@ -40,6 +40,7 @@ export const TYPE_CATEGORY: Record<
   session_reminder: 'session_reminders',
   session_update: 'session_updates',
   session_join: 'session_updates',
+  series_occurrences_generated: 'session_updates',
   follow: 'social_activity',
   like: 'social_activity',
   comment: 'social_activity',

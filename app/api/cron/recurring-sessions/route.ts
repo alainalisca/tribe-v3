@@ -8,11 +8,29 @@ import {
   type RecurringParentSession,
 } from '@/lib/dal/sessions';
 import { enrollSubscribersInChildSession } from '@/lib/dal/sessionSubscriptions';
+import { createNotification } from '@/lib/dal/notifications';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { computeRecurrenceDates } from '@/lib/recurrence';
 
 /** Number of days ahead to generate child sessions */
 const LOOKAHEAD_DAYS = 7;
+
+/** Bilingual copy for the per-instructor "your series generated new sessions"
+ *  notice. Deep-links to the instructor dashboard with a TRAILING SLASH:
+ *  trailingSlash is on, and a 308 redirect strips the auth headers. */
+const GENERATION_NOTICE: Record<'en' | 'es', { title: string; body: (n: number) => string }> = {
+  es: {
+    title: 'Nuevas sesiones de tu serie',
+    body: (n) =>
+      `Se crearon ${n} nuevas sesiones de tus series recurrentes para los proximos dias. Revisalas en tu panel.`,
+  },
+  en: {
+    title: 'New sessions in your series',
+    body: (n) =>
+      `${n} new sessions from your recurring series were created for the coming days. Review them in your dashboard.`,
+  },
+};
 
 /**
  * @description Generates child session instances for active recurring parent sessions.
@@ -64,6 +82,11 @@ export async function GET(request: Request) {
     let subscribersEnrolled = 0;
     let errorCount = 0;
 
+    // Gate 4: accumulate new-occurrence counts PER INSTRUCTOR across the whole
+    // run, so each instructor gets ONE notification afterward rather than one
+    // per generated row (a Mon-Fri series alone would otherwise fire 5+).
+    const perCreator = new Map<string, { count: number; sample: string }>();
+
     // NOTE: serviceClient (created above) is used for every write too. The
     // sessions INSERT policy is `auth.uid() = creator_id`, and a cron has no
     // auth user, so anon inserts were silently RLS-blocked — which is why 0
@@ -109,6 +132,11 @@ export async function GET(request: Request) {
 
           childrenCreated++;
 
+          // Tally this new occurrence against its instructor (batched notice below).
+          const agg = perCreator.get(parent.creator_id) ?? { count: 0, sample: parent.sport };
+          agg.count += 1;
+          perCreator.set(parent.creator_id, agg);
+
           // Auto-enroll the parent series' active subscribers into the new
           // child occurrence. This is the feature the "Subscribe" button
           // promises ("you'll be automatically added to future sessions") —
@@ -140,6 +168,70 @@ export async function GET(request: Request) {
       }
     }
 
+    // 3. ONE batched notification per instructor whose series generated at
+    //    least one new occurrence this run. In-app (bell) is always created;
+    //    push is gated on the instructor's preferences (session_updates
+    //    category). Non-fatal: a notification failure never fails the job.
+    let instructorsNotified = 0;
+    if (perCreator.size > 0) {
+      const creatorIds = Array.from(perCreator.keys());
+      const { data: creators } = await serviceClient
+        .from('users')
+        .select('id, preferred_language')
+        .in('id', creatorIds);
+      const langById = new Map<string, 'en' | 'es'>(
+        (creators ?? []).map((c) => [c.id as string, (c.preferred_language as string) === 'es' ? 'es' : 'en'])
+      );
+
+      const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+
+      for (const [creatorId, agg] of perCreator) {
+        if (agg.count <= 0) continue;
+        const lang = langById.get(creatorId) ?? 'en';
+        const title = GENERATION_NOTICE[lang].title;
+        const body = GENERATION_NOTICE[lang].body(agg.count);
+        try {
+          // Always create the in-app record.
+          const bell = await createNotification(serviceClient, {
+            recipient_id: creatorId,
+            type: 'series_occurrences_generated',
+            entity_type: 'user',
+            entity_id: creatorId,
+            message: body,
+          });
+          if (!bell.success) {
+            logError(bell.error, { route, action: 'generation_notice_bell', creatorId });
+          }
+
+          // Push only if the instructor allows it (never bypass preferences).
+          const allowPush = await shouldSendNotification(
+            serviceClient,
+            creatorId,
+            'series_occurrences_generated',
+            'push'
+          );
+          if (allowPush && SITE_URL) {
+            await fetch(`${SITE_URL}/api/notifications/send/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
+              body: JSON.stringify({ userId: creatorId, title, body, url: '/dashboard/instructor/' }),
+            });
+          }
+          instructorsNotified++;
+          log('info', 'generation_notice_sent', {
+            action: 'generation_notice',
+            route,
+            creatorId,
+            count: agg.count,
+            sample: agg.sample,
+            push: allowPush,
+          });
+        } catch (err) {
+          logError(err, { route, action: 'generation_notice', creatorId });
+        }
+      }
+    }
+
     const duration_ms = Date.now() - startedAt;
     log('info', 'cron_complete', {
       action: 'cron_complete',
@@ -148,6 +240,7 @@ export async function GET(request: Request) {
       parentsProcessed: parentSessions.length,
       childrenCreated,
       subscribersEnrolled,
+      instructorsNotified,
       errors: errorCount,
     });
     return NextResponse.json({
@@ -157,6 +250,7 @@ export async function GET(request: Request) {
       parentsProcessed: parentSessions.length,
       childrenCreated,
       subscribersEnrolled,
+      instructorsNotified,
       errors: errorCount,
     });
   } catch (error: unknown) {
