@@ -59,7 +59,6 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
       <CredentialsBadges
         certifications={instructor.certifications || []}
         isVerified={!!instructor.verified}
-        yearsExperience={instructor.years_experience || 0}
         language={lang}
       />
       <VideoIntro
