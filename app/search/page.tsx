@@ -5,7 +5,7 @@ import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { followUser, unfollowUser } from '@/lib/dal';
+import { followUser, unfollowUser, followNotificationMessage } from '@/lib/dal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { sportTranslations } from '@/lib/translations';
@@ -321,9 +321,21 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
       // write from an already-following no-op, so the state flip below only
       // happens on a confirmed write — a raw insert lost that and would show
       // "Connected" while the DB had no row.
-      const result = isFollowing
-        ? await unfollowUser(supabase, currentUserId, user.id)
-        : await followUser(supabase, currentUserId, user.id);
+      let result;
+      if (isFollowing) {
+        result = await unfollowUser(supabase, currentUserId, user.id);
+      } else {
+        // Notify the followed user that this athlete followed them.
+        const { data: authData } = await supabase.auth.getUser();
+        const followerName =
+          authData.user?.user_metadata?.name || authData.user?.email || (language === 'es' ? 'Alguien' : 'Someone');
+        result = await followUser(
+          supabase,
+          currentUserId,
+          user.id,
+          followNotificationMessage(followerName, language as 'en' | 'es')
+        );
+      }
       if (!result.success) throw new Error(result.error);
 
       setIsFollowing(!isFollowing);

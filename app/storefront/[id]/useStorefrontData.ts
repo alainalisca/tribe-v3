@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { fetchPartnerByUserId, fetchPartnerInstructors } from '@/lib/dal/featuredPartners';
-import { followUser, unfollowUser } from '@/lib/dal/promote';
+import { followUser, unfollowUser, followNotificationMessage } from '@/lib/dal/promote';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
 import { togglePostLike } from '@/lib/dal/instructorPosts';
 import { SESSION_ALL_COLUMNS } from '@/lib/dal/sessions';
@@ -376,7 +376,16 @@ export function useStorefrontData(instructorId: string) {
       } else {
         // BUG-215: route through DAL so a 0-row (RLS-blocked) insert surfaces
         // as a failure instead of a silent success that reverts on reload.
-        const result = await followUser(supabase, currentUserId, instructorId);
+        // Notify the instructor that this athlete followed them.
+        const { data: authData } = await supabase.auth.getUser();
+        const followerName =
+          authData.user?.user_metadata?.name || authData.user?.email || (language === 'es' ? 'Alguien' : 'Someone');
+        const result = await followUser(
+          supabase,
+          currentUserId,
+          instructorId,
+          followNotificationMessage(followerName, language)
+        );
         if (!result.success) throw new Error(result.error ?? 'Follow failed');
         showSuccess(language === 'es' ? 'Ahora sigues' : 'Following');
       }
