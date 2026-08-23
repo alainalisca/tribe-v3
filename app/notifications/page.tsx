@@ -4,7 +4,19 @@
 import { trackEvent } from '@/lib/analytics';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bell, Calendar, MessageCircle, Users, Star, Gift, Zap, CheckCheck, UserCog } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bell,
+  Calendar,
+  MessageCircle,
+  Users,
+  Star,
+  Gift,
+  Zap,
+  CheckCheck,
+  UserCog,
+  Repeat,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
@@ -14,6 +26,7 @@ import type { NotificationWithActor } from '@/lib/dal/notifications';
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   session_reminder: <Calendar className="w-5 h-5 text-tribe-green" />,
   session_update: <Calendar className="w-5 h-5 text-blue-400" />,
+  series_occurrences_generated: <Repeat className="w-5 h-5 text-tribe-green" />,
   session_join: <Users className="w-5 h-5 text-tribe-green" />,
   session_invite: <Users className="w-5 h-5 text-tribe-green" />,
   new_message: <MessageCircle className="w-5 h-5 text-tribe-green" />,
@@ -53,6 +66,10 @@ function getNotificationLink(notification: NotificationWithActor): string | null
   if (['dm', 'new_message'].includes(type) && entity_id) return `/messages/${entity_id}`;
   if (['community_invite', 'community_post'].includes(type) && entity_id) return `/communities/${entity_id}`;
   if (type === 'connection_request' && actor_id) return `/profile/${actor_id}`;
+  // Gate 4b: the generation notice sends instructors to their dashboard, where
+  // the recurring-series section lives. Trailing slash: trailingSlash is on and
+  // a 308 would strip the auth headers.
+  if (type === 'series_occurrences_generated') return '/dashboard/instructor/';
   return null;
 }
 
