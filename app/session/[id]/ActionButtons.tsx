@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { LogOut, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { downloadCalendarEvent, getGoogleCalendarUrl } from '@/lib/calendar';
@@ -10,6 +11,7 @@ import { showInfo } from '@/lib/toast';
 import { trackEvent } from '@/lib/analytics';
 import WhatsAppShareButton from '@/components/session/WhatsAppShareButton';
 import PaidSessionRequest from '@/components/session/PaidSessionRequest';
+import CancelSeriesDialog from '@/components/session/CancelSeriesDialog';
 
 interface ActionButtonsProps {
   language: 'en' | 'es';
@@ -31,6 +33,8 @@ interface ActionButtonsProps {
     handleJoin: () => void;
     handleLeave: () => void;
     handleCancel: () => void;
+    handleCancelOccurrence: () => void;
+    handleEndSeries: () => void;
     handleGuestLeave: () => void;
     setShowGuestModal: (v: boolean) => void;
   };
@@ -56,6 +60,12 @@ export default function ActionButtons({
   creatingInvite,
 }: ActionButtonsProps) {
   const { t } = useLanguage();
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  // A session is part of a series if it is a template (is_recurring) or an
+  // occurrence (recurring_parent_id set). Series sessions get the 3-option
+  // cancel dialog; plain one-offs keep the existing single confirm (Gate 7).
+  const isSeriesMember = !!session.is_recurring || session.recurring_parent_id != null;
+  const isSeriesParent = !!session.is_recurring && session.recurring_parent_id == null;
 
   const isPaidSession = !!session.is_paid && session.price_cents > 0;
   const calendarData = {
@@ -121,7 +131,7 @@ export default function ActionButtons({
                   {t('editSessionBtn')}
                 </Button>
                 <Button
-                  onClick={sessionActions.handleCancel}
+                  onClick={() => (isSeriesMember ? setShowCancelDialog(true) : sessionActions.handleCancel())}
                   variant="destructive"
                   className="w-full py-3 text-sm font-bold flex items-center justify-center gap-2"
                 >
@@ -129,6 +139,20 @@ export default function ActionButtons({
                   {t('cancelSession')}
                 </Button>
               </div>
+              <CancelSeriesDialog
+                open={showCancelDialog}
+                isParent={isSeriesParent}
+                language={_language}
+                onCancelOne={() => {
+                  setShowCancelDialog(false);
+                  sessionActions.handleCancelOccurrence();
+                }}
+                onEndSeries={() => {
+                  setShowCancelDialog(false);
+                  sessionActions.handleEndSeries();
+                }}
+                onClose={() => setShowCancelDialog(false)}
+              />
             </>
           )}
         </>
