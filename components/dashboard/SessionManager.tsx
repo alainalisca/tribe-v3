@@ -114,10 +114,12 @@ export default function SessionManager({ language, upcoming, past, series, onEnd
       session.price_cents && session.price_cents > 0
         ? formatPrice(session.price_cents, (session.currency as Currency) || 'COP')
         : txt.free;
-    // A series is "ended" once its recurrence_end_date is in the past: the cron
-    // will generate nothing more, so the end action no longer applies. Compare
-    // against Bogotá today, the same calendar the cron and end date use.
-    const ended = !!session.recurrence_end_date && session.recurrence_end_date.slice(0, 10) < bogotaToday();
+    // A series is "ended" once its recurrence_end_date is today OR earlier
+    // (Bogotá). Use <=, not <: computeRecurrenceDates emits only dates STRICTLY
+    // after today, so an end date of today already means no more occurrences —
+    // and endRecurringSeries defaults the end date to today, so a strict < would
+    // leave a series ended today reading as active until tomorrow.
+    const ended = !!session.recurrence_end_date && session.recurrence_end_date.slice(0, 10) <= bogotaToday();
     // Cadence comes from the PARENT'S pattern only, never a child's date (H1).
     const cadence = formatPattern(session.recurrence_pattern, language);
 
