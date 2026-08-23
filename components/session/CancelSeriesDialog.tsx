@@ -46,8 +46,8 @@ export default function CancelSeriesDialog({
     cancelThisOccurrenceDesc: es ? 'Solo esta fecha. La serie continúa.' : 'Only this date. The series continues.',
     endSeries: es ? 'Terminar toda la serie' : 'End the whole series',
     endSeriesDesc: es
-      ? 'Se cancelan las sesiones futuras de esta serie y no se crearán más.'
-      : 'Future sessions in this series are cancelled and no more will be created.',
+      ? 'Se cancelan las sesiones futuras de esta serie y no se crearán más. Las sesiones pasadas no se tocan.'
+      : 'Future sessions in this series are cancelled and no more will be created. Past sessions are untouched.',
     back: es ? 'Volver' : 'Back',
   };
 
