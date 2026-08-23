@@ -32,6 +32,7 @@ import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
 import ConnectionButton from '@/components/ConnectionButton';
+import InstructorProfileActions from '@/components/profile/InstructorProfileActions';
 import TrailblazerBadge from '@/components/TrailblazerBadge';
 import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { getProfileTranslations } from './translations';
@@ -340,15 +341,22 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
             </div>
           )}
 
-          {/* Connection Button — session-gated: Connect / Message */}
+          {/* Viewer actions. Instructors are a directory listing an athlete
+              reaches out to, so they get the storefront model (Message + Follow)
+              instead of the co-attendance connection funnel. Athlete-to-athlete
+              profiles keep ConnectionButton unchanged. */}
           {currentUser && !isOwnProfile && (
             <div className="mt-6">
-              <ConnectionButton
-                currentUserId={currentUser.id}
-                profileUserId={userId}
-                language={language}
-                profileUserName={profile?.name ?? undefined}
-              />
+              {profile.is_instructor ? (
+                <InstructorProfileActions currentUserId={currentUser.id} instructorId={userId} language={language} />
+              ) : (
+                <ConnectionButton
+                  currentUserId={currentUser.id}
+                  profileUserId={userId}
+                  language={language}
+                  profileUserName={profile?.name ?? undefined}
+                />
+              )}
             </div>
           )}
 
