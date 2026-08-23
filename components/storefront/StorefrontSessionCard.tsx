@@ -1,39 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Users, Zap, Loader2, CreditCard, CheckCircle } from 'lucide-react';
+import { Clock, Users, Zap, Loader2, CheckCircle } from 'lucide-react';
 import { formatPrice } from '@/lib/formatCurrency';
-import { getPaymentGateway } from '@/lib/payments/config';
 import type { Currency } from '@/lib/payments/config';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { celebrateJoin } from '@/lib/confetti';
-import BookingConfirmModal from '@/components/BookingConfirmModal';
-
-interface StorefrontSession {
-  id: string;
-  title: string;
-  sport: string;
-  date: string;
-  time: string;
-  price: number;
-  spots_available: number;
-  spots_total: number;
-  creator_id: string;
-  is_boosted?: boolean;
-  currency?: string;
-  is_paid?: boolean;
-  price_cents?: number;
-  location?: string;
-  join_policy?: string;
-}
+import { joinSession } from '@/lib/sessions';
+import { getJoinErrorMessages } from '@/hooks/sessionActionTypes';
+import PaidSessionRequest from '@/components/session/PaidSessionRequest';
+import type { Session } from '@/app/storefront/[id]/useStorefrontData';
 
 interface StorefrontSessionCardProps {
-  session: StorefrontSession;
+  session: Session;
   language: 'en' | 'es';
   currentUserId: string | null;
   joinedSessionIds: Set<string>;
   onJoined: (sessionId: string) => void;
+}
+
+/**
+ * Date formatter copied verbatim from AvailabilityPreview.formatDayLabel: parse
+ * the bare YYYY-MM-DD as UTC midnight (`+ 'T00:00:00Z'`) and render in UTC
+ * (`timeZone: 'UTC'`) so the wall-clock date never shifts. A bare
+ * `new Date('2026-08-23')` parses as UTC then renders local; in Medellin (UTC-5)
+ * that lands the previous evening and prints the day before. The tab and the
+ * sidebar AvailabilityPreview show the same sessions on one screen and MUST
+ * format identically, so keep this in sync with that component.
+ */
+function formatSessionDay(iso: string, language: 'en' | 'es'): string {
+  return new Date(iso + 'T00:00:00Z').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 export default function StorefrontSessionCard({
@@ -44,37 +46,30 @@ export default function StorefrontSessionCard({
   onJoined,
 }: StorefrontSessionCardProps): React.JSX.Element {
   const [joiningFree, setJoiningFree] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [requesting, setRequesting] = useState(false);
 
   const currency = (session.currency || 'COP') as Currency;
-  const isPaid = session.is_paid && (session.price_cents ?? session.price) > 0;
-  const isFree = !isPaid || session.price === 0;
-  const isFull = session.spots_available <= 0;
+  const isPaid = !!session.is_paid && (session.price_cents ?? 0) > 0;
+  const isFree = !isPaid;
+  // Spots come from the real counter columns (current_participants is maintained
+  // by the 087 trigger). The card used to read session.spots_available, which is
+  // not a DB column and is not selected, so it rendered "undefined spots left"
+  // and never went full.
+  const spotsAvailable = Math.max(0, session.max_participants - (session.current_participants ?? 0));
+  const isFull = spotsAvailable <= 0;
+  const spotsUrgent = spotsAvailable > 0 && spotsAvailable <= 3;
   const isOwn = currentUserId === session.creator_id;
   const hasJoined = joinedSessionIds.has(session.id);
-  const gateway = isPaid ? getPaymentGateway(currency) : null;
 
-  // Format the price display
-  const priceDisplay = isPaid
-    ? session.price_cents
-      ? formatPrice(session.price_cents, currency)
-      : `$${session.price.toLocaleString(currency === 'COP' ? 'es-CO' : 'en-US', { maximumFractionDigits: currency === 'COP' ? 0 : 2 })} ${currency}`
-    : language === 'es'
-      ? 'Gratis'
-      : 'Free';
+  const priceDisplay =
+    isPaid && session.price_cents ? formatPrice(session.price_cents, currency) : language === 'es' ? 'Gratis' : 'Free';
 
-  // Spots urgency
-  const spotsUrgent = session.spots_available > 0 && session.spots_available <= 3;
-
-  // Translations
   const t = {
     boosted: language === 'es' ? 'IMPULSADO' : 'BOOSTED',
-    spotsLeft:
-      language === 'es' ? `${session.spots_available} cupos disponibles` : `${session.spots_available} spots left`,
+    spotsLeft: language === 'es' ? `${spotsAvailable} cupos disponibles` : `${spotsAvailable} spots left`,
     full: language === 'es' ? 'Lleno' : 'Full',
     joinFree: language === 'es' ? 'Unirse Gratis' : 'Join Free',
-    bookPay: language === 'es' ? 'Reservar y Pagar' : 'Book & Pay',
+    requestToJoin: language === 'es' ? 'Solicitar unirse' : 'Request to join',
     joined: language === 'es' ? 'Inscrito' : 'Joined',
     ownSession: language === 'es' ? 'Tu sesion' : 'Your session',
     loginRequired: language === 'es' ? 'Inicia sesion para unirte' : 'Log in to join',
@@ -142,37 +137,57 @@ export default function StorefrontSessionCard({
     }
   }
 
-  async function handlePaidBooking(): Promise<void> {
+  // T-PAY1: paid sessions are OFF-PLATFORM — no checkout, no money through Tribe.
+  // This mirrors the session detail page (ActionButtons -> PaidSessionRequest ->
+  // sessionActions.handleJoin -> joinSession): joinSession creates a pending
+  // "awaiting payment" request; the athlete pays the instructor directly and the
+  // instructor confirms receipt. The previous Wompi checkout has been removed.
+  async function handlePaidRequest(): Promise<void> {
     if (!currentUserId) {
       showError(t.loginRequired);
       return;
     }
-    setShowBookingModal(true);
-  }
-
-  async function handleConfirmPayment(): Promise<void> {
-    setProcessingPayment(true);
+    if (requesting) return;
+    setRequesting(true);
     try {
-      const res = await fetch('/api/payment/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: session.id }),
-      });
-      const data = await res.json();
-      if (data.success && data.data?.redirect_url) {
-        window.location.href = data.data.redirect_url;
-      } else {
-        showError(data.error || (language === 'es' ? 'Error al procesar pago' : 'Payment processing failed'));
-        setProcessingPayment(false);
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userName = user?.user_metadata?.name || user?.email || 'Someone';
+
+      const result = await joinSession({ supabase, sessionId: session.id, userId: currentUserId, userName });
+      if (!result.success) {
+        const messages = getJoinErrorMessages(language);
+        showError(
+          messages[result.error ?? ''] ||
+            (language === 'es' ? 'No se pudo enviar la solicitud' : 'Could not send request')
+        );
+        return;
       }
+      onJoined(session.id);
+      showSuccess(
+        result.status === 'pending'
+          ? language === 'es'
+            ? '¡Solicitud enviada! Paga al instructor directamente y confirmará tu lugar.'
+            : 'Request sent! Pay the instructor directly and they will confirm your spot.'
+          : language === 'es'
+            ? '¡Estás dentro!'
+            : "You're in!"
+      );
     } catch {
-      showError(language === 'es' ? 'Error de conexion' : 'Connection error');
-      setProcessingPayment(false);
+      showError(language === 'es' ? 'Error al enviar la solicitud' : 'Failed to send request');
+    } finally {
+      setRequesting(false);
     }
   }
 
+  // Whether the viewer can act on a paid session (the off-platform request flow).
+  // Every other paid state (joined / own / full / logged-out) falls through to
+  // renderCTA below, so this is the ONLY paid entry point and it is off-platform.
+  const canRequestPaid = isPaid && !!currentUserId && !isOwn && !isFull && !hasJoined;
+
   function renderCTA(): React.JSX.Element {
-    // Already joined
     if (hasJoined) {
       return (
         <div className="flex items-center gap-1.5 text-tribe-green font-semibold text-sm">
@@ -182,109 +197,91 @@ export default function StorefrontSessionCard({
       );
     }
 
-    // Own session
     if (isOwn) {
       return <span className="text-xs text-theme-secondary font-medium">{t.ownSession}</span>;
     }
 
-    // Session full
     if (isFull) {
       return <span className="text-xs text-red-500 font-semibold">{t.full}</span>;
     }
 
-    // Not logged in
+    // Not logged in — prompt to log in. No checkout wording on paid sessions.
     if (!currentUserId) {
       return (
         <button
           onClick={() => showError(t.loginRequired)}
           className="bg-stone-200 dark:bg-tribe-mid text-theme-secondary px-3 py-1.5 rounded-xl font-semibold text-xs cursor-not-allowed"
         >
-          {isFree ? t.joinFree : `${t.bookPay} · ${priceDisplay}`}
+          {isFree ? t.joinFree : t.requestToJoin}
         </button>
       );
     }
 
-    // Free session
-    if (isFree) {
-      return (
-        <button
-          onClick={handleJoinFree}
-          disabled={joiningFree}
-          className="bg-green-600 text-white px-3 py-1.5 rounded-xl font-semibold hover:bg-green-700 transition-all text-xs flex items-center gap-1.5"
-        >
-          {joiningFree ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-          {t.joinFree}
-        </button>
-      );
-    }
-
-    // Paid session
+    // Logged in and actionable: paid is handled by canRequestPaid above, so the
+    // only case that reaches here is a free session.
     return (
       <button
-        onClick={handlePaidBooking}
-        className="bg-tribe-green text-slate-900 px-3 py-1.5 rounded-xl font-semibold hover:bg-tribe-green transition-all text-xs flex items-center gap-1.5"
+        onClick={handleJoinFree}
+        disabled={joiningFree}
+        className="bg-green-600 text-white px-3 py-1.5 rounded-xl font-semibold hover:bg-green-700 transition-all text-xs flex items-center gap-1.5"
       >
-        <CreditCard className="w-3.5 h-3.5" />
-        {t.bookPay} &middot; {priceDisplay}
-        {gateway && <span className="opacity-60 text-[10px] ml-0.5">{gateway === 'wompi' ? 'Wompi' : 'Stripe'}</span>}
+        {joiningFree ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+        {t.joinFree}
       </button>
     );
   }
 
   return (
-    <>
-      <div className="bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid p-4 overflow-hidden hover:border-tribe-green/50 transition-all">
-        {/* Boosted Badge */}
-        {session.is_boosted && (
-          <div className="flex items-center gap-1 mb-3 w-fit">
-            <Zap className="w-3 h-3 text-tribe-green" />
-            <span className="text-xs font-bold text-tribe-green bg-tribe-green/20 px-2 py-0.5 rounded-full">
-              {t.boosted}
-            </span>
-          </div>
-        )}
-
-        {/* Sport and Title */}
-        <h3 className="text-base font-bold text-theme-primary mb-1">{session.sport}</h3>
-        <p className="text-sm text-theme-secondary mb-3">{session.title}</p>
-
-        {/* Details */}
-        <div className="space-y-2 mb-4 text-xs">
-          <div className="flex items-center gap-2 text-theme-secondary">
-            <Clock className="w-4 h-4 text-tribe-green flex-shrink-0" />
-            <span>
-              {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')} &middot; {session.time}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Users className={`w-4 h-4 flex-shrink-0 ${spotsUrgent ? 'text-red-500' : 'text-tribe-green'}`} />
-            <span className={`${spotsUrgent ? 'text-red-500 font-semibold' : 'text-theme-secondary'}`}>
-              {isFull ? t.full : t.spotsLeft}
-            </span>
-          </div>
+    <div className="bg-white dark:bg-tribe-surface rounded-xl border border-stone-200 dark:border-tribe-mid p-4 overflow-hidden hover:border-tribe-green/50 transition-all">
+      {/* Boosted Badge */}
+      {session.is_boosted && (
+        <div className="flex items-center gap-1 mb-3 w-fit">
+          <Zap className="w-3 h-3 text-tribe-green" />
+          <span className="text-xs font-bold text-tribe-green bg-tribe-green/20 px-2 py-0.5 rounded-full">
+            {t.boosted}
+          </span>
         </div>
+      )}
 
-        {/* Price and CTA */}
+      {/* Sport and Title */}
+      <h3 className="text-base font-bold text-theme-primary mb-1">{session.sport}</h3>
+      <p className="text-sm text-theme-secondary mb-3">{session.title}</p>
+
+      {/* Details */}
+      <div className="space-y-2 mb-4 text-xs">
+        <div className="flex items-center gap-2 text-theme-secondary">
+          <Clock className="w-4 h-4 text-tribe-green flex-shrink-0" />
+          <span>
+            {formatSessionDay(session.date, language)} &middot; {session.start_time.slice(0, 5)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Users className={`w-4 h-4 flex-shrink-0 ${spotsUrgent ? 'text-red-500' : 'text-tribe-green'}`} />
+          <span className={`${spotsUrgent ? 'text-red-500 font-semibold' : 'text-theme-secondary'}`}>
+            {isFull ? t.full : t.spotsLeft}
+          </span>
+        </div>
+      </div>
+
+      {/* Price and CTA */}
+      {canRequestPaid ? (
+        <div className="pt-3 border-t border-stone-200 dark:border-gray-700">
+          <PaidSessionRequest
+            priceCents={session.price_cents ?? 0}
+            currency={currency}
+            paymentInstructions={null}
+            canViewPaymentInstructions={false}
+            onRequest={handlePaidRequest}
+            requesting={requesting}
+            language={language}
+          />
+        </div>
+      ) : (
         <div className="flex items-center justify-between pt-3 border-t border-stone-200 dark:border-gray-700">
           <span className={`text-lg font-bold ${isFree ? 'text-green-600' : 'text-tribe-green'}`}>{priceDisplay}</span>
           {renderCTA()}
         </div>
-      </div>
-
-      {/* Booking confirmation modal for paid sessions */}
-      {showBookingModal && (
-        <BookingConfirmModal
-          open={showBookingModal}
-          onClose={() => {
-            setShowBookingModal(false);
-            setProcessingPayment(false);
-          }}
-          onConfirm={handleConfirmPayment}
-          session={session}
-          language={language}
-          processing={processingPayment}
-        />
       )}
-    </>
+    </div>
   );
 }
