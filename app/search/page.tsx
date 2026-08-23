@@ -5,6 +5,7 @@ import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { followUser, unfollowUser } from '@/lib/dal';
 import { useLanguage } from '@/lib/LanguageContext';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { sportTranslations } from '@/lib/translations';
@@ -315,23 +316,15 @@ function PeopleResult({ user, currentUserId, language, supabase, onFollowChange 
 
     setActionLoading(true);
     try {
-      // Supabase returns the error on the result — it does NOT throw. The
-      // state flip below must only happen on a confirmed write, or the
-      // button would show "Connected" while the DB has no row.
-      if (isFollowing) {
-        const { error } = await supabase
-          .from('user_follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('user_follows').insert({
-          follower_id: currentUserId,
-          following_id: user.id,
-        });
-        if (error) throw error;
-      }
+      // Route through the DAL (CLAUDE.md: no inline supabase writes in
+      // components). followUser is idempotent AND disambiguates an RLS-blocked
+      // write from an already-following no-op, so the state flip below only
+      // happens on a confirmed write — a raw insert lost that and would show
+      // "Connected" while the DB had no row.
+      const result = isFollowing
+        ? await unfollowUser(supabase, currentUserId, user.id)
+        : await followUser(supabase, currentUserId, user.id);
+      if (!result.success) throw new Error(result.error);
 
       setIsFollowing(!isFollowing);
       onFollowChange();
