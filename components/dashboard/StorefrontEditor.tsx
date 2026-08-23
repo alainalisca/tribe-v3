@@ -65,9 +65,25 @@ export default function StorefrontEditor({
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `storefront-banners/${userId}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+      // Stable, per-user path (no timestamp, no extension): each re-upload
+      // overwrites the same object via upsert, so an instructor keeps exactly
+      // one banner instead of orphaning the previous file on every change.
+      //
+      // RLS: migration 057 grants this prefix a public SELECT ("Storefront
+      // banners are publicly readable") plus INSERT/UPDATE/DELETE scoped to
+      // storefront-banners/<auth.uid()>/... — DELETE is what lets upsert
+      // replace the object (the 038/QA-12 lesson). Those policies match on the
+      // folder segments only, not the filename, so dropping the timestamp keeps
+      // them satisfied and the anonymous /storefront/[id] read still works.
+      const path = `storefront-banners/${userId}/banner`;
+      const { error: uploadError } = await supabase.storage.from('media').upload(path, file, {
+        upsert: true,
+        // With no extension in the key, Supabase cannot infer the type from the
+        // path, so set it explicitly or the object is stored and served as
+        // application/octet-stream. The bucket allowlist (migration 145) is
+        // jpeg/png/webp/mp4; the file input already restricts to those images.
+        contentType: file.type || 'image/jpeg',
+      });
 
       if (uploadError) {
         // Surface the actual error so storage RLS / size / type problems are
@@ -78,7 +94,11 @@ export default function StorefrontEditor({
       }
 
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-      setBannerUrl(urlData.publicUrl);
+      // Cache-bust: the object now lives at a fixed URL, so without a changing
+      // query string the browser and CDN would keep serving the previous banner
+      // after an overwrite. ?v=<timestamp> forces a fresh fetch, and storing it
+      // means every surface reading storefront_banner_url gets the current image.
+      setBannerUrl(`${urlData.publicUrl}?v=${Date.now()}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : txt.uploadError;
       showError(message);
