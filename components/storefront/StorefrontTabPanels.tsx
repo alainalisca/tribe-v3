@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { Play, Heart, Eye } from 'lucide-react';
 import StorefrontSessionCard from '@/components/storefront/StorefrontSessionCard';
 import StorefrontPackageCard from '@/components/storefront/StorefrontPackageCard';
 import StorefrontProductsSection from '@/components/products/StorefrontProductsSection';
 import ReviewsList from '@/components/instructor/ReviewsList';
+import ProfileLightbox from '@/app/profile/[userId]/ProfileLightbox';
 import type { Session, ServicePackage, StorefrontMedia, InstructorPost } from '@/app/storefront/[id]/useStorefrontData';
 
 interface StorefrontTabPanelsProps {
@@ -57,6 +59,9 @@ export default function StorefrontTabPanels(props: StorefrontTabPanelsProps) {
     onPostLike,
   } = props;
 
+  // Media lightbox: index into the image-only subset (see the media panel below).
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
   const t = {
     noSessions: language === 'es' ? 'No hay sesiones disponibles' : 'No sessions available',
     noPackages: language === 'es' ? 'Sin paquetes' : 'No packages',
@@ -100,30 +105,66 @@ export default function StorefrontTabPanels(props: StorefrontTabPanelsProps) {
   }
 
   if (activeTab === 'media') {
-    return media.length > 0 ? (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {media.map((item) => (
-          <div
-            key={item.id}
-            className="relative aspect-square rounded-2xl overflow-hidden bg-theme-surface group cursor-pointer border border-theme"
-          >
-            <Image
-              src={item.url}
-              alt=""
-              fill
-              className="object-cover group-hover:scale-105 transition-transform"
-              unoptimized
-            />
-            {item.media_type === 'video' && (
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-all">
-                <Play className="w-8 h-8 text-white fill-white" />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    ) : (
-      <EmptyState text={t.noMedia} />
+    if (media.length === 0) return <EmptyState text={t.noMedia} />;
+    // The tiles were non-interactive divs (a cosmetic cursor-pointer only), so
+    // tapping a photo did nothing while the profile page had a lightbox. Reuse
+    // that same ProfileLightbox for image tiles. Videos can't render in an
+    // <img> lightbox, so they open in a new tab; a dedicated video lightbox is
+    // a separate enhancement. lightboxIndex indexes this image-only list.
+    const imageUrls = media.filter((m) => m.media_type !== 'video').map((m) => m.url);
+    return (
+      <>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {media.map((item) => {
+            const isVideo = item.media_type === 'video';
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (isVideo) {
+                    window.open(item.url, '_blank', 'noopener,noreferrer');
+                  } else {
+                    setLightboxIndex(imageUrls.indexOf(item.url));
+                  }
+                }}
+                aria-label={
+                  isVideo
+                    ? language === 'es'
+                      ? 'Reproducir video'
+                      : 'Play video'
+                    : language === 'es'
+                      ? 'Ver imagen'
+                      : 'View image'
+                }
+                className="relative aspect-square rounded-2xl overflow-hidden bg-theme-surface group cursor-pointer border border-theme"
+              >
+                <Image
+                  src={item.url}
+                  alt=""
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform"
+                  unoptimized
+                />
+                {isVideo && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-all">
+                    <Play className="w-8 h-8 text-white fill-white" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {lightboxIndex !== null && imageUrls[lightboxIndex] && (
+          <ProfileLightbox
+            photo={imageUrls[lightboxIndex]}
+            photos={imageUrls}
+            lightboxIndex={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+            onNavigate={(index) => setLightboxIndex(index)}
+          />
+        )}
+      </>
     );
   }
 
