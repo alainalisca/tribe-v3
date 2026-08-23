@@ -7,7 +7,13 @@ import { celebrateJoin } from '@/lib/confetti';
 import { trackEvent } from '@/lib/analytics';
 import { joinSession } from '@/lib/sessions';
 import { haptic } from '@/lib/haptics';
-import { cancelSession, deleteParticipantBySessionAndUser } from '@/lib/dal';
+import {
+  cancelSession,
+  cancelFutureChildren,
+  endRecurringSeries,
+  seriesParentId,
+  deleteParticipantBySessionAndUser,
+} from '@/lib/dal';
 import type { UseSessionActionsParams, ConfirmAction, GuestData } from './sessionActionTypes';
 import { getJoinErrorMessages } from './sessionActionTypes';
 import {
@@ -254,6 +260,43 @@ export function useSessionActions({
     }
   }
 
+  // Gate 7 — series-aware cancel. The CancelSeriesDialog is the confirmation for
+  // these two, so they do NOT set confirmAction (no double confirm).
+
+  /** Child + "cancel this occurrence": unchanged single-session cancel. */
+  function handleCancelOccurrence() {
+    doCancel();
+  }
+
+  /** "End the whole series": stop generation (endRecurringSeries) AND clear the
+   *  calendar (cancel every future active child, past ones untouched). Ending
+   *  first means generation halts even if some child cancels fail. */
+  async function handleEndSeries() {
+    try {
+      const parentId = seriesParentId(session);
+      const endResult = await endRecurringSeries(supabase, parentId);
+      if (!endResult.success) throw new Error(endResult.error);
+
+      const cancelResult = await cancelFutureChildren(supabase, parentId);
+      if (!cancelResult.success) throw new Error(cancelResult.error);
+
+      const failed = cancelResult.data?.failed ?? [];
+      if (failed.length > 0) {
+        // Series is ended (no new occurrences), but some existing ones remain.
+        showError(
+          language === 'es'
+            ? `Serie terminada. ${failed.length} sesión(es) no se pudieron cancelar; intenta de nuevo.`
+            : `Series ended. ${failed.length} session(s) could not be cancelled; try again.`
+        );
+      } else {
+        showSuccess(language === 'es' ? 'Serie terminada' : 'Series ended');
+      }
+      onNavigate('/sessions');
+    } catch (error) {
+      showError(getErrorMessage(error, 'delete_session', language));
+    }
+  }
+
   function handleKickUser(userId: string, userName: string) {
     setConfirmAction({
       title: language === 'es' ? 'Eliminar atleta' : 'Remove athlete',
@@ -301,6 +344,8 @@ export function useSessionActions({
     handleGuestLeave,
     handleLeave,
     handleCancel,
+    handleCancelOccurrence,
+    handleEndSeries,
     handleKickUser,
     checkGuestParticipation,
   };

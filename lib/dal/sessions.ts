@@ -1060,6 +1060,81 @@ export async function childSessionExists(
 }
 
 /**
+ * The series a session belongs to, as a parent id: a child points at its
+ * parent; a true parent (or a one-off) is its own series root. Pure helper so
+ * the end-series flow can target the right parent regardless of which row the
+ * host opened. (T-RECUR1 Gate 7.)
+ */
+export function seriesParentId(session: { id: string; recurring_parent_id: string | null }): string {
+  return session.recurring_parent_id ?? session.id;
+}
+
+/**
+ * Cancel every FUTURE active child of a recurring parent (date >= today,
+ * Bogotá). Past children are never touched. Host-authorized, mirroring
+ * endRecurringSeries. Each child is cancelled via cancelSession, which handles
+ * that child's confirmed-participant notification and refunds — so this adds no
+ * separate notifier.
+ *
+ * Partial failure is best-effort: a child whose cancelSession fails is recorded
+ * in `failed` and the loop CONTINUES (a destructive bulk must not abort halfway
+ * and leave an arbitrary partial state). Re-running is safe — the status filter
+ * excludes already-cancelled children, so a retry only re-touches the ones that
+ * are still active.
+ *
+ * Sequential is fine at current scale (a series has at most a handful of future
+ * children). If a series ever exceeds a few dozen future children, batch these
+ * cancelSession calls rather than firing them all at once.
+ */
+export async function cancelFutureChildren(
+  supabase: SupabaseClient,
+  parentId: string
+): Promise<DalResult<{ cancelled: number; failed: string[] }>> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'You must be signed in to end a series' };
+
+    const { data: parent, error: parentError } = await supabase
+      .from('sessions')
+      .select('creator_id')
+      .eq('id', parentId)
+      .single();
+    if (parentError || !parent) return { success: false, error: parentError?.message || 'Series not found' };
+    if (parent.creator_id !== user.id) {
+      return { success: false, error: 'Only the session host can end this series' };
+    }
+
+    const today = bogotaToday();
+    const { data: children, error: childrenError } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('recurring_parent_id', parentId)
+      .eq('status', 'active')
+      .gte('date', today);
+    if (childrenError) return { success: false, error: childrenError.message };
+
+    let cancelled = 0;
+    const failed: string[] = [];
+    for (const child of children ?? []) {
+      const childId = child.id as string;
+      const result = await cancelSession(supabase, childId);
+      if (result.success) {
+        cancelled += 1;
+      } else {
+        failed.push(childId);
+        logError(result.error, { action: 'cancelFutureChildren', parentId, childId });
+      }
+    }
+    return { success: true, data: { cancelled, failed } };
+  } catch (error) {
+    logError(error, { action: 'cancelFutureChildren', parentId });
+    return { success: false, error: 'Failed to cancel future sessions' };
+  }
+}
+
+/**
  * Create a child session instance from a recurring parent session.
  * Copies relevant fields and sets the new date. Returns the new session ID.
  */

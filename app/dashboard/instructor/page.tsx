@@ -27,7 +27,7 @@ import {
   type ServicePackageRow,
 } from '@/lib/dal/instructorDashboard';
 import { fetchUserProfile } from '@/lib/dal/users';
-import { endRecurringSeries } from '@/lib/dal';
+import { endRecurringSeries, cancelFutureChildren } from '@/lib/dal';
 import { createNotification, hasUnreadNotificationOfType } from '@/lib/dal/notifications';
 import { getMissingInstructorFields } from '@/lib/instructorProfile';
 import { notificationCopy, toLang } from '@/lib/notification-i18n';
@@ -81,8 +81,8 @@ export default function InstructorDashboardPage() {
       title: language === 'es' ? '¿Terminar esta serie?' : 'End this series?',
       message:
         language === 'es'
-          ? 'No se crearán más sesiones de esta serie. Las sesiones ya publicadas no se cancelan.'
-          : 'No more sessions will be generated from this series. Already-published sessions are not cancelled.',
+          ? 'Se cancelan las sesiones futuras de esta serie y no se crearán más. Las sesiones pasadas no se tocan.'
+          : 'Future sessions in this series are cancelled and no more will be created. Past sessions are untouched.',
       confirmLabel: language === 'es' ? 'Terminar serie' : 'End series',
       variant: 'danger',
     });
@@ -91,12 +91,25 @@ export default function InstructorDashboardPage() {
     const uid = profile?.id;
     if (!uid) return;
 
+    // Same path as the session-detail end-series (Gate 7): stop generation
+    // FIRST, then cancel every future active child. Past children untouched.
     const result = await endRecurringSeries(supabase, seriesId);
     if (!result.success) {
       showError(language === 'es' ? 'No se pudo terminar la serie' : 'Could not end the series');
       return;
     }
-    showSuccess(language === 'es' ? 'Serie terminada' : 'Series ended');
+
+    const cancelResult = await cancelFutureChildren(supabase, seriesId);
+    const failed = cancelResult.success ? (cancelResult.data?.failed ?? []) : [seriesId];
+    if (failed.length > 0) {
+      showError(
+        language === 'es'
+          ? `Serie terminada. ${failed.length} sesión(es) no se pudieron cancelar; intenta de nuevo.`
+          : `Series ended. ${failed.length} session(s) could not be cancelled; try again.`
+      );
+    } else {
+      showSuccess(language === 'es' ? 'Serie terminada' : 'Series ended');
+    }
 
     const refreshed = await fetchInstructorSessions(supabase, uid);
     if (refreshed.success && refreshed.data) {
