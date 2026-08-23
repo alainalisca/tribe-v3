@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { Camera, Loader, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -9,7 +8,6 @@ import StarRating from '@/components/StarRating';
 import PostSessionConnect from '@/components/PostSessionConnect';
 import PostSessionShareStep from '@/components/PostSessionShareStep';
 import RebookingStep from '@/components/postSession/RebookingStep';
-import TipButton from '@/components/TipButton';
 import { compressImage } from '@/components/stories/storyUploadHelpers';
 import { insertRecapPhoto } from '@/lib/dal';
 import { progressReferralOnSessionComplete } from '@/lib/dal/referrals-progression';
@@ -42,7 +40,10 @@ interface PostSessionFlowProps {
   price?: string;
 }
 
-const TOTAL_STEPS = 6;
+// Was 6: the final "Tip" step was removed because it started a live Wompi/Stripe
+// checkout (TipButton -> /api/payment/create), and Tribe takes no payments until
+// the banking issue is resolved. Rebooking (step 5) is now the terminal step.
+const TOTAL_STEPS = 5;
 
 export default function PostSessionFlow({
   open,
@@ -51,7 +52,8 @@ export default function PostSessionFlow({
   userId,
   creatorId,
   creatorName,
-  creatorAvatar,
+  // creatorAvatar prop is still accepted but no longer rendered here (the Tip
+  // step that used it was removed). Left in the interface for callers/future use.
   sport: _sport,
   participants,
   language,
@@ -438,75 +440,17 @@ export default function PostSessionFlow({
           city={neighborhood || locationName || null}
         />
 
+        {/* Rebooking is now the terminal step (the Tip step that this used to
+            advance to was removed — see TOTAL_STEPS). "Done" closes the flow. */}
         <div className="space-y-2">
           <button
-            onClick={() => setStep(6)}
+            onClick={onClose}
             className="block w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200
               bg-tribe-green-light hover:bg-lime-500 text-stone-900 hover:scale-[1.02] active:scale-95 text-center"
-          >
-            {t('Continue', 'Continuar')}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 text-sm font-medium text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-gray-300 transition-colors"
           >
             {t('Done', 'Listo')}
           </button>
         </div>
-      </div>
-    );
-  }
-
-  // --- Step 6: Tip (optional) ---
-  function renderTipStep() {
-    return (
-      <div className="space-y-5">
-        <div className="flex flex-col items-center text-center">
-          {creatorAvatar ? (
-            <img
-              src={creatorAvatar}
-              alt={creatorName}
-              className="w-16 h-16 rounded-full object-cover border-2 border-tribe-green/50 mb-3"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-tribe-green-light/30 to-tribe-green-light/10 flex items-center justify-center border-2 border-tribe-green/50 mb-3">
-              <span className="text-2xl font-bold text-tribe-green">{creatorName.charAt(0).toUpperCase()}</span>
-            </div>
-          )}
-          <h3 className="text-lg font-bold text-stone-900 dark:text-white">{t('Say thanks', 'Da las gracias')}</h3>
-          <p className="text-xs text-theme-secondary mt-1">
-            {t(`Optional — show ${creatorName} some appreciation`, `Opcional — muestra tu aprecio a ${creatorName}`)}
-          </p>
-        </div>
-
-        <TipButton
-          tipperId={userId}
-          instructorId={creatorId}
-          instructorName={creatorName}
-          sessionId={sessionId}
-          currency={price?.toLowerCase().includes('usd') ? 'USD' : 'COP'}
-          language={language as 'en' | 'es'}
-          inline
-          onTipped={() => {
-            // Keep the step open so the user can see the celebration; they tap Done to dismiss.
-          }}
-        />
-
-        <Link
-          href="/"
-          className="block w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-center
-            bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-gray-300
-            hover:bg-stone-200 dark:hover:bg-stone-700"
-        >
-          {t('Find other sessions', 'Buscar otras sesiones')}
-        </Link>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2.5 text-sm font-medium text-stone-500 dark:text-gray-400 hover:text-stone-700 dark:hover:text-gray-300 transition-colors"
-        >
-          {t('Skip', 'Omitir')}
-        </button>
       </div>
     );
   }
@@ -524,8 +468,6 @@ export default function PostSessionFlow({
         return renderShareStep();
       case 5:
         return renderRebookingStep();
-      case 6:
-        return renderTipStep();
       default:
         return null;
     }
