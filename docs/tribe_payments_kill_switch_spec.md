@@ -2,6 +2,20 @@
 
 Implementation spec. No code in this document.
 
+## Decisions locked (2026-08-23)
+
+These are decided; the sections below reflect them:
+
+- Flag `INSTRUCTOR_PAYMENTS_ENABLED`, separate from `TRIBE_OS_BILLING_ENABLED`,
+  default off, server-authoritative (routes refuse, not just hide). Approved.
+- Tips and boosts are gated too, no exception: if money runs through Tribe's
+  payment API, Tribe is processing funds, which is the exact thing forbidden.
+- `fee_cents` computed as 0 while off, and the fee/net rows hidden on the
+  Tribe.OS revenue cards. Approved.
+- Marketing copy is a separate, non-code decision owned by Al. His current lean
+  is to change it: "keep 85%" is wrong in both directions (instructors keep 100%
+  today), and "zero fees" is accurate now. Still his call, not gated by the flag.
+
 ## 1. Goal
 
 Tribe cannot legally take a platform fee or process payments until a banking
@@ -53,12 +67,11 @@ Everything in the C1 inventory below.
 - `components/BookingConfirmModal.tsx:107-131` — the on-platform booking modal, incl.
   "Platform fee: Included" and the Wompi/Stripe method line.
 
-> Scope decision for you (flagged, not assumed): gating `payment/create` wholesale
-> also disables **tips** and **boost/pro-storefront** purchases, because they route
-> money through Tribe too. Under "Tribe touches nothing" that is correct, so this
-> spec gates all three. If you want tips or boosts to stay live, the flag needs a
-> per-purpose branch instead of gating the whole route. Default recommendation:
-> gate all three.
+> Scope: DECIDED — gate all three. `payment/create` handles session participation,
+> **tips**, and **boost/pro-storefront** purchases, and every one routes money
+> through Tribe. If a tip runs through Tribe's payment API then Tribe is processing
+> funds, which is the exact thing the rule forbids. No exception: the flag gates the
+> whole route, so all three are off together while it is off.
 
 ### Stripe Connect onboarding (US-hardcoded dead end, already partly hidden)
 
@@ -131,10 +144,10 @@ your prior spec intended: **`INSTRUCTOR_PAYMENTS_ENABLED`**, kept separate from
 - **Revenue cards:** a "Gross / Platform fees / Net to you" breakdown implies Tribe
   takes a cut. While the flag is off, **hide the platform-fee and net-to-you rows**
   in `SummaryCards.tsx` (and the equivalent columns in `PaymentTable`/`RevenueChart`),
-  leaving at most a single "collected" figure. Simplest shippable option: hide the
-  whole Tribe.OS revenue surface while the flag is off, since it is premium-gated and
-  dormant anyway. Recommendation: **fee shown as 0, fee/net rows hidden** (keeps any
-  gross figure honest without asserting a platform cut). Confirm which you prefer.
+  leaving at most a single "collected" figure. **DECIDED: fee shown as 0, and the
+  fee and net-to-you rows hidden** (keeps any gross figure honest without asserting a
+  platform cut). Hiding the whole revenue surface remains an acceptable fallback since
+  it is premium-gated and dormant, but the chosen behavior is fee 0 + rows hidden.
 - Historical `fee_cents` already in the database is left untouched (capture/analytics
   of past state is not this flag's job).
 
@@ -152,9 +165,11 @@ decision; this spec does not change them:
 - Guides/assets: `onboarding-build/guide.html:256`, `onboarding-build/guide-es.html:258`,
   `social-assets/generate.mjs:140,151`.
 
-Decision needed: reword to the current reality (Tribe takes nothing, instructor keeps
-100%, off-platform collection), or leave as the intended future model. Either way it
-is copy, decided by you, not gated by the flag.
+Al's lean: change it. "Keep 85%" is wrong in both directions — instructors currently
+keep 100%, and "zero fees" is accurate today, so the current copy is inaccurate now.
+The reword would state the present reality (Tribe takes nothing, instructor keeps 100%,
+off-platform collection). This stays Al's call and is copy only, not gated by the flag,
+so it is tracked here but not built as part of the kill switch.
 
 ## 7. C5: shippable steps, smallest and safest first
 
