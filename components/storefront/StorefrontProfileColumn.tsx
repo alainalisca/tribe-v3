@@ -8,7 +8,6 @@ import CredentialsBadges from '@/components/instructor/CredentialsBadges';
 import VideoIntro from '@/components/instructor/VideoIntro';
 import AvailabilityPreview from '@/components/instructor/AvailabilityPreview';
 import InterestButton from '@/components/instructor/InterestButton';
-import TipButton from '@/components/TipButton';
 import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
 import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
 import type { Instructor, FollowState } from '@/app/storefront/[id]/useStorefrontData';
@@ -90,15 +89,12 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
           language={lang}
         />
       )}
-      {isAthleteViewer && (
-        <TipButton
-          tipperId={currentUserId!}
-          instructorId={instructorId}
-          instructorName={instructor.name}
-          currency={lang === 'en' ? 'USD' : 'COP'}
-          language={lang}
-        />
-      )}
+      {/* Tip CTA removed: it started a live Wompi/Stripe checkout via
+          /api/payment/create, and Tribe takes no payments until the banking issue
+          is resolved (see lib/payments/config.ts). This is the same live-checkout
+          entry point that was removed from the session card. TipButton and the
+          /api/payment/create tip branch are left in place for when payments
+          return; only this entry point is removed. */}
       <button
         onClick={onFollowToggle}
         className={`w-full px-3 py-2 rounded-xl font-semibold transition-all text-sm ${
