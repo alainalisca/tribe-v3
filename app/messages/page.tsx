@@ -252,7 +252,10 @@ function MessagesContent() {
                                 />
                               ) : (
                                 <span className="text-stone-700 dark:text-gray-300">
-                                  {conv.other_user.name
+                                  {/* other_user.name is typed string but can be
+                                      null at runtime; a null here previously
+                                      crashed the whole list on .split(). */}
+                                  {(conv.other_user.name || 'Unknown')
                                     .split(' ')
                                     .map((n) => n[0])
                                     .join('')
@@ -269,7 +272,7 @@ function MessagesContent() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <h3 className="font-semibold text-stone-900 dark:text-white truncate">
-                                {conv.other_user.name}
+                                {conv.other_user.name || 'Unknown'}
                               </h3>
                               {conv.last_message && (
                                 <span className="text-xs text-stone-500 dark:text-gray-400 flex-shrink-0 ml-2">
