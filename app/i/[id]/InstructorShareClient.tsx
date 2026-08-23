@@ -122,7 +122,10 @@ export default function InstructorShareClient() {
 
   const rating = profile.average_rating;
   const sports = profile.sports ?? [];
-  const ctaHref = userId ? `/profile/${profile.id}` : `/auth`;
+  // Send the "Book a Session" CTA to the storefront, not the profile: the
+  // storefront carries the session schedule and the Book flow, while the profile
+  // has no session list. Trailing slash because next.config trailingSlash is on.
+  const ctaHref = userId ? `/storefront/${profile.id}/` : `/auth`;
   const ctaLabel = language === 'es' ? 'Reserva una sesión' : 'Book a Session';
 
   return (

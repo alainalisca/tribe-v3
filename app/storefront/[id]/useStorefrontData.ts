@@ -229,7 +229,12 @@ export function useStorefrontData(instructorId: string) {
             // removing the select('*') latent-401 risk.
             .select(SESSION_ALL_COLUMNS)
             .eq('creator_id', instructorId)
-            .eq('status', 'open')
+            // Sessions are written with status 'active' on every create path, the
+            // DB default is 'active', and RLS only exposes 'active'. 'open' is a
+            // join_policy value, not a status, so this filter matched nothing and
+            // the storefront Sessions tab was always empty (which also hid the tab
+            // and disabled the Book CTA). Filter on the real value.
+            .eq('status', 'active')
             .gte('date', todayStr)
             .order('date', { ascending: true }),
           // Audit S-5: schema columns are `boosted_session_id` (not `session_id`)
