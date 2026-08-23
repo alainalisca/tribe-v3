@@ -707,6 +707,11 @@ function CreateSessionPageInner() {
                               {language === 'es' ? 'Desglose de pago' : 'Payment Breakdown'}
                             </p>
                             <div className="space-y-1">
+                              {/* Fee/payout lines intentionally hidden: Tribe takes no
+                                  platform fee, so a "Platform fee (15%) / you earn 85%"
+                                  split misstates the instructor's actual take (100%).
+                                  Only the price the athlete pays is shown. Display-only
+                                  change; no submission or validation math touched. */}
                               <div className="flex justify-between text-sm">
                                 <span className="text-emerald-800 dark:text-emerald-300">
                                   {language === 'es' ? 'Precio del atleta' : 'Athlete pays'}
@@ -715,40 +720,6 @@ function CreateSessionPageInner() {
                                   {formatDisplayAmount(Number(formData.price_display), formData.currency as Currency)}
                                 </span>
                               </div>
-                              {(() => {
-                                // Compute platform fee and payout the same way
-                                // the server does: convert to cents first,
-                                // round the *cents* value, then convert back
-                                // for display. Doing the rounding in dollars
-                                // (e.g. Math.round(0.05 * 0.15) = 0) gives
-                                // $0.00 for sub-dollar prices, which mis-
-                                // represents the actual fee.
-                                const priceCents = Math.round(Number(formData.price_display) * 100);
-                                const platformFeeCents = Math.round((priceCents * 15) / 100);
-                                const payoutCents = priceCents - platformFeeCents;
-                                return (
-                                  <>
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-theme-tertiary">
-                                        {language === 'es' ? 'Tarifa de plataforma (15%)' : 'Platform fee (15%)'}
-                                      </span>
-                                      <span className="text-theme-tertiary">
-                                        -{formatDisplayAmount(platformFeeCents / 100, formData.currency as Currency)}
-                                      </span>
-                                    </div>
-                                    <div className="border-t border-emerald-200 dark:border-emerald-700 pt-1">
-                                      <div className="flex justify-between text-sm font-bold">
-                                        <span className="text-emerald-800 dark:text-emerald-300">
-                                          {language === 'es' ? 'Tú recibes (85%)' : 'You earn (85%)'}
-                                        </span>
-                                        <span className="text-emerald-800 dark:text-emerald-300">
-                                          {formatDisplayAmount(payoutCents / 100, formData.currency as Currency)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </>
-                                );
-                              })()}
                             </div>
                           </div>
                         )}

@@ -7,7 +7,6 @@ import LocationMap from '@/components/LocationMap';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
-import { formatPrice } from '@/lib/formatCurrency';
 import type { Currency } from '@/lib/payments/config';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { translateSport } from '@/lib/translations';
@@ -34,6 +33,11 @@ interface SessionDetailsProps {
   participants: ParticipantInfo[];
   isFull: boolean;
   language: 'en' | 'es';
+  /**
+   * Still accepted by the component's public API, but currently unread: the host
+   * earnings/fee breakdown it used to gate is hidden (Tribe takes no platform
+   * fee). Wire it back up when a real payout view returns.
+   */
   isCreator?: boolean;
   /**
    * Gates the payment_instructions block. True only for the host or a viewer
@@ -59,7 +63,6 @@ export default function SessionDetails({
   participants,
   isFull,
   language,
-  isCreator = false,
   canViewPaymentInstructions = false,
   paymentInstructions = null,
   onOpenLightbox,
@@ -224,75 +227,12 @@ export default function SessionDetails({
                 </p>
               </div>
             )}
-            {isCreator &&
-              (() => {
-                // Pull the actual fee percent from the session row. The
-                // `sessions.platform_fee_percent` column overrides the global
-                // 15% default per-session (e.g. promotional sessions, partner
-                // accounts). Falls back to 15 if null/missing.
-                const feePct =
-                  typeof (session as { platform_fee_percent?: number | null }).platform_fee_percent === 'number'
-                    ? ((session as { platform_fee_percent?: number | null }).platform_fee_percent as number)
-                    : 15;
-                const feeRatio = feePct / 100;
-                const payoutRatio = 1 - feeRatio;
-                const confirmedCount = participants.filter((p) => p.status === 'confirmed').length;
-                return (
-                  <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
-                      {language === 'es' ? 'Tu desglose de pago' : 'Your Earnings Breakdown'}
-                    </p>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-emerald-600 dark:text-emerald-400">
-                          {language === 'es' ? 'Precio por persona' : 'Price per person'}
-                        </span>
-                        <span className="text-emerald-700 dark:text-emerald-300">
-                          {formatPrice(session.price_cents!, (session.currency || 'USD') as Currency)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-stone-500 dark:text-gray-400">
-                          {language === 'es' ? `Tarifa de plataforma (${feePct}%)` : `Platform fee (${feePct}%)`}
-                        </span>
-                        <span className="text-stone-500 dark:text-gray-400">
-                          -
-                          {formatPrice(
-                            Math.round(session.price_cents! * feeRatio),
-                            (session.currency || 'USD') as Currency
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs font-bold pt-1 border-t border-emerald-200 dark:border-emerald-700">
-                        <span className="text-emerald-800 dark:text-emerald-300">
-                          {language === 'es' ? 'Tú recibes por persona' : 'You earn per person'}
-                        </span>
-                        <span className="text-emerald-800 dark:text-emerald-300">
-                          {formatPrice(
-                            Math.round(session.price_cents! * payoutRatio),
-                            (session.currency || 'USD') as Currency
-                          )}
-                        </span>
-                      </div>
-                      {confirmedCount > 0 && (
-                        <div className="flex justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 pt-1">
-                          <span>
-                            {language === 'es'
-                              ? `Total estimado (${confirmedCount} confirmados)`
-                              : `Est. total (${confirmedCount} confirmed)`}
-                          </span>
-                          <span>
-                            {formatPrice(
-                              Math.round(session.price_cents! * payoutRatio * confirmedCount),
-                              (session.currency || 'USD') as Currency
-                            )}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+            {/* Earnings/fee breakdown intentionally hidden: Tribe does not take a
+                platform fee, so a "Platform fee (15%) / you receive 85%" breakdown
+                misrepresents what the instructor actually earns (100% of the price).
+                The price is already shown above. The `platform_fee_percent` column is
+                left untouched — this is a display-only change. Re-introduce a host
+                earnings view only once real payout math is wired up. */}
           </div>
         )}
 
