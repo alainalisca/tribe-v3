@@ -150,8 +150,12 @@ export default function StorefrontPage() {
     />
   );
 
+  // Bottom padding must clear the fixed 64px BottomNav on every breakpoint (the
+  // old lg:pb-12 = 48px was shorter than the nav, clipping desktop content), plus
+  // the mobile sticky Book CTA that floats above the nav when canBook. Desktop has
+  // no floating CTA, so lg:pb-24 is enough.
   return (
-    <div className="min-h-screen bg-theme-page pb-32 lg:pb-12">
+    <div className={`min-h-screen bg-theme-page lg:pb-24 ${canBook ? 'pb-40' : 'pb-32'}`}>
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
         <div className="max-w-5xl mx-auto h-14 flex items-center px-4">
           <button onClick={() => goBack()} className="text-theme-primary hover:text-tribe-green transition-colors">
@@ -240,9 +244,12 @@ export default function StorefrontPage() {
         )}
       </main>
 
-      {/* Sticky bottom CTA (mobile only) */}
+      {/* Sticky bottom CTA (mobile only). Floats just above the BottomNav:
+          bottom-16 (64px) ignored the safe-area inset, so on home-indicator
+          devices the nav's inset overlapped and clipped this CTA. Offset by the
+          nav height PLUS the inset. */}
       {canBook && (
-        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 pb-2 safe-area-bottom pointer-events-none">
+        <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 px-4 pb-2 pointer-events-none">
           <button
             onClick={goToSessions}
             className="pointer-events-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm shadow-tribe-green hover:opacity-90 transition"

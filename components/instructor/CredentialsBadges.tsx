@@ -58,7 +58,7 @@ export default function CredentialsBadges({ certifications, isVerified, language
             onClick={() => toggle(idx)}
             title={cert}
             aria-expanded={isOpen}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-theme-card text-theme-secondary text-xs text-left max-w-full min-w-0"
+            className={`flex items-center gap-1.5 px-3 py-1.5 ${isOpen ? 'rounded-2xl' : 'rounded-full'} bg-theme-card text-theme-secondary text-xs text-left max-w-full min-w-0`}
           >
             <GraduationCap className="w-3.5 h-3.5 text-[#A3E635] flex-shrink-0" />
             <span className={`min-w-0 ${isOpen ? 'whitespace-normal break-words' : 'truncate'}`}>{cert}</span>
