@@ -26,6 +26,10 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         curated: 'Curado - Revisas solicitudes',
         inviteOnly: 'Solo invitaci\u00f3n - Privado',
         recurringSection: 'Recurrencia',
+        seriesOccurrenceNotice:
+          'Esta es una sesi\u00f3n de una serie ({cadence}). Los cambios afectan solo esta fecha.',
+        seriesTemplateNotice:
+          'Esta es la plantilla de la serie. Los cambios afectan las sesiones futuras, no las ya publicadas.',
         save: 'Guardar Cambios',
         saving: 'Guardando...',
         cancel: 'Cancelar',
@@ -79,6 +83,9 @@ export function getEditSessionTranslations(language: 'en' | 'es') {
         curated: 'Curated - You review requests',
         inviteOnly: 'Invite Only - Private',
         recurringSection: 'Recurrence',
+        seriesOccurrenceNotice: 'This is one session in a series ({cadence}). Changes affect only this date.',
+        seriesTemplateNotice:
+          'This is the series template. Changes affect future sessions, not ones already published.',
         save: 'Save Changes',
         saving: 'Saving...',
         cancel: 'Cancel',

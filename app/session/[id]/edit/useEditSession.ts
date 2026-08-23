@@ -7,6 +7,7 @@ import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import {
   fetchSession,
+  fetchSessionFields,
   fetchSessionPaymentInstructions,
   fetchConfirmedCount,
   fetchUserProfile,
@@ -99,6 +100,13 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   // child is never independently recurring, so the recurrence toggle is hidden
   // and the submit path forces the non-recurring shape (T-RECUR1 Gate 2).
   const [seriesChild, setSeriesChild] = useState(false);
+  // Gate 6 (display-only): whether this row is a series template (a true parent),
+  // and the recurrence_pattern to render the cadence from. For a child the
+  // pattern comes from the PARENT (fetched below), never inferred from the
+  // child's own date — H1 found live children whose weekday contradicts the
+  // parent's pattern, so a date-derived cadence would be wrong.
+  const [seriesParent, setSeriesParent] = useState(false);
+  const [seriesPattern, setSeriesPattern] = useState<string | null>(null);
   const [priceValue, setPriceValue] = useState<PriceFormInput>(defaultPrice);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [originalPrice, setOriginalPrice] = useState<PriceSnapshot>({ is_paid: false, price_cents: null });
@@ -178,7 +186,25 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
 
       // A child occurrence (points at a parent) can never be independently
       // recurring; remember it so the toggle is hidden and submit coerces.
-      setSeriesChild(isSeriesChild(session));
+      const child = isSeriesChild(session);
+      setSeriesChild(child);
+
+      // Gate 6: resolve the series role + cadence source for the read-only
+      // notice. A true parent uses its OWN pattern; a child fetches the
+      // PARENT's pattern (one extra query, child-only — never inferred from
+      // the child's date). A plain one-off gets neither.
+      const parent = session.is_recurring === true && session.recurring_parent_id == null;
+      setSeriesParent(parent);
+      if (parent) {
+        setSeriesPattern(session.recurrence_pattern ?? null);
+      } else if (child && session.recurring_parent_id) {
+        const parentResult = await fetchSessionFields(supabase, session.recurring_parent_id, 'recurrence_pattern');
+        setSeriesPattern(
+          parentResult.success
+            ? ((parentResult.data as { recurrence_pattern: string | null }).recurrence_pattern ?? null)
+            : null
+        );
+      }
 
       // Initialise photo state from the existing session photos (may be null)
       setPhotos(session.photos ?? []);
@@ -305,6 +331,8 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
     priceError,
     isInstructor,
     isSeriesChild: seriesChild,
+    isSeriesParent: seriesParent,
+    seriesPattern,
     handleSubmit,
     params,
     router,

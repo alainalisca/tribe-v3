@@ -2,13 +2,14 @@
 'use client';
 
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatPattern } from '@/lib/recurrence';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import LocationPicker from '@/components/LocationPicker';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Repeat } from 'lucide-react';
 import Link from 'next/link';
 import { getEditSessionTranslations } from './translations';
 import { useEditSession } from './useEditSession';
@@ -33,6 +34,8 @@ export default function EditSessionPage() {
     priceError,
     isInstructor,
     isSeriesChild,
+    isSeriesParent,
+    seriesPattern,
     handleSubmit,
     params,
     router,
@@ -63,6 +66,20 @@ export default function EditSessionPage() {
 
       <div className="pt-header max-w-2xl mx-auto p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Gate 6 (display-only): tell the host this session belongs to a
+              series and what an edit here actually affects. Cadence is rendered
+              from the PARENT's pattern (seriesPattern), never the child's date. */}
+          {(isSeriesChild || isSeriesParent) && (
+            <div className="flex items-start gap-2 rounded-lg border border-tribe-sky bg-tribe-sky/40 p-3 text-sm text-theme-primary">
+              <Repeat className="w-4 h-4 mt-0.5 shrink-0 text-tribe-dark" />
+              <p>
+                {isSeriesParent
+                  ? txt.seriesTemplateNotice
+                  : txt.seriesOccurrenceNotice.replace('{cadence}', formatPattern(seriesPattern, language))}
+              </p>
+            </div>
+          )}
+
           <div>
             <Label className="mb-2 text-theme-primary">{txt.sport}</Label>
             <Input
