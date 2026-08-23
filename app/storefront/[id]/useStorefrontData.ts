@@ -40,10 +40,12 @@ export interface Session {
   title: string;
   sport: string;
   date: string;
-  time: string;
-  price: number;
-  spots_available: number;
-  spots_total: number;
+  start_time: string;
+  // Real counter columns (current_participants maintained by the 087 trigger).
+  // The card computes spots left from these; it previously read phantom
+  // spots_available/time/price fields that are not DB columns.
+  max_participants: number;
+  current_participants: number | null;
   creator_id: string;
   is_boosted?: boolean;
   currency?: string;
@@ -285,11 +287,12 @@ export function useStorefrontData(instructorId: string) {
           const boostedSessionIds = new Set(
             boostsResult.data?.map((b: { boosted_session_id: string }) => b.boosted_session_id) || []
           );
-          // `as unknown as Session[]`: the explicit column-list string loses
-          // PostgREST row-type inference (columns come back as `any`), and the
-          // local Session interface carries display-only fields (time, price,
-          // spots_available, spots_total) that aren't DB columns. The cards read
-          // raw columns off the spread, so cast the mapped rows to the local shape.
+          // `as unknown as Session[]`: an explicit column-list string select
+          // loses PostgREST row-type inference (columns come back untyped), so the
+          // mapped rows are cast to the local Session shape. Session now mirrors
+          // the real selected columns (date, start_time, max_participants,
+          // current_participants, price_cents, ...), so the cards read real columns
+          // off the spread — no phantom display fields.
           setSessions(
             sessionsResult.data.map((s) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })) as unknown as Session[]
           );
