@@ -7,6 +7,7 @@ import { logError } from '@/lib/logger';
 import type { DalResult } from './types';
 import type { Database } from '@/lib/database.types';
 import { createNotification } from './notifications';
+import { shouldSendNotification } from './notificationPreferences';
 
 // Type aliases
 type StorefrontMediaRow = Database['public']['Tables']['storefront_media']['Row'];
@@ -24,10 +25,21 @@ type UserFollowInsert = Database['public']['Tables']['user_follows']['Insert'];
 // --- FOLLOWS ---
 
 /**
+ * Standard "X started following you" bell message, built in the follower's UI
+ * language. Pass the result as followUser's notificationMessage so every follow
+ * entry point notifies the followed instructor with identical copy.
+ */
+export function followNotificationMessage(followerName: string, language: 'en' | 'es'): string {
+  return language === 'es' ? `${followerName} empezó a seguirte.` : `${followerName} started following you.`;
+}
+
+/**
  * Create a follow relationship between two users.
  * BUG-215: appends .select() so that RLS-blocked inserts (which return 0 rows
  * without an error) are treated as failures rather than silent successes.
- * Optional: pass notificationMessage to create a follow notification.
+ * Optional: pass notificationMessage to notify the followed user (gated by their
+ * notification preferences via shouldSendNotification). Use followNotificationMessage
+ * to build it.
  */
 export async function followUser(
   supabase: SupabaseClient,
@@ -67,8 +79,13 @@ export async function followUser(
       return { success: true, data: null };
     }
 
-    // Notify the followed user only on a NEW follow (no duplicate spam on retries).
-    if (notificationMessage) {
+    // Notify the followed user only on a NEW follow (no duplicate spam on retries),
+    // and only if their preferences allow it. shouldSendNotification maps 'follow'
+    // to the social_activity category; for the 'in_app' bell it currently always
+    // returns true (the bell is an always-on inbox), so this gate is a no-op today,
+    // but it routes the follow bell through the same preference path as every other
+    // notification and will respect the category the moment bell gating is enabled.
+    if (notificationMessage && (await shouldSendNotification(supabase, followingId, 'follow', 'in_app'))) {
       const bell = await createNotification(supabase, {
         recipient_id: followingId,
         actor_id: followerId,

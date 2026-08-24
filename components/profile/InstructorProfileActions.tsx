@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { isFollowing as fetchIsFollowing, followUser, unfollowUser } from '@/lib/dal';
+import { isFollowing as fetchIsFollowing, followUser, unfollowUser, followNotificationMessage } from '@/lib/dal';
 import { showSuccess, showError } from '@/lib/toast';
 import { logError } from '@/lib/logger';
 
@@ -50,11 +50,21 @@ export default function InstructorProfileActions({
     try {
       // Route through the DAL so a 0-row (RLS-blocked) write surfaces as a
       // failure instead of a silent success that reverts on reload (BUG-215).
-      // No notificationMessage is passed, so a follow does not create a bell —
-      // same as the storefront follow control.
-      const result = wasFollowing
-        ? await unfollowUser(supabase, currentUserId, instructorId)
-        : await followUser(supabase, currentUserId, instructorId);
+      let result;
+      if (wasFollowing) {
+        result = await unfollowUser(supabase, currentUserId, instructorId);
+      } else {
+        // Notify the instructor that this athlete followed them.
+        const { data: authData } = await supabase.auth.getUser();
+        const followerName =
+          authData.user?.user_metadata?.name || authData.user?.email || (language === 'es' ? 'Alguien' : 'Someone');
+        result = await followUser(
+          supabase,
+          currentUserId,
+          instructorId,
+          followNotificationMessage(followerName, language)
+        );
+      }
       if (!result.success) throw new Error(result.error ?? 'Follow update failed');
       showSuccess(
         wasFollowing
@@ -104,8 +114,8 @@ export default function InstructorProfileActions({
 
       <p className="px-1 text-xs text-theme-tertiary">
         {language === 'es'
-          ? 'Síguelo para ver sus publicaciones y nuevas sesiones en tu feed.'
-          : 'Follow to see their posts and new sessions in your feed.'}
+          ? 'Síguelo para ver sus publicaciones en tu feed.'
+          : 'Follow to see their posts in your feed.'}
       </p>
     </div>
   );

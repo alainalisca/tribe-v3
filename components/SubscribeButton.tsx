@@ -8,7 +8,7 @@ import { logError } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { subscribeToSession } from '@/lib/dal/sessionSubscriptions';
-import { followUser, isFollowing } from '@/lib/dal';
+import { followUser, isFollowing, followNotificationMessage } from '@/lib/dal';
 
 interface SubscribeButtonProps {
   sessionId: string;
@@ -56,7 +56,10 @@ export default function SubscribeButton({
       // failure shouldn't block the subscription itself.
       const followStatus = await isFollowing(supabase, userId, instructorId);
       if (followStatus.success && followStatus.data === false) {
-        await followUser(supabase, userId, instructorId);
+        const { data: authData } = await supabase.auth.getUser();
+        const followerName =
+          authData.user?.user_metadata?.name || authData.user?.email || (language === 'es' ? 'Alguien' : 'Someone');
+        await followUser(supabase, userId, instructorId, followNotificationMessage(followerName, language));
       }
 
       // Record the session-series subscription in its own table (migration 095).

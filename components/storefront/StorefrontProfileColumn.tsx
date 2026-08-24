@@ -107,9 +107,7 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
       </button>
       {!isOwn && (
         <p className="-mt-1 px-1 text-xs text-theme-tertiary">
-          {lang === 'es'
-            ? 'Síguelo para ver sus publicaciones y nuevas sesiones en tu feed.'
-            : 'Follow to see their posts and new sessions in your feed.'}
+          {lang === 'es' ? 'Síguelo para ver sus publicaciones en tu feed.' : 'Follow to see their posts in your feed.'}
         </p>
       )}
       {isOwn && (
