@@ -1,11 +1,10 @@
 'use client';
 
 import { Star, Clock, Calendar } from 'lucide-react';
-import type { Instructor, Session } from '@/app/storefront/[id]/useStorefrontData';
+import type { Instructor } from '@/app/storefront/[id]/useStorefrontData';
 
 interface StorefrontTrustBarProps {
   instructor: Instructor;
-  sessions: Session[];
   language: 'en' | 'es';
   /** horizontal = mobile strip, vertical = desktop sidebar */
   orientation?: 'horizontal' | 'vertical';
@@ -18,12 +17,15 @@ interface StorefrontTrustBarProps {
  */
 export default function StorefrontTrustBar({
   instructor,
-  sessions,
   language,
   orientation = 'horizontal',
 }: StorefrontTrustBarProps) {
   const hasReviews = (instructor.total_reviews ?? 0) > 0;
-  const sessionsLed = instructor.total_sessions_hosted ?? sessions.length;
+  // Use the real maintained counter (migration 148); coalesce null to 0. The old
+  // `?? sessions.length` fallback showed the count of UPCOMING active sessions (a
+  // future-facing number) under the past-facing "Sessions led" label, and never
+  // fired anyway for a stored 0 (?? only triggers on null).
+  const sessionsLed = instructor.total_sessions_hosted ?? 0;
   const years = instructor.years_experience ?? 0;
 
   const items = [
