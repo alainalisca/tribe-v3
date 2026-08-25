@@ -36,7 +36,7 @@ export default function StorefrontTrustBar({
     },
     {
       icon: Calendar,
-      value: String(sessionsLed),
+      value: sessionsLed > 0 ? String(sessionsLed) : '—',
       label: language === 'es' ? 'Sesiones dirigidas' : 'Sessions led',
     },
     {
