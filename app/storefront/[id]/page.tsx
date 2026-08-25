@@ -181,12 +181,7 @@ export default function StorefrontPage() {
           // BUG-026: extra bottom padding so the empty state doesn't sit
           // flush against (or get covered by) the fixed bottom nav.
           <div className="px-4 md:px-6 mt-4 mb-24 max-w-xl mx-auto space-y-4">
-            <StorefrontTrustBar
-              instructor={instructor}
-              sessions={d.sessions}
-              language={lang}
-              orientation="horizontal"
-            />
+            <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
             {profileColumn}
             <StorefrontEmpty language={lang} isOwner={isOwn} />
           </div>
@@ -194,23 +189,13 @@ export default function StorefrontPage() {
           <>
             {/* Below lg: single centered column. lg+: two-column. */}
             <div className="px-4 md:px-6 mt-4 lg:hidden max-w-xl mx-auto">
-              <StorefrontTrustBar
-                instructor={instructor}
-                sessions={d.sessions}
-                language={lang}
-                orientation="horizontal"
-              />
+              <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
             </div>
 
             <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-8 px-4 md:px-6 mt-4">
               <aside className="lg:sticky lg:top-20 lg:self-start space-y-4 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
                 <div className="hidden lg:block">
-                  <StorefrontTrustBar
-                    instructor={instructor}
-                    sessions={d.sessions}
-                    language={lang}
-                    orientation="vertical"
-                  />
+                  <StorefrontTrustBar instructor={instructor} language={lang} orientation="vertical" />
                 </div>
                 {profileColumn}
               </aside>
