@@ -66,6 +66,25 @@ export async function GET(request: Request): Promise<NextResponse> {
     // the lock; lockGuard falls back to no-lock execution if the
     // migration hasn't been applied yet so the cron still runs.
     const guarded = await withCronLock(service, 'reconcile-counters', async () => {
+      // Recompute users.total_sessions_hosted (migration 148,
+      // public.recompute_all_total_sessions_hosted). A session crossing the Bogota
+      // midnight boundary (05:00 UTC) from future to past becomes "hosted" with no
+      // row write to fire the counter's triggers, so the value drifts until this
+      // daily recompute — this route runs at 06:00 UTC, one hour after the boundary.
+      // Run FIRST and in its own try/catch so neither this nor the gym counter
+      // reconciliation below can abort the other: a failure here is caught (the gym
+      // work still runs), and a failure in the gym work below happens only after
+      // this has already completed.
+      let sessions_hosted_recompute: 'ok' | 'failed' = 'ok';
+      try {
+        const { error: recomputeErr } = await service.rpc('recompute_all_total_sessions_hosted');
+        if (recomputeErr) throw recomputeErr;
+        log('info', 'sessions_hosted_recomputed', { action: 'sessions_hosted_recomputed', route });
+      } catch (recomputeError) {
+        sessions_hosted_recompute = 'failed';
+        logError(recomputeError, { route, action: 'sessions_hosted_recompute' });
+      }
+
       // Pull every gym that has at least one non-archived client.
       // We skip gyms with zero clients to avoid wasted no-op
       // queries — most newly-created gyms fall into that bucket.
@@ -108,6 +127,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         drifted: total_drifted,
         corrected: total_corrected,
         drifted_gyms,
+        sessions_hosted_recompute,
       };
     });
 
