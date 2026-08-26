@@ -53,6 +53,15 @@ export interface Session {
   price_cents?: number;
   location?: string;
   join_policy?: string;
+  // Recurring-series fields. is_recurring/recurring_parent_id identify a series
+  // member; recurrence_pattern/recurrence_days carry the RESOLVED cadence; for a
+  // child occurrence these are copied from its parent below (a child never stores
+  // its own pattern), for a true parent they are the parent's own. All are real
+  // selected columns or values resolved from a real column, never phantom fields.
+  is_recurring: boolean | null;
+  recurring_parent_id: string | null;
+  recurrence_pattern: string | null;
+  recurrence_days: string | null;
 }
 
 export interface ServicePackage {
@@ -287,14 +296,52 @@ export function useStorefrontData(instructorId: string) {
           const boostedSessionIds = new Set(
             boostsResult.data?.map((b: { boosted_session_id: string }) => b.boosted_session_id) || []
           );
-          // `as unknown as Session[]`: an explicit column-list string select
-          // loses PostgREST row-type inference (columns come back untyped), so the
-          // mapped rows are cast to the local Session shape. Session now mirrors
-          // the real selected columns (date, start_time, max_participants,
-          // current_participants, price_cents, ...), so the cards read real columns
-          // off the spread — no phantom display fields.
+
+          // Resolve the recurring cadence per row. A child occurrence stores only
+          // recurring_parent_id (createChildSession never copies the pattern), so
+          // batch-fetch the distinct parents' cadence in ONE query and map it onto
+          // their children; a true parent row already carries its own pattern.
+          // Active parents are anon-readable (RLS: status='active'), so this works
+          // on the guest storefront too. Explicit columns, single query, no N+1.
+          const rawRows = sessionsResult.data as Array<Record<string, unknown>>;
+          const parentIds = Array.from(
+            new Set(rawRows.map((r) => r.recurring_parent_id as string | null).filter((id): id is string => !!id))
+          );
+          const parentCadence = new Map<string, { pattern: string | null; days: string | null }>();
+          if (parentIds.length > 0) {
+            const { data: parents } = await supabase
+              .from('sessions')
+              .select('id, recurrence_pattern, recurrence_days')
+              .in('id', parentIds);
+            for (const p of (parents ?? []) as Array<{
+              id: string;
+              recurrence_pattern: string | null;
+              recurrence_days: string | null;
+            }>) {
+              parentCadence.set(p.id, { pattern: p.recurrence_pattern, days: p.recurrence_days });
+            }
+          }
+          if (cancelled) return;
+
+          // `as unknown as Session[]`: an explicit column-list string select loses
+          // PostgREST row-type inference (columns come back untyped), so the mapped
+          // rows are cast to the local Session shape. Every Session field is a real
+          // selected column or one of the values resolved just below, so no phantom
+          // display fields.
           setSessions(
-            sessionsResult.data.map((s) => ({ ...s, is_boosted: boostedSessionIds.has(s.id) })) as unknown as Session[]
+            rawRows.map((r) => {
+              const parentId = (r.recurring_parent_id as string | null) ?? null;
+              const parent = parentId ? parentCadence.get(parentId) : null;
+              // Child uses its parent's cadence; parent uses its own; one-off gets null.
+              return {
+                ...r,
+                is_boosted: boostedSessionIds.has(r.id as string),
+                is_recurring: (r.is_recurring as boolean | null) ?? null,
+                recurring_parent_id: parentId,
+                recurrence_pattern: parent ? parent.pattern : ((r.recurrence_pattern as string | null) ?? null),
+                recurrence_days: parent ? parent.days : ((r.recurrence_days as string | null) ?? null),
+              };
+            }) as unknown as Session[]
           );
         }
         if (packagesResult.data) setPackages(packagesResult.data);

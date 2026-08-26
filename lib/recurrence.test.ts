@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRecurrenceDates, formatPattern, type RecurrenceInput } from './recurrence';
+import { computeRecurrenceDates, formatPattern, sessionMatchesPattern, type RecurrenceInput } from './recurrence';
 
 // Fixed reference day: 2026-06-14 is a SUNDAY. The weekly window of 7 days
 // that follows is Mon 2026-06-15 .. Sun 2026-06-21.
@@ -122,5 +122,50 @@ describe('formatPattern', () => {
     expect(formatPattern(null, 'es')).toBe('Recurrente');
     expect(formatPattern('', 'en')).toBe('Recurring');
     expect(formatPattern('yearly_3', 'en')).toBe('Recurring');
+  });
+});
+
+describe('sessionMatchesPattern', () => {
+  // Reference dates (bare YYYY-MM-DD read as a UTC weekday, like the card):
+  //   2026-08-24 = Monday, 2026-08-26 = Wednesday, 2026-08-25 = Tuesday.
+
+  it('single-day match: weekly_0 (Monday) on a Monday', () => {
+    expect(sessionMatchesPattern('weekly_0', '2026-08-24')).toBe(true);
+  });
+
+  it('single-day mismatch: weekly_0 (Monday) on a Wednesday -> suppress', () => {
+    // Alexandra's live case: a Wednesday child inside a Monday series.
+    expect(sessionMatchesPattern('weekly_0', '2026-08-26')).toBe(false);
+  });
+
+  it('multi-day match: weekly_0_2 (Mon+Wed) on a Wednesday', () => {
+    expect(sessionMatchesPattern('weekly_0_2', '2026-08-26')).toBe(true);
+  });
+
+  it('multi-day mismatch: weekly_0_2 (Mon+Wed) on a Tuesday -> suppress', () => {
+    expect(sessionMatchesPattern('weekly_0_2', '2026-08-25')).toBe(false);
+  });
+
+  it('biweekly checks weekday only: biweekly_2 (Wed) matches a Wednesday, mismatches a Monday', () => {
+    expect(sessionMatchesPattern('biweekly_2', '2026-08-26')).toBe(true);
+    expect(sessionMatchesPattern('biweekly_2', '2026-08-24')).toBe(false);
+  });
+
+  it('monthly has no weekday component: never suppressed', () => {
+    expect(sessionMatchesPattern('monthly', '2026-08-26')).toBe(true);
+  });
+
+  it('null pattern: nothing to contradict, never suppressed', () => {
+    expect(sessionMatchesPattern(null, '2026-08-26')).toBe(true);
+  });
+
+  it('legacy bare weekly/biweekly (no day suffix): never suppressed', () => {
+    expect(sessionMatchesPattern('weekly', '2026-08-26')).toBe(true);
+    expect(sessionMatchesPattern('biweekly', '2026-08-26')).toBe(true);
+  });
+
+  it('weekly_6 (Sunday, Mon-indexed 6) matches a Sunday', () => {
+    // 2026-08-30 is a Sunday.
+    expect(sessionMatchesPattern('weekly_6', '2026-08-30')).toBe(true);
   });
 });
