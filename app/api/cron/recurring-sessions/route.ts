@@ -19,16 +19,20 @@ const LOOKAHEAD_DAYS = 7;
 /** Bilingual copy for the per-instructor "your series generated new sessions"
  *  notice. Deep-links to the instructor dashboard with a TRAILING SLASH:
  *  trailingSlash is on, and a 308 redirect strips the auth headers. */
-const GENERATION_NOTICE: Record<'en' | 'es', { title: string; body: (n: number) => string }> = {
+const GENERATION_NOTICE: Record<'en' | 'es', { title: (n: number) => string; body: (n: number) => string }> = {
   es: {
-    title: 'Nuevas sesiones de tu serie',
+    title: (n) => (n === 1 ? 'Nueva sesión de tu serie' : 'Nuevas sesiones de tu serie'),
     body: (n) =>
-      `Se crearon ${n} nuevas sesiones de tus series recurrentes para los proximos dias. Revisalas en tu panel.`,
+      n === 1
+        ? 'Se creó 1 nueva sesión de tu serie recurrente para los próximos días. Revísala en tu panel.'
+        : `Se crearon ${n} nuevas sesiones de tus series recurrentes para los próximos días. Revísalas en tu panel.`,
   },
   en: {
-    title: 'New sessions in your series',
+    title: (n) => (n === 1 ? 'New session in your series' : 'New sessions in your series'),
     body: (n) =>
-      `${n} new sessions from your recurring series were created for the coming days. Review them in your dashboard.`,
+      n === 1
+        ? '1 new session from your recurring series was created for the coming days. Review it in your dashboard.'
+        : `${n} new sessions from your recurring series were created for the coming days. Review them in your dashboard.`,
   },
 };
 
@@ -188,7 +192,7 @@ export async function GET(request: Request) {
       for (const [creatorId, agg] of perCreator) {
         if (agg.count <= 0) continue;
         const lang = langById.get(creatorId) ?? 'en';
-        const title = GENERATION_NOTICE[lang].title;
+        const title = GENERATION_NOTICE[lang].title(agg.count);
         const body = GENERATION_NOTICE[lang].body(agg.count);
         try {
           // Always create the in-app record.
