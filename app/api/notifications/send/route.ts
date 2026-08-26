@@ -5,6 +5,7 @@ import { log, logError } from '@/lib/logger';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 
 // `url` is a client-side deep-link path (e.g. "/session/abc"), never
 // fetched server-side, so it is a bounded string — NOT z.string().url(),
@@ -15,6 +16,12 @@ const sendNotificationSchema = z.object({
   body: z.string().min(1).max(1000),
   url: z.string().max(2048).optional(),
   data: z.record(z.string(), z.string()).optional(),
+  // Optional notification type (e.g. 'new_message', 'session_reminder'). When a
+  // caller supplies it, this endpoint gates the send on the recipient's push
+  // preference for that type's category via shouldSendNotification. When it is
+  // omitted the endpoint sends unconditionally, exactly as before, so every
+  // existing caller keeps working unchanged. See W2 Group 0.
+  type: z.string().min(1).max(100).optional(),
 });
 
 const batchNotificationSchema = z.object({
@@ -29,8 +36,8 @@ const batchNotificationSchema = z.object({
  * @description Sends a push notification to a single user via FCM (for native apps) or Web Push (for browsers), with automatic fallback and stale token cleanup.
  * @method POST
  * @auth Internal only — requires a valid CRON_SECRET bearer. Not reachable with a user session.
- * @param {Object} request.body - JSON body with `userId` (string), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
- * @returns {{ success: boolean, method: 'fcm' | 'web-push', platform: string }} Delivery method used on success, or error details on failure.
+ * @param {Object} request.body - JSON body with `userId` (string), `title` (string), `body` (string), optional `url` (string), optional `data` (Record<string, string>), and optional `type` (string). When `type` is present the send is gated on the recipient's push preference for that category.
+ * @returns {{ success: boolean, method: 'fcm' | 'web-push', platform: string }} Delivery method used on success; or `{ success: true, suppressed: true, reason: 'preference' }` when a supplied `type` is disabled by the recipient; or error details on failure.
  */
 export async function POST(request: Request) {
   try {
@@ -52,9 +59,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
-    const { userId, title, body, url, data } = parsed.data;
+    const { userId, title, body, url, data, type } = parsed.data;
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Central preference gate. Only runs when the caller passes a `type`; if it
+    // is absent we fall straight through to the send below, preserving the
+    // pre-W2 behavior for every current caller. When present, we honor the
+    // recipient's push preference for that type's category and, if it is off,
+    // return a success response flagged as suppressed rather than an error, so
+    // callers do not treat an intentional skip as a failure.
+    if (type) {
+      const allowed = await shouldSendNotification(supabase, userId, type, 'push');
+      if (!allowed) {
+        log('info', 'Push suppressed by preference', {
+          route: '/api/notifications/send',
+          action: 'suppressed_by_preference',
+          userId,
+          type,
+        });
+        return NextResponse.json({ success: true, suppressed: true, reason: 'preference' });
+      }
+    }
 
     // Get user's notification credentials
     const userResult = await fetchUserProfileMaybe(supabase, userId, 'push_subscription, fcm_token, fcm_platform');

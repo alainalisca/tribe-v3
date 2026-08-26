@@ -8,6 +8,27 @@
  * and the outer function only rejects on a programming error.
  */
 
+/*
+ * W2 preference-gating decision (recorded intentionally).
+ *
+ * The four push sends in this file are transactional payment receipts:
+ *   1. "Booking Confirmed" to the buyer,
+ *   2. "Purchase Confirmed" to the buyer,
+ *   3. "New Sale" to the instructor,
+ *   4. "You received a tip" to the instructor.
+ *
+ * These are confirmations that money changed hands, not marketing or
+ * activity notifications. They are deliberately left UNGATED: none of these
+ * calls passes a `type` to /api/notifications/send, so the central W2 gate
+ * does not suppress them, and that is on purpose. A user must not miss the
+ * confirmation of a payment because they turned off, say, social activity.
+ *
+ * If gating is ever added here, it may ONLY be behind the push_enabled master
+ * toggle. It must NEVER be gated behind a marketing category or any activity
+ * category (social_activity, training_nudges, session_updates, and so on),
+ * because that would silently drop a financial receipt.
+ */
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logError } from '@/lib/logger';
 
