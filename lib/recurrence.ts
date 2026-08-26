@@ -118,6 +118,46 @@ export function formatPattern(pattern: string | null, language: 'en' | 'es'): st
   return es ? `Cada dos semanas: ${dayList}` : `Every other week: ${dayList}`;
 }
 
+/**
+ * Whether a session's actual weekday is consistent with its series pattern.
+ *
+ * A child occurrence can be moved off its series weekday (production: a
+ * weekly_0 Monday series with a Wednesday child). The cadence label is derived
+ * from the PARENT'S pattern (see formatPattern), so on a moved child it would
+ * contradict the card's own date row ("Wed, Aug 26" + "Every Monday"). Callers
+ * use this to suppress the cadence label when it would read as a contradiction.
+ *
+ * Returns true (consistent, show the label) when:
+ *   - the pattern has no weekday component to contradict: monthly, legacy bare
+ *     weekly/biweekly with no day suffix, null/unknown patterns; or
+ *   - the session's weekday matches ANY day in a weekly_N/biweekly_N pattern
+ *     (multi-day patterns like weekly_0_2 match on either day).
+ * Returns false only when the pattern names weekday(s) and the session's actual
+ * weekday is not among them.
+ *
+ * Weekday derivation MUST match how StorefrontSessionCard renders the date:
+ * parse the bare YYYY-MM-DD as UTC midnight and read the UTC weekday. A bare
+ * `new Date('2026-08-26')` is UTC-parsed then read locally, which in Medellin
+ * (UTC-5) lands the previous evening and reports the wrong day. Do not switch
+ * this to getDay()/local parsing; that is the off-by-one this codebase keeps
+ * reintroducing, and it would desync this check from the displayed date.
+ */
+export function sessionMatchesPattern(pattern: string | null, date: string): boolean {
+  if (!pattern) return true;
+
+  const [freq, ...dayTokens] = pattern.split('_');
+  if (freq !== 'weekly' && freq !== 'biweekly') return true; // monthly / unknown: no weekday to check.
+
+  const days = dayTokens.map((p) => parseInt(p, 10)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  if (days.length === 0) return true; // legacy bare weekly/biweekly: nothing to contradict.
+
+  const jsDow = new Date(date + 'T00:00:00Z').getUTCDay(); // Sun=0..Sat=6, matches the card's UTC date parse.
+  if (Number.isNaN(jsDow)) return true; // unparseable date: fail open, keep the pre-check behavior.
+
+  const appDow = (jsDow + 6) % 7; // -> Mon=0..Sun=6, the pattern's day convention.
+  return days.includes(appDow);
+}
+
 export function computeRecurrenceDates(parent: RecurrenceInput, today: Date, lookaheadDays: number): string[] {
   const pattern = parent.recurrence_pattern;
   if (!pattern) return [];

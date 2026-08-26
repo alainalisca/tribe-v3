@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Clock, Users, Zap, Loader2, CheckCircle, Repeat } from 'lucide-react';
 import { formatPrice } from '@/lib/formatCurrency';
-import { formatPattern } from '@/lib/recurrence';
+import { formatPattern, sessionMatchesPattern } from '@/lib/recurrence';
 import { formatTime12Hour } from '@/lib/utils';
 import type { Currency } from '@/lib/payments/config';
 import { createClient } from '@/lib/supabase/client';
@@ -67,10 +67,17 @@ export default function StorefrontSessionCard({
   // 7:00 PM". Shown only for a series member; recurrence_pattern is the resolved
   // series cadence (a child's parent pattern, or a parent's own) supplied by
   // useStorefrontData. Rendered nothing for a one-off session.
+  //
+  // Suppression: a child occurrence can be moved off its series weekday (a
+  // Wednesday occurrence inside a weekly_0 Monday series). The parent-derived
+  // label would then contradict this card's own date row, so drop it when the
+  // session's actual weekday does not match the pattern (sessionMatchesPattern
+  // reads the same UTC weekday the date row above renders).
   const isSeries = !!session.is_recurring || session.recurring_parent_id != null;
-  const cadenceLabel = isSeries
-    ? `${formatPattern(session.recurrence_pattern, language)} ${language === 'es' ? 'a las' : 'at'} ${formatTime12Hour(session.start_time)}`
-    : null;
+  const cadenceLabel =
+    isSeries && sessionMatchesPattern(session.recurrence_pattern, session.date)
+      ? `${formatPattern(session.recurrence_pattern, language)} ${language === 'es' ? 'a las' : 'at'} ${formatTime12Hour(session.start_time)}`
+      : null;
 
   const priceDisplay =
     isPaid && session.price_cents ? formatPrice(session.price_cents, currency) : language === 'es' ? 'Gratis' : 'Free';
