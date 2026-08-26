@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Clock, Users, Zap, Loader2, CheckCircle } from 'lucide-react';
+import { Clock, Users, Zap, Loader2, CheckCircle, Repeat } from 'lucide-react';
 import { formatPrice } from '@/lib/formatCurrency';
+import { formatPattern } from '@/lib/recurrence';
+import { formatTime12Hour } from '@/lib/utils';
 import type { Currency } from '@/lib/payments/config';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
@@ -60,6 +62,15 @@ export default function StorefrontSessionCard({
   const spotsUrgent = spotsAvailable > 0 && spotsAvailable <= 3;
   const isOwn = currentUserId === session.creator_id;
   const hasJoined = joinedSessionIds.has(session.id);
+
+  // Recurring cadence line, e.g. "Every Monday at 7:00 PM" / "Cada lunes a las
+  // 7:00 PM". Shown only for a series member; recurrence_pattern is the resolved
+  // series cadence (a child's parent pattern, or a parent's own) supplied by
+  // useStorefrontData. Rendered nothing for a one-off session.
+  const isSeries = !!session.is_recurring || session.recurring_parent_id != null;
+  const cadenceLabel = isSeries
+    ? `${formatPattern(session.recurrence_pattern, language)} ${language === 'es' ? 'a las' : 'at'} ${formatTime12Hour(session.start_time)}`
+    : null;
 
   const priceDisplay =
     isPaid && session.price_cents ? formatPrice(session.price_cents, currency) : language === 'es' ? 'Gratis' : 'Free';
@@ -255,6 +266,12 @@ export default function StorefrontSessionCard({
             {formatSessionDay(session.date, language)} &middot; {session.start_time.slice(0, 5)}
           </span>
         </div>
+        {cadenceLabel && (
+          <div className="flex items-center gap-2 text-theme-secondary">
+            <Repeat className="w-4 h-4 text-tribe-green flex-shrink-0" />
+            <span>{cadenceLabel}</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <Users className={`w-4 h-4 flex-shrink-0 ${spotsUrgent ? 'text-red-500' : 'text-tribe-green'}`} />
           <span className={`${spotsUrgent ? 'text-red-500 font-semibold' : 'text-theme-secondary'}`}>
