@@ -14,6 +14,7 @@ export interface NotificationPreferences {
   challenges: boolean;
   marketing: boolean;
   weekly_recap: boolean;
+  proximity_alerts: boolean;
   push_enabled: boolean;
   email_enabled: boolean;
 }
@@ -28,6 +29,7 @@ export const DEFAULT_PREFERENCES: Omit<NotificationPreferences, 'user_id'> = {
   challenges: true,
   marketing: false,
   weekly_recap: true,
+  proximity_alerts: true,
   push_enabled: true,
   email_enabled: false,
 };
@@ -64,6 +66,7 @@ export const TYPE_CATEGORY: Record<
   waitlist_expired: 'session_updates',
   training_interest: 'messages',
   tip_received: 'messages',
+  nearby: 'proximity_alerts',
 };
 
 /** Fetch preferences; returns defaults if no row exists. */

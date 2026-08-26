@@ -72,6 +72,11 @@ export default function NotificationPreferencesPage() {
         desc: language === 'es' ? 'Seguidores, me gusta, comentarios' : 'Follows, likes, comments',
       },
       {
+        key: 'proximity_alerts' as keyof Prefs,
+        title: language === 'es' ? 'Alertas Cercanas' : 'Nearby Alerts',
+        desc: language === 'es' ? 'Alguien cerca de ti quiere entrenar ahora' : 'Someone near you wants to train now',
+      },
+      {
         key: 'messages' as keyof Prefs,
         title: language === 'es' ? 'Mensajes' : 'Messages',
         desc: language === 'es' ? 'Mensajes directos, chat de sesión' : 'Direct messages, session chat',
