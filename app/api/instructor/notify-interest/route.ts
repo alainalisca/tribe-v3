@@ -96,6 +96,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           title,
           body,
           url: '/dashboard/instructor',
+          // Top-level `type` gates the send on the instructor's messages push
+          // preference at the endpoint (W2 Group A). The `data.type` below is a
+          // separate client-side payload field, left as-is.
+          type: 'training_interest',
           data: { type: 'training_interest' },
         }),
       }).catch((err) => logError(err, { route: '/api/instructor/notify-interest', action: 'dispatch', instructor_id }));

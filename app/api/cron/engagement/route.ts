@@ -156,6 +156,9 @@ export async function GET(request: Request) {
                 title: content.title,
                 body: content.body,
                 url: '/sessions',
+                // Weekly stats recap. Gated on the recipient's weekly_recap push
+                // preference by the central endpoint (W2 Group A).
+                type: 'weekly_recap',
               }),
             });
 
@@ -237,6 +240,10 @@ export async function GET(request: Request) {
               title: item.title,
               body: item.body,
               url: '/',
+              // Re-engagement nudge for an inactive user. This is a POST per
+              // recipient (not the PUT batch path), so the endpoint's type gate
+              // applies. comeback maps to training_nudges (W2 Group A).
+              type: 'comeback',
             }),
           });
           await updateUser(supabase, item.userId, { last_reengagement_sent: new Date().toISOString() });

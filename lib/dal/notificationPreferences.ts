@@ -132,3 +132,60 @@ export async function shouldSendNotification(
   const categoryFlag = prefs[category];
   return !!categoryFlag;
 }
+
+/**
+ * Batched push variant of shouldSendNotification for a list of recipients.
+ * Returns the subset of `userIds` allowed to receive a PUSH of
+ * `notificationType`, resolved in ONE query against notification_preferences
+ * (never one call per recipient, which would be an N+1 on a batch send).
+ *
+ * Semantics match shouldSendNotification(..., 'push') exactly, per user:
+ *   - a user with no preference row falls back to DEFAULT_PREFERENCES
+ *     (push_enabled true, category default), so they stay allowed;
+ *   - push_enabled off, or the type's category flag off, drops the user;
+ *   - an unmapped type is allowed for everyone (same as the single path);
+ *   - any query error fails OPEN (all userIds allowed), so a preferences
+ *     lookup problem never silently drops a send.
+ */
+export async function filterPushRecipients(
+  supabase: SupabaseClient,
+  userIds: string[],
+  notificationType: string
+): Promise<Set<string>> {
+  const allowAll = new Set<string>(userIds);
+  if (userIds.length === 0) return allowAll;
+
+  const category = TYPE_CATEGORY[notificationType];
+  if (!category) return allowAll; // unmapped type: allowed for everyone
+
+  try {
+    // `category` is a controlled column name from TYPE_CATEGORY, not caller
+    // input, so this interpolation is safe.
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .select(`user_id, push_enabled, ${category}`)
+      .in('user_id', userIds);
+    if (error) return allowAll; // fail open, never drop silently
+
+    const byId = new Map<string, Record<string, unknown>>();
+    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+      byId.set(row.user_id as string, row);
+    }
+
+    const allowed = new Set<string>();
+    for (const id of userIds) {
+      const row = byId.get(id);
+      const pushEnabled = row
+        ? ((row.push_enabled as boolean | null) ?? DEFAULT_PREFERENCES.push_enabled)
+        : DEFAULT_PREFERENCES.push_enabled;
+      const categoryFlag = row
+        ? ((row[category] as boolean | null) ?? DEFAULT_PREFERENCES[category])
+        : DEFAULT_PREFERENCES[category];
+      if (pushEnabled && categoryFlag) allowed.add(id);
+    }
+    return allowed;
+  } catch (error) {
+    logError(error, { action: 'filterPushRecipients', notificationType });
+    return allowAll; // fail open
+  }
+}
