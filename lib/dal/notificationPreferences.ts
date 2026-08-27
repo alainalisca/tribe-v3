@@ -60,10 +60,6 @@ export interface NotificationTypeMeta {
  * yet. shouldSendNotification and filterPushRecipients still consume
  * TYPE_CATEGORY, which is derived from this map below so every existing caller
  * behaves exactly as before.
- *
- * Classes marked FLAG are not covered by the explicit W2 classification and are
- * assigned a defensible default here only because `class` is required; they are
- * safe to override later.
  */
 export const TYPE_META: Record<string, NotificationTypeMeta> = {
   session_reminder: { category: 'session_reminders', class: 'transactional' },
@@ -81,12 +77,16 @@ export const TYPE_META: Record<string, NotificationTypeMeta> = {
   streak_milestone: { category: 'training_nudges', class: 'marketing' },
   comeback: { category: 'training_nudges', class: 'marketing' },
   review_reminder: { category: 'training_nudges', class: 'marketing' },
-  instructor_new_session: { category: 'instructor_updates', class: 'marketing' }, // FLAG
-  instructor_post: { category: 'instructor_updates', class: 'marketing' }, // FLAG
-  challenge_complete: { category: 'challenges', class: 'transactional' }, // FLAG
-  challenge_join: { category: 'challenges', class: 'transactional' }, // FLAG
+  // Following an instructor IS the affirmative opt-in, and it is a per-instructor
+  // subscription, which is stronger consent than any global toggle. So updates to
+  // followers are transactional; the instructor_updates category still lets a
+  // user turn them off.
+  instructor_new_session: { category: 'instructor_updates', class: 'transactional' },
+  instructor_post: { category: 'instructor_updates', class: 'transactional' },
+  challenge_complete: { category: 'challenges', class: 'transactional' },
+  challenge_join: { category: 'challenges', class: 'transactional' },
   spotlight_selected: { category: 'marketing', class: 'transactional' },
-  referral_complete: { category: 'marketing', class: 'transactional' }, // FLAG
+  referral_complete: { category: 'marketing', class: 'transactional' },
   general: { category: 'marketing', class: 'marketing' },
   weekly_recap: { category: 'weekly_recap', class: 'marketing' },
   waitlist_offered: { category: 'session_updates', class: 'transactional' },
