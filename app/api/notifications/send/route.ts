@@ -5,7 +5,7 @@ import { log, logError } from '@/lib/logger';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { sendFcmNotification, sendWebPushNotification, isFcmTokenInvalid } from './notificationHelpers';
 import { updateUser, updateUsersByIds, fetchUserProfileMaybe } from '@/lib/dal';
-import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
+import { shouldSendNotification, filterPushRecipients } from '@/lib/dal/notificationPreferences';
 
 // `url` is a client-side deep-link path (e.g. "/session/abc"), never
 // fetched server-side, so it is a bounded string — NOT z.string().url(),
@@ -30,6 +30,13 @@ const batchNotificationSchema = z.object({
   body: z.string().min(1).max(1000),
   url: z.string().max(2048).optional(),
   data: z.record(z.string(), z.string()).optional(),
+  // Optional notification type, same contract as the POST path. When present,
+  // recipients are filtered by their push preference for that type's category
+  // in ONE batched query (filterPushRecipients) before any send. When absent,
+  // the batch sends to everyone exactly as before, so existing callers are
+  // unaffected. All recipients of a batch share one type by design. See W2
+  // Group A.
+  type: z.string().min(1).max(100).optional(),
 });
 
 /**
@@ -174,8 +181,8 @@ export async function POST(request: Request) {
  * @description Batch sends push notifications to multiple users via FCM or Web Push, with automatic fallback and stale token/subscription cleanup.
  * @method PUT
  * @auth Internal only — requires a valid CRON_SECRET bearer. Not reachable with a user session.
- * @param {Object} request.body - JSON body with `userIds` (string[]), `title` (string), `body` (string), optional `url` (string), and optional `data` (Record<string, string>).
- * @returns {{ success: boolean, results: { total: number, fcm: Object, webPush: Object, noSubscription: number } }} Breakdown of send results per notification channel.
+ * @param {Object} request.body - JSON body with `userIds` (string[]), `title` (string), `body` (string), optional `url` (string), optional `data` (Record<string, string>), and optional `type` (string). When `type` is present, recipients are filtered by their push preference for that category before sending.
+ * @returns {{ success: boolean, results: { total: number, fcm: Object, webPush: Object, noSubscription: number, notFound: number, suppressed: number } }} Breakdown of send results per notification channel; `suppressed` counts recipients skipped by preference.
  */
 // Batch send notifications to multiple users
 export async function PUT(request: Request) {
@@ -193,9 +200,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, { status: 400 });
     }
 
-    const { userIds, title, body, url, data } = parsed.data;
+    const { userIds, title, body, url, data, type } = parsed.data;
 
     const supabase = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Central preference gate for the batch path. Only runs when the caller
+    // passes a `type`; resolves the allowed recipients in one batched query so
+    // the send loop below can skip anyone who has that push category off. When
+    // `type` is absent, allowedSet is null and no filtering happens, so the
+    // batch behaves exactly as before.
+    const allowedSet = type ? await filterPushRecipients(supabase, userIds, type) : null;
 
     // AUDIT-P0-4: batch-fetch in a single IN query instead of N round trips.
     // Previous implementation did `Promise.all(ids.map(id => fetchUserProfileMaybe(...)))`
@@ -233,6 +247,7 @@ export async function PUT(request: Request) {
       webPush: { sent: 0, failed: 0 },
       noSubscription: 0,
       notFound,
+      suppressed: 0,
     };
 
     const invalidFcmTokenUserIds: string[] = [];
@@ -240,6 +255,13 @@ export async function PUT(request: Request) {
 
     // Process each user
     for (const user of users) {
+      // Preference gate (only when a `type` was supplied). Anyone whose push
+      // category is off is counted as suppressed and skipped before any send.
+      if (allowedSet && !allowedSet.has(user.id)) {
+        results.suppressed++;
+        continue;
+      }
+
       if (!user.push_subscription && !user.fcm_token) {
         results.noSubscription++;
         continue;

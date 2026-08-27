@@ -156,11 +156,13 @@ export async function POST(request: Request) {
         ? `Empieza ${startText} en ${location}. ¡Únete ahora!`
         : `Starting ${startText} at ${location}. Join now!`;
 
-      // Use PUT for batch send to the unified notification endpoint
+      // Use PUT for batch send to the unified notification endpoint. `type:
+      // 'nearby'` gates each recipient on their proximity_alerts push
+      // preference via the endpoint's batched filter (W2 Group A).
       const response = await fetch(`${SITE_URL}/api/notifications/send/`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.CRON_SECRET}` },
-        body: JSON.stringify({ userIds, title, body, url }),
+        body: JSON.stringify({ userIds, title, body, url, type: 'nearby' }),
       });
 
       if (response.ok) {

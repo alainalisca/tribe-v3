@@ -7,6 +7,7 @@ import {
   sendWebPushNotification,
   isFcmTokenInvalid,
 } from '../../notifications/send/notificationHelpers';
+import { filterPushRecipients } from '@/lib/dal/notificationPreferences';
 
 interface WebhookPayload {
   type: 'INSERT';
@@ -146,6 +147,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, notified: 0 });
     }
 
+    // Preference gate (W2 Group A). This webhook calls the FCM/web-push helpers
+    // directly and never hits /api/notifications/send, so the endpoint's type
+    // gate cannot reach it; gate here instead. One batched query filters the
+    // recipients down to those who allow `new_message` (messages category) push.
+    const allowedIds = await filterPushRecipients(supabase, userIds, 'new_message');
+    const recipients = (users as UserNotificationRow[]).filter((u) => allowedIds.has(u.id));
+    if (recipients.length === 0) {
+      return NextResponse.json({ success: true, notified: 0 });
+    }
+
     const title = `${senderName} in ${sessionSport}`;
     const truncatedBody = message.length > 100 ? message.slice(0, 100) + '...' : message;
     const notificationData: Record<string, string> = {
@@ -157,7 +168,7 @@ export async function POST(request: NextRequest) {
     // Fan out notification sends with a concurrency cap. 10 in flight
     // balances throughput against FCM/WebPush rate limits and serverless
     // connection pool pressure.
-    const sendResults = await mapWithConcurrency(users as UserNotificationRow[], 10, async (user) => {
+    const sendResults = await mapWithConcurrency(recipients, 10, async (user) => {
       if (!user.fcm_token && !user.push_subscription) {
         return { notified: false, invalidFcm: null, invalidWebPush: null };
       }
