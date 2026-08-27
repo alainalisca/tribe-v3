@@ -73,8 +73,8 @@ export default function NotificationPreferencesPage() {
       },
       {
         key: 'proximity_alerts' as keyof Prefs,
-        title: language === 'es' ? 'Alertas Cercanas' : 'Nearby Alerts',
-        desc: language === 'es' ? 'Alguien cerca de ti quiere entrenar ahora' : 'Someone near you wants to train now',
+        title: language === 'es' ? 'Entrenar cerca de ti' : 'Training near you',
+        desc: language === 'es' ? 'Alguien cerca quiere entrenar ahora' : 'Someone nearby wants to train now',
       },
       {
         key: 'messages' as keyof Prefs,
