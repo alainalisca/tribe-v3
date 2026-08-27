@@ -34,40 +34,76 @@ export const DEFAULT_PREFERENCES: Omit<NotificationPreferences, 'user_id'> = {
   email_enabled: false,
 };
 
-/** Notification type → preference flag mapping. */
-export const TYPE_CATEGORY: Record<
-  string,
-  keyof Omit<NotificationPreferences, 'user_id' | 'push_enabled' | 'email_enabled'>
-> = {
-  session_reminder: 'session_reminders',
-  session_update: 'session_updates',
-  session_join: 'session_updates',
-  series_occurrences_generated: 'session_updates',
-  follow: 'social_activity',
-  like: 'social_activity',
-  comment: 'social_activity',
-  connection_request: 'social_activity',
-  new_message: 'messages',
-  dm: 'messages',
-  habit_session: 'training_nudges',
-  streak_risk: 'training_nudges',
-  streak_milestone: 'training_nudges',
-  comeback: 'training_nudges',
-  review_reminder: 'training_nudges',
-  instructor_new_session: 'instructor_updates',
-  instructor_post: 'instructor_updates',
-  challenge_complete: 'challenges',
-  challenge_join: 'challenges',
-  spotlight_selected: 'marketing',
-  referral_complete: 'marketing',
-  general: 'marketing',
-  weekly_recap: 'weekly_recap',
-  waitlist_offered: 'session_updates',
-  waitlist_expired: 'session_updates',
-  training_interest: 'messages',
-  tip_received: 'messages',
-  nearby: 'proximity_alerts',
+/** The preference flag a notification type is gated by (one of the category
+ *  columns, never a master toggle). */
+export type NotificationCategory = keyof Omit<NotificationPreferences, 'user_id' | 'push_enabled' | 'email_enabled'>;
+
+/**
+ * Delivery class, orthogonal to category. TRANSACTIONAL sends are a direct
+ * consequence of an action toward the recipient (receipts, confirmations,
+ * directed social events, reminders for things they committed to) and must not
+ * be blocked by opt-in state. MARKETING sends are proactive retention/growth
+ * and always require an affirmative opt-in.
+ */
+export type NotificationClass = 'transactional' | 'marketing';
+
+export interface NotificationTypeMeta {
+  category: NotificationCategory;
+  /** Required, so a new type cannot be added without deciding its class. */
+  class: NotificationClass;
+}
+
+/**
+ * Notification type → { category, class }. `category` selects WHICH preference
+ * flag gates the send; `class` governs HOW gating applies once consumers read
+ * it (a later W2 C1 step). This step is ADDITIVE ONLY: no code reads `class`
+ * yet. shouldSendNotification and filterPushRecipients still consume
+ * TYPE_CATEGORY, which is derived from this map below so every existing caller
+ * behaves exactly as before.
+ */
+export const TYPE_META: Record<string, NotificationTypeMeta> = {
+  session_reminder: { category: 'session_reminders', class: 'transactional' },
+  session_update: { category: 'session_updates', class: 'transactional' },
+  session_join: { category: 'session_updates', class: 'transactional' },
+  series_occurrences_generated: { category: 'session_updates', class: 'transactional' },
+  follow: { category: 'social_activity', class: 'transactional' },
+  like: { category: 'social_activity', class: 'transactional' },
+  comment: { category: 'social_activity', class: 'transactional' },
+  connection_request: { category: 'social_activity', class: 'transactional' },
+  new_message: { category: 'messages', class: 'transactional' },
+  dm: { category: 'messages', class: 'transactional' },
+  habit_session: { category: 'training_nudges', class: 'marketing' },
+  streak_risk: { category: 'training_nudges', class: 'marketing' },
+  streak_milestone: { category: 'training_nudges', class: 'marketing' },
+  comeback: { category: 'training_nudges', class: 'marketing' },
+  review_reminder: { category: 'training_nudges', class: 'marketing' },
+  // Following an instructor IS the affirmative opt-in, and it is a per-instructor
+  // subscription, which is stronger consent than any global toggle. So updates to
+  // followers are transactional; the instructor_updates category still lets a
+  // user turn them off.
+  instructor_new_session: { category: 'instructor_updates', class: 'transactional' },
+  instructor_post: { category: 'instructor_updates', class: 'transactional' },
+  challenge_complete: { category: 'challenges', class: 'transactional' },
+  challenge_join: { category: 'challenges', class: 'transactional' },
+  spotlight_selected: { category: 'marketing', class: 'transactional' },
+  referral_complete: { category: 'marketing', class: 'transactional' },
+  general: { category: 'marketing', class: 'marketing' },
+  weekly_recap: { category: 'weekly_recap', class: 'marketing' },
+  waitlist_offered: { category: 'session_updates', class: 'transactional' },
+  waitlist_expired: { category: 'session_updates', class: 'transactional' },
+  training_interest: { category: 'messages', class: 'transactional' },
+  tip_received: { category: 'messages', class: 'transactional' },
+  nearby: { category: 'proximity_alerts', class: 'marketing' },
 };
+
+/**
+ * Back-compat: notification type → category, derived from TYPE_META so the
+ * existing consumers (shouldSendNotification, filterPushRecipients) keep working
+ * unchanged. Do not hand-edit; add entries to TYPE_META.
+ */
+export const TYPE_CATEGORY: Record<string, NotificationCategory> = Object.fromEntries(
+  Object.entries(TYPE_META).map(([type, meta]): [string, NotificationCategory] => [type, meta.category])
+);
 
 /** Fetch preferences; returns defaults if no row exists. */
 export async function getNotificationPreferences(
