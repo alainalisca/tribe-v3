@@ -148,8 +148,17 @@ export async function updateNotificationPreferences(
 
 /**
  * Decide whether a notification of `type` should be delivered via `channel`
- * to `userId`. In-app notifications always return true; push/email respect
- * the user's flags.
+ * to `userId`, honoring the type's delivery class (TYPE_META):
+ *
+ *   in_app                -> always true (never gated).
+ *   email, transactional  -> ignore email_enabled AND the category. Send.
+ *   email, marketing      -> require email_enabled AND the category flag.
+ *   push,  transactional  -> require push_enabled, bypass the category.
+ *   push,  marketing      -> require push_enabled AND the category flag.
+ *
+ * push_enabled / email_enabled stay hard channel masters for marketing on both
+ * channels and for transactional push. The only master bypass is transactional
+ * EMAIL, and transactional sends of either channel skip the category.
  */
 export async function shouldSendNotification(
   supabase: SupabaseClient,
@@ -157,34 +166,54 @@ export async function shouldSendNotification(
   notificationType: string,
   channel: 'push' | 'email' | 'in_app'
 ): Promise<boolean> {
-  if (channel === 'in_app') return true;
+  if (channel === 'in_app') return true; // in-app is never gated
+
+  const meta = TYPE_META[notificationType];
+  // Unmapped type: treated as MARKETING with no category. It therefore respects
+  // the channel master toggle but requires no category flag, which reproduces
+  // the historical fail-open behavior (allow unless the master is off). It is
+  // deliberately NOT treated as transactional, since that would newly bypass
+  // email_enabled and start sending mail that is suppressed today.
+  const cls: NotificationClass = meta?.class ?? 'marketing';
+  const category = meta?.category;
+
+  // Transactional email ignores email_enabled AND the category: a receipt or
+  // confirmation must not be blocked by a marketing opt-out. It needs no prefs
+  // read, so it also never depends on the fetch below.
+  if (channel === 'email' && cls === 'transactional') return true;
 
   const res = await getNotificationPreferences(supabase, userId);
   if (!res.success || !res.data) return true; // fail open — never drop silently
   const prefs = res.data;
 
+  // Hard channel masters (unchanged) for everything that reaches here: marketing
+  // on either channel, and transactional push.
   if (channel === 'push' && !prefs.push_enabled) return false;
   if (channel === 'email' && !prefs.email_enabled) return false;
 
-  const category = TYPE_CATEGORY[notificationType];
-  if (!category) return true; // unmapped types default to allowed
-  const categoryFlag = prefs[category];
-  return !!categoryFlag;
+  // Master passed. Transactional bypasses the category; marketing requires it.
+  // An unmapped (marketing) type has no category, so it is allowed here.
+  if (cls === 'transactional') return true;
+  if (!category) return true;
+  return !!prefs[category];
 }
 
 /**
- * Batched push variant of shouldSendNotification for a list of recipients.
+ * Batched PUSH variant of shouldSendNotification for a list of recipients.
  * Returns the subset of `userIds` allowed to receive a PUSH of
  * `notificationType`, resolved in ONE query against notification_preferences
  * (never one call per recipient, which would be an N+1 on a batch send).
  *
- * Semantics match shouldSendNotification(..., 'push') exactly, per user:
- *   - a user with no preference row falls back to DEFAULT_PREFERENCES
- *     (push_enabled true, category default), so they stay allowed;
- *   - push_enabled off, or the type's category flag off, drops the user;
- *   - an unmapped type is allowed for everyone (same as the single path);
- *   - any query error fails OPEN (all userIds allowed), so a preferences
- *     lookup problem never silently drops a send.
+ * Class-aware, matching shouldSendNotification(..., 'push') exactly per user:
+ *   - push_enabled is a hard master for both classes: off -> dropped;
+ *   - transactional bypasses the category (push_enabled alone decides);
+ *   - marketing requires the type's category flag as well;
+ *   - an unmapped type is treated as MARKETING with no category, so it needs
+ *     push_enabled but no category flag (same as the single path, and no longer
+ *     the old blanket allow-all that ignored push_enabled);
+ *   - a user with no preference row falls back to DEFAULT_PREFERENCES;
+ *   - any query error fails OPEN (all userIds allowed), so a preferences lookup
+ *     problem never silently drops a send.
  */
 export async function filterPushRecipients(
   supabase: SupabaseClient,
@@ -194,20 +223,28 @@ export async function filterPushRecipients(
   const allowAll = new Set<string>(userIds);
   if (userIds.length === 0) return allowAll;
 
-  const category = TYPE_CATEGORY[notificationType];
-  if (!category) return allowAll; // unmapped type: allowed for everyone
+  const meta = TYPE_META[notificationType];
+  // Unmapped type: treated as MARKETING with no category (see
+  // shouldSendNotification), so it respects push_enabled but requires no flag.
+  const cls: NotificationClass = meta?.class ?? 'marketing';
+  const category = meta?.category;
+  // Only a marketing type WITH a category needs the category column fetched.
+  const needCategory = cls === 'marketing' && !!category;
 
   try {
-    // `category` is a controlled column name from TYPE_CATEGORY, not caller
-    // input, so this interpolation is safe.
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .select(`user_id, push_enabled, ${category}`)
-      .in('user_id', userIds);
+    // `category` is a controlled column name from TYPE_META, not caller input,
+    // so this interpolation is safe.
+    const columns = needCategory ? `user_id, push_enabled, ${category}` : 'user_id, push_enabled';
+    const { data, error } = await supabase.from('notification_preferences').select(columns).in('user_id', userIds);
     if (error) return allowAll; // fail open, never drop silently
 
     const byId = new Map<string, Record<string, unknown>>();
-    for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    // `select(columns)` takes a runtime-built string, so PostgREST cannot infer
+    // the row type and widens `data` to its error type. Go through `unknown` to
+    // the real row shape. This is a typing workaround, not a phantom-field cast:
+    // every field read below (user_id, push_enabled, the category) is a real
+    // selected column.
+    for (const row of (data ?? []) as unknown as Array<Record<string, unknown>>) {
       byId.set(row.user_id as string, row);
     }
 
@@ -217,10 +254,19 @@ export async function filterPushRecipients(
       const pushEnabled = row
         ? ((row.push_enabled as boolean | null) ?? DEFAULT_PREFERENCES.push_enabled)
         : DEFAULT_PREFERENCES.push_enabled;
+      if (!pushEnabled) continue; // push master off drops both classes
+
+      // Transactional, or unmapped-marketing with no category: master alone decides.
+      if (cls === 'transactional' || !category) {
+        allowed.add(id);
+        continue;
+      }
+
+      // Marketing with a category: the category flag must also be on.
       const categoryFlag = row
         ? ((row[category] as boolean | null) ?? DEFAULT_PREFERENCES[category])
         : DEFAULT_PREFERENCES[category];
-      if (pushEnabled && categoryFlag) allowed.add(id);
+      if (categoryFlag) allowed.add(id);
     }
     return allowed;
   } catch (error) {
