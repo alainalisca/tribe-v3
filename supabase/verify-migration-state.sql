@@ -679,4 +679,77 @@ select '142_flag_founder_test_accounts',
        -- together.
        case when (select count(*) from public.users where is_test_account = true) = 13
             then 'applied' else 'MISSING' end
+union all
+select '143_d9_invite_expiry_session_anchored',
+       -- Anchors invite expiry to the session: adds session_invite_expiry(uuid)
+       -- and rewires create_session_invite. Applied once the function exists.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'session_invite_expiry' and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
+union all
+select '144_recur1_gate0_sessions_updated_at_trigger',
+       -- Adds the trg_sessions_updated_at BEFORE UPDATE trigger on public.sessions.
+       case when exists (
+         select 1 from pg_trigger t
+         join pg_class c on c.oid = t.tgrelid
+         join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and c.relname = 'sessions'
+           and t.tgname = 'trg_sessions_updated_at'
+       ) then 'applied' else 'MISSING' end
+union all
+select '145_sec4_media_bucket_lockdown',
+       -- Locks storage.objects media writes to the owner. Applied once the
+       -- owner-scoped upload policy exists.
+       case when exists (
+         select 1 from pg_policies
+         where schemaname = 'storage' and tablename = 'objects'
+           and policyname = 'Users can upload own media'
+       ) then 'applied' else 'MISSING' end
+union all
+select '146_sec4_capture_production_media_policies',
+       -- Captures the production media read policy on storage.objects.
+       case when exists (
+         select 1 from pg_policies
+         where schemaname = 'storage' and tablename = 'objects'
+           and policyname = 'Authenticated can read media'
+       ) then 'applied' else 'MISSING' end
+union all
+select '148_total_sessions_hosted_counter',
+       -- Makes users.total_sessions_hosted a maintained counter via
+       -- recompute_all_total_sessions_hosted() plus triggers on sessions.
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'recompute_all_total_sessions_hosted' and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
+union all
+select '149_proximity_alerts_preference',
+       -- Adds notification_preferences.proximity_alerts (boolean, not null).
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'notification_preferences'
+           and column_name = 'proximity_alerts'
+       ) then 'applied' else 'MISSING' end
+union all
+select '150_notification_prefs_signup_trigger',
+       -- Adds the AFTER INSERT trigger on auth.users that seeds a default
+       -- notification_preferences row for every new signup.
+       case when exists (
+         select 1 from pg_trigger t
+         join pg_class c on c.oid = t.tgrelid
+         join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'auth' and c.relname = 'users'
+           and t.tgname = 'create_notification_prefs_on_signup'
+       ) then 'applied' else 'MISSING' end
+union all
+select '151_notification_prefs_backfill',
+       -- Data migration (no schema artifact): backfills a notification_preferences
+       -- row for every existing user and merges legacy session_reminders_enabled
+       -- opt-outs. Probed by the invariant it establishes: no auth user lacks a
+       -- row (the 150 trigger keeps this true for new signups).
+       case when not exists (
+         select 1 from auth.users a
+         left join public.notification_preferences p on p.user_id = a.id
+         where p.user_id is null
+       ) then 'applied' else 'MISSING' end
 order by migration;
