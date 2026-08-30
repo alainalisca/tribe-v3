@@ -4,12 +4,12 @@ import { shouldSendNotification, filterPushRecipients, DEFAULT_PREFERENCES } fro
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 
 // Representative types from TYPE_META (real map, not mocked):
-//   'new_message'  -> messages,          push default_on, email default_on
-//   'weekly_recap' -> weekly_recap,      push default_on, email opt_in
-//   'nearby'       -> proximity_alerts,  push default_on, email opt_in
-//   'tip_received' -> null,              push default_on, email required
-//   'welcome'      -> null,              push required,    email required
-//   'totally_unknown' -> unmapped (treated as default_on, no category)
+//   'new_message'       -> messages,         push default_on, email default_on
+//   'weekly_recap'      -> weekly_recap,     push default_on, email opt_in
+//   'nearby'            -> proximity_alerts, push default_on, email opt_in
+//   'booking_confirmed' -> null,             push default_on, email required
+//   'welcome'           -> null,             push required,   email required
+//   'totally_unknown'   -> unmapped (treated as default_on, no category)
 //
 // Note on push opt_in: no production type uses push:opt_in because on push it is
 // behaviorally identical to default_on (push_enabled is the only channel master
@@ -17,7 +17,7 @@ vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 // same code path.
 const DEFAULT_ON = 'new_message';
 const OPT_IN_EMAIL = 'weekly_recap';
-const REQUIRED_EMAIL = 'tip_received';
+const REQUIRED_EMAIL = 'booking_confirmed';
 const REQUIRED_PUSH = 'welcome';
 const UNMAPPED = 'totally_unknown';
 

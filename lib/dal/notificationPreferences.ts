@@ -95,11 +95,13 @@ export const TYPE_META: Record<string, NotificationTypeMeta> = {
   // Challenges.
   challenge_complete: { category: 'challenges', push: 'default_on', email: 'default_on' },
   challenge_join: { category: 'challenges', push: 'default_on', email: 'default_on' },
-  // spotlight_selected / referral_complete sit under the marketing category
-  // (default off), so under default_on they only fire once the user enables
-  // Marketing. FLAGGED for review: these are positive notices, not promos.
-  spotlight_selected: { category: 'marketing', push: 'default_on', email: 'default_on' },
-  referral_complete: { category: 'marketing', push: 'default_on', email: 'default_on' },
+  // spotlight_selected / referral_complete are news about the user's OWN
+  // account, not promotions, and there is no "tell me about my own account"
+  // toggle in the UI. category null keeps them ungated by a toggle. Under the
+  // marketing category they would only fire for users who enabled Marketing,
+  // which is almost nobody.
+  spotlight_selected: { category: null, push: 'default_on', email: 'default_on' },
+  referral_complete: { category: null, push: 'default_on', email: 'default_on' },
   // Engagement / retention: fine on push (default_on), email needs opt-in.
   habit_session: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
   streak_risk: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
@@ -109,10 +111,14 @@ export const TYPE_META: Record<string, NotificationTypeMeta> = {
   general: { category: 'marketing', push: 'default_on', email: 'opt_in' },
   weekly_recap: { category: 'weekly_recap', push: 'default_on', email: 'opt_in' },
   nearby: { category: 'proximity_alerts', push: 'default_on', email: 'opt_in' },
-  // Receipts: no user toggle (category null), email is required (always sent).
-  // The four notifyAfterFinalize payment sends plus the guest booking and
-  // welcome emails. Their callers are not wired to pass these types yet.
-  tip_received: { category: null, push: 'default_on', email: 'required' },
+  // tip_received stays under the messages category (default_on both), NOT a
+  // required receipt: tips are currently disabled, the tip checkout was removed,
+  // and payments are frozen, so hardcoding receipt semantics for a surface that
+  // does not exist would be premature.
+  tip_received: { category: 'messages', push: 'default_on', email: 'default_on' },
+  // Receipts DEFINED BUT NOT YET WIRED. No caller passes these types, so they
+  // gate nothing today. Wiring them (and settling their final policy) is
+  // deferred until the payments kill-switch work. category null, email required.
   booking_confirmed: { category: null, push: 'default_on', email: 'required' },
   purchase_confirmed: { category: null, push: 'default_on', email: 'required' },
   new_sale: { category: null, push: 'default_on', email: 'required' },
