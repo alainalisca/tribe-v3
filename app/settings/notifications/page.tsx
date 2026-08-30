@@ -11,6 +11,7 @@ import {
   updateNotificationPreferences,
   type NotificationPreferences,
 } from '@/lib/dal/notificationPreferences';
+import { SETTINGS_NOTIFICATION_CATEGORIES } from '@/lib/notifications/settingsCategories';
 import { showSuccess, showError } from '@/lib/toast';
 import { haptic } from '@/lib/haptics';
 
@@ -55,58 +56,14 @@ export default function NotificationPreferencesPage() {
     saved: language === 'es' ? 'Preferencias guardadas' : 'Preferences saved',
     error: language === 'es' ? 'No se pudo guardar' : 'Could not save',
     loading: language === 'es' ? 'Cargando…' : 'Loading…',
-    categories: [
-      {
-        key: 'session_reminders' as keyof Prefs,
-        title: language === 'es' ? 'Recordatorios de Sesión' : 'Session Reminders',
-        desc: language === 'es' ? '1 hora y 15 min antes' : '1 hour and 15 min before',
-      },
-      {
-        key: 'session_updates' as keyof Prefs,
-        title: language === 'es' ? 'Actualizaciones de Sesión' : 'Session Updates',
-        desc: language === 'es' ? 'Cambios, cancelaciones, lista de espera' : 'Changes, cancellations, waitlist',
-      },
-      {
-        key: 'social_activity' as keyof Prefs,
-        title: language === 'es' ? 'Actividad Social' : 'Social Activity',
-        desc: language === 'es' ? 'Seguidores, me gusta, comentarios' : 'Follows, likes, comments',
-      },
-      {
-        key: 'proximity_alerts' as keyof Prefs,
-        title: language === 'es' ? 'Entrenar cerca de ti' : 'Training near you',
-        desc: language === 'es' ? 'Alguien cerca quiere entrenar ahora' : 'Someone nearby wants to train now',
-      },
-      {
-        key: 'messages' as keyof Prefs,
-        title: language === 'es' ? 'Mensajes' : 'Messages',
-        desc: language === 'es' ? 'Mensajes directos, chat de sesión' : 'Direct messages, session chat',
-      },
-      {
-        key: 'training_nudges' as keyof Prefs,
-        title: language === 'es' ? 'Recordatorios de Entrenamiento' : 'Training Nudges',
-        desc: language === 'es' ? 'Rachas, hábitos, regresos' : 'Streaks, habits, comeback',
-      },
-      {
-        key: 'instructor_updates' as keyof Prefs,
-        title: language === 'es' ? 'Actualizaciones de Instructores' : 'Instructor Updates',
-        desc: language === 'es' ? 'Nuevas publicaciones y sesiones' : 'New posts and sessions',
-      },
-      {
-        key: 'challenges' as keyof Prefs,
-        title: language === 'es' ? 'Desafíos' : 'Challenges',
-        desc: language === 'es' ? 'Progreso y nuevos desafíos' : 'Progress and new challenges',
-      },
-      {
-        key: 'marketing' as keyof Prefs,
-        title: language === 'es' ? 'Marketing y Promociones' : 'Marketing & Promotions',
-        desc: language === 'es' ? 'Destacados, ofertas especiales' : 'Spotlight, special offers',
-      },
-      {
-        key: 'weekly_recap' as keyof Prefs,
-        title: language === 'es' ? 'Resumen Semanal' : 'Weekly Recap',
-        desc: language === 'es' ? 'Resumen de entrenamiento cada domingo' : 'Training summary every Sunday',
-      },
-    ],
+    // Rendered from the single source of truth so the gating invariant test can
+    // read the same list. Do not inline categories here; edit
+    // lib/notifications/settingsCategories.ts.
+    categories: SETTINGS_NOTIFICATION_CATEGORIES.map((c) => ({
+      key: c.key,
+      title: c.title[language === 'es' ? 'es' : 'en'],
+      desc: c.desc[language === 'es' ? 'es' : 'en'],
+    })),
     delivery: language === 'es' ? 'Método de Entrega' : 'Delivery Method',
     push: language === 'es' ? 'Notificaciones Push' : 'Push Notifications',
     email: language === 'es' ? 'Notificaciones Email' : 'Email Notifications',

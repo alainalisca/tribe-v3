@@ -39,71 +39,88 @@ export const DEFAULT_PREFERENCES: Omit<NotificationPreferences, 'user_id'> = {
 export type NotificationCategory = keyof Omit<NotificationPreferences, 'user_id' | 'push_enabled' | 'email_enabled'>;
 
 /**
- * Delivery class, orthogonal to category. TRANSACTIONAL sends are a direct
- * consequence of an action toward the recipient (receipts, confirmations,
- * directed social events, reminders for things they committed to) and must not
- * be blocked by opt-in state. MARKETING sends are proactive retention/growth
- * and always require an affirmative opt-in.
+ * Per-channel delivery policy. It answers two questions that "transactional vs
+ * marketing" collapsed into one: do we need consent to send, AND has the user
+ * told us to stop. Those are separate, and the policy is per type AND channel.
+ *
+ *   required   - always sends; nothing suppresses it (a receipt). No prefs read.
+ *   default_on - sends unless the user turned off its category. On push it also
+ *                respects push_enabled (the device master). On email it does
+ *                NOT read email_enabled, because email_enabled is a consent
+ *                record, not a hard master.
+ *   opt_in     - sends only with affirmative channel consent (push_enabled or
+ *                email_enabled) AND the category on.
  */
-export type NotificationClass = 'transactional' | 'marketing';
+export type DeliveryPolicy = 'required' | 'default_on' | 'opt_in';
 
 export interface NotificationTypeMeta {
-  category: NotificationCategory;
-  /** Required, so a new type cannot be added without deciding its class. */
-  class: NotificationClass;
+  /** The preference toggle this type honors, or null for a type with no user
+   *  control (a receipt). */
+  category: NotificationCategory | null;
+  /** Both channels are required, so a new type cannot be added without deciding
+   *  its policy on each. */
+  push: DeliveryPolicy;
+  email: DeliveryPolicy;
 }
 
 /**
- * Notification type → { category, class }. `category` selects WHICH preference
- * flag gates the send; `class` governs HOW gating applies once consumers read
- * it (a later W2 C1 step). This step is ADDITIVE ONLY: no code reads `class`
- * yet. shouldSendNotification and filterPushRecipients still consume
- * TYPE_CATEGORY, which is derived from this map below so every existing caller
- * behaves exactly as before.
+ * Notification type → per-channel delivery policy.
+ *
+ * `category` is the toggle the type honors (null for a receipt with no toggle).
+ * `push` / `email` are how each channel gates. See DeliveryPolicy.
+ *
+ * Consumed by shouldSendNotification and filterPushRecipients. The gating
+ * invariant test cross-checks this map against the settings UI category list.
  */
 export const TYPE_META: Record<string, NotificationTypeMeta> = {
-  session_reminder: { category: 'session_reminders', class: 'transactional' },
-  session_update: { category: 'session_updates', class: 'transactional' },
-  session_join: { category: 'session_updates', class: 'transactional' },
-  series_occurrences_generated: { category: 'session_updates', class: 'transactional' },
-  follow: { category: 'social_activity', class: 'transactional' },
-  like: { category: 'social_activity', class: 'transactional' },
-  comment: { category: 'social_activity', class: 'transactional' },
-  connection_request: { category: 'social_activity', class: 'transactional' },
-  new_message: { category: 'messages', class: 'transactional' },
-  dm: { category: 'messages', class: 'transactional' },
-  habit_session: { category: 'training_nudges', class: 'marketing' },
-  streak_risk: { category: 'training_nudges', class: 'marketing' },
-  streak_milestone: { category: 'training_nudges', class: 'marketing' },
-  comeback: { category: 'training_nudges', class: 'marketing' },
-  review_reminder: { category: 'training_nudges', class: 'marketing' },
-  // Following an instructor IS the affirmative opt-in, and it is a per-instructor
-  // subscription, which is stronger consent than any global toggle. So updates to
-  // followers are transactional; the instructor_updates category still lets a
-  // user turn them off.
-  instructor_new_session: { category: 'instructor_updates', class: 'transactional' },
-  instructor_post: { category: 'instructor_updates', class: 'transactional' },
-  challenge_complete: { category: 'challenges', class: 'transactional' },
-  challenge_join: { category: 'challenges', class: 'transactional' },
-  spotlight_selected: { category: 'marketing', class: 'transactional' },
-  referral_complete: { category: 'marketing', class: 'transactional' },
-  general: { category: 'marketing', class: 'marketing' },
-  weekly_recap: { category: 'weekly_recap', class: 'marketing' },
-  waitlist_offered: { category: 'session_updates', class: 'transactional' },
-  waitlist_expired: { category: 'session_updates', class: 'transactional' },
-  training_interest: { category: 'messages', class: 'transactional' },
-  tip_received: { category: 'messages', class: 'transactional' },
-  nearby: { category: 'proximity_alerts', class: 'marketing' },
+  // Session lifecycle: honor the category on both channels, no consent needed.
+  session_reminder: { category: 'session_reminders', push: 'default_on', email: 'default_on' },
+  session_update: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  session_join: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  series_occurrences_generated: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  waitlist_offered: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  waitlist_expired: { category: 'session_updates', push: 'default_on', email: 'default_on' },
+  // Social activity directed at the user.
+  follow: { category: 'social_activity', push: 'default_on', email: 'default_on' },
+  like: { category: 'social_activity', push: 'default_on', email: 'default_on' },
+  comment: { category: 'social_activity', push: 'default_on', email: 'default_on' },
+  connection_request: { category: 'social_activity', push: 'default_on', email: 'default_on' },
+  // Messages: default_on both, so the Messages toggle works on both channels.
+  new_message: { category: 'messages', push: 'default_on', email: 'default_on' },
+  dm: { category: 'messages', push: 'default_on', email: 'default_on' },
+  training_interest: { category: 'messages', push: 'default_on', email: 'default_on' },
+  // Instructor updates to followers (following is the consent; category still off-switches).
+  instructor_new_session: { category: 'instructor_updates', push: 'default_on', email: 'default_on' },
+  instructor_post: { category: 'instructor_updates', push: 'default_on', email: 'default_on' },
+  // Challenges.
+  challenge_complete: { category: 'challenges', push: 'default_on', email: 'default_on' },
+  challenge_join: { category: 'challenges', push: 'default_on', email: 'default_on' },
+  // spotlight_selected / referral_complete sit under the marketing category
+  // (default off), so under default_on they only fire once the user enables
+  // Marketing. FLAGGED for review: these are positive notices, not promos.
+  spotlight_selected: { category: 'marketing', push: 'default_on', email: 'default_on' },
+  referral_complete: { category: 'marketing', push: 'default_on', email: 'default_on' },
+  // Engagement / retention: fine on push (default_on), email needs opt-in.
+  habit_session: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
+  streak_risk: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
+  streak_milestone: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
+  comeback: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
+  review_reminder: { category: 'training_nudges', push: 'default_on', email: 'opt_in' },
+  general: { category: 'marketing', push: 'default_on', email: 'opt_in' },
+  weekly_recap: { category: 'weekly_recap', push: 'default_on', email: 'opt_in' },
+  nearby: { category: 'proximity_alerts', push: 'default_on', email: 'opt_in' },
+  // Receipts: no user toggle (category null), email is required (always sent).
+  // The four notifyAfterFinalize payment sends plus the guest booking and
+  // welcome emails. Their callers are not wired to pass these types yet.
+  tip_received: { category: null, push: 'default_on', email: 'required' },
+  booking_confirmed: { category: null, push: 'default_on', email: 'required' },
+  purchase_confirmed: { category: null, push: 'default_on', email: 'required' },
+  new_sale: { category: null, push: 'default_on', email: 'required' },
+  // Email-only receipts. push is nominal (no push send exists); required is the
+  // receipt default it would take if ever pushed.
+  guest_confirmation: { category: null, push: 'required', email: 'required' },
+  welcome: { category: null, push: 'required', email: 'required' },
 };
-
-/**
- * Back-compat: notification type → category, derived from TYPE_META so the
- * existing consumers (shouldSendNotification, filterPushRecipients) keep working
- * unchanged. Do not hand-edit; add entries to TYPE_META.
- */
-export const TYPE_CATEGORY: Record<string, NotificationCategory> = Object.fromEntries(
-  Object.entries(TYPE_META).map(([type, meta]): [string, NotificationCategory] => [type, meta.category])
-);
 
 /** Fetch preferences; returns defaults if no row exists. */
 export async function getNotificationPreferences(
@@ -147,18 +164,18 @@ export async function updateNotificationPreferences(
 }
 
 /**
- * Decide whether a notification of `type` should be delivered via `channel`
- * to `userId`, honoring the type's delivery class (TYPE_META):
+ * Decide whether a notification of `type` should be delivered via `channel` to
+ * `userId`, honoring the type's per-channel DeliveryPolicy (TYPE_META):
  *
- *   in_app                -> always true (never gated).
- *   email, transactional  -> ignore email_enabled AND the category. Send.
- *   email, marketing      -> require email_enabled AND the category flag.
- *   push,  transactional  -> require push_enabled, bypass the category.
- *   push,  marketing      -> require push_enabled AND the category flag.
+ *   in_app                 -> always true (never gated).
+ *   required               -> always true, no preferences read at all.
+ *   default_on, push       -> require push_enabled, then the category if any.
+ *   default_on, email      -> ignore email_enabled, require the category if any.
+ *   opt_in                 -> require the channel master (push_enabled/
+ *                             email_enabled) AND the category.
  *
- * push_enabled / email_enabled stay hard channel masters for marketing on both
- * channels and for transactional push. The only master bypass is transactional
- * EMAIL, and transactional sends of either channel skip the category.
+ * email_enabled is a consent record read ONLY by opt_in. push_enabled stays a
+ * device-level master for default_on and opt_in.
  */
 export async function shouldSendNotification(
   supabase: SupabaseClient,
@@ -169,31 +186,27 @@ export async function shouldSendNotification(
   if (channel === 'in_app') return true; // in-app is never gated
 
   const meta = TYPE_META[notificationType];
-  // Unmapped type: treated as MARKETING with no category. It therefore respects
-  // the channel master toggle but requires no category flag, which reproduces
-  // the historical fail-open behavior (allow unless the master is off). It is
-  // deliberately NOT treated as transactional, since that would newly bypass
-  // email_enabled and start sending mail that is suppressed today.
-  const cls: NotificationClass = meta?.class ?? 'marketing';
-  const category = meta?.category;
+  // Unmapped type: treated as default_on with no category. On push that means
+  // "respect push_enabled, no category gate"; on email "ignore email_enabled,
+  // no category gate" -> allow unless the push master is off. This preserves the
+  // historical fail-open behavior (allow rather than silently drop).
+  const policy: DeliveryPolicy = meta ? meta[channel] : 'default_on';
+  const category = meta ? meta.category : null;
 
-  // Transactional email ignores email_enabled AND the category: a receipt or
-  // confirmation must not be blocked by a marketing opt-out. It needs no prefs
-  // read, so it also never depends on the fetch below.
-  if (channel === 'email' && cls === 'transactional') return true;
+  // required never reads preferences: a receipt cannot be suppressed.
+  if (policy === 'required') return true;
 
   const res = await getNotificationPreferences(supabase, userId);
   if (!res.success || !res.data) return true; // fail open — never drop silently
   const prefs = res.data;
 
-  // Hard channel masters (unchanged) for everything that reaches here: marketing
-  // on either channel, and transactional push.
+  // Channel masters. push_enabled gates default_on and opt_in on push;
+  // email_enabled gates ONLY opt_in on email (it is a consent record, not a
+  // hard master, so default_on email ignores it).
   if (channel === 'push' && !prefs.push_enabled) return false;
-  if (channel === 'email' && !prefs.email_enabled) return false;
+  if (channel === 'email' && policy === 'opt_in' && !prefs.email_enabled) return false;
 
-  // Master passed. Transactional bypasses the category; marketing requires it.
-  // An unmapped (marketing) type has no category, so it is allowed here.
-  if (cls === 'transactional') return true;
+  // Category gate: consulted by default_on and opt_in when the type has one.
   if (!category) return true;
   return !!prefs[category];
 }
@@ -204,13 +217,12 @@ export async function shouldSendNotification(
  * `notificationType`, resolved in ONE query against notification_preferences
  * (never one call per recipient, which would be an N+1 on a batch send).
  *
- * Class-aware, matching shouldSendNotification(..., 'push') exactly per user:
- *   - push_enabled is a hard master for both classes: off -> dropped;
- *   - transactional bypasses the category (push_enabled alone decides);
- *   - marketing requires the type's category flag as well;
- *   - an unmapped type is treated as MARKETING with no category, so it needs
- *     push_enabled but no category flag (same as the single path, and no longer
- *     the old blanket allow-all that ignored push_enabled);
+ * Matches shouldSendNotification(..., 'push') exactly per user:
+ *   - required            -> everyone allowed, no preferences read;
+ *   - default_on / opt_in -> both require push_enabled (the device master),
+ *     then the category flag when the type has one (email_enabled never applies
+ *     on push, so default_on and opt_in are identical here);
+ *   - an unmapped type is default_on with no category: push_enabled only;
  *   - a user with no preference row falls back to DEFAULT_PREFERENCES;
  *   - any query error fails OPEN (all userIds allowed), so a preferences lookup
  *     problem never silently drops a send.
@@ -224,17 +236,18 @@ export async function filterPushRecipients(
   if (userIds.length === 0) return allowAll;
 
   const meta = TYPE_META[notificationType];
-  // Unmapped type: treated as MARKETING with no category (see
-  // shouldSendNotification), so it respects push_enabled but requires no flag.
-  const cls: NotificationClass = meta?.class ?? 'marketing';
-  const category = meta?.category;
-  // Only a marketing type WITH a category needs the category column fetched.
-  const needCategory = cls === 'marketing' && !!category;
+  // Unmapped type: default_on with no category (see shouldSendNotification), so
+  // it respects push_enabled but requires no flag.
+  const policy: DeliveryPolicy = meta ? meta.push : 'default_on';
+  const category = meta ? meta.category : null;
+
+  // required never suppresses, not even for push_enabled.
+  if (policy === 'required') return allowAll;
 
   try {
     // `category` is a controlled column name from TYPE_META, not caller input,
-    // so this interpolation is safe.
-    const columns = needCategory ? `user_id, push_enabled, ${category}` : 'user_id, push_enabled';
+    // so this interpolation is safe. Only fetch the category column when needed.
+    const columns = category ? `user_id, push_enabled, ${category}` : 'user_id, push_enabled';
     const { data, error } = await supabase.from('notification_preferences').select(columns).in('user_id', userIds);
     if (error) return allowAll; // fail open, never drop silently
 
@@ -254,15 +267,15 @@ export async function filterPushRecipients(
       const pushEnabled = row
         ? ((row.push_enabled as boolean | null) ?? DEFAULT_PREFERENCES.push_enabled)
         : DEFAULT_PREFERENCES.push_enabled;
-      if (!pushEnabled) continue; // push master off drops both classes
+      if (!pushEnabled) continue; // device master off drops default_on and opt_in
 
-      // Transactional, or unmapped-marketing with no category: master alone decides.
-      if (cls === 'transactional' || !category) {
+      // No category (receipt or unmapped): push_enabled alone decides.
+      if (!category) {
         allowed.add(id);
         continue;
       }
 
-      // Marketing with a category: the category flag must also be on.
+      // Category present: the flag must also be on.
       const categoryFlag = row
         ? ((row[category] as boolean | null) ?? DEFAULT_PREFERENCES[category])
         : DEFAULT_PREFERENCES[category];
