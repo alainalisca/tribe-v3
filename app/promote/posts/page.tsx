@@ -507,7 +507,7 @@ export default function PromotePostsPage() {
                 ) : (
                   sessions.map((session) => (
                     <option key={session.id} value={session.id}>
-                      {session.title} - {formatSessionDate(session.date, language)}
+                      {session.title || session.sport} - {formatSessionDate(session.date, language)}
                     </option>
                   ))
                 )}
@@ -591,7 +591,7 @@ export default function PromotePostsPage() {
                       <option value="">{strings.selectSession}</option>
                       {sessions.map((session) => (
                         <option key={session.id} value={session.id}>
-                          {session.title} - {formatSessionDate(session.date, language)}
+                          {session.title || session.sport} - {formatSessionDate(session.date, language)}
                         </option>
                       ))}
                     </select>
