@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Clock, Users, Zap, Loader2, CheckCircle, Repeat } from 'lucide-react';
 import { formatPrice } from '@/lib/formatCurrency';
 import { formatPattern, sessionMatchesPattern } from '@/lib/recurrence';
-import { formatTime12Hour } from '@/lib/utils';
+import { formatTime12Hour, formatSessionDate } from '@/lib/utils';
 import type { Currency } from '@/lib/payments/config';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
@@ -20,24 +20,6 @@ interface StorefrontSessionCardProps {
   currentUserId: string | null;
   joinedSessionIds: Set<string>;
   onJoined: (sessionId: string) => void;
-}
-
-/**
- * Date formatter copied verbatim from AvailabilityPreview.formatDayLabel: parse
- * the bare YYYY-MM-DD as UTC midnight (`+ 'T00:00:00Z'`) and render in UTC
- * (`timeZone: 'UTC'`) so the wall-clock date never shifts. A bare
- * `new Date('2026-08-23')` parses as UTC then renders local; in Medellin (UTC-5)
- * that lands the previous evening and prints the day before. The tab and the
- * sidebar AvailabilityPreview show the same sessions on one screen and MUST
- * format identically, so keep this in sync with that component.
- */
-function formatSessionDay(iso: string, language: 'en' | 'es'): string {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 export default function StorefrontSessionCard({
@@ -270,7 +252,8 @@ export default function StorefrontSessionCard({
         <div className="flex items-center gap-2 text-theme-secondary">
           <Clock className="w-4 h-4 text-tribe-green flex-shrink-0" />
           <span>
-            {formatSessionDay(session.date, language)} &middot; {session.start_time.slice(0, 5)}
+            {formatSessionDate(session.date, language, { weekday: 'short', month: 'short', day: 'numeric' })} &middot;{' '}
+            {session.start_time.slice(0, 5)}
           </span>
         </div>
         {cadenceLabel && (

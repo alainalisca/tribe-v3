@@ -21,6 +21,7 @@ import { sportTranslations } from '@/lib/translations';
 import { haptic } from '@/lib/haptics';
 import { trackEvent } from '@/lib/analytics';
 import { showSuccess, showError } from '@/lib/toast';
+import { formatSessionDate } from '@/lib/utils';
 
 const HEATMAP_DAYS = 84; // 12 weeks
 
@@ -30,16 +31,6 @@ function heatmapClass(count: number): string {
   if (count === 1) return 'bg-lime-200 dark:bg-lime-900/50';
   if (count === 2) return 'bg-lime-400 dark:bg-lime-700/70';
   return 'bg-lime-500';
-}
-
-function formatDayLabel(dateIso: string, language: 'en' | 'es'): string {
-  const d = new Date(dateIso + 'T00:00:00Z');
-  return d.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 export default function MyTrainingPage() {
@@ -294,7 +285,11 @@ export default function MyTrainingPage() {
                           </div>
                           <div className="text-xs text-theme-secondary truncate">
                             {entry.instructor?.name ? `${entry.instructor.name} · ` : ''}
-                            {formatDayLabel(entry.date, language)}
+                            {formatSessionDate(entry.date, language, {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                             {entry.start_time ? ` · ${entry.start_time.slice(0, 5)}` : ''}
                             {entry.location ? ` · ${entry.location}` : ''}
                           </div>

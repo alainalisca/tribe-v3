@@ -3,7 +3,7 @@
 import { MessageCircle } from 'lucide-react';
 import { trackEvent } from '@/lib/analytics';
 import { sportTranslations } from '@/lib/translations';
-import { formatTime12Hour } from '@/lib/utils';
+import { formatTime12Hour, formatSessionDate } from '@/lib/utils';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { formatPrice } from '@/lib/formatCurrency';
 import { getSessionShareUrl } from '@/lib/share';
@@ -31,14 +31,6 @@ interface WhatsAppShareButtonProps {
   isCreator?: boolean;
 }
 
-function formatSessionDate(dateIso: string, language: 'en' | 'es'): string {
-  return new Date(dateIso + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
 function formatPriceLine(
   isPaid: boolean,
   priceCents: number | null | undefined,
@@ -57,7 +49,7 @@ export default function WhatsAppShareButton({ session, language, isCreator = fal
     const sportName =
       language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
 
-    const dateStr = formatSessionDate(session.date, language);
+    const dateStr = formatSessionDate(session.date, language, { weekday: 'long', month: 'long', day: 'numeric' });
     const timeStr = formatTime12Hour(session.start_time);
     const locationStr = formatSessionLocation(
       session.location,
