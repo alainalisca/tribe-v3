@@ -91,9 +91,12 @@ describe('InvitePage — T-C1 Gate 1', () => {
     const signIn = await screen.findByText('signInToAccept');
     const link = signIn.closest('a');
     expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toBe(`/auth?returnTo=${encodeURIComponent(`/invite/${TOKEN}`)}`);
+    // The returnTo target carries a trailing slash (trailingSlash:true canonical
+    // form), matching the sibling share funnel; a no-slash returnTo would force a
+    // post-login 308 hop.
+    expect(link?.getAttribute('href')).toBe(`/auth?returnTo=${encodeURIComponent(`/invite/${TOKEN}/`)}`);
     // Sanity-check the encoding itself: the path must not survive un-encoded.
-    expect(link?.getAttribute('href')).toBe(`/auth?returnTo=%2Finvite%2F${TOKEN}`);
+    expect(link?.getAttribute('href')).toBe(`/auth?returnTo=%2Finvite%2F${TOKEN}%2F`);
 
     // The guest form is still offered next to it.
     expect(screen.getByText('confirmYourSpot')).toBeTruthy();

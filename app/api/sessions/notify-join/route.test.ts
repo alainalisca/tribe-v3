@@ -158,7 +158,10 @@ describe('POST /api/sessions/notify-join', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe('http://localhost:3000/api/notifications/send');
+    // Trailing slash is intentional: trailingSlash:true makes the no-slash URL
+    // 308-redirect, and a 308 strips the Authorization header (401). Every caller
+    // of this internal endpoint uses the slash for that reason.
+    expect(url).toBe('http://localhost:3000/api/notifications/send/');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-secret');
     const sent = JSON.parse(init.body as string);
     // Recipient is the session creator, NOT anything client-supplied.
