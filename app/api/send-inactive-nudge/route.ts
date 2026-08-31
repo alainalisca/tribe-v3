@@ -2,7 +2,13 @@ import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
 import { logError } from '@/lib/logger';
-import { fetchUsersForEmailJobs, fetchParticipationsWithSession, fetchSessionsByCreator } from '@/lib/dal';
+import {
+  fetchUsersForReengagementEmail,
+  fetchParticipationsWithSession,
+  fetchSessionsByCreator,
+  updateUser,
+} from '@/lib/dal';
+import { shouldSendNotification } from '@/lib/dal/notificationPreferences';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
 import { isValidCronAuth } from '@/lib/auth/cron';
 
@@ -35,7 +41,24 @@ export async function POST(request: Request) {
     // per-user activity queries below should not be RLS-scoped to a session.
     const supabase = getServiceRoleClient();
 
-    const usersResult = await fetchUsersForEmailJobs(supabase);
+    // Bounded, deduped audience (dedup + cap live in the DAL query):
+    //   - last_reengagement_sent NULL or older than 30 days, so a recently
+    //     re-engaged user is skipped. That column is SHARED with the engagement
+    //     cron's push comeback on purpose, for cross-channel dedup: a user who
+    //     just got a push comeback is not also emailed in the same window, and
+    //     whichever cron runs first claims the window.
+    //   - created more than 14 days ago (established accounts).
+    //   - ordered NULLS FIRST and capped at 150 per run, so the backlog drains
+    //     over several runs instead of a single mass blast.
+    const now = new Date();
+    const thirtyDaysAgoIso = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const fourteenDaysAgoIso = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    const usersResult = await fetchUsersForReengagementEmail(supabase, {
+      reengagementBefore: thirtyDaysAgoIso,
+      createdBefore: fourteenDaysAgoIso,
+      limit: 150,
+    });
     // A failed query must NOT look like "nobody to email" — that is how this
     // job went silently dead under the 067 revoke. Surface it.
     if (!usersResult.success) {
@@ -43,18 +66,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
     }
 
-    const users = (usersResult.data ?? []).filter((u) => u.email != null);
+    const users = usersResult.data ?? [];
 
     // Genuinely zero eligible recipients is a success, not an error.
     if (users.length === 0) {
       return NextResponse.json({ success: true, emailsSent: 0, errors: 0, totalUsers: 0 });
     }
 
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    // twoWeeksAgo (the Date) is compared to user.created_at (a UTC timestamp) —
-    // leave it. The string below is compared to session.date (Bogota-local), so
-    // it must use the Bogota calendar date. (T0-9)
+    // Compared to session.date (Bogota-local), so it must use the Bogota
+    // calendar date. (T0-9)
     const twoWeeksAgoStr = bogotaDateOffset(-14);
 
     let emailsSent = 0;
@@ -62,10 +82,6 @@ export async function POST(request: Request) {
 
     for (const user of users) {
       try {
-        // Skip users created less than 2 weeks ago
-        const userCreatedAt = new Date(user.created_at!);
-        if (userCreatedAt > twoWeeksAgo) continue;
-
         // Check if user has any recent activity
         const recentParticipationResult = await fetchParticipationsWithSession(supabase, user.id, {
           userJoinFields: 'id',
@@ -81,6 +97,13 @@ export async function POST(request: Request) {
 
         // Skip users with recent activity
         if (recentParticipation.length || recentHosted.length) continue;
+
+        // Gate on the user's email preference for this type. comeback is opt_in
+        // on email under the delivery-policy model, so this sends to almost
+        // nobody until users opt into email. That is correct and expected, not a
+        // bug: email_enabled is a consent record and defaults off.
+        const allowed = await shouldSendNotification(supabase, user.id, 'comeback', 'email');
+        if (!allowed) continue;
 
         const lang = user.preferred_language || 'en';
         const isSpanish = lang === 'es';
@@ -144,6 +167,11 @@ export async function POST(request: Request) {
         });
 
         emailsSent++;
+
+        // Stamp last_reengagement_sent ONLY on a confirmed send (resend.send
+        // above did not throw), matching the engagement cron. A failed send
+        // leaves it unstamped so the next run retries the user.
+        await updateUser(supabase, user.id, { last_reengagement_sent: new Date().toISOString() });
       } catch (error: unknown) {
         logError(error, { route: '/api/send-inactive-nudge', action: 'send_nudge_email', userId: user.id });
         errors++;
