@@ -6,6 +6,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import ShareButton from '@/components/ShareButton';
 import { shareAchievement } from '@/lib/share';
+import { getSessionWeekIndex, getSessionWeekday, computeWeeklyStreak } from '@/lib/utils';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 
 interface StreakBannerProps {
   userId: string;
@@ -53,45 +55,26 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
 
       const records = data as unknown as AttendanceRecord[];
 
-      // Calculate current weekly streak
-      const now = new Date();
-      const currentWeekStart = new Date(now);
-      currentWeekStart.setDate(now.getDate() - now.getDay());
-      currentWeekStart.setHours(0, 0, 0, 0);
+      // Bucket attended sessions by week and compute the streak. All week math
+      // lives in getSessionWeekIndex / computeWeeklyStreak so this component and
+      // AchievementBadges share one tested implementation instead of duplicating
+      // it (the old copy always bucketed to 0, pinning the streak at 0 or 1).
+      // currentWeekIndex is today's week in Medellin, the in-progress week that
+      // counts toward the streak but never breaks it (see computeWeeklyStreak).
+      const currentWeekIndex = getSessionWeekIndex(bogotaToday());
+      const weeksWithAttendance = new Set<number>(records.map((r) => getSessionWeekIndex(r.sessions.date)));
+      setStreak(computeWeeklyStreak(weeksWithAttendance, currentWeekIndex));
 
-      // Get all weeks with at least one attendance
-      const weeksWithAttendance = new Set<number>();
-      records.forEach((record) => {
-        const sessionDate = new Date(record.sessions.date);
-        const weekStart = new Date(sessionDate);
-        weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekNumber = Math.floor((sessionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-        weeksWithAttendance.add(weekNumber);
-      });
-
-      // Count consecutive weeks backwards from current week
-      let currentWeekStreak = 0;
-      const currentWeekNumber = Math.floor((now.getTime() - currentWeekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-
-      for (let i = currentWeekNumber; weeksWithAttendance.has(i); i--) {
-        currentWeekStreak++;
-      }
-
-      setStreak(currentWeekStreak);
-
-      // Calculate days in current week with attendance
+      // Days of the CURRENT week (Sunday=0 .. Saturday=6) that have an attended
+      // session. Week membership and weekday are both read in the same UTC frame
+      // as getSessionWeekIndex, so the previous UTC-date vs local-midnight
+      // mismatch (which dropped a same-day session) is gone.
       const daysInWeek: boolean[] = [false, false, false, false, false, false, false];
       records.forEach((record) => {
-        const sessionDate = new Date(record.sessions.date);
-        const weekStart = new Date(currentWeekStart);
-        const dayDiff = Math.floor((sessionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (dayDiff >= 0 && dayDiff < 7) {
-          daysInWeek[dayDiff] = true;
+        if (getSessionWeekIndex(record.sessions.date) === currentWeekIndex) {
+          daysInWeek[getSessionWeekday(record.sessions.date)] = true;
         }
       });
-
       setWeekDays(daysInWeek);
       setLoading(false);
     } catch (error) {

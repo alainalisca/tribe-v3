@@ -461,6 +461,8 @@ export default function SessionDetailPage() {
             isHost={isCreator}
             isAdmin={d.userIsAdmin}
             sessionDate={d.session.date}
+            sessionStartTime={d.session.start_time}
+            sessionEndTime={d.session.end_time ?? null}
           />
         )}
 

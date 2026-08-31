@@ -6,6 +6,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import ShareButton from '@/components/ShareButton';
 import { shareAchievement } from '@/lib/share';
+import { getSessionWeekIndex, computeWeeklyStreak } from '@/lib/utils';
+import { bogotaToday } from '@/lib/time/bogotaDate';
 
 interface AchievementBadgesProps {
   userId: string;
@@ -147,31 +149,14 @@ export default function AchievementBadges({ userId, isOwnProfile }: AchievementB
           sessions: { date: string };
         }>;
 
-        const now = new Date();
-        const currentWeekStart = new Date(now);
-        currentWeekStart.setDate(now.getDate() - now.getDay());
-        currentWeekStart.setHours(0, 0, 0, 0);
-
-        // Get all weeks with at least one attendance
-        const weeksWithAttendance = new Set<number>();
-        records.forEach((record) => {
-          const sessionDate = new Date(record.sessions.date);
-          const weekStart = new Date(sessionDate);
-          weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
-          weekStart.setHours(0, 0, 0, 0);
-          const weekNumber = Math.floor((sessionDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-          weeksWithAttendance.add(weekNumber);
-        });
-
-        // Count consecutive weeks backwards from current week
-        let currentWeekStreak = 0;
-        const currentWeekNumber = Math.floor((now.getTime() - currentWeekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-
-        for (let i = currentWeekNumber; weeksWithAttendance.has(i); i--) {
-          currentWeekStreak++;
-        }
-
-        setStreak(currentWeekStreak);
+        // Week math lives ONLY in getSessionWeekIndex / computeWeeklyStreak,
+        // shared with StreakBanner, so the two never drift. The old per-site copy
+        // bucketed every session to week 0, pinning the streak (and thus the
+        // streak badges) at 0 or 1. currentWeekIndex is today's week in Medellin,
+        // the in-progress week that counts but does not break the streak.
+        const currentWeekIndex = getSessionWeekIndex(bogotaToday());
+        const weeksWithAttendance = new Set<number>(records.map((r) => getSessionWeekIndex(r.sessions.date)));
+        setStreak(computeWeeklyStreak(weeksWithAttendance, currentWeekIndex));
       }
 
       setLoading(false);

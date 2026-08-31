@@ -75,3 +75,44 @@ export function getSessionWeekday(iso: string): number {
 export function formatSessionDate(iso: string, language: 'en' | 'es', opts?: Intl.DateTimeFormatOptions): string {
   return parseSessionDate(iso).toLocaleDateString(SESSION_DATE_LOCALE[language], { ...opts, timeZone: 'UTC' });
 }
+
+const MS_PER_DAY = 86_400_000;
+const MS_PER_WEEK = 7 * MS_PER_DAY;
+
+/**
+ * Fixed-epoch week index for a session date. Weeks start on SUNDAY, matching the
+ * getUTCDay convention (Sunday = 0). Two dates in the same Sun..Sat week share an
+ * index, and consecutive weeks differ by exactly 1, so it is safe to compare and
+ * decrement across weeks. Because session.date is the Medellin calendar date and
+ * this buckets in UTC (via parseSessionDate), the result is exactly local-week
+ * semantics with no timezone drift.
+ *
+ * The `+ 4 days` shifts the Unix epoch (a Thursday, 1970-01-01) so the week
+ * boundary lands between Saturday and Sunday. This replaces the previous per-site
+ * math that subtracted each session's OWN week-start from itself and therefore
+ * always returned 0, collapsing every session into a single bucket.
+ */
+export function getSessionWeekIndex(iso: string): number {
+  return Math.floor((parseSessionDate(iso).getTime() + 4 * MS_PER_DAY) / MS_PER_WEEK);
+}
+
+/**
+ * Weekly attendance streak from the set of week indices that each contain at
+ * least one attended session, counting back from `currentWeekIndex` (the
+ * in-progress week, i.e. getSessionWeekIndex of today in Medellin).
+ *
+ * THE RULE, stated so it cannot be silently reinterpreted later:
+ *   - The current, still-in-progress week COUNTS toward the streak if it already
+ *     has a session, but its ABSENCE does NOT break the streak, because the week
+ *     has not ended yet.
+ *   - Every COMPLETED (past) week counted must contain a session. The streak
+ *     breaks at the first completed week with none.
+ * So a user who trained the last three weeks and has not yet trained this week
+ * still has a streak of 3; it only drops once this week ends with no session.
+ */
+export function computeWeeklyStreak(weekIndices: Set<number>, currentWeekIndex: number): number {
+  let streak = 0;
+  if (weekIndices.has(currentWeekIndex)) streak++; // in-progress week: counts if present, never breaks if absent
+  for (let i = currentWeekIndex - 1; weekIndices.has(i); i--) streak++; // completed weeks: consecutive or stop
+  return streak;
+}

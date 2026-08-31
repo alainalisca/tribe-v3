@@ -22,9 +22,39 @@ interface AttendanceTrackerProps {
   isHost: boolean;
   isAdmin: boolean;
   sessionDate: string;
+  sessionStartTime: string;
+  sessionEndTime: string | null;
 }
 
-export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionDate }: AttendanceTrackerProps) {
+/**
+ * Whether a session's END has come and gone, evaluated in the viewer's local
+ * time. The app's market is Medellin, so on a Medellin device this is Medellin
+ * local. `date + time` is parsed as a local wall-clock instant, the same idiom
+ * the session reminder crons use.
+ *
+ * end_time is nullable. When it is missing we fall back to the START time rather
+ * than silently treating the session as never-ended: a missing end is a data gap
+ * we degrade around by opening attendance at the session start (a little early)
+ * instead of blocking it forever. We deliberately do NOT default to "not passed".
+ */
+export function sessionHasEnded(
+  dateIso: string,
+  startTime: string,
+  endTime: string | null,
+  now: Date = new Date()
+): boolean {
+  const endClock = endTime || startTime;
+  return new Date(`${dateIso}T${endClock}`) < now;
+}
+
+export default function AttendanceTracker({
+  sessionId,
+  isHost,
+  isAdmin,
+  sessionDate,
+  sessionStartTime,
+  sessionEndTime,
+}: AttendanceTrackerProps) {
   const supabase = createClient();
   const { t, language } = useLanguage();
   const [participants, setParticipants] = useState<AttendanceParticipant[]>([]);
@@ -32,7 +62,7 @@ export default function AttendanceTracker({ sessionId, isHost, isAdmin, sessionD
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   const canManageAttendance = isHost || isAdmin;
-  const sessionHasPassed = new Date(sessionDate) < new Date();
+  const sessionHasPassed = sessionHasEnded(sessionDate, sessionStartTime, sessionEndTime);
 
   useEffect(() => {
     if (canManageAttendance && sessionHasPassed) {
