@@ -101,8 +101,47 @@ describe('recurring-sessions cron — Gate 4 generation notice', () => {
       (createNotification as ReturnType<typeof vi.fn>).mock.calls.map((c) => [c[1].recipient_id, c[1].message])
     );
     expect(byRecipient['inst-1']).toContain('5 new sessions');
-    expect(byRecipient['inst-2']).toContain('Se crearon 1');
+    // inst-2 has a single occurrence, so the ES copy is the SINGULAR form.
+    expect(byRecipient['inst-2']).toContain('Se creó 1 nueva sesión');
     expect((createNotification as ReturnType<typeof vi.fn>).mock.calls[0][1].type).toBe('series_occurrences_generated');
+  });
+
+  it('renders singular and plural notice copy correctly in both languages', async () => {
+    // One instructor per (language x count) combination, so all four bodies are
+    // exercised: EN singular, EN plural, ES singular, ES plural.
+    const parents = [
+      { id: 'pen1', creator_id: 'inst-en-1', sport: 'Yoga' },
+      { id: 'pen2', creator_id: 'inst-en-2', sport: 'Boxing' },
+      { id: 'pes1', creator_id: 'inst-es-1', sport: 'Running' },
+      { id: 'pes2', creator_id: 'inst-es-2', sport: 'Cycling' },
+    ];
+    const users = [
+      { id: 'inst-en-1', preferred_language: 'en' },
+      { id: 'inst-en-2', preferred_language: 'en' },
+      { id: 'inst-es-1', preferred_language: 'es' },
+      { id: 'inst-es-2', preferred_language: 'es' },
+    ];
+    (getServiceRoleClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      from: (table: string) =>
+        chainFor(table === 'sessions' ? { data: parents, error: null } : { data: users, error: null }),
+    });
+    // The *2 parents get two occurrences (plural); the *1 parents get one (singular).
+    (computeRecurrenceDates as ReturnType<typeof vi.fn>).mockImplementation((parent: { id: string }) =>
+      parent.id === 'pen2' || parent.id === 'pes2' ? ['d1', 'd2'] : ['d1']
+    );
+    // Push off: the in-app bell (createNotification) is created regardless, and
+    // that is the copy under test.
+    (shouldSendNotification as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+
+    await GET(makeRequest());
+
+    const byRecipient = Object.fromEntries(
+      (createNotification as ReturnType<typeof vi.fn>).mock.calls.map((c) => [c[1].recipient_id, c[1].message])
+    );
+    expect(byRecipient['inst-en-1']).toContain('1 new session from your recurring series');
+    expect(byRecipient['inst-en-2']).toContain('2 new sessions from your recurring series');
+    expect(byRecipient['inst-es-1']).toContain('Se creó 1 nueva sesión');
+    expect(byRecipient['inst-es-2']).toContain('Se crearon 2 nuevas sesiones');
   });
 
   it('gates push on shouldSendNotification and never bypasses it', async () => {
