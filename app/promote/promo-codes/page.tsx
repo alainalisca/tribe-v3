@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { copyToClipboard } from '@/lib/share';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionDate } from '@/lib/utils';
 import {
   Plus,
   Copy,
@@ -483,9 +484,7 @@ export default function PromoCodesPage() {
     if (promo.applies_to === 'all') return t.allSessions;
     if (promo.applies_to === 'specific_session') {
       const session = sessions.find((s) => s.id === promo.session_id);
-      return session
-        ? `${session.sport} - ${new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}`
-        : t.sessionNotFound;
+      return session ? `${session.sport} - ${formatSessionDate(session.date, language)}` : t.sessionNotFound;
     }
     if (promo.applies_to === 'specific_package') {
       const pkg = packages.find((p) => p.id === promo.package_id);
@@ -732,8 +731,7 @@ export default function PromoCodesPage() {
                     <option value="">{t.selectSession}</option>
                     {sessions.map((session) => (
                       <option key={session.id} value={session.id}>
-                        {session.sport} -{' '}
-                        {new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}
+                        {session.sport} - {formatSessionDate(session.date, language)}
                       </option>
                     ))}
                   </select>

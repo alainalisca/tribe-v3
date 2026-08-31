@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionDate } from '@/lib/utils';
 import { Trash2, Pin, Edit2, X, Check, Loader, Eye, Heart, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
@@ -506,7 +507,7 @@ export default function PromotePostsPage() {
                 ) : (
                   sessions.map((session) => (
                     <option key={session.id} value={session.id}>
-                      {session.title} - {new Date(session.date).toLocaleDateString()}
+                      {session.title} - {formatSessionDate(session.date, language)}
                     </option>
                   ))
                 )}
@@ -590,7 +591,7 @@ export default function PromotePostsPage() {
                       <option value="">{strings.selectSession}</option>
                       {sessions.map((session) => (
                         <option key={session.id} value={session.id}>
-                          {session.title} - {new Date(session.date).toLocaleDateString()}
+                          {session.title} - {formatSessionDate(session.date, language)}
                         </option>
                       ))}
                     </select>

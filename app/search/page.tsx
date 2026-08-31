@@ -7,8 +7,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { followUser, unfollowUser, followNotificationMessage } from '@/lib/dal';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionDate } from '@/lib/utils';
 import { formatSessionLocation } from '@/lib/sessionLocation';
-import { sportTranslations } from '@/lib/translations';
+import { sportTranslations, Language } from '@/lib/translations';
 import { Search as SearchIcon, Loader, MapPin, Calendar, DollarSign, Users } from 'lucide-react';
 import Image from 'next/image';
 import BottomNav from '@/components/BottomNav';
@@ -452,12 +453,12 @@ function ChallengeResult({ challenge, language, onSelect }: ChallengeResultProps
 
 interface SessionResultProps {
   session: any;
-  language: string;
+  language: Language;
   onSelect: () => void;
 }
 
 function SessionResult({ session, language, onSelect }: SessionResultProps) {
-  const sessionDate = new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US');
+  const sessionDate = formatSessionDate(session.date, language);
   const { currency: userCurrency } = useUserCurrency();
 
   return (

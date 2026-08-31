@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionDate } from '@/lib/utils';
 import { getTrialStatus, isFeatureFree } from '@/lib/trial';
 import TrialBanner from '@/components/TrialBanner';
 import {
@@ -345,7 +346,7 @@ export default function BoostsPage() {
 
   const getBoostLabel = (campaign: BoostCampaign) => {
     if (campaign.boost_type === 'session' && campaign.session) {
-      return `${campaign.session.sport} - ${new Date(campaign.session.date).toLocaleDateString()}`;
+      return `${campaign.session.sport} - ${formatSessionDate(campaign.session.date, language)}`;
     } else if (campaign.boost_type === 'post' && campaign.post) {
       return campaign.post.content.substring(0, 50) + (campaign.post.content.length > 50 ? '...' : '');
     }
@@ -856,7 +857,7 @@ export default function BoostsPage() {
                     ) : (
                       sessions.map((session) => (
                         <option key={session.id} value={session.id}>
-                          {session.sport} - {new Date(session.date).toLocaleDateString()}
+                          {session.sport} - {formatSessionDate(session.date, language)}
                         </option>
                       ))
                     )}
