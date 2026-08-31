@@ -46,3 +46,14 @@ social-content-spec.md
 # Generator is committed (portable tooling); rendered images + downloaded stock are not.
 social-assets/out/
 social-assets/stock/
+
+# Local working notes and audits, not repo documentation (repo is public).
+# Listed explicitly so real docs (README, docs/*) are never ignored.
+INVITE-ACCEPTANCE-INVESTIGATION.md
+MVP_SCOPE_ASSESSMENT.md
+SECURITY-ROUTE-INVENTORY.md
+SHARE-FUNNEL-INVESTIGATION.md
+SINTRA-BRAIN-SEED.md
+docs/BUILD_AUDIT_2026-08-16.md
+docs/QA_HANDOFF_FOR_COWORK.md
+docs/ROUTE_INVENTORY_2026-08-16.md
