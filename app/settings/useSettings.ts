@@ -9,6 +9,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getSettingsTranslations } from './translations';
 import { fetchUserField, fetchUserIsAdmin, updateUser } from '@/lib/dal';
+import { getNotificationPreferences, updateNotificationPreferences } from '@/lib/dal/notificationPreferences';
 import { requestUserLocation } from '@/lib/location';
 import { resetUser } from '@/lib/analytics';
 import { changePassword, type PasswordChangeError } from '@/lib/auth/passwordChange';
@@ -122,14 +123,16 @@ export function useSettings(language: 'en' | 'es') {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
-  // Load user's reminder preference
+  // Load user's reminder preference. Reads the notification_preferences
+  // session_reminders category (the authoritative field, shared with
+  // /settings/notifications), not the retired users.session_reminders_enabled.
   useEffect(() => {
     async function loadReminderPreference() {
       if (!user) return;
-      const result = await fetchUserField(supabase, user.id, 'session_reminders_enabled');
+      const result = await getNotificationPreferences(supabase, user.id);
 
-      if (result.success && result.data !== undefined) {
-        setSessionRemindersEnabled(result.data !== false);
+      if (result.success && result.data) {
+        setSessionRemindersEnabled(result.data.session_reminders !== false);
       }
     }
     loadReminderPreference();
@@ -235,7 +238,9 @@ export function useSettings(language: 'en' | 'es') {
     setLoadingReminders(true);
     try {
       const newValue = !sessionRemindersEnabled;
-      const updateResult = await updateUser(supabase, user.id, { session_reminders_enabled: newValue });
+      // Write the notification_preferences session_reminders category, the same
+      // field /settings/notifications writes, so the two surfaces stay in sync.
+      const updateResult = await updateNotificationPreferences(supabase, user.id, { session_reminders: newValue });
 
       if (!updateResult.success) throw new Error(updateResult.error);
 
