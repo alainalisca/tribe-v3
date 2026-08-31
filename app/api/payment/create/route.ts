@@ -189,9 +189,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: 'Failed to create Wompi transaction' }, { status: 500 });
         }
         redirectUrl = wompiResult.redirect_url;
-        // The gateway transaction id is the handle finalize_payment matches
-        // the tip on when the webhook fires.
-        await serviceSupabase.from('tips').update({ gateway_payment_id: wompiResult.transaction_id }).eq('id', tipId);
+        // Web Checkout has no transaction id yet — Wompi assigns it when the
+        // customer pays. The webhook back-fills tips.gateway_payment_id (keyed
+        // by reference = tipId) before finalize_payment runs.
       } else {
         // PAYMENT_GATEWAY_OVERRIDE: COP can land here when the env override
         // forces Stripe. The app stores COP as `value × 100` (Wompi convention).
@@ -331,10 +331,9 @@ export async function POST(request: NextRequest) {
         }
 
         checkoutUrl = wompiResult.redirect_url;
-        await serviceSupabase
-          .from('payments')
-          .update({ gateway_payment_id: wompiResult.transaction_id, status: 'processing' })
-          .eq('id', paymentId);
+        // No transaction id yet (Web Checkout). The webhook back-fills
+        // gateway_payment_id (keyed by reference = paymentId) before finalize.
+        await serviceSupabase.from('payments').update({ status: 'processing' }).eq('id', paymentId);
       } else {
         const finalSuccessUrl = success_url || `${siteUrl}/promote/boosts?payment=success&campaign=${reference_id}`;
         const finalCancelUrl = cancel_url || `${siteUrl}/promote/boosts?payment=cancelled&campaign=${reference_id}`;
@@ -621,14 +620,10 @@ export async function POST(request: NextRequest) {
 
       redirectUrl = wompiResult.redirect_url;
 
-      // Store Wompi transaction ID
-      await serviceSupabase
-        .from('payments')
-        .update({
-          gateway_payment_id: wompiResult.transaction_id,
-          status: 'processing',
-        })
-        .eq('id', paymentId);
+      // No transaction id yet (Web Checkout assigns it when the customer pays).
+      // The webhook back-fills gateway_payment_id (keyed by reference =
+      // paymentId) before finalize_payment runs.
+      await serviceSupabase.from('payments').update({ status: 'processing' }).eq('id', paymentId);
     } else {
       // USD session payment. Destination charge to instructor's Connect
       // account — refuse to create the session unless onboarding is done,
