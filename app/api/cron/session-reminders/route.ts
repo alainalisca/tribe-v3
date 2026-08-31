@@ -95,36 +95,38 @@ export async function GET(request: Request) {
         !session.reminder_15min_sent && sessionDateTime >= fifteenMinFromNow && sessionDateTime <= twentyMinFromNow;
 
       if (needsOneHourReminder || needsFifteenMinReminder) {
-        // Fetch creator and participants in parallel (independent queries)
+        // Fetch creator and participants in parallel (independent queries). The
+        // legacy users.session_reminders_enabled column is no longer read: the
+        // notification_preferences session_reminders category (checked via
+        // shouldSendNotification below) is now the sole authority, so it is not
+        // selected here either.
         const [creatorResult, participantsResult] = await Promise.all([
-          fetchUserProfileMaybe(supabase, session.creator_id, 'id, preferred_language, session_reminders_enabled'),
-          fetchParticipantsWithUserDetails(supabase, session.id),
+          fetchUserProfileMaybe(supabase, session.creator_id, 'id, preferred_language'),
+          fetchParticipantsWithUserDetails(supabase, session.id, 'id, preferred_language'),
         ]);
         const creator = creatorResult.data as {
           id: string;
           preferred_language: string | null;
-          session_reminders_enabled: boolean | null;
         } | null;
         const participants = (participantsResult.data || []) as Array<{
           user_id: string;
-          user: { id: string; preferred_language: string | null; session_reminders_enabled: boolean | null } | null;
+          user: { id: string; preferred_language: string | null } | null;
         }>;
 
-        // Collect all users to notify (creator + participants)
+        // Collect all users to notify (creator + participants). Gating is done
+        // solely by shouldSendNotification below, so add everyone here.
         const usersToNotify: Array<{ id: string; lang: string }> = [];
 
-        // Add creator if reminders enabled
-        if (creator && creator.session_reminders_enabled !== false) {
+        if (creator) {
           usersToNotify.push({
             id: creator.id,
             lang: creator.preferred_language || 'en',
           });
         }
 
-        // Add participants if reminders enabled
         for (const participant of participants) {
           const userData = participant.user;
-          if (userData && userData.session_reminders_enabled !== false) {
+          if (userData) {
             usersToNotify.push({
               id: participant.user_id,
               lang: userData.preferred_language || 'en',
@@ -132,7 +134,9 @@ export async function GET(request: Request) {
           }
         }
 
-        // Respect per-category preferences (push channel, session_reminders category)
+        // Respect per-category preferences (push channel, session_reminders
+        // category). Under the delivery-policy model this is default_on: it
+        // requires push_enabled and honors the session_reminders toggle.
         const prefsChecks = await Promise.all(
           usersToNotify.map((u) => shouldSendNotification(supabase, u.id, 'session_reminder', 'push'))
         );
