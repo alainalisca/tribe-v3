@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { sportTranslations } from '@/lib/translations';
+import { formatSessionDate } from '@/lib/utils';
 
 interface AvailabilityPreviewProps {
   instructorId: string;
@@ -19,16 +20,6 @@ interface UpcomingSession {
   title: string | null;
   max_participants: number | null;
   participant_count: number;
-}
-
-function formatDayLabel(iso: string, language: 'en' | 'es'): string {
-  const d = new Date(iso + 'T00:00:00Z');
-  return d.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 export default function AvailabilityPreview({ instructorId, language, daysAhead = 14 }: AvailabilityPreviewProps) {
@@ -121,7 +112,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
                     aria-hidden="true"
                   />
                   <span className="text-xs text-theme-tertiary w-20 flex-shrink-0">
-                    {formatDayLabel(s.date, language)}
+                    {formatSessionDate(s.date, language, { weekday: 'short', month: 'short', day: 'numeric' })}
                   </span>
                   <span className="text-xs text-theme-tertiary w-16 flex-shrink-0">{s.start_time.slice(0, 5)}</span>
                   <span className="flex-1 truncate">{s.title || sportLabel}</span>

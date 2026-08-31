@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { sportTranslations } from '@/lib/translations';
 import { trackEvent } from '@/lib/analytics';
+import { formatSessionDate } from '@/lib/utils';
 
 interface RebookingStepProps {
   instructorId: string;
@@ -30,16 +31,6 @@ interface UpcomingSessionCard {
   participant_count: number;
   creator_id: string;
   creator_name: string | null;
-}
-
-function formatDay(iso: string, language: 'en' | 'es'): string {
-  const d = new Date(iso + 'T00:00:00Z');
-  return d.toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function formatPrice(
@@ -81,7 +72,7 @@ function SessionCard({
       }`}
     >
       <p className="text-xs text-theme-tertiary">
-        {formatDay(s.date, language)}
+        {formatSessionDate(s.date, language, { weekday: 'short', month: 'short', day: 'numeric' })}
         {s.start_time ? ` · ${s.start_time.slice(0, 5)}` : ''}
       </p>
       <p className="text-sm font-semibold text-white mt-0.5">{s.title || sportLabel}</p>
