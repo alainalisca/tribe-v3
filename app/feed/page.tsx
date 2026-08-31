@@ -6,6 +6,8 @@ import { showError } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { formatSessionDate } from '@/lib/utils';
+import { Language } from '@/lib/translations';
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import {
   Heart,
@@ -443,7 +445,7 @@ interface PostCardProps {
   viewCount: number;
   shareMessage: boolean;
   commentCount: number;
-  language: string;
+  language: Language;
 }
 
 function PostCard({
@@ -554,7 +556,7 @@ function PostCard({
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-tribe-green" />
-              <span>{new Date(session.date).toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US')}</span>
+              <span>{formatSessionDate(session.date, language)}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-tribe-green" />
