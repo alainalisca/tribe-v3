@@ -715,6 +715,16 @@ select '146_sec4_capture_production_media_policies',
            and policyname = 'Authenticated can read media'
        ) then 'applied' else 'MISSING' end
 union all
+select '147_capture_user_follows_schema',
+       -- Captures public.user_follows (with its no_self_follow CHECK and
+       -- unique_follow UNIQUE constraints) and session_participants
+       -- .payment_confirmed_by. Applied once the table AND both constraints
+       -- exist, which distinguishes a real apply from a partial one.
+       case when (select to_regclass('public.user_follows')) is not null
+              and exists (select 1 from pg_constraint where conname = 'no_self_follow')
+              and exists (select 1 from pg_constraint where conname = 'unique_follow')
+            then 'applied' else 'MISSING' end
+union all
 select '148_total_sessions_hosted_counter',
        -- Makes users.total_sessions_hosted a maintained counter via
        -- recompute_all_total_sessions_hosted() plus triggers on sessions.
