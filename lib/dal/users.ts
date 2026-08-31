@@ -360,6 +360,53 @@ export async function fetchUsersForEmailJobs(supabase: SupabaseClient): Promise<
   }
 }
 
+/**
+ * Bounded audience for the inactive-nudge re-engagement email. Mirrors the
+ * engagement cron's re-engagement pattern (fetchUsersWithPush + a
+ * last_reengagement_sent filter) but for EMAIL recipients: it does not require a
+ * push subscription, and it keeps the deleted/banned/test exclusions the email
+ * jobs need.
+ *
+ * Dedup + cap live here, not in the caller:
+ *   - `reengagementBefore`: only users whose last_reengagement_sent is NULL or
+ *     older than this cutoff, so a recently-nudged user is skipped. This column
+ *     is SHARED with the engagement cron's push comeback, which is deliberate:
+ *     it gives cross-channel dedup (a user who just got a push comeback is not
+ *     also emailed in the same window), and whichever cron runs first claims it.
+ *   - `createdBefore`: only users older than the cutoff (established accounts).
+ *   - NULLS FIRST ordering + `limit`: never-nudged users drain first, and each
+ *     run is capped so the backlog clears over several runs instead of one blast.
+ *
+ * Callers MUST pass the service-role client (same rationale as
+ * fetchUsersForEmailJobs).
+ */
+export async function fetchUsersForReengagementEmail(
+  supabase: SupabaseClient,
+  opts: { reengagementBefore: string; createdBefore: string; limit: number }
+): Promise<DalResult<EmailJobUser[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select(EMAIL_JOB_USER_FIELDS)
+      .is('deleted_at', null)
+      .not('banned', 'is', true)
+      .not('is_test_account', 'is', true)
+      .not('email', 'is', null)
+      .lt('created_at', opts.createdBefore)
+      .or(`last_reengagement_sent.is.null,last_reengagement_sent.lt.${opts.reengagementBefore}`)
+      .order('last_reengagement_sent', { ascending: true, nullsFirst: true })
+      .limit(opts.limit);
+    if (error) {
+      logError(error, { action: 'fetchUsersForReengagementEmail' });
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: (data ?? []) as unknown as EmailJobUser[] };
+  } catch (error) {
+    logError(error, { action: 'fetchUsersForReengagementEmail' });
+    return { success: false, error: 'Failed to fetch users' };
+  }
+}
+
 /** Fetch user profile, returning null instead of error when not found. */
 export async function fetchUserProfileMaybe(
   supabase: SupabaseClient,
