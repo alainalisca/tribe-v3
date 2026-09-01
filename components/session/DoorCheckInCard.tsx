@@ -153,12 +153,12 @@ export default function DoorCheckInCard({
                 key={guest.participantId}
                 className="flex items-center justify-between p-3 bg-stone-50 dark:bg-tribe-mid rounded-lg"
               >
-                <span className="font-medium text-stone-900 dark:text-white truncate">{guest.name}</span>
+                <span className="flex-1 min-w-0 font-medium text-stone-900 dark:text-white truncate">{guest.name}</span>
                 <button
                   onClick={() => handleRemove(guest.participantId)}
                   disabled={removingId === guest.participantId}
                   aria-label={`${txt.remove} ${guest.name}`}
-                  className="p-2 rounded-lg text-stone-500 dark:text-gray-400 hover:bg-red-500 hover:text-white transition disabled:opacity-50"
+                  className="shrink-0 p-2 rounded-lg text-stone-500 dark:text-gray-400 hover:bg-red-500 hover:text-white transition disabled:opacity-50"
                 >
                   {removingId === guest.participantId ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -455,7 +455,7 @@ export default function SessionDetailPage() {
             sessionEndTime={d.session.end_time ?? null}
             sessionStatus={d.session.status}
             language={language}
-            onChange={d.reload}
+            onChange={d.reloadSilent}
           />
         )}
 

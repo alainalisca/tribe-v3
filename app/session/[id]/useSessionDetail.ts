@@ -144,10 +144,18 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     }
   }
 
-  async function loadSession() {
+  // `silent` refetches session + participants (and the rest) WITHOUT flipping the
+  // page-level loading/error gates, so an in-place mutation (door check-in add,
+  // kick, approve, guest join, waitlist accept) can refresh the count and roster
+  // without unmounting the subtree behind the full-screen spinner. Default
+  // (non-silent) keeps the original mount/refresh behavior unchanged.
+  async function loadSession(opts?: { silent?: boolean }) {
+    const silent = opts?.silent ?? false;
     try {
-      setLoading(true);
-      setLoadError(null);
+      if (!silent) {
+        setLoading(true);
+        setLoadError(null);
+      }
       // RLS-H4: authed viewers read the base table (full precision, all columns);
       // a logged-out viewer reads the anon view (3dp coords, invite_only stubbed),
       // which survives the Gate 3 revoke. Auth is resolved freshly here rather than
@@ -160,7 +168,10 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
         ? await fetchSessionWithDetails(supabase, sessionId)
         : await fetchSessionPublicView(supabase, sessionId);
       if (!result.success || !result.data) {
-        setLoadError(result.error || 'unknown');
+        // In silent mode, do not flip the page into its error view over a
+        // background refresh; log and leave the current content in place.
+        if (!silent) setLoadError(result.error || 'unknown');
+        else logError(new Error(result.error || 'unknown'), { action: 'loadSession.silent', sessionId });
         return;
       }
       setSession(result.data.session);
@@ -213,7 +224,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     } catch (error) {
       logError(error, { action: 'loadSession', sessionId });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -301,6 +312,7 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     loading,
     loadError,
     reload: loadSession,
+    reloadSilent: () => loadSession({ silent: true }),
     user,
     userIsAdmin,
     hasJoined,
