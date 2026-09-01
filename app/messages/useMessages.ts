@@ -109,15 +109,26 @@ export function useMessages({ targetUserId }: UseMessagesOptions = {}) {
   }
 
   async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-      return;
+    // The auth call used to sit outside loadConversations' try, so a rejected
+    // getUser skipped both setError and setLoading(false) and the page spun
+    // forever. Guard it here with the same error shape loadConversations uses,
+    // so the retry state renders.
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth');
+        return;
+      }
+      setCurrentUser(user);
+      await loadConversations(user.id);
+    } catch (err) {
+      logError(err, { action: 'checkUser' });
+      setError('load_failed');
+    } finally {
+      setLoading(false);
     }
-    setCurrentUser(user);
-    await loadConversations(user.id);
   }
 
   async function loadConversations(userId: string) {
