@@ -762,4 +762,40 @@ select '151_notification_prefs_backfill',
          left join public.notification_preferences p on p.user_id = a.id
          where p.user_id is null
        ) then 'applied' else 'MISSING' end
+union all
+select '152_scope_participant_roster',
+       -- Scopes the session_participants_roster view to the session creator, a
+       -- confirmed participant, or an app admin. The view predated 152 (127/128)
+       -- with NO viewer scoping, so existence alone is not a signal. Probed on the
+       -- view definition carrying the auth.uid() scoping the WHERE clause added.
+       case when exists (
+         select 1 from pg_views
+         where schemaname = 'public' and viewname = 'session_participants_roster'
+           and definition ilike '%auth.uid()%'
+       ) then 'applied' else 'MISSING' end
+union all
+select '153_host_door_checkin',
+       -- Adds the two creator-scoped door check-in RPCs. Applied once BOTH
+       -- functions exist (a partial apply that created only one is caught).
+       case when exists (
+         select 1 from pg_proc
+         where proname = 'host_add_session_guest' and pronamespace = 'public'::regnamespace
+       ) and exists (
+         select 1 from pg_proc
+         where proname = 'host_remove_session_guest' and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
+union all
+select '154_close_guest_delete_policy',
+       -- A revoke: probed by the ABSENCE it establishes. Both unverified guest
+       -- DELETE policies are gone AND the orphaned check_guest_identity function
+       -- is dropped. (sp_delete_by_instructor and the self-delete policies are
+       -- intentionally kept and are not probed here.)
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public' and tablename = 'session_participants'
+           and policyname in ('Guests can leave sessions', 'Allow guests to delete their own participation')
+       ) and not exists (
+         select 1 from pg_proc
+         where proname = 'check_guest_identity' and pronamespace = 'public'::regnamespace
+       ) then 'applied' else 'MISSING' end
 order by migration;
