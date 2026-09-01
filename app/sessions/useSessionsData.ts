@@ -72,15 +72,26 @@ export function useSessionsData() {
   }, []);
 
   async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-      return;
+    // The auth call used to sit outside loadSessions' try, so a rejected
+    // getUser skipped both setError and setLoading(false) and the page spun
+    // forever. Guard it here with the same error shape loadSessions uses, so
+    // the retry state renders.
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth');
+        return;
+      }
+      setUser(user);
+      await loadSessions(user.id);
+    } catch (err) {
+      logError(err, { action: 'checkUser' });
+      setError('load_failed');
+    } finally {
+      setLoading(false);
     }
-    setUser(user);
-    await loadSessions(user.id);
   }
 
   async function loadSessions(userId: string) {

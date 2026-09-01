@@ -60,13 +60,23 @@ export function useMatches() {
   }, [user, activeTab]);
 
   async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push('/auth');
-    } else {
-      setUser(user);
+    // A rejected getUser used to leave loading stuck true with no error, so the
+    // retry state never rendered. On success, loading is cleared by loadData
+    // (run from the `user` effect), so we clear it here only on failure rather
+    // than in a finally, which would flash the loaded state before loadData runs.
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/auth');
+      } else {
+        setUser(user);
+      }
+    } catch (err) {
+      logError(err, { action: 'checkUser' });
+      setError('load_failed');
+      setLoading(false);
     }
   }
 
