@@ -25,6 +25,7 @@ export interface Instructor {
   verified: boolean;
   storefront_banner_url: string;
   bio: string;
+  instructor_bio?: string | null;
   average_rating?: number | null;
   total_reviews?: number | null;
   storefront_video_url?: string | null;
@@ -166,7 +167,7 @@ export function useStorefrontData(instructorId: string) {
           supabase
             .from('users')
             .select(
-              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos'
+              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, instructor_bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos'
             )
             .eq('id', instructorId)
             // A soft-deleted account's storefront should not load — maybeSingle
