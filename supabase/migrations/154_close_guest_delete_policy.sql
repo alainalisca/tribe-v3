@@ -1,48 +1,58 @@
 -- 154_close_guest_delete_policy.sql
--- Close the loose guest DELETE policy on session_participants.
+-- Close the unverified guest DELETE hole on session_participants.
 --
--- THE HOLE: "Allow guests to delete their own participation" is
---   FOR DELETE USING (is_guest = true AND user_id IS NULL [AND check_guest_identity()])
--- with no scoping to the guest, the session, or the creator. Its intended
--- verification, check_guest_identity(), was created returning TRUE unconditionally
--- (add_guest_unjoin_policy.sql) and later re-created to compare an x-guest-token
--- request header to the row's guest_token (fix_guest_identity_check.sql). Either
--- way the policy is a table-wide guest-delete door: near-harmless today (almost no
--- guest rows) but serious the moment door check-in (153) ships and every roster is
--- guest rows.
+-- LIVE STATE (from pg_policies, not the migration files, which were incomplete):
+-- session_participants has SEVEN DELETE policies. RLS policies are permissive and
+-- OR'd, so a guest row is deletable if ANY of them passes. Two of them gate guest
+-- rows with no real authorization:
+--   * "Guests can leave sessions"                    USING (is_guest AND user_id IS NULL)
+--       -> NO verification at all. This is the hole: any role with table DELETE
+--          privilege can remove any guest row of any session.
+--   * "Allow guests to delete their own participation"
+--          USING (is_guest AND user_id IS NULL AND check_guest_identity())
+--       -> check_guest_identity() (the only overload in prod, 0-arg) compares the
+--          x-guest-token header to a bare guest_token with no parameter and no FROM,
+--          so inside a USING clause it cannot see the row and likely errors rather
+--          than authorizing. Either way this policy is not a real guard, and no
+--          wired client sends that header.
 --
--- WHY DROPPING IT IS SAFE (delete-path audit, verified in code)
---   * Guest self-unjoin does NOT use this policy. It goes through the
---     guest_leave_session SECURITY DEFINER RPC (migration 128), called from
---     hooks/sessionActionHelpers.ts with the guest_token stored in localStorage.
---     Definer RPCs bypass RLS, so the policy is irrelevant to it.
---   * Host removal of a guest goes through host_remove_session_guest (migration
---     153), also SECURITY DEFINER and creator-scoped. Also policy-independent.
---   * The two DAL helpers that DID do direct client guest deletes
---     (deleteGuestParticipant, deleteGuestParticipantsForSession in
---     lib/dal/participants.ts) have ZERO callers. They are dead code left over
---     from before migration 128 rerouted onto the RPC. Nothing wired breaks.
---   * The host kick path (deleteParticipantBySessionAndUser) filters on
---     user_id equality, so it only ever targets real-user rows and never matched
---     this guest policy in the first place.
--- So after this drop, the only guest-delete paths are the two definer RPCs, each
--- gated (guest_token for the guest, creator/admin for the host). A token-less
--- direct DELETE by anon/authenticated is default-denied (RLS on, no DELETE policy).
+-- WHY DROPPING BOTH IS SAFE (delete-path audit, verified in code):
+--   * Guest self-unjoin runs through guest_leave_session (migration 128), a
+--     SECURITY DEFINER RPC that verifies guest_token server-side and bypasses RLS.
+--     Called from hooks/sessionActionHelpers.ts. It does not use either policy.
+--   * The two DAL helpers that did direct client guest deletes
+--     (deleteGuestParticipant, deleteGuestParticipantsForSession) have ZERO
+--     callers (dead code from before 128).
+-- After the drop, the surviving DELETE policies are: sp_delete_by_instructor
+-- (creator can delete rows of their own session, guests included), the three
+-- identical self-delete policies (auth.uid() = user_id, real accounts only), and
+-- the admin-email policy. So guest rows remain removable by the host (policy AND
+-- the explicit host_remove_session_guest RPC from 153) and by the guest
+-- (guest_leave_session). A token-less direct DELETE by a non-creator is then
+-- default-denied.
 --
--- PROD-STATE NOTE: which check_guest_identity() variant is live and whether the
--- policy's USING clause includes it cannot be read from a migration file. This
--- migration is robust to that ambiguity: it drops the policy BY NAME and both
--- function overloads BY SIGNATURE, so it lands correctly regardless of which
--- variant production currently has. (Confirm the live state with the SQL in the
--- rehearsal header if you want ground truth before applying.)
+-- KEPT ON PURPOSE:
+--   * sp_delete_by_instructor: this IS the creator-scoped guest-delete grant. It
+--     stays. host_remove_session_guest (153) is kept alongside it as the explicit
+--     RPC the door UI calls (recomputes current_participants, structured errors,
+--     survives future policy tightening).
+--   * The three duplicate self-delete policies ("Users can leave sessions",
+--     participants_delete_policy, sp_delete_self) are left intact so real-account
+--     self-unjoin keeps working. Consolidating those three into one is pure
+--     duplication cleanup and belongs in its OWN migration, not here.
 --
--- Also drops both check_guest_identity overloads: once the policy is gone they are
--- orphaned, and the arg-less-returns-true original is a foot-gun worth removing.
+-- SEPARATE CONCERN (filed, not touched here): "Admin can delete
+-- session_participants" is gated on a hardcoded email
+-- ((auth.jwt() ->> 'email') = 'alainalisca@aplusfitnessllc.com'). That should move
+-- to public.is_app_admin() like the rest of the admin surface, in its own ticket.
 
+DROP POLICY IF EXISTS "Guests can leave sessions" ON public.session_participants;
 DROP POLICY IF EXISTS "Allow guests to delete their own participation" ON public.session_participants;
 
--- Order matters: the policy above referenced check_guest_identity(), so it must be
--- dropped first. Both overloads are removed (the 0-arg token-check version and the
--- 2-arg return-TRUE original). No other policy or object references them.
+-- "Allow guests to delete their own participation" referenced check_guest_identity(),
+-- so it is dropped above first. The 0-arg overload is the only one in production;
+-- the 2-arg drop is a no-op in prod (present only in dev/staging DBs where the
+-- superseded add_guest_unjoin_policy.sql ran) and is included for environment
+-- robustness.
 DROP FUNCTION IF EXISTS public.check_guest_identity();
 DROP FUNCTION IF EXISTS public.check_guest_identity(text, text);

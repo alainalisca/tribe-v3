@@ -1,57 +1,43 @@
 -- ============================================================================
 -- 154_close_guest_delete_policy_REHEARSAL.sql  —  NOT A MIGRATION.
--- Paste into the Supabase SQL Editor and Run once. Opens a transaction, sets up
--- the world that exists AFTER 153 ships (recreates 153's host RPCs; guest_leave_
--- session from 128 is assumed already live and is precheck-verified), applies
--- 154's drops verbatim, proves the surviving paths still work AND the hole is
--- closed, returns a SINGLE final result set, and ROLLS BACK. ZERO changes persist.
+-- Paste into the Supabase SQL Editor and Run once. Sets up the post-153 world
+-- (recreates 153's host RPCs; guest_leave_session from 128 is assumed live and is
+-- precheck-verified), applies 154's drops verbatim, proves the surviving paths
+-- still work AND the hole is closed, returns a SINGLE final result set, and ROLLS
+-- BACK. ZERO changes persist.
 --
--- No RAISE NOTICE: every scenario writes a row into a temp table; the final SELECT
--- renders them plus an ALL_CHECKS rollup.
--- Columns: check_name text | actual text | expected text | pass boolean.
+-- No RAISE NOTICE. Columns: check_name | actual | expected | pass.
 --
--- SIMULATING auth.uid(): same technique as the 152/153 rehearsals (set_config on
--- the request JWT claim GUCs). The role-deny proof additionally uses SET LOCAL
--- ROLE authenticated so real RLS applies to a direct DELETE.
+-- SIMULATING auth.uid(): set_config on the request JWT claim GUCs. The direct-
+-- delete proofs additionally SET LOCAL ROLE authenticated so real RLS applies.
+-- auth.uid() reads the GUC regardless of the current role, so under
+-- (role authenticated + GUC = some uid) the DELETE policies evaluate for that uid.
 --
--- GROUND TRUTH before applying (run separately, this rehearsal does NOT need it):
---   -- live DELETE policy USING clause:
---   SELECT policyname, cmd, qual FROM pg_policies
---     WHERE schemaname='public' AND tablename='session_participants' AND cmd='DELETE';
---   -- live check_guest_identity bodies (both overloads):
---   SELECT oid::regprocedure, prosrc FROM pg_proc WHERE proname='check_guest_identity';
+-- What it proves after the change:
+--   * both_guest_delete_policies_gone
+--   * sp_delete_by_instructor_still_present
+--   * non_delete_policies_unchanged (SELECT + UPDATE sets byte-identical)
+--   * check_guest_identity_dropped
+--   * guest_leave_valid_token_works / wrong_token_cannot_delete
+--   * host_remove_works_for_creator
+--   * creator_direct_delete_allowed (sp_delete_by_instructor still lets a creator
+--     directly delete a guest row)
+--   * non_creator_direct_delete_denied (a token-less DELETE as authenticated by a
+--     stranger removes ZERO rows; the guest row survives)
+--   * real_account_self_unjoin_works (a real user deletes their own row as
+--     authenticated via the self-delete policy)
 --
--- What it proves:
---   * permissive_delete_policy_gone: the named policy no longer exists.
---   * no_delete_policy_remains: session_participants has zero DELETE policies.
---   * non_delete_policies_unchanged: the SELECT/UPDATE policy set is byte-identical
---     before and after (the REVOKE did not disturb read/update paths).
---   * check_guest_identity_dropped: both function overloads are gone.
---   * guest_leave_valid_token_works: a guest with the correct guest_token is still
---     removed by guest_leave_session.
---   * wrong_token_cannot_delete: guest_leave_session with a wrong token deletes
---     nothing.
---   * authenticated_direct_delete_denied: a direct DELETE as role authenticated
---     removes 0 rows (RLS default-deny) or errors on privilege; the guest row
---     survives.
---   * host_remove_works_for_creator: host_remove_session_guest still removes a
---     guest for the session creator.
---
--- FIXTURE DEPENDENCY: needs any one non-cancelled session (for its creator) and
--- guest_leave_session present (migration 128). Missing -> the guard checks fail and
--- ALL_CHECKS fails; nothing is faked. All writes roll back.
+-- FIXTURE DEPENDENCY: a non-cancelled session (for its creator), a non-admin
+-- stranger, one existing real-user participant row (any session), and
+-- guest_leave_session present (128). Missing -> guard checks fail, ALL_CHECKS
+-- fails, nothing faked. Everything rolls back.
 -- ============================================================================
 
 BEGIN;
 
--- ── PRE-REQ: migration 153 host RPCs (recreated so the removal proof is self-
---    contained; 153 ships before 154 in the same sequence). guest_leave_session
---    (128) is assumed live and precheck-verified below. ──────────────────────────
+-- ── PRE-REQ: migration 153 host RPCs (so the removal proofs are self-contained). ──
 CREATE OR REPLACE FUNCTION public.host_add_session_guest(
-  p_session_id uuid,
-  p_guest_name text,
-  p_guest_phone text DEFAULT NULL,
-  p_guest_email text DEFAULT NULL
+  p_session_id uuid, p_guest_name text, p_guest_phone text DEFAULT NULL, p_guest_email text DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -79,8 +65,7 @@ REVOKE ALL ON FUNCTION public.host_add_session_guest(uuid, text, text, text) FRO
 GRANT EXECUTE ON FUNCTION public.host_add_session_guest(uuid, text, text, text) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.host_remove_session_guest(
-  p_session_id uuid,
-  p_participant_id uuid
+  p_session_id uuid, p_participant_id uuid
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -103,129 +88,191 @@ END $$;
 REVOKE ALL ON FUNCTION public.host_remove_session_guest(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.host_remove_session_guest(uuid, uuid) TO authenticated;
 
--- Snapshot ALL policies on session_participants BEFORE the 154 drop.
+-- Snapshot ALL policies BEFORE the 154 drop.
 CREATE TEMP TABLE policy_before ON COMMIT DROP AS
   SELECT policyname, cmd FROM pg_policies
    WHERE schemaname = 'public' AND tablename = 'session_participants';
 
 -- ── MIGRATION 154 BODY (verbatim) ───────────────────────────────────────────
+DROP POLICY IF EXISTS "Guests can leave sessions" ON public.session_participants;
 DROP POLICY IF EXISTS "Allow guests to delete their own participation" ON public.session_participants;
 DROP FUNCTION IF EXISTS public.check_guest_identity();
 DROP FUNCTION IF EXISTS public.check_guest_identity(text, text);
 
 -- ── VERIFICATION ────────────────────────────────────────────────────────────
 CREATE TEMP TABLE rehearsal_results (check_name text, actual text, expected text, pass boolean) ON COMMIT DROP;
-CREATE TEMP TABLE t_ctx (s uuid, c uuid, direct_del_pid uuid) ON COMMIT DROP;
+CREATE TEMP TABLE t_ctx (s uuid, c uuid, x uuid, g_creator_del uuid, g_stranger_del uuid, r1_id uuid, u uuid) ON COMMIT DROP;
 
 DO $$
 DECLARE
-  v_s uuid; v_c uuid;
+  v_s uuid; v_c uuid; v_x uuid; v_r1 uuid; v_u uuid;
   v_res jsonb; v_pid uuid; v_token uuid; v_cnt int; v_bool boolean;
+  v_g_creator uuid; v_g_stranger uuid;
   v_leave_exists boolean;
 BEGIN
   v_leave_exists := to_regprocedure('public.guest_leave_session(uuid, uuid)') IS NOT NULL;
   INSERT INTO rehearsal_results VALUES (
-    'guest_leave_session_present', v_leave_exists::text, 'true (migration 128 applied)', v_leave_exists
-  );
+    'guest_leave_session_present', v_leave_exists::text, 'true (migration 128 applied)', v_leave_exists);
 
-  SELECT id, creator_id INTO v_s, v_c
-    FROM public.sessions
-   WHERE COALESCE(status, '') <> 'cancelled'
-   ORDER BY created_at DESC LIMIT 1;
+  SELECT id, creator_id INTO v_s, v_c FROM public.sessions
+   WHERE COALESCE(status, '') <> 'cancelled' ORDER BY created_at DESC LIMIT 1;
+  SELECT id INTO v_x FROM public.users WHERE COALESCE(is_admin, false) = false AND id <> v_c LIMIT 1;
+  SELECT id, user_id INTO v_r1, v_u FROM public.session_participants WHERE user_id IS NOT NULL LIMIT 1;
+
   INSERT INTO rehearsal_results VALUES (
-    'fixture_found', format('S=%s C=%s', v_s, v_c), 'S, C present', v_s IS NOT NULL AND v_c IS NOT NULL
+    'fixture_found',
+    format('S=%s C=%s X=%s R1=%s U=%s', v_s, v_c, v_x, v_r1, v_u),
+    'session, creator, stranger, real participant all present',
+    v_s IS NOT NULL AND v_c IS NOT NULL AND v_x IS NOT NULL AND v_r1 IS NOT NULL AND v_u IS NOT NULL AND v_leave_exists
   );
-  IF v_s IS NULL OR v_c IS NULL OR NOT v_leave_exists THEN RETURN; END IF;
+  IF v_s IS NULL OR v_c IS NULL OR v_x IS NULL OR v_r1 IS NULL OR v_u IS NULL OR NOT v_leave_exists THEN
+    RETURN;
+  END IF;
 
+  -- Act as the creator for the RPC-based scenarios.
   PERFORM set_config('request.jwt.claim.sub', v_c::text, true);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_c::text)::text, true);
 
-  -- (A) guest_leave_session with the VALID token still works.
+  -- guest_leave_session with a VALID token still works.
   v_res := public.host_add_session_guest(v_s, 'Leave Me', NULL, NULL);
   v_pid := (v_res->>'participant_id')::uuid;
   SELECT guest_token INTO v_token FROM public.session_participants WHERE id = v_pid;
   v_bool := public.guest_leave_session(v_s, v_token);
   SELECT count(*) INTO v_cnt FROM public.session_participants WHERE id = v_pid;
   INSERT INTO rehearsal_results VALUES (
-    'guest_leave_valid_token_works',
-    format('rpc=%s row_gone=%s', v_bool, (v_cnt = 0)),
-    'true and row removed',
-    v_bool = true AND v_cnt = 0
-  );
+    'guest_leave_valid_token_works', format('rpc=%s row_gone=%s', v_bool, (v_cnt = 0)),
+    'true and row removed', v_bool = true AND v_cnt = 0);
 
-  -- (B) A wrong token deletes nothing. Leave this row in place for the role test.
-  v_res := public.host_add_session_guest(v_s, 'Keep Me', NULL, NULL);
+  -- Wrong token deletes nothing.
+  v_res := public.host_add_session_guest(v_s, 'Wrong Token Keep', NULL, NULL);
   v_pid := (v_res->>'participant_id')::uuid;
-  INSERT INTO t_ctx VALUES (v_s, v_c, v_pid);
   v_bool := public.guest_leave_session(v_s, gen_random_uuid());
   SELECT count(*) INTO v_cnt FROM public.session_participants WHERE id = v_pid;
   INSERT INTO rehearsal_results VALUES (
-    'wrong_token_cannot_delete',
-    format('rpc=%s row_present=%s', v_bool, v_cnt),
-    'false and row still present (1)',
-    v_bool = false AND v_cnt = 1
-  );
+    'wrong_token_cannot_delete', format('rpc=%s row_present=%s', v_bool, v_cnt),
+    'false and row still present (1)', v_bool = false AND v_cnt = 1);
+  -- Clean it up via the RPC so it does not pollute later counts.
+  v_res := public.host_remove_session_guest(v_s, v_pid);
 
-  -- (C) host_remove_session_guest still works for the creator.
+  -- host_remove_session_guest still works for the creator.
   v_res := public.host_add_session_guest(v_s, 'Host Remove Me', NULL, NULL);
   v_pid := (v_res->>'participant_id')::uuid;
   v_res := public.host_remove_session_guest(v_s, v_pid);
   SELECT count(*) INTO v_cnt FROM public.session_participants WHERE id = v_pid;
   INSERT INTO rehearsal_results VALUES (
-    'host_remove_works_for_creator',
-    format('success=%s row_gone=%s', v_res->>'success', (v_cnt = 0)),
-    'true and row removed',
-    (v_res->>'success') = 'true' AND v_cnt = 0
-  );
+    'host_remove_works_for_creator', format('success=%s row_gone=%s', v_res->>'success', (v_cnt = 0)),
+    'true and row removed', (v_res->>'success') = 'true' AND v_cnt = 0);
+
+  -- Create two guest rows for the direct-delete role tests below.
+  v_res := public.host_add_session_guest(v_s, 'Creator Deletes Me', NULL, NULL);
+  v_g_creator := (v_res->>'participant_id')::uuid;
+  v_res := public.host_add_session_guest(v_s, 'Stranger Cannot Delete Me', NULL, NULL);
+  v_g_stranger := (v_res->>'participant_id')::uuid;
+
+  INSERT INTO t_ctx VALUES (v_s, v_c, v_x, v_g_creator, v_g_stranger, v_r1, v_u);
 
   PERFORM set_config('request.jwt.claim.sub', '', true);
   PERFORM set_config('request.jwt.claims', '', true);
 END $$;
 
--- (D) A token-less DIRECT delete as role authenticated is denied (RLS default-deny
--- now that there is no DELETE policy). Isolated so role handling is clean; catches
--- a missing table privilege as an equally-valid deny.
+-- sp_delete_by_instructor: the creator can DIRECTLY delete a guest row (role
+-- authenticated so RLS applies; auth.uid() = creator).
 DO $$
-DECLARE v_pid uuid; v_cnt int;
+DECLARE v_s uuid; v_c uuid; v_pid uuid; v_cnt int;
 BEGIN
-  SELECT direct_del_pid INTO v_pid FROM t_ctx;
+  SELECT s, c, g_creator_del INTO v_s, v_c, v_pid FROM t_ctx;
   IF v_pid IS NULL THEN
-    INSERT INTO rehearsal_results VALUES ('authenticated_direct_delete_denied', 'no fixture', 'skipped', false);
-    RETURN;
+    INSERT INTO rehearsal_results VALUES ('creator_direct_delete_allowed', 'no fixture', 'skipped', false); RETURN;
   END IF;
+  PERFORM set_config('request.jwt.claim.sub', v_c::text, true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_c::text)::text, true);
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    DELETE FROM public.session_participants WHERE id = v_pid;
+    GET DIAGNOSTICS v_cnt = ROW_COUNT;
+    RESET ROLE;
+  EXCEPTION WHEN insufficient_privilege THEN
+    RESET ROLE; v_cnt := -1;
+  END;
+  INSERT INTO rehearsal_results VALUES (
+    'creator_direct_delete_allowed', format('rows_deleted=%s', v_cnt),
+    '1 (sp_delete_by_instructor)', v_cnt = 1);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claims', '', true);
+END $$;
+
+-- A stranger (non-creator, not the row owner) cannot delete a guest row now that
+-- both guest policies are gone. Direct DELETE as authenticated removes ZERO rows.
+DO $$
+DECLARE v_x uuid; v_pid uuid; v_cnt int;
+BEGIN
+  SELECT x, g_stranger_del INTO v_x, v_pid FROM t_ctx;
+  IF v_pid IS NULL THEN
+    INSERT INTO rehearsal_results VALUES ('non_creator_direct_delete_denied', 'no fixture', 'skipped', false); RETURN;
+  END IF;
+  PERFORM set_config('request.jwt.claim.sub', v_x::text, true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_x::text)::text, true);
   BEGIN
     SET LOCAL ROLE authenticated;
     DELETE FROM public.session_participants WHERE id = v_pid;
     GET DIAGNOSTICS v_cnt = ROW_COUNT;
     RESET ROLE;
     INSERT INTO rehearsal_results VALUES (
-      'authenticated_direct_delete_denied', format('rows_deleted=%s', v_cnt),
-      '0 (RLS default-deny, no DELETE policy)', v_cnt = 0
-    );
+      'non_creator_direct_delete_denied', format('rows_deleted=%s', v_cnt),
+      '0 (no guest delete policy)', v_cnt = 0);
   EXCEPTION WHEN insufficient_privilege THEN
     RESET ROLE;
     INSERT INTO rehearsal_results VALUES (
-      'authenticated_direct_delete_denied', 'permission denied for table', 'denied (no table privilege)', true
-    );
+      'non_creator_direct_delete_denied', 'permission denied for table', 'denied', true);
   END;
   SELECT count(*) INTO v_cnt FROM public.session_participants WHERE id = v_pid;
-  INSERT INTO rehearsal_results VALUES ('guest_row_survived_direct_delete', v_cnt::text, '1', v_cnt = 1);
+  INSERT INTO rehearsal_results VALUES ('guest_row_survived_stranger_delete', v_cnt::text, '1', v_cnt = 1);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claims', '', true);
+END $$;
+
+-- Real-account self-unjoin still works: a real user deletes their own row as
+-- authenticated via the self-delete policy (auth.uid() = user_id).
+DO $$
+DECLARE v_u uuid; v_r1 uuid; v_cnt int;
+BEGIN
+  SELECT u, r1_id INTO v_u, v_r1 FROM t_ctx;
+  IF v_r1 IS NULL THEN
+    INSERT INTO rehearsal_results VALUES ('real_account_self_unjoin_works', 'no fixture', 'skipped', false); RETURN;
+  END IF;
+  PERFORM set_config('request.jwt.claim.sub', v_u::text, true);
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_u::text)::text, true);
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    DELETE FROM public.session_participants WHERE id = v_r1;
+    GET DIAGNOSTICS v_cnt = ROW_COUNT;
+    RESET ROLE;
+  EXCEPTION WHEN insufficient_privilege THEN
+    RESET ROLE; v_cnt := -1;
+  END;
+  INSERT INTO rehearsal_results VALUES (
+    'real_account_self_unjoin_works', format('rows_deleted=%s', v_cnt),
+    '1 (self-delete policy)', v_cnt = 1);
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+  PERFORM set_config('request.jwt.claims', '', true);
 END $$;
 
 -- Structural checks.
 INSERT INTO rehearsal_results
-SELECT 'permissive_delete_policy_gone',
+SELECT 'both_guest_delete_policies_gone',
        (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants'
-          AND policyname='Allow guests to delete their own participation')::text,
+          AND policyname IN ('Guests can leave sessions', 'Allow guests to delete their own participation'))::text,
        '0',
        (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants'
-          AND policyname='Allow guests to delete their own participation') = 0;
+          AND policyname IN ('Guests can leave sessions', 'Allow guests to delete their own participation')) = 0;
 
 INSERT INTO rehearsal_results
-SELECT 'no_delete_policy_remains',
-       (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants' AND cmd='DELETE')::text,
-       '0',
-       (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants' AND cmd='DELETE') = 0;
+SELECT 'sp_delete_by_instructor_still_present',
+       (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants'
+          AND policyname='sp_delete_by_instructor')::text,
+       '1',
+       (SELECT count(*) FROM pg_policies WHERE schemaname='public' AND tablename='session_participants'
+          AND policyname='sp_delete_by_instructor') = 1;
 
 INSERT INTO rehearsal_results
 SELECT 'non_delete_policies_unchanged',
@@ -239,11 +286,9 @@ SELECT 'non_delete_policies_unchanged',
 
 INSERT INTO rehearsal_results
 SELECT 'check_guest_identity_dropped',
-       COALESCE(to_regprocedure('public.check_guest_identity()')::text, 'gone') || '/' ||
-       COALESCE(to_regprocedure('public.check_guest_identity(text, text)')::text, 'gone'),
-       'gone/gone',
-       to_regprocedure('public.check_guest_identity()') IS NULL
-       AND to_regprocedure('public.check_guest_identity(text, text)') IS NULL;
+       COALESCE(to_regprocedure('public.check_guest_identity()')::text, 'gone'),
+       'gone',
+       to_regprocedure('public.check_guest_identity()') IS NULL;
 
 -- ── SINGLE FINAL RESULT SET ─────────────────────────────────────────────────
 SELECT check_name, actual, expected, pass
