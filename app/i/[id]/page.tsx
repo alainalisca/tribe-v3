@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const { data: instructor } = await supabase
     .from('users')
-    .select('id, name, avatar_url, bio, sports, average_rating')
+    .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating')
     .eq('id', id)
     .single();
 
@@ -29,8 +29,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const ratingStr = instructor.average_rating ? ` (${instructor.average_rating.toFixed(1)}★)` : '';
 
-  const description = instructor.bio
-    ? instructor.bio.substring(0, 160)
+  // instructor_bio first, bio second: instructor_bio is the field both
+  // instructor-facing editors write, so it matches the storefront. The bio
+  // fallback keeps a description for instructors who only filled the older
+  // general bio field.
+  const storefrontBio = instructor.instructor_bio || instructor.bio;
+  const description = storefrontBio
+    ? storefrontBio.substring(0, 160)
     : `${instructor.name || 'Instructor'} — ${sportsLabel} instructor on Tribe${ratingStr}`;
 
   const subtitle = `${sportsLabel} instructor${ratingStr}`;

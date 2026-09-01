@@ -14,6 +14,7 @@ interface InstructorProfile {
   name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  instructor_bio: string | null;
   sports: string[] | null;
   average_rating: number | null;
   // Schema column is `location`, not `city`. Audit S-2.
@@ -55,7 +56,7 @@ export default function InstructorShareClient() {
       const [profileRes, sessionsRes, countRes, userRes] = await Promise.all([
         supabase
           .from('users')
-          .select('id, name, avatar_url, bio, sports, average_rating, location')
+          .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating, location')
           .eq('id', instructorId)
           .single(),
         supabase
@@ -175,9 +176,14 @@ export default function InstructorShareClient() {
             </div>
           </div>
 
-          {/* Bio */}
-          {profile.bio && (
-            <p className="mt-5 text-sm text-theme-secondary leading-relaxed text-center">{profile.bio}</p>
+          {/* Bio: instructor_bio first, bio second. instructor_bio is what both
+              instructor-facing editors write, so it matches the storefront; the
+              bio fallback keeps a bio for instructors who only filled the older
+              general field. */}
+          {(profile.instructor_bio || profile.bio) && (
+            <p className="mt-5 text-sm text-theme-secondary leading-relaxed text-center">
+              {profile.instructor_bio || profile.bio}
+            </p>
           )}
 
           {/* Sports tags */}

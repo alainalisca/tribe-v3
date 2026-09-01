@@ -50,9 +50,15 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
   return (
     <div className="space-y-4">
       {partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />}
-      {instructor.bio && (
+      {/* instructor_bio first, bio second: instructor_bio is the field both
+          instructor-facing editors (the Storefront Editor and the profile-edit
+          Professional Bio) write, so it reflects what the instructor last saved
+          for their storefront. The bio fallback means an instructor who only
+          ever filled the older general bio field still shows something here
+          instead of a blank storefront. */}
+      {(instructor.instructor_bio || instructor.bio) && (
         <div className="bg-theme-card rounded-2xl p-4 border border-theme">
-          <p className="text-theme-secondary text-sm leading-relaxed">{instructor.bio}</p>
+          <p className="text-theme-secondary text-sm leading-relaxed">{instructor.instructor_bio || instructor.bio}</p>
         </div>
       )}
       <CredentialsBadges
