@@ -51,7 +51,7 @@ export default function DoorCheckInCard({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const txt = {
-    title: language === 'es' ? 'Registro en la puerta' : 'Door check in',
+    title: language === 'es' ? 'Quién llegó' : 'Who showed up',
     help: language === 'es' ? 'Agrega a quienes llegaron. Solo el nombre.' : 'Add whoever showed up. Name only.',
     placeholder: language === 'es' ? 'Escribe un nombre' : 'Type a name',
     add: language === 'es' ? 'Agregar' : 'Add',
