@@ -25,6 +25,11 @@ interface AddedGuest {
   name: string;
 }
 
+// TEMP DEBUG (bug 2): module-level mount counter. Survives across mounts of this
+// component within the page's lifetime, so a remount shows a higher number on the
+// live instance. Remove with the on-screen diagnostic line below.
+let dbgMountCount = 0;
+
 /**
  * Host-only "add people at the door" card. Renders before the session ends
  * (mirror image of AttendanceTracker, which renders only after) for the creator
@@ -50,18 +55,16 @@ export default function DoorCheckInCard({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // TEMP DEBUG (bug 2 investigation): distinguishes a remount (new instance id)
-  // from a state reset without unmount. Remove once the cause is confirmed.
+  // TEMP DEBUG (bug 2): on-screen diagnostic instead of console (console output
+  // never reached the deployed build). instanceId is a stable per-instance value,
+  // so a remount produces a NEW id; dbgMounts reflects the module-level counter,
+  // bumped once per mount. Rendered as a visible line below. Remove once the cause
+  // is confirmed.
   const instanceId = useRef(Math.random().toString(36).slice(2, 7));
-  // eslint-disable-next-line no-console
-  console.log(`[DoorCheckIn ${instanceId.current}] render added=${added.length}`);
+  const [dbgMounts, setDbgMounts] = useState(0);
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log(`[DoorCheckIn ${instanceId.current}] MOUNT`);
-    return () => {
-      // eslint-disable-next-line no-console
-      console.log(`[DoorCheckIn ${instanceId.current}] UNMOUNT`);
-    };
+    dbgMountCount += 1;
+    setDbgMounts(dbgMountCount);
   }, []);
 
   const txt = {
@@ -101,15 +104,8 @@ export default function DoorCheckInCard({
     const result = await addSessionGuest(supabase, sessionId, trimmed);
     setAdding(false);
 
-    // eslint-disable-next-line no-console
-    console.log(`[DoorCheckIn ${instanceId.current}] add result`, result);
-
     if (result.success && result.data) {
-      setAdded((prev) => {
-        // eslint-disable-next-line no-console
-        console.log(`[DoorCheckIn ${instanceId.current}] setAdded ${prev.length} -> ${prev.length + 1}`);
-        return [{ participantId: result.data!.participantId, name: trimmed }, ...prev];
-      });
+      setAdded((prev) => [{ participantId: result.data!.participantId, name: trimmed }, ...prev]);
       setName('');
       onChange();
       // Keep the keyboard open and ready for the next name.
@@ -166,6 +162,11 @@ export default function DoorCheckInCard({
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="mt-4 space-y-2">
+          {/* TEMP DEBUG (bug 2): on-screen diagnostic. Not production copy. Remove
+              once the remount-vs-reset cause is confirmed. */}
+          <p className="font-mono text-[10px] leading-tight text-amber-600 dark:text-amber-400">
+            dbg-A id={instanceId.current} added={added.length} mounts={dbgMounts}
+          </p>
           {added.length === 0 ? (
             <p className="text-sm text-stone-500 dark:text-gray-400">{txt.empty}</p>
           ) : (
