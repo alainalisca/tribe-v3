@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,6 +50,20 @@ export default function DoorCheckInCard({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // TEMP DEBUG (bug 2 investigation): distinguishes a remount (new instance id)
+  // from a state reset without unmount. Remove once the cause is confirmed.
+  const instanceId = useRef(Math.random().toString(36).slice(2, 7));
+  // eslint-disable-next-line no-console
+  console.log(`[DoorCheckIn ${instanceId.current}] render added=${added.length}`);
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log(`[DoorCheckIn ${instanceId.current}] MOUNT`);
+    return () => {
+      // eslint-disable-next-line no-console
+      console.log(`[DoorCheckIn ${instanceId.current}] UNMOUNT`);
+    };
+  }, []);
+
   const txt = {
     title: language === 'es' ? 'Quién llegó' : 'Who showed up',
     help: language === 'es' ? 'Agrega a quienes llegaron. Solo el nombre.' : 'Add whoever showed up. Name only.',
@@ -87,8 +101,15 @@ export default function DoorCheckInCard({
     const result = await addSessionGuest(supabase, sessionId, trimmed);
     setAdding(false);
 
+    // eslint-disable-next-line no-console
+    console.log(`[DoorCheckIn ${instanceId.current}] add result`, result);
+
     if (result.success && result.data) {
-      setAdded((prev) => [{ participantId: result.data!.participantId, name: trimmed }, ...prev]);
+      setAdded((prev) => {
+        // eslint-disable-next-line no-console
+        console.log(`[DoorCheckIn ${instanceId.current}] setAdded ${prev.length} -> ${prev.length + 1}`);
+        return [{ participantId: result.data!.participantId, name: trimmed }, ...prev];
+      });
       setName('');
       onChange();
       // Keep the keyboard open and ready for the next name.
