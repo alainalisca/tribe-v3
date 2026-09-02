@@ -18,6 +18,7 @@ import { markStoriesSeen } from '@/components/StoriesRow';
 import SessionHeader from '@/components/session/SessionHeader';
 import SessionDetails from '@/components/session/SessionDetails';
 import ParticipantList from '@/components/session/ParticipantList';
+import DoorCheckInCard from '@/components/session/DoorCheckInCard';
 import ReviewSection from '@/components/session/ReviewSection';
 import RecapPhotos from '@/components/session/RecapPhotos';
 import ReviewsList from '@/components/instructor/ReviewsList';
@@ -443,6 +444,20 @@ export default function SessionDetailPage() {
           language={language}
           onViewStories={() => d.setShowStoryViewer(true)}
         />
+
+        {d.user && (
+          <DoorCheckInCard
+            sessionId={params.id as string}
+            isCreator={isCreator}
+            isAdmin={d.userIsAdmin}
+            sessionDate={d.session.date}
+            sessionStartTime={d.session.start_time}
+            sessionEndTime={d.session.end_time ?? null}
+            sessionStatus={d.session.status}
+            language={language}
+            onChange={d.reloadSilent}
+          />
+        )}
 
         <ParticipantList
           creator={d.creator}

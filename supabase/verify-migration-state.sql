@@ -798,4 +798,13 @@ select '154_close_guest_delete_policy',
          select 1 from pg_proc
          where proname = 'check_guest_identity' and pronamespace = 'public'::regnamespace
        ) then 'applied' else 'MISSING' end
+union all
+select '155_door_guest_payment_not_required',
+       -- Replaces host_add_session_guest so door guests land payment_status
+       -- not_required (via a post-insert UPDATE that overrides the BEFORE INSERT
+       -- trigger). Probed on the function body carrying that UPDATE, since the
+       -- function already existed (153) so its presence alone is not a signal.
+       case when pg_get_functiondef('public.host_add_session_guest(uuid, text, text, text)'::regprocedure)
+                 ilike '%payment_status%not_required%'
+            then 'applied' else 'MISSING' end
 order by migration;

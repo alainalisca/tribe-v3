@@ -2,6 +2,7 @@ export * from './types';
 export * from './sessions';
 export * from './users';
 export * from './participants';
+export * from './doorCheckin';
 export * from './chat';
 export * from './conversations';
 export * from './media';
