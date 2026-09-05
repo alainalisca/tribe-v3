@@ -1,4 +1,4 @@
-/** Page: /onboarding/instructor — Guided instructor setup with profile + storefront + monetization */
+/** Page: /onboarding/instructor: guided instructor setup with profile + storefront + payments */
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -27,16 +27,11 @@ import {
   User,
   Store,
   DollarSign,
-  Sparkles,
   Camera,
   Image as ImageIcon,
   Link as LinkIcon,
   Star,
   Zap,
-  Tag,
-  Megaphone,
-  TrendingUp,
-  Wallet,
 } from 'lucide-react';
 
 const SPORTS_LIST = [
@@ -62,11 +57,43 @@ const SPORTS_LIST = [
   'Other',
 ];
 
+// PAY-01 layer 2: step 3 must not imply Tribe processes or holds money.
+// Instructors collect directly and Tribe takes nothing. Plain en/es object,
+// same style as the tribe-os banner components, so no language ternaries.
+const copy = {
+  en: {
+    stepLabel: 'Payments',
+    title: 'How you get paid',
+    intro: 'You charge directly. Tribe does not process or hold your money.',
+    card1Title: 'You set the price',
+    card1Body: 'Publish a session free or paid. You decide what to charge and you can change it any time.',
+    card2Title: 'You collect directly',
+    card2Body:
+      'Your students pay you by Nequi, transfer, or cash, the same way you work today. Tribe takes no commission.',
+    card3Title: 'You keep your students',
+    card3Body: 'The people who book with you are yours. Their contact stays with you, on Tribe and off it.',
+    currencyNote: 'Your prices show in Colombian pesos (COP).',
+  },
+  es: {
+    stepLabel: 'Cobros',
+    title: 'Cómo cobras',
+    intro: 'Tú cobras directo. Tribe no procesa ni retiene tu plata.',
+    card1Title: 'Tú pones el precio',
+    card1Body: 'Publica tu sesión gratis o con precio. Tú decides cuánto cobras y lo puedes cambiar cuando quieras.',
+    card2Title: 'Cobras directo',
+    card2Body:
+      'Tus estudiantes te pagan por Nequi, transferencia o efectivo, como ya trabajas hoy. Tribe no te cobra comisión.',
+    card3Title: 'Tus estudiantes son tuyos',
+    card3Body: 'La gente que reserva contigo es tuya. Su contacto se queda contigo, dentro y fuera de Tribe.',
+    currencyNote: 'Tus precios se muestran en pesos colombianos (COP).',
+  },
+} as const;
+
 const getTranslations = (language: 'en' | 'es') => ({
   // Step labels
   step1Label: language === 'es' ? 'Tu Perfil' : 'Your Profile',
   step2Label: language === 'es' ? 'Tu Vitrina' : 'Your Storefront',
-  step3Label: language === 'es' ? 'Monetización' : 'Monetization',
+  step3Label: copy[language].stepLabel,
   // Step 1
   step1Title: language === 'es' ? 'Cuéntanos sobre ti' : 'Tell us about yourself',
   step1Subtitle:
@@ -130,43 +157,6 @@ const getTranslations = (language: 'en' | 'es') => ({
     language === 'es'
       ? 'Así se verá tu vitrina en /storefront/tu-id'
       : 'This is how your storefront looks at /storefront/your-id',
-  // Step 3
-  step3Title: language === 'es' ? 'Herramientas para ganar' : 'Tools to earn',
-  step3Subtitle:
-    language === 'es'
-      ? 'Tribe te da todo lo que necesitas para monetizar tu conocimiento'
-      : 'Tribe gives you everything you need to monetize your expertise',
-  earningsCurrency: language === 'es' ? 'Moneda de ganancias' : 'Earnings currency',
-  featurePaidSessions: language === 'es' ? 'Sesiones Pagadas' : 'Paid Sessions',
-  featurePaidSessionsDesc:
-    language === 'es'
-      ? 'Cobra por tus sesiones. Los pagos van directo a ti.'
-      : 'Charge for your sessions. Payments go directly to you.',
-  featurePromoCodes: language === 'es' ? 'Códigos Promocionales' : 'Promo Codes',
-  featurePromoCodesDesc:
-    language === 'es' ? 'Crea descuentos para atraer nuevos atletas.' : 'Create discounts to attract new athletes.',
-  featureBoosts: language === 'es' ? 'Campañas de Boost' : 'Boost Campaigns',
-  featureBoostsDesc:
-    language === 'es'
-      ? 'Paga para aparecer primero en la página de descubrimiento.'
-      : 'Pay to appear first on the discovery page.',
-  featureAnnouncements: language === 'es' ? 'Anuncios' : 'Announcements',
-  featureAnnouncementsDesc:
-    language === 'es' ? 'Publica actualizaciones para tus seguidores.' : 'Post updates to your followers.',
-  readyNote:
-    language === 'es'
-      ? 'Encontrarás todas estas herramientas en tu Hub de Promoción después de completar tu perfil.'
-      : "You'll find all these tools in your Promote Hub after completing your profile.",
-  // Get Paid card (next-step nudge for payout setup)
-  payoutsTitle: language === 'es' ? 'Recibe pagos por tus sesiones' : 'Get paid for your sessions',
-  payoutsBodyUSD:
-    language === 'es'
-      ? 'Después de Completar Perfil, conectamos Stripe para que recibas pagos en USD. Necesitarás un documento de identidad y datos bancarios — unos 5 minutos.'
-      : "After Complete Profile, we'll connect Stripe so you can receive USD payouts. You'll need a government ID and bank info — about 5 minutes.",
-  payoutsBodyCOP:
-    language === 'es'
-      ? 'Después de Completar Perfil, agrega tu cuenta bancaria colombiana para que Wompi pueda depositar tus ganancias.'
-      : 'After Complete Profile, add your Colombian bank account so Wompi can deposit your earnings.',
   // Navigation
   back: language === 'es' ? 'Atrás' : 'Back',
   next: language === 'es' ? 'Siguiente' : 'Next',
@@ -186,6 +176,7 @@ export default function InstructorOnboardingPage() {
   const router = useRouter();
   const { language } = useLanguage();
   const t = getTranslations(language);
+  const pay = copy[language];
   const supabase = createClient();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -415,7 +406,10 @@ export default function InstructorOnboardingPage() {
         // page (which reads banner_url) and the storefront page (which
         // reads storefront_banner_url) both display the uploaded image.
         banner_url: form.storefront_banner_url || null,
-        earnings_currency: form.earnings_currency,
+        // PAY-01: COP only. The column must keep a value because /earnings
+        // and the paid session price display read it; the prefill keeps an
+        // existing value, the fallback covers a blank one.
+        earnings_currency: form.earnings_currency || 'COP',
         photos: form.photos,
       };
 
@@ -869,86 +863,31 @@ export default function InstructorOnboardingPage() {
           </div>
         )}
 
-        {/* Step 3: Monetization */}
+        {/* Step 3: Payments. Copy only: Tribe does not process or hold money. */}
         {step === 3 && (
           <div className="space-y-5 animate-in fade-in duration-300">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-stone-900 dark:text-white">{t.step3Title}</h2>
-              <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{t.step3Subtitle}</p>
+              <h2 className="text-2xl font-bold text-stone-900 dark:text-white">{pay.title}</h2>
+              <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">{pay.intro}</p>
             </div>
 
-            {/* Feature Cards */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
               {[
-                {
-                  icon: DollarSign,
-                  title: t.featurePaidSessions,
-                  desc: t.featurePaidSessionsDesc,
-                  color: 'text-emerald-500',
-                  bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-                },
-                {
-                  icon: Tag,
-                  title: t.featurePromoCodes,
-                  desc: t.featurePromoCodesDesc,
-                  color: 'text-blue-500',
-                  bg: 'bg-blue-50 dark:bg-blue-900/20',
-                },
-                {
-                  icon: TrendingUp,
-                  title: t.featureBoosts,
-                  desc: t.featureBoostsDesc,
-                  color: 'text-orange-500',
-                  bg: 'bg-orange-50 dark:bg-orange-900/20',
-                },
-                {
-                  icon: Megaphone,
-                  title: t.featureAnnouncements,
-                  desc: t.featureAnnouncementsDesc,
-                  color: 'text-purple-500',
-                  bg: 'bg-purple-50 dark:bg-purple-900/20',
-                },
-              ].map((feat) => (
+                { title: pay.card1Title, body: pay.card1Body },
+                { title: pay.card2Title, body: pay.card2Body },
+                { title: pay.card3Title, body: pay.card3Body },
+              ].map((card) => (
                 <div
-                  key={feat.title}
-                  className={`${feat.bg} rounded-xl p-3 border border-stone-100 dark:border-gray-700`}
+                  key={card.title}
+                  className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-gray-700"
                 >
-                  <feat.icon className={`w-6 h-6 ${feat.color} mb-2`} />
-                  <h4 className="text-xs font-bold text-stone-900 dark:text-white mb-1">{feat.title}</h4>
-                  <p className="text-[10px] text-stone-500 dark:text-gray-400 leading-relaxed">{feat.desc}</p>
+                  <h4 className="text-sm font-bold text-stone-900 dark:text-white mb-1">{card.title}</h4>
+                  <p className="text-xs text-stone-600 dark:text-gray-400 leading-relaxed">{card.body}</p>
                 </div>
               ))}
             </div>
 
-            {/* Currency Selector */}
-            <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.earningsCurrency}</Label>
-              <select
-                value={form.earnings_currency}
-                onChange={(e) => setForm({ ...form, earnings_currency: e.target.value })}
-                className="w-full px-3 py-2.5 bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
-              >
-                <option value="COP">{language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}</option>
-                <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
-              </select>
-            </div>
-
-            {/* Info note */}
-            <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-4 flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
-              <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">{t.readyNote}</p>
-            </div>
-
-            {/* Get Paid — currency-aware nudge to set up payouts as the next step. */}
-            <div className="bg-tribe-green/10 border border-tribe-green/30 rounded-xl p-4 flex items-start gap-3">
-              <Wallet className="w-5 h-5 text-tribe-green shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="text-sm font-bold text-stone-900 dark:text-white mb-1">{t.payoutsTitle}</h4>
-                <p className="text-xs text-stone-700 dark:text-gray-300 leading-relaxed">
-                  {form.earnings_currency === 'USD' ? t.payoutsBodyUSD : t.payoutsBodyCOP}
-                </p>
-              </div>
-            </div>
+            <p className="text-xs text-stone-500 dark:text-gray-400 text-center">{pay.currencyNote}</p>
           </div>
         )}
 
