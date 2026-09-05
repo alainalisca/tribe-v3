@@ -112,7 +112,9 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
-function buildCsp(): string {
+// Exported so middleware.csp.test.ts can pin the served policy. Next.js only
+// reserves `middleware` and `config` on this file; extra named exports are fine.
+export function buildCsp(): string {
   const isDev = process.env.NODE_ENV !== 'production';
 
   const scriptSrc = [
@@ -134,9 +136,17 @@ function buildCsp(): string {
     'style-src': "'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com",
     'img-src': "'self' https: data: blob:",
     'font-src': "'self' data: https://fonts.gstatic.com https://vercel.live",
+    // Cloudflare Stream hosts: upload.videodelivery.net receives the direct
+    // upload POST, *.cloudflarestream.com and videodelivery.net serve the HLS
+    // manifest and segments.
     'connect-src':
-      "'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://maps.googleapis.com https://fcm.googleapis.com https://vercel.live https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://*.tile.openstreetmap.org https://unpkg.com https://api.open-meteo.com",
-    'frame-src': "'self' https://vercel.live",
+      "'self' https://*.supabase.co wss://*.supabase.co https://us.i.posthog.com https://us-assets.i.posthog.com https://maps.googleapis.com https://fcm.googleapis.com https://vercel.live https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://*.tile.openstreetmap.org https://unpkg.com https://api.open-meteo.com https://*.cloudflarestream.com https://videodelivery.net https://upload.videodelivery.net",
+    // media-src was never set, so <video> and <audio> fell back to default-src
+    // 'self' and every Supabase-hosted intro video was refused in production.
+    // blob: covers object URLs used for client-side duration probing.
+    'media-src': "'self' blob: https://*.supabase.co https://*.cloudflarestream.com https://videodelivery.net",
+    // *.cloudflarestream.com so the Stream iframe player remains an option.
+    'frame-src': "'self' https://vercel.live https://*.cloudflarestream.com",
     'object-src': "'none'",
     'base-uri': "'self'",
     'form-action': "'self'",
