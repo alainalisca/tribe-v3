@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { getServiceRoleClient } from '@/lib/supabase/admin';
 import { createPaymentSchema } from '@/lib/validations/payment';
@@ -30,8 +30,57 @@ import { createTip } from '@/lib/dal/tips';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+/**
+ * PAY-01: instructor payments are OFF until Tribe's banking is resolved.
+ *
+ * This route is the only place a Wompi transaction or a Stripe Checkout
+ * Session is created for sessions, tips, boosts and Pro storefront, so the
+ * gate is on the ROUTE, not just the UI: hiding a button would leave this
+ * endpoint reachable by anyone who can POST. Until INSTRUCTOR_PAYMENTS_ENABLED
+ * is set to the literal 'true' in the environment, nothing below runs and no
+ * money can move through Tribe. Absent means off.
+ *
+ * Kept separate from TRIBE_OS_BILLING_ENABLED on purpose: that flag covers
+ * instructors paying Tribe for Tribe.OS, this one covers athletes paying
+ * instructors through Tribe. Read at call time so a Vercel env change takes
+ * effect without a redeploy of module state.
+ */
+function isInstructorPaymentsEnabled(): boolean {
+  return process.env.INSTRUCTOR_PAYMENTS_ENABLED === 'true';
+}
+
+/**
+ * Best-effort read of the requested payment type for the blocked-attempt log.
+ * Mirrors the handler's own default (no payment_type means session
+ * participation). Reads a clone so the original body stays untouched, and
+ * never throws: an unreadable body is still a blocked attempt worth logging.
+ */
+async function readRequestedPaymentType(request: NextRequest): Promise<string> {
+  try {
+    const body: unknown = await request.clone().json();
+    if (body && typeof body === 'object' && 'payment_type' in body) {
+      const requested = (body as { payment_type?: unknown }).payment_type;
+      if (typeof requested === 'string' && requested.length > 0) return requested;
+    }
+    return 'session_participation';
+  } catch {
+    return 'unreadable';
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    if (!isInstructorPaymentsEnabled()) {
+      // 503, not 403: this is "not open yet", not "you may not". Logged so an
+      // attempt while the switch is off is visible rather than silent.
+      log('warn', 'instructor_payments_blocked', {
+        route: 'POST /api/payment/create',
+        action: 'payments_disabled',
+        payment_type: await readRequestedPaymentType(request),
+      });
+      return NextResponse.json({ success: false, error: 'payments_disabled' }, { status: 503 });
+    }
+
     const supabase = await createClient();
 
     // Get authenticated user first, then rate-limit by user id (falling back
