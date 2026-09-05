@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 /**
@@ -26,7 +26,7 @@ import { NextRequest } from 'next/server';
  *   8. Happy path (COP → Wompi) → 200 with redirect URL
  */
 
-vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
+vi.mock('@/lib/logger', () => ({ log: vi.fn(), logError: vi.fn() }));
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn() }));
@@ -212,9 +212,15 @@ function request(body: Record<string, unknown>) {
 
 // ── Tests ──────────────────────────────────────────────────────────
 
+// PAY-01: the route refuses with 503 unless INSTRUCTOR_PAYMENTS_ENABLED is
+// exactly 'true'. These tests exercise the flows BEHIND the gate, so they run
+// with it open; the gate itself is pinned in route.paymentsGate.test.ts.
+const ORIGINAL_PAYMENTS_FLAG = process.env.INSTRUCTOR_PAYMENTS_ENABLED;
+
 describe('POST /api/payment/create', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.INSTRUCTOR_PAYMENTS_ENABLED = 'true';
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
     process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
@@ -225,6 +231,11 @@ describe('POST /api/payment/create', () => {
       success: true,
       data: {},
     } as never);
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_PAYMENTS_FLAG === undefined) delete process.env.INSTRUCTOR_PAYMENTS_ENABLED;
+    else process.env.INSTRUCTOR_PAYMENTS_ENABLED = ORIGINAL_PAYMENTS_FLAG;
   });
 
   it('returns 401 when unauthenticated', async () => {
