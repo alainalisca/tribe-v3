@@ -18,11 +18,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { logError } from '@/lib/logger';
+import { log, logError } from '@/lib/logger';
 import { getStripeConnectAccount, isStripeAccountReady } from '@/lib/payments/stripe';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+/**
+ * PAY-01: instructor payments are OFF until Tribe's banking is resolved.
+ * Stripe Connect onboarding is the front door to Tribe processing payments
+ * for instructors, so every /api/stripe/connect/* route refuses until
+ * INSTRUCTOR_PAYMENTS_ENABLED is the literal 'true'. Absent means off.
+ * Duplicated per route on purpose, matching isBillingEnabled() in the
+ * Tribe.OS checkout route; read at call time, not at module load.
+ */
+function isInstructorPaymentsEnabled(): boolean {
+  return process.env.INSTRUCTOR_PAYMENTS_ENABLED === 'true';
+}
 
 export async function GET(_request: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -30,6 +42,16 @@ export async function GET(_request: NextRequest) {
   const successRedirect = `${siteUrl}/earnings/payout-settings?stripe=complete`;
 
   try {
+    if (!isInstructorPaymentsEnabled()) {
+      // 503, not 403: this is "not open yet", not "you may not". Logged so an
+      // attempt while the switch is off is visible rather than silent.
+      log('warn', 'instructor_payments_blocked', {
+        route: 'GET /api/stripe/connect/return',
+        action: 'payments_disabled',
+      });
+      return NextResponse.json({ success: false, error: 'payments_disabled' }, { status: 503 });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
