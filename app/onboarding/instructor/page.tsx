@@ -11,6 +11,7 @@ import { getErrorMessage } from '@/lib/errorMessages';
 import { fetchUserProfile, updateUser } from '@/lib/dal';
 import { haptic } from '@/lib/haptics';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
+import { isInstructorProfileComplete, type InstructorProfileFields } from '@/lib/instructorProfile';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -73,6 +74,20 @@ const getTranslations = (language: 'en' | 'es') => ({
       ? 'Esta información aparecerá en tu perfil público y vitrina'
       : 'This info appears on your public profile and storefront',
   name: language === 'es' ? 'Nombre completo' : 'Full name',
+  nameRequired: language === 'es' ? 'Agrega tu nombre completo.' : 'Add your full name.',
+  // INS-01: the completeness gate (lib/instructorProfile.ts) requires a
+  // non-empty users.location. The wizard never collected it, so every
+  // instructor finished "incomplete" and was hidden from /instructors.
+  location: language === 'es' ? 'Ubicación' : 'Location',
+  locationPlaceholder: 'Laureles, Medellín',
+  locationHelper:
+    language === 'es'
+      ? 'El barrio o la zona donde enseñas. Así te encuentran las personas que están cerca de ti.'
+      : 'The neighborhood or area where you teach. This is how people near you find you.',
+  locationRequired:
+    language === 'es'
+      ? 'Agrega tu ubicación para aparecer en el directorio.'
+      : 'Add your location so you appear in the directory.',
   bio: language === 'es' ? 'Sobre ti (bio)' : 'About you (bio)',
   bioPlaceholder: language === 'es' ? 'Cuéntale a tu comunidad quién eres...' : 'Tell your community who you are...',
   professionalBio: language === 'es' ? 'Bio profesional' : 'Professional bio',
@@ -158,6 +173,13 @@ const getTranslations = (language: 'en' | 'es') => ({
   finish: language === 'es' ? 'Completar Perfil' : 'Complete Profile',
   saving: language === 'es' ? 'Guardando...' : 'Saving...',
   profileComplete: language === 'es' ? '¡Perfil completo!' : 'Profile complete!',
+  // Shown instead of profileComplete when the saved row still fails the
+  // completeness gate (photo, bio, specialties or years missing). The wizard
+  // does not require those on purpose; it just has to tell the truth.
+  profileSavedIncomplete:
+    language === 'es'
+      ? 'Perfil guardado. Te faltan algunos datos para aparecer en el directorio.'
+      : 'Profile saved. A few details are still missing before you appear in the directory.',
 });
 
 export default function InstructorOnboardingPage() {
@@ -183,9 +205,17 @@ export default function InstructorOnboardingPage() {
 
   // Form state
   const [customSpecialty, setCustomSpecialty] = useState('');
+  // INS-01: show the required-location error only after the user leaves the
+  // field, so a freshly opened wizard does not open on a red message.
+  const [locationTouched, setLocationTouched] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+  // The row as loaded, kept so the post-save completeness check can merge the
+  // written fields over it without a refetch.
+  const [loadedProfile, setLoadedProfile] = useState<InstructorProfileFields | null>(null);
 
   const [form, setForm] = useState({
     name: '',
+    location: '',
     bio: '',
     instructor_bio: '',
     specialties: [] as string[],
@@ -224,8 +254,12 @@ export default function InstructorOnboardingPage() {
       setLoadedOk(profileResult.success);
       if (profileResult.data) {
         const p = profileResult.data;
+        setLoadedProfile(p);
         setForm({
           name: p.name || user.user_metadata?.full_name || '',
+          // Prefill from the row so rerunning the wizard cannot blank a
+          // location that was set from /profile/edit.
+          location: p.location || '',
           bio: p.bio || '',
           instructor_bio: p.instructor_bio || '',
           specialties: p.specialties || [],
@@ -363,6 +397,8 @@ export default function InstructorOnboardingPage() {
         .map((c) => c.trim())
         .filter(Boolean);
 
+      const yearsExperience = form.years_experience ? parseInt(form.years_experience) : null;
+
       const updatePayload: Record<string, unknown> = {
         name: form.name,
         bio: form.bio,
@@ -371,7 +407,7 @@ export default function InstructorOnboardingPage() {
         instructor_bio: form.instructor_bio || null,
         specialties: form.specialties,
         certifications: certsArray,
-        years_experience: form.years_experience ? parseInt(form.years_experience) : null,
+        years_experience: yearsExperience,
         website_url: form.website_url || null,
         storefront_tagline: form.storefront_tagline || null,
         storefront_banner_url: form.storefront_banner_url || null,
@@ -387,22 +423,41 @@ export default function InstructorOnboardingPage() {
         updatePayload.avatar_url = avatarUrl;
       }
 
+      // INS-01: only write a non-empty location. Writing '' would clear a
+      // value the user set from /profile/edit (the other writer of this column).
+      const trimmedLocation = form.location.trim();
+      if (trimmedLocation) {
+        updatePayload.location = trimmedLocation;
+      }
+
       const result = await updateUser(supabase, userId, updatePayload);
       if (!result.success) throw new Error(result.error);
 
-      await haptic('success');
-      showSuccess(t.profileComplete);
+      // Judge completeness on what was just written merged over the loaded
+      // row, so the toast matches the gate the directory applies
+      // (lib/instructorProfile.ts) without a refetch. Photo, bio, specialties
+      // and years are deliberately not required by the wizard.
+      const savedProfile: InstructorProfileFields = {
+        avatar_url: avatarUrl ?? loadedProfile?.avatar_url ?? null,
+        photos: form.photos,
+        bio: form.bio,
+        instructor_bio: form.instructor_bio || null,
+        specialties: form.specialties,
+        location: trimmedLocation || loadedProfile?.location || null,
+        years_experience: yearsExperience,
+      };
+      const complete = isInstructorProfileComplete(savedProfile);
 
-      // After onboarding, take instructors straight to payout setup. Without
-      // this, they'd land with payout_method = NULL / no Stripe Connect, and
-      // any paid session would fail at checkout time. They can navigate to
-      // their storefront from the dashboard once payouts are wired.
+      await haptic('success');
+      showSuccess(complete ? t.profileComplete : t.profileSavedIncomplete);
+
+      // Land on the instructor dashboard: it mounts
+      // InstructorProfileIncompleteBanner (which lists what is still missing)
+      // and PayoutSetupBanner (which persists until payout_method is set), so
+      // both an incomplete and a complete instructor see their next step.
       // T-C1 Gate 2: unless this signup started from a destination (an invite
-      // or shared link) — that parked returnTo wins. The path back to payout
-      // setup is PayoutSetupBanner on the instructor dashboard, which renders
-      // persistently until payout_method is set (the earnings page itself has
-      // no link to /earnings/payout-settings).
-      router.push(consumePendingReturnTo() ?? '/earnings/payout-settings');
+      // or shared link); that parked returnTo wins.
+      router.push(consumePendingReturnTo() ?? '/dashboard/instructor');
     } catch (err) {
       logError(err, { action: 'instructorOnboarding.handleFinish' });
       showError(getErrorMessage(err, 'update_profile', language));
@@ -417,6 +472,23 @@ export default function InstructorOnboardingPage() {
         <LoadingSpinner className="flex justify-center" />
       </div>
     );
+  }
+
+  // Step 1 needs a name (the minimum for a real account) and a location (the
+  // completeness gate requires it). Next stays enabled; clicking it with a
+  // blank field reveals that field's required message instead of advancing,
+  // so the user always sees why nothing happened.
+  const nameBlank = form.name.trim().length === 0;
+  const locationBlank = form.location.trim().length === 0;
+
+  function handleNext() {
+    void haptic('light');
+    if (step === 1 && (nameBlank || locationBlank)) {
+      if (nameBlank) setNameTouched(true);
+      if (locationBlank) setLocationTouched(true);
+      return;
+    }
+    setStep((s) => (s + 1) as 1 | 2 | 3);
   }
 
   const steps = [
@@ -503,8 +575,29 @@ export default function InstructorOnboardingPage() {
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onBlur={() => setNameTouched(true)}
                 className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
+              {nameTouched && nameBlank && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t.nameRequired}</p>
+              )}
+            </div>
+
+            {/* Location (INS-01): required by the completeness gate. */}
+            <div>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.location}</Label>
+              <Input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                onBlur={() => setLocationTouched(true)}
+                placeholder={t.locationPlaceholder}
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
+              />
+              {locationTouched && locationBlank ? (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t.locationRequired}</p>
+              ) : (
+                <p className="text-xs text-stone-500 dark:text-gray-500 mt-1">{t.locationHelper}</p>
+              )}
             </div>
 
             {/* Bio */}
@@ -874,16 +967,8 @@ export default function InstructorOnboardingPage() {
               )}
               {step < 3 ? (
                 <button
-                  onClick={() => {
-                    void haptic('light');
-                    setStep((s) => (s + 1) as 1 | 2 | 3);
-                  }}
-                  disabled={step === 1 && !form.name.trim()}
-                  className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
-                    step === 1 && !form.name.trim()
-                      ? 'bg-stone-200 dark:bg-stone-600 text-stone-400 cursor-not-allowed'
-                      : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
-                  }`}
+                  onClick={handleNext}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition bg-tribe-green text-slate-900 hover:bg-tribe-green"
                 >
                   {t.next}
                   <ArrowRight className="w-4 h-4" />
