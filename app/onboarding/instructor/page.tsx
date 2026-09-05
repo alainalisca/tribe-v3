@@ -73,6 +73,19 @@ const getTranslations = (language: 'en' | 'es') => ({
       ? 'Esta información aparecerá en tu perfil público y vitrina'
       : 'This info appears on your public profile and storefront',
   name: language === 'es' ? 'Nombre completo' : 'Full name',
+  // INS-01: the completeness gate (lib/instructorProfile.ts) requires a
+  // non-empty users.location. The wizard never collected it, so every
+  // instructor finished "incomplete" and was hidden from /instructors.
+  location: language === 'es' ? 'Ubicación' : 'Location',
+  locationPlaceholder: 'Laureles, Medellín',
+  locationHelper:
+    language === 'es'
+      ? 'El barrio o la zona donde enseñas. Así te encuentran las personas que están cerca de ti.'
+      : 'The neighborhood or area where you teach. This is how people near you find you.',
+  locationRequired:
+    language === 'es'
+      ? 'Agrega tu ubicación para aparecer en el directorio.'
+      : 'Add your location so you appear in the directory.',
   bio: language === 'es' ? 'Sobre ti (bio)' : 'About you (bio)',
   bioPlaceholder: language === 'es' ? 'Cuéntale a tu comunidad quién eres...' : 'Tell your community who you are...',
   professionalBio: language === 'es' ? 'Bio profesional' : 'Professional bio',
@@ -183,9 +196,13 @@ export default function InstructorOnboardingPage() {
 
   // Form state
   const [customSpecialty, setCustomSpecialty] = useState('');
+  // INS-01: show the required-location error only after the user leaves the
+  // field, so a freshly opened wizard does not open on a red message.
+  const [locationTouched, setLocationTouched] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
+    location: '',
     bio: '',
     instructor_bio: '',
     specialties: [] as string[],
@@ -226,6 +243,9 @@ export default function InstructorOnboardingPage() {
         const p = profileResult.data;
         setForm({
           name: p.name || user.user_metadata?.full_name || '',
+          // Prefill from the row so rerunning the wizard cannot blank a
+          // location that was set from /profile/edit.
+          location: p.location || '',
           bio: p.bio || '',
           instructor_bio: p.instructor_bio || '',
           specialties: p.specialties || [],
@@ -387,6 +407,13 @@ export default function InstructorOnboardingPage() {
         updatePayload.avatar_url = avatarUrl;
       }
 
+      // INS-01: only write a non-empty location. Writing '' would clear a
+      // value the user set from /profile/edit (the other writer of this column).
+      const trimmedLocation = form.location.trim();
+      if (trimmedLocation) {
+        updatePayload.location = trimmedLocation;
+      }
+
       const result = await updateUser(supabase, userId, updatePayload);
       if (!result.success) throw new Error(result.error);
 
@@ -418,6 +445,10 @@ export default function InstructorOnboardingPage() {
       </div>
     );
   }
+
+  // Step 1 needs a name (the minimum for a real account) and a location (the
+  // completeness gate requires it) before Next is enabled.
+  const step1Complete = form.name.trim().length > 0 && form.location.trim().length > 0;
 
   const steps = [
     { num: 1, label: t.step1Label, icon: User },
@@ -505,6 +536,23 @@ export default function InstructorOnboardingPage() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
+            </div>
+
+            {/* Location (INS-01): required by the completeness gate. */}
+            <div>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.location}</Label>
+              <Input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                onBlur={() => setLocationTouched(true)}
+                placeholder={t.locationPlaceholder}
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
+              />
+              {locationTouched && !form.location.trim() ? (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t.locationRequired}</p>
+              ) : (
+                <p className="text-xs text-stone-500 dark:text-gray-500 mt-1">{t.locationHelper}</p>
+              )}
             </div>
 
             {/* Bio */}
@@ -878,9 +926,9 @@ export default function InstructorOnboardingPage() {
                     void haptic('light');
                     setStep((s) => (s + 1) as 1 | 2 | 3);
                   }}
-                  disabled={step === 1 && !form.name.trim()}
+                  disabled={step === 1 && !step1Complete}
                   className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition ${
-                    step === 1 && !form.name.trim()
+                    step === 1 && !step1Complete
                       ? 'bg-stone-200 dark:bg-stone-600 text-stone-400 cursor-not-allowed'
                       : 'bg-tribe-green text-slate-900 hover:bg-tribe-green'
                   }`}
