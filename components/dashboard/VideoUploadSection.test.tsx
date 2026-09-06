@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 
 /**
  * The upload order is the point of these tests.
@@ -41,6 +41,9 @@ vi.mock('@/lib/videoValidation', async (importOriginal) => ({
 const TEMPLATES: Record<string, string> = {
   videoTooLarge: 'That video is {size} MB and the limit is {limit} MB.',
   videoLargeFileWarning: 'This video is {size} MB and may take several minutes.',
+  videoUploadingNow: 'Uploading your video',
+  videoAlmostDone: 'Almost done',
+  videoProcessing: 'Processing your video. This can take a moment.',
 };
 vi.mock('@/lib/LanguageContext', () => ({
   useLanguage: () => ({ t: (k: string) => TEMPLATES[k] ?? k, language: 'en' }),
@@ -58,6 +61,67 @@ const ORIGINAL_SUBDOMAIN = process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_SUBDOMAIN;
 const supabase = { storage: { from: () => ({ remove: vi.fn().mockResolvedValue({ error: null }) }) } };
 let calls: string[] = [];
 let fetchMock: ReturnType<typeof vi.fn>;
+// The upload uses XHR rather than fetch, because fetch cannot report upload
+// progress. These let a test drive the status and the progress events.
+let xhrStatus = 200;
+let xhrShouldError = false;
+// When true, send() does nothing further and the test drives the events by
+// hand, which is the only way to observe a phase that is otherwise transient.
+let xhrManual = false;
+let lastXhr: FakeXhr | null = null;
+
+/** Passing the instance in avoids aliasing `this` to an outer variable. */
+function registerXhr(instance: FakeXhr) {
+  lastXhr = instance;
+}
+
+class FakeXhr {
+  upload: { onprogress: ((event: ProgressEvent) => void) | null } = { onprogress: null };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  status = 0;
+  method = '';
+  url = '';
+  body: FormData | null = null;
+
+  constructor() {
+    registerXhr(this);
+  }
+
+  open(method: string, url: string) {
+    this.method = method;
+    this.url = url;
+  }
+
+  /** Test helper: report progress as if the browser had drained that much. */
+  emitProgress(loaded: number, total = 100) {
+    this.upload.onprogress?.({ lengthComputable: true, loaded, total } as ProgressEvent);
+  }
+
+  /** Test helper: deliver the response. */
+  finish(status = 200) {
+    this.status = status;
+    this.onload?.();
+  }
+
+  send(body: FormData) {
+    this.body = body;
+    calls.push('upload');
+    if (xhrManual) return;
+    // Resolve on a microtask so the component's await actually suspends.
+    queueMicrotask(() => {
+      if (xhrShouldError) {
+        this.onerror?.();
+        return;
+      }
+      this.upload.onprogress?.({ lengthComputable: true, loaded: 40, total: 100 } as ProgressEvent);
+      this.upload.onprogress?.({ lengthComputable: true, loaded: 100, total: 100 } as ProgressEvent);
+      this.status = xhrStatus;
+      this.onload?.();
+    });
+  }
+}
 
 function mintOk() {
   return {
@@ -70,6 +134,11 @@ function mintOk() {
 beforeEach(() => {
   vi.clearAllMocks();
   calls = [];
+  xhrStatus = 200;
+  xhrShouldError = false;
+  xhrManual = false;
+  lastXhr = null;
+  vi.stubGlobal('XMLHttpRequest', FakeXhr);
   process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_SUBDOMAIN = HOST;
   mockValidateSync.mockReturnValue(null);
   mockValidateDuration.mockResolvedValue(null);
@@ -82,10 +151,6 @@ beforeEach(() => {
     if (String(url).includes('/api/video/direct-upload/')) {
       calls.push('mint');
       return mintOk();
-    }
-    if (String(url).includes('upload.videodelivery.net')) {
-      calls.push('upload');
-      return { ok: true, status: 200, json: async () => ({}) };
     }
     if (String(url).includes('/api/video/delete/')) {
       calls.push('delete');
@@ -137,11 +202,12 @@ describe('upload flow', () => {
     selectFile(container);
 
     await waitFor(() => expect(calls).toContain('upload'));
-    const uploadCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('upload.videodelivery.net'));
-    const init = uploadCall?.[1] as RequestInit;
-    expect(init.method).toBe('POST');
-    expect(init.body).toBeInstanceOf(FormData);
-    expect((init.body as FormData).get('file')).toBeInstanceOf(File);
+    expect(lastXhr?.method).toBe('POST');
+    expect(lastXhr?.url).toBe('https://upload.videodelivery.net/tok');
+    expect(lastXhr?.body).toBeInstanceOf(FormData);
+    expect(lastXhr?.body?.get('file')).toBeInstanceOf(File);
+    // The bytes must never travel over fetch to one of our own routes.
+    expect(fetchMock.mock.calls.every((c) => String(c[0]).startsWith('/api/'))).toBe(true);
   });
 
   it('accepts a .MOV, which the old MP4 only rule rejected', async () => {
@@ -194,11 +260,7 @@ describe('ordering, the load bearing part', () => {
   });
 
   it('never writes or deletes when the upload to Cloudflare fails', async () => {
-    fetchMock.mockImplementation(async (url: string) => {
-      if (String(url).includes('/api/video/direct-upload/')) return mintOk();
-      if (String(url).includes('upload.videodelivery.net')) return { ok: false, status: 400, json: async () => ({}) };
-      throw new Error('should not reach delete');
-    });
+    xhrStatus = 400;
     const { container } = renderSection(OLD_UID);
 
     selectFile(container);
@@ -210,7 +272,6 @@ describe('ordering, the load bearing part', () => {
   it('stays silent when the cleanup delete fails, since the profile is already correct', async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (String(url).includes('/api/video/direct-upload/')) return mintOk();
-      if (String(url).includes('upload.videodelivery.net')) return { ok: true, status: 200, json: async () => ({}) };
       if (String(url).includes('/api/video/delete/')) return { ok: false, status: 502, json: async () => ({}) };
       throw new Error('unexpected');
     });
@@ -282,6 +343,85 @@ describe('slow upload warning', () => {
 
     await waitFor(() => expect(mockShowSuccess).toHaveBeenCalled());
     expect(mockShowInfo).not.toHaveBeenCalled();
+  });
+});
+
+describe('progress reporting', () => {
+  it('shows a real percentage while the bytes are moving', async () => {
+    xhrManual = true;
+    const { container } = renderSection(null);
+
+    selectFile(container);
+    await waitFor(() => expect(lastXhr).not.toBeNull());
+    await act(async () => {
+      lastXhr?.emitProgress(40);
+    });
+
+    expect(screen.getByText('40%')).toBeInTheDocument();
+    expect(screen.getByText('Uploading your video')).toBeInTheDocument();
+    expect(container.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('40');
+  });
+
+  it('says almost done at 100 percent, so the bar never sits full and silent', async () => {
+    xhrManual = true;
+    const { container } = renderSection(null);
+
+    selectFile(container);
+    await waitFor(() => expect(lastXhr).not.toBeNull());
+    await act(async () => {
+      lastXhr?.emitProgress(100);
+    });
+
+    expect(screen.getByText('Almost done')).toBeInTheDocument();
+    // The percentage is dropped once it is meaningless, but the bar stays full.
+    expect(screen.queryByText('100%')).toBeNull();
+    expect(container.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('100');
+  });
+
+  it('switches to processing once Cloudflare answers, since it encodes after receiving', async () => {
+    xhrManual = true;
+    mockUpdateStorefrontProfile.mockImplementation(
+      () =>
+        new Promise(() => {
+          // Never resolves, so the processing phase stays observable.
+        })
+    );
+    const { container } = renderSection(null);
+
+    selectFile(container);
+    await waitFor(() => expect(lastXhr).not.toBeNull());
+    await act(async () => {
+      lastXhr?.emitProgress(100);
+      lastXhr?.finish(200);
+    });
+
+    expect(screen.getByText('Processing your video. This can take a moment.')).toBeInTheDocument();
+  });
+
+  it('ignores a progress event the browser cannot size', async () => {
+    xhrManual = true;
+    const { container } = renderSection(null);
+
+    selectFile(container);
+    await waitFor(() => expect(lastXhr).not.toBeNull());
+    await act(async () => {
+      lastXhr?.emitProgress(60);
+      lastXhr?.upload.onprogress?.({ lengthComputable: false, loaded: 0, total: 0 } as ProgressEvent);
+    });
+
+    // The last real percentage survives rather than resetting to zero.
+    expect(screen.getByText('60%')).toBeInTheDocument();
+  });
+
+  it('never writes or deletes when the connection drops mid upload', async () => {
+    xhrShouldError = true;
+    const { container } = renderSection(OLD_UID);
+
+    selectFile(container);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalledWith('videoUploadError'));
+    expect(mockUpdateStorefrontProfile).not.toHaveBeenCalled();
+    expect(calls).not.toContain('delete');
   });
 });
 
