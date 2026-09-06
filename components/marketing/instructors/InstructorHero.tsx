@@ -4,20 +4,21 @@ import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 
 // PAY-01 layer 2: there is no paid instructor tier, so there is no trial to
-// start, and the sub no longer promises product sales. Matches the footer CTA
-// on this same page. Plain en/es object so the section carries no ternaries.
+// start, and the sub no longer promises product sales. The hero carries its
+// own wording rather than repeating the footer CTA further down this page.
+// Plain en/es object so the section carries no ternaries.
 const copy = {
   en: {
     eyebrow: 'For Instructors',
     headline: 'Build Your Fitness Business on Tribe',
-    sub: 'Free. No contracts, no commission.',
-    cta: 'Create your instructor profile',
+    sub: 'Publish your sessions, get your own page, and let people in Medellin find you. You keep everything you charge.',
+    cta: 'Start free',
   },
   es: {
     eyebrow: 'Para Instructores',
     headline: 'Construye Tu Negocio Fitness en Tribe',
-    sub: 'Gratis. Sin contratos, sin comisión.',
-    cta: 'Crea tu perfil de instructor',
+    sub: 'Publica tus sesiones, ten tu propia página y deja que la gente en Medellín te encuentre. Te quedas con todo lo que cobras.',
+    cta: 'Empieza gratis',
   },
 } as const;
 
