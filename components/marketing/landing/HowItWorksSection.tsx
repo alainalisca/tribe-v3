@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { Search, CreditCard, Dumbbell, Store, ClipboardList, Wallet, type LucideIcon } from 'lucide-react';
+import { Search, CalendarCheck, Dumbbell, Store, ClipboardList, Wallet, type LucideIcon } from 'lucide-react';
 
 const tracks = {
   en: {
@@ -18,7 +18,7 @@ const tracks = {
         },
         {
           num: '02',
-          Icon: CreditCard,
+          Icon: CalendarCheck,
           title: 'Request your spot',
           desc: 'Send a join request. The instructor confirms and tells you how to pay them.',
         },
@@ -67,7 +67,7 @@ const tracks = {
         },
         {
           num: '02',
-          Icon: CreditCard,
+          Icon: CalendarCheck,
           title: 'Pide tu cupo',
           desc: 'Manda tu solicitud. El instructor te confirma y te dice cómo pagarle.',
         },

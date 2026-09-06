@@ -22,6 +22,12 @@ const categories: FAQCategory[] = [
         aEs: 'Tribe es un marketplace fitness que conecta atletas e instructores en Medellín. Encuentra sesiones de entrenamiento, reserva con instructores locales y nunca entrenes solo de nuevo.',
       },
       {
+        qEn: 'Is Tribe free to use?',
+        qEs: '¿Tribe es gratis?',
+        aEn: 'Yes. Creating a profile, publishing sessions, and finding sessions are all free. Tribe does not take a commission on what instructors charge.',
+        aEs: 'Sí. Crear tu perfil, publicar sesiones y encontrar sesiones es gratis. Tribe no cobra comisión sobre lo que cobran los instructores.',
+      },
+      {
         qEn: 'Does Tribe take a commission?',
         qEs: '¿Tribe cobra comisión?',
         aEn: 'No. Instructors keep everything they charge. Tribe does not take a commission and does not touch their money.',
@@ -123,6 +129,12 @@ const categories: FAQCategory[] = [
     titleEn: 'Payments & Safety',
     titleEs: 'Pagos y Seguridad',
     items: [
+      {
+        qEn: 'How do I pay for a session?',
+        qEs: '¿Cómo pago una sesión?',
+        aEn: 'You pay the instructor directly, by Nequi, transfer, or cash. Tribe does not process payments, so nothing is charged inside the app.',
+        aEs: 'Le pagas directo al instructor, por Nequi, transferencia o efectivo. Tribe no procesa pagos, así que dentro de la app no se cobra nada.',
+      },
       {
         qEn: 'Does Tribe handle the money?',
         qEs: '¿Tribe maneja la plata?',
