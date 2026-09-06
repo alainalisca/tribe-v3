@@ -51,19 +51,19 @@ interface TribeOSEntryCardProps {
 const copy = {
   en: {
     activeTitle: 'Tribe.OS active',
-    activeDescription: 'Manage your clients, attendance, and revenue.',
+    activeDescription: 'Manage your clients, attendance, and sessions.',
     activeCta: 'Open dashboard',
-    inactiveTitle: 'Try Tribe.OS',
-    inactiveDescription: 'For instructors. Manage clients, take payments, track revenue. First 90 days free.',
+    inactiveTitle: 'Tribe.OS',
+    inactiveDescription: 'Tools for instructors to manage clients and sessions. In development. Join the list.',
     inactiveCta: 'Learn more',
   },
   es: {
     activeTitle: 'Tribe.OS activo',
-    activeDescription: 'Gestiona tus clientes, asistencias e ingresos.',
+    activeDescription: 'Gestiona tus clientes, asistencias y sesiones.',
     activeCta: 'Abrir panel',
-    inactiveTitle: 'Prueba Tribe.OS',
+    inactiveTitle: 'Tribe.OS',
     inactiveDescription:
-      'Para instructores. Gestiona clientes, recibe pagos, sigue tus ingresos. Primeros 90 días gratis.',
+      'Herramientas para instructores, para manejar clientes y sesiones. En desarrollo. Únete a la lista.',
     inactiveCta: 'Aprender más',
   },
 } as const;
