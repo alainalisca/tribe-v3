@@ -66,6 +66,19 @@ export function streamIframeUrl(uid: string, host: string): string {
 }
 
 /**
+ * Permissions delegated to the Stream player iframe.
+ *
+ * autoplay is load bearing and its omission was a bug. A cross origin iframe
+ * cannot autoplay at all unless the parent delegates the permission here, so
+ * without it the autoplay=true in the URL is silently ignored and the viewer
+ * has to press play a second time inside Cloudflare's own player. This list
+ * matches Cloudflare's documented embed snippet.
+ *
+ * Kept beside the URL builder so the two cannot drift apart again.
+ */
+export const STREAM_IFRAME_ALLOW = 'accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;';
+
+/**
  * A real frame from the video. Billed as an image request, not as delivery
  * minutes, so it is safe to show on a storefront that is never played.
  */

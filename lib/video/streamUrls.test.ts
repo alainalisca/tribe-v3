@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { resolveVideoSource, isStreamUid, streamIframeUrl, streamThumbnailUrl } from './streamUrls';
+import {
+  resolveVideoSource,
+  isStreamUid,
+  streamIframeUrl,
+  streamThumbnailUrl,
+  STREAM_IFRAME_ALLOW,
+} from './streamUrls';
 
 /**
  * users.storefront_video_url holds two shapes and there is no migration:
@@ -42,6 +48,18 @@ describe('URL builders', () => {
 
   it('builds a thumbnail URL, which bills as an image and not as delivery', () => {
     expect(streamThumbnailUrl('vid_1', HOST)).toBe(`https://${HOST}/vid_1/thumbnails/thumbnail.jpg`);
+  });
+
+  it('delegates autoplay to the iframe, without which autoplay=true is ignored', () => {
+    // A cross origin iframe cannot autoplay unless the parent grants the
+    // permission here. Omitting it cost a second click inside the player.
+    expect(STREAM_IFRAME_ALLOW).toContain('autoplay');
+  });
+
+  it('keeps the rest of the permissions Cloudflare documents', () => {
+    for (const permission of ['accelerometer', 'gyroscope', 'encrypted-media', 'picture-in-picture']) {
+      expect(STREAM_IFRAME_ALLOW).toContain(permission);
+    }
   });
 });
 

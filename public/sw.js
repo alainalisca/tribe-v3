@@ -21,6 +21,15 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event — network-first with offline fallback for navigation requests
 self.addEventListener('fetch', (event) => {
+  // Never intercept non-GET requests. The Cache API can only store GET, so
+  // there is nothing to serve them from, and re-issuing a request with a
+  // body from inside the worker is exactly where Safari's "Load failed"
+  // comes from on large uploads (Cloudflare Stream video POSTs). Returning
+  // without respondWith lets the browser handle the request natively.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   const url = new URL(event.request.url);
 
   // Only handle same-origin requests — let cross-origin requests
