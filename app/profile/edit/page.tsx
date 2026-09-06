@@ -10,10 +10,6 @@ import {
   Upload,
   X,
   Sparkles,
-  DollarSign,
-  Tag,
-  Zap,
-  Bell,
   Check,
   Store,
   Camera,
@@ -31,6 +27,38 @@ import { Label } from '@/components/ui/label';
 import { useEditProfile } from './useEditProfile';
 import ImageCropModal from '@/components/ImageCropModal';
 import { parseCommaList, formatCommaList } from '@/lib/format/commaList';
+
+// PAY-01 layer 2: step 3 must not imply Tribe processes or holds money.
+// Instructors collect directly and Tribe takes nothing. Plain en/es object,
+// same style as the tribe-os banner components, so no language ternaries.
+const copy = {
+  en: {
+    stepLabel: 'Payments',
+    title: 'How you get paid',
+    intro: 'You charge directly. Tribe does not process or hold your money.',
+    card1Title: 'You set the price',
+    card1Body: 'Publish a session free or paid. You decide what to charge and you can change it any time.',
+    card2Title: 'You collect directly',
+    card2Body:
+      'Your students pay you by Nequi, transfer, or cash, the same way you work today. Tribe takes no commission.',
+    card3Title: 'You keep your students',
+    card3Body: 'The people who book with you are yours. Their contact stays with you, on Tribe and off it.',
+    currencyNote: 'Your prices show in Colombian pesos (COP).',
+  },
+  es: {
+    stepLabel: 'Cobros',
+    title: 'Cómo cobras',
+    intro: 'Tú cobras directo. Tribe no procesa ni retiene tu plata.',
+    card1Title: 'Tú pones el precio',
+    card1Body: 'Publica tu sesión gratis o con precio. Tú decides cuánto cobras y lo puedes cambiar cuando quieras.',
+    card2Title: 'Cobras directo',
+    card2Body:
+      'Tus estudiantes te pagan por Nequi, transferencia o efectivo, como ya trabajas hoy. Tribe no te cobra comisión.',
+    card3Title: 'Tus estudiantes son tuyos',
+    card3Body: 'La gente que reserva contigo es tuya. Su contacto se queda contigo, dentro y fuera de Tribe.',
+    currencyNote: 'Tus precios se muestran en pesos colombianos (COP).',
+  },
+} as const;
 
 export default function EditProfilePage() {
   const { language } = useLanguage();
@@ -324,7 +352,7 @@ export default function EditProfilePage() {
                 <h3 className="text-sm font-bold text-theme-primary">
                   {wizardStep === 1 && (language === 'es' ? '1. Identidad Profesional' : '1. Professional Identity')}
                   {wizardStep === 2 && (language === 'es' ? '2. Tu Escaparate' : '2. Your Storefront')}
-                  {wizardStep === 3 && (language === 'es' ? '3. Monetización' : '3. Monetization')}
+                  {wizardStep === 3 && `3. ${copy[language].stepLabel}`}
                 </h3>
               </div>
 
@@ -625,82 +653,28 @@ export default function EditProfilePage() {
                 </div>
               )}
 
-              {/* Step 3: Monetization Overview */}
+              {/* Step 3: Payments. Copy only: Tribe does not process or hold money. */}
               {wizardStep === 3 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
-                      <DollarSign className="w-6 h-6 text-tribe-green mb-2" />
-                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
-                        {language === 'es' ? 'Sesiones de Pago' : 'Paid Sessions'}
-                      </h4>
-                      <p className="text-xs text-stone-600 dark:text-gray-400">
-                        {language === 'es'
-                          ? 'Establece precios en tus sesiones y cobra pagos'
-                          : 'Set prices on your sessions and collect payments'}
-                      </p>
-                    </div>
+                  <p className="text-sm text-stone-600 dark:text-gray-400 text-center">{copy[language].intro}</p>
 
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
-                      <Tag className="w-6 h-6 text-tribe-green mb-2" />
-                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
-                        {language === 'es' ? 'Códigos Promo' : 'Promo Codes'}
-                      </h4>
-                      <p className="text-xs text-stone-600 dark:text-gray-400">
-                        {language === 'es'
-                          ? 'Crea códigos de descuento para atraer nuevos clientes'
-                          : 'Create discount codes to attract new clients'}
-                      </p>
-                    </div>
-
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
-                      <Zap className="w-6 h-6 text-tribe-green mb-2" />
-                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
-                        {language === 'es' ? 'Campañas de Impulso' : 'Boost Campaigns'}
-                      </h4>
-                      <p className="text-xs text-stone-600 dark:text-gray-400">
-                        {language === 'es'
-                          ? 'Paga para promocionar sesiones en el feed de descubrimiento'
-                          : 'Pay to promote sessions in the discovery feed'}
-                      </p>
-                    </div>
-
-                    <div className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid">
-                      <Bell className="w-6 h-6 text-tribe-green mb-2" />
-                      <h4 className="text-xs font-semibold text-theme-primary mb-1">
-                        {language === 'es' ? 'Anuncios' : 'Announcements'}
-                      </h4>
-                      <p className="text-xs text-stone-600 dark:text-gray-400">
-                        {language === 'es'
-                          ? 'Publica actualizaciones que llegan a tus seguidores'
-                          : 'Post updates that push to your followers'}
-                      </p>
-                    </div>
+                  <div className="space-y-3">
+                    {[
+                      { title: copy[language].card1Title, body: copy[language].card1Body },
+                      { title: copy[language].card2Title, body: copy[language].card2Body },
+                      { title: copy[language].card3Title, body: copy[language].card3Body },
+                    ].map((card) => (
+                      <div
+                        key={card.title}
+                        className="bg-white dark:bg-tribe-surface rounded-xl p-4 border border-stone-200 dark:border-tribe-mid"
+                      >
+                        <h4 className="text-sm font-semibold text-theme-primary mb-1">{card.title}</h4>
+                        <p className="text-xs text-stone-600 dark:text-gray-400 leading-relaxed">{card.body}</p>
+                      </div>
+                    ))}
                   </div>
 
-                  <div>
-                    <Label className="text-xs text-theme-secondary mb-1 block">
-                      {language === 'es' ? 'Moneda de ganancias' : 'Earnings Currency'}
-                    </Label>
-                    <select
-                      value={formData.earnings_currency || 'COP'}
-                      onChange={(e) => setFormData({ ...formData, earnings_currency: e.target.value })}
-                      className="w-full px-3 py-2 bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-theme-primary dark:text-white focus-visible:ring-2 focus-visible:ring-tribe-green"
-                    >
-                      <option value="COP">
-                        {language === 'es' ? 'Pesos Colombianos (COP)' : 'Colombian Pesos (COP)'}
-                      </option>
-                      <option value="USD">{language === 'es' ? 'Dólares US (USD)' : 'US Dollars (USD)'}</option>
-                    </select>
-                  </div>
-
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                    <p className="text-xs text-stone-700 dark:text-gray-300">
-                      {language === 'es'
-                        ? 'Puedes configurar estas funciones en cualquier momento desde el hub de Promoción (/promote)'
-                        : 'You can set up these features anytime from the Promote hub (/promote)'}
-                    </p>
-                  </div>
+                  <p className="text-xs text-theme-secondary text-center">{copy[language].currencyNote}</p>
 
                   <div className="flex gap-3 pt-4">
                     <button

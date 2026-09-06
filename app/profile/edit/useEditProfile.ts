@@ -80,7 +80,7 @@ export interface EditProfileFormData {
   // Storefront fields (wizard step 2)
   storefront_tagline: string;
   storefront_banner_url: string;
-  // Monetization fields (wizard step 3)
+  // Payments fields (wizard step 3). COP only; the column must keep a value.
   earnings_currency: string;
 }
 
