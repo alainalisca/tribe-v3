@@ -54,6 +54,59 @@ interface MintedUpload {
   uid: string;
 }
 
+/**
+ * Where the upload has got to. The instructor cannot tell a slow upload from
+ * a hung one, so every stage says something different.
+ *
+ *   uploading  bytes are moving and the percentage is real
+ *   finishing  the last byte is handed to the socket but Cloudflare has not
+ *              answered yet, so the bar would otherwise sit at 100 looking dead
+ *   processing Cloudflare has the file and is encoding it, which it does after
+ *              receiving rather than during
+ */
+type UploadPhase = 'idle' | 'uploading' | 'finishing' | 'processing';
+
+/**
+ * POST the file to Cloudflare over XHR rather than fetch.
+ *
+ * fetch cannot report upload progress: there is no readable stream for the
+ * request body in browsers, so a two minute upload is indistinguishable from
+ * a hang. XHR exposes upload.onprogress, which is the only reason this is not
+ * a fetch call like every other request in this file.
+ *
+ * Resolves on a 2xx and rejects on anything else, so the caller keeps the
+ * exact same control flow it had with fetch: no write and no delete unless
+ * the upload actually succeeded.
+ */
+function postToCloudflare(uploadURL: string, file: File, onProgress: (percent: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', uploadURL);
+
+    xhr.upload.onprogress = (event: ProgressEvent) => {
+      // lengthComputable is false when the browser cannot size the body. Leave
+      // the last known percentage alone rather than showing a wrong one.
+      if (!event.lengthComputable || event.total === 0) return;
+      onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Cloudflare upload failed with status ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onabort = () => reject(new Error('Upload aborted'));
+
+    xhr.send(form);
+  });
+}
+
 /** A stored value is a Stream uid when it is not an absolute URL. */
 function isStreamUid(value: string | null): value is string {
   return Boolean(value) && !String(value).toLowerCase().startsWith('http');
@@ -67,6 +120,8 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
   // Set when the mint route reports it has no Stream credentials. The surface
   // then disables itself instead of offering an uploader that cannot work.
   const [unavailable, setUnavailable] = useState(false);
+  const [phase, setPhase] = useState<UploadPhase>('idle');
+  const [progress, setProgress] = useState(0);
   // The dashboard preview keeps the same click to play gate the storefront
   // uses. Cloudflare counts buffering as billable delivery, so the player is
   // mounted only when the instructor asks to watch their own video.
@@ -135,6 +190,8 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
     const previous = videoUrl;
 
     setUploading(true);
+    setPhase('uploading');
+    setProgress(0);
     try {
       const mintRes = await fetch('/api/video/direct-upload/', { method: 'POST' });
 
@@ -159,14 +216,24 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
 
       // Step 2: the bytes go straight to Cloudflare. Plain multipart POST with
       // a "file" field; Cloudflare answers 200 on success.
-      const form = new FormData();
-      form.append('file', file);
-      const uploadRes = await fetch(minted.data.uploadURL, { method: 'POST', body: form });
-
-      if (!uploadRes.ok) {
+      try {
+        await postToCloudflare(minted.data.uploadURL, file, (percent) => {
+          setProgress(percent);
+          // The socket is drained but the response has not landed. Say so,
+          // rather than parking the bar at 100 with no explanation.
+          if (percent >= 100) setPhase('finishing');
+        });
+      } catch (uploadError) {
+        // Same outcome the failed fetch had: nothing is written and nothing is
+        // deleted, so the instructor keeps whatever video they already had.
+        logError(uploadError, { action: 'VideoUploadSection.postToCloudflare', userId });
         showError(t('videoUploadError'));
         return;
       }
+
+      // Cloudflare has the bytes and encodes after receiving them, so the
+      // wait is not over just because the upload finished.
+      setPhase('processing');
 
       // Step 3: the uid alone, never a URL.
       const result = await updateStorefrontProfile(supabase, userId, { storefront_video_url: minted.data.uid });
@@ -188,6 +255,8 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
       showError(message);
     } finally {
       setUploading(false);
+      setPhase('idle');
+      setProgress(0);
     }
   }
 
@@ -221,6 +290,17 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
   }
 
   const source = resolveVideoSource(videoUrl);
+
+  // Phase copy. An object rather than a language ternary, and keyed off the
+  // phase so the label and the bar can never disagree.
+  const PHASE_LABEL: Record<Exclude<UploadPhase, 'idle'>, string> = {
+    uploading: t('videoUploadingNow'),
+    finishing: t('videoAlmostDone'),
+    processing: t('videoProcessing'),
+  };
+  const phaseLabel = phase === 'idle' ? t('videoUploadingNow') : PHASE_LABEL[phase];
+  // Once the bytes are gone the bar is full; only the label keeps moving.
+  const barPercent = phase === 'finishing' || phase === 'processing' ? 100 : progress;
 
   return (
     <div className="space-y-2">
@@ -314,13 +394,34 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
           }`}
         >
           {uploading ? (
-            <Loader className="w-6 h-6 text-tribe-green animate-spin" />
+            <div className="w-full px-6 space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <Loader className="w-4 h-4 text-tribe-green animate-spin shrink-0" />
+                <span className="text-sm font-medium text-theme-secondary text-center">{phaseLabel}</span>
+                {phase === 'uploading' && (
+                  <span className="text-sm font-semibold text-tribe-green tabular-nums shrink-0">{progress}%</span>
+                )}
+              </div>
+              <div
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={barPercent}
+                aria-label={phaseLabel}
+                className="h-1.5 w-full rounded-full bg-stone-200 dark:bg-tribe-mid overflow-hidden"
+              >
+                <div
+                  className="h-full bg-tribe-green transition-[width] duration-200 ease-out"
+                  style={{ width: `${barPercent}%` }}
+                />
+              </div>
+            </div>
           ) : (
-            <Video className="w-6 h-6 text-stone-400" />
+            <>
+              <Video className="w-6 h-6 text-stone-400" />
+              <span className="text-sm font-medium text-theme-secondary">{t('uploadVideo')}</span>
+            </>
           )}
-          <span className="text-sm font-medium text-theme-secondary">
-            {uploading ? t('uploading') : t('uploadVideo')}
-          </span>
           <input
             ref={inputRef}
             type="file"
