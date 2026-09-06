@@ -256,13 +256,24 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
               </span>
             </button>
           ) : source.kind === 'stream' ? (
-            <iframe
-              src={source.iframeUrl}
-              title={t('introVideo')}
-              className="w-full h-56 border-0"
-              allow={STREAM_IFRAME_ALLOW}
-              allowFullScreen
-            />
+            <>
+              <iframe
+                src={source.iframeUrl}
+                title={t('introVideo')}
+                className="w-full h-56 border-0"
+                allow={STREAM_IFRAME_ALLOW}
+                allowFullScreen
+              />
+              {/* Same handoff cover as the storefront player. See VideoIntro
+                  for why this exists and why it is time based. */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none animate-out fade-out fill-mode-forwards delay-700 duration-500"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={source.thumbnailUrl} alt="" aria-hidden="true" className="w-full h-full object-contain" />
+              </div>
+            </>
           ) : (
             /* eslint-disable-next-line jsx-a11y/media-has-caption */
             <video src={source.src} controls playsInline className="w-full max-h-56 object-contain" />

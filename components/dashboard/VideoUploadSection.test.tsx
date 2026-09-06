@@ -314,6 +314,9 @@ describe('preview keeps the click gate', () => {
     const iframe = container.querySelector('iframe');
     expect(iframe?.getAttribute('src')).toBe(`https://${HOST}/${OLD_UID}/iframe?autoplay=true&preload=none`);
     expect(iframe?.getAttribute('allow')).toContain('autoplay');
+    // The handoff cover hides Cloudflare's own poster and play button.
+    const cover = container.querySelector('.animate-out');
+    expect(cover?.className).toContain('pointer-events-none');
   });
 
   it('renders a legacy URL in a native video element, as before', () => {

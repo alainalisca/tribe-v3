@@ -68,6 +68,15 @@ export default function VideoIntro({
   const streamThumbnail = source.kind === 'stream' && !thumbnailFailed ? source.thumbnailUrl : null;
   const effectivePoster = streamThumbnail ?? posterUrl ?? null;
 
+  // The still frame, shared by the pre click button and the handoff cover so
+  // the image cannot change across the transition.
+  const posterFill = effectivePoster ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={effectivePoster} alt="" aria-hidden="true" className="w-full h-full object-cover" />
+  ) : (
+    <div className="w-full h-full bg-gradient-to-br from-[#3D4349] to-[#272D34]" />
+  );
+
   return (
     <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
       {/*
@@ -112,15 +121,43 @@ export default function VideoIntro({
           </span>
         </button>
       ) : source.kind === 'stream' ? (
-        // autoplay=true in the URL is correct for the same reason autoPlay is
-        // correct on the native element below: the viewer already clicked.
-        <iframe
-          src={source.iframeUrl}
-          title={IFRAME_TITLE[language]}
-          className="w-full h-full border-0"
-          allow={STREAM_IFRAME_ALLOW}
-          allowFullScreen
-        />
+        <>
+          {/* autoplay=true in the URL is correct for the same reason autoPlay
+              is correct on the native element below: the viewer already
+              clicked. STREAM_IFRAME_ALLOW delegates the permission. */}
+          <iframe
+            src={source.iframeUrl}
+            title={IFRAME_TITLE[language]}
+            className="w-full h-full border-0"
+            allow={STREAM_IFRAME_ALLOW}
+            allowFullScreen
+          />
+          {/*
+            Handoff cover. Between mounting the iframe and autoplay actually
+            starting, Cloudflare's player paints its own poster and its own
+            white play button, so the viewer saw two play buttons in a row and
+            the feature looked broken even though it worked.
+
+            This holds our poster, the same image that was on screen a moment
+            ago, over that gap and then fades itself out. Pure CSS through
+            tailwindcss-animate, so there is no timer, no state and no player
+            SDK: the element animates once on mount and stays transparent.
+            pointer-events-none throughout, so it never intercepts a click
+            meant for the player's own controls.
+
+            The 700ms hold is a judgement, not a measurement, because without
+            the Stream SDK there is no event that says playback began. If
+            autoplay is slower than that on a poor connection the cover fades
+            early and the viewer sees what they see today, so the worst case
+            is the current behaviour rather than something new.
+          */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none animate-out fade-out fill-mode-forwards delay-700 duration-500"
+          >
+            {posterFill}
+          </div>
+        </>
       ) : (
         <video
           controls
