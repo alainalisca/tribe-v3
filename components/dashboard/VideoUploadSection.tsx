@@ -18,17 +18,27 @@
  * all. A delete that fails after step 3 is a billing leak, not a user facing
  * failure, so it is logged and never surfaced.
  *
- * Guardrails before any bytes leave the browser: it must be a video, and it
- * must be 60 seconds or less. Format and file size are no longer checked
- * because Stream transcodes any common format and bills duration, not bytes.
+ * Guardrails before any bytes leave the browser: it must be a video, it must
+ * fit Cloudflare's 200 MB simple POST ceiling, and it must be 60 seconds or
+ * less. Format is not checked because Stream transcodes anything common.
+ *
+ * All three run BEFORE the mint route is called. A file rejected after
+ * minting would waste a direct upload URL, which reserves storage on
+ * Cloudflare until it is used or expires.
  */
 
 import { useRef, useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Video, Loader, Upload, X, Play } from 'lucide-react';
-import { showSuccess, showError } from '@/lib/toast';
+import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { updateStorefrontProfile } from '@/lib/dal/instructorDashboard';
-import { validateVideoSync, validateVideoDuration } from '@/lib/videoValidation';
+import {
+  validateVideoSync,
+  validateVideoDuration,
+  isSlowUpload,
+  toMegabytes,
+  CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES,
+} from '@/lib/videoValidation';
 import { resolveVideoSource } from '@/lib/video/streamUrls';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
@@ -95,8 +105,18 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
     // Reset the input so the same file can be re-selected after an error.
     if (inputRef.current) inputRef.current.value = '';
 
-    if (validateVideoSync(file) === 'wrong_type') {
+    const syncError = validateVideoSync(file);
+    if (syncError === 'wrong_type') {
       showError(t('videoWrongType'));
+      return;
+    }
+    if (syncError === 'too_large') {
+      // Named sizes, because "too large" without a number is unactionable.
+      showError(
+        t('videoTooLarge')
+          .replace('{size}', String(toMegabytes(file.size)))
+          .replace('{limit}', String(toMegabytes(CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES)))
+      );
       return;
     }
 
@@ -104,6 +124,11 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
     if (durationError === 'too_long') {
       showError(t('videoTooLong'));
       return;
+    }
+
+    // Allowed, but big enough that silence would read as a hung upload.
+    if (isSlowUpload(file)) {
+      showInfo(t('videoLargeFileWarning').replace('{size}', String(toMegabytes(file.size))));
     }
 
     // Step 1: remember what is there now, before anything changes.

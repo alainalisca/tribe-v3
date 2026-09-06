@@ -260,11 +260,15 @@ export const extEn = {
 
   // BUG-211: Instructor intro video upload (StorefrontEditor)
   introVideo: 'Intro Video',
-  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  introVideoHint: 'Any video format · max 60 s · max 180 MB',
   uploadVideo: 'Upload video',
   changeVideo: 'Change video',
   removeVideo: 'Remove video',
   videoWrongType: 'That file is not a video. Pick a video from your phone or computer.',
+  videoTooLarge:
+    'That video is {size} MB and the limit is {limit} MB. Record a shorter clip, or turn off HDR and 4K in Settings, Camera, then record it again.',
+  videoLargeFileWarning:
+    'This video is {size} MB. On mobile data the upload can take several minutes. Keep this screen open until it finishes.',
   videoTooLong: 'Video is longer than 60 seconds. Trim it and try again.',
   videoUnavailable: 'Video upload is unavailable right now. Try again later.',
   playVideo: 'Play video',
@@ -533,12 +537,16 @@ export const extEs: Record<keyof typeof extEn, string> = {
   inviteOnlyLabel: 'Solo con Invitacion',
 
   // BUG-211: Instructor intro video upload (StorefrontEditor)
-  introVideo: 'Video de Presentacion',
-  introVideoHint: 'MP4 · max 60 s · max 50 MB',
+  introVideo: 'Video de Presentación',
+  introVideoHint: 'Cualquier formato de video · máx. 60 s · máx. 180 MB',
   uploadVideo: 'Subir video',
   changeVideo: 'Cambiar video',
   removeVideo: 'Eliminar video',
   videoWrongType: 'Ese archivo no es un video. Elige un video de tu celular o computador.',
+  videoTooLarge:
+    'Ese video pesa {size} MB y el límite es {limit} MB. Graba un clip más corto, o desactiva HDR y 4K en Ajustes, Cámara, y vuelve a grabarlo.',
+  videoLargeFileWarning:
+    'Este video pesa {size} MB. Con datos móviles la subida puede tardar varios minutos. No cierres esta pantalla hasta que termine.',
   videoTooLong: 'El video dura más de 60 segundos. Recórtalo e intenta de nuevo.',
   videoUnavailable: 'La subida de video no está disponible en este momento. Intenta más tarde.',
   playVideo: 'Reproducir video',

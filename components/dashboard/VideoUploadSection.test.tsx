@@ -15,22 +15,36 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
  * silent.
  */
 
-const { mockUpdateStorefrontProfile, mockShowError, mockShowSuccess, mockValidateSync, mockValidateDuration } =
-  vi.hoisted(() => ({
-    mockUpdateStorefrontProfile: vi.fn(),
-    mockShowError: vi.fn(),
-    mockShowSuccess: vi.fn(),
-    mockValidateSync: vi.fn(),
-    mockValidateDuration: vi.fn(),
-  }));
+const {
+  mockUpdateStorefrontProfile,
+  mockShowError,
+  mockShowSuccess,
+  mockShowInfo,
+  mockValidateSync,
+  mockValidateDuration,
+} = vi.hoisted(() => ({
+  mockUpdateStorefrontProfile: vi.fn(),
+  mockShowError: vi.fn(),
+  mockShowSuccess: vi.fn(),
+  mockShowInfo: vi.fn(),
+  mockValidateSync: vi.fn(),
+  mockValidateDuration: vi.fn(),
+}));
 
 vi.mock('@/lib/dal/instructorDashboard', () => ({ updateStorefrontProfile: mockUpdateStorefrontProfile }));
-vi.mock('@/lib/toast', () => ({ showError: mockShowError, showSuccess: mockShowSuccess }));
-vi.mock('@/lib/videoValidation', () => ({
+vi.mock('@/lib/toast', () => ({ showError: mockShowError, showSuccess: mockShowSuccess, showInfo: mockShowInfo }));
+vi.mock('@/lib/videoValidation', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/videoValidation')>()),
   validateVideoSync: mockValidateSync,
   validateVideoDuration: mockValidateDuration,
 }));
-vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ t: (k: string) => k, language: 'en' }) }));
+const TEMPLATES: Record<string, string> = {
+  videoTooLarge: 'That video is {size} MB and the limit is {limit} MB.',
+  videoLargeFileWarning: 'This video is {size} MB and may take several minutes.',
+};
+vi.mock('@/lib/LanguageContext', () => ({
+  useLanguage: () => ({ t: (k: string) => TEMPLATES[k] ?? k, language: 'en' }),
+}));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }));
 
 import VideoUploadSection from './VideoUploadSection';
@@ -96,9 +110,12 @@ function renderSection(initial: string | null) {
   );
 }
 
-function selectFile(container: HTMLElement) {
+function selectFile(container: HTMLElement, size = 8) {
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   const file = new File([new Uint8Array(8)], 'clip.mov', { type: 'video/quicktime' });
+  // Report a size without allocating it. Real 4K clips are hundreds of MB and
+  // the component only ever reads file.size.
+  Object.defineProperty(file, 'size', { value: size });
   fireEvent.change(input, { target: { files: [file] } });
 }
 
@@ -203,6 +220,68 @@ describe('ordering, the load bearing part', () => {
 
     await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('videoSaved'));
     expect(mockShowError).not.toHaveBeenCalled();
+  });
+});
+
+describe('size ceiling, checked before any mint is spent', () => {
+  it('rejects an oversize file WITHOUT calling the mint route', async () => {
+    mockValidateSync.mockReturnValue('too_large');
+    const { container } = renderSection(null);
+
+    selectFile(container, 1024);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+    // The whole point: no direct upload URL was minted, so no storage was
+    // reserved on Cloudflare for a file that can never be sent.
+    expect(calls).not.toContain('mint');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mockUpdateStorefrontProfile).not.toHaveBeenCalled();
+  });
+
+  it('names the actual size and the limit, so the message is actionable', async () => {
+    mockValidateSync.mockReturnValue('too_large');
+    const { container } = renderSection(null);
+
+    selectFile(container, 200 * 1024 * 1024);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+    const message = mockShowError.mock.calls[0][0] as string;
+    expect(message).toContain('200');
+    expect(message).toContain('180');
+    expect(message).not.toContain('{size}');
+    expect(message).not.toContain('{limit}');
+  });
+
+  it('does not warn about slowness for a file it already rejected', async () => {
+    mockValidateSync.mockReturnValue('too_large');
+    const { container } = renderSection(null);
+
+    selectFile(container, 200 * 1024 * 1024);
+
+    await waitFor(() => expect(mockShowError).toHaveBeenCalled());
+    expect(mockShowInfo).not.toHaveBeenCalled();
+  });
+});
+
+describe('slow upload warning', () => {
+  it('warns and still proceeds for a large but allowed file', async () => {
+    const { container } = renderSection(null);
+
+    selectFile(container, 120 * 1024 * 1024);
+
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledWith('videoSaved'));
+    expect(mockShowInfo).toHaveBeenCalled();
+    expect(mockShowInfo.mock.calls[0][0]).toContain('120');
+    expect(calls).toEqual(['mint', 'upload', 'write']);
+  });
+
+  it('stays quiet for a small file', async () => {
+    const { container } = renderSection(null);
+
+    selectFile(container, 1024);
+
+    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalled());
+    expect(mockShowInfo).not.toHaveBeenCalled();
   });
 });
 

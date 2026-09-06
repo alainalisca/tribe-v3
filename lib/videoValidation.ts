@@ -22,17 +22,55 @@ export const MAX_VIDEO_SECONDS = 60;
 /** Any video container. Stream rejects what it cannot transcode. */
 export const ACCEPTED_VIDEO_TYPE_PREFIX = 'video/';
 
-export type VideoValidationError = 'wrong_type' | 'too_long';
+/**
+ * Transport ceiling, not a billing one.
+ *
+ * Cloudflare's simple POST path for a direct creator upload accepts at most
+ * 200 MB. Anything larger is refused with a 4xx no matter how short it is,
+ * and Cloudflare requires the tus protocol above that line. 180 MB leaves
+ * headroom for multipart framing and for a phone that reports a slightly
+ * different size than it sends.
+ *
+ * This number is reachable well inside our own 60 second duration cap: a 4K
+ * HDR clip from a recent iPhone runs past 200 MB in under a minute, which is
+ * why duration alone is not a sufficient guard.
+ *
+ * Do not raise this constant to accept bigger files. Above 200 MB the simple
+ * POST path cannot work at all, so the fix is implementing tus, which needs a
+ * different mint endpoint and a client library. Editing the number just moves
+ * the failure from a clear message to an opaque 4xx.
+ */
+export const CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES = 180 * 1024 * 1024;
 
 /**
- * Synchronous check: is this a video at all.
+ * Above this the upload is worth warning about but still allowed. On mobile
+ * data a file this size can take minutes, and silence during that wait is
+ * what makes a working upload feel broken.
+ */
+export const SLOW_UPLOAD_WARNING_BYTES = 60 * 1024 * 1024;
+
+export type VideoValidationError = 'wrong_type' | 'too_long' | 'too_large';
+
+/** Whole megabytes, for user facing messages. */
+export function toMegabytes(bytes: number): number {
+  return Math.round(bytes / (1024 * 1024));
+}
+
+/** True when the file is large enough to be worth warning about first. */
+export function isSlowUpload(file: File): boolean {
+  return file.size > SLOW_UPLOAD_WARNING_BYTES && file.size <= CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES;
+}
+
+/**
+ * Synchronous checks: is this a video, and can it physically be uploaded.
  *
- * Size is not checked. Stream accepts up to 200 MB on the basic upload path
- * and a 60 second clip is far below that, and the byte count no longer
- * affects the bill.
+ * Both run before the mint route is called. A file rejected here never burns
+ * a direct upload URL, which would otherwise reserve storage on Cloudflare
+ * for the life of the link.
  */
 export function validateVideoSync(file: File): VideoValidationError | null {
   if (!file.type.toLowerCase().startsWith(ACCEPTED_VIDEO_TYPE_PREFIX)) return 'wrong_type';
+  if (file.size > CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES) return 'too_large';
   return null;
 }
 
