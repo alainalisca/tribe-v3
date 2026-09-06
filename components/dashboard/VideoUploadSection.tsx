@@ -1,25 +1,37 @@
 'use client';
 
 /**
- * VideoUploadSection — instructor intro video upload for the Storefront Editor.
+ * VideoUploadSection: instructor intro video upload for the Storefront Editor.
  *
- * Guardrails (before any bytes reach Storage):
- *   - Rejects non-MP4 MIME types
- *   - Rejects files > 50 MB
- *   - Rejects duration > 60 s (via hidden video element)
+ * Uploads go to Cloudflare Stream by direct creator upload. The server mints a
+ * one time URL, the browser PUTs the file straight to Cloudflare, and the
+ * bytes never pass through Vercel. What lands in users.storefront_video_url is
+ * the bare Stream uid, not a URL. VideoIntro reads both that and the legacy
+ * Supabase URLs that three older rows still hold.
  *
- * All error messages are bilingual EN/ES via the shared translation system.
- * Uploads go to the existing 'media' bucket under storefront-videos/<userId>/.
- * The public URL is written to users.storefront_video_url via the DAL.
+ * Ordering is load bearing and must not be rearranged:
+ *   1. remember the current value
+ *   2. upload the new file
+ *   3. write the new uid
+ *   4. only then delete the old Stream video
+ * Deleting before a confirmed write can leave an instructor with no video at
+ * all. A delete that fails after step 3 is a billing leak, not a user facing
+ * failure, so it is logged and never surfaced.
+ *
+ * Guardrails before any bytes leave the browser: it must be a video, and it
+ * must be 60 seconds or less. Format and file size are no longer checked
+ * because Stream transcodes any common format and bills duration, not bytes.
  */
 
 import { useRef, useState } from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Video, Loader, Upload, X } from 'lucide-react';
+import { Video, Loader, Upload, X, Play } from 'lucide-react';
 import { showSuccess, showError } from '@/lib/toast';
 import { updateStorefrontProfile } from '@/lib/dal/instructorDashboard';
 import { validateVideoSync, validateVideoDuration } from '@/lib/videoValidation';
+import { resolveVideoSource } from '@/lib/video/streamUrls';
 import { useLanguage } from '@/lib/LanguageContext';
+import { logError } from '@/lib/logger';
 
 interface VideoUploadSectionProps {
   supabase: SupabaseClient;
@@ -27,12 +39,54 @@ interface VideoUploadSectionProps {
   initialVideoUrl: string | null;
 }
 
+interface MintedUpload {
+  uploadURL: string;
+  uid: string;
+}
+
+/** A stored value is a Stream uid when it is not an absolute URL. */
+function isStreamUid(value: string | null): value is string {
+  return Boolean(value) && !String(value).toLowerCase().startsWith('http');
+}
+
 export default function VideoUploadSection({ supabase, userId, initialVideoUrl }: VideoUploadSectionProps) {
   const { t } = useLanguage();
   const [videoUrl, setVideoUrl] = useState<string | null>(initialVideoUrl);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
+  // Set when the mint route reports it has no Stream credentials. The surface
+  // then disables itself instead of offering an uploader that cannot work.
+  const [unavailable, setUnavailable] = useState(false);
+  // The dashboard preview keeps the same click to play gate the storefront
+  // uses. Cloudflare counts buffering as billable delivery, so the player is
+  // mounted only when the instructor asks to watch their own video.
+  const [previewPlaying, setPreviewPlaying] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Best effort cleanup of a replaced Stream video. Never surfaces an error:
+   * by the time this runs the instructor's profile already points at the new
+   * video, so a failure here is an orphaned billing line for us, not a
+   * problem they can act on.
+   */
+  async function deleteReplacedVideo(uid: string) {
+    try {
+      const res = await fetch('/api/video/delete/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid }),
+      });
+      if (!res.ok) {
+        logError(new Error(`delete failed with ${res.status}`), {
+          action: 'VideoUploadSection.deleteReplacedVideo',
+          userId,
+          uid,
+        });
+      }
+    } catch (err) {
+      logError(err, { action: 'VideoUploadSection.deleteReplacedVideo', userId, uid });
+    }
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -41,48 +95,69 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
     // Reset the input so the same file can be re-selected after an error.
     if (inputRef.current) inputRef.current.value = '';
 
-    // Synchronous guards: type + size
-    const syncError = validateVideoSync(file);
-    if (syncError === 'wrong_type') {
+    if (validateVideoSync(file) === 'wrong_type') {
       showError(t('videoWrongType'));
       return;
     }
-    if (syncError === 'too_large') {
-      showError(t('videoTooLarge'));
-      return;
-    }
 
-    // Async guard: duration via hidden video element
     const durationError = await validateVideoDuration(file);
     if (durationError === 'too_long') {
       showError(t('videoTooLong'));
       return;
     }
 
+    // Step 1: remember what is there now, before anything changes.
+    const previous = videoUrl;
+
     setUploading(true);
     try {
-      // Stable path (one object per user) + upsert so replacing a video
-      // overwrites the old one instead of orphaning a timestamped file in the
-      // public bucket. A cache-busting query param ensures the new video shows.
-      const path = `storefront-videos/${userId}/intro.mp4`;
-      const { error: uploadError } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+      const mintRes = await fetch('/api/video/direct-upload/', { method: 'POST' });
 
-      if (uploadError) {
-        showError(uploadError.message || t('videoUploadError'));
+      if (mintRes.status === 503) {
+        // No Stream credentials in this environment. Disable rather than
+        // letting the instructor try again into the same wall.
+        setUnavailable(true);
+        showError(t('videoUnavailable'));
         return;
       }
 
-      const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-      const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+      if (!mintRes.ok) {
+        showError(t('videoUploadError'));
+        return;
+      }
 
-      const result = await updateStorefrontProfile(supabase, userId, { storefront_video_url: publicUrl });
+      const minted = (await mintRes.json()) as { success?: boolean; data?: MintedUpload };
+      if (!minted.success || !minted.data?.uploadURL || !minted.data?.uid) {
+        showError(t('videoUploadError'));
+        return;
+      }
+
+      // Step 2: the bytes go straight to Cloudflare. Plain multipart POST with
+      // a "file" field; Cloudflare answers 200 on success.
+      const form = new FormData();
+      form.append('file', file);
+      const uploadRes = await fetch(minted.data.uploadURL, { method: 'POST', body: form });
+
+      if (!uploadRes.ok) {
+        showError(t('videoUploadError'));
+        return;
+      }
+
+      // Step 3: the uid alone, never a URL.
+      const result = await updateStorefrontProfile(supabase, userId, { storefront_video_url: minted.data.uid });
       if (!result.success) {
         showError(result.error || t('videoUploadError'));
         return;
       }
 
-      setVideoUrl(publicUrl);
+      setVideoUrl(minted.data.uid);
+      setPreviewPlaying(false);
       showSuccess(t('videoSaved'));
+
+      // Step 4, and only now. Their profile is already correct.
+      if (isStreamUid(previous)) {
+        void deleteReplacedVideo(previous);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('videoUploadError');
       showError(message);
@@ -92,6 +167,7 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
   }
 
   async function handleRemove() {
+    const previous = videoUrl;
     setRemoving(true);
     try {
       const result = await updateStorefrontProfile(supabase, userId, { storefront_video_url: null });
@@ -99,10 +175,18 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
         showError(result.error || t('videoUploadError'));
         return;
       }
-      // Clean up the stored object so it does not linger in the public bucket.
-      await supabase.storage.from('media').remove([`storefront-videos/${userId}/intro.mp4`]);
+
       setVideoUrl(null);
+      setPreviewPlaying(false);
       showSuccess(t('videoRemoved'));
+
+      // Same rule as a replacement: clear the pointer first, then clean up.
+      if (isStreamUid(previous)) {
+        void deleteReplacedVideo(previous);
+      } else if (previous) {
+        // Legacy Supabase object, left over from the old upload path.
+        await supabase.storage.from('media').remove([`storefront-videos/${userId}/intro.mp4`]);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('videoUploadError');
       showError(message);
@@ -110,6 +194,8 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
       setRemoving(false);
     }
   }
+
+  const source = resolveVideoSource(videoUrl);
 
   return (
     <div className="space-y-2">
@@ -121,11 +207,41 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
         <span className="text-xs text-theme-secondary">{t('introVideoHint')}</span>
       </div>
 
-      {videoUrl ? (
-        /* Video preview with replace / remove controls */
+      {unavailable ? (
+        <div className="flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed border-stone-300 dark:border-tribe-mid opacity-70">
+          <Video className="w-6 h-6 text-stone-400" />
+          <span className="text-sm font-medium text-theme-secondary text-center px-4">{t('videoUnavailable')}</span>
+        </div>
+      ) : source.kind !== 'unavailable' ? (
+        /* Preview with replace and remove controls */
         <div className="relative rounded-xl overflow-hidden bg-black border border-stone-200 dark:border-tribe-mid">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <video src={videoUrl} controls playsInline className="w-full max-h-56 object-contain" />
+          {source.kind === 'stream' && !previewPlaying ? (
+            <button
+              type="button"
+              onClick={() => setPreviewPlaying(true)}
+              className="relative block w-full h-40"
+              aria-label={t('playVideo')}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={source.thumbnailUrl} alt="" aria-hidden="true" className="w-full h-full object-contain" />
+              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <span className="w-12 h-12 rounded-full bg-tribe-green flex items-center justify-center">
+                  <Play className="w-6 h-6 text-slate-900 fill-slate-900 ml-0.5" />
+                </span>
+              </span>
+            </button>
+          ) : source.kind === 'stream' ? (
+            <iframe
+              src={source.iframeUrl}
+              title={t('introVideo')}
+              className="w-full h-56 border-0"
+              allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
+              allowFullScreen
+            />
+          ) : (
+            /* eslint-disable-next-line jsx-a11y/media-has-caption */
+            <video src={source.src} controls playsInline className="w-full max-h-56 object-contain" />
+          )}
           <div className="absolute bottom-2 right-2 flex gap-2">
             <label
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition bg-black/60 text-white hover:bg-black/80 ${
@@ -137,7 +253,7 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
               <input
                 ref={inputRef}
                 type="file"
-                accept="video/mp4"
+                accept="video/*"
                 className="hidden"
                 onChange={handleFileChange}
                 disabled={uploading}
@@ -172,7 +288,7 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
           <input
             ref={inputRef}
             type="file"
-            accept="video/mp4"
+            accept="video/*"
             className="hidden"
             onChange={handleFileChange}
             disabled={uploading}

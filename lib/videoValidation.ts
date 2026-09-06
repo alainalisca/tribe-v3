@@ -1,30 +1,43 @@
 /**
- * Client-side guardrails for instructor intro video uploads (BUG-211).
+ * Client side guardrails for instructor intro video uploads.
  *
- * All validation is intentionally pure and synchronous (or returns a Promise
- * only for duration detection) so it can be unit-tested without a DOM or a
- * Supabase instance. The upload component calls these helpers before sending
- * any bytes to Storage.
+ * These ran against Supabase storage originally, where the file was served
+ * back byte for byte, so the MIME type and the file size both mattered.
+ * Uploads now go to Cloudflare Stream, which transcodes any common container
+ * and codec and bills by duration rather than by bytes, so both of those
+ * checks were removed. What is left is the check that still costs money if it
+ * is wrong.
+ *
+ * Duration stays at 60 seconds and is deliberately below the 120 second
+ * maxDurationSeconds the mint route declares. Cloudflare reserves storage for
+ * the declared maximum from the moment a link is minted, so that gap is
+ * headroom for a slightly long file, not permission to upload one.
+ *
+ * Still pure and DOM free apart from duration detection, so it unit tests
+ * without a browser or a Supabase instance.
  */
 
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50 MB
 export const MAX_VIDEO_SECONDS = 60;
-export const ACCEPTED_VIDEO_TYPE = 'video/mp4';
 
-export type VideoValidationError = 'too_large' | 'wrong_type' | 'too_long';
+/** Any video container. Stream rejects what it cannot transcode. */
+export const ACCEPTED_VIDEO_TYPE_PREFIX = 'video/';
+
+export type VideoValidationError = 'wrong_type' | 'too_long';
 
 /**
- * Synchronous checks: MIME type and file size.
- * Returns the first violation found, or null on pass.
+ * Synchronous check: is this a video at all.
+ *
+ * Size is not checked. Stream accepts up to 200 MB on the basic upload path
+ * and a 60 second clip is far below that, and the byte count no longer
+ * affects the bill.
  */
 export function validateVideoSync(file: File): VideoValidationError | null {
-  if (file.type !== ACCEPTED_VIDEO_TYPE) return 'wrong_type';
-  if (file.size > MAX_VIDEO_BYTES) return 'too_large';
+  if (!file.type.toLowerCase().startsWith(ACCEPTED_VIDEO_TYPE_PREFIX)) return 'wrong_type';
   return null;
 }
 
 /**
- * Async check: duration via a hidden <video> element.
+ * Async check: duration via a hidden video element.
  * Resolves with 'too_long' if duration exceeds the cap, null otherwise.
  * Cleans up the object URL when done.
  *
@@ -43,9 +56,9 @@ export function validateVideoDuration(file: File): Promise<VideoValidationError 
     };
 
     video.onerror = () => {
-      // Treat unreadable files as passing duration check — the upload will
-      // fail at the server anyway, and we don't want to block on a bad
-      // metadata reader.
+      // Treat unreadable files as passing the duration check. Stream will
+      // reject a file it cannot read, and blocking on a flaky metadata reader
+      // is worse than letting the server have the final say.
       URL.revokeObjectURL(url);
       resolve(null);
     };
