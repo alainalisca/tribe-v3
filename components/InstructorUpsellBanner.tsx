@@ -14,16 +14,18 @@ interface InstructorUpsellBannerProps {
 const DISMISS_KEY_PREFIX = 'tribe_upsell_dismissed_';
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-const text = {
+// PAY-01 layer 2: the banner invites people to teach, it does not sell
+// charging through Tribe. Plain en/es object, no language ternaries.
+const copy = {
   en: {
     headline: 'Your sessions are popular!',
-    body: 'Upgrade to Instructor to charge for sessions and get a storefront.',
-    cta: 'Upgrade Now',
+    body: 'Teach on Tribe. Publish your sessions and get your own page. Free.',
+    cta: 'Become an instructor',
   },
   es: {
     headline: '\u00a1Tus sesiones son populares!',
-    body: 'Convi\u00e9rtete en Instructor para cobrar por sesiones y tener tu vitrina.',
-    cta: 'Actualizar Ahora',
+    body: 'Ense\u00f1a en Tribe. Publica tus sesiones y ten tu propia p\u00e1gina. Gratis.',
+    cta: 'Quiero ser instructor',
   },
 } as const;
 
@@ -54,7 +56,8 @@ export default function InstructorUpsellBanner({ userId, language }: InstructorU
 
   if (!visible) return null;
 
-  const t = language === 'es' ? text.es : text.en;
+  // The language prop is a plain string; anything that is not a known key falls back to English.
+  const t = copy[language as keyof typeof copy] ?? copy.en;
 
   const handleDismiss = () => {
     localStorage.setItem(`${DISMISS_KEY_PREFIX}${userId}`, String(Date.now()));
@@ -75,7 +78,7 @@ export default function InstructorUpsellBanner({ userId, language }: InstructorU
       <p className="text-sm text-stone-600 dark:text-stone-300 mb-3 pr-6">{t.body}</p>
 
       <Link
-        href="/profile/edit?wizard=1"
+        href="/onboarding/instructor"
         className="inline-block bg-tribe-green-light text-tribe-dark font-semibold rounded-lg px-4 py-2 text-sm hover:opacity-90 transition"
       >
         {t.cta}

@@ -11,7 +11,6 @@ import BottomNav from '@/components/BottomNav';
 import StorefrontEditor from '@/components/dashboard/StorefrontEditor';
 import SessionManager from '@/components/dashboard/SessionManager';
 import TribeOSEntryCard from '@/components/tribe-os/TribeOSEntryCard';
-import PayoutSetupBanner from '@/components/PayoutSetupBanner';
 import InstructorProfileIncompleteBanner from '@/components/InstructorProfileIncompleteBanner';
 import InstructorAnalytics from '@/components/dashboard/InstructorAnalytics';
 import PackageManager from '@/components/dashboard/PackageManager';
@@ -226,10 +225,6 @@ export default function InstructorDashboardPage() {
         {/* T-PROF1: profile-completeness nudge — shown while the instructor is
             hidden from the Train with an Instructor page. Lists what's missing. */}
         {profile && <InstructorProfileIncompleteBanner missingFields={getMissingInstructorFields(profile)} />}
-
-        {/* Payout setup nudge — shows until the instructor connects a real
-            payout method so clients can actually pay them. */}
-        <PayoutSetupBanner />
 
         {/* Tab Bar */}
         <div className="mt-4 flex gap-1 bg-white dark:bg-tribe-surface rounded-xl p-1 border border-stone-200 dark:border-tribe-mid">
