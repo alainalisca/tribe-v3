@@ -100,10 +100,10 @@ const categories: FAQCategory[] = [
         aEs: 'Regístrate, selecciona "Instructor" como tu rol y completa tu perfil. Puedes empezar a publicar sesiones inmediatamente. No se requiere proceso de aprobación.',
       },
       {
-        qEn: 'Can I sell products on Tribe?',
-        qEs: '¿Puedo vender productos en Tribe?',
-        aEn: 'Yes. You can sell meal plans, workout programs, merchandise, and other fitness-related products directly through your instructor profile.',
-        aEs: 'Sí. Puedes vender planes de comida, programas de entrenamiento, mercancía y otros productos relacionados con fitness directamente a través de tu perfil de instructor.',
+        qEn: 'Can I publish a class that repeats every week?',
+        qEs: '¿Puedo publicar una clase que se repita cada semana?',
+        aEn: 'Yes. Create the session once, set the pattern, and Tribe generates each date. You can edit a single date or the whole series.',
+        aEs: 'Sí. Creas la sesión una vez, defines el patrón y Tribe genera cada fecha. Puedes editar una sola fecha o toda la serie.',
       },
       {
         qEn: 'When do I get paid?',

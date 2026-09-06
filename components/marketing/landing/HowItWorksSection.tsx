@@ -42,8 +42,8 @@ const tracks = {
         {
           num: '02',
           Icon: ClipboardList,
-          title: 'List sessions and products',
-          desc: 'Set prices, schedules, and sell merch or training plans.',
+          title: 'Publish your sessions',
+          desc: 'Set your price, schedule, and location. One off or a weekly series.',
         },
         {
           num: '03',
@@ -91,8 +91,8 @@ const tracks = {
         {
           num: '02',
           Icon: ClipboardList,
-          title: 'Publica sesiones y productos',
-          desc: 'Fija precios, horarios y vende mercancía o planes de entrenamiento.',
+          title: 'Publica tus sesiones',
+          desc: 'Pones tu precio, tu horario y el lugar. Una sola vez o una serie semanal.',
         },
         {
           num: '03',
