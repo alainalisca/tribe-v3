@@ -15,7 +15,6 @@ import {
   Bug,
   Dumbbell,
   HeartHandshake,
-  ShoppingBag,
   Palette,
 } from 'lucide-react';
 import { useUserCurrency } from '@/lib/useUserCurrency';
@@ -110,23 +109,6 @@ export default function SettingsPage() {
             account/settings area; for non-premium users it surfaces
             the offering without forcing them through marketing copy. */}
         <TribeOSEntryCard variant="inline" />
-
-        {/* My Orders Section */}
-        <div className="bg-white dark:bg-tribe-card rounded-2xl p-5 border border-stone-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 mb-4">
-            <ShoppingBag className="w-5 h-5 text-tribe-green" />
-            <h2 className="text-lg font-bold text-theme-primary">{language === 'es' ? 'Mis Compras' : 'My Orders'}</h2>
-          </div>
-          <Link href="/my-orders">
-            <Button
-              variant="ghost"
-              className="w-full p-4 rounded-xl text-left justify-start text-stone-700 dark:text-gray-300 bg-stone-100 dark:bg-tribe-surface hover:bg-stone-200 dark:hover:bg-tribe-mid flex items-center gap-2"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              {language === 'es' ? 'Ver historial de compras' : 'View purchase history'}
-            </Button>
-          </Link>
-        </div>
 
         {/* Replay welcome tours — clears the localStorage seen-flags
             for every QuickGuide so they auto-popup again on next

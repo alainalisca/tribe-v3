@@ -1,8 +1,12 @@
 /**
  * Storefront data layer. Extracted verbatim from the original
  * app/storefront/[id]/page.tsx so the Part 6 redesign restructures only
- * JSX/layout, never data fetching. Sole addition: `productCount` (a
- * head-count query) which the new tab system uses to hide empty tabs.
+ * JSX/layout, never data fetching.
+ *
+ * PAY-01 layer 2: the productCount head query and its state were removed
+ * along with the storefront Productos tab. The products table does not exist
+ * in the live database, so that query always errored, productCount stayed
+ * null, and the fail-open rule showed an empty tab on every storefront.
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -112,7 +116,6 @@ export function useStorefrontData(instructorId: string) {
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [media, setMedia] = useState<StorefrontMedia[]>([]);
   const [posts, setPosts] = useState<InstructorPost[]>([]);
-  const [productCount, setProductCount] = useState<number | null>(null);
   const [followState, setFollowState] = useState<FollowState>({
     isFollowing: false,
     followerCount: 0,
@@ -229,7 +232,6 @@ export function useStorefrontData(instructorId: string) {
           packagesResult,
           mediaResult,
           postsResult,
-          productsResult,
           followersResult,
           followingResult,
         ] = await Promise.all([
@@ -270,14 +272,6 @@ export function useStorefrontData(instructorId: string) {
             .select('*')
             .eq('author_id', instructorId)
             .order('created_at', { ascending: false }),
-          // Product count drives empty-tab hiding (spec 6C). Fail-open: on a
-          // count error leave productCount null so the page shows the tab
-          // rather than wrongly hiding real products.
-          supabase
-            .from('products')
-            .select('id', { count: 'exact', head: true })
-            .eq('instructor_id', instructorId)
-            .eq('status', 'active'),
           // T3-7: count-only (head:true) instead of transferring every follower
           // row just to read .length — an instructor with thousands of followers
           // was shipping thousands of UUIDs on every storefront open.
@@ -348,8 +342,6 @@ export function useStorefrontData(instructorId: string) {
         if (packagesResult.data) setPackages(packagesResult.data);
         if (mediaResult.data) setMedia(mediaResult.data);
         if (postsResult.data) setPosts(postsResult.data);
-        setProductCount(productsResult.error ? null : (productsResult.count ?? 0));
-
         // Follow-count refresh only. `isFollowing` is owned by the viewer
         // follow-state effect below; clobbering it to false here was a race —
         // a re-fetch (e.g. on a language change) reset the button to "Follow"
@@ -503,7 +495,6 @@ export function useStorefrontData(instructorId: string) {
     packages,
     media: combinedMedia,
     posts,
-    productCount,
     followState,
     loading,
     likedPosts,

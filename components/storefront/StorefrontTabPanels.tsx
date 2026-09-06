@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { Play, Heart, Eye } from 'lucide-react';
 import StorefrontSessionCard from '@/components/storefront/StorefrontSessionCard';
 import StorefrontPackageCard from '@/components/storefront/StorefrontPackageCard';
-import StorefrontProductsSection from '@/components/products/StorefrontProductsSection';
 import ReviewsList from '@/components/instructor/ReviewsList';
 import ProfileLightbox from '@/app/profile/[userId]/ProfileLightbox';
 import type { Session, ServicePackage, StorefrontMedia, InstructorPost } from '@/app/storefront/[id]/useStorefrontData';
@@ -86,10 +85,6 @@ export default function StorefrontTabPanels(props: StorefrontTabPanelsProps) {
     ) : (
       <EmptyState text={t.noSessions} />
     );
-  }
-
-  if (activeTab === 'products') {
-    return <StorefrontProductsSection instructorId={instructorId} isOwnProfile={currentUserId === instructorId} />;
   }
 
   if (activeTab === 'packages') {
