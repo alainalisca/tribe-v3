@@ -8,12 +8,12 @@ import { useScrollReveal } from '@/hooks/useScrollReveal';
 const faqs = {
   en: [
     {
-      q: 'Is Tribe free for athletes?',
-      a: 'Yes. Creating an account and joining free community sessions costs nothing. Paid instructor sessions have a price set by the instructor.',
+      q: 'How do I pay for a session?',
+      a: 'You pay the instructor directly, by Nequi, transfer, or cash. Tribe does not process payments, so nothing is charged inside the app.',
     },
     {
-      q: 'How do instructors get paid?',
-      a: 'Athletes pay through the app. Instructors receive 85% of every paid booking. The first 3 months have zero platform fees.',
+      q: 'Does Tribe take a commission?',
+      a: 'No. Instructors keep everything they charge. Tribe does not take a commission and does not touch their money.',
     },
     {
       q: 'What sports are on Tribe?',
@@ -30,12 +30,12 @@ const faqs = {
   ],
   es: [
     {
-      q: '¿Tribe es gratis para atletas?',
-      a: 'Sí. Crear cuenta y unirte a sesiones comunitarias gratis no tiene costo. Las sesiones de instructores pagos tienen el precio que fije el instructor.',
+      q: '¿Cómo pago una sesión?',
+      a: 'Le pagas directo al instructor, por Nequi, transferencia o efectivo. Tribe no procesa pagos, así que dentro de la app no se cobra nada.',
     },
     {
-      q: '¿Cómo cobran los instructores?',
-      a: 'Los atletas pagan por la app. Los instructores reciben el 85% de cada reserva paga. Los primeros 3 meses no tienen comisión.',
+      q: '¿Tribe cobra comisión?',
+      a: 'No. Los instructores se quedan con todo lo que cobran. Tribe no cobra comisión y no toca su plata.',
     },
     {
       q: '¿Qué deportes hay en Tribe?',

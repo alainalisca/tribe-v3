@@ -22,10 +22,10 @@ const categories: FAQCategory[] = [
         aEs: 'Tribe es un marketplace fitness que conecta atletas e instructores en Medellín. Encuentra sesiones de entrenamiento, reserva con instructores locales y nunca entrenes solo de nuevo.',
       },
       {
-        qEn: 'Is Tribe free to use?',
-        qEs: '¿Tribe es gratis?',
-        aEn: 'Tribe is free to download and browse. Athletes pay only when they book a session or purchase a product. Instructors keep 85% of every transaction.',
-        aEs: 'Tribe es gratis para descargar y explorar. Los atletas pagan solo cuando reservan una sesión o compran un producto. Los instructores se quedan con el 85% de cada transacción.',
+        qEn: 'Does Tribe take a commission?',
+        qEs: '¿Tribe cobra comisión?',
+        aEn: 'No. Instructors keep everything they charge. Tribe does not take a commission and does not touch their money.',
+        aEs: 'No. Los instructores se quedan con todo lo que cobran. Tribe no cobra comisión y no toca su plata.',
       },
       {
         qEn: 'What sports and activities are on Tribe?',
@@ -70,10 +70,10 @@ const categories: FAQCategory[] = [
         aEs: 'Los paquetes de sesiones te permiten comprar varias sesiones con un instructor a un precio con descuento. Es una excelente manera de comprometerte con tu entrenamiento y ahorrar dinero.',
       },
       {
-        qEn: 'Are sessions refundable?',
-        qEs: '¿Las sesiones son reembolsables?',
-        aEn: 'Cancellations made 24 hours or more before a session are fully refundable. Late cancellations are handled on a case-by-case basis by the instructor.',
-        aEs: 'Las cancelaciones realizadas 24 horas o más antes de una sesión son completamente reembolsables. Las cancelaciones tardías se manejan caso por caso por el instructor.',
+        qEn: 'What if I need a refund?',
+        qEs: '¿Y si necesito un reembolso?',
+        aEn: 'Talk to the instructor. Since you paid them directly, the refund is between the two of you. You can message them through Tribe.',
+        aEs: 'Habla con el instructor. Como le pagaste directo, el reembolso lo arreglan entre ustedes. Le puedes escribir por Tribe.',
       },
       {
         qEn: 'What if a session is full?',
@@ -94,22 +94,16 @@ const categories: FAQCategory[] = [
         aEs: 'Regístrate, selecciona "Instructor" como tu rol y completa tu perfil. Puedes empezar a publicar sesiones inmediatamente. No se requiere proceso de aprobación.',
       },
       {
-        qEn: 'What is the platform fee?',
-        qEs: '¿Cuál es la comisión de la plataforma?',
-        aEn: 'Tribe takes a 15% commission on each transaction. For your first 3 months, the fee is 0% — you keep 100% of everything you earn.',
-        aEs: 'Tribe cobra una comisión del 15% por cada transacción. Durante tus primeros 3 meses, la comisión es 0% — te quedas con el 100% de todo lo que ganas.',
-      },
-      {
         qEn: 'Can I sell products on Tribe?',
         qEs: '¿Puedo vender productos en Tribe?',
         aEn: 'Yes. You can sell meal plans, workout programs, merchandise, and other fitness-related products directly through your instructor profile.',
         aEs: 'Sí. Puedes vender planes de comida, programas de entrenamiento, mercancía y otros productos relacionados con fitness directamente a través de tu perfil de instructor.',
       },
       {
-        qEn: 'How do payouts work?',
-        qEs: '¿Cómo funcionan los pagos?',
-        aEn: 'Payouts are processed after each completed session and transferred to your registered bank account within 3-5 business days. Track everything in your dashboard.',
-        aEs: 'Los pagos se procesan después de cada sesión completada y se transfieren a tu cuenta bancaria registrada en 3-5 días hábiles. Rastrea todo en tu panel.',
+        qEn: 'When do I get paid?',
+        qEs: '¿Cuándo recibo mi plata?',
+        aEn: 'When your student pays you, which is between the two of you. Tribe does not hold or transfer money, so there is no payout to wait for.',
+        aEs: 'Cuando tu estudiante te paga, y eso lo arreglan entre ustedes. Tribe no retiene ni transfiere plata, así que no hay ningún pago que esperar.',
       },
       {
         qEn: 'Do I need my own gym or space?',
@@ -130,10 +124,10 @@ const categories: FAQCategory[] = [
     titleEs: 'Pagos y Seguridad',
     items: [
       {
-        qEn: 'How does payment processing work?',
-        qEs: '¿Cómo funciona el procesamiento de pagos?',
-        aEn: 'All payments are processed securely through our payment partner. Athletes pay at the time of booking, and instructors receive payouts after session completion.',
-        aEs: 'Todos los pagos se procesan de forma segura a través de nuestro socio de pagos. Los atletas pagan al momento de la reserva y los instructores reciben sus pagos después de completar la sesión.',
+        qEn: 'Does Tribe handle the money?',
+        qEs: '¿Tribe maneja la plata?',
+        aEn: 'No. Tribe is where you find instructors and sessions. The payment happens between you and the instructor, the same way it would if you had found them any other way.',
+        aEs: 'No. Tribe es donde encuentras instructores y sesiones. El pago es entre tú y el instructor, igual que si lo hubieras encontrado por cualquier otro lado.',
       },
       {
         qEn: 'Is my personal information secure?',
@@ -142,10 +136,10 @@ const categories: FAQCategory[] = [
         aEs: 'Sí. Usamos encriptación estándar de la industria y nunca compartimos tus datos personales con terceros. Tu ubicación solo se muestra a nivel de sesión, no tu dirección de casa.',
       },
       {
-        qEn: 'How do refunds work?',
-        qEs: '¿Cómo funcionan los reembolsos?',
-        aEn: 'Refunds for cancellations made 24+ hours before a session are automatic. For other cases, contact the instructor directly or reach out to our support team.',
-        aEs: 'Los reembolsos por cancelaciones realizadas 24+ horas antes de una sesión son automáticos. Para otros casos, contacta al instructor directamente o escríbenos a nuestro equipo de soporte.',
+        qEn: 'What if I need a refund?',
+        qEs: '¿Y si necesito un reembolso?',
+        aEn: 'Talk to the instructor. Since you paid them directly, the refund is between the two of you. You can message them through Tribe.',
+        aEs: 'Habla con el instructor. Como le pagaste directo, el reembolso lo arreglan entre ustedes. Le puedes escribir por Tribe.',
       },
       {
         qEn: 'Can I delete my account?',

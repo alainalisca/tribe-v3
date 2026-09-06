@@ -19,8 +19,8 @@ const tracks = {
         {
           num: '02',
           Icon: CreditCard,
-          title: 'Book and pay in the app',
-          desc: 'Secure payment via Wompi or Stripe. Free sessions too.',
+          title: 'Request your spot',
+          desc: 'Send a join request. The instructor confirms and tells you how to pay them.',
         },
         {
           num: '03',
@@ -49,7 +49,7 @@ const tracks = {
           num: '03',
           Icon: Wallet,
           title: 'Get paid directly',
-          desc: '85% goes to you. Track earnings in your dashboard.',
+          desc: 'Your students pay you. Tribe takes no commission.',
         },
       ],
     },
@@ -68,8 +68,8 @@ const tracks = {
         {
           num: '02',
           Icon: CreditCard,
-          title: 'Reserva y paga en la app',
-          desc: 'Pago seguro por Wompi o Stripe. También sesiones gratis.',
+          title: 'Pide tu cupo',
+          desc: 'Manda tu solicitud. El instructor te confirma y te dice cómo pagarle.',
         },
         {
           num: '03',
@@ -97,8 +97,8 @@ const tracks = {
         {
           num: '03',
           Icon: Wallet,
-          title: 'Recibe pagos directos',
-          desc: 'El 85% es para ti. Rastrea tus ingresos en tu dashboard.',
+          title: 'Cobras directo',
+          desc: 'Tus estudiantes te pagan a ti. Tribe no cobra comisión.',
         },
       ],
     },
