@@ -36,12 +36,6 @@ export default function StorefrontPage() {
         show: d.sessions.length > 0,
       },
       {
-        id: 'products',
-        label: lang === 'es' ? 'Productos' : 'Products',
-        count: d.productCount ?? undefined,
-        show: d.productCount === null || (d.productCount ?? 0) > 0,
-      },
-      {
         id: 'packages',
         label: lang === 'es' ? 'Paquetes' : 'Packages',
         count: d.packages.length,
@@ -57,7 +51,7 @@ export default function StorefrontPage() {
       { id: 'reviews', label: lang === 'es' ? 'Reseñas' : 'Reviews', count: reviews, show: reviews > 0 },
     ];
     return defs.filter((t) => t.show).map(({ id, label, count }) => ({ id, label, count }));
-  }, [d.sessions, d.productCount, d.packages, d.media, d.posts, d.instructor, lang]);
+  }, [d.sessions, d.packages, d.media, d.posts, d.instructor, lang]);
 
   // Keep the active tab valid as data resolves (spec 6C: default Sessions,
   // fall back to the first available tab if Sessions has no content).
