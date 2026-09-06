@@ -20,7 +20,6 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
     thisMonth: language === 'es' ? 'Este mes' : 'This month',
     lastMonth: language === 'es' ? 'Mes pasado' : 'Last month',
     sessions: language === 'es' ? 'sesiones' : 'sessions',
-    viewDetailed: language === 'es' ? 'Ver detalles en Ganancias' : 'View details in Earnings',
   };
 
   const trendUp = stats.sessionsThisMonth >= stats.sessionsLastMonth;
@@ -97,11 +96,6 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
           </div>
         </div>
       </div>
-
-      {/* Link to detailed earnings */}
-      <a href="/earnings" className="block text-center text-sm text-tribe-green font-medium hover:underline">
-        {txt.viewDetailed} &rarr;
-      </a>
     </div>
   );
 }
