@@ -64,15 +64,27 @@ export default function AppStoreBanner() {
         <DialogTitle className="sr-only">{t('getTheTribeApp')}</DialogTitle>
 
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-tribe-dark rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-white">
-              Tribe
-              <span
-                aria-hidden="true"
-                className="inline-block w-[0.35em] h-[0.35em] rounded-full bg-tribe-green ml-[0.1em] align-middle"
-              />
-            </span>
-          </div>
+          {/*
+            The real app icon, not a rebuild of it. This block used to draw a
+            navy square with the word Tribe and a CSS circle, which wrapped
+            inside the 80px box and put the lime dot on its own line below the
+            word instead of after the "e" where the brand puts it. The
+            wordmark is an image asset, never text plus CSS.
+
+            icon-192 is the same artwork the home screen shows, and this is a
+            modal asking the viewer to install exactly that app, so showing
+            the icon they are about to see on their phone is the point. 192px
+            covers the 80px box at 2x with room to spare.
+          */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon-192.png"
+            alt=""
+            aria-hidden="true"
+            width={80}
+            height={80}
+            className="w-20 h-20 rounded-2xl mx-auto mb-4"
+          />
           <h2 className="text-2xl font-bold mb-2 text-stone-900 dark:text-white">{t('getTheTribeApp')}</h2>
           <p className="text-stone-600 dark:text-gray-400">{t('availableOnIOSAndAndroid')}</p>
         </div>
