@@ -39,7 +39,7 @@ import {
   toMegabytes,
   CLOUDFLARE_SIMPLE_UPLOAD_LIMIT_BYTES,
 } from '@/lib/videoValidation';
-import { resolveVideoSource } from '@/lib/video/streamUrls';
+import { resolveVideoSource, STREAM_IFRAME_ALLOW } from '@/lib/video/streamUrls';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 
@@ -260,7 +260,7 @@ export default function VideoUploadSection({ supabase, userId, initialVideoUrl }
               src={source.iframeUrl}
               title={t('introVideo')}
               className="w-full h-56 border-0"
-              allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
+              allow={STREAM_IFRAME_ALLOW}
               allowFullScreen
             />
           ) : (

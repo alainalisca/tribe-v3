@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Play } from 'lucide-react';
-import { resolveVideoSource } from '@/lib/video/streamUrls';
+import { resolveVideoSource, STREAM_IFRAME_ALLOW } from '@/lib/video/streamUrls';
 
 // Title for the Stream embed. A plain object rather than a language ternary:
 // the ternary pattern in this file predates the i18n move (UI-I01) and new
@@ -118,7 +118,7 @@ export default function VideoIntro({
           src={source.iframeUrl}
           title={IFRAME_TITLE[language]}
           className="w-full h-full border-0"
-          allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
+          allow={STREAM_IFRAME_ALLOW}
           allowFullScreen
         />
       ) : (

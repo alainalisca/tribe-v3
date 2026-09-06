@@ -311,9 +311,9 @@ describe('preview keeps the click gate', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'playVideo' }));
 
-    expect(container.querySelector('iframe')?.getAttribute('src')).toBe(
-      `https://${HOST}/${OLD_UID}/iframe?autoplay=true&preload=none`
-    );
+    const iframe = container.querySelector('iframe');
+    expect(iframe?.getAttribute('src')).toBe(`https://${HOST}/${OLD_UID}/iframe?autoplay=true&preload=none`);
+    expect(iframe?.getAttribute('allow')).toContain('autoplay');
   });
 
   it('renders a legacy URL in a native video element, as before', () => {

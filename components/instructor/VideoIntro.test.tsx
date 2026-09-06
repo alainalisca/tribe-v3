@@ -73,6 +73,17 @@ describe('legacy direct URL', () => {
     expect(container.querySelector('video')?.hasAttribute('autoplay')).toBe(true);
   });
 
+  it('still plays on ONE click, unchanged: same document, so the gesture applies directly', () => {
+    const { container } = render(<VideoIntro videoUrl={LEGACY} language="en" />);
+
+    play();
+
+    const video = container.querySelector('video');
+    expect(video?.hasAttribute('autoplay')).toBe(true);
+    expect(video?.getAttribute('src')).toBe(LEGACY);
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+
   it('uses the posterUrl prop for its poster, as it does today', () => {
     render(<VideoIntro videoUrl={LEGACY} posterUrl="https://cdn.example/banner.jpg" language="en" />);
 
@@ -94,13 +105,27 @@ describe('Cloudflare Stream uid', () => {
     expect(container.querySelector('video')).toBeNull();
   });
 
+  it('plays on ONE click: the URL asks for autoplay and the iframe is allowed it', () => {
+    const { container } = render(<VideoIntro videoUrl={UID} language="en" />);
+
+    play();
+
+    const iframe = container.querySelector('iframe');
+    expect(iframe?.getAttribute('src')).toContain('autoplay=true');
+    expect(iframe?.getAttribute('allow')).toContain('autoplay');
+  });
+
   it('sets the permissions the Stream player needs, and allows fullscreen', () => {
     const { container } = render(<VideoIntro videoUrl={UID} language="en" />);
 
     play();
 
     const iframe = container.querySelector('iframe');
-    expect(iframe?.getAttribute('allow')).toBe('accelerometer; gyroscope; encrypted-media; picture-in-picture;');
+    // autoplay must be delegated or the URL's autoplay=true does nothing and
+    // the viewer has to press play again inside Cloudflare's player.
+    expect(iframe?.getAttribute('allow')).toContain('autoplay');
+    expect(iframe?.getAttribute('allow')).toContain('encrypted-media');
+    expect(iframe?.getAttribute('allow')).toContain('picture-in-picture');
     expect(iframe?.hasAttribute('allowfullscreen')).toBe(true);
   });
 
