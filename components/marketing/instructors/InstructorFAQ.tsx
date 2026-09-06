@@ -25,16 +25,10 @@ const faqs: FAQItem[] = [
     aEs: '¡Sí! Las sesiones gratuitas son una excelente manera de construir tu reputación y atraer nuevos atletas. Puedes poner cualquier sesión a $0 COP y empezar a construir tu comunidad.',
   },
   {
-    qEn: 'How and when do I get paid?',
-    qEs: '¿Cómo y cuándo recibo mi pago?',
-    aEn: 'Payouts are processed after each completed session. Funds are transferred to your registered bank account within 3-5 business days. You can track all earnings in your instructor dashboard.',
-    aEs: 'Los pagos se procesan después de cada sesión completada. Los fondos se transfieren a tu cuenta bancaria registrada en 3-5 días hábiles. Puedes rastrear todas tus ganancias en tu panel de instructor.',
-  },
-  {
-    qEn: 'Can I sell physical or digital products?',
-    qEs: '¿Puedo vender productos físicos o digitales?',
-    aEn: 'Absolutely. You can list meal plans, workout programs, branded merchandise, supplements, or any fitness-related product. The same 85/15 revenue split applies to product sales.',
-    aEs: 'Por supuesto. Puedes publicar planes de comida, programas de entrenamiento, mercancía, suplementos o cualquier producto relacionado con fitness. La misma división 85/15 aplica para ventas de productos.',
+    qEn: 'When do I get paid?',
+    qEs: '¿Cuándo recibo mi plata?',
+    aEn: 'When your student pays you, which is between the two of you. Tribe does not hold or transfer money, so there is no payout to wait for.',
+    aEs: 'Cuando tu estudiante te paga, y eso lo arreglan entre ustedes. Tribe no retiene ni transfiere plata, así que no hay ningún pago que esperar.',
   },
 ];
 

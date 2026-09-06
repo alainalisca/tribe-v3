@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/lib/LanguageContext';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-import { Search, CreditCard, Dumbbell, Store, ClipboardList, Wallet, type LucideIcon } from 'lucide-react';
+import { Search, CalendarCheck, Dumbbell, Store, ClipboardList, Wallet, type LucideIcon } from 'lucide-react';
 
 const tracks = {
   en: {
@@ -18,9 +18,9 @@ const tracks = {
         },
         {
           num: '02',
-          Icon: CreditCard,
-          title: 'Book and pay in the app',
-          desc: 'Secure payment via Wompi or Stripe. Free sessions too.',
+          Icon: CalendarCheck,
+          title: 'Request your spot',
+          desc: 'Send a join request. The instructor confirms and tells you how to pay them.',
         },
         {
           num: '03',
@@ -42,14 +42,14 @@ const tracks = {
         {
           num: '02',
           Icon: ClipboardList,
-          title: 'List sessions and products',
-          desc: 'Set prices, schedules, and sell merch or training plans.',
+          title: 'Publish your sessions',
+          desc: 'Set your price, schedule, and location. One off or a weekly series.',
         },
         {
           num: '03',
           Icon: Wallet,
           title: 'Get paid directly',
-          desc: '85% goes to you. Track earnings in your dashboard.',
+          desc: 'Your students pay you. Tribe takes no commission.',
         },
       ],
     },
@@ -67,9 +67,9 @@ const tracks = {
         },
         {
           num: '02',
-          Icon: CreditCard,
-          title: 'Reserva y paga en la app',
-          desc: 'Pago seguro por Wompi o Stripe. También sesiones gratis.',
+          Icon: CalendarCheck,
+          title: 'Pide tu cupo',
+          desc: 'Manda tu solicitud. El instructor te confirma y te dice cómo pagarle.',
         },
         {
           num: '03',
@@ -91,14 +91,14 @@ const tracks = {
         {
           num: '02',
           Icon: ClipboardList,
-          title: 'Publica sesiones y productos',
-          desc: 'Fija precios, horarios y vende mercancía o planes de entrenamiento.',
+          title: 'Publica tus sesiones',
+          desc: 'Pones tu precio, tu horario y el lugar. Una sola vez o una serie semanal.',
         },
         {
           num: '03',
           Icon: Wallet,
-          title: 'Recibe pagos directos',
-          desc: 'El 85% es para ti. Rastrea tus ingresos en tu dashboard.',
+          title: 'Cobras directo',
+          desc: 'Tus estudiantes te pagan a ti. Tribe no cobra comisión.',
         },
       ],
     },

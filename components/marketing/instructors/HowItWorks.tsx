@@ -26,10 +26,10 @@ const steps = [
   },
   {
     num: '04',
-    titleEn: 'Get Paid',
-    titleEs: 'Recibe Tu Pago',
-    descEn: 'Money hits your account after each completed session.',
-    descEs: 'El dinero llega a tu cuenta después de cada sesión completada.',
+    titleEn: 'Get paid directly',
+    titleEs: 'Cobras directo',
+    descEn: 'Your students pay you by Nequi, transfer, or cash. Tribe takes no commission.',
+    descEs: 'Tus estudiantes te pagan por Nequi, transferencia o efectivo. Tribe no cobra comisión.',
   },
 ];
 

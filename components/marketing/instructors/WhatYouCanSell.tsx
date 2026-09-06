@@ -1,7 +1,7 @@
 'use client';
 
 import { useLanguage } from '@/lib/LanguageContext';
-import { Dumbbell, Package, Ticket, type LucideIcon } from 'lucide-react';
+import { Dumbbell, Repeat, Ticket, type LucideIcon } from 'lucide-react';
 
 const cards: { Icon: LucideIcon; titleEn: string; titleEs: string; descEn: string; descEs: string }[] = [
   {
@@ -12,11 +12,13 @@ const cards: { Icon: LucideIcon; titleEn: string; titleEs: string; descEn: strin
     descEs: 'Sesiones individuales o grupales. Pon tu propio precio, horario y ubicación.',
   },
   {
-    Icon: Package,
-    titleEn: 'Products',
-    titleEs: 'Productos',
-    descEn: 'Sell meal plans, workout programs, merchandise, or any digital product.',
-    descEs: 'Vende planes de comida, programas de entrenamiento, mercancía o cualquier producto digital.',
+    Icon: Repeat,
+    titleEn: 'Recurring series',
+    titleEs: 'Series recurrentes',
+    descEn:
+      'Publish a class that repeats every week. Tribe creates each date for you and your regulars see it without asking.',
+    descEs:
+      'Publica una clase que se repite cada semana. Tribe crea cada fecha por ti y tus alumnos de siempre la ven sin tener que preguntar.',
   },
   {
     Icon: Ticket,
