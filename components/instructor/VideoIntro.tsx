@@ -2,8 +2,19 @@
 
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { resolveVideoSource } from '@/lib/video/streamUrls';
+
+// Title for the Stream embed. A plain object rather than a language ternary:
+// the ternary pattern in this file predates the i18n move (UI-I01) and new
+// strings should not add to it.
+const IFRAME_TITLE = { en: 'Video introduction', es: 'Video de introducción' } as const;
 
 interface VideoIntroProps {
+  /**
+   * Raw users.storefront_video_url. Two shapes, both supported: a full
+   * Supabase URL on legacy rows, a bare Cloudflare Stream uid on new ones.
+   * resolveVideoSource is the only thing that knows the difference.
+   */
   videoUrl: string | null | undefined;
   /** When true, show the "Add a video intro" prompt for instructors viewing their own storefront. */
   isOwnStorefront?: boolean;
@@ -20,8 +31,16 @@ export default function VideoIntro({
   onRequestUpload,
 }: VideoIntroProps) {
   const [playing, setPlaying] = useState(false);
+  // A Stream thumbnail is a real frame from the video, but it can 404 while
+  // Cloudflare is still encoding. Fall back to the caller's poster rather
+  // than showing a broken image.
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
-  if (!videoUrl) {
+  const source = resolveVideoSource(videoUrl);
+
+  // 'unavailable' covers an empty column AND a Stream uid with no configured
+  // subdomain. Both render the empty state, never a half built embed.
+  if (source.kind === 'unavailable') {
     if (!isOwnStorefront) return null;
     return (
       <div className="bg-theme-card rounded-2xl p-4 border border-dashed border-[#84cc16]/40">
@@ -46,8 +65,24 @@ export default function VideoIntro({
     );
   }
 
+  const streamThumbnail = source.kind === 'stream' && !thumbnailFailed ? source.thumbnailUrl : null;
+  const effectivePoster = streamThumbnail ?? posterUrl ?? null;
+
   return (
     <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+      {/*
+        DO NOT mount the player before this click. This is a cost control, not
+        a UI preference, and removing it costs real money on every storefront
+        view. Cloudflare Stream bills by HTTP requests for video segments, and
+        its own docs state that client side preloading and buffering counts as
+        billable delivery. While the branch below renders only an image and a
+        button, a storefront that loads and is never played costs zero delivery
+        minutes. Mount an iframe or a video element here, even with
+        preload="none", and every visitor who scrolls past starts paying,
+        because the Stream player always loads some data to initialize itself.
+        If you are here to "optimize" the click away, the optimization is the
+        bug. Keep the poster as an image and mount the player only on click.
+      */}
       {!playing ? (
         <button
           type="button"
@@ -55,9 +90,15 @@ export default function VideoIntro({
           className="absolute inset-0 w-full h-full group"
           aria-label={language === 'es' ? 'Reproducir video' : 'Play video'}
         >
-          {posterUrl ? (
+          {effectivePoster ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={posterUrl} alt="" aria-hidden="true" className="w-full h-full object-cover" />
+            <img
+              src={effectivePoster}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              onError={streamThumbnail ? () => setThumbnailFailed(true) : undefined}
+            />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-[#3D4349] to-[#272D34]" />
           )}
@@ -70,8 +111,25 @@ export default function VideoIntro({
             {language === 'es' ? 'Video de Introducción' : 'Video Introduction'}
           </span>
         </button>
+      ) : source.kind === 'stream' ? (
+        // autoplay=true in the URL is correct for the same reason autoPlay is
+        // correct on the native element below: the viewer already clicked.
+        <iframe
+          src={source.iframeUrl}
+          title={IFRAME_TITLE[language]}
+          className="w-full h-full border-0"
+          allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
+          allowFullScreen
+        />
       ) : (
-        <video controls autoPlay playsInline className="w-full h-full" src={videoUrl} poster={posterUrl || undefined} />
+        <video
+          controls
+          autoPlay
+          playsInline
+          className="w-full h-full"
+          src={source.src}
+          poster={posterUrl || undefined}
+        />
       )}
     </div>
   );
