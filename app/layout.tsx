@@ -65,6 +65,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{var t=localStorage.getItem('tribe-theme')||'light';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var c=document.documentElement.classList;c.remove('light','dark');c.add(t==='dark'?'dark':'light');}catch(e){}})();`,
           }}
         />
+        {/* Language pre-paint guard. Sets <html lang> from the saved choice
+            before hydration so assistive tech and search engines see the
+            language the user actually gets, instead of the hardcoded "en"
+            below. Must stay in sync with LANGUAGE_STORAGE_KEY and
+            readStoredLanguage() in lib/LanguageContext.
+
+            Note this cannot do for text what the theme guard does for colour.
+            The theme is a CSS class, so a script can fix it before paint; the
+            copy is React state, so the first server rendered frame is still
+            English until the provider hydrates. This sets the document
+            language, which is a real correctness fix on its own. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,
+          }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
