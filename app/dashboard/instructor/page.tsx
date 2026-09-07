@@ -58,7 +58,7 @@ export default function InstructorDashboardPage() {
     title: language === 'es' ? 'Panel del Instructor' : 'Instructor Dashboard',
     storefront: language === 'es' ? 'Vitrina' : 'Storefront',
     sessions: language === 'es' ? 'Sesiones' : 'Sessions',
-    analytics: language === 'es' ? 'Estadisticas' : 'Analytics',
+    analytics: language === 'es' ? 'Estadísticas' : 'Analytics',
     packages: language === 'es' ? 'Paquetes' : 'Packages',
     leads: language === 'es' ? 'Interesados' : 'Leads',
   };

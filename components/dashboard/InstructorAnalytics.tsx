@@ -1,9 +1,7 @@
 'use client';
 
-import { Star, Users, Calendar, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
-import { formatPrice } from '@/lib/formatCurrency';
+import { Star, Users, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import type { InstructorStats } from '@/lib/dal/instructorDashboard';
-import type { Currency } from '@/lib/payments/config';
 
 interface InstructorAnalyticsProps {
   language: 'en' | 'es';
@@ -14,8 +12,7 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
   const txt = {
     totalSessions: language === 'es' ? 'Sesiones' : 'Sessions',
     athletes: language === 'es' ? 'Atletas' : 'Athletes',
-    avgRating: language === 'es' ? 'Calificacion' : 'Avg Rating',
-    revenue: language === 'es' ? 'Ingresos' : 'Revenue',
+    avgRating: language === 'es' ? 'Calificación' : 'Avg Rating',
     monthlyTrend: language === 'es' ? 'Tendencia Mensual' : 'Monthly Trend',
     thisMonth: language === 'es' ? 'Este mes' : 'This month',
     lastMonth: language === 'es' ? 'Mes pasado' : 'Last month',
@@ -43,13 +40,6 @@ export default function InstructorAnalytics({ language, stats }: InstructorAnaly
       value: stats.averageRating > 0 ? stats.averageRating.toFixed(1) : '--',
       icon: Star,
       color: 'text-yellow-500',
-    },
-    {
-      label: txt.revenue,
-      value:
-        stats.totalRevenueCents > 0 ? formatPrice(stats.totalRevenueCents, stats.revenueCurrency as Currency) : '--',
-      icon: DollarSign,
-      color: 'text-tribe-green',
     },
   ];
 
