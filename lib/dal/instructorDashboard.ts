@@ -150,7 +150,20 @@ export async function fetchInstructorStats(
     const averageRating =
       reviews && reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
 
-    // Total revenue from approved payments
+    // ORPHANED as of branch fix/pay-01-ui-sweep-g6-revenue-card: this query
+    // and the two values derived from it, totalRevenueCents and
+    // revenueCurrency, lost their only consumer when the Revenue card was
+    // removed from the instructor dashboard Analytics tab. Nothing reads
+    // either field now, so this round trip runs on every dashboard load and
+    // produces nothing a user sees.
+    //
+    // It stays for now rather than being deleted quietly. Tribe does not
+    // process, hold or move money and takes no commission, so there is no
+    // honest revenue figure for Tribe to report, and the card was removed
+    // rather than reworded for that reason. Whether this query goes with it
+    // depends on the GMV decision, which is still open: the same numbers
+    // could be reframed as volume an instructor transacted rather than as
+    // revenue Tribe handled. Removing it is a separate commit either way.
     const { data: payments, error: payErr } = await supabase
       .from('payments')
       .select('instructor_payout_cents, currency, session:sessions!inner(creator_id)')
