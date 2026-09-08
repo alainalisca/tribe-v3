@@ -15,6 +15,7 @@ const SPORTS_LIST = [
   'Running',
   'Cycling',
   'CrossFit',
+  'HYROX',
   'Basketball',
   'Tennis',
   'Soccer',

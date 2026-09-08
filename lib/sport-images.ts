@@ -70,6 +70,7 @@ export function getSportGradient(sport: string): string {
     running: 'from-emerald-600 to-teal-800',
     yoga: 'from-purple-600 to-indigo-800',
     crossfit: 'from-red-600 to-orange-800',
+    hyrox: 'from-slate-700 to-zinc-900',
     cycling: 'from-blue-600 to-cyan-800',
     swimming: 'from-cyan-500 to-blue-700',
     boxing: 'from-red-700 to-rose-900',

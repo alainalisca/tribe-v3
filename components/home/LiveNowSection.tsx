@@ -59,7 +59,7 @@ export default function LiveNowSection({ liveNowSessions, userLocation, language
           const sportEmoji =
             session.sport === 'Running'
               ? '🏃'
-              : session.sport === 'CrossFit'
+              : session.sport === 'CrossFit' || session.sport === 'HYROX'
                 ? '🏋️'
                 : session.sport === 'Swimming'
                   ? '🏊'
