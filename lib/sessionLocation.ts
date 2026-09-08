@@ -8,7 +8,7 @@
 // the home feed, session detail page, and any future surfaces all behave
 // the same way.
 
-import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
+import { ACTIVE_CITY, detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 
 /** Matches "6.220661, -75.573718" and similar raw lat/lng strings. */
 const RAW_COORDS_RE = /^-?\d+\.\d+\s*,\s*-?\d+\.\d+$/;
@@ -43,4 +43,95 @@ export function formatSessionLocation(
   }
 
   return language === 'es' ? 'Ubicación no especificada' : 'Location not specified';
+}
+
+/** Case- and accent-insensitive key for comparing address segments. */
+function segmentKey(segment: string): string {
+  return segment
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Administrative segments to drop from a short address: the active city, its
+ * country, and its department.
+ *
+ * The department is not on CityConfig, so it is listed here rather than
+ * invented as a config field for one string. Revisit when Tribe launches in a
+ * second city and this needs to travel with the config.
+ */
+const ADMIN_SEGMENTS = new Set([
+  segmentKey(ACTIVE_CITY.name),
+  segmentKey(ACTIVE_CITY.country),
+  segmentKey('Antioquia'),
+]);
+
+/**
+ * Collapse repeated comma-separated segments in an address, keeping the first
+ * occurrence and the original order.
+ *
+ * Google returns Medellín addresses that name the barrio and city twice
+ * ("Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín, Antioquia,
+ * Colombia"). 45 of 311 live sessions carry a string like that. Nothing in the
+ * app concatenates them, so this is a display-side repair.
+ */
+export function dedupeLocationSegments(location: string | null | undefined): string {
+  const raw = (location ?? '').trim();
+  if (!raw) return '';
+
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const segment of raw.split(',')) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+    const key = segmentKey(trimmed);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(trimmed);
+  }
+  return kept.join(', ');
+}
+
+/**
+ * A short, card-sized version of a session's location.
+ *
+ * Returns the street (or venue) plus the neighborhood when we can recognise
+ * one, and drops the city, department and country that every Medellín address
+ * repeats. "Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín,
+ * Antioquia, Colombia" becomes "Cl. 20 #43g - 155, El Poblado".
+ *
+ * The detail page keeps the full string; it only needs dedupeLocationSegments.
+ */
+export function formatSessionLocationShort(
+  location: string | null | undefined,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+  language: 'en' | 'es' = 'en'
+): string {
+  const hood =
+    typeof lat === 'number' && typeof lng === 'number' && !Number.isNaN(lat) && !Number.isNaN(lng)
+      ? detectNeighborhood(lat, lng) || getNearestNeighborhood(lat, lng)
+      : null;
+  const notSpecified = language === 'es' ? 'Ubicación no especificada' : 'Location not specified';
+
+  const trimmed = (location ?? '').trim();
+  if (!trimmed || isRawCoordsString(trimmed)) {
+    return hood?.name ?? notSpecified;
+  }
+
+  const segments = dedupeLocationSegments(trimmed)
+    .split(', ')
+    .filter((segment) => segment && !ADMIN_SEGMENTS.has(segmentKey(segment)));
+
+  if (segments.length === 0) {
+    return hood?.name ?? notSpecified;
+  }
+
+  const known = new Set(ACTIVE_CITY.neighborhoods.map((n) => segmentKey(n.name)));
+  const head = segments[0];
+  const neighborhood = segments.slice(1).find((segment) => known.has(segmentKey(segment)));
+
+  return neighborhood ? `${head}, ${neighborhood}` : head;
 }
