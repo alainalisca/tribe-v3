@@ -37,6 +37,7 @@ import {
 const SPORTS_LIST = [
   'Yoga',
   'CrossFit',
+  'HYROX',
   'Running',
   'Cycling',
   'Swimming',
