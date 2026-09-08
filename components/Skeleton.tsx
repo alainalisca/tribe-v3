@@ -14,7 +14,7 @@ export function SkeletonCard({ heroRatio = 'fixed' }: SkeletonCardProps = {}) {
   const heroClass = heroRatio === 'session' ? 'aspect-[4/3] md:aspect-[3/2] w-full' : 'h-40 w-full';
 
   return (
-    <div className="bg-white dark:bg-tribe-card rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600/30">
+    <div className="bg-theme-card rounded-xl overflow-hidden border border-theme">
       {/* Image placeholder */}
       <div className={`${heroClass} bg-stone-200 dark:bg-tribe-mid animate-pulse`} />
       <div className="p-4 space-y-3">
