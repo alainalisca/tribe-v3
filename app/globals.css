@@ -309,3 +309,30 @@ body {
       0 2px 8px rgba(0, 0, 0, 0.3);
   }
 }
+
+@layer utilities {
+  /* Hero hover zoom, gated on real pointer capability.
+     tailwind.config.ts does not enable future.hoverOnlyWhenSupported yet, so a
+     plain `hover:` or `group-hover:` also fires on touch after a tap and leaves
+     the card stuck at 1.03. Gating on (hover: hover) and (pointer: fine) keeps
+     the effect on mice and trackpads only.
+
+     When T-UI3 turns hoverOnlyWhenSupported on, this can collapse back into
+     `motion-safe:group-hover:scale-[1.03]` on the img and this utility can go. */
+  @media (hover: hover) and (pointer: fine) {
+    .hero-zoom:hover .hero-zoom-img {
+      transform: scale(1.03);
+    }
+
+    .hero-zoom:hover .hero-zoom-hint {
+      opacity: 1;
+    }
+  }
+
+  /* Respect a reduced-motion preference: show the hint, skip the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-zoom:hover .hero-zoom-img {
+      transform: none;
+    }
+  }
+}

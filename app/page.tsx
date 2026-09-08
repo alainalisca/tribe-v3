@@ -181,9 +181,9 @@ export default function HomePage() {
           {/* ══ MAIN FEED: Sessions with interleaved discovery ══ */}
           {f.loading ? (
             <div className="space-y-4">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
+              <SkeletonCard heroRatio="session" />
+              <SkeletonCard heroRatio="session" />
+              <SkeletonCard heroRatio="session" />
             </div>
           ) : f.fetchError ? (
             <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
@@ -375,6 +375,7 @@ export default function HomePage() {
                         onShare={f.handleShareSession}
                         distance={f.getDistanceText(session)}
                         liveData={f.liveStatusMap[session.id]}
+                        priority={index < 2}
                       />
                     </AnimatedCard>
                   );

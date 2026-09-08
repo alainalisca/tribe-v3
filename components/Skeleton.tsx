@@ -1,8 +1,22 @@
-export function SkeletonCard() {
+interface SkeletonCardProps {
+  /**
+   * Match the hero ratio of the card this skeleton stands in for.
+   *
+   * Defaults to the original fixed strip so the eight non-session call sites
+   * (communities, admin, instructors, storefront, app/loading) are unchanged.
+   * The home feed opts into 'session', which mirrors SessionCardHero's
+   * 4:3 / md:3:2 box so the card does not jump when it loads.
+   */
+  heroRatio?: 'fixed' | 'session';
+}
+
+export function SkeletonCard({ heroRatio = 'fixed' }: SkeletonCardProps = {}) {
+  const heroClass = heroRatio === 'session' ? 'aspect-[4/3] md:aspect-[3/2] w-full' : 'h-40 w-full';
+
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl overflow-hidden border border-stone-200 dark:border-gray-600/30">
       {/* Image placeholder */}
-      <div className="h-40 w-full bg-stone-200 dark:bg-tribe-mid animate-pulse" />
+      <div className={`${heroClass} bg-stone-200 dark:bg-tribe-mid animate-pulse`} />
       <div className="p-4 space-y-3">
         {/* Title */}
         <div className="h-5 w-3/4 bg-stone-200 dark:bg-tribe-mid rounded-md animate-pulse" />
