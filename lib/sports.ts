@@ -1,9 +1,13 @@
+// Keep in sync with `sportTranslations` in lib/sportTranslationData.ts.
+// The two lists are separate modules and neither imports the other; the
+// sync guard in lib/sportTranslationData.test.ts fails if they drift.
 export const SPORTS_LIST = [
   'Running',
   'Hiking',
   'Cycling',
   'Swimming',
   'CrossFit',
+  'HYROX',
   'Weightlifting',
   'Calisthenics',
   'Boxing',
@@ -31,6 +35,7 @@ export const SPORTS_TRANSLATIONS: Record<Sport, { en: string; es: string }> = {
   Cycling: { en: 'Cycling', es: 'Ciclismo' },
   Swimming: { en: 'Swimming', es: 'Natación' },
   CrossFit: { en: 'CrossFit', es: 'CrossFit' },
+  HYROX: { en: 'HYROX', es: 'HYROX' },
   Weightlifting: { en: 'Weightlifting', es: 'Levantamiento de Pesas' },
   Calisthenics: { en: 'Calisthenics', es: 'Calistenia' },
   Boxing: { en: 'Boxing', es: 'Boxeo' },
