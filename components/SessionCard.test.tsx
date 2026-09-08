@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import SessionCard from './SessionCard';
 import type { SessionWithRelations } from '@/lib/dal';
 
@@ -52,8 +52,13 @@ vi.mock('@/lib/city-config', () => ({
   getNearestNeighborhood: () => null,
 }));
 
+// Steerable per test: '' is the no-photo case that falls back to the
+// gradient, a URL is the real-image case. SessionCard branches on this to
+// decide whether the expand affordance exists at all.
+const mockHeroImage = { value: 'https://example.com/hero.jpg' };
+
 vi.mock('@/lib/sport-images', () => ({
-  getSessionHeroImage: () => 'https://example.com/hero.jpg',
+  getSessionHeroImage: () => mockHeroImage.value,
   getSportGradient: () => 'from-blue-500 to-purple-500',
 }));
 
@@ -103,6 +108,11 @@ function baseSession(overrides: Partial<SessionWithRelations> = {}): SessionWith
 }
 
 describe('<SessionCard />', () => {
+  beforeEach(() => {
+    mockHeroImage.value = 'https://example.com/hero.jpg';
+    mockPush.mockClear();
+  });
+
   it('renders without crashing and shows the session location', () => {
     render(<SessionCard session={baseSession()} />);
     expect(screen.getByText(/Medellín Park/)).toBeInTheDocument();
@@ -130,5 +140,61 @@ describe('<SessionCard />', () => {
     ];
     render(<SessionCard session={full} />);
     expect(screen.getByText(/Full/)).toBeInTheDocument();
+  });
+
+  describe('hero photo expand', () => {
+    it('renders the expand button when the card has a real image', () => {
+      render(<SessionCard session={baseSession()} />);
+      expect(screen.getByLabelText('View full photo')).toBeInTheDocument();
+    });
+
+    it('does not render the expand button for a gradient-only card', () => {
+      // No session photo and no instructor banner: getSessionHeroImage
+      // returns '', the card falls back to the sport gradient, and there is
+      // nothing to expand.
+      mockHeroImage.value = '';
+      render(<SessionCard session={baseSession()} />);
+      expect(screen.queryByLabelText('View full photo')).not.toBeInTheDocument();
+    });
+
+    it('opens the lightbox without navigating to the session', () => {
+      render(<SessionCard session={baseSession()} />);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+
+      // The expand button stops propagation, so the card's own click
+      // handler must not fire.
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('shows the session photos in the lightbox when it has them', () => {
+      const withPhotos = baseSession({
+        photos: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+      } as Partial<SessionWithRelations>);
+      render(<SessionCard session={withPhotos} />);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+      expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    });
+
+    it('loads eagerly at high fetch priority only when marked priority', () => {
+      // Regression guard: React 18 silently drops a camelCase fetchPriority
+      // prop, which would make the above-the-fold hint a no-op.
+      const { container: eagerCard } = render(<SessionCard session={baseSession()} priority />);
+      const eagerImg = eagerCard.querySelector('img[src="https://example.com/hero.jpg"]');
+      expect(eagerImg?.getAttribute('fetchpriority')).toBe('high');
+      expect(eagerImg?.getAttribute('loading')).toBe('eager');
+      expect(eagerImg?.getAttribute('decoding')).toBe('async');
+
+      const { container: lazyCard } = render(<SessionCard session={baseSession()} />);
+      const lazyImg = lazyCard.querySelector('img[src="https://example.com/hero.jpg"]');
+      expect(lazyImg?.getAttribute('fetchpriority')).toBe('auto');
+      expect(lazyImg?.getAttribute('loading')).toBe('lazy');
+    });
+
+    it('renders the hero in an aspect-ratio box rather than a fixed strip', () => {
+      const { container } = render(<SessionCard session={baseSession()} />);
+      expect(container.querySelector('.aspect-\\[4\\/3\\]')).toBeTruthy();
+      expect(container.querySelector('.h-40')).toBeNull();
+    });
   });
 });

@@ -53,7 +53,11 @@ export default function SmartPhoto({ src, alt, eager = false, className = '', on
         src={src}
         alt={alt}
         loading={eager ? 'eager' : 'lazy'}
-        fetchPriority={eager ? 'high' : 'auto'}
+        // React 18 does not recognise the camelCase `fetchPriority` prop: it
+        // warns and drops it, so the browser never sees the hint. Spread the
+        // lowercase DOM attribute instead. Becomes a plain `fetchPriority`
+        // prop once this app is on React 19.
+        {...({ fetchpriority: eager ? 'high' : 'auto' } as Record<string, string>)}
         decoding="async"
         onLoad={handleLoad}
         onError={onError}
