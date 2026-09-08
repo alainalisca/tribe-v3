@@ -6,7 +6,7 @@ import { formatSessionLocation } from '@/lib/sessionLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import type { Currency } from '@/lib/payments/config';
-import { getSessionHeroImage, getSportGradient } from '@/lib/sport-images';
+import { getSessionHeroImage } from '@/lib/sport-images';
 
 import { Calendar, MapPin, Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,9 @@ import { computeSessionStatus } from './SessionCardHelpers';
 import type { SessionCardProps } from './SessionCardHelpers';
 import { shareSession as shareSessionFn } from '@/lib/share';
 import ShareButton from '@/components/ShareButton';
+import SessionCardHero from '@/components/SessionCardHero';
+import PhotoLightbox from '@/components/PhotoLightbox';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 export default function SessionCard({
   session,
@@ -30,12 +33,14 @@ export default function SessionCard({
   liveData,
   currentUserId,
   featuredPartnerUserIds,
+  priority = false,
 }: SessionCardProps) {
   const router = useRouter();
   const { language } = useLanguage();
+  const tCard = useTranslations('sessionCard');
   const { currency: userCurrency } = useUserCurrency();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
-  const [imageError, setImageError] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showCreatorMenu, setShowCreatorMenu] = useState(false);
   const isCreator = Boolean(currentUserId && session.creator_id === currentUserId);
 
@@ -66,17 +71,22 @@ export default function SessionCard({
 
   const heroImage = getSessionHeroImage(session.sport, session.photos, (session.creator as any)?.banner_url);
 
-  // Urgency badge: priority order
-  const urgencyBadge =
+  // Urgency badge: priority order. The hero owns the colour, keyed off type.
+  const urgencyBadge: { text: string; type: 'starting_soon' | 'full' | 'spots_left' | 'filling_up' } | null =
     isStartingSoon && !isPast && !isFull
-      ? { text: `🔥 ${language === 'es' ? 'Empieza pronto' : 'Starting soon'}`, color: 'bg-orange-500 animate-pulse' }
+      ? { text: `🔥 ${language === 'es' ? 'Empieza pronto' : 'Starting soon'}`, type: 'starting_soon' }
       : isFull && !isPast
-        ? { text: language === 'es' ? 'Lleno' : 'Full', color: 'bg-red-500' }
+        ? { text: language === 'es' ? 'Lleno' : 'Full', type: 'full' }
         : spotsLeft <= 3 && spotsLeft > 0 && !isPast
-          ? { text: `${spotsLeft} ${language === 'es' ? 'cupos' : 'spots left'}`, color: 'bg-amber-500' }
+          ? { text: `${spotsLeft} ${language === 'es' ? 'cupos' : 'spots left'}`, type: 'spots_left' }
           : fillingFast
-            ? { text: `🔥 ${language === 'es' ? 'Llenándose' : 'Filling up'}`, color: 'bg-tribe-amber' }
+            ? { text: `🔥 ${language === 'es' ? 'Llenándose' : 'Filling up'}`, type: 'filling_up' }
             : null;
+
+  // The lightbox shows the session's own photos when it has them; otherwise the
+  // single resolved hero (an instructor banner or a sport photo).
+  const lightboxPhotos = session.photos && session.photos.length > 0 ? session.photos : [heroImage];
+  const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
 
   return (
     <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
@@ -87,25 +97,18 @@ export default function SessionCard({
             : 'border-stone-200 dark:border-gray-600/30'
         }`}
       >
-        {/* Hero Image */}
-        <div className="relative h-40 w-full overflow-hidden">
-          {!imageError && (heroImage.startsWith('/images/') || heroImage.startsWith('http')) ? (
-            <img
-              src={heroImage}
-              alt={session.sport}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(session.sport)}`} />
-          )}
-
-          {/* Dark gradient for readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
-
-          {/* Top-right actions: share + creator menu */}
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        <SessionCardHero
+          sport={session.sport}
+          sportName={sportName}
+          heroImage={heroImage}
+          imageAlt={tCard('photoOf', { sport: sportName })}
+          urgencyLabel={urgencyBadge?.text}
+          urgencyType={urgencyBadge?.type ?? null}
+          onExpand={canExpand ? () => setLightboxOpen(true) : undefined}
+          liveCount={liveData?.count ?? 0}
+          liveLabel={language === 'es' ? 'EN VIVO' : 'LIVE'}
+          eager={priority}
+          shareButton={
             <ShareButton
               size="sm"
               variant="icon"
@@ -126,92 +129,72 @@ export default function SessionCard({
               }}
               className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 border-0 rounded-full"
             />
+          }
+          actions={
+            <>
+              {/* Creator-only edit/delete menu */}
+              {isCreator && (onEdit || onDelete) && (
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowCreatorMenu((prev) => !prev);
+                    }}
+                    aria-label={language === 'es' ? 'Opciones' : 'Options'}
+                    className="p-1.5 bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full transition-colors"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
 
-            {/* Creator-only edit/delete menu */}
-            {isCreator && (onEdit || onDelete) && (
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowCreatorMenu((prev) => !prev);
-                  }}
-                  aria-label={language === 'es' ? 'Opciones' : 'Options'}
-                  className="p-1.5 bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {showCreatorMenu && (
-                  <>
-                    {/* Backdrop to close menu on outside click */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowCreatorMenu(false);
-                      }}
-                    />
-                    <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-tribe-surface rounded-lg shadow-xl border border-stone-200 dark:border-tribe-mid z-20 overflow-hidden">
-                      {onEdit && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowCreatorMenu(false);
-                            onEdit(session.id);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-stone-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          {language === 'es' ? 'Editar' : 'Edit'}
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowCreatorMenu(false);
-                            onDelete(session.id);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          {language === 'es' ? 'Eliminar' : 'Delete'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Bottom overlay: sport badge + urgency */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between z-10">
-            <span className="px-3 py-1.5 bg-tribe-green text-slate-900 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
-              {sportName}
-            </span>
-
-            {urgencyBadge && (
-              <span className={`px-3 py-1.5 text-white rounded-full text-xs font-bold shadow-lg ${urgencyBadge.color}`}>
-                {urgencyBadge.text}
-              </span>
-            )}
-          </div>
-
-          {/* Live indicator */}
-          {liveData && liveData.count > 0 && (
-            <div className="absolute top-3 left-3 z-10">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse shadow-lg">
-                <span className="w-2 h-2 bg-white rounded-full" />
-                {language === 'es' ? 'EN VIVO' : 'LIVE'}
-              </span>
-            </div>
-          )}
-        </div>
+                  {showCreatorMenu && (
+                    <>
+                      {/* Backdrop to close menu on outside click */}
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowCreatorMenu(false);
+                        }}
+                      />
+                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-tribe-surface rounded-lg shadow-xl border border-stone-200 dark:border-tribe-mid z-20 overflow-hidden">
+                        {onEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowCreatorMenu(false);
+                              onEdit(session.id);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-stone-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            {language === 'es' ? 'Editar' : 'Edit'}
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowCreatorMenu(false);
+                              onDelete(session.id);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {language === 'es' ? 'Eliminar' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          }
+        />
 
         <CardContent className="p-4 space-y-2.5">
           {/* Title */}
@@ -301,6 +284,13 @@ export default function SessionCard({
           )}
         </CardContent>
       </Card>
+
+      {/* Feed lightbox. Closing just clears local state: the detail page's
+          history.back() pattern belongs to its pushState flow and would
+          navigate the athlete away from the feed. */}
+      {lightboxOpen && (
+        <PhotoLightbox photos={lightboxPhotos} initialIndex={0} onClose={() => setLightboxOpen(false)} />
+      )}
     </div>
   );
 }

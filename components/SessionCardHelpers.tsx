@@ -13,6 +13,11 @@ export interface SessionCardProps {
   liveData?: { count: number; users: Array<{ name: string; avatar_url: string | null }> };
   /** Set of user IDs that are active featured partners (or their instructors) */
   featuredPartnerUserIds?: Set<string>;
+  /**
+   * Above-the-fold card: loads its hero eagerly at high fetch priority.
+   * The home feed sets this for the first two cards only.
+   */
+  priority?: boolean;
 }
 
 export function getSkillLevelDisplay(level: string, t: (key: TranslationKey) => string) {

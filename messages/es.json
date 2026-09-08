@@ -227,5 +227,14 @@
       "pricingMissing": "Elige el modelo de precios que te funciona.",
       "networkError": "Algo falló de nuestro lado. Intenta de nuevo."
     }
+  },
+  "sessionCard": {
+    "expandPhoto": "Ver foto completa",
+    "viewPhoto": "Ver foto",
+    "photoOf": "Foto de una sesión de {sport}"
+  },
+  "lightbox": {
+    "label": "Visor de fotos",
+    "photoNumber": "Foto {n} de {total}"
   }
 }

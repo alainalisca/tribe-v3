@@ -28,7 +28,7 @@ import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
-import PhotoLightbox from './PhotoLightbox';
+import PhotoLightbox from '@/components/PhotoLightbox';
 import ActionButtons from './ActionButtons';
 import GuestJoinModal from './GuestJoinModal';
 import InviteModal from './InviteModal';
