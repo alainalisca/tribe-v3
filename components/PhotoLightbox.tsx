@@ -62,15 +62,20 @@ export default function PhotoLightbox({ photos, initialIndex, onClose }: PhotoLi
     };
   }, []);
 
-  // Focus the close button on open, and hand focus back to whatever opened
-  // us (the expand button on a card) when we go away.
+  // Focus the close button on open, and hand focus back to whatever opened us
+  // (the expand button on a card) when we go away.
+  //
+  // Gated on `mounted`, not []: the first render returns null so the portal is
+  // not in the document yet, and closeButtonRef is still empty. Focusing there
+  // silently did nothing and left focus on <body>.
   useEffect(() => {
+    if (!mounted) return;
     const previouslyFocused = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
     return () => {
       previouslyFocused?.focus?.();
     };
-  }, []);
+  }, [mounted]);
 
   const goTo = useCallback(
     (index: number) => {

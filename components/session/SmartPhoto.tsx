@@ -53,10 +53,17 @@ export default function SmartPhoto({ src, alt, eager = false, className = '', on
         src={src}
         alt={alt}
         loading={eager ? 'eager' : 'lazy'}
-        // React 18 does not recognise the camelCase `fetchPriority` prop: it
-        // warns and drops it, so the browser never sees the hint. Spread the
-        // lowercase DOM attribute instead. Becomes a plain `fetchPriority`
-        // prop once this app is on React 19.
+        // Spelled lowercase deliberately. Under react-dom 18.3.1 in the test
+        // environment the camelCase `fetchPriority` prop is not recognised and
+        // is dropped, so the hint never reaches the markup at all. The
+        // lowercase attribute lands in both environments: verified in the
+        // browser as fetchpriority="high" with img.fetchPriority === 'high'.
+        //
+        // The cost is one dev-only React warning ("Invalid DOM property
+        // `fetchpriority`") which does not appear in production builds. The
+        // attribute has to be in the initial render to be worth anything, so
+        // setting it from a ref after mount is not an alternative. Revisit
+        // when this app moves to React 19.
         {...({ fetchpriority: eager ? 'high' : 'auto' } as Record<string, string>)}
         decoding="async"
         onLoad={handleLoad}
