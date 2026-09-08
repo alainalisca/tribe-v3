@@ -14,7 +14,7 @@ export interface SessionCardHeroProps {
   heroImage: string;
   imageAlt: string;
   urgencyLabel?: string | null;
-  urgencyType?: 'starting_soon' | 'full' | 'spots_left' | 'filling_up' | null;
+  urgencyType?: 'starting_soon' | 'full' | 'spots_left' | 'filling_up' | 'ended' | null;
   /** Renders the expand button and the hover hint. Omitted for gradient-only cards. */
   onExpand?: () => void;
   /** Top-right slot, rendered after share and expand (creator edit/delete menu). */
@@ -60,6 +60,11 @@ export default function SessionCardHero({
   const hasImage = !imageError && (heroImage.startsWith('/images/') || heroImage.startsWith('http'));
   const showExpand = Boolean(onExpand) && hasImage;
 
+  // 'ended' is representable but currently unreachable: the feed drops finished
+  // sessions and no history surface renders this card yet. It gets a neutral
+  // slate so a future history surface has a correct default rather than an
+  // urgent-looking amber. The grayscale/opacity treatment from the ticket is
+  // deliberately not built until something can actually show it.
   const urgencyColorClass =
     urgencyType === 'starting_soon'
       ? 'bg-orange-500 animate-pulse'
@@ -67,7 +72,9 @@ export default function SessionCardHero({
         ? 'bg-red-500'
         : urgencyType === 'filling_up'
           ? 'bg-tribe-amber'
-          : 'bg-amber-500';
+          : urgencyType === 'ended'
+            ? 'bg-slate-600'
+            : 'bg-amber-500';
 
   function handleExpand(e: React.MouseEvent) {
     e.preventDefault();

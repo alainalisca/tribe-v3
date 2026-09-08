@@ -38,7 +38,8 @@ vi.mock('@/lib/LanguageContext', () => ({
 }));
 
 vi.mock('@/lib/translations', () => ({
-  sportTranslations: { Running: { es: 'Correr' } },
+  sportTranslations: { Running: { en: 'Running', es: 'Correr' } },
+  translateSport: (sport: string) => sport,
   TranslationKey: {},
 }));
 
@@ -47,7 +48,10 @@ vi.mock('@/lib/utils', () => ({
   cn: (...inputs: string[]) => inputs.filter(Boolean).join(' '),
 }));
 
-vi.mock('@/lib/city-config', () => ({
+// Keep the real config (formatSessionLocationShort reads ACTIVE_CITY for the
+// city/department/country it strips) and stub only the coord lookups.
+vi.mock('@/lib/city-config', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/city-config')>()),
   detectNeighborhood: () => null,
   getNearestNeighborhood: () => null,
 }));
@@ -118,14 +122,13 @@ describe('<SessionCard />', () => {
     expect(screen.getByText(/Medellín Park/)).toBeInTheDocument();
   });
 
-  it('navigates to /session/:id when the card is clicked', () => {
-    mockPush.mockClear();
+  it('links to the session with a real anchor, not an onClick div', () => {
     const { container } = render(<SessionCard session={baseSession()} />);
-    // The outermost div has the onClick handler.
-    const clickable = container.querySelector('div[class*="cursor-pointer"]');
-    expect(clickable).toBeTruthy();
-    (clickable as HTMLElement).click();
-    expect(mockPush).toHaveBeenCalledWith('/session/session-1');
+    const link = container.querySelector('a[href="/session/session-1"]');
+    expect(link).toBeTruthy();
+    // The old div[onClick] gave no keyboard access, no middle-click and no
+    // open-in-new-tab. Nothing should have reintroduced it.
+    expect(container.querySelector('div[class*="cursor-pointer"]')).toBeNull();
   });
 
   it('shows a Full badge when confirmed participants match max', () => {
@@ -195,6 +198,87 @@ describe('<SessionCard />', () => {
       const { container } = render(<SessionCard session={baseSession()} />);
       expect(container.querySelector('.aspect-\\[4\\/3\\]')).toBeTruthy();
       expect(container.querySelector('.h-40')).toBeNull();
+    });
+  });
+
+  describe('content polish', () => {
+    it('builds the title from first and last name only, and never repeats it below', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).name = 'Salomon Tabares Adarve';
+      render(<SessionCard session={session} />);
+
+      expect(screen.getByRole('heading')).toHaveTextContent('Running with Salomon Tabares');
+      // The instructor row carries trust signals now, not a second copy of the name.
+      expect(screen.queryByText('Salomon Tabares Adarve')).not.toBeInTheDocument();
+    });
+
+    it('keeps a custom title and still drops the name from the row', () => {
+      const session = baseSession({ title: 'Sunrise 5k' } as Partial<SessionWithRelations>);
+      (session.creator as unknown as Record<string, unknown>).name = 'Salomon Tabares Adarve';
+      render(<SessionCard session={session} />);
+      expect(screen.getByRole('heading')).toHaveTextContent('Sunrise 5k');
+      expect(screen.queryByText(/Salomon/)).not.toBeInTheDocument();
+    });
+
+    it('shows the instructor session count when there is one', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).total_sessions_hosted = 39;
+      render(<SessionCard session={session} />);
+      expect(screen.getByText(/39 sessions/)).toBeInTheDocument();
+    });
+
+    it('omits the session count when the instructor has none', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).total_sessions_hosted = 0;
+      render(<SessionCard session={session} />);
+      expect(screen.queryByText(/sessions/)).not.toBeInTheDocument();
+    });
+
+    it('shortens a repeating Google address', () => {
+      const session = baseSession({
+        location: 'Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín, Antioquia, Colombia',
+      } as Partial<SessionWithRelations>);
+      render(<SessionCard session={session} />);
+      expect(screen.getByText('Cl. 20 #43g - 155, El Poblado')).toBeInTheDocument();
+    });
+  });
+
+  describe('meta badges', () => {
+    it('badges women-only and men-only sessions', () => {
+      render(
+        <SessionCard session={baseSession({ gender_preference: 'women_only' } as Partial<SessionWithRelations>)} />
+      );
+      expect(screen.getByText('Women only')).toBeInTheDocument();
+    });
+
+    it('does not badge a session open to everyone', () => {
+      render(<SessionCard session={baseSession({ gender_preference: 'all' } as Partial<SessionWithRelations>)} />);
+      expect(screen.queryByText('Women only')).not.toBeInTheDocument();
+      expect(screen.queryByText('Men only')).not.toBeInTheDocument();
+    });
+
+    it('badges a specific skill level', () => {
+      render(<SessionCard session={baseSession({ skill_level: 'beginner' } as Partial<SessionWithRelations>)} />);
+      expect(screen.getByText('Beginner')).toBeInTheDocument();
+    });
+
+    it('does not badge all-levels, which is most sessions and says nothing', () => {
+      render(<SessionCard session={baseSession({ skill_level: 'all_levels' } as Partial<SessionWithRelations>)} />);
+      for (const label of ['Beginner', 'Intermediate', 'Advanced', 'All levels']) {
+        expect(screen.queryByText(label)).not.toBeInTheDocument();
+      }
+    });
+
+    it('renders no emoji in the badges', () => {
+      const { container } = render(
+        <SessionCard
+          session={baseSession({
+            gender_preference: 'women_only',
+            skill_level: 'advanced',
+          } as Partial<SessionWithRelations>)}
+        />
+      );
+      expect(container.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
     });
   });
 });
