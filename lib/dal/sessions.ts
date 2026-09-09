@@ -411,6 +411,59 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
 }
 
 /**
+ * The most recent recap photos for each of the given instructors, newest first.
+ *
+ * One request for a whole feed page rather than one per card: the creator ids
+ * on screen go in as a single `in.()` filter and the caller groups the result.
+ * Indexed by idx_session_recap_photos_session and idx_sessions_creator.
+ *
+ * `reported` photos are excluded — a photo someone flagged must never surface
+ * on the feed. RLS on session_recap_photos is `TO authenticated`, so a logged
+ * out visitor gets an empty map and the carousel simply has fewer slides.
+ *
+ * Ordered by created_at. The table also carries uploaded_at, which currently
+ * holds the identical value on every row; that redundancy is a follow-up.
+ */
+export async function fetchRecapPhotosByCreators(
+  supabase: SupabaseClient,
+  creatorIds: string[],
+  perCreator: number = 4
+): Promise<DalResult<Record<string, string[]>>> {
+  if (creatorIds.length === 0) return { success: true, data: {} };
+
+  try {
+    const { data, error } = await supabase
+      .from('session_recap_photos')
+      .select('photo_url, created_at, session:sessions!inner(creator_id)')
+      .in('session.creator_id', creatorIds)
+      .eq('reported', false)
+      .order('created_at', { ascending: false })
+      .limit(perCreator * creatorIds.length);
+
+    if (error) return { success: false, error: error.message };
+
+    // REASON: PostgREST types the embedded row as an array; at runtime an
+    // !inner join on a to-one relationship returns a single object.
+    const rows = (data ?? []) as unknown as Array<{
+      photo_url: string | null;
+      session: { creator_id: string | null } | null;
+    }>;
+
+    const byCreator: Record<string, string[]> = {};
+    for (const row of rows) {
+      const creatorId = row.session?.creator_id;
+      if (!creatorId || !row.photo_url) continue;
+      const bucket = (byCreator[creatorId] ??= []);
+      if (bucket.length < perCreator) bucket.push(row.photo_url);
+    }
+    return { success: true, data: byCreator };
+  } catch (error) {
+    logError(error, { action: 'fetchRecapPhotosByCreators' });
+    return { success: false, error: 'Failed to fetch recap photos' };
+  }
+}
+
+/**
  * Fetches the confirmed participant count for a session.
  * Used for capacity checks.
  */
