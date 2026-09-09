@@ -807,4 +807,26 @@ select '155_door_guest_payment_not_required',
        case when pg_get_functiondef('public.host_add_session_guest(uuid, text, text, text)'::regprocedure)
                  ilike '%payment_status%not_required%'
             then 'applied' else 'MISSING' end
+union all
+select '156_onboarding_state',
+       -- First-run state moved off localStorage onto the user row. Probes all
+       -- three parts: both columns AND the dismiss_banner RPC, since the
+       -- columns without the function would leave every banner dismissal
+       -- failing silently at runtime.
+       case when exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'users'
+                    and column_name = 'onboarding_completed_at'
+                )
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'users'
+                    and column_name = 'dismissed_banners'
+                )
+             and exists (
+                  select 1 from pg_proc p
+                  join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = 'dismiss_banner'
+                )
+            then 'applied' else 'MISSING' end
 order by migration;

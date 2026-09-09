@@ -302,7 +302,6 @@ export default function HomePage() {
                               hasPhoto={!!f.userProfile.avatar_url}
                               hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
                               hasName={!!f.userProfile.name}
-                              userId={f.user.id}
                             />
                           );
                         }
@@ -340,7 +339,7 @@ export default function HomePage() {
                   // After 10th card: referral
                   10: f.user ? (
                     <LazyMount key="banner-referral-lazy" minHeight="120px">
-                      <ReferralBanner userId={f.user.id} />
+                      <ReferralBanner />
                     </LazyMount>
                   ) : null,
                   12: f.user ? (

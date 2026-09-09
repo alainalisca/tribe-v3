@@ -20,6 +20,9 @@
  */
 
 import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { resetOnboardingState } from '@/lib/dal';
+import { logError } from '@/lib/logger';
 import { RotateCcw, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -34,6 +37,18 @@ const GUIDE_IDS = [
 ] as const;
 
 const STORAGE_PREFIX = 'tribe_guide_seen_';
+const BANNER_STORAGE_PREFIX = 'tribe_banner_dismissed_';
+
+// Banner ids, matching hooks/useBannerDismissal.ts and the comment on
+// users.dismissed_banners. Only their local mirrors are cleared here; the
+// server array is emptied in one call.
+const BANNER_IDS_TO_CLEAR = [
+  'profile-completion',
+  'streak',
+  'referral',
+  'instructor-upsell',
+  'notification-prompt',
+] as const;
 
 // Onboarding checklist dismissal key — cleared here too so the user
 // gets back the full "see everything again" experience. The
@@ -60,18 +75,40 @@ export default function ReplayToursButton() {
   const s = copy[language];
   const [cleared, setCleared] = useState(false);
 
-  function handleReplay() {
-    if (typeof window === 'undefined') return;
-    try {
-      for (const id of GUIDE_IDS) {
-        window.localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
+  /**
+   * T-ONB1: this is the reset path. First-run state is now on the user row, so
+   * clearing the local mirrors alone would do nothing — the server would just
+   * answer "seen" again on the next load. Both halves are cleared: the server
+   * columns via resetOnboardingState, and the local mirrors so the current tab
+   * does not keep answering from cache.
+   */
+  async function handleReplay() {
+    if (typeof window !== 'undefined') {
+      try {
+        for (const id of GUIDE_IDS) {
+          window.localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
+        }
+        for (const id of BANNER_IDS_TO_CLEAR) {
+          window.localStorage.removeItem(`${BANNER_STORAGE_PREFIX}${id}`);
+        }
+        window.localStorage.removeItem(ONBOARDING_DISMISS_KEY);
+      } catch {
+        // localStorage can throw in private browsing. The server reset below
+        // is the one that matters, so carry on.
       }
-      window.localStorage.removeItem(ONBOARDING_DISMISS_KEY);
-    } catch {
-      // localStorage can throw in private browsing; we just fail
-      // silently — the worst case is the user has to skip a tour
-      // again on next visit, which is acceptable.
     }
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const result = await resetOnboardingState(supabase, user.id);
+      if (!result.success) {
+        logError(new Error(result.error ?? 'reset_failed'), { action: 'ReplayToursButton' });
+      }
+    }
+
     setCleared(true);
   }
 
@@ -90,7 +127,7 @@ export default function ReplayToursButton() {
       ) : (
         <button
           type="button"
-          onClick={handleReplay}
+          onClick={() => void handleReplay()}
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 text-xs font-bold rounded-full hover:bg-stone-200 dark:hover:bg-tribe-mid transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
