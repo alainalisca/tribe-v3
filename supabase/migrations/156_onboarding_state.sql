@@ -90,3 +90,22 @@ COMMENT ON FUNCTION public.dismiss_banner(TEXT) IS
 
 REVOKE ALL ON FUNCTION public.dismiss_banner(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.dismiss_banner(TEXT) TO authenticated;
+
+-- Column-level SELECT grants for the two new columns.
+--
+-- public.users has NO table-level SELECT grant for authenticated/anon: 066
+-- revoked it and re-granted SELECT column by column (067 extended the list).
+-- A column added afterwards is therefore invisible to every non-service caller
+-- until it is granted explicitly, and the client fails with
+-- 42501 permission denied for table users.
+--
+-- These two lines were missing when this migration first ran against
+-- production, which is why the introduction and every dismissible banner
+-- rendered nothing. They are repeated in 157 because this file had already
+-- been applied; here they exist so a database rebuilt from the migrations does
+-- not reproduce the bug. Running both is harmless -- GRANT is idempotent.
+GRANT SELECT (onboarding_completed_at, dismissed_banners)
+  ON public.users TO authenticated;
+
+GRANT SELECT (onboarding_completed_at, dismissed_banners)
+  ON public.users TO anon;

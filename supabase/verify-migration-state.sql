@@ -829,4 +829,93 @@ select '156_onboarding_state',
                   where n.nspname = 'public' and p.proname = 'dismiss_banner'
                 )
             then 'applied' else 'MISSING' end
+union all
+select '157_grant_onboarding_columns',
+       -- Grants SELECT on 156's two columns. 156 added them without a grant,
+       -- so the client could not read them at all -- see the guards below.
+       case when has_column_privilege('authenticated', 'public.users', 'onboarding_completed_at', 'SELECT')
+             and has_column_privilege('authenticated', 'public.users', 'dismissed_banners', 'SELECT')
+            then 'applied' else 'MISSING' end
+union all
+
+-- ---------------------------------------------------------------------------
+-- GUARDS (not migrations): column-level SELECT grants on public.users.
+--
+-- public.users has NO table-level SELECT grant for authenticated or anon. 066
+-- revoked it and re-granted SELECT column by column; 067 extended the list.
+-- Any column added afterwards is invisible to every non-service caller until
+-- it is granted explicitly, and the client fails with
+--   42501 permission denied for table users
+-- That is exactly how 156 shipped: it added two columns, granted neither, and
+-- blanked the first-run introduction, all five dismissible banners and the
+-- What's New badge. Before this guard the rule existed only as a comment in
+-- 066's header, which is why it was missed. Three attempts went into finding
+-- it, because the DAL is mocked in every unit test and no test can see a
+-- permission error.
+--
+-- USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.
+-- That view lists only explicitly granted COLUMN privileges and cannot see a
+-- table-level grant. A column readable through a table-level grant is absent
+-- from it; a column that is genuinely unreadable is also absent from it. It
+-- returns identical output for the two cases this guard exists to tell apart,
+-- and it gave a false pass while this bug was being diagnosed.
+-- has_column_privilege() resolves table-level and column-level grants together
+-- and is the only correct test here.
+--
+-- The exclusion list is the set of columns deliberately withheld from the
+-- client by 066, 067, 113, 115 and 118. Anything NOT on it must be readable.
+-- Adding a column to public.users means either granting it or listing it here
+-- with the migration that restricts it -- never leaving it in neither.
+-- ---------------------------------------------------------------------------
+select 'GUARD_users_columns_readable',
+       coalesce(
+         'MISSING -- not readable by authenticated: '
+           || string_agg(c.column_name, ', ' order by c.column_name),
+         'applied'
+       )
+from information_schema.columns c
+where c.table_schema = 'public'
+  and c.table_name = 'users'
+  and c.column_name not in (
+    -- 066/067: Tribe.OS billing, push and device identity (service-role only)
+    'tribe_os_stripe_customer_id', 'tribe_os_stripe_subscription_id',
+    'tribe_os_granted_at', 'tribe_os_granted_by',
+    'push_subscription', 'fcm_token', 'fcm_platform', 'fcm_updated_at',
+    -- 113: admin flag and payout identity
+    'is_admin', 'payout_method', 'stripe_account_id', 'wompi_merchant_id',
+    'total_earnings_cents',
+    -- 115: precise home coordinates
+    'location_lat', 'location_lng',
+    -- 118: email
+    'email'
+  )
+  and not has_column_privilege('authenticated', 'public.users', c.column_name, 'SELECT')
+union all
+
+-- The mirror of the guard above: a column the app believes is withheld must
+-- actually be withheld. This catches the failure mode 093 introduced, where a
+-- table-level GRANT silently re-exposes every restricted column, because a
+-- column-level REVOKE cannot take a table-level privilege away. Verified clean
+-- against production on 2026-09-09 (auth_email = false).
+select 'GUARD_users_columns_restricted',
+       coalesce(
+         'MISSING -- unexpectedly READABLE by authenticated: '
+           || string_agg(r.column_name, ', ' order by r.column_name),
+         'applied'
+       )
+from (values
+    ('tribe_os_stripe_customer_id'), ('tribe_os_stripe_subscription_id'),
+    ('tribe_os_granted_at'), ('tribe_os_granted_by'),
+    ('push_subscription'), ('fcm_token'), ('fcm_platform'), ('fcm_updated_at'),
+    ('is_admin'), ('payout_method'), ('stripe_account_id'), ('wompi_merchant_id'),
+    ('total_earnings_cents'),
+    ('location_lat'), ('location_lng'),
+    ('email')
+) as r(column_name)
+where exists (
+        select 1 from information_schema.columns c
+        where c.table_schema = 'public' and c.table_name = 'users'
+          and c.column_name = r.column_name
+      )
+  and has_column_privilege('authenticated', 'public.users', r.column_name, 'SELECT')
 order by migration;
