@@ -348,28 +348,29 @@ body {
     user-select: none;
   }
 
-  /* Hero hover zoom, gated on real pointer capability.
-     tailwind.config.ts does not enable future.hoverOnlyWhenSupported yet, so a
-     plain `hover:` or `group-hover:` also fires on touch after a tap and leaves
-     the card stuck at 1.03. Gating on (hover: hover) and (pointer: fine) keeps
-     the effect on mice and trackpads only.
+  /* An affordance that hides until hover, but only where hover exists.
 
-     When T-UI3 turns hoverOnlyWhenSupported on, this can collapse back into
-     `motion-safe:group-hover:scale-[1.03]` on the img and this utility can go. */
-  @media (hover: hover) and (pointer: fine) {
-    .hero-zoom:hover .hero-zoom-img {
-      transform: scale(1.03);
-    }
+     With hoverOnlyWhenSupported on, `opacity-0 group-hover:opacity-100`
+     becomes permanently invisible on a touch device: the control is still in
+     the DOM and still focusable, but no finger can reach it. This is visible
+     by default and hides only where a real pointer can bring it back.
 
-    .hero-zoom:hover .hero-zoom-hint {
-      opacity: 1;
-    }
+     Replaces T-UI1's .hero-zoom utility, which existed only because the
+     Tailwind flag was off; the hero now uses plain group-hover. */
+  .hover-reveal {
+    opacity: 1;
   }
 
-  /* Respect a reduced-motion preference: show the hint, skip the movement. */
-  @media (prefers-reduced-motion: reduce) {
-    .hero-zoom:hover .hero-zoom-img {
-      transform: none;
+  @media (hover: hover) and (pointer: fine) {
+    .hover-reveal {
+      opacity: 0;
+      transition: opacity 0.15s ease-out;
+    }
+
+    .group:hover .hover-reveal,
+    .group:focus-within .hover-reveal,
+    .hover-reveal:focus-visible {
+      opacity: 1;
     }
   }
 }

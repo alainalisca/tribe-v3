@@ -115,7 +115,7 @@ export default function SessionCardHero({
           onClick={handleExpand}
           tabIndex={-1}
           aria-hidden="true"
-          className="hero-zoom-hint absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1.5 bg-black/55 backdrop-blur-sm text-white text-[13px] font-semibold px-3.5 py-2 rounded-full opacity-0 transition-opacity duration-200"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1.5 bg-black/55 backdrop-blur-sm text-white text-[13px] font-semibold px-3.5 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
           <Maximize2 className="w-3.5 h-3.5" />
           {t('viewPhoto')}
@@ -164,7 +164,7 @@ export default function SessionCardHero({
   );
 
   return (
-    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'hero-zoom' : ''}`}>
+    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'group' : ''}`}>
       {useCarousel ? (
         <HeroCarousel
           photos={carouselPhotos}
@@ -184,7 +184,7 @@ export default function SessionCardHero({
               alt={imageAlt}
               eager={eager}
               onError={() => setImageError(true)}
-              className="hero-zoom-img transition-transform duration-300 ease-out"
+              className="transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
             />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(sport)}`} />

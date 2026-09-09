@@ -212,7 +212,7 @@ export default function HeroCarousel({
                 eager={i === 0 && eagerFirst}
                 /* T-VID1: the video preview applies to slide 0 only, and should
                    pause whenever the reported index is not 0. */
-                className="hero-zoom-img transition-transform duration-300 ease-out"
+                className="transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
               />
             )}
           </div>
@@ -248,7 +248,7 @@ export default function HeroCarousel({
               move(-1, 'arrow');
             }}
             aria-label={t('previousPhoto')}
-            className="hero-zoom-hint absolute left-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 transition-opacity duration-200"
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200"
           >
             <span className="w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center">
               <ChevronLeft className="w-4 h-4" />
@@ -262,7 +262,7 @@ export default function HeroCarousel({
               move(1, 'arrow');
             }}
             aria-label={t('nextPhoto')}
-            className="hero-zoom-hint absolute right-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 transition-opacity duration-200"
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200"
           >
             <span className="w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center">
               <ChevronRight className="w-4 h-4" />

@@ -208,7 +208,7 @@ export default function SessionChat({ sessionId, currentUserId, isHost = false, 
                           if (selectedMessage === msg.id) dismissMenu();
                           else openMessageMenu(msg.id, row);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-200 dark:hover:bg-tribe-mid rounded transition"
+                        className="hover-reveal p-1 hover:bg-stone-200 dark:hover:bg-tribe-mid rounded transition"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
