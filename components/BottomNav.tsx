@@ -136,9 +136,9 @@ export default function BottomNav() {
                   href={item.href}
                   aria-label={item.label}
                   onClick={() => haptic('light')}
-                  className="flex flex-col items-center justify-center flex-1 -mt-8"
+                  className="flex flex-col items-center justify-center flex-1 -mt-6"
                 >
-                  <div className="bg-tribe-green rounded-full p-4 shadow-lg hover:bg-tribe-green transition-colors">
+                  <div className="bg-tribe-green rounded-full p-4 shadow-lg ring-4 ring-white dark:ring-tribe-card hover:bg-tribe-green transition-colors">
                     {item.icon}
                   </div>
                   <span className="text-xs mt-1 font-medium text-tribe-green">{item.label}</span>
@@ -151,6 +151,7 @@ export default function BottomNav() {
                 key={item.href}
                 href={item.href}
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => haptic('light')}
                 className={`flex flex-col items-center justify-center min-w-0 flex-1 transition-colors relative ${
                   isActive

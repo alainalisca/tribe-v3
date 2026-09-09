@@ -78,8 +78,17 @@ jobs:
         #     should already tree-shake; verify no barrel imports)
         # Raising this ceiling further without a clear explanation
         # in the PR description is a red flag in review.
+        #
+        # Raised from 7600 to 7800 on 2026-09-09 for T-UI3 (+12 KB: the
+        # two-column feed and the collapsible filter bar). main was sitting at
+        # exactly 7600 with zero headroom, so the gate was blocking every
+        # feature PR, not just that one. Only ~1 KB of the increase is CSS from
+        # hoverOnlyWhenSupported; the rest is the feature itself. Deliberately
+        # no savings were hunted in that layout PR — see follow-up ticket
+        # T-PERF1, which owns finding real reductions and ratcheting this
+        # ceiling back down.
         run: |
-          BUDGET_KB=7600
+          BUDGET_KB=7800
           TOTAL_KB=$(du -sk .next/static/chunks 2>/dev/null | awk '{print $1}')
           echo "client bundle: ${TOTAL_KB} KB (budget: ${BUDGET_KB} KB)"
           if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then

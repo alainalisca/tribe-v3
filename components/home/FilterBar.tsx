@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { trackEvent } from '@/lib/analytics';
-import { Search, X } from 'lucide-react';
+import { MapPin, Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import LanguageToggle from '@/components/LanguageToggle';
@@ -10,9 +10,14 @@ import NotificationBell from '@/components/NotificationBell';
 import TribeOSQuickAccess from '@/components/TribeOSQuickAccess';
 import AdminQuickAccess from '@/components/AdminQuickAccess';
 import WhatsNewBadge from '@/components/WhatsNewBadge';
-import { sportTranslations, TranslationKey } from '@/lib/translations';
+import type { TranslationKey } from '@/lib/translations';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { getPopularNeighborhoods, detectNeighborhood } from '@/lib/city-config';
+import { useCollapseOnScroll } from '@/hooks/useCollapseOnScroll';
+import ActiveFilterRow from '@/components/home/ActiveFilterRow';
+import { useActiveFilters } from '@/hooks/useActiveFilters';
+import FilterSelects from '@/components/home/FilterSelects';
+import DistanceSlider from '@/components/home/DistanceSlider';
 
 import TribeWordmark from '@/components/TribeWordmark';
 interface FilterBarProps {
@@ -62,7 +67,6 @@ export default function FilterBar({
 }: FilterBarProps) {
   const fixedAreaRef = useRef<HTMLDivElement>(null);
   const tr = useTranslations('home');
-  const sports = Object.keys(sportTranslations);
 
   const measureFixed = useCallback(() => {
     if (fixedAreaRef.current) {
@@ -70,17 +74,59 @@ export default function FilterBar({
     }
   }, [onFixedHeightChange]);
 
+  // A ResizeObserver rather than a hand-maintained dependency list. The old
+  // list missed any height change that did not come with one of its named
+  // props or a window resize: measured live, the header reported 335px while
+  // the element was 319px, so the feed's top padding sat 16px off until an
+  // unrelated resize corrected it. The observer cannot miss a case, and it
+  // covers the collapse/expand transition for free.
   useEffect(() => {
+    const element = fixedAreaRef.current;
+    if (!element) return;
+
     measureFixed();
     window.addEventListener('resize', measureFixed);
-    return () => window.removeEventListener('resize', measureFixed);
+
+    if (typeof ResizeObserver === 'undefined') {
+      return () => window.removeEventListener('resize', measureFixed);
+    }
+    const observer = new ResizeObserver(() => measureFixed());
+    observer.observe(element);
+    return () => {
+      window.removeEventListener('resize', measureFixed);
+      observer.disconnect();
+    };
   }, [measureFixed]);
 
-  // Re-measure when content changes
+  // Collapse the controls on scroll down, restore them on scroll up. The
+  // athlete can always force them open from the Filters button.
+  const autoCollapsed = useCollapseOnScroll();
+  const [forcedOpen, setForcedOpen] = useState(false);
+  const collapsed = autoCollapsed && !forcedOpen;
+
+  // Re-collapsing is the scroll's job; once the athlete scrolls up and the
+  // controls come back on their own, drop the override.
   useEffect(() => {
-    measureFixed();
-    requestAnimationFrame(() => measureFixed());
-  }, [userLocation, loading, searchQuery, selectedSport, filteredCount, selectedNeighborhood, measureFixed]);
+    if (!autoCollapsed) setForcedOpen(false);
+  }, [autoCollapsed]);
+
+  const activeFilters = useActiveFilters({
+    searchQuery,
+    setSearchQuery,
+    selectedSport,
+    setSelectedSport,
+    dateFilter,
+    setDateFilter,
+    genderFilter,
+    setGenderFilter,
+    pricingFilter,
+    setPricingFilter,
+    selectedNeighborhood,
+    onNeighborhoodChange,
+    language,
+    t,
+    tr,
+  });
 
   // Track search execution (debounced — only fires after user stops typing)
   useEffect(() => {
@@ -107,7 +153,7 @@ export default function FilterBar({
 
   return (
     <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark">
-      <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4 gap-4">
+      <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4 md:px-6 gap-4">
         <Link href="/profile" className="shrink-0">
           {/* Slightly larger so the wordmark dominates and the notification
               badge can't visually mash into the green dot. */}
@@ -126,8 +172,8 @@ export default function FilterBar({
         </div>
       </div>
 
-      <div className="border-t border-stone-300 dark:border-black p-4 pb-3">
-        <div className="max-w-2xl mx-auto space-y-2">
+      <div className="border-t border-stone-300 dark:border-black p-4 md:px-6 pb-3">
+        <div className="max-w-2xl md:max-w-4xl mx-auto space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
             <Input
@@ -150,128 +196,91 @@ export default function FilterBar({
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            <select
-              value={selectedSport}
-              onChange={(e) => setSelectedSport(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-            >
-              <option value="">{t('sport')}</option>
-              {sports.map((sport) => (
-                <option key={sport} value={sport}>
-                  {language === 'es' ? sportTranslations[sport]?.es || sport : sport}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-            >
-              <option value="all">{t('date')}</option>
-              <option value="today">{t('today')}</option>
-              <option value="week">{t('week')}</option>
-              <option value="month">{t('month')}</option>
-            </select>
-
-            <select
-              value={genderFilter}
-              onChange={(e) => setGenderFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-            >
-              <option value="all">{t('all')}</option>
-              <option value="women_only">{t('women')}</option>
-              <option value="men_only">{t('men')}</option>
-            </select>
-
-            <select
-              value={pricingFilter}
-              onChange={(e) => setPricingFilter(e.target.value)}
-              className="w-full p-2.5 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg text-stone-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-tribe-green text-sm"
-            >
-              <option value="all">{tr('filterAll')}</option>
-              <option value="free">{tr('filterFree')}</option>
-              <option value="paid">{tr('filterPaid')}</option>
-            </select>
-          </div>
-
-          {userLocation && (
-            <div className="flex items-center gap-3 bg-white dark:bg-tribe-card border border-stone-300 dark:border-tribe-mid rounded-lg px-3 py-1.5">
-              <label className="text-xs font-medium text-stone-900 dark:text-gray-100 whitespace-nowrap">
-                {t('dist')}
-              </label>
-              <input
-                type="range"
-                min="5"
-                max="100"
-                step="5"
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="flex-1 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-tribe-green"
+          {/* Collapsible region. Height animates to 0 on scroll down so the
+              feed gains back most of the 319px this header occupies on a
+              375x667 phone. Search and the wordmark stay pinned. */}
+          <div
+            className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+              collapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+            }`}
+            aria-hidden={collapsed}
+          >
+            <div className="overflow-hidden min-h-0 space-y-2">
+              <FilterSelects
+                selectedSport={selectedSport}
+                setSelectedSport={setSelectedSport}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                genderFilter={genderFilter}
+                setGenderFilter={setGenderFilter}
+                pricingFilter={pricingFilter}
+                setPricingFilter={setPricingFilter}
+                language={language}
+                t={t}
               />
-              <span className="text-xs font-semibold text-tribe-green min-w-[48px] text-right flex-shrink-0">
-                {maxDistance === 100 ? t('all') : `${maxDistance}km`}
-              </span>
-            </div>
-          )}
 
-          {/* Neighborhood pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
-            <div className="w-px h-6 bg-stone-300 dark:bg-tribe-mid self-center mx-1 flex-shrink-0" />
-            {getPopularNeighborhoods().map((hood) => (
-              <button
-                key={hood.id}
-                onClick={() => {
-                  const newValue = selectedNeighborhood === hood.id ? null : hood.id;
-                  if (newValue) {
-                    trackEvent('neighborhood_selected', {
-                      neighborhood: hood.name,
-                      source: 'filter_pill',
-                    });
-                  }
-                  onNeighborhoodChange?.(newValue);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all flex-shrink-0 ${
-                  selectedNeighborhood === hood.id
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-blue-500/10 text-blue-400 border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/30'
-                }`}
-              >
-                {hood.name}
-              </button>
-            ))}
+              {userLocation && <DistanceSlider maxDistance={maxDistance} setMaxDistance={setMaxDistance} t={t} />}
+
+              {/* Neighborhood pills */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+                <MapPin className="w-4 h-4 text-theme-tertiary self-center flex-shrink-0" aria-hidden="true" />
+                {getPopularNeighborhoods().map((hood) => (
+                  <button
+                    key={hood.id}
+                    onClick={() => {
+                      const newValue = selectedNeighborhood === hood.id ? null : hood.id;
+                      if (newValue) {
+                        trackEvent('neighborhood_selected', {
+                          neighborhood: hood.name,
+                          source: 'filter_pill',
+                        });
+                      }
+                      onNeighborhoodChange?.(newValue);
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all flex-shrink-0 ${
+                      selectedNeighborhood === hood.id
+                        ? 'bg-tribe-green text-slate-900 border-tribe-green'
+                        : 'bg-theme-card text-theme-secondary border-theme'
+                    }`}
+                  >
+                    {hood.name}
+                  </button>
+                ))}
+              </div>
+
+              {(!loading || searchQuery || selectedSport) && (
+                <div className="flex items-center justify-between">
+                  {!loading && (
+                    <p className="text-xs text-stone-600 dark:text-gray-300">
+                      {filteredCount} {t('sessionsCount')}
+                    </p>
+                  )}
+                  {(searchQuery ||
+                    selectedSport ||
+                    dateFilter !== 'all' ||
+                    genderFilter !== 'all' ||
+                    pricingFilter !== 'all' ||
+                    selectedNeighborhood) && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedSport('');
+                        setDateFilter('all');
+                        setGenderFilter('all');
+                        setPricingFilter('all');
+                        onNeighborhoodChange?.(null);
+                      }}
+                      className="text-xs text-tribe-green hover:underline"
+                    >
+                      {t('clearAll')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {(!loading || searchQuery || selectedSport) && (
-            <div className="flex items-center justify-between">
-              {!loading && (
-                <p className="text-xs text-stone-600 dark:text-gray-300">
-                  {filteredCount} {t('sessionsCount')}
-                </p>
-              )}
-              {(searchQuery ||
-                selectedSport ||
-                dateFilter !== 'all' ||
-                genderFilter !== 'all' ||
-                pricingFilter !== 'all' ||
-                selectedNeighborhood) && (
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedSport('');
-                    setDateFilter('all');
-                    setGenderFilter('all');
-                    setPricingFilter('all');
-                    onNeighborhoodChange?.(null);
-                  }}
-                  className="text-xs text-tribe-green hover:underline"
-                >
-                  {t('clearAll')}
-                </button>
-              )}
-            </div>
-          )}
+          {collapsed && <ActiveFilterRow filters={activeFilters} onExpand={() => setForcedOpen(true)} />}
         </div>
       </div>
     </div>

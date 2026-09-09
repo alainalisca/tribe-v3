@@ -88,7 +88,7 @@ export default function SessionCardHero({
   // deliberately not built until something can actually show it.
   const urgencyColorClass =
     urgencyType === 'starting_soon'
-      ? 'bg-orange-500 animate-pulse'
+      ? 'bg-orange-500 motion-safe:animate-pulse'
       : urgencyType === 'full'
         ? 'bg-red-500'
         : urgencyType === 'filling_up'
@@ -115,7 +115,7 @@ export default function SessionCardHero({
           onClick={handleExpand}
           tabIndex={-1}
           aria-hidden="true"
-          className="hero-zoom-hint absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1.5 bg-black/55 backdrop-blur-sm text-white text-[13px] font-semibold px-3.5 py-2 rounded-full opacity-0 transition-opacity duration-200"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center gap-1.5 bg-black/55 backdrop-blur-sm text-white text-[13px] font-semibold px-3.5 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         >
           <Maximize2 className="w-3.5 h-3.5" />
           {t('viewPhoto')}
@@ -154,7 +154,7 @@ export default function SessionCardHero({
           top-left, so the two never overlap. */}
       {liveCount > 0 && (
         <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>
-          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse shadow-lg">
+          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold motion-safe:animate-pulse shadow-lg">
             <span className="w-2 h-2 bg-white rounded-full" />
             {liveLabel}
           </span>
@@ -164,7 +164,7 @@ export default function SessionCardHero({
   );
 
   return (
-    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'hero-zoom' : ''}`}>
+    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'group' : ''}`}>
       {useCarousel ? (
         <HeroCarousel
           photos={carouselPhotos}
@@ -184,7 +184,7 @@ export default function SessionCardHero({
               alt={imageAlt}
               eager={eager}
               onError={() => setImageError(true)}
-              className="hero-zoom-img transition-transform duration-300 ease-out"
+              className="transition-transform duration-300 ease-out motion-safe:group-hover:scale-[1.03]"
             />
           ) : (
             <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(sport)}`} />
