@@ -43,6 +43,8 @@ export interface SessionWithRelations extends Session {
     avatar_url: string | null;
     average_rating: number | null;
     total_reviews: number | null;
+    /** Trust signal on the card's instructor row. Only fetched by the feed query. */
+    total_sessions_hosted?: number | null;
   } | null;
 }
 
@@ -392,7 +394,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
+        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted)
       `
       )
       .eq('status', 'active')

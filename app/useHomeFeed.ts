@@ -27,6 +27,7 @@ import { identifyUser, setSessionContext, trackEvent } from '@/lib/analytics';
 import { detectNeighborhood } from '@/lib/city-config';
 
 import { useSessionFiltering } from './hooks/useSessionFiltering';
+import { isPastFeedGrace } from '@/components/SessionCardHelpers';
 import { useLiveStatus } from './hooks/useLiveStatus';
 import { useSessionActions } from './hooks/useSessionActions';
 
@@ -105,10 +106,14 @@ export function useHomeFeed() {
       setFetchError(false);
       const result = await fetchUpcomingSessions(supabase);
       if (!result.success) throw new Error(result.error);
-      setSessions(result.data || []);
+      // fetchUpcomingSessions filters on date alone, so a session that ended
+      // hours ago is still "today". Drop anything more than the grace period
+      // past its end time; history surfaces show those instead.
+      const upcoming = (result.data || []).filter((s) => !isPastFeedGrace(s));
+      setSessions(upcoming);
       // Defer live status loading so session list renders immediately
       requestAnimationFrame(() => {
-        liveStatus.loadLiveStatuses((result.data || []).map((s) => s.id));
+        liveStatus.loadLiveStatuses(upcoming.map((s) => s.id));
       });
     } catch (error) {
       logError(error, { action: 'loadSessions' });

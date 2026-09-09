@@ -107,10 +107,11 @@ export default function SessionDetails({
           {session.gender_preference && session.gender_preference !== 'all' && (
             <Badge
               className={`px-3 py-1 rounded-full text-sm border-transparent ${
-                session.gender_preference === 'women_only' ? 'bg-pink-100 text-pink-800' : 'bg-sky-100 text-sky-800'
+                session.gender_preference === 'women_only'
+                  ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200'
+                  : 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200'
               }`}
             >
-              {session.gender_preference === 'women_only' ? '👩' : '👨'}{' '}
               {session.gender_preference === 'women_only' ? t('womenOnly') : t('menOnly')}
             </Badge>
           )}

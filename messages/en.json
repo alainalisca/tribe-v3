@@ -231,7 +231,26 @@
   "sessionCard": {
     "expandPhoto": "View full photo",
     "viewPhoto": "View photo",
-    "photoOf": "Photo of a {sport} session"
+    "photoOf": "Photo of a {sport} session",
+    "openSession": "Open session",
+    "live": "LIVE",
+    "options": "Options",
+    "ended": "Ended",
+    "startingSoon": "Starting soon",
+    "full": "Full",
+    "spotsLeft": "{count} spots left",
+    "fillingUp": "Filling up",
+    "free": "Free",
+    "with": "with",
+    "athletes": "athletes",
+    "sessionsHosted": "{count} sessions",
+    "instructorLabel": "Instructor {name}",
+    "womenOnly": "Women only",
+    "menOnly": "Men only",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "minutesShort": "{count} min"
   },
   "lightbox": {
     "label": "Photo viewer",

@@ -2,16 +2,16 @@
 import { useState } from 'react';
 import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
-import { formatSessionLocation } from '@/lib/sessionLocation';
+import { formatSessionLocationShort } from '@/lib/sessionLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import type { Currency } from '@/lib/payments/config';
 import { getSessionHeroImage } from '@/lib/sport-images';
 
-import { Calendar, MapPin, Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Calendar, MapPin, Star } from 'lucide-react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { sportTranslations } from '@/lib/translations';
+import { translateSport } from '@/lib/translations';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import AvatarStack from '@/components/AvatarStack';
 import type { AvatarStackParticipant } from '@/components/AvatarStack';
@@ -23,6 +23,28 @@ import ShareButton from '@/components/ShareButton';
 import SessionCardHero from '@/components/SessionCardHero';
 import PhotoLightbox from '@/components/PhotoLightbox';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import SessionCardCreatorMenu from '@/components/session/SessionCardCreatorMenu';
+import SessionMetaBadges from '@/components/session/SessionMetaBadges';
+
+/** Date locale per UI language. A lookup, so no `language === 'es'` ternary is needed. */
+const DATE_LOCALE: Record<'en' | 'es', string> = { en: 'en-US', es: 'es-CO' };
+
+/** Case- and accent-insensitive containment: "does the address already name the barrio". */
+function looselyContains(haystack: string, needle: string): boolean {
+  const strip = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return strip(haystack).includes(strip(needle));
+}
+
+/**
+ * First and last name only.
+ *
+ * The title carries the instructor's name now, and "Boxeo con Salomon Tabares
+ * Adarve" wraps to two lines on a phone while saying no more than "Boxeo con
+ * Salomon Tabares".
+ */
+function shortName(name: string | null | undefined): string {
+  return (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+}
 
 export default function SessionCard({
   session,
@@ -35,14 +57,11 @@ export default function SessionCard({
   featuredPartnerUserIds,
   priority = false,
 }: SessionCardProps) {
-  const router = useRouter();
   const { language } = useLanguage();
   const tCard = useTranslations('sessionCard');
   const { currency: userCurrency } = useUserCurrency();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [showCreatorMenu, setShowCreatorMenu] = useState(false);
-  const isCreator = Boolean(currentUserId && session.creator_id === currentUserId);
 
   // Detected neighborhood — used for the share-button payload and the
   // little inline neighborhood badge next to the location label.
@@ -52,18 +71,17 @@ export default function SessionCard({
         getNearestNeighborhood(session.location_lat, session.location_lng)
       : null;
 
-  // Centralised location-render so cards never show raw "6.22, -75.57"
-  // strings. Falls back to detected neighborhood or "Location not
-  // specified". See lib/sessionLocation.ts.
-  const displayLocation = formatSessionLocation(
+  // Short, deduped address. The detail page keeps the full string. Google
+  // repeats the barrio and city on Medellin addresses and 45 live sessions
+  // carry the repeat; see lib/sessionLocation.ts.
+  const displayLocation = formatSessionLocationShort(
     session.location,
     session.location_lat ?? null,
     session.location_lng ?? null,
-    language === 'es' ? 'es' : 'en'
+    language
   );
 
-  const sportName =
-    language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
+  const sportName = translateSport(session.sport, language);
 
   const spotsLeft = session.max_participants - confirmedParticipants.length;
   const isFree = !session.price_cents;
@@ -71,16 +89,27 @@ export default function SessionCard({
 
   const heroImage = getSessionHeroImage(session.sport, session.photos, (session.creator as any)?.banner_url);
 
+  const instructorName = session.creator?.name ?? '';
+  const cardTitle = session.title || `${sportName} ${tCard('with')} ${shortName(instructorName)}`.trim();
+
+  const dateLine = `${new Date(session.date + 'T00:00:00').toLocaleDateString(DATE_LOCALE[language], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} · ${formatTime12Hour(session.start_time)}${
+    session.duration ? ` · ${tCard('minutesShort', { count: session.duration })}` : ''
+  }`;
+
   // Urgency badge: priority order. The hero owns the colour, keyed off type.
   const urgencyBadge: { text: string; type: 'starting_soon' | 'full' | 'spots_left' | 'filling_up' } | null =
     isStartingSoon && !isPast && !isFull
-      ? { text: `🔥 ${language === 'es' ? 'Empieza pronto' : 'Starting soon'}`, type: 'starting_soon' }
+      ? { text: `🔥 ${tCard('startingSoon')}`, type: 'starting_soon' }
       : isFull && !isPast
-        ? { text: language === 'es' ? 'Lleno' : 'Full', type: 'full' }
+        ? { text: tCard('full'), type: 'full' }
         : spotsLeft <= 3 && spotsLeft > 0 && !isPast
-          ? { text: `${spotsLeft} ${language === 'es' ? 'cupos' : 'spots left'}`, type: 'spots_left' }
+          ? { text: tCard('spotsLeft', { count: spotsLeft }), type: 'spots_left' }
           : fillingFast
-            ? { text: `🔥 ${language === 'es' ? 'Llenándose' : 'Filling up'}`, type: 'filling_up' }
+            ? { text: `🔥 ${tCard('fillingUp')}`, type: 'filling_up' }
             : null;
 
   // The lightbox shows the session's own photos when it has them; otherwise the
@@ -88,25 +117,39 @@ export default function SessionCard({
   const lightboxPhotos = session.photos && session.photos.length > 0 ? session.photos : [heroImage];
   const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
 
+  const sessionsHosted = session.creator?.total_sessions_hosted ?? 0;
+
   return (
-    <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
+    <div className="relative">
       <Card
-        className={`dark:bg-tribe-card shadow-none hover:shadow-md transition-shadow duration-200 overflow-hidden ${
+        className={`bg-theme-card shadow-none hover:shadow-md transition-shadow duration-200 overflow-hidden ${
           featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id)
             ? 'border-tribe-green/40'
-            : 'border-stone-200 dark:border-gray-600/30'
+            : 'border-theme'
         }`}
       >
+        {/* Whole-card link, as an overlay rather than a wrapper: a <button>
+            inside an <a> is invalid HTML and breaks keyboard and screen-reader
+            behaviour. The overlay still gets prefetch, middle-click,
+            open-in-new-tab, a focus ring and Enter. Controls sit above it. */}
+        <Link
+          href={`/session/${session.id}`}
+          aria-label={`${cardTitle}, ${dateLine}`}
+          className="absolute inset-0 z-[1] rounded-xl focus-visible:ring-2 focus-visible:ring-tribe-green focus-visible:ring-offset-2"
+        >
+          <span className="sr-only">{tCard('openSession')}</span>
+        </Link>
+
         <SessionCardHero
           sport={session.sport}
           sportName={sportName}
           heroImage={heroImage}
-          imageAlt={tCard('photoOf', { sport: sportName })}
+          imageAlt={cardTitle}
           urgencyLabel={urgencyBadge?.text}
           urgencyType={urgencyBadge?.type ?? null}
           onExpand={canExpand ? () => setLightboxOpen(true) : undefined}
           liveCount={liveData?.count ?? 0}
-          liveLabel={language === 'es' ? 'EN VIVO' : 'LIVE'}
+          liveLabel={tCard('live')}
           eager={priority}
           shareButton={
             <ShareButton
@@ -127,144 +170,78 @@ export default function SessionCard({
                 );
                 return null;
               }}
-              className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 border-0 rounded-full"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 border-0 rounded-full"
             />
           }
           actions={
-            <>
-              {/* Creator-only edit/delete menu */}
-              {isCreator && (onEdit || onDelete) && (
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowCreatorMenu((prev) => !prev);
-                    }}
-                    aria-label={language === 'es' ? 'Opciones' : 'Options'}
-                    className="p-1.5 bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full transition-colors"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-
-                  {showCreatorMenu && (
-                    <>
-                      {/* Backdrop to close menu on outside click */}
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowCreatorMenu(false);
-                        }}
-                      />
-                      <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-tribe-surface rounded-lg shadow-xl border border-stone-200 dark:border-tribe-mid z-20 overflow-hidden">
-                        {onEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowCreatorMenu(false);
-                              onEdit(session.id);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-stone-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            {language === 'es' ? 'Editar' : 'Edit'}
-                          </button>
-                        )}
-                        {onDelete && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowCreatorMenu(false);
-                              onDelete(session.id);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            {language === 'es' ? 'Eliminar' : 'Delete'}
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </>
+            currentUserId && session.creator_id === currentUserId ? (
+              <SessionCardCreatorMenu sessionId={session.id} onEdit={onEdit} onDelete={onDelete} />
+            ) : null
           }
         />
 
         <CardContent className="p-4 space-y-2.5">
           {/* Title */}
-          <h3 className="text-base font-bold text-stone-900 dark:text-white leading-snug line-clamp-2">
-            {session.title || `${sportName} ${language === 'es' ? 'con' : 'with'} ${session.creator?.name || ''}`}
-          </h3>
+          <h3 className="text-base font-bold text-theme-primary leading-snug line-clamp-2">{cardTitle}</h3>
 
           {/* Date + Time */}
-          <div className="flex items-center text-sm text-stone-600 dark:text-gray-400">
+          <div className="flex items-center text-sm text-theme-secondary">
             <Calendar className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
-            <span>
-              {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
-              {' · '}
-              {formatTime12Hour(session.start_time)}
-              {session.duration ? ` · ${session.duration} min` : ''}
-            </span>
+            <span>{dateLine}</span>
           </div>
 
           {/* Location */}
-          <div className="flex items-center text-sm text-stone-600 dark:text-gray-400">
+          <div className="flex items-center text-sm text-theme-secondary">
             <MapPin className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
             <span className="truncate">{displayLocation}</span>
-            {sessionHood && displayLocation !== sessionHood.name && (
-              <span className="ml-1.5 text-xs text-blue-400 font-medium flex-shrink-0">· {sessionHood.name}</span>
+            {sessionHood && !looselyContains(displayLocation, sessionHood.name) && (
+              <span className="ml-1.5 text-xs text-theme-tertiary font-medium flex-shrink-0">· {sessionHood.name}</span>
             )}
             {distance && (
               <span className="ml-1.5 text-xs text-tribe-green font-medium flex-shrink-0">· {distance}</span>
             )}
           </div>
 
-          {/* Instructor + Price row */}
+          <SessionMetaBadges genderPreference={session.gender_preference} skillLevel={session.skill_level} />
+
+          {/* Instructor + Price. No name text: the title already carries it. */}
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
               {session.creator && (
                 <>
-                  <Avatar className="w-6 h-6">
+                  <Avatar className="w-6 h-6" aria-label={tCard('instructorLabel', { name: instructorName })}>
                     <AvatarImage loading="lazy" src={session.creator.avatar_url || undefined} />
                     <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-[10px]">
                       {session.creator.name?.[0]?.toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs text-stone-500 dark:text-gray-400 font-medium">{session.creator.name}</span>
                   {Number(session.creator.average_rating) > 0 && (
                     <span className="text-xs text-yellow-500 font-semibold flex items-center gap-0.5">
                       <Star className="w-3 h-3 fill-yellow-500" />
                       {Number(session.creator.average_rating).toFixed(1)}
                     </span>
                   )}
+                  {sessionsHosted > 0 && (
+                    <span className="text-xs text-theme-tertiary">
+                      · {tCard('sessionsHosted', { count: sessionsHosted })}
+                    </span>
+                  )}
                 </>
               )}
             </div>
 
-            <span className={`text-sm font-bold ${isFree ? 'text-tribe-green' : 'text-stone-900 dark:text-white'}`}>
+            <span className={`text-sm font-bold ${isFree ? 'text-tribe-green' : 'text-theme-primary'}`}>
               {isFree
-                ? language === 'es'
-                  ? 'Gratis'
-                  : 'Free'
+                ? tCard('free')
                 : session.price_cents
                   ? formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)
                   : `$0 ${session.currency || 'COP'}`}
             </span>
           </div>
 
-          {/* Avatar stack + capacity */}
+          {/* Avatar stack + capacity. z-[2] so its profile links beat the overlay. */}
           {confirmedParticipants.length > 0 && (
-            <div className="flex items-center justify-between pt-1 border-t border-stone-100 dark:border-tribe-mid">
+            <div className="relative z-[2] flex items-center justify-between pt-1 border-t border-theme">
               <AvatarStack
                 participants={confirmedParticipants.map(
                   (p): AvatarStackParticipant => ({
@@ -277,8 +254,8 @@ export default function SessionCard({
                 size="sm"
                 linkToProfile
               />
-              <span className="text-xs text-stone-500 dark:text-gray-400">
-                {confirmedParticipants.length}/{session.max_participants} {language === 'es' ? 'atletas' : 'athletes'}
+              <span className="text-xs text-theme-tertiary">
+                {confirmedParticipants.length}/{session.max_participants} {tCard('athletes')}
               </span>
             </div>
           )}

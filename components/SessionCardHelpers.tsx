@@ -46,18 +46,46 @@ export function getGenderDisplay(gender: string, t: (key: TranslationKey) => str
   }
 }
 
+/**
+ * When a session finishes, as a local Date.
+ *
+ * Sessions are stored as wall-clock Bogota date + time, so this builds a local
+ * Date rather than parsing a UTC instant. A session with no start_time is
+ * treated as running until the end of its day.
+ *
+ * Exported so the feed's "hide it once it is over" rule and the card's own
+ * isPast agree by construction instead of by two similar-looking snippets.
+ */
+export function getSessionEndsAt(session: Pick<SessionWithRelations, 'date' | 'start_time' | 'duration'>): Date {
+  const endsAt = new Date(session.date + 'T00:00:00');
+  if (session.start_time) {
+    const [hours, minutes] = session.start_time.split(':').map(Number);
+    endsAt.setHours(hours, minutes, 0, 0);
+    endsAt.setMinutes(endsAt.getMinutes() + (session.duration || 60));
+  } else {
+    endsAt.setHours(23, 59, 59, 999);
+  }
+  return endsAt;
+}
+
+/** Grace period the home feed keeps a just-finished session visible for. */
+export const FEED_ENDED_GRACE_MINUTES = 30;
+
+/**
+ * Whether a session finished long enough ago that the home feed should drop it.
+ *
+ * fetchUpcomingSessions filters on date only, so without this a 6:30pm session
+ * stays in the feed until midnight.
+ */
+export function isPastFeedGrace(
+  session: Pick<SessionWithRelations, 'date' | 'start_time' | 'duration'>,
+  now: Date = new Date()
+): boolean {
+  return now.getTime() - getSessionEndsAt(session).getTime() > FEED_ENDED_GRACE_MINUTES * 60 * 1000;
+}
+
 export function computeSessionStatus(session: SessionWithRelations) {
-  const isPast = (() => {
-    const sessionDate = new Date(session.date + 'T00:00:00');
-    if (session.start_time) {
-      const [hours, minutes] = session.start_time.split(':').map(Number);
-      sessionDate.setHours(hours, minutes, 0, 0);
-      sessionDate.setMinutes(sessionDate.getMinutes() + (session.duration || 60));
-    } else {
-      sessionDate.setHours(23, 59, 59, 999);
-    }
-    return sessionDate < new Date();
-  })();
+  const isPast = getSessionEndsAt(session) < new Date();
 
   const isFull = (session.current_participants ?? 0) >= session.max_participants;
 
