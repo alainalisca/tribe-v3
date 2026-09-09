@@ -88,7 +88,7 @@ export default function SessionCardHero({
   // deliberately not built until something can actually show it.
   const urgencyColorClass =
     urgencyType === 'starting_soon'
-      ? 'bg-orange-500 animate-pulse'
+      ? 'bg-orange-500 motion-safe:animate-pulse'
       : urgencyType === 'full'
         ? 'bg-red-500'
         : urgencyType === 'filling_up'
@@ -154,7 +154,7 @@ export default function SessionCardHero({
           top-left, so the two never overlap. */}
       {liveCount > 0 && (
         <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>
-          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse shadow-lg">
+          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold motion-safe:animate-pulse shadow-lg">
             <span className="w-2 h-2 bg-white rounded-full" />
             {liveLabel}
           </span>
