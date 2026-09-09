@@ -107,7 +107,7 @@ export default function FilterBar({
 
   return (
     <div ref={fixedAreaRef} className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-stone-200 dark:bg-tribe-dark">
-      <div className="max-w-2xl mx-auto h-14 flex items-center justify-between px-4 gap-4">
+      <div className="max-w-2xl md:max-w-4xl mx-auto h-14 flex items-center justify-between px-4 md:px-6 gap-4">
         <Link href="/profile" className="shrink-0">
           {/* Slightly larger so the wordmark dominates and the notification
               badge can't visually mash into the green dot. */}
@@ -126,8 +126,8 @@ export default function FilterBar({
         </div>
       </div>
 
-      <div className="border-t border-stone-300 dark:border-black p-4 pb-3">
-        <div className="max-w-2xl mx-auto space-y-2">
+      <div className="border-t border-stone-300 dark:border-black p-4 md:px-6 pb-3">
+        <div className="max-w-2xl md:max-w-4xl mx-auto space-y-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
             <Input
