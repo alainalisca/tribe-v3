@@ -74,7 +74,6 @@ export function useHomeFeed() {
   // signal the settings page uses). 'granted' means location is enabled even
   // before the deferred silent fetch resolves — so the banner shouldn't show.
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // T-C1: true when a pending destination (a shared /s/[id] link the user signed
   // in from) is in flight. It suppresses BOTH the onboarding modal and the welcome
   // tour so a fresh localStorage context (e.g. the WhatsApp in-app browser) can't
@@ -233,17 +232,6 @@ export function useHomeFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
-  useEffect(() => {
-    if (!user || !userProfile) return;
-    if (suppressOnboarding) return; // T-C1: a pending destination wins over onboarding.
-    const isProfileComplete = userProfile.avatar_url && (userProfile.sports?.length ?? 0) > 0;
-    if (isProfileComplete) {
-      setShowOnboarding(false);
-      return;
-    }
-    if (!localStorage.getItem(`hasSeenOnboarding_${user.id}`)) setShowOnboarding(true);
-  }, [user, userProfile, suppressOnboarding]);
-
   // --- Analytics: identify user + session context + app_opened ---
   useEffect(() => {
     if (!user || !userProfile || identifiedRef.current) return;
@@ -335,8 +323,6 @@ export function useHomeFeed() {
     // BUG-008: hide the Enable-location banner once location is known
     // (in-memory coords, granted permission, or stored profile coords).
     locationKnown: computeLocationKnown(userLocation, locationPermission, userProfile),
-    showOnboarding,
-    setShowOnboarding,
     suppressOnboarding,
     filteredSessions: filtering.filteredSessions,
     liveNowSessions: filtering.liveNowSessions,

@@ -1,52 +1,47 @@
+'use client';
+
 /**
  * State management for the QuickGuide modal.
  *
- * Tracks "has this user seen this specific guide" in localStorage so
- * we can auto-show a tour on first visit but never spam an existing
- * user with it. Each guide has a stable string id; mark-as-seen is
- * scoped to that id.
+ * Tracks "has this athlete seen this specific guide". Each guide has a stable
+ * string id; mark-as-seen is scoped to that id.
  *
- * Usage:
+ * WHERE THE ANSWER LIVES (changed in T-ONB1):
+ * The server is authoritative — `users.dismissed_banners` carries the ids the
+ * athlete has dismissed, so the answer follows the person across devices and
+ * survives a cache clear. It previously lived only in localStorage, which is
+ * per-device and per-browser, so the same athlete was re-onboarded on their
+ * laptop, inside the Capacitor shell, in the WhatsApp in-app browser, and
+ * after clearing site data.
  *
- *   const guide = useQuickGuide('tribe-os-welcome', {
- *     autoOpen: true,        // open on first visit when seen=false
- *     enabled: isPremium,    // only consider auto-opening if this is true
- *   });
+ * localStorage is kept as an optimistic mirror, not as the source of truth:
+ * the flag is written locally the instant the athlete dismisses and to the
+ * server in the same action, and on load the guide is suppressed if EITHER
+ * says seen. A failed network write therefore cannot resurrect the tour on the
+ * next load, while the server still settles the cross-device answer.
  *
- *   return (
- *     <>
- *       <button onClick={guide.replay}>Take the tour</button>
- *       <QuickGuide
- *         id="tribe-os-welcome"
- *         open={guide.open}
- *         onClose={guide.close}
- *         steps={...}
- *       />
- *     </>
- *   );
- *
- * Why localStorage instead of a user-row flag: the seen-state is
- * device-local — a user on phone vs laptop expects to see the tour
- * once per device, not once globally. Also avoids round-tripping a
- * trivial UI preference to the database. If a multi-device sync
- * pattern becomes important later, switching the storage shim to
- * a user_preferences table doesn't change the API surface.
+ * UNKNOWN MEANS RENDER NOTHING. While the server answer is in flight the guide
+ * stays closed. It used to auto-open during that gap — the guide mounted as
+ * soon as `user` existed, before the profile had loaded — which is why an
+ * athlete saw the tour, then the onboarding modal, then the tour again when
+ * the modal closed and the component remounted. A brief absence is always
+ * better than a wrongly repeated modal.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { dismissBanner, fetchOnboardingState } from '@/lib/dal';
+import { logError } from '@/lib/logger';
 
 interface UseQuickGuideOptions {
   /**
-   * If true, the guide auto-opens on first visit (when no seen flag
-   * exists in localStorage). Defaults to true. Set false if you want
-   * a manual-trigger-only guide (e.g. a help-button-launched tour).
+   * If true, the guide auto-opens the first time this athlete sees it.
+   * Defaults to true. Set false for a manual-trigger-only guide.
    */
   autoOpen?: boolean;
   /**
-   * Additional gate for auto-open. Common case: only auto-show the
-   * Tribe.OS tour to PREMIUM users (we don't want to lecture non-
-   * premium visitors who are just exploring). When this is false,
-   * `markSeen` is still callable so the user can opt in via `replay`,
-   * but auto-open is suppressed.
+   * Additional gate for auto-open. Common case: only auto-show the Tribe.OS
+   * tour to premium users. When false, auto-open is suppressed but `replay`
+   * still works.
    */
   enabled?: boolean;
 }
@@ -54,13 +49,15 @@ interface UseQuickGuideOptions {
 interface UseQuickGuideResult {
   /** Whether the guide should currently be rendered open. */
   open: boolean;
-  /** Whether the seen flag is set (the auto-open trigger has fired). */
+  /** Whether this guide is known to have been seen. False while unknown. */
   seen: boolean;
-  /** Close the guide. Marks it seen (sets the localStorage flag). */
+  /** True until the answer is known. Callers render nothing meanwhile. */
+  loading: boolean;
+  /** Close the guide and record it as seen, locally and on the server. */
   close: () => void;
   /**
-   * Re-open the guide. Does not affect the seen flag — re-running the
-   * tour shouldn't change the "have they been onboarded" answer.
+   * Re-open the guide. Does not clear the seen flag — re-running a tour
+   * shouldn't change the "have they been onboarded" answer.
    */
   replay: () => void;
 }
@@ -71,25 +68,24 @@ function storageKey(id: string): string {
   return `${STORAGE_PREFIX}${id}`;
 }
 
-function readSeen(id: string): boolean {
+/** Optimistic mirror read. Never the only answer, so a miss is harmless. */
+function readLocalSeen(id: string): boolean {
   if (typeof window === 'undefined') return false;
   try {
     return window.localStorage.getItem(storageKey(id)) === '1';
   } catch {
-    // localStorage can throw in private browsing on some Safari
-    // versions. Treat as "seen" so we never trap the user in an
-    // infinite auto-open loop.
-    return true;
+    // localStorage throws in private-mode Safari. Fall through to the server.
+    return false;
   }
 }
 
-function writeSeen(id: string): void {
+function writeLocalSeen(id: string): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(storageKey(id), '1');
   } catch {
-    // Ignore. The next render will re-derive open=false because the
-    // hook's local state has already flipped seen=true.
+    // Ignore: the server write is the durable one and local state has already
+    // flipped, so this render is correct either way.
   }
 }
 
@@ -97,31 +93,83 @@ export function useQuickGuide(id: string, options: UseQuickGuideOptions = {}): U
   const { autoOpen = true, enabled = true } = options;
   const [seen, setSeen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  // Guards the auto-open so it fires at most once per mount.
+  const decided = useRef(false);
 
-  // Initial read: localStorage is only available on the client, so we
-  // can't seed useState from it. Read in an effect on mount.
   useEffect(() => {
-    const initialSeen = readSeen(id);
-    setSeen(initialSeen);
-    if (!initialSeen && autoOpen && enabled) {
-      setOpen(true);
+    let cancelled = false;
+
+    // The local mirror answers instantly, and is trusted when it says "seen":
+    // it can only have been written by this athlete dismissing the guide.
+    if (readLocalSeen(id)) {
+      setSeen(true);
+      setLoading(false);
+      decided.current = true;
+      return;
     }
-    // Intentionally only depends on id. autoOpen / enabled changes
-    // after mount shouldn't re-trigger the modal — that would
-    // re-open the tour every time a state ancestor flips, which is
-    // not what the caller wants.
+
+    async function resolveFromServer() {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (cancelled) return;
+      if (!user) {
+        // Signed out: no row to read and nothing to auto-open against.
+        setLoading(false);
+        return;
+      }
+
+      const result = await fetchOnboardingState(supabase, user.id);
+      if (cancelled) return;
+
+      if (!result.success || !result.data) {
+        // Unknown, not "unseen". Leave the guide closed rather than risk
+        // showing it again to someone who already dismissed it.
+        setLoading(false);
+        return;
+      }
+
+      const alreadySeen = result.data.dismissedBanners.includes(id);
+      setSeen(alreadySeen);
+      setLoading(false);
+
+      if (!alreadySeen && autoOpen && enabled && !decided.current) {
+        decided.current = true;
+        setOpen(true);
+      }
+    }
+
+    void resolveFromServer();
+    return () => {
+      cancelled = true;
+    };
+    // Only `id`: autoOpen/enabled flipping after mount must not re-trigger the
+    // modal, which is part of what made the tour reappear mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const close = useCallback(() => {
     setOpen(false);
     setSeen(true);
-    writeSeen(id);
+    // Optimistic local write first, so a failed network call cannot resurrect
+    // the tour on the next load.
+    writeLocalSeen(id);
+
+    void (async () => {
+      const supabase = createClient();
+      const result = await dismissBanner(supabase, id);
+      if (!result.success) {
+        logError(new Error(result.error ?? 'dismiss_failed'), { action: 'useQuickGuide.close', guideId: id });
+      }
+    })();
   }, [id]);
 
   const replay = useCallback(() => {
     setOpen(true);
   }, []);
 
-  return { open, seen, close, replay };
+  return { open, seen, loading, close, replay };
 }

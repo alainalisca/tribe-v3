@@ -11,10 +11,11 @@
  *   2. Find a session (filters, map, feed)
  *   3. Create your own session
  *   4. Message / community
- *   5. Tribe.OS (for instructors who want the business side)
+ *   5. Tribe.OS — instructors only, see showInstructorStep
  *
- * Dismissible. Seen-state persists in localStorage. "Take the tour
- * again" can be wired from any caller via the replay callback ref.
+ * Dismissible. Seen-state persists on the user row via useQuickGuide, so it
+ * follows the athlete across devices (T-ONB1). "Take the tour again" can be
+ * wired from any caller via the replay callback ref.
  *
  * Bilingual EN+ES (ES marked PENDING VERONICA).
  */
@@ -39,6 +40,12 @@ interface TribeWelcomeGuideProps {
    * the modal without a context provider.
    */
   onReplayRef?: (replay: () => void) => void;
+  /**
+   * Show the closing Tribe.OS step. Off for athletes: someone who came for a
+   * boxing class does not need a pitch for gym-management software, and it is
+   * the one step in the tour that is not about them.
+   */
+  showInstructorStep?: boolean;
 }
 
 // ES PENDING VERONICA REVIEW
@@ -99,7 +106,11 @@ const stepsByLanguage = {
   ],
 } as const satisfies Record<'en' | 'es', readonly QuickGuideStep[]>;
 
-export default function TribeWelcomeGuide({ enabled = true, onReplayRef }: TribeWelcomeGuideProps) {
+export default function TribeWelcomeGuide({
+  enabled = true,
+  onReplayRef,
+  showInstructorStep = false,
+}: TribeWelcomeGuideProps) {
   const { language } = useLanguage();
   const guide = useQuickGuide(GUIDE_ID, { enabled, autoOpen: true });
 
@@ -107,5 +118,9 @@ export default function TribeWelcomeGuide({ enabled = true, onReplayRef }: Tribe
     onReplayRef?.(guide.replay);
   }, [onReplayRef, guide.replay]);
 
-  return <QuickGuide id={GUIDE_ID} open={guide.open} onClose={guide.close} steps={stepsByLanguage[language]} />;
+  // The Tribe.OS step is last in every language, so dropping it is a slice.
+  const allSteps = stepsByLanguage[language];
+  const steps = showInstructorStep ? allSteps : allSteps.slice(0, -1);
+
+  return <QuickGuide id={GUIDE_ID} open={guide.open} onClose={guide.close} steps={steps} />;
 }
