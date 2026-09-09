@@ -150,3 +150,142 @@ describe('<HeroCarousel /> lazy slides', () => {
     expect(container.querySelectorAll('img')).toHaveLength(1);
   });
 });
+
+describe('<HeroCarousel /> mouse drag', () => {
+  /** jsdom has no layout and no pointer capture; supply both. */
+  function dragSetup(container: HTMLElement, width = 300) {
+    const track = container.querySelector('.carousel-track') as HTMLElement;
+    Object.defineProperty(track, 'clientWidth', { value: width, configurable: true });
+    let scrollLeft = 0;
+    Object.defineProperty(track, 'scrollLeft', {
+      get: () => scrollLeft,
+      set: (v: number) => {
+        scrollLeft = v;
+      },
+      configurable: true,
+    });
+    track.setPointerCapture = vi.fn();
+    track.releasePointerCapture = vi.fn();
+    const scrollTo = vi.fn();
+    track.scrollTo = scrollTo as unknown as typeof track.scrollTo;
+    return { track, scrollTo, getScrollLeft: () => scrollLeft };
+  }
+
+  it('scrolls the track when a mouse drags past the threshold', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track, getScrollLeft } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 120, clientY: 100 });
+
+    // Dragging left by 80px scrolls the track right by 80px.
+    expect(getScrollLeft()).toBe(80);
+  });
+
+  it('does not move the track until the drag passes the tap threshold', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track, getScrollLeft } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 195, clientY: 100 });
+
+    // 5px is still a click, not a drag.
+    expect(getScrollLeft()).toBe(0);
+  });
+
+  it('still opens the session when a mouse click barely moves', () => {
+    const onTap = vi.fn();
+    const { container } = render(<HeroCarousel photos={photos} alt="a" onTap={onTap} />);
+    const { track } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 203, clientY: 101 });
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+
+    expect(onTap).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open the session after a real drag', () => {
+    const onTap = vi.fn();
+    const { container } = render(<HeroCarousel photos={photos} alt="a" onTap={onTap} />);
+    const { track } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+
+    expect(onTap).not.toHaveBeenCalled();
+  });
+
+  it('snaps to the nearest photo on release', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track, scrollTo } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 400, clientY: 100 });
+    // Past halfway into slide 1 (scrollLeft 170 of a 300px slide).
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 230, clientY: 100 });
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 300, behavior: 'smooth' });
+  });
+
+  it('snaps back when the drag did not clear half a slide', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track, scrollTo } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 400, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 330, clientY: 100 });
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+
+    expect(scrollTo).toHaveBeenCalledWith({ left: 0, behavior: 'smooth' });
+  });
+
+  it('leaves touch alone so native momentum scrolling is untouched', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track, getScrollLeft } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'touch', pointerId: 2, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'touch', pointerId: 2, clientX: 100, clientY: 100 });
+
+    // The browser scrolls a touch gesture itself; taking it over would break
+    // momentum and snap, which already work on a phone.
+    expect(getScrollLeft()).toBe(0);
+  });
+
+  it('does not drag a single-photo hero', () => {
+    const { container } = render(<HeroCarousel photos={[photos[0]]} alt="a" />);
+    const { track, getScrollLeft } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(getScrollLeft()).toBe(0);
+  });
+
+  it('marks the track while dragging so snap and smooth-scroll stand down', () => {
+    const { container } = render(<HeroCarousel photos={photos} alt="a" />);
+    const { track } = dragSetup(container);
+
+    expect(track.className).not.toContain('is-dragging');
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 100, clientY: 100 });
+    expect(track.className).toContain('is-dragging');
+
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+    expect(track.className).not.toContain('is-dragging');
+  });
+
+  it('gives up the drag cleanly when the gesture is cancelled', () => {
+    const onTap = vi.fn();
+    const { container } = render(<HeroCarousel photos={photos} alt="a" onTap={onTap} />);
+    const { track } = dragSetup(container);
+
+    fireEvent.pointerDown(track, { pointerType: 'mouse', pointerId: 1, clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(track, { pointerType: 'mouse', pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerCancel(track, { pointerType: 'mouse', pointerId: 1 });
+
+    expect(track.className).not.toContain('is-dragging');
+    fireEvent.pointerUp(track, { pointerType: 'mouse', pointerId: 1 });
+    expect(onTap).not.toHaveBeenCalled();
+  });
+});
