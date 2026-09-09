@@ -250,7 +250,12 @@
     "beginner": "Principiante",
     "intermediate": "Intermedio",
     "advanced": "Avanzado",
-    "minutesShort": "{count} min"
+    "minutesShort": "{count} min",
+    "photoCounter": "{index} / {total}",
+    "photoOfTotal": "Foto {index} de {total}",
+    "previousPhoto": "Foto anterior",
+    "nextPhoto": "Siguiente foto",
+    "photos": "Fotos"
   },
   "lightbox": {
     "label": "Visor de fotos",

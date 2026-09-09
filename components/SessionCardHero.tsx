@@ -5,6 +5,9 @@ import { Maximize2 } from 'lucide-react';
 import { getSportGradient } from '@/lib/sport-images';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import SmartPhoto from '@/components/session/SmartPhoto';
+import HeroCarousel from '@/components/session/HeroCarousel';
+import type { CarouselControls } from '@/components/session/HeroCarousel';
+import type { CardPhoto } from '@/lib/sessionPhotos';
 
 export interface SessionCardHeroProps {
   sport: string;
@@ -26,6 +29,15 @@ export interface SessionCardHeroProps {
   liveLabel?: string;
   /** First cards in the feed load eagerly at high priority. */
   eager?: boolean;
+  /**
+   * Every photo this card can show. Two or more turns the hero into a
+   * carousel; zero or one keeps the single-image path.
+   */
+  photos?: CardPhoto[];
+  /** A tap on a carousel slide, as opposed to a swipe. */
+  onTap?: () => void;
+  onIndexChange?: (index: number, method: 'swipe' | 'arrow' | 'key') => void;
+  controlsRef?: React.MutableRefObject<CarouselControls | null>;
 }
 
 /**
@@ -51,6 +63,10 @@ export default function SessionCardHero({
   liveCount = 0,
   liveLabel,
   eager = false,
+  photos,
+  onTap,
+  onIndexChange,
+  controlsRef,
 }: SessionCardHeroProps) {
   const t = useTranslations('sessionCard');
   const [imageError, setImageError] = useState(false);
@@ -59,6 +75,11 @@ export default function SessionCardHero({
   // is actually fetchable.
   const hasImage = !imageError && (heroImage.startsWith('/images/') || heroImage.startsWith('http'));
   const showExpand = Boolean(onExpand) && hasImage;
+  // One photo is not a carousel. 143 of 311 sessions carry exactly one, and
+  // wrapping those in a scroll container would trade the card's link
+  // semantics for tap detection and gain nothing.
+  const carouselPhotos = photos ?? [];
+  const useCarousel = carouselPhotos.length > 1 && !imageError;
 
   // 'ended' is representable but currently unreachable: the feed drops finished
   // sessions and no history surface renders this card yet. It gets a neutral
@@ -82,20 +103,8 @@ export default function SessionCardHero({
     onExpand?.();
   }
 
-  return (
-    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'hero-zoom' : ''}`}>
-      {hasImage ? (
-        <SmartPhoto
-          src={heroImage}
-          alt={imageAlt}
-          eager={eager}
-          onError={() => setImageError(true)}
-          className="hero-zoom-img transition-transform duration-300 ease-out"
-        />
-      ) : (
-        <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(sport)}`} />
-      )}
-
+  const overlay = (
+    <>
       {/* Dark gradient for badge legibility */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
 
@@ -141,14 +150,47 @@ export default function SessionCardHero({
         )}
       </div>
 
-      {/* Live indicator */}
+      {/* Live indicator. Shifted right when the carousel counter also sits
+          top-left, so the two never overlap. */}
       {liveCount > 0 && (
-        <div className="absolute top-3 left-3 z-10">
+        <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>
           <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse shadow-lg">
             <span className="w-2 h-2 bg-white rounded-full" />
             {liveLabel}
           </span>
         </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className={`relative w-full aspect-[4/3] md:aspect-[3/2] overflow-hidden ${showExpand ? 'hero-zoom' : ''}`}>
+      {useCarousel ? (
+        <HeroCarousel
+          photos={carouselPhotos}
+          alt={imageAlt}
+          eagerFirst={eager}
+          onTap={onTap}
+          onIndexChange={onIndexChange}
+          controlsRef={controlsRef}
+        >
+          {overlay}
+        </HeroCarousel>
+      ) : (
+        <>
+          {hasImage ? (
+            <SmartPhoto
+              src={heroImage}
+              alt={imageAlt}
+              eager={eager}
+              onError={() => setImageError(true)}
+              className="hero-zoom-img transition-transform duration-300 ease-out"
+            />
+          ) : (
+            <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(sport)}`} />
+          )}
+          {overlay}
+        </>
       )}
     </div>
   );

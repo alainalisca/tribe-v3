@@ -25,6 +25,8 @@ import PhotoLightbox from '@/components/PhotoLightbox';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import SessionCardCreatorMenu from '@/components/session/SessionCardCreatorMenu';
 import SessionMetaBadges from '@/components/session/SessionMetaBadges';
+import { useCardPhotos } from '@/hooks/useCardPhotos';
+import { useRouter } from 'next/navigation';
 
 /** Date locale per UI language. A lookup, so no `language === 'es'` ternary is needed. */
 const DATE_LOCALE: Record<'en' | 'es', string> = { en: 'en-US', es: 'es-CO' };
@@ -56,12 +58,14 @@ export default function SessionCard({
   currentUserId,
   featuredPartnerUserIds,
   priority = false,
+  recapPhotos,
 }: SessionCardProps) {
   const { language } = useLanguage();
   const tCard = useTranslations('sessionCard');
   const { currency: userCurrency } = useUserCurrency();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const router = useRouter();
 
   // Detected neighborhood — used for the share-button payload and the
   // little inline neighborhood badge next to the location label.
@@ -87,7 +91,7 @@ export default function SessionCard({
   const isFree = !session.price_cents;
   const fillingFast = confirmedParticipants.length >= session.max_participants * 0.7 && !isPast && !isFull;
 
-  const heroImage = getSessionHeroImage(session.sport, session.photos, (session.creator as any)?.banner_url);
+  const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.banner_url);
 
   const instructorName = session.creator?.name ?? '';
   const cardTitle = session.title || `${sportName} ${tCard('with')} ${shortName(instructorName)}`.trim();
@@ -112,15 +116,21 @@ export default function SessionCard({
             ? { text: `🔥 ${tCard('fillingUp')}`, type: 'filling_up' }
             : null;
 
-  // The lightbox shows the session's own photos when it has them; otherwise the
-  // single resolved hero (an instructor banner or a sport photo).
-  const lightboxPhotos = session.photos && session.photos.length > 0 ? session.photos : [heroImage];
+  // Every photo this card can show: the session's own, then the instructor's
+  // recent recap photos, then the banner only if nothing else exists.
+  const photos = useCardPhotos({
+    sessionId: session.id,
+    sessionPhotos: session.photos,
+    recapPhotos,
+    bannerUrl: session.creator?.banner_url ?? null,
+    fallbackSrc: heroImage,
+  });
   const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
 
   const sessionsHosted = session.creator?.total_sessions_hosted ?? 0;
 
   return (
-    <div className="relative">
+    <div className="relative" onKeyDown={photos.onKeyDown}>
       <Card
         className={`bg-theme-card shadow-none hover:shadow-md transition-shadow duration-200 overflow-hidden ${
           featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id)
@@ -147,7 +157,18 @@ export default function SessionCard({
           imageAlt={cardTitle}
           urgencyLabel={urgencyBadge?.text}
           urgencyType={urgencyBadge?.type ?? null}
-          onExpand={canExpand ? () => setLightboxOpen(true) : undefined}
+          onExpand={
+            canExpand
+              ? () => {
+                  photos.onExpand();
+                  setLightboxOpen(true);
+                }
+              : undefined
+          }
+          photos={photos.photos}
+          onTap={() => router.push(`/session/${session.id}`)}
+          onIndexChange={photos.onIndexChange}
+          controlsRef={photos.controlsRef}
           liveCount={liveData?.count ?? 0}
           liveLabel={tCard('live')}
           eager={priority}
@@ -266,7 +287,11 @@ export default function SessionCard({
           history.back() pattern belongs to its pushState flow and would
           navigate the athlete away from the feed. */}
       {lightboxOpen && (
-        <PhotoLightbox photos={lightboxPhotos} initialIndex={0} onClose={() => setLightboxOpen(false)} />
+        <PhotoLightbox
+          photos={photos.lightboxPhotos}
+          initialIndex={photos.lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
     </div>
   );

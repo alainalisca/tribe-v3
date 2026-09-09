@@ -18,6 +18,12 @@ export interface SessionCardProps {
    * The home feed sets this for the first two cards only.
    */
   priority?: boolean;
+  /**
+   * The instructor's recent recap photos, newest first, already filtered for
+   * `reported`. Supplied by the feed in one batched query for the whole page;
+   * other call sites may omit it and the carousel simply has fewer slides.
+   */
+  recapPhotos?: string[];
 }
 
 export function getSkillLevelDisplay(level: string, t: (key: TranslationKey) => string) {

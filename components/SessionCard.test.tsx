@@ -1,5 +1,5 @@
-import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import SessionCard from './SessionCard';
 import type { SessionWithRelations } from '@/lib/dal';
 
@@ -176,7 +176,9 @@ describe('<SessionCard />', () => {
       } as Partial<SessionWithRelations>);
       render(<SessionCard session={withPhotos} />);
       fireEvent.click(screen.getByLabelText('View full photo'));
-      expect(screen.getByText('1 / 2')).toBeInTheDocument();
+      // Two photos is now a carousel, whose own counter also reads "1 / 2", so
+      // scope this to the lightbox rather than matching the text globally.
+      expect(within(screen.getByRole('dialog')).getByText('1 / 2')).toBeInTheDocument();
     });
 
     it('loads eagerly at high fetch priority only when marked priority', () => {
@@ -279,6 +281,66 @@ describe('<SessionCard />', () => {
         />
       );
       expect(container.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+    });
+  });
+
+  describe('photo carousel', () => {
+    const twoPhotos = ['https://example.com/p1.jpg', 'https://example.com/p2.jpg'];
+
+    beforeEach(() => {
+      // The index hook throttles on rAF, which jsdom runs asynchronously. Make
+      // it synchronous so a scroll's effect is visible by the next assertion.
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+      vi.stubGlobal('cancelAnimationFrame', () => {});
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function scrollToSlide(container: HTMLElement, slide: number, width = 300) {
+      const track = container.querySelector('.carousel-track') as HTMLElement;
+      Object.defineProperty(track, 'clientWidth', { value: width, configurable: true });
+      Object.defineProperty(track, 'scrollLeft', { value: slide * width, configurable: true });
+      fireEvent.scroll(track);
+      return track;
+    }
+
+    it('opens the lightbox on the slide the athlete is looking at', () => {
+      const { container } = render(
+        <SessionCard session={baseSession({ photos: twoPhotos } as Partial<SessionWithRelations>)} />
+      );
+      scrollToSlide(container, 1);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+
+      // Slide 2 of 2, not reset to the first.
+      expect(within(screen.getByRole('dialog')).getByText('2 / 2')).toBeInTheDocument();
+    });
+
+    it('shows carousel chrome only when there is more than one photo', () => {
+      const { container: single } = render(
+        <SessionCard session={baseSession({ photos: [twoPhotos[0]] } as Partial<SessionWithRelations>)} />
+      );
+      expect(single.querySelector('.carousel-track')).toBeNull();
+
+      const { container: many } = render(
+        <SessionCard session={baseSession({ photos: twoPhotos } as Partial<SessionWithRelations>)} />
+      );
+      expect(many.querySelector('.carousel-track')).toBeTruthy();
+    });
+
+    it('appends the instructor recap photos after the session photos', () => {
+      const { container } = render(
+        <SessionCard
+          session={baseSession({ photos: [twoPhotos[0]] } as Partial<SessionWithRelations>)}
+          recapPhotos={['https://example.com/r1.jpg']}
+        />
+      );
+      expect(container.querySelector('.carousel-track')).toBeTruthy();
+      expect(screen.getByLabelText('Photo 2 of 2')).toBeInTheDocument();
     });
   });
 });

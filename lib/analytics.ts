@@ -85,6 +85,10 @@ type EventName =
   | 'session_completed'
   | 'session_shared'
 
+  // Card photo carousel (T-UI4)
+  | 'card_photo_swipe' // first swipe per card only; arrows and keys fire every time
+  | 'card_photo_expand'
+
   // Sessions (Instructor)
   | 'session_created'
   | 'session_edited'
