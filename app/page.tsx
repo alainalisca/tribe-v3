@@ -9,7 +9,6 @@ import ProfileCompletionBanner from '@/components/ProfileCompletionBanner';
 import StreakBanner from '@/components/StreakBanner';
 import ReferralBanner from '@/components/ReferralBanner';
 import { SkeletonCard } from '@/components/Skeleton';
-import FeedWide from '@/components/home/FeedWide';
 
 /**
  * Modal-only components are dynamic-imported so their dependency graphs
@@ -181,14 +180,13 @@ export default function HomePage() {
 
           {/* ══ MAIN FEED: Sessions with interleaved discovery ══ */}
           {f.loading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-              <SkeletonCard heroRatio="session" />
+            <div className="space-y-4">
               <SkeletonCard heroRatio="session" />
               <SkeletonCard heroRatio="session" />
               <SkeletonCard heroRatio="session" />
             </div>
           ) : f.fetchError ? (
-            <Card className="lg:col-span-2 dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
+            <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
               <CardContent className="p-8 text-center">
                 <div className="text-4xl mb-4">⚠️</div>
                 <p className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
@@ -201,8 +199,8 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ) : f.filteredSessions.length === 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-              <Card className="lg:col-span-2 dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
+            <div className="space-y-4">
+              <Card className="dark:bg-tribe-card border-stone-200 dark:border-tribe-mid shadow-none">
                 <CardContent className="p-8 text-center">
                   {f.searchQuery ||
                   f.selectedSport ||
@@ -262,21 +260,19 @@ export default function HomePage() {
                 when there are 0 sessions. Each section self-hides when it has
                 no data of its own. */}
               {f.user && (
-                <FeedWide>
-                  <div className="space-y-4">
-                    <FeaturedInstructors language={f.language} />
-                    <FeaturedPartnerBanner />
-                    <FindTrainingPartners language={f.language} />
-                    <LocalFitnessEventsSection language={f.language} />
-                    <StoriesCarousel language={f.language} userId={f.user?.id || null} />
-                    <PopularVenuesSection language={f.language} />
-                    <PopularRoutesSection language={f.language} />
-                  </div>
-                </FeedWide>
+                <>
+                  <FeaturedInstructors language={f.language} />
+                  <FeaturedPartnerBanner />
+                  <FindTrainingPartners language={f.language} />
+                  <LocalFitnessEventsSection language={f.language} />
+                  <StoriesCarousel language={f.language} userId={f.user?.id || null} />
+                  <PopularVenuesSection language={f.language} />
+                  <PopularRoutesSection language={f.language} />
+                </>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="space-y-4">
               {(() => {
                 const visibleSessions = f.filteredSessions.slice(0, f.visibleCount);
 
@@ -389,14 +385,14 @@ export default function HomePage() {
 
                   // Insert discovery/banner slots at their designated positions
                   if (discoverySlots[position]) {
-                    items.push(<FeedWide key={`wide-${position}`}>{discoverySlots[position]}</FeedWide>);
+                    items.push(discoverySlots[position]);
                   }
                 });
 
                 // Append any remaining discovery slots beyond visible sessions
                 Object.entries(discoverySlots).forEach(([pos, node]) => {
                   if (Number(pos) > visibleSessions.length && node) {
-                    items.push(<FeedWide key={`wide-rest-${pos}`}>{node}</FeedWide>);
+                    items.push(node);
                   }
                 });
 
@@ -405,7 +401,7 @@ export default function HomePage() {
               {f.visibleCount < f.filteredSessions.length && (
                 <button
                   onClick={() => f.setVisibleCount((prev) => prev + f.PAGE_SIZE)}
-                  className="lg:col-span-2 w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-tribe-mid hover:bg-stone-100 dark:hover:bg-tribe-card transition"
+                  className="w-full py-3 bg-white dark:bg-tribe-card text-stone-700 dark:text-white font-medium rounded-xl border border-stone-200 dark:border-tribe-mid hover:bg-stone-100 dark:hover:bg-tribe-card transition"
                 >
                   {f.language === 'es'
                     ? `Mostrar más (${f.filteredSessions.length - f.visibleCount} restantes)`
