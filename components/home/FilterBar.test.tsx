@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FilterBar from './FilterBar';
 
@@ -184,5 +184,88 @@ describe('FilterBar', () => {
       />
     );
     expect(screen.getByText('Dist.')).toBeInTheDocument();
+  });
+});
+
+describe('FilterBar collapsed row', () => {
+  /** Drive the collapse-on-scroll hook: scroll down past its trigger. */
+  function scrollDown(y = 200) {
+    Object.defineProperty(window, 'scrollY', { value: y, configurable: true, writable: true });
+    fireEvent.scroll(window);
+  }
+
+  function scrollUp() {
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
+    fireEvent.scroll(window);
+  }
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
+    // The hook throttles on rAF; run it synchronously so a scroll's effect is
+    // visible by the next assertion.
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('stays expanded until the page scrolls down', () => {
+    render(<FilterBar {...createDefaultProps()} />);
+    expect(screen.queryByLabelText('Show filters')).not.toBeInTheDocument();
+  });
+
+  it('collapses on scroll down and shows the Filters button', () => {
+    render(<FilterBar {...createDefaultProps()} />);
+    scrollDown();
+    expect(screen.getByLabelText('Show filters')).toBeInTheDocument();
+  });
+
+  it('expands again on any scroll up', () => {
+    render(<FilterBar {...createDefaultProps()} />);
+    scrollDown();
+    expect(screen.getByLabelText('Show filters')).toBeInTheDocument();
+    scrollUp();
+    expect(screen.queryByLabelText('Show filters')).not.toBeInTheDocument();
+  });
+
+  it('counts the active filters on the collapsed button', () => {
+    render(
+      <FilterBar {...createDefaultProps({ searchQuery: 'yoga', genderFilter: 'women_only', pricingFilter: 'free' })} />
+    );
+    scrollDown();
+    // Search, gender and price are three narrowing choices.
+    expect(screen.getByLabelText('Show filters')).toHaveTextContent('3');
+  });
+
+  it('shows no count badge when nothing is filtering the feed', () => {
+    render(<FilterBar {...createDefaultProps()} />);
+    scrollDown();
+    expect(screen.getByLabelText('Show filters')).not.toHaveTextContent(/[0-9]/);
+  });
+
+  it('renders one removable chip per active filter', () => {
+    render(<FilterBar {...createDefaultProps({ searchQuery: 'yoga', pricingFilter: 'free' })} />);
+    scrollDown();
+    expect(screen.getByLabelText('Clear yoga')).toBeInTheDocument();
+    expect(screen.getByLabelText('Clear Free')).toBeInTheDocument();
+  });
+
+  it('clears just that filter when a chip is dismissed', () => {
+    const setSearchQuery = vi.fn();
+    render(<FilterBar {...createDefaultProps({ searchQuery: 'yoga', setSearchQuery })} />);
+    scrollDown();
+    fireEvent.click(screen.getByLabelText('Clear yoga'));
+    expect(setSearchQuery).toHaveBeenCalledWith('');
+  });
+
+  it('reopens the controls from the Filters button without scrolling up', () => {
+    render(<FilterBar {...createDefaultProps()} />);
+    scrollDown();
+    fireEvent.click(screen.getByLabelText('Show filters'));
+    expect(screen.queryByLabelText('Show filters')).not.toBeInTheDocument();
   });
 });

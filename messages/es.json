@@ -46,7 +46,12 @@
     "startingIn": "Empieza en",
     "beFirstToHost": "Sé el primero en organizar en {hood}",
     "sessionsToday": "{count} sesiones hoy",
-    "beFirstHere": "Sé el primero en crear una sesión aquí"
+    "beFirstHere": "Sé el primero en crear una sesión aquí",
+    "filters": "Filtros",
+    "genderAll": "Género: Todos",
+    "priceAll": "Precio: Todos",
+    "clearFilter": "Quitar {name}",
+    "showFilters": "Mostrar filtros"
   },
   "weather": {
     "clear": "Día perfecto para entrenar al aire libre",
