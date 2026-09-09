@@ -61,37 +61,30 @@ jobs:
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'placeholder'
 
       - name: Bundle size budget
-        # Baseline (2026-05-15): 7308 KB on feature/tribe-os after the
-        # Tribe.OS sprint added the full owner overlay (~25 pages +
-        # ~30 components: dashboard widgets, audit log + filter bar,
-        # training-pattern insight, recently-ended prompt, etc).
-        # Budget set at 7600 KB to catch regressions while leaving
-        # ~290 KB of headroom for the immediate post-merge work.
-        # This is a CEILING, not a target — ratchet DOWN as the
-        # follow-up code-split lands:
-        #   - Lazy-load /os/* routes via dynamic() (biggest win,
-        #     ~1.5 MB potential reduction)
-        #   - Framer Motion -> LazyMotion + domAnimation split
-        #     (~60 KB gz per consumer)
-        #   - Leaflet stays lazy via useLocationPickerMap
-        #   - Trim unused lucide-react icons (per-component imports
-        #     should already tree-shake; verify no barrel imports)
-        # Raising this ceiling further without a clear explanation
-        # in the PR description is a red flag in review.
+        # Gates on what a browser actually downloads for the home page, not on
+        # the size of the build output.
         #
-        # Raised from 7600 to 7800 on 2026-09-09 for T-UI3 (+12 KB: the
-        # two-column feed and the collapsible filter bar). main was sitting at
-        # exactly 7600 with zero headroom, so the gate was blocking every
-        # feature PR, not just that one. Only ~1 KB of the increase is CSS from
-        # hoverOnlyWhenSupported; the rest is the feature itself. Deliberately
-        # no savings were hunted in that layout PR — see follow-up ticket
-        # T-PERF1, which owns finding real reductions and ratcheting this
-        # ceiling back down.
-        run: |
-          BUDGET_KB=7800
-          TOTAL_KB=$(du -sk .next/static/chunks 2>/dev/null | awk '{print $1}')
-          echo "client bundle: ${TOTAL_KB} KB (budget: ${BUDGET_KB} KB)"
-          if [ "$TOTAL_KB" -gt "$BUDGET_KB" ]; then
-            echo "::error::Bundle size ${TOTAL_KB} KB exceeds budget ${BUDGET_KB} KB"
-            exit 1
-          fi
+        # Changed on 2026-09-09 by T-PERF1. The old gate summed every chunk for
+        # all 77 routes (`du -sk .next/static/chunks`). That number is build
+        # output: code splitting moves bytes between chunks without changing
+        # it, so the gate punished exactly the work it was supposed to
+        # encourage. It also read 7600 KB while the home page downloaded 1452,
+        # which is how T-UI3 got blocked by a 12 KB feature and had to raise
+        # the ceiling from 7600 to 7800.
+        #
+        # The new number is the sum of the scripts the prerendered home page
+        # references — the bytes an athlete on 4G in Medellin actually pays
+        # for. Measured at 1414 KB after T-PERF1's LazyMotion split (down from
+        # 1452). Budget set to 1520 KB, about 100 KB of headroom.
+        #
+        # The all-chunks total is still printed, clearly labelled as
+        # informational, so the two can never be confused again.
+        #
+        # Method note: Next 16 stopped printing per-route First Load JS and
+        # @next/bundle-analyzer is webpack-only, so it emits no report against
+        # a Turbopack build. Reading the prerendered page's script tags is the
+        # house method now; see scripts/measure-bundle.mjs.
+        #
+        # Still a CEILING, not a target. Ratchet DOWN. Known remaining weight
+        # lives in the shared chunk every route pays (543 KB across 8 files).
+        run: node scripts/measure-bundle.mjs 1520
