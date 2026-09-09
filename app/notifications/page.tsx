@@ -17,7 +17,7 @@ import {
   UserCog,
   Repeat,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
 import { useNotifications } from './useNotifications';
@@ -181,7 +181,7 @@ export default function NotificationsPage() {
         {!loading && !error && notifications.length > 0 && (
           <div className="space-y-2">
             {notifications.map((notification, index) => (
-              <motion.button
+              <m.button
                 key={notification.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -226,7 +226,7 @@ export default function NotificationsPage() {
                 {!notification.is_read && (
                   <div className="w-2.5 h-2.5 rounded-full bg-tribe-green flex-shrink-0 mt-2" />
                 )}
-              </motion.button>
+              </m.button>
             ))}
           </div>
         )}

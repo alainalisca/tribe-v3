@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Users, MapPin, Calendar, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -81,7 +81,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
         <div className="text-center mb-6 min-h-[180px]">
           <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
               key={step}
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
@@ -93,7 +93,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   <TribeWordmark className="h-6 w-auto" />
                 </div>
               ) : (
-                <motion.div
+                <m.div
                   className="mb-4 flex justify-center"
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -102,14 +102,14 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
                   <div className="w-16 h-16 bg-tribe-green/20 rounded-full flex items-center justify-center">
                     <Icon className="w-8 h-8 text-tribe-green" />
                   </div>
-                </motion.div>
+                </m.div>
               )}
 
               <h2 className="text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white mb-2">
                 {currentStep.title}
               </h2>
               <p className="text-stone-600 dark:text-gray-300">{currentStep.description}</p>
-            </motion.div>
+            </m.div>
           </AnimatePresence>
         </div>
 
@@ -118,7 +118,7 @@ export default function OnboardingModal({ onComplete }: OnboardingModalProps) {
             const isActive = i + 1 === step;
             const isPast = i + 1 < step;
             return (
-              <motion.div
+              <m.div
                 key={i}
                 animate={{ width: isActive ? 24 : 8 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
