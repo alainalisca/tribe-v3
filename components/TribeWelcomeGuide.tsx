@@ -1,10 +1,12 @@
 'use client';
 
 /**
- * General Tribe welcome guide — auto-shows on first feed visit for
- * signed-in users. Distinct from OnboardingModal (which handles
- * profile completion immediately after signup): this is feature
- * discovery, not data collection.
+ * The single first-run introduction for signed-in athletes (T-ONB1).
+ *
+ * There used to be two: a four-slide OnboardingModal and this tour. They fired
+ * in sequence, and the tour fired again when the modal closed. The modal is
+ * gone; the profile nudge it ended on belongs to ProfileCompletionBanner,
+ * which does the same job without blocking the screen.
  *
  * Five steps:
  *   1. Welcome / what Tribe is
@@ -20,11 +22,12 @@
  * Bilingual EN+ES (ES marked PENDING VERONICA).
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Sparkles, Search, Plus, MessageCircle, Briefcase } from 'lucide-react';
 import QuickGuide, { type QuickGuideStep } from '@/components/QuickGuide';
 import { useQuickGuide } from '@/hooks/useQuickGuide';
+import { trackEvent } from '@/lib/analytics';
 
 const GUIDE_ID = 'tribe-welcome';
 
@@ -117,6 +120,25 @@ export default function TribeWelcomeGuide({
   useEffect(() => {
     onReplayRef?.(guide.replay);
   }, [onReplayRef, guide.replay]);
+
+  // LR-04 funnel. These fired from OnboardingModal, which T-ONB1 deleted;
+  // without them the funnel loses its middle (signup -> verify -> onboarding
+  // start -> onboarding complete -> first profile save). Refs so a replay or a
+  // re-render cannot double-count.
+  const startedRef = useRef(false);
+  const finishedRef = useRef(false);
+
+  useEffect(() => {
+    if (guide.open && !startedRef.current) {
+      startedRef.current = true;
+      trackEvent('onboarding_started');
+    }
+    if (guide.seen && startedRef.current && !finishedRef.current) {
+      finishedRef.current = true;
+      trackEvent('onboarding_finished'); // legacy
+      trackEvent('onboarding_completed'); // LR-04 canonical
+    }
+  }, [guide.open, guide.seen]);
 
   // The Tribe.OS step is last in every language, so dropping it is a slice.
   const allSteps = stepsByLanguage[language];
