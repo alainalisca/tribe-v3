@@ -1,7 +1,7 @@
 'use client';
 
 import { X, Camera } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -9,52 +9,27 @@ interface ProfileCompletionBannerProps {
   hasPhoto: boolean;
   hasSports: boolean;
   hasName?: boolean;
-  userId?: string;
 }
 
 // How long the banner stays hidden after the user dismisses it. We snooze
 // instead of dismissing forever so users who skipped adding a photo get a
 // gentle reminder again later, while users who completed their profile never
-// see it. Photo-less profiles make the app feel empty, so we keep asking.
-const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-export default function ProfileCompletionBanner({
-  hasPhoto,
-  hasSports,
-  hasName = true,
-  userId,
-}: ProfileCompletionBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
+export default function ProfileCompletionBanner({ hasPhoto, hasSports, hasName = true }: ProfileCompletionBannerProps) {
   const { t, language } = useLanguage();
+  // T-ONB1: was a timed snooze in localStorage, so it came back on a timer and
+  // was per-device besides. Dismissal is now permanent and server-side. The
+  // banner is still conditional — it hides itself the moment the profile is
+  // complete — so it can return if the athlete later empties their profile,
+  // which is the condition changing rather than a new session starting.
+  const { dismissed, loading, dismiss } = useBannerDismissal(BANNER_IDS.profileCompletion);
 
-  // On mount, check whether the banner is still within its snooze window.
-  // Migration: older builds wrote a permanent `profileBannerDismissed_*` flag.
-  // We no longer read it (so those users re-enter the snooze cycle) and clean
-  // it up here.
-  useEffect(() => {
-    if (!userId) return;
-    localStorage.removeItem(`profileBannerDismissed_${userId}`);
-    const snoozedUntilRaw = localStorage.getItem(`profileBannerSnoozedUntil_${userId}`);
-    if (snoozedUntilRaw) {
-      const snoozedUntil = Number.parseInt(snoozedUntilRaw, 10);
-      if (Number.isFinite(snoozedUntil) && Date.now() < snoozedUntil) {
-        setDismissed(true);
-      }
-    }
-  }, [userId]);
-
-  // Profile is complete if user has name, photo, and sports
   const isProfileComplete = hasName && hasPhoto && hasSports;
 
-  // Don't show if snoozed OR if profile is complete
-  if (dismissed || isProfileComplete) return null;
+  // Unknown means render nothing.
+  if (loading || dismissed || isProfileComplete) return null;
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    if (userId) {
-      localStorage.setItem(`profileBannerSnoozedUntil_${userId}`, String(Date.now() + SNOOZE_MS));
-    }
-  };
+  const handleDismiss = () => dismiss();
 
   // When the photo is missing we lead with a photo-specific ask, because a real
   // face is what makes the app feel like real people. Name and sports stay as
