@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { logError } from '@/lib/logger';
+import { X } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
+import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 import { shareAchievement } from '@/lib/share';
 import { getSessionWeekIndex, getSessionWeekday, computeWeeklyStreak } from '@/lib/utils';
 import { bogotaToday } from '@/lib/time/bogotaDate';
@@ -23,6 +26,10 @@ interface AttendanceRecord {
 
 export default function StreakBanner({ userId }: StreakBannerProps) {
   const supabase = createClient();
+  // T-ONB1: this banner had no dismiss control at all — the only one of the
+  // five without a way to make it stop.
+  const { dismissed, loading: dismissalLoading, dismiss } = useBannerDismissal(BANNER_IDS.streak);
+  const tCommon = useTranslations('common');
   const { language } = useLanguage();
   const [streak, setStreak] = useState<number>(0);
   const [weekDays, setWeekDays] = useState<boolean[]>([false, false, false, false, false, false, false]);
@@ -83,8 +90,8 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
     }
   }
 
-  // Don't show if no streak
-  if (loading || streak === 0) {
+  // No streak, dismissed, or the answer is not known yet.
+  if (loading || dismissalLoading || dismissed || streak === 0) {
     return null;
   }
 
@@ -93,7 +100,15 @@ export default function StreakBanner({ userId }: StreakBannerProps) {
   const showSparkle = streak >= 4;
 
   return (
-    <div className="bg-white dark:bg-tribe-mid rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-tribe-card">
+    <div className="relative bg-white dark:bg-tribe-mid rounded-lg p-4 mb-4 shadow-sm border border-gray-200 dark:border-tribe-card">
+      <button
+        onClick={dismiss}
+        aria-label={tCommon('dismiss')}
+        className="absolute top-1 right-1 min-w-[40px] min-h-[40px] flex items-center justify-center text-stone-500 hover:text-stone-700 dark:text-gray-400 dark:hover:text-gray-200 rounded"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
       {/* Streak header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

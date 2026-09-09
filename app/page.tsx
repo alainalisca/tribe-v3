@@ -22,12 +22,10 @@ import { SkeletonCard } from '@/components/Skeleton';
  * content that matters for SEO or initial paint — they're interactive
  * overlays that only mount after a user action or auth-state change.
  */
-const OnboardingModal = dynamic(() => import('@/components/OnboardingModal'), { ssr: false });
 const SafetyWaiverModal = dynamic(() => import('@/components/SafetyWaiverModal'), { ssr: false });
-// Auto-shown welcome tour for signed-in users on first feed visit.
-// Distinct from OnboardingModal (which collects profile data); this
-// is feature discovery. Dynamic so the small chunk only loads when
-// the home page actually renders for an authed user.
+// The single first-run sequence for signed-in athletes (T-ONB1). Dynamic so
+// the small chunk only loads when the home page actually renders for an
+// authed user.
 const TribeWelcomeGuide = dynamic(() => import('@/components/TribeWelcomeGuide'), { ssr: false });
 import StoriesRow from '@/components/StoriesRow';
 import LazyMount from '@/components/LazyMount';
@@ -88,24 +86,22 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen pb-32 bg-stone-50 dark:bg-tribe-mid">
-      {/* T-C1: `suppressOnboarding` hides both onboarding systems when a pending
-          destination (a shared /s/[id] link the user signed in from) is in flight,
-          so the user lands on the session, not the onboarding gauntlet. */}
-      {f.showOnboarding && f.user && !f.suppressOnboarding && (
-        <OnboardingModal
-          onComplete={() => {
-            localStorage.setItem(`hasSeenOnboarding_${f.user!.id}`, 'true');
-            f.setShowOnboarding(false);
-          }}
-        />
-      )}
+      {/* The single first-run sequence (T-ONB1). There used to be two: a
+          four-slide OnboardingModal and this tour, which fired in sequence and
+          then the tour again when the modal closed. The modal is gone; its one
+          useful job, nudging an incomplete profile, is ProfileCompletionBanner's
+          and does not block the screen.
 
-      {/* Feature-discovery welcome guide. Auto-shows on first visit
-          for signed-in users; suppressed while OnboardingModal is up
-          so we don't stack two modals. Independent seen-flag from
-          the onboarding modal — this one is "have you seen the app
-          tour", not "have you completed your profile". */}
-      {f.user && !f.showOnboarding && !f.suppressOnboarding ? <TribeWelcomeGuide enabled /> : null}
+          Rendered only once the profile is known. `userChecked` alone is not
+          enough: `user` resolves a round-trip before `userProfile`, and mounting
+          in that window is what auto-opened the tour before the answer existed.
+
+          T-C1: `suppressOnboarding` hides it when a pending destination (a
+          shared /s/[id] link the user signed in from) is in flight, so the
+          athlete lands on the session, not the intro. */}
+      {f.user && f.userProfile && !f.suppressOnboarding ? (
+        <TribeWelcomeGuide enabled showInstructorStep={!!f.userProfile.is_instructor} />
+      ) : null}
 
       <FilterBar
         searchQuery={f.searchQuery}
@@ -302,7 +298,6 @@ export default function HomePage() {
                               hasPhoto={!!f.userProfile.avatar_url}
                               hasSports={!!f.userProfile.sports && f.userProfile.sports.length > 0}
                               hasName={!!f.userProfile.name}
-                              userId={f.user.id}
                             />
                           );
                         }
@@ -340,7 +335,7 @@ export default function HomePage() {
                   // After 10th card: referral
                   10: f.user ? (
                     <LazyMount key="banner-referral-lazy" minHeight="120px">
-                      <ReferralBanner userId={f.user.id} />
+                      <ReferralBanner />
                     </LazyMount>
                   ) : null,
                   12: f.user ? (
@@ -438,7 +433,7 @@ export default function HomePage() {
       />
 
       <BottomNav />
-      <NotificationPrompt hideWhenOnboarding={f.showOnboarding} />
+      <NotificationPrompt />
     </div>
   );
 }
