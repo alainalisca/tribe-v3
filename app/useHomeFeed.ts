@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation } from '@/lib/dal';
+import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation, fetchRecapPhotosByCreators } from '@/lib/dal';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
@@ -87,6 +87,10 @@ export function useHomeFeed() {
   const identifiedRef = useRef(false);
 
   // --- Composed hooks ---
+  // Instructor recap photos for the card carousel, keyed by creator id.
+  // Fetched once for the whole visible page rather than per card.
+  const [recapPhotosByCreator, setRecapPhotosByCreator] = useState<Record<string, string[]>>({});
+
   const filtering = useSessionFiltering({ sessions, userLocation });
   const liveStatus = useLiveStatus(supabase);
 
@@ -111,9 +115,19 @@ export function useHomeFeed() {
       // past its end time; history surfaces show those instead.
       const upcoming = (result.data || []).filter((s) => !isPastFeedGrace(s));
       setSessions(upcoming);
-      // Defer live status loading so session list renders immediately
+      // Defer live status and recap photos so the session list renders
+      // immediately. Recap photos are ONE request for the whole page, keyed by
+      // the distinct creators on screen — never one per card.
       requestAnimationFrame(() => {
         liveStatus.loadLiveStatuses(upcoming.map((s) => s.id));
+        const creatorIds = [...new Set(upcoming.map((s) => s.creator_id).filter(Boolean))] as string[];
+        if (creatorIds.length > 0) {
+          void fetchRecapPhotosByCreators(supabase, creatorIds).then((recap) => {
+            // A failure costs the carousel a few slides and nothing else, so the
+            // feed keeps its sessions rather than surfacing an error.
+            if (recap.success && recap.data) setRecapPhotosByCreator(recap.data);
+          });
+        }
       });
     } catch (error) {
       logError(error, { action: 'loadSessions' });
@@ -345,6 +359,7 @@ export function useHomeFeed() {
     setShowSafetyWaiver: actions.setShowSafetyWaiver,
     setPendingSessionId: actions.setPendingSessionId,
     liveStatusMap: liveStatus.liveStatusMap,
+    recapPhotosByCreator,
     liveUserIdSet: liveStatus.liveUserIdSet,
     fixedHeight,
     setFixedHeight,

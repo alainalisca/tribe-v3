@@ -376,6 +376,7 @@ export default function HomePage() {
                         distance={f.getDistanceText(session)}
                         liveData={f.liveStatusMap[session.id]}
                         priority={index < 2}
+                        recapPhotos={f.recapPhotosByCreator[session.creator_id ?? ''] ?? []}
                       />
                     </AnimatedCard>
                   );

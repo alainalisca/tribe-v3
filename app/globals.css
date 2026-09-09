@@ -311,6 +311,43 @@ body {
 }
 
 @layer utilities {
+  /* Card photo carousel track. Native scroll-snap, no library: it keeps
+     momentum scrolling on iOS, works inside Capacitor, and adds no bundle. */
+  .carousel-track {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Reduce Motion: slides jump rather than glide. scroll-behavior has to be
+     overridden here because Tailwind's scroll-smooth sets it on the element. */
+  @media (prefers-reduced-motion: reduce) {
+    .carousel-track {
+      scroll-behavior: auto;
+    }
+  }
+
+  /* Mid mouse-drag. A native scroll container ignores mouse drag, so the
+     carousel sets scrollLeft by hand; snap and smooth-scroll both fight that
+     assignment and make the strip stutter or spring back. Both stand down for
+     the duration, and the release re-enables them so the snap-to-nearest
+     animation still lands. */
+  .carousel-track.is-dragging {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
+
+  /* The browser's drag ghost on a photo reads as a broken interaction. The
+     track also calls preventDefault on dragstart; this covers Safari, which
+     honours the CSS property rather than the attribute. */
+  .carousel-track img {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
   /* Hero hover zoom, gated on real pointer capability.
      tailwind.config.ts does not enable future.hoverOnlyWhenSupported yet, so a
      plain `hover:` or `group-hover:` also fires on touch after a tap and leaves
