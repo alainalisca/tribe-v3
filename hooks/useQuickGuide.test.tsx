@@ -100,7 +100,7 @@ describe('useQuickGuide: dismissal persists', () => {
     act(() => result.current.close());
 
     expect(result.current.open).toBe(false);
-    expect(window.localStorage.getItem('tribe_guide_seen_tribe-welcome')).toBe('1');
+    expect(window.localStorage.getItem('tribe_guide_seen_u1_tribe-welcome')).toBe('1');
     await waitFor(() => expect(mockDismiss).toHaveBeenCalledWith(expect.anything(), 'tribe-welcome'));
   });
 
@@ -117,11 +117,53 @@ describe('useQuickGuide: dismissal persists', () => {
   });
 
   it('trusts the local mirror without waiting for the network', async () => {
-    window.localStorage.setItem('tribe_guide_seen_tribe-welcome', '1');
+    window.localStorage.setItem('tribe_guide_seen_u1_tribe-welcome', '1');
     mockFetchState.mockImplementation(pending);
     const { result } = renderHook(() => useQuickGuide('tribe-welcome'));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.open).toBe(false);
     expect(mockFetchState).not.toHaveBeenCalled();
+  });
+});
+
+describe('useQuickGuide: a brand new athlete sees the introduction', () => {
+  it('opens for NULL onboarding_completed_at and an empty dismissed_banners', async () => {
+    // Exactly the row a brand new account has after migration 156: the default
+    // is NULL and the backfill only touched pre-existing users.
+    mockFetchState.mockResolvedValue({
+      success: true,
+      data: { onboardingCompletedAt: null, dismissedBanners: [] },
+    });
+    const { result } = renderHook(() => useQuickGuide('tribe-welcome'));
+    await waitFor(() => expect(result.current.open).toBe(true));
+    expect(result.current.seen).toBe(false);
+  });
+
+  it('is not suppressed by another account dismissing it on the same device', async () => {
+    // REGRESSION. The mirror key carried only the guide id, so it was shared by
+    // every account on the browser — and every browser that had used the old
+    // build already had it set. The introduction was suppressed for everyone,
+    // and the server was never even consulted.
+    window.localStorage.setItem('tribe_guide_seen_tribe-welcome', '1');
+
+    const { result } = renderHook(() => useQuickGuide('tribe-welcome'));
+    await waitFor(() => expect(result.current.open).toBe(true));
+    expect(mockFetchState).toHaveBeenCalled();
+  });
+
+  it('is not suppressed by a different user id in the scoped key', async () => {
+    window.localStorage.setItem('tribe_guide_seen_someone-else_tribe-welcome', '1');
+    const { result } = renderHook(() => useQuickGuide('tribe-welcome'));
+    await waitFor(() => expect(result.current.open).toBe(true));
+  });
+
+  it('writes and reads a key scoped to this athlete', async () => {
+    const { result } = renderHook(() => useQuickGuide('tribe-welcome'));
+    await waitFor(() => expect(result.current.open).toBe(true));
+    act(() => result.current.close());
+
+    expect(window.localStorage.getItem('tribe_guide_seen_u1_tribe-welcome')).toBe('1');
+    // And nothing under the old shared key.
+    expect(window.localStorage.getItem('tribe_guide_seen_tribe-welcome')).toBeNull();
   });
 });

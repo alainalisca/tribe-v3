@@ -65,7 +65,7 @@ describe('useBannerDismissal', () => {
     act(() => result.current.dismiss());
 
     expect(result.current.dismissed).toBe(true);
-    expect(window.localStorage.getItem('tribe_banner_dismissed_referral')).toBe('1');
+    expect(window.localStorage.getItem('tribe_banner_dismissed_u1_referral')).toBe('1');
     await waitFor(() => expect(mockDismiss).toHaveBeenCalledWith(expect.anything(), 'referral'));
   });
 
@@ -93,5 +93,21 @@ describe('useBannerDismissal', () => {
     expect(streak.result.current.dismissed).toBe(true);
     expect(referral.result.current.dismissed).toBe(false);
     expect(new Set(Object.values(BANNER_IDS)).size).toBe(Object.values(BANNER_IDS).length);
+  });
+});
+
+describe('useBannerDismissal: the mirror is per athlete', () => {
+  it('is not hidden by another account dismissing it on this device', async () => {
+    window.localStorage.setItem('tribe_banner_dismissed_referral', '1');
+    const { result } = renderHook(() => useBannerDismissal(BANNER_IDS.referral));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dismissed).toBe(false);
+  });
+
+  it('writes a key scoped to this athlete', async () => {
+    const { result } = renderHook(() => useBannerDismissal(BANNER_IDS.referral));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    act(() => result.current.dismiss());
+    expect(window.localStorage.getItem('tribe_banner_dismissed_u1_referral')).toBe('1');
   });
 });

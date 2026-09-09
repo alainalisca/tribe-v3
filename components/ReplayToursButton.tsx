@@ -22,6 +22,8 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { resetOnboardingState } from '@/lib/dal';
+import { guideStorageKey } from '@/hooks/useQuickGuide';
+import { bannerStorageKey } from '@/hooks/useBannerDismissal';
 import { logError } from '@/lib/logger';
 import { RotateCcw, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -83,29 +85,35 @@ export default function ReplayToursButton() {
    * does not keep answering from cache.
    */
   async function handleReplay() {
-    if (typeof window !== 'undefined') {
-      try {
-        for (const id of GUIDE_IDS) {
-          window.localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
-        }
-        for (const id of BANNER_IDS_TO_CLEAR) {
-          window.localStorage.removeItem(`${BANNER_STORAGE_PREFIX}${id}`);
-        }
-        window.localStorage.removeItem(ONBOARDING_DISMISS_KEY);
-      } catch {
-        // localStorage can throw in private browsing. The server reset below
-        // is the one that matters, so carry on.
-      }
-    }
-
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (user) {
       const result = await resetOnboardingState(supabase, user.id);
       if (!result.success) {
         logError(new Error(result.error ?? 'reset_failed'), { action: 'ReplayToursButton' });
+      }
+    }
+
+    // The mirror keys are scoped to the user, so clearing them needs the id.
+    // The legacy un-scoped keys are cleared too: they are never read any more,
+    // but leaving them behind is litter in every athlete's browser.
+    if (typeof window !== 'undefined') {
+      try {
+        for (const id of GUIDE_IDS) {
+          window.localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
+          if (user) window.localStorage.removeItem(guideStorageKey(id, user.id));
+        }
+        for (const id of BANNER_IDS_TO_CLEAR) {
+          window.localStorage.removeItem(`${BANNER_STORAGE_PREFIX}${id}`);
+          if (user) window.localStorage.removeItem(bannerStorageKey(id, user.id));
+        }
+        window.localStorage.removeItem(ONBOARDING_DISMISS_KEY);
+      } catch {
+        // localStorage can throw in private browsing. The server reset above is
+        // the one that matters, so carry on.
       }
     }
 

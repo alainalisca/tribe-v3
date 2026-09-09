@@ -10,29 +10,36 @@
  * Dismissal state used to live only in localStorage, in a different key shape
  * per banner — and NotificationPrompt's key was not even per-user, so one
  * person dismissing it hid it from everyone else sharing that device.
+ *
+ * The mirror key here is scoped to the user for the same reason: a per-device
+ * flag that ignores identity hides a banner from the next account to sign in
+ * on that browser, whose server state correctly says otherwise.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { dismissBanner, fetchOnboardingState } from '@/lib/dal';
 import { logError } from '@/lib/logger';
 
 const STORAGE_PREFIX = 'tribe_banner_dismissed_';
 
-const key = (bannerId: string) => `${STORAGE_PREFIX}${bannerId}`;
+/** Per-user, so one account's dismissal cannot hide a banner from another. */
+export function bannerStorageKey(bannerId: string, userId: string): string {
+  return `${STORAGE_PREFIX}${userId}_${bannerId}`;
+}
 
-function readLocal(bannerId: string): boolean {
+function readLocal(bannerId: string, userId: string): boolean {
   if (typeof window === 'undefined') return false;
   try {
-    return window.localStorage.getItem(key(bannerId)) === '1';
+    return window.localStorage.getItem(bannerStorageKey(bannerId, userId)) === '1';
   } catch {
     return false;
   }
 }
 
-function writeLocal(bannerId: string): void {
+function writeLocal(bannerId: string, userId: string): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(key(bannerId), '1');
+    window.localStorage.setItem(bannerStorageKey(bannerId, userId), '1');
   } catch {
     // Ignore: the server write is the durable one.
   }
@@ -51,14 +58,10 @@ export function useBannerDismissal(bannerId: string): UseBannerDismissalResult {
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const userIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
-
-    if (readLocal(bannerId)) {
-      setDismissed(true);
-      setLoading(false);
-      return;
-    }
 
     async function resolve() {
       const supabase = createClient();
@@ -67,6 +70,14 @@ export function useBannerDismissal(bannerId: string): UseBannerDismissalResult {
       } = await supabase.auth.getUser();
       if (cancelled) return;
       if (!user) {
+        setLoading(false);
+        return;
+      }
+      userIdRef.current = user.id;
+
+      // Checked only once the user is known, because the key is scoped to them.
+      if (readLocal(bannerId, user.id)) {
+        setDismissed(true);
         setLoading(false);
         return;
       }
@@ -95,7 +106,7 @@ export function useBannerDismissal(bannerId: string): UseBannerDismissalResult {
 
   const dismiss = useCallback(() => {
     setDismissed(true);
-    writeLocal(bannerId);
+    if (userIdRef.current) writeLocal(bannerId, userIdRef.current);
 
     void (async () => {
       const supabase = createClient();
