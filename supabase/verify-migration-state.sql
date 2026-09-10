@@ -1004,4 +1004,18 @@ select 'GUARD_sessions_verdict_locked',
 from (values ('partner_status'), ('partner_reviewed_at')) as v(column_name)
 where has_column_privilege('authenticated', 'public.sessions', v.column_name, 'UPDATE')
    or has_column_privilege('authenticated', 'public.sessions', v.column_name, 'INSERT')
+union all
+select '159_rls_admin_helper_not_inline_is_admin',
+       -- Policy-only migration, so the artifact is the policy text itself.
+       -- An untouched policy still reads "... FROM users WHERE id = auth.uid()
+       -- AND is_admin"; a fixed one reads is_app_admin(). Matching on
+       -- "from users" rather than on "is_admin" avoids matching the helper's
+       -- own name.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public'
+           and tablename in ('featured_partners', 'community_news',
+                             'local_fitness_events', 'community_bulletin')
+           and coalesce(qual, '') ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
 order by migration;
