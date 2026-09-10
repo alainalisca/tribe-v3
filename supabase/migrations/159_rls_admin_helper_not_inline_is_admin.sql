@@ -56,3 +56,10 @@ CREATE POLICY "Anyone can read active or admin reads all" ON public.featured_par
 DROP POLICY IF EXISTS "Admins manage all" ON public.featured_partners;
 CREATE POLICY "Admins manage all" ON public.featured_partners
   FOR ALL USING (public.is_app_admin());
+
+-- ── community_news ──────────────────────────────────────────────────────────
+-- Read policy (is_active = true) is fine; the FOR ALL admin policy is what
+-- refuses the read, because FOR ALL covers SELECT.
+DROP POLICY IF EXISTS "Admins can manage news" ON public.community_news;
+CREATE POLICY "Admins can manage news" ON public.community_news
+  FOR ALL USING (public.is_app_admin());
