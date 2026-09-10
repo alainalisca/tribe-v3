@@ -68,3 +68,8 @@ CREATE POLICY "Admins can manage news" ON public.community_news
 DROP POLICY IF EXISTS "Admins can manage events" ON public.local_fitness_events;
 CREATE POLICY "Admins can manage events" ON public.local_fitness_events
   FOR ALL USING (public.is_app_admin());
+
+-- ── community_bulletin ──────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "Admins can manage bulletin" ON public.community_bulletin;
+CREATE POLICY "Admins can manage bulletin" ON public.community_bulletin
+  FOR ALL USING (public.is_app_admin());
