@@ -49,3 +49,7 @@ export * from './tribeOSWaitlist';
 export * from './releaseNotes';
 // Note: instructorPosts is NOT re-exported from here because its symbol names
 // collide with comments.ts / promote.ts. Import directly from './instructorPosts'.
+
+// T-GYM1: gym venue identity and approval
+export * from './gymVenue';
+export * from './venueRequests';

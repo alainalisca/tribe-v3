@@ -117,7 +117,7 @@ export const RECURRING_PARENT_COLUMNS =
  * no consumer of these lists reads it.
  */
 export const SESSION_ALL_COLUMNS =
-  'community_id, created_at, creator_id, currency, current_participants, date, description, duration, early_access_only_until, end_time, equipment, followup_sent, gender_preference, id, is_immediate, is_paid, is_recurring, is_training_now, join_policy, latitude, location, location_lat, location_lng, longitude, max_paid_spots, max_participants, payment_gateway, photo_verified, photos, platform_fee_percent, price_cents, recap_photos, recurrence_days, recurrence_end_date, recurrence_pattern, recurring_parent_id, reminder_15min_sent, reminder_1hr_sent, reminder_sent, skill_level, sport, start_time, status, title, updated_at, verified_at, verified_by, visibility, waitlist_count';
+  'community_id, created_at, creator_id, currency, current_participants, date, description, duration, early_access_only_until, end_time, equipment, followup_sent, gender_preference, id, is_immediate, is_paid, is_recurring, is_training_now, join_policy, latitude, location, location_lat, location_lng, longitude, max_paid_spots, max_participants, partner_id, partner_reviewed_at, partner_status, payment_gateway, photo_verified, photos, platform_fee_percent, price_cents, recap_photos, recurrence_days, recurrence_end_date, recurrence_pattern, recurring_parent_id, reminder_15min_sent, reminder_1hr_sent, reminder_sent, skill_level, sport, start_time, status, title, updated_at, verified_at, verified_by, visibility, waitlist_count';
 
 // --- Read operations ---
 
@@ -137,7 +137,7 @@ export async function fetchSession(supabase: SupabaseClient, sessionId: string):
         // fetchSessionPaymentInstructions. Keeping it out of this list is also
         // what makes the anon column REVOKE safe: after the revoke, any select
         // naming the column fails for anon and would break the whole page.
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .single();
@@ -180,7 +180,7 @@ export async function fetchSessionWithDetails(
         // fetchSessionPaymentInstructions. Keeping it out of this list is also
         // what makes the anon column REVOKE safe: after the revoke, any select
         // naming the column fails for anon and would break the whole page.
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .maybeSingle();
@@ -272,7 +272,7 @@ export async function fetchSessionPublicView(
     const { data: row, error } = await supabase
       .from('sessions_public')
       .select(
-        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng'
+        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .maybeSingle();
