@@ -372,6 +372,8 @@ export default function HomePage() {
                         liveData={f.liveStatusMap[session.id]}
                         priority={index < 2}
                         recapPhotos={f.recapPhotosByCreator[session.creator_id ?? ''] ?? []}
+                        sessionPartner={session.partner_id ? (f.partnersById.get(session.partner_id) ?? null) : null}
+                        creatorPartner={f.partnersByCreator.get(session.creator_id ?? '') ?? null}
                       />
                     </AnimatedCard>
                   );

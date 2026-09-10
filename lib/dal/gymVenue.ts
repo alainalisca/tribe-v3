@@ -26,9 +26,15 @@ export interface GymIdentity {
   business_type: string;
   logo_url: string | null;
   status: string;
+  /**
+   * The gym's own user account. Needed for two things that fail silently
+   * without it: telling "the gym is hosting" from "a coach is hosting here",
+   * and linking the chip to /storefront/[id], which is keyed by user id.
+   */
+  user_id: string | null;
 }
 
-const GYM_IDENTITY_COLUMNS = 'id, business_name, business_type, logo_url, status';
+const GYM_IDENTITY_COLUMNS = 'id, business_name, business_type, logo_url, status, user_id';
 
 /** A pending venue request, as the gym's dashboard shows it. */
 export interface VenueRequest {
@@ -246,7 +252,6 @@ export async function fetchOrganizationUserIds(supabase: SupabaseClient): Promis
 
 /** A gym or studio tile in the "Gimnasios y estudios" discover section. */
 export interface GymDirectoryEntry extends GymIdentity {
-  user_id: string;
   address: string | null;
   specialties: string[] | null;
   coachCount: number;
@@ -257,7 +262,7 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select(`${GYM_IDENTITY_COLUMNS}, user_id, address, specialties`)
+      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties`)
       .eq('status', 'active')
       .in('business_type', [...ORGANIZATION_TYPES])
       .order('business_name', { ascending: true });
