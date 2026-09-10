@@ -26,6 +26,13 @@ export interface SessionCardHeroProps {
   shareButton?: React.ReactNode;
   /** Renders the LIVE pill top-left when greater than zero. */
   liveCount?: number;
+  /**
+   * T-GYM1: the gym chip (or the creator's "Pendiente" tag). Rendered only when
+   * the slot is free -- the LIVE pill and the carousel's photo counter both own
+   * top-left, and the hero must never stack two things there. The venue is
+   * still named on the address line, so nothing is lost when it is crowded out.
+   */
+  topLeftSlot?: React.ReactNode;
   liveLabel?: string;
   /** First cards in the feed load eagerly at high priority. */
   eager?: boolean;
@@ -61,6 +68,7 @@ export default function SessionCardHero({
   actions,
   shareButton,
   liveCount = 0,
+  topLeftSlot,
   liveLabel,
   eager = false,
   photos,
@@ -152,6 +160,8 @@ export default function SessionCardHero({
 
       {/* Live indicator. Shifted right when the carousel counter also sits
           top-left, so the two never overlap. */}
+      {topLeftSlot && liveCount === 0 && !useCarousel && topLeftSlot}
+
       {liveCount > 0 && (
         <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>
           <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold motion-safe:animate-pulse shadow-lg">
