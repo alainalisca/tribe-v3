@@ -8,8 +8,6 @@ import { fetchPartnerByUserId, fetchPartnerStats } from '@/lib/dal/featuredPartn
 import type { FeaturedPartner, PartnerStats } from '@/lib/dal/featuredPartners';
 import BottomNav from '@/components/BottomNav';
 import PartnerDashboardStats from '@/components/partner/PartnerDashboardStats';
-import PartnerBookingsChart from '@/components/partner/PartnerBookingsChart';
-import PartnerPerformance from '@/components/partner/PartnerPerformance';
 import { ArrowLeft, Loader } from 'lucide-react';
 import VenueRequestsSection from '@/components/partner/VenueRequestsSection';
 import { useVenueRequests } from '@/hooks/useVenueRequests';
@@ -138,11 +136,18 @@ export default function PartnerDashboardPage() {
         {/* Stats grid */}
         <PartnerDashboardStats stats={stats} language={language} />
 
-        {/* Bookings chart */}
-        <PartnerBookingsChart language={language} period={period} />
-
-        {/* Performance metrics */}
-        <PartnerPerformance partner={partner} language={language} />
+        {/* The Bookings-by-Day chart and the Performance Metrics block were
+            removed here (T-GYM2). The chart's bars were Math.random(), and
+            "Avg Rating" / "Sessions/Month" rendered partner.min_rating and
+            partner.min_sessions_per_month -- the partnership's CONTRACT
+            MINIMUMS -- as achievements, next to a green "Target: 4.0+". A gym
+            with no sessions and no ratings read its own contract back as
+            performance it had met.
+            
+            This PR is what makes the page reachable at all, so the four tiles
+            above are the page. They read real data and their zeros are true.
+            No replacements, no empty states: see the follow-up ticket for
+            wiring real metrics. */}
       </div>
 
       <BottomNav />
