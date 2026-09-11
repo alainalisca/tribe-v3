@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveSessionGym, type SessionGymSource } from './sessionGym';
+import { resolveSessionGym, presenterGymMark, type SessionGymSource } from './sessionGym';
 
 const BULLBOX: SessionGymSource = {
   id: 'p1',
@@ -86,5 +86,60 @@ describe('resolveSessionGym', () => {
     // DoD 1: their card must look exactly as T-UI1/T-UI2 left it.
     const r = resolveSessionGym({ creatorId: COACH, viewerId: COACH });
     expect(r).toEqual({ venue: null, affiliation: null, pending: null, gymHosted: false });
+  });
+});
+
+describe('presenterGymMark — one gym element, never two', () => {
+  const OTHER: SessionGymSource = { ...BULLBOX, id: 'p9', business_name: 'Gym Nueve', user_id: 'other-user' };
+
+  it('prefers the affiliation, because the venue is already bold on the location line', () => {
+    const mark = presenterGymMark(
+      resolveSessionGym({
+        sessionPartner: OTHER,
+        sessionPartnerStatus: 'approved',
+        creatorPartner: BULLBOX,
+        creatorId: COACH,
+      })
+    );
+    expect(mark).toEqual({ gym: expect.objectContaining({ business_name: 'CrossFit BullBox' }), asCoach: true });
+  });
+
+  it('falls back to the venue when the coach is on no roster', () => {
+    // Today's state: partner_instructors is empty, so this is the live path.
+    const mark = presenterGymMark(
+      resolveSessionGym({ sessionPartner: BULLBOX, sessionPartnerStatus: 'approved', creatorId: COACH })
+    );
+    expect(mark).toEqual({ gym: expect.objectContaining({ business_name: 'CrossFit BullBox' }), asCoach: false });
+  });
+
+  it('prints the gym once, not twice, when venue and affiliation are the same place', () => {
+    const mark = presenterGymMark(
+      resolveSessionGym({
+        sessionPartner: BULLBOX,
+        sessionPartnerStatus: 'approved',
+        creatorPartner: BULLBOX,
+        creatorId: COACH,
+      })
+    );
+    expect(mark?.gym.id).toBe('p1');
+    expect(mark?.asCoach).toBe(true);
+  });
+
+  it('returns nothing for a gym-hosted session, since GymHostRow is already the gym', () => {
+    const mark = presenterGymMark(
+      resolveSessionGym({ sessionPartner: BULLBOX, sessionPartnerStatus: 'approved', creatorId: 'gym-user' })
+    );
+    expect(mark).toBeNull();
+  });
+
+  it('returns nothing for an unaffiliated instructor at no partner venue', () => {
+    expect(presenterGymMark(resolveSessionGym({ creatorId: COACH }))).toBeNull();
+  });
+
+  it('returns nothing while a request is pending, since there is no approved identity yet', () => {
+    const mark = presenterGymMark(
+      resolveSessionGym({ sessionPartner: BULLBOX, sessionPartnerStatus: 'pending', creatorId: COACH, viewerId: COACH })
+    );
+    expect(mark).toBeNull();
   });
 });

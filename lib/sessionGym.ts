@@ -100,3 +100,37 @@ export function resolveSessionGym({
     gymHosted,
   };
 }
+
+/** The single gym element the presenter row shows beside the instructor. */
+export interface PresenterGymMark {
+  gym: SessionGymSource;
+  /**
+   * True renders "Coach {gym}" -- this person coaches there. False renders the
+   * gym name alone -- this session is merely held there.
+   */
+  asCoach: boolean;
+}
+
+/**
+ * ONE gym element in the presenter row, never two.
+ *
+ * The venue and the affiliation are different facts -- "this session is at
+ * BullBox" versus "this instructor coaches at BullBox" -- and in the common
+ * case they are the same gym, so rendering both would print the name twice in
+ * one row. Al asked for them collapsed (2026-09-10); this is the rule chosen.
+ *
+ * The affiliation wins when there is one, because THE VENUE IS ALREADY STATED:
+ * it leads the location line in bold. The affiliation has nowhere else to live.
+ * So when an instructor coaches at BullBox and hosts at some other approved
+ * gym, the row reads "Coach CrossFit BullBox" while the location line names the
+ * other gym -- both facts survive, neither is repeated.
+ *
+ * Nothing is returned for a gym-hosted session: GymHostRow already IS the gym,
+ * and a second mark beside it would be the same logo twice on one card.
+ */
+export function presenterGymMark(identity: SessionGymIdentity): PresenterGymMark | null {
+  if (identity.gymHosted) return null;
+  if (identity.affiliation) return { gym: identity.affiliation, asCoach: true };
+  if (identity.venue) return { gym: identity.venue, asCoach: false };
+  return null;
+}

@@ -13,8 +13,8 @@
 
 import { Star } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { CoachAffiliationTag, GymHostRow } from '@/components/partner/SessionGymBits';
-import type { SessionGymIdentity } from '@/lib/sessionGym';
+import { PresenterGymTag, PendingVenueTag, GymHostRow } from '@/components/partner/SessionGymBits';
+import { presenterGymMark, type SessionGymIdentity } from '@/lib/sessionGym';
 
 interface SessionCardPresenterProps {
   gym: SessionGymIdentity;
@@ -44,6 +44,9 @@ export default function SessionCardPresenter({
 
   if (!creator) return <div className="flex items-center gap-2 min-w-0" />;
 
+  // One gym element, never two -- see presenterGymMark for which fact wins.
+  const mark = presenterGymMark(gym);
+
   return (
     <div className="flex items-center gap-2 min-w-0">
       <Avatar className="w-6 h-6" aria-label={tCard('instructorLabel', { name: instructorName })}>
@@ -59,9 +62,15 @@ export default function SessionCardPresenter({
         </span>
       )}
       {sessionsHosted > 0 && (
-        <span className="text-xs text-theme-tertiary">· {tCard('sessionsHosted', { count: sessionsHosted })}</span>
+        <span className="text-xs text-theme-tertiary flex-shrink-0">
+          · {tCard('sessionsHosted', { count: sessionsHosted })}
+        </span>
       )}
-      {gym.affiliation && <CoachAffiliationTag gym={gym.affiliation} />}
+      {gym.pending ? (
+        <PendingVenueTag gym={gym.pending} />
+      ) : (
+        mark && <PresenterGymTag gym={mark.gym} asCoach={mark.asCoach} />
+      )}
     </div>
   );
 }

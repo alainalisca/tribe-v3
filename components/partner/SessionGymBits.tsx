@@ -11,9 +11,8 @@
 
 import { Clock, Building2 } from 'lucide-react';
 import Link from 'next/link';
-import GymChip from '@/components/partner/GymChip';
 import { useTranslations } from '@/lib/i18n/useTranslations';
-import type { SessionGymSource, SessionGymIdentity } from '@/lib/sessionGym';
+import type { SessionGymSource } from '@/lib/sessionGym';
 
 /** First letters of the first two words: "CrossFit BullBox" -> "CB". */
 function monogram(name: string): string {
@@ -25,22 +24,12 @@ function monogram(name: string): string {
     .join('');
 }
 
-export function GymHeroChip({ gym }: { gym: SessionGymSource }) {
-  return (
-    <GymChip
-      name={gym.business_name}
-      type={gym.business_type === 'studio' ? 'studio' : 'gym'}
-      logoUrl={gym.logo_url}
-      size="sm"
-      overPhoto
-      href={gym.user_id ? `/storefront/${gym.user_id}` : undefined}
-    />
-  );
-}
-
 /**
  * "Pendiente · {gym}" — the creator's own view while the gym decides.
- * Takes the same hero slot as the chip, since the two are mutually exclusive.
+ *
+ * Also moved out of the hero: it names the gym, so it is gym identity and falls
+ * under the same rule. It sits in the presenter row, where the approved mark
+ * would be, since the two are mutually exclusive by definition.
  */
 export function PendingVenueTag({ gym }: { gym: SessionGymSource }) {
   const t = useTranslations('partner');
@@ -53,31 +42,43 @@ export function PendingVenueTag({ gym }: { gym: SessionGymSource }) {
 }
 
 /**
- * "Coach BullBox" in the instructor row. Describes the person, so it renders
- * regardless of whether this particular session is at that gym.
+ * The single gym element in the presenter row (T-GYM1).
+ *
+ * Gym identity never appears over the photo (Al, 2026-09-10): the hero belongs
+ * to LIVE, the photo counter and, later, the video pill. Three elements fought
+ * for that corner and the gym name truncated to "CrossF...", which reads as
+ * broken rather than branded.
+ *
+ * Same visual language as GymHostRow -- square mark, then the name -- but
+ * subordinate to the person: smaller, muted, and after the instructor's rating
+ * and session count, because on a coach-hosted session the coach is the host
+ * and the gym is only the venue.
+ *
+ * The name is NOT truncated at a fraction of the row. It shrinks with the row
+ * and wins space over the session count beside it, because a half-rendered gym
+ * name is worse than a missing one.
  */
-export function CoachAffiliationTag({ gym }: { gym: SessionGymSource }) {
+export function PresenterGymTag({ gym, asCoach }: { gym: SessionGymSource; asCoach: boolean }) {
   const t = useTranslations('partner');
-  const label = t('coachAt', { gym: gym.business_name });
+  const label = asCoach ? t('coachAt', { gym: gym.business_name }) : gym.business_name;
 
   const body = (
     <>
       {gym.logo_url ? (
-        <img src={gym.logo_url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" loading="lazy" />
+        <img src={gym.logo_url} alt="" className="w-4 h-4 rounded-sm object-cover flex-shrink-0" loading="lazy" />
       ) : (
         <span
           aria-hidden="true"
-          className="w-3.5 h-3.5 rounded-sm bg-tribe-dark text-tribe-green text-[7px] font-bold flex items-center justify-center"
+          className="w-4 h-4 rounded-sm bg-tribe-dark text-tribe-green text-[8px] font-bold flex items-center justify-center flex-shrink-0"
         >
           {monogram(gym.business_name)}
         </span>
       )}
-      {label}
+      <span className="truncate">{label}</span>
     </>
   );
 
-  const className =
-    'inline-flex items-center gap-1 bg-theme-inset text-theme-secondary rounded-md px-1.5 py-0.5 text-[11px] font-semibold max-w-[45%] truncate';
+  const className = 'inline-flex items-center gap-1 min-w-0 text-[11px] font-semibold text-theme-secondary';
 
   if (!gym.user_id) {
     return <span className={className}>{body}</span>;
@@ -118,19 +119,4 @@ export function GymHostRow({ gym, coachCount }: { gym: SessionGymSource; coachCo
       )}
     </>
   );
-}
-
-/**
- * What belongs in the hero's top-left slot, if anything.
- *
- * The creator's pending tag wins over the chip: while a request is outstanding
- * there is no approved identity to show, and the creator is the only person who
- * sees anything at all. A gym hosting its own session shows no chip either --
- * it is already the presenter in the row below, and repeating the logo twice on
- * one card reads as a bug.
- */
-export function HeroGymSlot({ gym }: { gym: SessionGymIdentity }) {
-  if (gym.pending) return <PendingVenueTag gym={gym.pending} />;
-  if (gym.venue && !gym.gymHosted) return <GymHeroChip gym={gym.venue} />;
-  return null;
 }

@@ -4,7 +4,6 @@ import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
 import { formatSessionLocationShortParts } from '@/lib/sessionLocation';
 import { resolveSessionGym } from '@/lib/sessionGym';
-import { HeroGymSlot } from '@/components/partner/SessionGymBits';
 import SessionCardPresenter from '@/components/session/SessionCardPresenter';
 import SessionCardLocation from '@/components/session/SessionCardLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
@@ -186,7 +185,6 @@ export default function SessionCard({
           onTap={() => router.push(`/session/${session.id}`)}
           onIndexChange={photos.onIndexChange}
           controlsRef={photos.controlsRef}
-          topLeftSlot={<HeroGymSlot gym={gym} />}
           liveCount={liveData?.count ?? 0}
           liveLabel={tCard('live')}
           eager={priority}
