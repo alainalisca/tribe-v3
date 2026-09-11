@@ -24,6 +24,7 @@ import { reviewVenueRequest, setAutoApproveRoster, type VenueRequest } from '@/l
 import { createNotification } from '@/lib/dal/notifications';
 import { trackEvent } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 export type VenueDecision = 'approved' | 'declined';
 
@@ -51,6 +52,7 @@ export function useVenueRequests({
   gymUserId,
   initialAutoApprove,
 }: UseVenueRequestsArgs): UseVenueRequestsResult {
+  const tNotif = useTranslations('notif');
   const [requests, setRequests] = useState<VenueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [deciding, setDeciding] = useState<string | null>(null);
@@ -106,7 +108,10 @@ export function useVenueRequests({
             type: decision === 'approved' ? 'venue_request_approved' : 'venue_request_declined',
             entity_type: 'session',
             entity_id: request.sessionId,
-            message: `${gymName}|${request.title ?? request.sport}`,
+            message:
+              decision === 'approved'
+                ? tNotif('venueRequestApproved', { gym: gymName, title: request.title ?? request.sport })
+                : tNotif('venueRequestDeclined', { gym: gymName, title: request.title ?? request.sport }),
           });
           if (!notified.success) {
             // The verdict is already recorded; a missing bell must not undo it
@@ -135,7 +140,7 @@ export function useVenueRequests({
         setDeciding(null);
       }
     },
-    [partnerId, gymName, gymUserId]
+    [partnerId, gymName, gymUserId, tNotif]
   );
 
   const toggleAutoApprove = useCallback(

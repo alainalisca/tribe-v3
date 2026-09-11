@@ -24,6 +24,10 @@ vi.mock('@/lib/dal/gymVenue', () => ({
   reviewVenueRequest: (...a: unknown[]) => reviewVenueRequest(...a),
   setAutoApproveRoster: (...a: unknown[]) => setAutoApproveRoster(...a),
 }));
+vi.mock('@/lib/i18n/useTranslations', () => ({
+  useTranslations: () => (key: string, v?: Record<string, string | number>) =>
+    v ? `${key}: ${Object.values(v).join(' / ')}` : key,
+}));
 vi.mock('@/lib/dal/notifications', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
 vi.mock('@/lib/analytics', () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock('@/lib/logger', () => ({ logError: (...a: unknown[]) => logError(...a), log: vi.fn() }));
@@ -102,6 +106,11 @@ describe('useVenueRequests', () => {
       {},
       expect.objectContaining({ recipient_id: 'leo', type: 'venue_request_declined', entity_id: 's1' })
     );
+    // A sentence naming the gym and the session, not "gym|title".
+    const call = createNotification.mock.calls[0][1] as { message: string };
+    expect(call.message).toContain('venueRequestDeclined:');
+    expect(call.message).toContain('CrossFit BullBox');
+    expect(call.message).not.toContain('|');
   });
 
   it('keeps the verdict when the bell fails', async () => {

@@ -291,7 +291,8 @@
     "pendingTag": "Pendiente · {gym}",
     "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio.",
     "requestedOn": "Solicitada el {date}",
-    "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta."
+    "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta.",
+    "partnerDashboard": "Panel del gimnasio"
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",
@@ -305,6 +306,8 @@
   "notif": {
     "venueRequestNew": "Nueva solicitud de sede: {instructor} quiere publicar {title} en {gym}",
     "venueRequestApproved": "{gym} aprobó {title} en su sede",
-    "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección."
+    "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección.",
+    "anInstructor": "Un instructor",
+    "aSession": "una sesión"
   }
 }

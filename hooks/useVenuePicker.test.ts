@@ -15,10 +15,19 @@ const trackEvent = vi.fn();
 const logError = vi.fn();
 const createNotification = vi.fn();
 
-vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'leo' } } }) } }),
+}));
+vi.mock('@/lib/dal/users', () => ({
+  fetchUserProfileMaybe: async () => ({ success: true, data: { name: 'Leo Garcia' } }),
+}));
 vi.mock('@/lib/dal/gymVenue', () => ({ setSessionPartner: (...a: unknown[]) => setSessionPartner(...a) }));
 vi.mock('@/lib/analytics', () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock('@/lib/logger', () => ({ logError: (...a: unknown[]) => logError(...a), log: vi.fn() }));
+vi.mock('@/lib/i18n/useTranslations', () => ({
+  useTranslations: () => (key: string, v?: Record<string, string | number>) =>
+    v ? `${key}: ${Object.values(v).join(' / ')}` : key,
+}));
 vi.mock('@/lib/dal/notifications', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
 
 import { useVenuePicker } from './useVenuePicker';
@@ -51,7 +60,7 @@ describe('useVenuePicker', () => {
     expect(out).toEqual({ ok: true, status: 'pending' });
     expect(result.current.status).toBe('pending');
     // The status is not among the arguments -- the RPC computes it.
-    expect(setSessionPartner).toHaveBeenCalledWith({}, 's1', 'p1');
+    expect(setSessionPartner).toHaveBeenCalledWith(expect.anything(), 's1', 'p1');
   });
 
   it('passes null to clear, which clears all three columns in the database', async () => {
@@ -63,7 +72,7 @@ describe('useVenuePicker', () => {
       await result.current.commit('s1');
     });
 
-    expect(setSessionPartner).toHaveBeenCalledWith({}, 's1', null);
+    expect(setSessionPartner).toHaveBeenCalledWith(expect.anything(), 's1', null);
   });
 
   it('does NOT throw when the link fails, so the create page cannot mislabel it', async () => {
@@ -138,16 +147,14 @@ describe('useVenuePicker', () => {
       await result.current.commit('s1');
     });
 
-    expect(createNotification).toHaveBeenCalledWith(
-      {},
-      {
-        recipient_id: 'gym-user',
-        type: 'venue_request_new',
-        entity_type: 'session',
-        entity_id: 's1',
-        message: 'CrossFit BullBox',
-      }
-    );
+    // A SENTENCE, not a bare business name. The notifications page prints
+    // notification.message verbatim and has no per-type case, so a token
+    // stored here arrives unreadable -- which is exactly what shipped.
+    const call = createNotification.mock.calls[0][1] as { message: string; actor_id: string | null };
+    expect(call.actor_id).toBe('leo');
+    expect(call.message).toContain('Leo Garcia');
+    expect(call.message).toContain('CrossFit BullBox');
+    expect(call.message).not.toBe('CrossFit BullBox');
   });
 
   it('does NOT notify when the link was auto-approved', async () => {

@@ -27,6 +27,8 @@ import { createClient } from '@/lib/supabase/client';
 import { setSessionPartner, type GymIdentity } from '@/lib/dal/gymVenue';
 import { trackEvent } from '@/lib/analytics';
 import { createNotification } from '@/lib/dal/notifications';
+import { fetchUserProfileMaybe } from '@/lib/dal/users';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import { logError } from '@/lib/logger';
 
 /** What the database decided, once a venue has been attached. */
@@ -54,11 +56,13 @@ export interface UseVenuePickerResult {
    * Attach (or clear) the venue on a session that already exists. Safe to call
    * with no selection: it clears, which is a no-op on an unlinked session.
    */
-  commit: (sessionId: string) => Promise<VenueLinkResult>;
+  /** `sessionTitle` only shapes the gym's notification text. */
+  commit: (sessionId: string, sessionTitle?: string) => Promise<VenueLinkResult>;
   reset: () => void;
 }
 
 export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePickerResult {
+  const tNotif = useTranslations('notif');
   const [selected, setSelected] = useState<GymIdentity | null>(initial);
   const [linking, setLinking] = useState(false);
   const [status, setStatus] = useState<VenueStatus>(null);
@@ -79,7 +83,7 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
   }, []);
 
   const commit = useCallback(
-    async (sessionId: string): Promise<VenueLinkResult> => {
+    async (sessionId: string, sessionTitle = ''): Promise<VenueLinkResult> => {
       setLinking(true);
       setFailed(false);
       try {
@@ -111,12 +115,31 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
           // bell: the gym already said yes, either by being the host or by
           // leaving auto-approve on for its roster.
           if (next === 'pending' && selected.user_id) {
+            // The message is STORED, not rendered per type: the notifications
+            // page prints notification.message verbatim and has no per-type
+            // case. Storing a bare business name is why the gym's bell arrived
+            // unreadable -- it showed "CrossFit BullBox" and nothing else.
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            // fetchUserForNotification is push-delivery data and carries no name.
+            const lookup = user?.id ? await fetchUserProfileMaybe(supabase, user.id) : null;
+            // fetchUserProfileMaybe takes a dynamic field list, so its data is
+            // loosely typed; narrow rather than assert.
+            const rawName = lookup?.success ? (lookup.data as { name?: unknown } | null)?.name : undefined;
+            const instructorName = typeof rawName === 'string' && rawName.trim() ? rawName : null;
+
             const notified = await createNotification(supabase, {
               recipient_id: selected.user_id,
+              actor_id: user?.id ?? null,
               type: 'venue_request_new',
               entity_type: 'session',
               entity_id: sessionId,
-              message: selected.business_name,
+              message: tNotif('venueRequestNew', {
+                instructor: instructorName ?? tNotif('anInstructor'),
+                title: sessionTitle || tNotif('aSession'),
+                gym: selected.business_name,
+              }),
             });
             if (!notified.success) {
               // The request exists and the gym will see it in its queue. A
@@ -142,7 +165,7 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
         setLinking(false);
       }
     },
-    [selected]
+    [selected, tNotif]
   );
 
   return { selected, select, linking, status, failed, commit, reset };

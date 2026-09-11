@@ -296,7 +296,7 @@ function CreateSessionPageInner() {
       // session that was created. The instructor is told what actually
       // happened and can set the venue from the edit screen.
       if (result.data?.id && venue.selected) {
-        const link = await venue.commit(result.data.id);
+        const link = await venue.commit(result.data.id, rest.sport);
         if (!link.ok) showError(tCreate('venueLinkFailed'));
       }
 

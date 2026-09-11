@@ -291,7 +291,8 @@
     "pendingTag": "Pending · {gym}",
     "pendingNote": "{gym} has not approved this session at its venue yet. Meanwhile it is published with the address, without the gym's name or logo.",
     "requestedOn": "Requested {date}",
-    "recurringWarning": "This session repeats weekly. Approving it applies to every future occurrence, not just this date."
+    "recurringWarning": "This session repeats weekly. Approving it applies to every future occurrence, not just this date.",
+    "partnerDashboard": "Gym dashboard"
   },
   "create": {
     "whereIsSession": "Where is the session?",
@@ -305,6 +306,8 @@
   "notif": {
     "venueRequestNew": "New venue request: {instructor} wants to publish {title} at {gym}",
     "venueRequestApproved": "{gym} approved {title} at its venue",
-    "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address."
+    "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address.",
+    "anInstructor": "An instructor",
+    "aSession": "a session"
   }
 }

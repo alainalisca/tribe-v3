@@ -43,7 +43,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   general: <Bell className="w-5 h-5 text-stone-400" />,
 };
 
-function getNotificationLink(notification: NotificationWithActor): string | null {
+export function getNotificationLink(notification: NotificationWithActor): string | null {
   const { type, entity_type, entity_id, actor_id } = notification;
   if (type === 'follow' && actor_id) return `/profile/${actor_id}`;
   if (
@@ -70,6 +70,11 @@ function getNotificationLink(notification: NotificationWithActor): string | null
   // the recurring-series section lives. Trailing slash: trailingSlash is on and
   // a 308 would strip the auth headers.
   if (type === 'series_occurrences_generated') return '/dashboard/instructor/';
+  // T-GYM2: the gym's request lands on its queue; the instructor's verdict
+  // lands on the session it is about. Trailing slash on the dashboard for the
+  // same reason as above -- trailingSlash is on and a 308 strips auth headers.
+  if (type === 'venue_request_new') return '/dashboard/partner/';
+  if (['venue_request_approved', 'venue_request_declined'].includes(type) && entity_id) return `/session/${entity_id}`;
   return null;
 }
 

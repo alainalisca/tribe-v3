@@ -326,7 +326,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       // is not writable by the client and partner_id is not in the
       // HostEditableSessionUpdate allow-list. It goes through the RPC, and a
       // failure there is the link's alone: the edit itself has already saved.
-      const link = await venue.commit(params.id as string);
+      const link = await venue.commit(params.id as string, formData.sport);
       if (!link.ok) showError(tCreate('venueLinkFailed'));
 
       // Cross-page invalidation: the home feed caches its session list and
