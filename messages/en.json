@@ -266,5 +266,39 @@
   "lightbox": {
     "label": "Photo viewer",
     "photoNumber": "Photo {n} of {total}"
+  },
+  "partner": {
+    "typeGym": "Gym",
+    "typeStudio": "Studio",
+    "verified": "Verified",
+    "verifiedLong": "Verified gym",
+    "verifiedLongStudio": "Verified studio",
+    "coachAt": "Coach at {gym}",
+    "coachAtLong": "Coach at {gym}",
+    "ourCoaches": "Our coaches",
+    "coachesCount": "{n} coaches",
+    "sessionsPerWeek": "sessions / week",
+    "gymsAndStudios": "Gyms and studios",
+    "featuredSince": "Featured affiliate · since {date}",
+    "venueRequests": "Venue requests",
+    "venueRequestsHelp": "Instructors who want to publish a session at {gym}. Until you approve, the session shows without your name or logo.",
+    "notOnRoster": "Not on your roster",
+    "approve": "Approve",
+    "decline": "Decline",
+    "noRequests": "No pending requests",
+    "autoApproveRoster": "Auto-approve my coaches",
+    "autoApproveRosterHelp": "Instructors on your roster publish at {gym} without asking.",
+    "pendingTag": "Pending · {gym}",
+    "pendingNote": "{gym} has not approved this session at its venue yet. Meanwhile it is published with the address, without the gym's name or logo."
+  },
+  "create": {
+    "whereIsSession": "Where is the session?",
+    "otherPlace": "Other place",
+    "partnerNeedsApproval": "{gym} will review this request. Until they approve, your session shows the address without the gym's name."
+  },
+  "notif": {
+    "venueRequestNew": "New venue request: {instructor} wants to publish {title} at {gym}",
+    "venueRequestApproved": "{gym} approved {title} at its venue",
+    "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address."
   }
 }

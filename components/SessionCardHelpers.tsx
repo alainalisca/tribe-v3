@@ -1,5 +1,6 @@
 import type { TranslationKey } from '@/lib/translations';
 import type { SessionWithRelations } from '@/lib/dal';
+import type { SessionGymSource } from '@/lib/sessionGym';
 
 export interface SessionCardProps {
   session: SessionWithRelations;
@@ -13,6 +14,18 @@ export interface SessionCardProps {
   liveData?: { count: number; users: Array<{ name: string; avatar_url: string | null }> };
   /** Set of user IDs that are active featured partners (or their instructors) */
   featuredPartnerUserIds?: Set<string>;
+  /**
+   * T-GYM1. Both are resolved by the feed in one batched query for the whole
+   * page, never per card.
+   *   sessionPartner  the gym on sessions.partner_id -- the venue.
+   *   creatorPartner  the gym whose roster the creator is on -- the affiliation.
+   * They are different questions: the venue needs the gym's approval, the
+   * affiliation describes the person. See lib/sessionGym.ts.
+   */
+  sessionPartner?: SessionGymSource | null;
+  creatorPartner?: SessionGymSource | null;
+  /** Active roster size, only needed when the gym account is the host. */
+  partnerCoachCount?: number;
   /**
    * Above-the-fold card: loads its hero eagerly at high fetch priority.
    * The home feed sets this for the first two cards only.

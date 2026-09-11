@@ -94,6 +94,36 @@ export function dedupeLocationSegments(location: string | null | undefined): str
   return kept.join(', ');
 }
 
+export interface SessionLocationParts {
+  /** The gym or studio hosting this session, when one has approved it. */
+  venue: string | null;
+  /** The short address, with any repetition of the venue name removed. */
+  address: string;
+}
+
+/**
+ * The same short location, split so a caller can weight the two halves
+ * differently. The card renders the venue bold and the address plain.
+ *
+ * `venueName` is de-duplicated against the leading segment rather than matched
+ * whole: live sessions store "CrossFit BullBox Ciudad del Rio, Cra 43G #25a-50,
+ * ...", where the branch ("Ciudad del Rio") is real information sitting inside
+ * the same segment as the gym name. Stripping the segment entirely would throw
+ * the branch away, so only the matching prefix is removed and the remainder
+ * survives as part of the address.
+ */
+export function formatSessionLocationShortParts(
+  location: string | null | undefined,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+  language: 'en' | 'es' = 'en',
+  venueName?: string | null
+): SessionLocationParts {
+  const venue = (venueName ?? '').trim() || null;
+  const address = shortAddress(location, lat, lng, language, venue);
+  return { venue, address };
+}
+
 /**
  * A short, card-sized version of a session's location.
  *
@@ -102,13 +132,41 @@ export function dedupeLocationSegments(location: string | null | undefined): str
  * repeats. "Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín,
  * Antioquia, Colombia" becomes "Cl. 20 #43g - 155, El Poblado".
  *
+ * With `venueName`, the venue is prepended and de-duplicated against the
+ * leading segment: "CrossFit BullBox · Ciudad del Río, Cra 43G #25a-50".
+ *
  * The detail page keeps the full string; it only needs dedupeLocationSegments.
  */
 export function formatSessionLocationShort(
   location: string | null | undefined,
   lat: number | null | undefined,
   lng: number | null | undefined,
-  language: 'en' | 'es' = 'en'
+  language: 'en' | 'es' = 'en',
+  venueName?: string | null
+): string {
+  const { venue, address } = formatSessionLocationShortParts(location, lat, lng, language, venueName);
+  if (!venue) return address;
+  return address ? `${venue} · ${address}` : venue;
+}
+
+/** Strip a leading occurrence of the venue name from an address segment. */
+function stripVenuePrefix(segment: string, venue: string): string {
+  if (segmentKey(segment) === segmentKey(venue)) return '';
+  if (segment.toLowerCase().startsWith(venue.toLowerCase())) {
+    return segment
+      .slice(venue.length)
+      .replace(/^[\s,·\-–—]+/, '')
+      .trim();
+  }
+  return segment;
+}
+
+function shortAddress(
+  location: string | null | undefined,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+  language: 'en' | 'es',
+  venue: string | null
 ): string {
   const hood =
     typeof lat === 'number' && typeof lng === 'number' && !Number.isNaN(lat) && !Number.isNaN(lng)
@@ -118,7 +176,8 @@ export function formatSessionLocationShort(
 
   const trimmed = (location ?? '').trim();
   if (!trimmed || isRawCoordsString(trimmed)) {
-    return hood?.name ?? notSpecified;
+    if (hood?.name) return hood.name;
+    return venue ? '' : notSpecified;
   }
 
   const segments = dedupeLocationSegments(trimmed)
@@ -126,12 +185,13 @@ export function formatSessionLocationShort(
     .filter((segment) => segment && !ADMIN_SEGMENTS.has(segmentKey(segment)));
 
   if (segments.length === 0) {
-    return hood?.name ?? notSpecified;
+    return venue ? '' : (hood?.name ?? notSpecified);
   }
 
   const known = new Set(ACTIVE_CITY.neighborhoods.map((n) => segmentKey(n.name)));
-  const head = segments[0];
+  const head = venue ? stripVenuePrefix(segments[0], venue) : segments[0];
   const neighborhood = segments.slice(1).find((segment) => known.has(segmentKey(segment)));
 
+  if (!head) return neighborhood ?? '';
   return neighborhood ? `${head}, ${neighborhood}` : head;
 }

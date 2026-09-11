@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
-import { formatSessionLocationShort } from '@/lib/sessionLocation';
+import { formatSessionLocationShortParts } from '@/lib/sessionLocation';
+import { resolveSessionGym } from '@/lib/sessionGym';
+import SessionCardPresenter from '@/components/session/SessionCardPresenter';
+import SessionCardLocation from '@/components/session/SessionCardLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import type { Currency } from '@/lib/payments/config';
 import { getSessionHeroImage } from '@/lib/sport-images';
 
-import { Calendar, MapPin, Star } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 import { translateSport } from '@/lib/translations';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import AvatarStack from '@/components/AvatarStack';
 import type { AvatarStackParticipant } from '@/components/AvatarStack';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,6 +57,9 @@ export default function SessionCard({
   onShare: _onShareLegacy, // deprecated: kept for callsite compat, internal share uses lib/share
   distance,
   liveData,
+  sessionPartner,
+  creatorPartner,
+  partnerCoachCount = 0,
   currentUserId,
   featuredPartnerUserIds,
   priority = false,
@@ -78,11 +83,22 @@ export default function SessionCard({
   // Short, deduped address. The detail page keeps the full string. Google
   // repeats the barrio and city on Medellin addresses and 45 live sessions
   // carry the repeat; see lib/sessionLocation.ts.
-  const displayLocation = formatSessionLocationShort(
+  // T-GYM1; the rules live in lib/sessionGym.ts.
+  const gym = resolveSessionGym({
+    sessionPartner,
+    sessionPartnerStatus: session.partner_status ?? null,
+    creatorPartner,
+    creatorId: session.creator_id ?? session.creator?.id ?? null,
+    viewerId: currentUserId ?? null,
+  });
+
+  // Venue name leads the address, bolded and de-duplicated against the street.
+  const { venue: venueName, address: displayLocation } = formatSessionLocationShortParts(
     session.location,
     session.location_lat ?? null,
     session.location_lng ?? null,
-    language
+    language,
+    gym.venue?.business_name ?? null
   );
 
   const sportName = translateSport(session.sport, language);
@@ -211,45 +227,25 @@ export default function SessionCard({
             <span>{dateLine}</span>
           </div>
 
-          {/* Location */}
-          <div className="flex items-center text-sm text-theme-secondary">
-            <MapPin className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
-            <span className="truncate">{displayLocation}</span>
-            {sessionHood && !looselyContains(displayLocation, sessionHood.name) && (
-              <span className="ml-1.5 text-xs text-theme-tertiary font-medium flex-shrink-0">· {sessionHood.name}</span>
-            )}
-            {distance && (
-              <span className="ml-1.5 text-xs text-tribe-green font-medium flex-shrink-0">· {distance}</span>
-            )}
-          </div>
+          <SessionCardLocation
+            venueName={venueName}
+            address={displayLocation}
+            neighborhood={sessionHood && !looselyContains(displayLocation, sessionHood.name) ? sessionHood.name : null}
+            distance={distance}
+          />
 
           <SessionMetaBadges genderPreference={session.gender_preference} skillLevel={session.skill_level} />
 
           {/* Instructor + Price. No name text: the title already carries it. */}
           <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              {session.creator && (
-                <>
-                  <Avatar className="w-6 h-6" aria-label={tCard('instructorLabel', { name: instructorName })}>
-                    <AvatarImage loading="lazy" src={session.creator.avatar_url || undefined} />
-                    <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-[10px]">
-                      {session.creator.name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  {Number(session.creator.average_rating) > 0 && (
-                    <span className="text-xs text-yellow-500 font-semibold flex items-center gap-0.5">
-                      <Star className="w-3 h-3 fill-yellow-500" />
-                      {Number(session.creator.average_rating).toFixed(1)}
-                    </span>
-                  )}
-                  {sessionsHosted > 0 && (
-                    <span className="text-xs text-theme-tertiary">
-                      · {tCard('sessionsHosted', { count: sessionsHosted })}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
+            <SessionCardPresenter
+              gym={gym}
+              creator={session.creator ?? null}
+              instructorName={instructorName}
+              sessionsHosted={sessionsHosted}
+              coachCount={partnerCoachCount}
+              tCard={tCard}
+            />
 
             <span className={`text-sm font-bold ${isFree ? 'text-tribe-green' : 'text-theme-primary'}`}>
               {isFree

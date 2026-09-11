@@ -8,9 +8,21 @@ import { fetchActivePartners, incrementPartnerMetric } from '@/lib/dal/featuredP
 import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
 import Image from 'next/image';
 import { Star, ChevronRight, Users, Calendar } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/useTranslations';
+
+/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
+function monogram(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
 export default function FeaturedPartnerBanner() {
   const { language } = useLanguage();
+  const tPartner = useTranslations('partner');
   const router = useRouter();
   const supabase = createClient();
   const [partners, setPartners] = useState<FeaturedPartner[]>([]);
@@ -81,13 +93,28 @@ export default function FeaturedPartnerBanner() {
             {partner.logo_url ? (
               <Image src={partner.logo_url} alt={partner.business_name} fill className="object-cover" unoptimized />
             ) : (
-              <span className="text-2xl">{partner.business_type === 'gym' ? '🏋️' : '🏢'}</span>
+              /* T-GYM1: a monogram, not an emoji. 🏋️/🏢 read as decoration and
+                 as "no logo"; initials on the brand square read as an
+                 organization that simply has not uploaded one yet. Every live
+                 partner has logo_url = null, so this is the branch that ships. */
+              <span aria-hidden="true" className="text-tribe-green text-xl font-bold tracking-tight">
+                {monogram(partner.business_name)}
+              </span>
             )}
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-bold text-base leading-tight truncate">{partner.business_name}</h3>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="text-white font-bold text-base leading-tight truncate">{partner.business_name}</h3>
+              {/* Only gyms and studios carry a type label; an 'independent'
+                  partner is a person and calling them a Gimnasio would be wrong. */}
+              {(partner.business_type === 'gym' || partner.business_type === 'studio') && (
+                <span className="flex-shrink-0 text-tribe-gray-60 text-[10px] font-bold tracking-wide uppercase">
+                  {partner.business_type === 'gym' ? tPartner('typeGym') : tPartner('typeStudio')}
+                </span>
+              )}
+            </div>
             {desc && <p className="text-tribe-gray-60 text-xs leading-snug line-clamp-2 mt-0.5">{desc}</p>}
           </div>
         </div>

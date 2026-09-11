@@ -918,4 +918,121 @@ where exists (
           and c.column_name = r.column_name
       )
   and has_column_privilege('authenticated', 'public.users', r.column_name, 'SELECT')
+union all
+select '158_gym_venue_approval',
+       -- Probes all four parts: the three sessions columns, auto_approve_roster,
+       -- both RPCs, and the view carrying the columns to anon. The columns
+       -- without the RPCs would leave every approval failing silently.
+       case when exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'sessions'
+                    and column_name in ('partner_id', 'partner_status', 'partner_reviewed_at')
+                  having count(*) = 3
+                )
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'featured_partners'
+                    and column_name = 'auto_approve_roster'
+                )
+             and (select to_regprocedure('public.set_session_partner(uuid,uuid)')) is not null
+             and (select to_regprocedure('public.review_venue_request(uuid,text)')) is not null
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'sessions_public'
+                    and column_name = 'partner_status'
+                )
+            then 'applied' else 'MISSING' end
+union all
+
+-- ---------------------------------------------------------------------------
+-- GUARD: column-level INSERT/UPDATE grants on public.sessions.
+--
+-- 158 put public.sessions under column-level write grants so the creator cannot
+-- set partner_status themselves: the table-level INSERT and UPDATE are revoked
+-- from authenticated and re-granted column by column, excluding the two verdict
+-- columns. A column added to sessions afterwards is therefore NOT writable by
+-- authenticated until it is granted, and it fails in production while every
+-- test passes -- the same shape of bug as 156's missing SELECT grant, which
+-- took three attempts to find.
+--
+-- USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.
+-- That view lists only explicitly granted COLUMN privileges and cannot see a
+-- table-level grant, so it returns the same "absent" answer for a column that
+-- is writable via a table-level grant and for one that is genuinely not
+-- writable -- identical output for the two cases this guard exists to tell
+-- apart. It gave a false pass while 156's bug was being diagnosed.
+--
+-- partner_status and partner_reviewed_at are excluded on purpose: they are
+-- deliberately not writable, and GUARD_sessions_verdict_locked below asserts
+-- that they stay that way.
+-- ---------------------------------------------------------------------------
+select 'GUARD_sessions_columns_writable',
+       coalesce(
+         'MISSING -- not writable by authenticated: '
+           || string_agg(c.column_name || '(' || c.missing || ')', ', ' order by c.column_name),
+         'applied'
+       )
+from (
+  select column_name,
+         case
+           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+            and not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT')
+             then 'insert+update'
+           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+             then 'update'
+           else 'insert'
+         end as missing
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'sessions'
+    and column_name not in ('partner_status', 'partner_reviewed_at')
+    and (not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+      or not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT'))
+) c
+union all
+
+-- The mirror: the verdict columns must stay unwritable by authenticated, or the
+-- gym no longer owns its own name and a creator can approve themselves. Catches
+-- a well-meaning future migration re-granting sessions at table level, which
+-- would silently re-open it (a column-level REVOKE cannot close it again -- see
+-- 093).
+select 'GUARD_sessions_verdict_locked',
+       coalesce(
+         'MISSING -- unexpectedly WRITABLE by authenticated: '
+           || string_agg(v.column_name, ', ' order by v.column_name),
+         'applied'
+       )
+from (values ('partner_status'), ('partner_reviewed_at')) as v(column_name)
+where has_column_privilege('authenticated', 'public.sessions', v.column_name, 'UPDATE')
+   or has_column_privilege('authenticated', 'public.sessions', v.column_name, 'INSERT')
+union all
+select '159_rls_admin_helper_not_inline_is_admin',
+       -- Policy-only migration, so the artifact is the policy text itself.
+       -- An untouched policy still reads "... FROM users WHERE id = auth.uid()
+       -- AND is_admin"; a fixed one reads is_app_admin(). Matching on
+       -- "from users" rather than on "is_admin" avoids matching the helper's
+       -- own name.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public'
+           and tablename in ('featured_partners', 'community_news',
+                             'local_fitness_events', 'community_bulletin')
+           and coalesce(qual, '') ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
+union all
+select '160_drop_duplicate_partner_read_policy',
+       -- The duplicate is gone when no policy on featured_partners reads users
+       -- directly any more. Same text probe the migration asserts on, so this
+       -- row and the migration cannot disagree.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public' and tablename = 'featured_partners'
+           and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
+union all
+select '161_featured_partners_display_order',
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'featured_partners'
+           and column_name = 'display_order'
+       ) then 'applied' else 'MISSING' end
 order by migration;

@@ -218,6 +218,134 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
   });
 });
 
+/**
+ * The static half of the sessions write-grant guard (T-GYM1).
+ *
+ * 158 put public.sessions under column-level INSERT and UPDATE grants so a
+ * session's creator cannot set partner_status themselves -- the gym owns its
+ * own name. The cost of that mechanism is a new trap: from 158 on, a column
+ * added to sessions is NOT writable by authenticated until it is granted, and
+ * it fails in production while every test passes, because the DAL is mocked
+ * everywhere and a mock cannot return a permission error.
+ *
+ * That is the same failure shape as 156's missing SELECT grant on users, which
+ * took three attempts to find. verify-migration-state.sql catches it against
+ * the live database; this catches it in CI, before the migration is applied.
+ *
+ * The live check must use has_column_privilege(), never
+ * information_schema.column_privileges -- that view cannot see table-level
+ * grants and returns the same answer whether a column is writable or not. Do
+ * not swap it back.
+ */
+describe('public.sessions columns added after 158 carry an explicit write grant', () => {
+  const WRITE_GRANT_MIGRATION = 158;
+
+  /** Deliberately not writable by authenticated -- only the two RPCs set them. */
+  const VERDICT_COLUMNS = ['partner_status', 'partner_reviewed_at'];
+
+  function stripSqlComments(sql: string): string {
+    return sql
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .split('\n')
+      .map((line) => line.replace(/--.*$/, ''))
+      .join('\n');
+  }
+
+  it('every sessions column added after 158 is granted INSERT and UPDATE', () => {
+    const files = fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => /^\d{3}_.*\.sql$/.test(f))
+      .sort();
+
+    const added: { file: string; column: string }[] = [];
+    const granted = { INSERT: new Set<string>(), UPDATE: new Set<string>() };
+
+    for (const file of files) {
+      const sql = stripSqlComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
+
+      const alters = sql.matchAll(
+        /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:public\s*\.\s*)?"?sessions"?\b([\s\S]*?);/gi
+      );
+      for (const alter of alters) {
+        for (const col of alter[1].matchAll(/ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?"?([a-z0-9_]+)"?/gi)) {
+          added.push({ file, column: col[1] });
+        }
+      }
+
+      for (const privilege of ['INSERT', 'UPDATE'] as const) {
+        const re = new RegExp(
+          `GRANT\\s+${privilege}\\s*\\(([^)]*)\\)\\s*ON\\s+(?:public\\s*\\.\\s*)?"?sessions"?`,
+          'gi'
+        );
+        for (const grant of sql.matchAll(re)) {
+          for (const name of grant[1].split(',')) {
+            const clean = name.trim().replace(/"/g, '');
+            if (clean) granted[privilege].add(clean);
+          }
+        }
+      }
+    }
+
+    // 158 re-grants dynamically from the live catalog (`|| cols ||`), which the
+    // regex above cannot enumerate. Columns existing at 158 are covered by that
+    // block; only later additions need naming, so scope the assertion to them.
+    const ungranted = added
+      .filter(({ file }) => parseInt(file.slice(0, 3), 10) > WRITE_GRANT_MIGRATION)
+      .filter(({ column }) => !VERDICT_COLUMNS.includes(column))
+      .flatMap(({ file, column }) => {
+        const missing = (['INSERT', 'UPDATE'] as const).filter((p) => !granted[p].has(column));
+        return missing.length > 0 ? [{ file, column, missing: missing.join('+') }] : [];
+      });
+
+    if (ungranted.length > 0) {
+      throw new Error(
+        `These columns were added to public.sessions after 158 without a write grant:\n` +
+          ungranted.map((u) => `  ${u.column}  (${u.file}) -- missing ${u.missing}`).join('\n') +
+          `\n\n158 revoked table-level INSERT/UPDATE on public.sessions from authenticated and\n` +
+          `re-granted column by column, so the session creator cannot set partner_status.\n` +
+          `A column added afterwards is NOT writable until granted: writes fail at runtime\n` +
+          `with "permission denied for column", and no unit test can see it because the DAL\n` +
+          `is mocked everywhere.\n\n` +
+          `Add to the migration:\n` +
+          `  GRANT INSERT (<column>), UPDATE (<column>) ON public.sessions TO authenticated;\n\n` +
+          `If the column must NOT be client-writable, add it to VERDICT_COLUMNS here and to\n` +
+          `the exclusion list in supabase/verify-migration-state.sql.`
+      );
+    }
+    expect(ungranted).toEqual([]);
+  });
+
+  it('158 revokes both privileges and re-grants from the live catalog', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, '158_gym_venue_approval.sql'), 'utf-8');
+
+    // INSERT as well as UPDATE: revoking only UPDATE would leave the guarantee
+    // bypassable by creating the session with partner_status already 'approved'.
+    expect(sql).toMatch(/REVOKE\s+UPDATE\s+ON\s+public\.sessions\s+FROM\s+authenticated/i);
+    expect(sql).toMatch(/REVOKE\s+INSERT\s+ON\s+public\.sessions\s+FROM\s+authenticated/i);
+
+    // Enumerated from information_schema at apply time, never from
+    // lib/database.types.ts, which 137 records as three columns stale.
+    expect(sql).toMatch(/FROM information_schema\.columns/i);
+    expect(sql).toMatch(/GRANT UPDATE \(' \|\| cols \|\| '\) ON public\.sessions/);
+    expect(sql).toMatch(/GRANT INSERT \(' \|\| cols \|\| '\) ON public\.sessions/);
+    expect(sql).toContain("NOT IN ('partner_status', 'partner_reviewed_at')");
+  });
+
+  it('the verdict columns are never added to the host-editable allow-list', () => {
+    // updateSessionAsHost takes a Pick<> allow-list. If partner_status ever
+    // appears there, the creator can approve their own request through the
+    // ordinary edit flow and the RPC guarantee is moot.
+    const dal = fs.readFileSync(path.join(__dirname, '..', 'lib', 'dal', 'sessions.ts'), 'utf-8');
+    const allowList = dal.slice(
+      dal.indexOf('HostEditableSessionUpdate'),
+      dal.indexOf('>;', dal.indexOf('HostEditableSessionUpdate'))
+    );
+    for (const column of VERDICT_COLUMNS) {
+      expect(allowList).not.toContain(column);
+    }
+  });
+});
+
 // Dropped the third 'malformed row' check — it tripped on the
 // stylistic difference between `select 'NNN' as migration,` (first
 // row, has alias) vs `select 'NNN',` (subsequent rows, no alias).

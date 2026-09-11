@@ -266,5 +266,39 @@
   "lightbox": {
     "label": "Visor de fotos",
     "photoNumber": "Foto {n} de {total}"
+  },
+  "partner": {
+    "typeGym": "Gimnasio",
+    "typeStudio": "Estudio",
+    "verified": "Verificado",
+    "verifiedLong": "Gimnasio verificado",
+    "verifiedLongStudio": "Estudio verificado",
+    "coachAt": "Coach {gym}",
+    "coachAtLong": "Coach en {gym}",
+    "ourCoaches": "Nuestros coaches",
+    "coachesCount": "{n} coaches",
+    "sessionsPerWeek": "sesiones / semana",
+    "gymsAndStudios": "Gimnasios y estudios",
+    "featuredSince": "Afiliado destacado · desde {date}",
+    "venueRequests": "Solicitudes de sede",
+    "venueRequestsHelp": "Instructores que quieren publicar una sesión en {gym}. Hasta que apruebes, la sesión se muestra sin tu nombre ni tu logo.",
+    "notOnRoster": "No está en tu roster",
+    "approve": "Aprobar",
+    "decline": "Rechazar",
+    "noRequests": "Sin solicitudes pendientes",
+    "autoApproveRoster": "Aprobar automáticamente a mis coaches",
+    "autoApproveRosterHelp": "Los instructores de tu roster publican en {gym} sin pedir permiso.",
+    "pendingTag": "Pendiente · {gym}",
+    "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio."
+  },
+  "create": {
+    "whereIsSession": "¿Dónde es la sesión?",
+    "otherPlace": "Otro lugar",
+    "partnerNeedsApproval": "{gym} revisará esta solicitud. Hasta que la apruebe, tu sesión se muestra con la dirección sin el nombre del gimnasio."
+  },
+  "notif": {
+    "venueRequestNew": "Nueva solicitud de sede: {instructor} quiere publicar {title} en {gym}",
+    "venueRequestApproved": "{gym} aprobó {title} en su sede",
+    "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección."
   }
 }

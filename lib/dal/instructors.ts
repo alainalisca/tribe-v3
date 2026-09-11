@@ -6,6 +6,7 @@ import { logError } from '@/lib/logger';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
+import { fetchOrganizationUserIds } from './gymVenue';
 
 /** Full instructor profile for Browse Instructors page */
 export interface InstructorProfile {
@@ -82,6 +83,16 @@ export async function fetchInstructors(
 
     if (options?.limit) {
       query = query.limit(options.limit);
+    }
+
+    // T-GYM1: gym and studio accounts are ordinary users rows with
+    // is_instructor = true -- there is no account_type column -- so without
+    // this they appear among the instructor tiles as if they were people.
+    // Filtered by business_type, not by partner membership: both partners live
+    // today are 'independent' solo trainers who belong in this list.
+    const orgResult = await fetchOrganizationUserIds(supabase);
+    if (orgResult.success && orgResult.data && orgResult.data.length > 0) {
+      query = query.not('id', 'in', `(${orgResult.data.join(',')})`);
     }
 
     const { data, error } = await query;

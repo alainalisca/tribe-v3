@@ -19,6 +19,8 @@ export interface FeaturedPartner {
   lng: number | null;
   specialties: string[];
   tier: string;
+  /** Editorial placement, highest first (161). 0 = unplaced. */
+  display_order: number;
   status: string;
   starts_at: string | null;
   expires_at: string | null;
@@ -77,9 +79,15 @@ export async function fetchActivePartners(supabase: SupabaseClient, limit = 5): 
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order'
       )
       .eq('status', 'active')
+      // display_order is editorial placement and sorts ahead of everything
+      // (161). tier stays below it so a commercial field never doubles as
+      // merchandising, and total_impressions keeps rotating everything that
+      // ties -- which, at display_order 0, is every partner not deliberately
+      // placed.
+      .order('display_order', { ascending: false })
       .order('tier', { ascending: false })
       .order('total_impressions', { ascending: true })
       .limit(limit);
@@ -101,7 +109,7 @@ export async function fetchPartnerByUserId(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order'
       )
       .eq('user_id', userId)
       .maybeSingle();
@@ -123,7 +131,7 @@ export async function fetchPartnerById(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order'
       )
       .eq('id', partnerId)
       .maybeSingle();
@@ -247,7 +255,7 @@ export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalRes
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order'
       )
       .order('created_at', { ascending: false })
       .limit(200);

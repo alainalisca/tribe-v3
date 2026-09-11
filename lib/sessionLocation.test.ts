@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { dedupeLocationSegments, formatSessionLocation, formatSessionLocationShort } from './sessionLocation';
+import {
+  dedupeLocationSegments,
+  formatSessionLocation,
+  formatSessionLocationShort,
+  formatSessionLocationShortParts,
+} from './sessionLocation';
 
 // El Poblado, so the coord-based fallbacks resolve to a real neighborhood.
 const POBLADO = { lat: 6.2088, lng: -75.5648 };
@@ -72,5 +77,58 @@ describe('formatSessionLocationShort', () => {
   it('leaves the full formatter untouched for the detail page', () => {
     const full = 'Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín, Antioquia, Colombia';
     expect(formatSessionLocation(full, POBLADO.lat, POBLADO.lng, 'es')).toBe(full);
+  });
+});
+
+describe('formatSessionLocationShort with venueName (T-GYM1)', () => {
+  const BULLBOX = 'CrossFit BullBox';
+
+  it('prepends the venue name to the short address', () => {
+    expect(formatSessionLocationShort('Cra 43G #25a-50, El Poblado', POBLADO.lat, POBLADO.lng, 'en', BULLBOX)).toBe(
+      'CrossFit BullBox · Cra 43G #25a-50, El Poblado'
+    );
+  });
+
+  it('de-duplicates the venue against the leading segment but keeps the branch', () => {
+    // The live BullBox rows read "CrossFit BullBox Ciudad del Río, Cra 43G...".
+    // The gym name must not appear twice, and "Ciudad del Río" must survive.
+    const result = formatSessionLocationShort(
+      'CrossFit BullBox Ciudad del Río, Cra 43G #25a-50, El Poblado, Medellín, Antioquia, Colombia',
+      POBLADO.lat,
+      POBLADO.lng,
+      'en',
+      BULLBOX
+    );
+    expect(result).toBe('CrossFit BullBox · Ciudad del Río, El Poblado');
+    expect(result.match(/BullBox/g)).toHaveLength(1);
+  });
+
+  it('drops the segment entirely when it is exactly the venue name', () => {
+    expect(formatSessionLocationShort('CrossFit BullBox', POBLADO.lat, POBLADO.lng, 'en', BULLBOX)).toBe(
+      'CrossFit BullBox'
+    );
+  });
+
+  it('is case-insensitive when de-duplicating', () => {
+    expect(formatSessionLocationShort('crossfit bullbox', POBLADO.lat, POBLADO.lng, 'en', BULLBOX)).toBe(
+      'CrossFit BullBox'
+    );
+  });
+
+  it('is unchanged when no venue name is passed', () => {
+    expect(formatSessionLocationShort('Cra 43G #25a-50, El Poblado', POBLADO.lat, POBLADO.lng, 'en')).toBe(
+      'Cra 43G #25a-50, El Poblado'
+    );
+  });
+
+  it('splits into parts so the card can weight the venue differently', () => {
+    const parts = formatSessionLocationShortParts(
+      'CrossFit BullBox Ciudad del Río, Cra 43G #25a-50, El Poblado',
+      POBLADO.lat,
+      POBLADO.lng,
+      'en',
+      BULLBOX
+    );
+    expect(parts).toEqual({ venue: 'CrossFit BullBox', address: 'Ciudad del Río, El Poblado' });
   });
 });

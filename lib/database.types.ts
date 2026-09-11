@@ -1249,6 +1249,9 @@ export type Database = {
           max_participants: number
           payment_gateway: string | null
           payment_instructions: string | null
+          partner_id: string | null
+          partner_reviewed_at: string | null
+          partner_status: string | null
           photo_verified: boolean | null
           photos: string[] | null
           platform_fee_percent: number | null
@@ -1298,6 +1301,9 @@ export type Database = {
           max_participants: number
           payment_gateway?: string | null
           payment_instructions?: string | null
+          partner_id?: string | null
+          partner_reviewed_at?: string | null
+          partner_status?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
           platform_fee_percent?: number | null
@@ -1347,6 +1353,9 @@ export type Database = {
           max_participants?: number
           payment_gateway?: string | null
           payment_instructions?: string | null
+          partner_id?: string | null
+          partner_reviewed_at?: string | null
+          partner_status?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
           platform_fee_percent?: number | null

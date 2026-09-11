@@ -30,6 +30,7 @@ import { useSessionFiltering } from './hooks/useSessionFiltering';
 import { isPastFeedGrace } from '@/components/SessionCardHelpers';
 import { useLiveStatus } from './hooks/useLiveStatus';
 import { useSessionActions } from './hooks/useSessionActions';
+import { fetchPartnersByIds, fetchPartnersForInstructors, type GymIdentity } from '@/lib/dal/gymVenue';
 
 /** Subset of user profile fields loaded on the home page */
 export interface UserProfile {
@@ -90,6 +91,13 @@ export function useHomeFeed() {
   // Fetched once for the whole visible page rather than per card.
   const [recapPhotosByCreator, setRecapPhotosByCreator] = useState<Record<string, string[]>>({});
 
+  // T-GYM1. Two questions, both answered once for the whole visible page:
+  // which gym is each session held at (the venue, which needed the gym's
+  // approval), and which gym does each creator coach at (the affiliation tag,
+  // which describes the person). Keyed by partner id and creator id.
+  const [partnersById, setPartnersById] = useState<Map<string, GymIdentity>>(new Map());
+  const [partnersByCreator, setPartnersByCreator] = useState<Map<string, GymIdentity>>(new Map());
+
   const filtering = useSessionFiltering({ sessions, userLocation });
   const liveStatus = useLiveStatus(supabase);
 
@@ -125,6 +133,18 @@ export function useHomeFeed() {
             // A failure costs the carousel a few slides and nothing else, so the
             // feed keeps its sessions rather than surfacing an error.
             if (recap.success && recap.data) setRecapPhotosByCreator(recap.data);
+          });
+          // Same rule as recap photos: one request each, never per card. A
+          // failure costs the gym chip and nothing else, so the feed keeps its
+          // sessions rather than surfacing an error.
+          void fetchPartnersForInstructors(supabase, creatorIds).then((res) => {
+            if (res.success && res.data) setPartnersByCreator(res.data);
+          });
+        }
+        const partnerIds = [...new Set(upcoming.map((s) => s.partner_id).filter(Boolean))] as string[];
+        if (partnerIds.length > 0) {
+          void fetchPartnersByIds(supabase, partnerIds).then((res) => {
+            if (res.success && res.data) setPartnersById(res.data);
           });
         }
       });
@@ -346,6 +366,8 @@ export function useHomeFeed() {
     setPendingSessionId: actions.setPendingSessionId,
     liveStatusMap: liveStatus.liveStatusMap,
     recapPhotosByCreator,
+    partnersById,
+    partnersByCreator,
     liveUserIdSet: liveStatus.liveUserIdSet,
     fixedHeight,
     setFixedHeight,
