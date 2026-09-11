@@ -984,7 +984,9 @@ from (
          end as missing
   from information_schema.columns
   where table_schema = 'public' and table_name = 'sessions'
-    and column_name not in ('partner_status', 'partner_reviewed_at')
+    -- THREE, not two: partner_id is revoked by 162 because it is the only way
+    -- the verdict gets computed. See GUARD_sessions_verdict_locked below.
+    and column_name not in ('partner_status', 'partner_reviewed_at', 'partner_id')
     and (not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
       or not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT'))
 ) c
@@ -1001,7 +1003,7 @@ select 'GUARD_sessions_verdict_locked',
            || string_agg(v.column_name, ', ' order by v.column_name),
          'applied'
        )
-from (values ('partner_status'), ('partner_reviewed_at')) as v(column_name)
+from (values ('partner_status'), ('partner_reviewed_at'), ('partner_id')) as v(column_name)
 where has_column_privilege('authenticated', 'public.sessions', v.column_name, 'UPDATE')
    or has_column_privilege('authenticated', 'public.sessions', v.column_name, 'INSERT')
 union all
@@ -1035,4 +1037,12 @@ select '161_featured_partners_display_order',
          where table_schema = 'public' and table_name = 'featured_partners'
            and column_name = 'display_order'
        ) then 'applied' else 'MISSING' end
+union all
+select '162_revoke_partner_id_write',
+       -- Applied when authenticated can no longer write partner_id by either
+       -- privilege. GUARD_sessions_verdict_locked below covers the same ground
+       -- continuously; this row answers "did 162 run" specifically.
+       case when not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'INSERT')
+             and not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'UPDATE')
+            then 'applied' else 'MISSING' end
 order by migration;
