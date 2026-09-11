@@ -1028,4 +1028,11 @@ select '160_drop_duplicate_partner_read_policy',
          where schemaname = 'public' and tablename = 'featured_partners'
            and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ilike '%from users%'
        ) then 'applied' else 'MISSING' end
+union all
+select '161_featured_partners_display_order',
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'featured_partners'
+           and column_name = 'display_order'
+       ) then 'applied' else 'MISSING' end
 order by migration;
