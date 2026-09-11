@@ -1018,4 +1018,14 @@ select '159_rls_admin_helper_not_inline_is_admin',
                              'local_fitness_events', 'community_bulletin')
            and coalesce(qual, '') ilike '%from users%'
        ) then 'applied' else 'MISSING' end
+union all
+select '160_drop_duplicate_partner_read_policy',
+       -- The duplicate is gone when no policy on featured_partners reads users
+       -- directly any more. Same text probe the migration asserts on, so this
+       -- row and the migration cannot disagree.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public' and tablename = 'featured_partners'
+           and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
 order by migration;

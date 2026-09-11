@@ -64,6 +64,56 @@ If the change adds a new table:
 If the change adds sensitive columns:
 - Verify existing RLS policies don't expose the new data to unauthorized users
 
+### Step 5b: Replacing an RLS policy
+
+Two rules, both learned the hard way on 2026-09-10 (migrations 159 and 160).
+
+**Enumerate the live policies first. Do not trust policy names in migration files.**
+
+```sql
+select policyname, cmd, qual, with_check
+from pg_policies
+where schemaname = 'public' and tablename = '<table>';
+```
+
+`DROP POLICY IF EXISTS` is **silent when the name does not match**. A replacement
+that targets a name which is not the live name therefore leaves the original in
+place and looks like it worked. `featured_partners` carried a fifth policy —
+`"Read active partners or admin reads all"` — that existed in no migration in
+this repository, had been applied by hand to production, and duplicated another
+policy under a different name. Migration 159 replaced four policies correctly
+and changed nothing observable, because that one survivor still refused the read.
+
+Permissive policies are OR'd for the *row* test, but the column-privilege check
+applies to every policy expression that gets planned. **One surviving policy
+refuses the entire read.**
+
+**Assert afterwards that nothing on the table still reads the forbidden column,
+and fail if it does.**
+
+```sql
+DO $$
+DECLARE leftover TEXT;
+BEGIN
+  SELECT string_agg(policyname, ', ' ORDER BY policyname)
+  INTO leftover
+  FROM pg_policies
+  WHERE schemaname = 'public' AND tablename = '<table>'
+    AND (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ILIKE '%from users%';
+
+  IF leftover IS NOT NULL THEN
+    RAISE EXCEPTION 'policies still reading users directly: %', leftover;
+  END IF;
+END $$;
+```
+
+A policy must never inline `EXISTS (SELECT 1 FROM users WHERE id = auth.uid()
+AND is_admin = true)`. Migration 113 revoked `users.is_admin` from
+`authenticated` and `anon`, so any policy expression naming it makes the table
+unreadable to every client with `42501 permission denied for table users`. Use
+`public.is_app_admin()` — `SECURITY DEFINER`, so it reads the column as its
+owner.
+
 ### Step 6: Update Schema Documentation
 
 Add the change to `supabase/schema.sql` (or equivalent) so the schema file matches production.
@@ -75,3 +125,7 @@ Add the change to `supabase/schema.sql` (or equivalent) so the schema file match
 3. **Document every change** — future developers (including you) need to know why columns exist
 4. **Test with RLS** — verify the change works as an authenticated user, not just with service_role key
 5. **One change at a time** — don't batch unrelated schema changes. Each gets its own commit.
+6. **Probe before you conclude** — a mocked DAL cannot see a permission error, so a green
+   test suite proves nothing about grants or RLS. Query the live API as `anon` and as
+   `authenticated` before and after. `popular_routes` has the identical broken-looking
+   policy shape as the four tables 159 fixed and is not broken; only the probe could tell.
