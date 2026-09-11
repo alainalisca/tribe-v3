@@ -26,6 +26,7 @@ import { useCallback, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { setSessionPartner, type GymIdentity } from '@/lib/dal/gymVenue';
 import { trackEvent } from '@/lib/analytics';
+import { createNotification } from '@/lib/dal/notifications';
 import { logError } from '@/lib/logger';
 
 /** What the database decided, once a venue has been attached. */
@@ -105,6 +106,27 @@ export function useVenuePicker(initial: GymIdentity | null = null): UseVenuePick
             partner_id: selected.id,
             auto_approved: next === 'approved',
           });
+
+          // Only a pending link is news to the gym. An approved one needs no
+          // bell: the gym already said yes, either by being the host or by
+          // leaving auto-approve on for its roster.
+          if (next === 'pending' && selected.user_id) {
+            const notified = await createNotification(supabase, {
+              recipient_id: selected.user_id,
+              type: 'venue_request_new',
+              entity_type: 'session',
+              entity_id: sessionId,
+              message: selected.business_name,
+            });
+            if (!notified.success) {
+              // The request exists and the gym will see it in its queue. A
+              // missing bell must not make the instructor think the link failed.
+              logError(new Error(notified.error ?? 'notify_failed'), {
+                action: 'useVenuePicker.notifyGym',
+                sessionId,
+              });
+            }
+          }
         }
         return { ok: true, status: next };
       } catch (error) {

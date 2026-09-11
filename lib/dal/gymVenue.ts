@@ -56,6 +56,15 @@ export interface VenueRequest {
   } | null;
   /** True when the requester is not an active member of this gym's roster. */
   notOnRoster: boolean;
+  /**
+   * When the SESSION was created -- a proxy for when the request arrived, not a
+   * record of it. Nothing stores the latter: partner_reviewed_at is written
+   * only on a decision, so a request has no timestamp of its own. Exact for a
+   * venue chosen at creation, an overestimate when one was attached later from
+   * the edit form. Used only for the hours_to_decision analytics property,
+   * which should be read with that in mind.
+   */
+  requestedAt: string | null;
 }
 
 /** Only an active partner may lend its identity to a session. */

@@ -13,11 +13,13 @@ import { renderHook, act } from '@testing-library/react';
 const setSessionPartner = vi.fn();
 const trackEvent = vi.fn();
 const logError = vi.fn();
+const createNotification = vi.fn();
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/dal/gymVenue', () => ({ setSessionPartner: (...a: unknown[]) => setSessionPartner(...a) }));
 vi.mock('@/lib/analytics', () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock('@/lib/logger', () => ({ logError: (...a: unknown[]) => logError(...a), log: vi.fn() }));
+vi.mock('@/lib/dal/notifications', () => ({ createNotification: (...a: unknown[]) => createNotification(...a) }));
 
 import { useVenuePicker } from './useVenuePicker';
 
@@ -30,7 +32,10 @@ const BULLBOX = {
   user_id: 'gym-user',
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  createNotification.mockResolvedValue({ success: true });
+});
 
 describe('useVenuePicker', () => {
   it('reports the status the database decided, never one of its own', async () => {
@@ -123,6 +128,53 @@ describe('useVenuePicker', () => {
       partner_id: 'p1',
       auto_approved: true,
     });
+  });
+
+  it('notifies the gym when the request lands pending', async () => {
+    setSessionPartner.mockResolvedValue({ success: true, data: 'pending' });
+    const { result } = renderHook(() => useVenuePicker());
+    act(() => result.current.select(BULLBOX));
+    await act(async () => {
+      await result.current.commit('s1');
+    });
+
+    expect(createNotification).toHaveBeenCalledWith(
+      {},
+      {
+        recipient_id: 'gym-user',
+        type: 'venue_request_new',
+        entity_type: 'session',
+        entity_id: 's1',
+        message: 'CrossFit BullBox',
+      }
+    );
+  });
+
+  it('does NOT notify when the link was auto-approved', async () => {
+    // The gym already said yes, by hosting it or by leaving auto-approve on.
+    setSessionPartner.mockResolvedValue({ success: true, data: 'approved' });
+    const { result } = renderHook(() => useVenuePicker());
+    act(() => result.current.select(BULLBOX));
+    await act(async () => {
+      await result.current.commit('s1');
+    });
+    expect(createNotification).not.toHaveBeenCalled();
+  });
+
+  it('still reports success when the bell fails', async () => {
+    // The request exists and the gym will see it in its queue; a missing
+    // notification must not read to the instructor as a failed link.
+    setSessionPartner.mockResolvedValue({ success: true, data: 'pending' });
+    createNotification.mockResolvedValue({ success: false, error: 'rls' });
+    const { result } = renderHook(() => useVenuePicker());
+    act(() => result.current.select(BULLBOX));
+
+    let out;
+    await act(async () => {
+      out = await result.current.commit('s1');
+    });
+    expect(out).toEqual({ ok: true, status: 'pending' });
+    expect(logError).toHaveBeenCalled();
   });
 
   it('tracks nothing when the venue was cleared rather than chosen', async () => {

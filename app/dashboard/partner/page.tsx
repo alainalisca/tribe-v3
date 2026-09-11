@@ -11,6 +11,8 @@ import PartnerDashboardStats from '@/components/partner/PartnerDashboardStats';
 import PartnerBookingsChart from '@/components/partner/PartnerBookingsChart';
 import PartnerPerformance from '@/components/partner/PartnerPerformance';
 import { ArrowLeft, Loader } from 'lucide-react';
+import VenueRequestsSection from '@/components/partner/VenueRequestsSection';
+import { useVenueRequests } from '@/hooks/useVenueRequests';
 
 type Period = '7d' | '30d' | '90d';
 
@@ -20,6 +22,15 @@ export default function PartnerDashboardPage() {
   const { language } = useLanguage();
 
   const [partner, setPartner] = useState<FeaturedPartner | null>(null);
+  // Hooks cannot be conditional, and `partner` is null until the guard above
+  // resolves, so the queue loads with an empty id and fetches nothing until it
+  // has one. fetchVenueRequests short-circuits on a falsy partner id.
+  const venue = useVenueRequests({
+    partnerId: partner?.id ?? '',
+    gymName: partner?.business_name ?? '',
+    gymUserId: partner?.user_id ?? '',
+    initialAutoApprove: partner?.auto_approve_roster ?? true,
+  });
   const [stats, setStats] = useState<PartnerStats | null>(null);
   const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
@@ -111,6 +122,18 @@ export default function PartnerDashboardPage() {
             </button>
           ))}
         </div>
+
+        {/* Venue requests sit above the metrics: an instructor waiting on a
+            decision is more urgent than last week's impressions. */}
+        <VenueRequestsSection
+          gymName={partner.business_name}
+          requests={venue.requests}
+          loading={venue.loading}
+          deciding={venue.deciding}
+          autoApprove={venue.autoApprove}
+          onDecide={(request, decision) => void venue.decide(request, decision)}
+          onToggleAutoApprove={(next) => void venue.toggleAutoApprove(next)}
+        />
 
         {/* Stats grid */}
         <PartnerDashboardStats stats={stats} language={language} />

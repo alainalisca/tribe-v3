@@ -20,6 +20,7 @@ interface RequestRow {
   is_paid: boolean | null;
   price_cents: number | null;
   currency: string | null;
+  created_at: string | null;
   creator_id: string;
   creator: {
     id: string;
@@ -55,12 +56,17 @@ export async function fetchVenueRequests(
   supabase: SupabaseClient,
   partnerId: string
 ): Promise<DalResult<VenueRequest[]>> {
+  // The dashboard calls this before its partner row resolves, and hooks cannot
+  // be conditional. An empty id would reach PostgREST as an invalid uuid and
+  // 400 rather than returning nothing.
+  if (!partnerId) return { success: true, data: [] };
+
   try {
     const [sessionsResult, rosterResult] = await Promise.all([
       supabase
         .from('sessions')
         .select(
-          'id, title, sport, date, start_time, duration, is_paid, price_cents, currency, creator_id, ' +
+          'id, title, sport, date, start_time, duration, is_paid, price_cents, currency, created_at, creator_id, ' +
             'creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_sessions_hosted)'
         )
         .eq('partner_id', partnerId)
@@ -95,6 +101,7 @@ export async function fetchVenueRequests(
           }
         : null,
       notOnRoster: !roster.has(row.creator_id),
+      requestedAt: row.created_at,
     }));
 
     return { success: true, data: requests };
