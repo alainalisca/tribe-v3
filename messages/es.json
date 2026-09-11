@@ -294,7 +294,11 @@
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",
     "otherPlace": "Otro lugar",
-    "partnerNeedsApproval": "{gym} revisará esta solicitud. Hasta que la apruebe, tu sesión se muestra con la dirección sin el nombre del gimnasio."
+    "partnerNeedsApproval": "{gym} revisará esta solicitud. Hasta que la apruebe, tu sesión se muestra con la dirección sin el nombre del gimnasio.",
+    "searchGyms": "Busca gimnasios y estudios",
+    "noGymsFound": "No se encontraron gimnasios",
+    "venueLinkFailed": "Tu sesión se guardó, pero no se pudo vincular el gimnasio. Puedes elegir la sede desde la pantalla de edición.",
+    "venueApproved": "Publicada en {gym}."
   },
   "notif": {
     "venueRequestNew": "Nueva solicitud de sede: {instructor} quiere publicar {title} en {gym}",

@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import LocationPicker from '@/components/LocationPicker';
+import VenuePicker from '@/components/VenuePicker';
+import { useVenuePicker } from '@/hooks/useVenuePicker';
 import { ArrowLeft, Zap, ChevronDown, ChevronUp, Share2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -31,6 +33,7 @@ import TemplateSection from './TemplateSection';
 import PhotoUploadSection from './PhotoUploadSection';
 import RecurringSessionToggle from '@/components/RecurringSessionToggle';
 import { shareSession, getSessionShareUrl, copyToClipboard } from '@/lib/share';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 type SessionTemplateRow = Database['public']['Tables']['session_templates']['Row'];
 type FormErrors = Partial<
@@ -58,10 +61,12 @@ function CreateSessionPageInner() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const { t, language } = useLanguage();
+  const tCreate = useTranslations('create');
   const confirm = useConfirm();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInstructor, setIsInstructor] = useState(false);
   const [loading, setLoading] = useState(false);
+  const venue = useVenuePicker();
   const [errors, setErrors] = useState<FormErrors>({});
   const [photos, setPhotos] = useState<string[]>([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
@@ -284,6 +289,17 @@ function CreateSessionPageInner() {
         location_lng: rest.longitude ?? null,
       });
       if (!result.success) throw new Error(result.error);
+
+      // The session now exists. Attaching the venue is a separate outcome from
+      // creating it, and commit() never throws, so a link failure cannot fall
+      // into the catch below and report "session creation failed" about a
+      // session that was created. The instructor is told what actually
+      // happened and can set the venue from the edit screen.
+      if (result.data?.id && venue.selected) {
+        const link = await venue.commit(result.data.id);
+        if (!link.ok) showError(tCreate('venueLinkFailed'));
+      }
+
       trackEvent('session_created', {
         session_id: result.data?.id,
         is_paid: formData.is_paid,
@@ -530,6 +546,14 @@ function CreateSessionPageInner() {
             {/* Location */}
             <div data-field="location">
               <Label className="text-theme-primary mb-2">{t('location')} *</Label>
+              <VenuePicker
+                selected={venue.selected}
+                onSelect={venue.select}
+                status={venue.status}
+                failed={venue.failed}
+                disabled={loading}
+              />
+
               <LocationPicker
                 value={formData.location}
                 onChange={(location, coords) => {

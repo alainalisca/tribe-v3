@@ -25,6 +25,9 @@ import {
   type PriceValidationError,
 } from './editGuards';
 import type { EditSessionTranslations } from './translations';
+import { fetchPartnersByIds } from '@/lib/dal/gymVenue';
+import { useVenuePicker } from '@/hooks/useVenuePicker';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
 export interface EditSessionFormData {
   sport: string;
@@ -91,6 +94,8 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   const confirm = useConfirm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const venue = useVenuePicker();
+  const tCreate = useTranslations('create');
   const [formData, setFormData] = useState<EditSessionFormData>(defaultFormData);
   const [recurringValue, setRecurringValue] = useState<EditRecurringValue>(defaultRecurring);
   const [photos, setPhotos] = useState<EditSessionPhotos>([]);
@@ -137,6 +142,19 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   async function loadSession(uid: string) {
     try {
       const result = await fetchSession(supabase, params.id as string);
+
+      // T-GYM2: restore the venue the session already has, so the picker shows
+      // it and "clear" has something to clear. fetchSession selects partner_id
+      // (T-GYM1), so this is one extra read for the partner row, not two.
+      void (async () => {
+        const partnerId = (result.data as { partner_id?: string | null } | undefined)?.partner_id ?? null;
+        if (!partnerId) return;
+        const partners = await fetchPartnersByIds(supabase, [partnerId]);
+        if (partners.success && partners.data) {
+          const gym = partners.data.get(partnerId);
+          if (gym) venue.select(gym);
+        }
+      })();
       if (!result.success || !result.data) throw new Error(result.error);
 
       const session = result.data;
@@ -304,6 +322,13 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
       });
       if (!result.success) throw new Error(result.error);
 
+      // T-GYM2: the venue is not part of the session update -- partner_status
+      // is not writable by the client and partner_id is not in the
+      // HostEditableSessionUpdate allow-list. It goes through the RPC, and a
+      // failure there is the link's alone: the edit itself has already saved.
+      const link = await venue.commit(params.id as string);
+      if (!link.ok) showError(tCreate('venueLinkFailed'));
+
       // Cross-page invalidation: the home feed caches its session list and
       // refetches when this flag is set (same convention as join/leave/cancel).
       sessionStorage.setItem('tribe_sessions_dirty', '1');
@@ -320,6 +345,7 @@ export function useEditSession(language: 'en' | 'es', txt: EditSessionTranslatio
   return {
     loading,
     saving,
+    venue,
     formData,
     setFormData,
     recurringValue,

@@ -294,7 +294,11 @@
   "create": {
     "whereIsSession": "Where is the session?",
     "otherPlace": "Other place",
-    "partnerNeedsApproval": "{gym} will review this request. Until they approve, your session shows the address without the gym's name."
+    "partnerNeedsApproval": "{gym} will review this request. Until they approve, your session shows the address without the gym's name.",
+    "searchGyms": "Search gyms and studios",
+    "noGymsFound": "No gyms found",
+    "venueLinkFailed": "Your session was saved, but the gym could not be attached. You can set the venue from the edit screen.",
+    "venueApproved": "Published at {gym}."
   },
   "notif": {
     "venueRequestNew": "New venue request: {instructor} wants to publish {title} at {gym}",
