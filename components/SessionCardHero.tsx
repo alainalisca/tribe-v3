@@ -27,10 +27,11 @@ export interface SessionCardHeroProps {
   /** Renders the LIVE pill top-left when greater than zero. */
   liveCount?: number;
   /**
-   * T-GYM1: the gym chip (or the creator's "Pendiente" tag). Rendered only when
-   * the slot is free -- the LIVE pill and the carousel's photo counter both own
-   * top-left, and the hero must never stack two things there. The venue is
-   * still named on the address line, so nothing is lost when it is crowded out.
+   * T-GYM1: the gym chip (or the creator's "Pendiente" tag). Positioned here
+   * rather than by the caller, because only the hero knows whether the
+   * carousel's photo counter is occupying the corner -- when it is, this
+   * shifts right beside it, the same offset the LIVE pill uses. A LIVE session
+   * suppresses it outright; the venue is still named on the address line.
    */
   topLeftSlot?: React.ReactNode;
   liveLabel?: string;
@@ -160,7 +161,15 @@ export default function SessionCardHero({
 
       {/* Live indicator. Shifted right when the carousel counter also sits
           top-left, so the two never overlap. */}
-      {topLeftSlot && liveCount === 0 && !useCarousel && topLeftSlot}
+      {/* The gym chip shares this corner with the carousel's photo counter, so it
+          shifts right exactly as the LIVE pill below does rather than being
+          dropped. Gating it on !useCarousel made it near-dead on real content:
+          a session with more than one photo is the common case, not the
+          exception. LIVE still wins outright -- three things in one corner is
+          one too many. */}
+      {topLeftSlot && liveCount === 0 && (
+        <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>{topLeftSlot}</div>
+      )}
 
       {liveCount > 0 && (
         <div className={`absolute top-3 z-10 ${useCarousel ? 'left-[4.25rem]' : 'left-3'}`}>

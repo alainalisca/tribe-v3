@@ -27,16 +27,14 @@ function monogram(name: string): string {
 
 export function GymHeroChip({ gym }: { gym: SessionGymSource }) {
   return (
-    <div className="absolute top-3 left-3 z-10">
-      <GymChip
-        name={gym.business_name}
-        type={gym.business_type === 'studio' ? 'studio' : 'gym'}
-        logoUrl={gym.logo_url}
-        size="sm"
-        overPhoto
-        href={gym.user_id ? `/storefront/${gym.user_id}` : undefined}
-      />
-    </div>
+    <GymChip
+      name={gym.business_name}
+      type={gym.business_type === 'studio' ? 'studio' : 'gym'}
+      logoUrl={gym.logo_url}
+      size="sm"
+      overPhoto
+      href={gym.user_id ? `/storefront/${gym.user_id}` : undefined}
+    />
   );
 }
 
@@ -47,12 +45,10 @@ export function GymHeroChip({ gym }: { gym: SessionGymSource }) {
 export function PendingVenueTag({ gym }: { gym: SessionGymSource }) {
   const t = useTranslations('partner');
   return (
-    <div className="absolute top-3 left-3 z-10">
-      <span className="inline-flex items-center gap-1 bg-amber-500/90 text-slate-900 text-[11px] font-semibold px-2 py-1 rounded-lg">
-        <Clock className="w-3 h-3" />
-        {t('pendingTag', { gym: gym.business_name })}
-      </span>
-    </div>
+    <span className="inline-flex items-center gap-1 bg-amber-500/90 text-slate-900 text-[11px] font-semibold px-2 py-1 rounded-lg">
+      <Clock className="w-3 h-3" />
+      {t('pendingTag', { gym: gym.business_name })}
+    </span>
   );
 }
 
