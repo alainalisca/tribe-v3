@@ -12,8 +12,6 @@ import { ArrowLeft, Loader } from 'lucide-react';
 import VenueRequestsSection from '@/components/partner/VenueRequestsSection';
 import { useVenueRequests } from '@/hooks/useVenueRequests';
 
-type Period = '7d' | '30d' | '90d';
-
 export default function PartnerDashboardPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -30,7 +28,6 @@ export default function PartnerDashboardPage() {
     initialAutoApprove: partner?.auto_approve_roster ?? true,
   });
   const [stats, setStats] = useState<PartnerStats | null>(null);
-  const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,12 +69,6 @@ export default function PartnerDashboardPage() {
 
   if (!partner || !stats) return null;
 
-  const periods: { value: Period; label: string }[] = [
-    { value: '7d', label: t('7 days', '7 días') },
-    { value: '30d', label: t('30 days', '30 días') },
-    { value: '90d', label: t('90 days', '90 días') },
-  ];
-
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Header */}
@@ -102,23 +93,6 @@ export default function PartnerDashboardPage() {
           <span className="bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
             {partner.tier}
           </span>
-        </div>
-
-        {/* Period selector */}
-        <div className="flex gap-2 mb-5">
-          {periods.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                period === p.value
-                  ? 'bg-tribe-green text-slate-900'
-                  : 'bg-white dark:bg-tribe-surface text-stone-700 dark:text-gray-200 border border-stone-200 dark:border-tribe-mid'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
         </div>
 
         {/* Venue requests sit above the metrics: an instructor waiting on a
