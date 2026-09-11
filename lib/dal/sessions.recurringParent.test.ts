@@ -50,6 +50,10 @@ const REQUIRED_FIELDS = [
   'start_time',
   'title',
   'visibility',
+  // T-GYM2: the venue travels with the series, so the cron must read it.
+  'partner_id',
+  'partner_status',
+  'partner_reviewed_at',
 ] as const;
 
 const selected = RECURRING_PARENT_COLUMNS.split(',').map((c) => c.trim());
