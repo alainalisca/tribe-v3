@@ -21,6 +21,7 @@ interface RequestRow {
   price_cents: number | null;
   currency: string | null;
   created_at: string | null;
+  is_recurring: boolean | null;
   creator_id: string;
   creator: {
     id: string;
@@ -66,7 +67,7 @@ export async function fetchVenueRequests(
       supabase
         .from('sessions')
         .select(
-          'id, title, sport, date, start_time, duration, is_paid, price_cents, currency, created_at, creator_id, ' +
+          'id, title, sport, date, start_time, duration, is_paid, price_cents, currency, created_at, is_recurring, creator_id, ' +
             'creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_sessions_hosted)'
         )
         .eq('partner_id', partnerId)
@@ -102,6 +103,7 @@ export async function fetchVenueRequests(
         : null,
       notOnRoster: !roster.has(row.creator_id),
       requestedAt: row.created_at,
+      isRecurring: !!row.is_recurring,
     }));
 
     return { success: true, data: requests };

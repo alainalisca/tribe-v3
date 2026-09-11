@@ -289,7 +289,9 @@
     "autoApproveRoster": "Aprobar automáticamente a mis coaches",
     "autoApproveRosterHelp": "Los instructores de tu roster publican en {gym} sin pedir permiso.",
     "pendingTag": "Pendiente · {gym}",
-    "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio."
+    "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio.",
+    "requestedOn": "Solicitada el {date}",
+    "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta."
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",

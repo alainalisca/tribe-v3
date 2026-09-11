@@ -11,7 +11,7 @@
  * The instructor is a person, so their avatar stays a circle. The gym is the
  * organization and is not repeated here -- the whole section belongs to it.
  */
-import { Check, X, Clock, AlertCircle } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Repeat } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { VenueRequest } from '@/lib/dal/gymVenue';
@@ -25,6 +25,13 @@ interface Props {
   autoApprove: boolean;
   onDecide: (request: VenueRequest, decision: VenueDecision) => void;
   onToggleAutoApprove: (next: boolean) => void;
+}
+
+/** "Requested on" -- a date the gym can act on, not a latency measure. */
+function formatRequestedOn(iso: string, locale: string): string {
+  const stamp = new Date(iso);
+  if (Number.isNaN(stamp.getTime())) return '';
+  return stamp.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
 function formatWhen(date: string, startTime: string | null, locale: string): string {
@@ -81,10 +88,28 @@ export default function VenueRequestsSection({
                 </div>
               </div>
 
+              {request.requestedAt && (
+                <p className="text-[11px] text-theme-tertiary">
+                  {t('requestedOn', { date: formatRequestedOn(request.requestedAt, locale) })}
+                </p>
+              )}
+
               {request.notOnRoster && (
                 <p className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-500">
                   <AlertCircle className="w-3 h-3 flex-shrink-0" />
                   {t('notOnRoster')}
+                </p>
+              )}
+
+              {/* A gym approving what it reads as one Tuesday session, and
+                  getting every Tuesday until March, is how a partnership ends.
+                  createChildSession copies the verdict onto generated
+                  occurrences, so this has to be said before the tap, not in a
+                  changelog. Sits directly above the buttons for that reason. */}
+              {request.isRecurring && (
+                <p className="flex items-start gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 p-2 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  <Repeat className="w-3.5 h-3.5 mt-px flex-shrink-0" />
+                  {t('recurringWarning')}
                 </p>
               )}
 

@@ -45,14 +45,6 @@ export interface UseVenueRequestsResult {
   toggleAutoApprove: (next: boolean) => Promise<boolean>;
 }
 
-/** Hours between the request arriving and the gym deciding, for the funnel. */
-function hoursSince(iso: string | null | undefined): number | null {
-  if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  return Math.round(((Date.now() - then) / 36e5) * 10) / 10;
-}
-
 export function useVenueRequests({
   partnerId,
   gymName,
@@ -126,11 +118,17 @@ export function useVenueRequests({
           }
         }
 
+        // No latency property. The only timestamp available is the session's
+        // created_at, which is exact when the venue was chosen at creation and
+        // an overestimate when it was attached later from the edit form -- with
+        // nothing in the row telling the two apart. A metric that gets plotted
+        // and believed while being wrong in an unmeasurable direction is worse
+        // than none (Al, 2026-09-11). The honest fix is a partner_requested_at
+        // column written by set_session_partner; noted as a follow-up.
         trackEvent(decision === 'approved' ? 'venue_request_approved' : 'venue_request_declined', {
           partner_id: partnerId,
           session_id: request.sessionId,
           decision,
-          hours_to_decision: hoursSince(request.requestedAt),
         });
         return true;
       } finally {

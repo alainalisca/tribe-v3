@@ -43,6 +43,7 @@ const REQUEST = {
   instructor: { id: 'leo', name: 'Leo Garcia', avatarUrl: null, averageRating: 4.8, totalSessionsHosted: 17 },
   notOnRoster: true,
   requestedAt: '2026-09-19T06:00:00Z',
+  isRecurring: false,
 };
 
 const ARGS = { partnerId: 'p1', gymName: 'CrossFit BullBox', gymUserId: 'gym-user', initialAutoApprove: true };

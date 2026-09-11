@@ -57,14 +57,18 @@ export interface VenueRequest {
   /** True when the requester is not an active member of this gym's roster. */
   notOnRoster: boolean;
   /**
-   * When the SESSION was created -- a proxy for when the request arrived, not a
-   * record of it. Nothing stores the latter: partner_reviewed_at is written
-   * only on a decision, so a request has no timestamp of its own. Exact for a
-   * venue chosen at creation, an overestimate when one was attached later from
-   * the edit form. Used only for the hours_to_decision analytics property,
-   * which should be read with that in mind.
+   * When the SESSION was created. Shown to the gym as "requested on", which is
+   * true and useful; deliberately NOT used as a latency metric, because a venue
+   * attached later from the edit form makes it an overestimate and nothing in
+   * the row tells the two apart.
    */
   requestedAt: string | null;
+  /**
+   * True when this session is a recurring parent. Approving it grants the venue
+   * to every future occurrence, because createChildSession copies the verdict
+   * onto generated children -- so the gym has to be told before it taps.
+   */
+  isRecurring: boolean;
 }
 
 /** Only an active partner may lend its identity to a session. */
