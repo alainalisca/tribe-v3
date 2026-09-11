@@ -20,11 +20,16 @@ export interface GymChipProps {
   name: string;
   type: 'gym' | 'studio';
   logoUrl?: string | null;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /** Links to the gym's storefront. Omitted inside an existing link. */
   href?: string;
   /** Translucent white plate, for placement over a session photo. */
   overPhoto?: boolean;
+  /**
+   * Render the mark alone. The storefront header prints the gym's name as its
+   * page title directly beneath, and the same name twice reads as a bug.
+   */
+  hideName?: boolean;
 }
 
 /** First letters of the first two words: "CrossFit BullBox" -> "CB". */
@@ -37,11 +42,24 @@ function monogram(name: string): string {
     .join('');
 }
 
-export default function GymChip({ name, type, logoUrl, size = 'sm', href, overPhoto = false }: GymChipProps) {
+export default function GymChip({
+  name,
+  type,
+  logoUrl,
+  size = 'sm',
+  href,
+  overPhoto = false,
+  hideName = false,
+}: GymChipProps) {
   const t = useTranslations('partner');
   const typeLabel = type === 'studio' ? t('typeStudio') : t('typeGym');
 
-  const logoBox = size === 'sm' ? 'w-[26px] h-[26px] rounded-md' : 'w-10 h-10 rounded-lg';
+  const logoBox =
+    size === 'lg'
+      ? 'w-[72px] h-[72px] rounded-2xl'
+      : size === 'md'
+        ? 'w-10 h-10 rounded-lg'
+        : 'w-[26px] h-[26px] rounded-md';
   const textSize = size === 'sm' ? 'text-[11px]' : 'text-sm';
 
   const body = (
@@ -52,23 +70,27 @@ export default function GymChip({ name, type, logoUrl, size = 'sm', href, overPh
         <span
           aria-hidden="true"
           className={`${logoBox} flex-shrink-0 bg-tribe-dark text-tribe-green flex items-center justify-center font-bold ${
-            size === 'sm' ? 'text-[10px]' : 'text-xs'
+            size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-xs' : 'text-[10px]'
           }`}
         >
           {monogram(name)}
         </span>
       )}
-      <span className="min-w-0 flex flex-col leading-tight">
-        <span className={`${textSize} font-semibold truncate`}>{name}</span>
-        <span className={`${size === 'sm' ? 'text-[9px]' : 'text-[10px]'} font-bold tracking-wide opacity-70`}>
-          {typeLabel.toUpperCase()}
+      {!hideName && (
+        <span className="min-w-0 flex flex-col leading-tight">
+          <span className={`${textSize} font-semibold truncate`}>{name}</span>
+          <span className={`${size === 'sm' ? 'text-[9px]' : 'text-[10px]'} font-bold tracking-wide opacity-70`}>
+            {typeLabel.toUpperCase()}
+          </span>
         </span>
-      </span>
+      )}
     </>
   );
 
   const plate = overPhoto ? 'bg-white/85 text-slate-900 backdrop-blur-sm' : 'bg-theme-inset text-theme-primary';
-  const className = `inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg max-w-[70%] ${plate}`;
+  const className = hideName
+    ? 'inline-flex'
+    : `inline-flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg max-w-[70%] ${plate}`;
   const label = `${name}, ${typeLabel.toLowerCase()}`;
 
   if (href) {

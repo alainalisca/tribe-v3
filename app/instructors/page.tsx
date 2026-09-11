@@ -25,6 +25,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors';
+import { fetchGymsAndStudios, type GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 import { logError } from '@/lib/logger';
 import InstructorsPageClient from './InstructorsPageClient';
 
@@ -42,10 +43,14 @@ export const revalidate = 60;
 
 export default async function InstructorsPage() {
   let initialInstructors: InstructorProfile[] = [];
+  let gyms: GymDirectoryEntry[] = [];
 
   try {
     const supabase = await createClient();
-    const result = await fetchInstructors(supabase);
+    // Both on the server, in parallel: the gym section is part of the first
+    // paint, not a client fetch that pops in after it.
+    const [result, gymResult] = await Promise.all([fetchInstructors(supabase), fetchGymsAndStudios(supabase)]);
+    if (gymResult.success && gymResult.data) gyms = gymResult.data;
     if (result.success && result.data) {
       initialInstructors = result.data;
     } else if (!result.success) {
@@ -61,5 +66,5 @@ export default async function InstructorsPage() {
     logError(error, { action: 'InstructorsPage.serverFetch' });
   }
 
-  return <InstructorsPageClient initialInstructors={initialInstructors} />;
+  return <InstructorsPageClient initialInstructors={initialInstructors} gyms={gyms} />;
 }

@@ -6,7 +6,7 @@ import { logError } from '@/lib/logger';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
-import { fetchOrganizationUserIds } from './gymVenue';
+import { fetchOrganizationUserIds } from './gymDirectory';
 import { buildExclusionFilter } from '@/lib/instructorExclusion';
 
 /** Full instructor profile for Browse Instructors page */

@@ -21,7 +21,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search, X, Check, Clock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { fetchGymsAndStudios, type GymIdentity } from '@/lib/dal/gymVenue';
+import { type GymIdentity } from '@/lib/dal/gymVenue';
+import { fetchGymsAndStudios } from '@/lib/dal/gymDirectory';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { logError } from '@/lib/logger';
 import type { VenueStatus } from '@/hooks/useVenuePicker';

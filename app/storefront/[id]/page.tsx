@@ -137,6 +137,7 @@ export default function StorefrontPage() {
       isAthleteViewer={isAthleteViewer}
       partnerData={d.partnerData}
       partnerInstructors={d.partnerInstructors}
+      sessionsPerWeek={d.sessionsPerWeek}
       followState={d.followState}
       onFollowToggle={d.handleFollowToggle}
       canBook={canBook}

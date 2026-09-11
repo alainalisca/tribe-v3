@@ -18,6 +18,7 @@ import { SESSION_ALL_COLUMNS } from '@/lib/dal/sessions';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError, showSuccess } from '@/lib/toast';
+import { fetchGymSessionsPerWeek } from '@/lib/dal/gymDirectory';
 
 export interface Instructor {
   id: string;
@@ -127,6 +128,7 @@ export function useStorefrontData(instructorId: string) {
   const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(new Set());
   const [partnerData, setPartnerData] = useState<FeaturedPartner | null>(null);
   const [partnerInstructors, setPartnerInstructors] = useState<PartnerInstructor[]>([]);
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(0);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -200,8 +202,14 @@ export function useStorefrontData(instructorId: string) {
 
         if (partnerResult.success && partnerResult.data && partnerResult.data.status === 'active') {
           setPartnerData(partnerResult.data);
-          const iResult = await fetchPartnerInstructors(supabase, partnerResult.data.id);
+          // Roster and weekly count together: both are header stats and neither
+          // blocks the other.
+          const [iResult, weekResult] = await Promise.all([
+            fetchPartnerInstructors(supabase, partnerResult.data.id),
+            fetchGymSessionsPerWeek(supabase, partnerResult.data.id),
+          ]);
           if (!cancelled && iResult.success && iResult.data) setPartnerInstructors(iResult.data);
+          if (!cancelled && weekResult.success) setSessionsPerWeek(weekResult.data ?? 0);
         }
       } catch (err) {
         logError(err, { action: 'useStorefrontData.fetchInstructor', instructorId });
@@ -502,6 +510,7 @@ export function useStorefrontData(instructorId: string) {
     joinedSessionIds,
     partnerData,
     partnerInstructors,
+    sessionsPerWeek,
     handleSessionJoined,
     handleFollowToggle,
     handlePostLike,

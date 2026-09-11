@@ -9,6 +9,7 @@ import VideoIntro from '@/components/instructor/VideoIntro';
 import AvailabilityPreview from '@/components/instructor/AvailabilityPreview';
 import InterestButton from '@/components/instructor/InterestButton';
 import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
+import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
 import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
 import type { Instructor, FollowState } from '@/app/storefront/[id]/useStorefrontData';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
@@ -22,6 +23,7 @@ interface StorefrontProfileColumnProps {
   isAthleteViewer: boolean;
   partnerData: FeaturedPartner | null;
   partnerInstructors: PartnerInstructor[];
+  sessionsPerWeek: number;
   followState: FollowState;
   onFollowToggle: () => void;
   canBook: boolean;
@@ -41,15 +43,37 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
     isAthleteViewer,
     partnerData,
     partnerInstructors,
+    sessionsPerWeek,
     followState,
     onFollowToggle,
     canBook,
     onBook,
   } = props;
 
+  // 'gym' | 'studio' are organizations; 'independent' is a solo trainer and
+  // keeps the person treatment. business_type is the only thing that tells
+  // them apart -- the users row looks identical either way.
+  const isOrganization =
+    !!partnerData && (partnerData.business_type === 'gym' || partnerData.business_type === 'studio');
+
   return (
     <div className="space-y-4">
-      {partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />}
+      {/* An organization gets the organization header; the affiliate pill drops
+          to a secondary line beneath it rather than being the headline. A
+          partner that is an 'independent' solo trainer keeps the old treatment,
+          because they ARE a person. */}
+      {isOrganization ? (
+        <>
+          <GymStorefrontHeader
+            partner={partnerData}
+            coachCount={partnerInstructors.length}
+            sessionsPerWeek={sessionsPerWeek}
+          />
+          <PartnerStorefrontBadge partner={partnerData} language={lang} />
+        </>
+      ) : (
+        partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />
+      )}
       {/* instructor_bio first, bio second: instructor_bio is the field both
           instructor-facing editors (the Storefront Editor and the profile-edit
           Professional Bio) write, so it reflects what the instructor last saved
@@ -128,9 +152,7 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
           {lang === 'es' ? 'Compartir Perfil' : 'Share Profile'}
         </button>
       )}
-      {partnerData && partnerInstructors.length > 0 && (
-        <PartnerInstructorRoster instructors={partnerInstructors} language={lang} />
-      )}
+      {partnerData && partnerInstructors.length > 0 && <PartnerInstructorRoster instructors={partnerInstructors} />}
       {canBook && (
         <button
           onClick={onBook}
