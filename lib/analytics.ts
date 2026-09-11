@@ -236,6 +236,13 @@ type EventName =
   | 'tip_interest' // legacy: user tried to tip before tip charging was wired
   | 'tip_initiated' // user started a real tip checkout (post tip-payment wiring)
 
+  // Gym venues (T-GYM2). All five are new; no dashboard reads them yet.
+  | 'venue_selected' // instructor attached a gym; auto_approved says whether it published at once
+  | 'venue_request_approved' // gym approved a pending request from its dashboard
+  | 'venue_request_declined' // gym declined one
+  | 'gym_storefront_viewed' // a gym storefront opened; `source` says where from
+  | 'gym_tile_tapped' // a gym tile tapped in Gimnasios y estudios on /instructors
+
   // Errors
   | 'error_occurred'
   | 'api_error';

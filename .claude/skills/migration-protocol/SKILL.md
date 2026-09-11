@@ -125,7 +125,13 @@ Add the change to `supabase/schema.sql` (or equivalent) so the schema file match
 3. **Document every change** — future developers (including you) need to know why columns exist
 4. **Test with RLS** — verify the change works as an authenticated user, not just with service_role key
 5. **One change at a time** — don't batch unrelated schema changes. Each gets its own commit.
-6. **Probe before you conclude** — a mocked DAL cannot see a permission error, so a green
+6. **Wrap every production probe in a transaction** — `begin; <probe>; rollback;`. A
+   diagnostic write against production is still a write. The T-GYM2 probe for a CHECK
+   constraint on `notifications.type` was an unwrapped INSERT that only failed to land
+   because the recipient id happened to violate a foreign key; a different bogus value
+   would have written a real row. The probe was sound, the method was not. This applies
+   to any INSERT/UPDATE/DELETE used to learn something, including constraint probes.
+7. **Probe before you conclude** — a mocked DAL cannot see a permission error, so a green
    test suite proves nothing about grants or RLS. Query the live API as `anon` and as
    `authenticated` before and after. `popular_routes` has the identical broken-looking
    policy shape as the four tables 159 fixed and is not broken; only the probe could tell.
