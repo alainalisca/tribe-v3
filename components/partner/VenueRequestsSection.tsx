@@ -14,8 +14,12 @@
 import { Check, X, Clock, AlertCircle, Repeat } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { useLanguage } from '@/lib/LanguageContext';
 import type { VenueRequest } from '@/lib/dal/gymVenue';
 import type { VenueDecision } from '@/hooks/useVenueRequests';
+
+/** App language -> date locale. A map rather than a ternary on `language`. */
+const DATE_LOCALES: Record<string, string> = { es: 'es-CO', en: 'en-US' };
 
 interface Props {
   gymName: string;
@@ -50,7 +54,13 @@ export default function VenueRequestsSection({
   onToggleAutoApprove,
 }: Props) {
   const t = useTranslations('partner');
-  const locale = typeof navigator !== 'undefined' && navigator.language?.startsWith('es') ? 'es-CO' : 'en-US';
+  // The APP's language, not the browser's. Reading navigator.language gave a
+  // Spanish sentence an English month -- "Solicitada el Sep 11" -- for anyone
+  // running the app in Spanish on an English-locale device, which is most
+  // phones here. Intl already produces "11 de sept" for es-CO, so the format
+  // was never the problem; the locale source was.
+  const { language } = useLanguage();
+  const locale = DATE_LOCALES[language] ?? DATE_LOCALES.en;
 
   return (
     <section className="bg-theme-card rounded-2xl border border-theme p-4 space-y-3">

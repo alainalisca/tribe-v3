@@ -20,6 +20,8 @@ vi.mock('@/lib/i18n/useTranslations', () => ({
         ? `Requested ${v?.date}`
         : key,
 }));
+let mockLanguage = 'en';
+vi.mock('@/lib/LanguageContext', () => ({ useLanguage: () => ({ language: mockLanguage }) }));
 vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
@@ -78,6 +80,27 @@ describe('VenueRequestsSection', () => {
   it('shows when the request was made, as a date', () => {
     renderSection(BASE);
     expect(screen.getByText(/^Requested /)).toBeTruthy();
+  });
+
+  it('formats the date in the APP language, not the browser locale', () => {
+    // "Solicitada el Sep 11" -- a Spanish sentence with an English month -- was
+    // the bug: the locale came from navigator.language, so anyone running the
+    // app in Spanish on an English-locale phone got a mixed date.
+    mockLanguage = 'es';
+    try {
+      renderSection(BASE);
+      // es-CO already renders "19 de sept", "de" included.
+      expect(screen.getByText(/^Requested /).textContent).toContain('19 de sept');
+      expect(screen.getByText(/^Requested /).textContent).not.toContain('Sep 19');
+    } finally {
+      mockLanguage = 'en';
+    }
+  });
+
+  it('still renders the English month when the app is in English', () => {
+    mockLanguage = 'en';
+    renderSection(BASE);
+    expect(screen.getByText(/^Requested /).textContent).toContain('Sep 19');
   });
 
   it('renders a calm empty state rather than an error', () => {
