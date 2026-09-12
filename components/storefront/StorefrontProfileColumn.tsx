@@ -9,7 +9,6 @@ import VideoIntro from '@/components/instructor/VideoIntro';
 import AvailabilityPreview from '@/components/instructor/AvailabilityPreview';
 import InterestButton from '@/components/instructor/InterestButton';
 import PartnerStorefrontBadge from '@/components/storefront/PartnerStorefrontBadge';
-import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
 import PartnerInstructorRoster from '@/components/storefront/PartnerInstructorRoster';
 import type { Instructor, FollowState } from '@/app/storefront/[id]/useStorefrontData';
 import type { FeaturedPartner, PartnerInstructor } from '@/lib/dal/featuredPartners';
@@ -23,7 +22,6 @@ interface StorefrontProfileColumnProps {
   isAthleteViewer: boolean;
   partnerData: FeaturedPartner | null;
   partnerInstructors: PartnerInstructor[];
-  sessionsPerWeek: number;
   followState: FollowState;
   onFollowToggle: () => void;
   canBook: boolean;
@@ -43,7 +41,6 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
     isAthleteViewer,
     partnerData,
     partnerInstructors,
-    sessionsPerWeek,
     followState,
     onFollowToggle,
     canBook,
@@ -58,22 +55,10 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
 
   return (
     <div className="space-y-4">
-      {/* An organization gets the organization header; the affiliate pill drops
-          to a secondary line beneath it rather than being the headline. A
-          partner that is an 'independent' solo trainer keeps the old treatment,
-          because they ARE a person. */}
-      {isOrganization ? (
-        <>
-          <GymStorefrontHeader
-            partner={partnerData}
-            coachCount={partnerInstructors.length}
-            sessionsPerWeek={sessionsPerWeek}
-          />
-          <PartnerStorefrontBadge partner={partnerData} language={lang} />
-        </>
-      ) : (
-        partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />
-      )}
+      {/* An organisation's identity is the page-level GymStorefrontHeader, which
+          replaces StorefrontHero. Nothing organisation-shaped renders here, or
+          the storefront shows the gym twice -- which is what shipped. */}
+      {!isOrganization && partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />}
       {/* instructor_bio first, bio second: instructor_bio is the field both
           instructor-facing editors (the Storefront Editor and the profile-edit
           Professional Bio) write, so it reflects what the instructor last saved
@@ -90,12 +75,19 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
         isVerified={!!instructor.verified}
         language={lang}
       />
-      <VideoIntro
-        videoUrl={instructor.storefront_video_url}
-        posterUrl={instructor.storefront_banner_url}
-        isOwnStorefront={isOwn}
-        language={lang}
-      />
+      {/* Suppressed for organisations rather than reworded. The uploader behind
+          this prompt writes to the instructor profile's video field, which is
+          person-scoped plumbing -- a reworded prompt would open it and file a
+          gym's video into a personal instructor record. Suppressing is honest;
+          rewording would be a lie with a nicer tone. */}
+      {!isOrganization && (
+        <VideoIntro
+          videoUrl={instructor.storefront_video_url}
+          posterUrl={instructor.storefront_banner_url}
+          isOwnStorefront={isOwn}
+          language={lang}
+        />
+      )}
       <AvailabilityPreview instructorId={instructorId} language={lang} />
       {isAthleteViewer && (
         // T-DM Gate 2: instructors are publicly soliciting business, so an athlete

@@ -16,6 +16,7 @@ import StorefrontTabPanels from '@/components/storefront/StorefrontTabPanels';
 import StorefrontEmpty from '@/components/storefront/StorefrontEmpty';
 import BlockReportControls from '@/components/BlockReportControls';
 import { useStorefrontData } from './useStorefrontData';
+import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -24,6 +25,11 @@ export default function StorefrontPage() {
   const instructorId = params.id as string;
 
   const d = useStorefrontData(instructorId);
+  // 'gym' | 'studio' are organisations; 'independent' is a solo trainer and
+  // keeps the person treatment. business_type is the only thing that tells them
+  // apart -- the users row looks identical either way.
+  const isOrganization =
+    !!d.partnerData && (d.partnerData.business_type === 'gym' || d.partnerData.business_type === 'studio');
   const [activeTab, setActiveTab] = useState('sessions');
 
   const tabs = useMemo<StorefrontTab[]>(() => {
@@ -137,7 +143,6 @@ export default function StorefrontPage() {
       isAthleteViewer={isAthleteViewer}
       partnerData={d.partnerData}
       partnerInstructors={d.partnerInstructors}
-      sessionsPerWeek={d.sessionsPerWeek}
       followState={d.followState}
       onFollowToggle={d.handleFollowToggle}
       canBook={canBook}
@@ -169,14 +174,26 @@ export default function StorefrontPage() {
           page left. `clip` (not `hidden`) avoids creating a scroll container, so
           the sticky sidebar + sticky tabs below keep working. */}
       <main className="pt-header max-w-5xl mx-auto overflow-x-clip">
-        <StorefrontHero instructor={instructor} language={lang} />
+        {/* An organisation gets the organisation identity INSTEAD of the person
+            one. Rendering both is what showed BullBox twice: two avatars, two
+            names, and three person metrics as empty dashes. */}
+        {isOrganization && d.partnerData ? (
+          <GymStorefrontHeader
+            partner={d.partnerData}
+            account={instructor}
+            coachCount={d.partnerInstructors.length}
+            sessionsPerWeek={d.sessionsPerWeek}
+          />
+        ) : (
+          <StorefrontHero instructor={instructor} language={lang} />
+        )}
 
         {!hasContent ? (
           // No offerings yet — single centered column, no empty void.
           // BUG-026: extra bottom padding so the empty state doesn't sit
           // flush against (or get covered by) the fixed bottom nav.
           <div className="px-4 md:px-6 mt-4 mb-24 max-w-xl mx-auto space-y-4">
-            <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+            {!isOrganization && <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />}
             {profileColumn}
             <StorefrontEmpty language={lang} isOwner={isOwn} />
           </div>
@@ -184,13 +201,17 @@ export default function StorefrontPage() {
           <>
             {/* Below lg: single centered column. lg+: two-column. */}
             <div className="px-4 md:px-6 mt-4 lg:hidden max-w-xl mx-auto">
-              <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+              {!isOrganization && (
+                <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+              )}
             </div>
 
             <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-8 px-4 md:px-6 mt-4">
               <aside className="lg:sticky lg:top-20 lg:self-start space-y-4 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
                 <div className="hidden lg:block">
-                  <StorefrontTrustBar instructor={instructor} language={lang} orientation="vertical" />
+                  {!isOrganization && (
+                    <StorefrontTrustBar instructor={instructor} language={lang} orientation="vertical" />
+                  )}
                 </div>
                 {profileColumn}
               </aside>

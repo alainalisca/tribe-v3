@@ -292,7 +292,8 @@
     "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio.",
     "requestedOn": "Solicitada el {date}",
     "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta.",
-    "partnerDashboard": "Panel del gimnasio"
+    "partnerDashboard": "Panel del gimnasio",
+    "featuredAffiliate": "Afiliado destacado"
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",
