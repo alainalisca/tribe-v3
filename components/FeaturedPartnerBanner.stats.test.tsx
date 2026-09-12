@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => ({}) }));
 vi.mock('@/lib/dal/featuredPartners', async () => ({
@@ -235,13 +235,40 @@ describe('FeaturedPartnerBanner carousel affordances', () => {
     expect(current.length).toBe(1);
   });
 
-  it('scrolls rather than swapping state, so touch swipe works natively', async () => {
-    // The old version had no scroll container and no pointer handlers at all,
-    // so there was nothing to swipe.
+  it('renders ONE partner at a time, not a scroll track', async () => {
+    // The scroll-snap track shipped broken on iPhone -- slides landed partway
+    // and clipped, plus an empty slide at the end -- and neither Al nor I could
+    // reproduce it, because the authenticated feed is unreachable to both of
+    // us. Reverting the mechanism was the honest response; a speculative CSS
+    // fix would have been the same mistake a third time.
     const { container } = await renderTwo();
-    const track = container.querySelector('.overflow-x-auto') as HTMLElement;
-    expect(track).toBeTruthy();
-    expect(track.className).toContain('snap-x');
+    expect(container.querySelector('.overflow-x-auto')).toBeNull();
+    expect(container.querySelector('.snap-x')).toBeNull();
+    // Exactly one card, whatever the partner count.
+    expect(container.querySelectorAll('.bg-theme-card').length).toBe(1);
+  });
+
+  it('advances with the arrows', async () => {
+    const { container } = await renderTwo();
+    expect(container.textContent).toContain('CrossFit BullBox');
+
+    fireEvent.click(screen.getByLabelText('Siguiente afiliado'));
+    expect(container.textContent).toContain('Marce Anahata');
+    expect(container.textContent).not.toContain('CrossFit BullBox');
+  });
+
+  it('jumps with the dots', async () => {
+    const { container } = await renderTwo();
+    fireEvent.click(screen.getByLabelText('Ir al afiliado 2'));
+    expect(container.textContent).toContain('Marce Anahata');
+  });
+
+  it('wraps, so neither arrow is ever a dead control', async () => {
+    // With three partners a clamped arrow spends a third of its life doing
+    // nothing, which reads as broken.
+    const { container } = await renderTwo();
+    fireEvent.click(screen.getByLabelText('Afiliado anterior'));
+    expect(container.textContent).toContain('Marce Anahata');
   });
 
   it('does not auto-advance', () => {

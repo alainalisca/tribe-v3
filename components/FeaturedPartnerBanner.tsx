@@ -10,8 +10,6 @@ import Image from 'next/image';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import PartnerCard from '@/components/partner/FeaturedPartnerCard';
-import { useCarouselIndex } from '@/hooks/useCarouselIndex';
-import { usePointerDragScroll } from '@/hooks/usePointerDragScroll';
 
 export default function FeaturedPartnerBanner() {
   const { language } = useLanguage();
@@ -20,11 +18,26 @@ export default function FeaturedPartnerBanner() {
   const supabase = createClient();
   const [partners, setPartners] = useState<FeaturedPartner[]>([]);
   const impressionTracked = useRef<Set<string>>(new Set());
-  // Both hooks are the session card's, unchanged: useCarouselIndex derives the
-  // active slide from scrollLeft, usePointerDragScroll adds mouse drag that a
-  // native scroll container otherwise ignores.
-  const { trackRef, index, scrollBySlides } = useCarouselIndex(partners.length);
-  const { dragging, handlers } = usePointerDragScroll({ trackRef, count: partners.length });
+  // One partner at a time, switched by state -- NOT a scroll-snap track.
+  //
+  // The track shipped broken on iPhone: slides landed partway and clipped, and
+  // an empty slide appeared at the end. Neither Al nor I could reproduce it,
+  // because the authenticated feed is unreachable to both of us -- / renders
+  // LandingPage when logged out and both banner mounts sit behind
+  // {f.user && ...}. Reverting the mechanism is the honest response to a bug
+  // that cannot be observed; a speculative CSS fix would have been the same
+  // mistake a third time.
+  //
+  // What is lost is native touch swipe, which never existed on this component
+  // before that change, so this is the status quo rather than a regression.
+  // usePointerDragScroll stays in the codebase -- HeroCarousel uses it and its
+  // 21 tests pass on it. Only the banner stops using it.
+  const [index, setIndex] = useState(0);
+
+  /** Wraps, so neither arrow is ever a dead control on a 3-item carousel. */
+  function step(delta: number) {
+    setIndex((prev) => (prev + delta + partners.length) % partners.length);
+  }
 
   useEffect(() => {
     async function load() {
@@ -56,31 +69,12 @@ export default function FeaturedPartnerBanner() {
     return <BecomePartnerCTA />;
   }
 
-  return (
-    /* One scroll-snap track, not a state swap.
-       The banner rendered a single partner and changed it with setState, which
-       meant NO swipe on mobile at all -- there were no pointer handlers and no
-       scroll container. A native track gives touch swipe for free, and the
-       T-UI4 drag hook gives the mouse the same gesture, since a native scroll
-       container ignores mouse drag entirely.
+  const partner = partners[index];
+  if (!partner) return null;
 
-       Matches the feed rather than inverting it: this was a near-black gradient
-       card in a column of light cards and read as pasted in from another
-       product. Featured status is the badge and the green border. */
+  return (
     <div className="relative mb-4">
-      <div
-        ref={trackRef}
-        {...handlers}
-        className={`flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide rounded-2xl ${
-          partners.length > 1 ? 'md:cursor-grab' : ''
-        } ${dragging ? 'select-none md:cursor-grabbing' : ''}`}
-      >
-        {partners.map((p: FeaturedPartner) => (
-          <div key={p.id} className="w-full flex-shrink-0 snap-start">
-            <PartnerCard partner={p} language={language} onOpen={() => handleClick(p)} />
-          </div>
-        ))}
-      </div>
+      <PartnerCard partner={partner} language={language} onOpen={() => handleClick(partner)} />
 
       {partners.length > 1 && (
         /* Pagination row: arrows flanking the dots, BELOW the card.
@@ -100,7 +94,7 @@ export default function FeaturedPartnerBanner() {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              scrollBySlides(-1);
+              step(-1);
             }}
             aria-label={tPartner('previousPartner')}
             className="min-w-[40px] min-h-[40px] flex items-center justify-center text-theme-tertiary hover:text-theme-primary transition-colors"
@@ -118,7 +112,7 @@ export default function FeaturedPartnerBanner() {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                scrollBySlides(i - index);
+                setIndex(i);
               }}
               aria-label={tPartner('goToPartner', { n: i + 1 })}
               aria-current={i === index}
@@ -136,7 +130,7 @@ export default function FeaturedPartnerBanner() {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              scrollBySlides(1);
+              step(1);
             }}
             aria-label={tPartner('nextPartner')}
             className="min-w-[40px] min-h-[40px] flex items-center justify-center text-theme-tertiary hover:text-theme-primary transition-colors"
