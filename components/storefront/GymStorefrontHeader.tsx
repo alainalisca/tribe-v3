@@ -56,8 +56,13 @@ export default function GymStorefrontHeader({ partner, account, coachCount, sess
 
   // A single tile reads as orphaned -- the same visual problem as a lone chip
   // in a grid. One stat becomes a line of text; the row returns at two or more.
+  // Both labels are unit-only and the number always lives in `value`, so the
+  // one-line path and the tile path can each render it exactly once.
+  // coachesCount ('{n} coaches') is deliberately NOT used here: it embeds the
+  // number, which the one-line path dropped and the tile path printed twice.
+  // It stays for SessionGymBits, which needs the interpolated form.
   const stats = [
-    coachCount > 0 ? { value: coachCount, label: t('coachesCount', { n: coachCount }) } : null,
+    coachCount > 0 ? { value: coachCount, label: t('coachesUnit') } : null,
     sessionsPerWeek > 0 ? { value: sessionsPerWeek, label: t('sessionsPerWeek') } : null,
   ].filter(Boolean) as { value: number; label: string }[];
 
@@ -105,7 +110,11 @@ export default function GymStorefrontHeader({ partner, account, coachCount, sess
           </p>
         )}
 
-        {stats.length === 1 && <p className="mt-1 text-sm text-theme-tertiary">{stats[0].label}</p>}
+        {stats.length === 1 && (
+          <p className="mt-1 text-sm text-theme-tertiary">
+            {stats[0].value} {stats[0].label}
+          </p>
+        )}
 
         {/* No date. When an affiliation started tells an athlete choosing a gym
             nothing, and it advertises how new the partnership is. */}

@@ -89,7 +89,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
 
   return (
     <div className="bg-theme-card rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">{t.heading}</h3>
+      <h3 className="text-sm font-semibold text-theme-primary mb-3">{t.heading}</h3>
       {sessions.length === 0 ? (
         <p className="text-xs text-theme-tertiary">{t.noSessions}</p>
       ) : (
@@ -105,7 +105,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
               <li key={s.id}>
                 <Link
                   href={`/session/${s.id}`}
-                  className="flex items-center gap-2 py-1.5 text-sm text-gray-200 hover:text-[#A3E635]"
+                  className="flex items-center gap-2 py-1.5 text-sm text-theme-primary hover:text-tribe-green-dark"
                 >
                   <span
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${full ? 'bg-red-500' : 'bg-[#84cc16]'}`}

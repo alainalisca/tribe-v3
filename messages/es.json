@@ -277,6 +277,7 @@
     "coachAtLong": "Coach en {gym}",
     "ourCoaches": "Nuestros coaches",
     "coachesCount": "{n} coaches",
+    "coachesUnit": "coaches",
     "sessionsPerWeek": "sesiones / semana",
     "gymsAndStudios": "Gimnasios y estudios",
     "featuredSince": "Afiliado destacado · desde {date}",
