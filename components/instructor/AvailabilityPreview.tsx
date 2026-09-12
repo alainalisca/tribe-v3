@@ -108,7 +108,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
                   className="flex items-center gap-2 py-1.5 text-sm text-theme-primary hover:text-tribe-green-dark"
                 >
                   <span
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${full ? 'bg-red-500' : 'bg-[#84cc16]'}`}
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${full ? 'bg-red-500' : 'bg-tribe-green'}`}
                     aria-hidden="true"
                   />
                   <span className="text-xs text-theme-tertiary w-20 flex-shrink-0">
@@ -116,7 +116,9 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
                   </span>
                   <span className="text-xs text-theme-tertiary w-16 flex-shrink-0">{s.start_time.slice(0, 5)}</span>
                   <span className="flex-1 truncate">{s.title || sportLabel}</span>
-                  {full && <span className="text-[10px] uppercase text-red-400 font-semibold">{t.full}</span>}
+                  {full && (
+                    <span className="text-[10px] uppercase text-red-600 dark:text-red-400 font-semibold">{t.full}</span>
+                  )}
                 </Link>
               </li>
             );
