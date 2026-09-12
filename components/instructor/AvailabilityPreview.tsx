@@ -117,7 +117,7 @@ export default function AvailabilityPreview({ instructorId, language, daysAhead 
                   <span className="text-xs text-theme-tertiary w-16 flex-shrink-0">{s.start_time.slice(0, 5)}</span>
                   <span className="flex-1 truncate">{s.title || sportLabel}</span>
                   {full && (
-                    <span className="text-[10px] uppercase text-red-600 dark:text-red-400 font-semibold">{t.full}</span>
+                    <span className="text-[10px] uppercase text-red-600 dark:text-red-300 font-semibold">{t.full}</span>
                   )}
                 </Link>
               </li>
