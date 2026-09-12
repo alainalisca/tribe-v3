@@ -195,3 +195,30 @@ function shortAddress(
   if (!head) return neighborhood ?? '';
   return neighborhood ? `${head}, ${neighborhood}` : head;
 }
+
+/**
+ * The neighbourhood from a partner's street address, for a directory tile.
+ *
+ * Falls back neighbourhood -> city -> null, and NEVER returns a street. A tile
+ * reading "Cra 43G #25a-50" looks like a bug; a tile with no location line
+ * reads fine, and the full address is on the storefront, which is where
+ * somebody goes for it (Al, 2026-09-11).
+ */
+export function neighborhoodFromAddress(address: string | null | undefined): string | null {
+  const trimmed = (address ?? '').trim();
+  if (!trimmed) return null;
+
+  const segments = dedupeLocationSegments(trimmed)
+    .split(', ')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const known = new Map(ACTIVE_CITY.neighborhoods.map((n) => [segmentKey(n.name), n.name]));
+  for (const segment of segments) {
+    const match = known.get(segmentKey(segment));
+    if (match) return match;
+  }
+
+  const city = segments.find((s) => segmentKey(s) === segmentKey(ACTIVE_CITY.name));
+  return city ?? null;
+}

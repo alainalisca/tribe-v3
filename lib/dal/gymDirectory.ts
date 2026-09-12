@@ -42,6 +42,16 @@ export interface GymDirectoryEntry extends GymIdentity {
   address: string | null;
   specialties: string[] | null;
   coachCount: number;
+  /**
+   * The gym account's avatar, used when logo_url is null -- the same fallback
+   * the storefront header uses, so a gym cannot show its logo on one surface
+   * and a monogram on the other. Verified readable by `anon` before adding the
+   * embed: public.users is under a column-level SELECT regime, and an
+   * ungranted column does not degrade the embed, it fails the whole read.
+   */
+  accountAvatarUrl: string | null;
+  /** Approved sessions at this venue in the next seven days. */
+  sessionsPerWeek: number;
 }
 
 /** Active gyms and studios with their roster sizes, for the discover section. */
@@ -49,7 +59,7 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties, display_order`)
+      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties, display_order, user:users(avatar_url)`)
       .eq('status', 'active')
       .in('business_type', [...ORGANIZATION_TYPES])
       // Editorial placement first (161), then alphabetical. Same precedence as
@@ -82,7 +92,47 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
 
-    return { success: true, data: partners.map((p) => ({ ...p, coachCount: counts.get(p.id) ?? 0 })) };
+    // Approved sessions in the next seven days, for every gym at once.
+    //
+    // Read through sessions_public, not sessions: this page renders logged out
+    // and 140 revoked anon from the base table. Counted in memory rather than
+    // with a grouped select because THIS POSTGREST HAS AGGREGATES DISABLED --
+    // `select=partner_id,count()` returns PGRST123 "Use of aggregate functions
+    // is not allowed". One query either way; the rows are bounded by a
+    // seven-day window at partner venues, and this needs no server config.
+    const today = new Date();
+    const week = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const { data: upcoming, error: upcomingError } = await supabase
+      .from('sessions_public')
+      .select('partner_id')
+      .in(
+        'partner_id',
+        partners.map((p) => p.id)
+      )
+      .eq('partner_status', 'approved')
+      .eq('status', 'active')
+      .gte('date', iso(today))
+      .lte('date', iso(week));
+
+    if (upcomingError) return { success: false, error: upcomingError.message };
+
+    const weekly = new Map<string, number>();
+    for (const row of upcoming ?? []) {
+      const key = row.partner_id as string;
+      weekly.set(key, (weekly.get(key) ?? 0) + 1);
+    }
+
+    return {
+      success: true,
+      data: partners.map((p) => ({
+        ...p,
+        coachCount: counts.get(p.id) ?? 0,
+        sessionsPerWeek: weekly.get(p.id) ?? 0,
+        accountAvatarUrl: (p as unknown as { user?: { avatar_url?: string | null } | null }).user?.avatar_url ?? null,
+      })),
+    };
   } catch (error) {
     logError(error, { action: 'fetchGymsAndStudios' });
     return { success: false, error: 'Failed to fetch gyms and studios' };
