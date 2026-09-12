@@ -180,6 +180,37 @@ describe('FeaturedPartnerBanner carousel affordances', () => {
     expect(screen.getByLabelText('Afiliado anterior')).toBeTruthy();
   });
 
+  it('puts the arrows in the pagination row, not floating over the card', async () => {
+    // The reuse was right in mechanism and wrong in context: over a photo an
+    // overlay is correct, over text it landed on the "CrossFit" tag and drew a
+    // focus ring across it.
+    const { container } = await renderTwo();
+    const prev = screen.getByLabelText('Afiliado anterior');
+    expect(prev.className).not.toContain('absolute');
+    // Same row as the dots, so they read as one control.
+    const firstDot = container.querySelector('button[aria-label^="Ir al afiliado"]');
+    expect(prev.parentElement).toBe(firstDot?.parentElement);
+  });
+
+  it('shows the arrows always, not on hover', async () => {
+    // Out of the card they are a control, not an overlay.
+    await renderTwo();
+    for (const label of ['Afiliado anterior', 'Siguiente afiliado']) {
+      const btn = screen.getByLabelText(label);
+      expect(btn.className).not.toContain('opacity-0');
+      expect(btn.className).not.toContain('group-hover');
+    }
+  });
+
+  it('keeps the 40px hit area on the arrows', async () => {
+    await renderTwo();
+    for (const label of ['Afiliado anterior', 'Siguiente afiliado']) {
+      const btn = screen.getByLabelText(label);
+      expect(btn.className).toContain('min-w-[40px]');
+      expect(btn.className).toContain('min-h-[40px]');
+    }
+  });
+
   it('renders no arrows for a single partner', async () => {
     render(<FeaturedPartnerBanner />);
     await screen.findByText('CrossFit BullBox');

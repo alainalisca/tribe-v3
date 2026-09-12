@@ -67,7 +67,7 @@ export default function FeaturedPartnerBanner() {
        Matches the feed rather than inverting it: this was a near-black gradient
        card in a column of light cards and read as pasted in from another
        product. Featured status is the badge and the green border. */
-    <div className="relative group mb-4">
+    <div className="relative mb-4">
       <div
         ref={trackRef}
         {...handlers}
@@ -83,9 +83,19 @@ export default function FeaturedPartnerBanner() {
       </div>
 
       {partners.length > 1 && (
-        <>
-          {/* Chevrons: same position, styling and show-on-hover as the session
-              card's, so the two carousels behave identically on desktop. */}
+        /* Pagination row: arrows flanking the dots, BELOW the card.
+           The mechanism is the session card's and stays so -- same 40px hit
+           areas, same scrollBySlides, same drag and swipe. The PLACEMENT is
+           not, because the context is not: on SessionCardHero the chevrons
+           float over a photo, where overlaying is correct. Here they floated
+           over text, landing on the "CrossFit" tag and drawing a focus ring
+           across it.
+
+           Always visible rather than hover-only, since out here they are a
+           control rather than an overlay -- and the dark circle that gave them
+           contrast against a photo is gone for the same reason: on a light row
+           it read as a sticker. */
+        <div className="flex items-center justify-center gap-1 mt-2.5">
           <button
             type="button"
             onClick={(e) => {
@@ -93,12 +103,35 @@ export default function FeaturedPartnerBanner() {
               scrollBySlides(-1);
             }}
             aria-label={tPartner('previousPartner')}
-            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-theme-tertiary hover:text-theme-primary transition-colors"
           >
-            <span className="w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center">
-              <ChevronLeft className="w-4 h-4" />
-            </span>
+            <ChevronLeft className="w-4 h-4" />
           </button>
+
+          {/* The dots WERE buttons already, but 6px with no padding is not a
+              hittable target on a phone -- which is why they read as
+              decoration. The dot stays 6px; the tap area around it is 40px,
+              matching every other control in the app. */}
+          {partners.map((p: FeaturedPartner, i: number) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                scrollBySlides(i - index);
+              }}
+              aria-label={tPartner('goToPartner', { n: i + 1 })}
+              aria-current={i === index}
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center"
+            >
+              <span
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index ? 'bg-tribe-green w-4' : 'bg-theme-inset w-1.5'
+                }`}
+              />
+            </button>
+          ))}
+
           <button
             type="button"
             onClick={(e) => {
@@ -106,39 +139,11 @@ export default function FeaturedPartnerBanner() {
               scrollBySlides(1);
             }}
             aria-label={tPartner('nextPartner')}
-            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 min-w-[40px] min-h-[40px] hidden md:flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-200"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center text-theme-tertiary hover:text-theme-primary transition-colors"
           >
-            <span className="w-8 h-8 rounded-full bg-black/45 text-white flex items-center justify-center">
-              <ChevronRight className="w-4 h-4" />
-            </span>
+            <ChevronRight className="w-4 h-4" />
           </button>
-
-          {/* The dots WERE buttons already, but 6px with no padding is not a
-              hittable target on a phone -- which is why they read as
-              decoration. The dot stays 6px; the tap area around it is 40px,
-              matching every other control in the app. */}
-          <div className="flex justify-center gap-1 mt-2.5">
-            {partners.map((p: FeaturedPartner, i: number) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  scrollBySlides(i - index);
-                }}
-                aria-label={tPartner('goToPartner', { n: i + 1 })}
-                aria-current={i === index}
-                className="min-w-[40px] min-h-[40px] flex items-center justify-center"
-              >
-                <span
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === index ? 'bg-tribe-green w-4' : 'bg-theme-inset w-1.5'
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
