@@ -15,11 +15,9 @@ import { Check, X, Clock, AlertCircle, Repeat } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { useLanguage } from '@/lib/LanguageContext';
+import { dateLocale } from '@/lib/dateLocale';
 import type { VenueRequest } from '@/lib/dal/gymVenue';
 import type { VenueDecision } from '@/hooks/useVenueRequests';
-
-/** App language -> date locale. A map rather than a ternary on `language`. */
-const DATE_LOCALES: Record<string, string> = { es: 'es-CO', en: 'en-US' };
 
 interface Props {
   gymName: string;
@@ -60,7 +58,7 @@ export default function VenueRequestsSection({
   // phones here. Intl already produces "11 de sept" for es-CO, so the format
   // was never the problem; the locale source was.
   const { language } = useLanguage();
-  const locale = DATE_LOCALES[language] ?? DATE_LOCALES.en;
+  const locale = dateLocale(language);
 
   return (
     <section className="bg-theme-card rounded-2xl border border-theme p-4 space-y-3">
