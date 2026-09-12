@@ -295,7 +295,16 @@
     "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta.",
     "partnerDashboard": "Panel del gimnasio",
     "featuredAffiliate": "Afiliado destacado",
-    "viewGym": "Ver gimnasio"
+    "viewGym": "Ver gimnasio",
+    "athletes": "Atletas",
+    "viewStudio": "Ver estudio",
+    "featuredAffiliatesTitle": "Afiliados destacados",
+    "ownAGym": "¿Tienes un estudio o gimnasio?",
+    "ownAGymBody": "Destaca tu negocio y conecta con atletas locales",
+    "learnMore": "Conocer más",
+    "previousPartner": "Afiliado anterior",
+    "nextPartner": "Siguiente afiliado",
+    "goToPartner": "Ir al afiliado {n}"
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",
