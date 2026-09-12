@@ -4,11 +4,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
-import { fetchActivePartners, incrementPartnerMetric } from '@/lib/dal/featuredPartners';
+import { fetchActivePartners, incrementPartnerMetric, partnerLogoUrl } from '@/lib/dal/featuredPartners';
 import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
 import Image from 'next/image';
 import { Star, ChevronRight, Users, Calendar } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+
+/**
+ * Trim to a whole word, so a clamped description never ends mid-word.
+ * line-clamp handles the visual overflow; this handles the sentence.
+ */
+function clampToWords(text: string, max: number): string {
+  const clean = text.trim();
+  if (clean.length <= max) return clean;
+  const cut = clean.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).replace(/[\s,;:.–-]+$/, '') + '…';
+}
 
 /** First letters of the first two words: "CrossFit BullBox" -> "CB". */
 function monogram(name: string): string {
@@ -51,52 +63,55 @@ export default function FeaturedPartnerBanner() {
   }, [currentIndex, partners]);
 
   if (partners.length === 0) {
-    return <BecomePartnerCTA language={language} />;
+    return <BecomePartnerCTA />;
   }
 
   const partner = partners[currentIndex];
   if (!partner) return null;
 
-  const desc = language === 'es' ? partner.description_es || partner.description : partner.description;
+  // Field selection, not copy: description_es is a separate COLUMN, so this
+  // picks a row value rather than a UI string and does not belong in messages/.
+  const desc = (language === 'es' && partner.description_es) || partner.description;
+  const logoUrl = partnerLogoUrl(partner);
 
   function handleClick() {
     incrementPartnerMetric(supabase, partner.id, 'total_clicks');
     router.push(`/storefront/${partner.user_id}`);
   }
 
-  function handleNext() {
-    setCurrentIndex((prev) => (prev + 1) % partners.length);
-  }
-
   return (
+    /* Matches the feed rather than inverting it.
+       This was a near-black gradient card sitting in a column of light cards,
+       and it read as something pasted in from another product -- Al flagged it
+       unprompted. Nothing recorded the inversion as deliberate: it arrived in a
+       14-feature mega-spec PR with no comment and no design note.
+       Featured status is now carried by the AFILIADO DESTACADO badge and a
+       tribe-green border, not by flipping the whole surface. */
     <div
       onClick={handleClick}
-      className="relative cursor-pointer rounded-2xl border border-tribe-green/30 overflow-hidden mb-4"
-      style={{
-        background: 'linear-gradient(135deg, #1a2a1a 0%, #2a3a2a 50%, #1a2a1a 100%)',
-      }}
+      className="relative cursor-pointer rounded-2xl border-2 border-tribe-green/40 bg-theme-card overflow-hidden mb-4"
     >
-      {/* Subtle glow */}
-      <div className="absolute -top-12 -right-8 w-48 h-48 rounded-full bg-tribe-green/[0.08] blur-2xl pointer-events-none" />
-
       <div className="relative p-4">
         {/* Badge */}
-        <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-3">
+        <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/40 text-tribe-green-dark text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-3">
           <Star className="w-3 h-3 fill-tribe-green" />
-          {language === 'es' ? 'Afiliado Destacado' : 'Featured Affiliate'}
+          {tPartner('featuredAffiliate')}
         </div>
 
         {/* Content */}
         <div className="flex gap-3 items-center">
           {/* Logo/Avatar */}
-          <div className="relative flex-shrink-0 w-16 h-16 rounded-2xl bg-tribe-mid border-2 border-tribe-green flex items-center justify-center overflow-hidden">
-            {partner.logo_url ? (
-              <Image src={partner.logo_url} alt={partner.business_name} fill className="object-cover" unoptimized />
+          {/* Same chain as the storefront header and the discover tile:
+              logo_url, then the partner account's avatar, monogram last. This
+              showed "CB" for BullBox while both other surfaces showed its real
+              logo, because it had no fallback of its own. */}
+          <div className="relative flex-shrink-0 w-16 h-16 rounded-2xl bg-tribe-dark border-2 border-tribe-green flex items-center justify-center overflow-hidden">
+            {logoUrl ? (
+              <Image src={logoUrl} alt={partner.business_name} fill className="object-cover" unoptimized />
             ) : (
               /* T-GYM1: a monogram, not an emoji. 🏋️/🏢 read as decoration and
                  as "no logo"; initials on the brand square read as an
-                 organization that simply has not uploaded one yet. Every live
-                 partner has logo_url = null, so this is the branch that ships. */
+                 organization that simply has not uploaded one yet. */
               <span aria-hidden="true" className="text-tribe-green text-xl font-bold tracking-tight">
                 {monogram(partner.business_name)}
               </span>
@@ -106,16 +121,21 @@ export default function FeaturedPartnerBanner() {
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              <h3 className="text-white font-bold text-base leading-tight truncate">{partner.business_name}</h3>
+              <h3 className="text-theme-primary font-bold text-base leading-tight truncate">{partner.business_name}</h3>
               {/* Only gyms and studios carry a type label; an 'independent'
                   partner is a person and calling them a Gimnasio would be wrong. */}
               {(partner.business_type === 'gym' || partner.business_type === 'studio') && (
-                <span className="flex-shrink-0 text-tribe-gray-60 text-[10px] font-bold tracking-wide uppercase">
+                <span className="flex-shrink-0 text-theme-tertiary text-[10px] font-bold tracking-wide uppercase">
                   {partner.business_type === 'gym' ? tPartner('typeGym') : tPartner('typeStudio')}
                 </span>
               )}
             </div>
-            {desc && <p className="text-tribe-gray-60 text-xs leading-snug line-clamp-2 mt-0.5">{desc}</p>}
+            {/* line-clamp alone cuts mid-word, so a long description ended on a
+                fragment. Trimmed to a word boundary first; the clamp then only
+                has to handle the narrow-screen case. */}
+            {desc && (
+              <p className="text-theme-secondary text-xs leading-snug line-clamp-2 mt-0.5">{clampToWords(desc, 120)}</p>
+            )}
           </div>
         </div>
 
@@ -138,7 +158,7 @@ export default function FeaturedPartnerBanner() {
             correct. No stats beats three wrong ones. */}
         {partner.total_bookings > 0 && (
           <div className="flex gap-5 mt-3">
-            <PartnerStat value={`${partner.total_bookings}`} label={language === 'es' ? 'Atletas' : 'Athletes'} />
+            <PartnerStat value={`${partner.total_bookings}`} label={tPartner('athletes')} />
           </div>
         )}
 
@@ -148,7 +168,7 @@ export default function FeaturedPartnerBanner() {
             {partner.specialties.slice(0, 4).map((tag) => (
               <span
                 key={tag}
-                className="bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[11px] px-2.5 py-0.5 rounded-full font-medium"
+                className="bg-tribe-green/15 border border-tribe-green/40 text-tribe-green-dark text-[11px] px-2.5 py-0.5 rounded-full font-medium"
               >
                 {tag}
               </span>
@@ -164,7 +184,7 @@ export default function FeaturedPartnerBanner() {
             handleClick();
           }}
         >
-          {language === 'es' ? 'Ver Estudio' : 'View Studio'}
+          {partner.business_type === 'studio' ? tPartner('viewStudio') : tPartner('viewGym')}
           <ChevronRight className="w-4 h-4" />
         </button>
 
@@ -179,7 +199,7 @@ export default function FeaturedPartnerBanner() {
                   setCurrentIndex(i);
                 }}
                 className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  i === currentIndex ? 'bg-tribe-green w-4' : 'bg-tribe-mid'
+                  i === currentIndex ? 'bg-tribe-green w-4' : 'bg-theme-inset'
                 }`}
               />
             ))}
@@ -193,36 +213,31 @@ export default function FeaturedPartnerBanner() {
 function PartnerStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="text-center">
-      <div className="text-lg font-extrabold text-tribe-green">{value}</div>
-      <div className="text-[10px] text-tribe-gray-60">{label}</div>
+      <div className="text-lg font-extrabold text-tribe-green-dark">{value}</div>
+      <div className="text-[10px] text-theme-tertiary">{label}</div>
     </div>
   );
 }
 
 /** Fallback CTA banner shown when no active partners exist */
-function BecomePartnerCTA({ language }: { language: string }) {
+function BecomePartnerCTA() {
   const router = useRouter();
+  const t = useTranslations('partner');
 
   return (
     <div
       onClick={() => router.push('/partners')}
-      className="relative cursor-pointer rounded-2xl border border-dashed border-tribe-green/40 overflow-hidden mb-4 bg-tribe-dark hover:border-tribe-green/60 transition"
+      className="relative cursor-pointer rounded-2xl border-2 border-dashed border-tribe-green/40 overflow-hidden mb-4 bg-theme-card hover:border-tribe-green/60 transition"
     >
       <div className="p-4 text-center">
-        <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/30 text-tribe-green text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-2">
+        <div className="inline-flex items-center gap-1.5 bg-tribe-green/15 border border-tribe-green/40 text-tribe-green-dark text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide mb-2">
           <Star className="w-3 h-3 fill-tribe-green" />
-          {language === 'es' ? 'Afiliados Destacados' : 'Featured Affiliates'}
+          {t('featuredAffiliatesTitle')}
         </div>
-        <p className="text-white font-bold text-sm mb-1">
-          {language === 'es' ? '¿Tienes un estudio o gimnasio?' : 'Own a studio or gym?'}
-        </p>
-        <p className="text-tribe-gray-60 text-xs mb-3">
-          {language === 'es'
-            ? 'Destaca tu negocio y conecta con atletas locales'
-            : 'Get featured and connect with local athletes'}
-        </p>
+        <p className="text-theme-primary font-bold text-sm mb-1">{t('ownAGym')}</p>
+        <p className="text-theme-secondary text-xs mb-3">{t('ownAGymBody')}</p>
         <span className="inline-flex items-center gap-1 bg-tribe-green text-slate-900 font-bold text-xs px-4 py-2 rounded-xl">
-          {language === 'es' ? 'Conocer más' : 'Learn More'}
+          {t('learnMore')}
           <ChevronRight className="w-3.5 h-3.5" />
         </span>
       </div>

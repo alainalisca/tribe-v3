@@ -23,6 +23,17 @@ export interface FeaturedPartner {
   auto_approve_roster: boolean;
   /** Editorial placement, highest first (161). 0 = unplaced. */
   display_order: number;
+  /**
+   * The partner account's own avatar, embedded so the banner can fall back to
+   * it when logo_url is null -- the same chain the storefront header and the
+   * discover tile use. Without it BullBox showed a "CB" monogram in the feed
+   * while showing its real logo on both other surfaces.
+   *
+   * public.users is under a column-level SELECT regime and this banner renders
+   * on the public home feed, so an ungranted column would fail the WHOLE embed
+   * rather than degrade. avatar_url is verified readable by anon.
+   */
+  user?: { avatar_url: string | null } | { avatar_url: string | null }[] | null;
   status: string;
   starts_at: string | null;
   expires_at: string | null;
@@ -81,7 +92,7 @@ export async function fetchActivePartners(supabase: SupabaseClient, limit = 5): 
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
       )
       .eq('status', 'active')
       // display_order is editorial placement and sorts ahead of everything
@@ -111,7 +122,7 @@ export async function fetchPartnerByUserId(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
       )
       .eq('user_id', userId)
       .maybeSingle();
@@ -133,7 +144,7 @@ export async function fetchPartnerById(
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
       )
       .eq('id', partnerId)
       .maybeSingle();
@@ -257,7 +268,7 @@ export async function fetchAllPartners(supabase: SupabaseClient): Promise<DalRes
     const { data, error } = await supabase
       .from('featured_partners')
       .select(
-        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster'
+        'id, user_id, business_name, business_type, description, description_es, logo_url, banner_url, website_url, phone, address, lat, lng, specialties, tier, status, starts_at, expires_at, monthly_fee_cents, currency, total_impressions, total_clicks, total_bookings, min_sessions_per_month, min_rating, created_at, updated_at, display_order, auto_approve_roster, user:users(avatar_url)'
       )
       .order('created_at', { ascending: false })
       .limit(200);
@@ -416,4 +427,24 @@ export async function applyForPartnership(
     logError(error, { action: 'applyForPartnership', userId });
     return { success: false, error: 'Failed to submit application' };
   }
+}
+
+/**
+ * The image to show for a partner: its own logo, then the account's avatar,
+ * then nothing (callers render a monogram).
+ *
+ * ONE chain for three surfaces -- the storefront header, the discover tile and
+ * the feed banner. The banner showed "CB" for BullBox while the other two
+ * showed its real logo, because it had no fallback of its own.
+ *
+ * PostgREST types a to-one embed as an array even though it returns an object,
+ * so both shapes are handled here rather than cast at each call site.
+ */
+export function partnerLogoUrl(partner: {
+  logo_url: string | null;
+  user?: { avatar_url: string | null } | { avatar_url: string | null }[] | null;
+}): string | null {
+  if (partner.logo_url) return partner.logo_url;
+  const account = Array.isArray(partner.user) ? partner.user[0] : partner.user;
+  return account?.avatar_url ?? null;
 }
