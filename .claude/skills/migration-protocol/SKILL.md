@@ -114,6 +114,48 @@ unreadable to every client with `42501 permission denied for table users`. Use
 `public.is_app_admin()` — `SECURITY DEFINER`, so it reads the column as its
 owner.
 
+### Step 5c: Row-and-column-scoped writes are not expressible in RLS or grants
+
+When a requirement needs both "only your own row" and "only these columns", neither
+mechanism can carry it, and asking for either one produces a hole rather than a
+restriction.
+
+**A policy grants the whole row.** `WITH CHECK` cannot compare against the OLD row, so
+"the owner may edit these columns but not those" has no policy form. There is nothing
+to write.
+
+**A column grant has no row awareness.** `GRANT UPDATE (col) ON t TO authenticated`
+says which column, never whose row, so "only your own row" has no grant form either.
+
+The mechanism is a `SECURITY DEFINER` function that resolves the caller itself and
+writes only the permitted columns. It runs as its owner, so it bypasses RLS by design
+and the authorisation lives in the function body where it can see both the caller and
+the intended change.
+
+Worked examples to copy:
+
+- `self_activate_featured_partner` (104)
+- `review_venue_request` (158)
+- `set_session_partner` (158)
+
+**Migration 104 exists because of exactly this mistake.** Migration 018 created:
+
+```sql
+CREATE POLICY "Partners manage own record" ON featured_partners
+  FOR UPDATE USING (auth.uid() = user_id);
+```
+
+with no `WITH CHECK`. The intent was "a partner may edit their own profile fields". What
+it granted was the whole row, so any partner with a `featured_partners` row could set
+`status = 'active'`, extend `expires_at`, and zero `monthly_fee_cents` straight from the
+client, bypassing admin approval and, once billing is live, payment. Migration 102's
+header had already claimed the UPDATE policy was admin-only, which was false. 104 dropped
+the policy outright and moved activation into the RPC, because the column restriction the
+policy was reaching for could not be written.
+
+The failure mode is worth naming: a policy asked to do this does not error. It grants
+more than intended and looks like it worked.
+
 ### Step 6: Update Schema Documentation
 
 Add the change to `supabase/schema.sql` (or equivalent) so the schema file matches production.
