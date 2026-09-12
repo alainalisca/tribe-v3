@@ -155,7 +155,13 @@ export default function StorefrontPage() {
   // the mobile sticky Book CTA that floats above the nav when canBook. Desktop has
   // no floating CTA, so lg:pb-24 is enough.
   return (
-    <div className={`min-h-screen bg-theme-page lg:pb-24 ${canBook ? 'pb-40' : 'pb-32'}`}>
+    <div
+      // Clearance derives from the same variable: the nav, plus the CTA's own
+      // height when it is showing. A hardcoded pb-40 was the third independent
+      // copy of this number.
+      style={{ paddingBottom: canBook ? 'calc(var(--bottom-nav-h) + 4.5rem)' : 'calc(var(--bottom-nav-h) + 1rem)' }}
+      className="min-h-screen bg-theme-page lg:pb-24"
+    >
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
         <div className="max-w-5xl mx-auto h-14 flex items-center px-4">
           <button onClick={() => goBack()} className="text-theme-primary hover:text-tribe-green transition-colors">
@@ -250,7 +256,10 @@ export default function StorefrontPage() {
           devices the nav's inset overlapped and clipped this CTA. Offset by the
           nav height PLUS the inset. */}
       {canBook && (
-        <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 px-4 pb-2 pointer-events-none">
+        <div
+          style={{ bottom: 'var(--bottom-nav-h)' }}
+          className="lg:hidden fixed left-0 right-0 z-30 px-4 pb-2 pointer-events-none"
+        >
           <button
             onClick={goToSessions}
             className="pointer-events-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm shadow-tribe-green hover:opacity-90 transition"
