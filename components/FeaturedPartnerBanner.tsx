@@ -119,15 +119,28 @@ export default function FeaturedPartnerBanner() {
           </div>
         </div>
 
-        {/* Stats row */}
-        <div className="flex gap-5 mt-3">
-          <PartnerStat value={partner.min_rating.toString()} label={language === 'es' ? 'Rating' : 'Rating'} />
-          <PartnerStat
-            value={`${partner.min_sessions_per_month}+`}
-            label={language === 'es' ? 'Sesiones/sem' : 'Sessions/wk'}
-          />
-          <PartnerStat value={`${partner.total_bookings}`} label={language === 'es' ? 'Atletas' : 'Athletes'} />
-        </div>
+        {/* Stats row.
+            Two stats were removed here, both fabricated, on the most-seen
+            surface in the app:
+
+              "Rating"       was partner.min_rating -- the CONTRACT MINIMUM,
+                             rendered as a score. BullBox has zero reviews and
+                             this told every athlete in the feed it was rated 4.
+              "Sesiones/sem" was partner.min_sessions_per_month -- the monthly
+                             contractual minimum, under a WEEKLY label. Wrong
+                             number and wrong unit. A real weekly count exists
+                             (GymsAndStudiosSection computes it) and can return
+                             properly in the banner redesign.
+
+            Athletes is real (total_bookings) and stays, but hides at zero --
+            same rule as the gym storefront: a zero stat is worse than no stat.
+            With all three gone the row does not render at all, which is
+            correct. No stats beats three wrong ones. */}
+        {partner.total_bookings > 0 && (
+          <div className="flex gap-5 mt-3">
+            <PartnerStat value={`${partner.total_bookings}`} label={language === 'es' ? 'Atletas' : 'Athletes'} />
+          </div>
+        )}
 
         {/* Specialties tags */}
         {partner.specialties && partner.specialties.length > 0 && (
