@@ -76,6 +76,18 @@ export default function StorefrontPage() {
   const isOwn = d.currentUserId === instructorId;
   const isAthleteViewer = !!d.currentUserId && !isOwn;
   const canBook = tabs.some((t) => t.id === 'sessions');
+
+  // The floating Book-a-session bar is for INSTRUCTOR storefronts only.
+  //
+  // A gym storefront already lists its upcoming sessions inline, each with its
+  // own join control, so the floating bar duplicates them -- and it permanently
+  // occludes a strip of the page to do it, riding over the Following button as
+  // you scroll past. On an instructor storefront, where booking is a
+  // conversation rather than a listed session, it still earns its place.
+  //
+  // canBook stays untouched: it still drives the inline Reservar button in the
+  // profile column, which is not the thing that was in the way.
+  const showFloatingBookCta = canBook && !isOrganization;
   const hasContent = tabs.length > 0;
 
   if (d.loading) {
@@ -152,14 +164,17 @@ export default function StorefrontPage() {
 
   // Bottom padding must clear the fixed 64px BottomNav on every breakpoint (the
   // old lg:pb-12 = 48px was shorter than the nav, clipping desktop content), plus
-  // the mobile sticky Book CTA that floats above the nav when canBook. Desktop has
-  // no floating CTA, so lg:pb-24 is enough.
+  // the mobile sticky Book CTA when it is showing -- instructor storefronts
+  // only, see showFloatingBookCta. Desktop has no floating CTA, so lg:pb-24 is
+  // enough.
   return (
     <div
       // Clearance derives from the same variable: the nav, plus the CTA's own
       // height when it is showing. A hardcoded pb-40 was the third independent
       // copy of this number.
-      style={{ paddingBottom: canBook ? 'calc(var(--bottom-nav-h) + 4.5rem)' : 'calc(var(--bottom-nav-h) + 1rem)' }}
+      style={{
+        paddingBottom: showFloatingBookCta ? 'calc(var(--bottom-nav-h) + 4.5rem)' : 'calc(var(--bottom-nav-h) + 1rem)',
+      }}
       className="min-h-screen bg-theme-page lg:pb-24"
     >
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
@@ -255,7 +270,7 @@ export default function StorefrontPage() {
           bottom-16 (64px) ignored the safe-area inset, so on home-indicator
           devices the nav's inset overlapped and clipped this CTA. Offset by the
           nav height PLUS the inset. */}
-      {canBook && (
+      {showFloatingBookCta && (
         <div
           style={{ bottom: 'var(--bottom-nav-h)' }}
           className="lg:hidden fixed left-0 right-0 z-30 px-4 pb-2 pointer-events-none"
