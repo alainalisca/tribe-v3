@@ -301,7 +301,10 @@
     "featuredAffiliatesTitle": "Afiliados destacados",
     "ownAGym": "¿Tienes un estudio o gimnasio?",
     "ownAGymBody": "Destaca tu negocio y conecta con atletas locales",
-    "learnMore": "Conocer más"
+    "learnMore": "Conocer más",
+    "previousPartner": "Afiliado anterior",
+    "nextPartner": "Siguiente afiliado",
+    "goToPartner": "Ir al afiliado {n}"
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",

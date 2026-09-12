@@ -301,7 +301,10 @@
     "featuredAffiliatesTitle": "Featured affiliates",
     "ownAGym": "Own a studio or gym?",
     "ownAGymBody": "Get featured and connect with local athletes",
-    "learnMore": "Learn more"
+    "learnMore": "Learn more",
+    "previousPartner": "Previous partner",
+    "nextPartner": "Next partner",
+    "goToPartner": "Go to partner {n}"
   },
   "create": {
     "whereIsSession": "Where is the session?",

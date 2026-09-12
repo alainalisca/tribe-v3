@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CardPhoto } from '@/lib/sessionPhotos';
 import SmartPhoto from '@/components/session/SmartPhoto';
 import { useCarouselIndex } from '@/hooks/useCarouselIndex';
 import { useInView } from '@/hooks/useInView';
 import { useTranslations } from '@/lib/i18n/useTranslations';
+import { usePointerDragScroll } from '@/hooks/usePointerDragScroll';
 
 /** Lets a parent drive the track (arrow keys on the card's overlay link). */
 export interface CarouselControls {
@@ -24,27 +25,6 @@ interface HeroCarouselProps {
   /** Overlay layer: gradient, badges, action buttons. Rendered once, above the track. */
   children?: React.ReactNode;
   controlsRef?: React.MutableRefObject<CarouselControls | null>;
-}
-
-/** A tap is a press that barely moved. Beyond this it was a swipe or a drag. */
-const TAP_SLOP_PX = 8;
-
-/**
- * Whether this pointer should drag the track.
- *
- * A native scroll container ignores mouse drag entirely: touch gets momentum
- * scrolling for free, a mouse gets nothing, which is why the carousel felt
- * broken on desktop while working on a phone.
- *
- * Gated on the pointer being a mouse rather than a global media query, so a
- * hybrid laptop keeps native touch scrolling for its touchscreen and gets drag
- * for its trackpad. The matchMedia check mirrors the hover/fine rule the
- * chevrons use, for browsers that report a coarse mouse.
- */
-function isDragPointer(e: React.PointerEvent): boolean {
-  if (e.pointerType !== 'mouse') return false;
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true;
-  return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 }
 
 /**
@@ -92,86 +72,13 @@ export default function HeroCarousel({
     controlsRef.current = { scrollBySlides: (delta: number) => move(delta, 'key') };
   }
 
-  // Tap versus swipe is pointer movement, not timing: a press that barely moved
-  // opens the session, anything further was the athlete scrolling the strip.
-  const pointerStart = useRef<{ x: number; y: number } | null>(null);
-  const movedRef = useRef(false);
-  /** Mouse-drag bookkeeping. Null whenever a drag is not eligible or active. */
-  const dragRef = useRef<{ startX: number; startScrollLeft: number; pointerId: number } | null>(null);
-  const draggingRef = useRef(false);
-  const [dragging, setDragging] = useState(false);
-
-  function endDrag() {
-    dragRef.current = null;
-    draggingRef.current = false;
-    setDragging(false);
-  }
-
-  function handlePointerDown(e: React.PointerEvent) {
-    pointerStart.current = { x: e.clientX, y: e.clientY };
-    movedRef.current = false;
-
-    const track = trackRef.current;
-    if (!track || !isDragPointer(e) || photos.length < 2) return;
-    dragRef.current = { startX: e.clientX, startScrollLeft: track.scrollLeft, pointerId: e.pointerId };
-  }
-
-  function handlePointerMove(e: React.PointerEvent) {
-    const start = pointerStart.current;
-    if (!start) return;
-    if (Math.abs(e.clientX - start.x) > TAP_SLOP_PX || Math.abs(e.clientY - start.y) > TAP_SLOP_PX) {
-      movedRef.current = true;
-    }
-
-    const drag = dragRef.current;
-    const track = trackRef.current;
-    if (!drag || !track) return;
-
-    const dx = e.clientX - drag.startX;
-    // Only take over once past the tap threshold, so a click that wobbles a
-    // pixel still opens the session.
-    if (!draggingRef.current) {
-      if (Math.abs(dx) <= TAP_SLOP_PX) return;
-      draggingRef.current = true;
-      setDragging(true);
-      try {
-        track.setPointerCapture(drag.pointerId);
-      } catch {
-        // Capture is a nicety: without it a fast drag that leaves the element
-        // stops early. Not worth failing the gesture over.
-      }
-    }
-
-    // Suppress text selection and the browser's drag ghost mid-drag.
-    e.preventDefault();
-    track.scrollLeft = drag.startScrollLeft - dx;
-  }
-
-  function handlePointerUp() {
-    const track = trackRef.current;
-    const drag = dragRef.current;
-
-    if (draggingRef.current && track) {
-      // Land on the nearest photo, matching what scroll-snap does for touch.
-      const width = track.clientWidth || 1;
-      const nearest = Math.max(0, Math.min(photos.length - 1, Math.round(track.scrollLeft / width)));
-      if (drag) {
-        try {
-          track.releasePointerCapture(drag.pointerId);
-        } catch {
-          // Already released, or never captured.
-        }
-      }
-      endDrag();
-      track.scrollTo({ left: nearest * width, behavior: 'smooth' });
-      pointerStart.current = null;
-      return;
-    }
-
-    if (pointerStart.current && !movedRef.current) onTap?.();
-    endDrag();
-    pointerStart.current = null;
-  }
+  // Drag, tap-vs-drag and snap-on-release come from the shared hook (T-UI4,
+  // extracted when the featured-partner banner needed the same behaviour).
+  const { dragging, handlers } = usePointerDragScroll({
+    trackRef,
+    count: photos.length,
+    onTap: () => onTap?.(),
+  });
 
   const multiple = photos.length > 1;
   // Slide 0 always mounts. Later slides wait until the card is near the
@@ -186,14 +93,7 @@ export default function HeroCarousel({
         role="group"
         aria-roledescription="carousel"
         aria-label={t('photos')}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={() => {
-          endDrag();
-          pointerStart.current = null;
-        }}
-        onDragStart={(e) => e.preventDefault()}
+        {...handlers}
         className={`carousel-track absolute inset-0 z-[2] flex overflow-x-auto snap-x snap-mandatory scroll-smooth ${
           multiple ? 'md:cursor-grab' : ''
         } ${dragging ? 'is-dragging select-none md:cursor-grabbing' : ''}`}
