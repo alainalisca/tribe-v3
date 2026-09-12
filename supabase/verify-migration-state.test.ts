@@ -240,8 +240,18 @@ describe('public.users columns added after 067 carry an explicit SELECT grant', 
 describe('public.sessions columns added after 158 carry an explicit write grant', () => {
   const WRITE_GRANT_MIGRATION = 158;
 
-  /** Deliberately not writable by authenticated -- only the two RPCs set them. */
-  const VERDICT_COLUMNS = ['partner_status', 'partner_reviewed_at'];
+  /**
+   * Deliberately NOT writable by authenticated. THREE columns, not two:
+   * partner_status and partner_reviewed_at are the gym's verdict (158), and
+   * partner_id is the only way that verdict gets computed (162) -- a client
+   * that can set it directly can leave partner_status NULL, a state
+   * set_session_partner cannot produce.
+   *
+   * 158's DO block re-grants every live column except a hard-coded list, and
+   * copying that pattern verbatim silently re-grants partner_id and undoes 162
+   * with no error. That is what this list exists to catch.
+   */
+  const VERDICT_COLUMNS = ['partner_status', 'partner_reviewed_at', 'partner_id'];
 
   function stripSqlComments(sql: string): string {
     return sql
@@ -273,8 +283,11 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
       }
 
       for (const privilege of ['INSERT', 'UPDATE'] as const) {
+        // Matches both `GRANT INSERT (a, b) ON sessions` and the combined
+        // `GRANT INSERT (a), UPDATE (a) ON sessions` form, where the privilege
+        // is followed by another privilege rather than by ON.
         const re = new RegExp(
-          `GRANT\\s+${privilege}\\s*\\(([^)]*)\\)\\s*ON\\s+(?:public\\s*\\.\\s*)?"?sessions"?`,
+          `GRANT[\\s\\S]{0,80}?\\b${privilege}\\s*\\(([^)]*)\\)[\\s\\S]{0,80}?ON\\s+(?:public\\s*\\.\\s*)?"?sessions"?`,
           'gi'
         );
         for (const grant of sql.matchAll(re)) {
@@ -329,6 +342,64 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
     expect(sql).toMatch(/GRANT UPDATE \(' \|\| cols \|\| '\) ON public\.sessions/);
     expect(sql).toMatch(/GRANT INSERT \(' \|\| cols \|\| '\) ON public\.sessions/);
     expect(sql).toContain("NOT IN ('partner_status', 'partner_reviewed_at')");
+  });
+
+  it('no migration after 162 re-grants a verdict column to authenticated', () => {
+    // Addition 2, and the case a negative probe showed was NOT covered: the
+    // "columns added after 158" check filters verdict columns out, so a
+    // migration that copies 158's two-column exclusion and re-grants
+    // partner_id was invisible to CI and would only surface in the live guard.
+    const offenders: string[] = [];
+    for (const file of fs
+      .readdirSync(MIGRATIONS_DIR)
+      .filter((f) => /^\d{3}_.*\.sql$/.test(f))
+      .sort()) {
+      if (parseInt(file.slice(0, 3), 10) <= 162) continue;
+      const sql = stripSqlComments(fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf-8'));
+      for (const privilege of ['INSERT', 'UPDATE'] as const) {
+        const re = new RegExp(
+          `GRANT[\\s\\S]{0,80}?\\b${privilege}\\s*\\(([^)]*)\\)[\\s\\S]{0,200}?ON\\s+(?:public\\s*\\.\\s*)?"?sessions"?[\\s\\S]{0,80}?authenticated`,
+          'gi'
+        );
+        for (const grant of sql.matchAll(re)) {
+          for (const name of grant[1].split(',').map((n) => n.trim().replace(/"/g, ''))) {
+            if (VERDICT_COLUMNS.includes(name)) offenders.push(`${file}: GRANT ${privilege} (${name})`);
+          }
+        }
+      }
+    }
+
+    if (offenders.length > 0) {
+      throw new Error(
+        `These migrations re-grant a verdict column on public.sessions:\n  ` +
+          offenders.join('\n  ') +
+          `\n\npartner_status and partner_reviewed_at are the gym's verdict; partner_id is the\n` +
+          `only way that verdict gets computed. A client that can write partner_id can leave\n` +
+          `partner_status NULL, a state set_session_partner cannot produce.\n\n` +
+          `158's DO block re-grants every live column except a hard-coded list of TWO.\n` +
+          `Any re-grant on this table must exclude THREE.`
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('162 revokes both write privileges on partner_id and asserts it stuck', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, '162_revoke_partner_id_write.sql'), 'utf-8');
+    expect(sql).toMatch(
+      /REVOKE\s+INSERT\s*\(partner_id\),\s*UPDATE\s*\(partner_id\)\s*ON\s+public\.sessions\s+FROM\s+authenticated/i
+    );
+    // The assertion must use has_column_privilege; information_schema cannot
+    // see table-level grants and would pass either way.
+    expect(sql).toContain("has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'INSERT')");
+    expect(sql).toContain("has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'UPDATE')");
+  });
+
+  it('names all three verdict columns in the loud header, so a copied re-grant is caught by eye too', () => {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, '162_revoke_partner_id_write.sql'), 'utf-8');
+    expect(sql).toContain('THREE COLUMNS, NOT TWO');
+    for (const column of ['partner_status', 'partner_reviewed_at', 'partner_id']) {
+      expect(sql).toContain(column);
+    }
   });
 
   it('the verdict columns are never added to the host-editable allow-list', () => {

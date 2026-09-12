@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/lib/database.types';
 import { useLanguage } from '@/lib/LanguageContext';
 import type { Currency } from '@/lib/payments/config';
-import { formatSessionLocation } from '@/lib/sessionLocation';
 import { translateSport } from '@/lib/translations';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
+import { SessionDetailVenueLine, SessionDetailGymHost } from '@/components/session/SessionDetailVenue';
+import type { SessionGymIdentity } from '@/lib/sessionGym';
 
 interface CreatorInfo {
   id: string;
@@ -29,6 +30,14 @@ interface ParticipantInfo {
 
 interface SessionDetailsProps {
   session: Session;
+  /**
+   * Resolved gym identity (T-GYM2). Undefined on surfaces that have not
+   * resolved it; the location line falls back to the plain address, which is
+   * exactly what an unlinked session shows.
+   */
+  gym?: SessionGymIdentity;
+  /** Roster size, for the gym-hosted "· N coaches" line. */
+  coachCount?: number;
   creator: CreatorInfo | null;
   participants: ParticipantInfo[];
   isFull: boolean;
@@ -59,6 +68,8 @@ interface SessionDetailsProps {
 
 export default function SessionDetails({
   session,
+  gym,
+  coachCount = 0,
   creator,
   participants,
   isFull,
@@ -182,17 +193,13 @@ export default function SessionDetails({
           </span>
         </div>
 
-        <div className="flex items-start text-muted-foreground">
-          <MapPin className="w-5 h-5 mr-3 mt-0.5 text-muted-foreground" />
-          <span>
-            {formatSessionLocation(
-              session.location,
-              session.latitude ?? null,
-              session.longitude ?? null,
-              language === 'es' ? 'es' : 'en'
-            )}
-          </span>
-        </div>
+        <SessionDetailVenueLine
+          gym={gym}
+          location={session.location}
+          lat={session.latitude ?? null}
+          lng={session.longitude ?? null}
+          language={language === 'es' ? 'es' : 'en'}
+        />
 
         {session.equipment && (
           <div className="flex items-start text-muted-foreground">
@@ -245,8 +252,11 @@ export default function SessionDetails({
           <div className="flex items-center justify-between text-muted-foreground">
             <div className="flex items-center">
               <Users className="w-5 h-5 mr-3 text-muted-foreground" />
-              <span>
-                {t('hostedBy')} {creator.name}
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="truncate">
+                  {t('hostedBy')} {creator.name}
+                </span>
+                {gym && <SessionDetailGymHost gym={gym} coachCount={coachCount} />}
               </span>
             </div>
             {creator.average_rating != null && creator.average_rating > 0 && (

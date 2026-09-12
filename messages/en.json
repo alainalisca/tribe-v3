@@ -277,6 +277,7 @@
     "coachAtLong": "Coach at {gym}",
     "ourCoaches": "Our coaches",
     "coachesCount": "{n} coaches",
+    "coachesUnit": "coaches",
     "sessionsPerWeek": "sessions / week",
     "gymsAndStudios": "Gyms and studios",
     "featuredSince": "Featured affiliate · since {date}",
@@ -289,16 +290,27 @@
     "autoApproveRoster": "Auto-approve my coaches",
     "autoApproveRosterHelp": "Instructors on your roster publish at {gym} without asking.",
     "pendingTag": "Pending · {gym}",
-    "pendingNote": "{gym} has not approved this session at its venue yet. Meanwhile it is published with the address, without the gym's name or logo."
+    "pendingNote": "{gym} has not approved this session at its venue yet. Meanwhile it is published with the address, without the gym's name or logo.",
+    "requestedOn": "Requested {date}",
+    "recurringWarning": "This session repeats weekly. Approving it applies to every future occurrence, not just this date.",
+    "partnerDashboard": "Gym dashboard",
+    "featuredAffiliate": "Featured affiliate",
+    "viewGym": "View gym"
   },
   "create": {
     "whereIsSession": "Where is the session?",
     "otherPlace": "Other place",
-    "partnerNeedsApproval": "{gym} will review this request. Until they approve, your session shows the address without the gym's name."
+    "partnerNeedsApproval": "{gym} will review this request. Until they approve, your session shows the address without the gym's name.",
+    "searchGyms": "Search gyms and studios",
+    "noGymsFound": "No gyms found",
+    "venueLinkFailed": "Your session was saved, but the gym could not be attached. You can set the venue from the edit screen.",
+    "venueApproved": "Published at {gym}."
   },
   "notif": {
     "venueRequestNew": "New venue request: {instructor} wants to publish {title} at {gym}",
     "venueRequestApproved": "{gym} approved {title} at its venue",
-    "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address."
+    "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address.",
+    "anInstructor": "An instructor",
+    "aSession": "a session"
   }
 }

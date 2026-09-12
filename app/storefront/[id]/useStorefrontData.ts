@@ -18,6 +18,7 @@ import { SESSION_ALL_COLUMNS } from '@/lib/dal/sessions';
 import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError, showSuccess } from '@/lib/toast';
+import { fetchGymSessionsPerWeek } from '@/lib/dal/gymDirectory';
 
 export interface Instructor {
   id: string;
@@ -28,6 +29,8 @@ export interface Instructor {
   specialties: string[];
   verified: boolean;
   storefront_banner_url: string;
+  /** The account cover image. Distinct from storefront_banner_url and often the only one set. */
+  banner_url: string | null;
   bio: string;
   instructor_bio?: string | null;
   average_rating?: number | null;
@@ -127,6 +130,7 @@ export function useStorefrontData(instructorId: string) {
   const [joinedSessionIds, setJoinedSessionIds] = useState<Set<string>>(new Set());
   const [partnerData, setPartnerData] = useState<FeaturedPartner | null>(null);
   const [partnerInstructors, setPartnerInstructors] = useState<PartnerInstructor[]>([]);
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(0);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -170,7 +174,7 @@ export function useStorefrontData(instructorId: string) {
           supabase
             .from('users')
             .select(
-              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, instructor_bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos'
+              'id, name, avatar_url, storefront_tagline, location, specialties, is_verified_instructor, storefront_banner_url, bio, instructor_bio, average_rating, total_reviews, storefront_video_url, certifications, years_experience, total_participants_served, total_sessions_hosted, photos, banner_url'
             )
             .eq('id', instructorId)
             // A soft-deleted account's storefront should not load — maybeSingle
@@ -200,8 +204,14 @@ export function useStorefrontData(instructorId: string) {
 
         if (partnerResult.success && partnerResult.data && partnerResult.data.status === 'active') {
           setPartnerData(partnerResult.data);
-          const iResult = await fetchPartnerInstructors(supabase, partnerResult.data.id);
+          // Roster and weekly count together: both are header stats and neither
+          // blocks the other.
+          const [iResult, weekResult] = await Promise.all([
+            fetchPartnerInstructors(supabase, partnerResult.data.id),
+            fetchGymSessionsPerWeek(supabase, partnerResult.data.id),
+          ]);
           if (!cancelled && iResult.success && iResult.data) setPartnerInstructors(iResult.data);
+          if (!cancelled && weekResult.success) setSessionsPerWeek(weekResult.data ?? 0);
         }
       } catch (err) {
         logError(err, { action: 'useStorefrontData.fetchInstructor', instructorId });
@@ -262,10 +272,15 @@ export function useStorefrontData(instructorId: string) {
             .eq('instructor_id', instructorId)
             .eq('status', 'active'),
           supabase.from('service_packages').select('*').eq('instructor_id', instructorId).eq('is_active', true),
+          // The column is user_id, not instructor_id. There is no
+          // instructor_id on this table, so the old filter returned PostgREST
+          // 42703 (undefined column) and a 400 on every storefront load, gym
+          // and instructor alike. lib/dal/promote.ts is the reference for both
+          // the column name and this explicit column list.
           supabase
             .from('storefront_media')
-            .select('*')
-            .eq('instructor_id', instructorId)
+            .select('id, user_id, media_url, media_type, thumbnail_url, caption, display_order, created_at')
+            .eq('user_id', instructorId)
             .order('created_at', { ascending: false }),
           supabase
             .from('instructor_posts')
@@ -340,7 +355,21 @@ export function useStorefrontData(instructorId: string) {
           );
         }
         if (packagesResult.data) setPackages(packagesResult.data);
-        if (mediaResult.data) setMedia(mediaResult.data);
+        if (mediaResult.data) {
+          // Map the DB row onto the render shape. The table stores media_url
+          // and user_id; StorefrontMedia above (and StorefrontTabPanels, which
+          // reads item.url) wants url and instructor_id. select('*') made this
+          // mismatch invisible to tsc, so even a correct filter would have
+          // rendered undefined image sources.
+          setMedia(
+            mediaResult.data.map((row) => ({
+              id: row.id,
+              url: row.media_url,
+              media_type: row.media_type === 'video' ? ('video' as const) : ('image' as const),
+              instructor_id: row.user_id,
+            }))
+          );
+        }
         if (postsResult.data) setPosts(postsResult.data);
         // Follow-count refresh only. `isFollowing` is owned by the viewer
         // follow-state effect below; clobbering it to false here was a race —
@@ -502,6 +531,7 @@ export function useStorefrontData(instructorId: string) {
     joinedSessionIds,
     partnerData,
     partnerInstructors,
+    sessionsPerWeek,
     handleSessionJoined,
     handleFollowToggle,
     handlePostLike,

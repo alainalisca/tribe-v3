@@ -92,11 +92,15 @@ export type RecurringParentSession = Pick<
   | 'start_time'
   | 'title'
   | 'visibility'
+  // T-GYM2: the venue travels with the series. See createChildSession.
+  | 'partner_id'
+  | 'partner_status'
+  | 'partner_reviewed_at'
 >;
 
 /** Column list matching RecurringParentSession, for the cron's SELECT. */
 export const RECURRING_PARENT_COLUMNS =
-  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility';
+  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility, partner_id, partner_status, partner_reviewed_at';
 
 /**
  * Every column on public.sessions EXCEPT payment_instructions — enumerated from
@@ -1235,6 +1239,19 @@ export async function createChildSession(
       is_recurring: false,
       current_participants: 0,
       status: 'active',
+      // T-GYM2: the venue travels with the series. Without this the address
+      // text was copied while the gym link was not, so every future occurrence
+      // of an approved series silently lost its gym -- live on a7b498d6, a
+      // CrossFit series approved at BullBox.
+      //
+      // Written directly, not through set_session_partner. This job runs as the
+      // SERVICE ROLE (getServiceRoleClient in the recurring-sessions cron), which
+      // bypasses 162's column grants, and copying preserves the gym's ACTUAL
+      // decision. Recomputing would flip a declined series back to pending and
+      // put it in the gym's queue again on every occurrence.
+      partner_id: parent.partner_id,
+      partner_status: parent.partner_status,
+      partner_reviewed_at: parent.partner_reviewed_at,
     };
 
     const { data: session, error } = await supabase.from('sessions').insert(childData).select('id').single();

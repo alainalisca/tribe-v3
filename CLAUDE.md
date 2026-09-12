@@ -88,6 +88,8 @@ Core tables in `supabase/schema.sql`:
 - `session_participants` - Join table with status (pending/confirmed)
 - `match_requests` - Request system for curated sessions
 
+**Anything that renders for logged-out visitors reads sessions through `public.sessions_public`, never `public.sessions`.** Migration 140 revoked `anon` from the base table, so a query against `sessions` passes every test — the DAL is mocked — and returns zero rows in production for every signed-out user.
+
 RLS enabled on all tables. Key policies allow:
 
 - Public read on sessions/users

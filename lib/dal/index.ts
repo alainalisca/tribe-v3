@@ -52,4 +52,5 @@ export * from './releaseNotes';
 
 // T-GYM1: gym venue identity and approval
 export * from './gymVenue';
+export * from './gymDirectory';
 export * from './venueRequests';

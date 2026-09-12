@@ -51,10 +51,18 @@ describe('GymChip', () => {
 
   it('never renders a circular logo, at either size', () => {
     // The identity rule: organizations are rounded squares, people are circles.
-    for (const size of ['sm', 'md'] as const) {
+    for (const size of ['sm', 'md', 'lg'] as const) {
       const { container } = render(<GymChip name="CrossFit BullBox" type="gym" size={size} />);
       expect(container.innerHTML).not.toContain('rounded-full');
     }
+  });
+
+  it('renders the mark alone when the page prints the name itself', () => {
+    // The storefront header shows the gym's name as its page title directly
+    // beneath; the same name twice reads as a bug.
+    render(<GymChip name="CrossFit BullBox" type="gym" size="lg" hideName />);
+    expect(screen.queryByText('CrossFit BullBox')).toBeNull();
+    expect(screen.getByText('CB')).toBeTruthy();
   });
 
   it('labels itself for screen readers as an organization', () => {

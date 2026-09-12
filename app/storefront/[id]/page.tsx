@@ -16,6 +16,7 @@ import StorefrontTabPanels from '@/components/storefront/StorefrontTabPanels';
 import StorefrontEmpty from '@/components/storefront/StorefrontEmpty';
 import BlockReportControls from '@/components/BlockReportControls';
 import { useStorefrontData } from './useStorefrontData';
+import GymStorefrontHeader from '@/components/storefront/GymStorefrontHeader';
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -24,6 +25,11 @@ export default function StorefrontPage() {
   const instructorId = params.id as string;
 
   const d = useStorefrontData(instructorId);
+  // 'gym' | 'studio' are organisations; 'independent' is a solo trainer and
+  // keeps the person treatment. business_type is the only thing that tells them
+  // apart -- the users row looks identical either way.
+  const isOrganization =
+    !!d.partnerData && (d.partnerData.business_type === 'gym' || d.partnerData.business_type === 'studio');
   const [activeTab, setActiveTab] = useState('sessions');
 
   const tabs = useMemo<StorefrontTab[]>(() => {
@@ -70,6 +76,18 @@ export default function StorefrontPage() {
   const isOwn = d.currentUserId === instructorId;
   const isAthleteViewer = !!d.currentUserId && !isOwn;
   const canBook = tabs.some((t) => t.id === 'sessions');
+
+  // The floating Book-a-session bar is for INSTRUCTOR storefronts only.
+  //
+  // A gym storefront already lists its upcoming sessions inline, each with its
+  // own join control, so the floating bar duplicates them -- and it permanently
+  // occludes a strip of the page to do it, riding over the Following button as
+  // you scroll past. On an instructor storefront, where booking is a
+  // conversation rather than a listed session, it still earns its place.
+  //
+  // canBook stays untouched: it still drives the inline Reservar button in the
+  // profile column, which is not the thing that was in the way.
+  const showFloatingBookCta = canBook && !isOrganization;
   const hasContent = tabs.length > 0;
 
   if (d.loading) {
@@ -146,10 +164,19 @@ export default function StorefrontPage() {
 
   // Bottom padding must clear the fixed 64px BottomNav on every breakpoint (the
   // old lg:pb-12 = 48px was shorter than the nav, clipping desktop content), plus
-  // the mobile sticky Book CTA that floats above the nav when canBook. Desktop has
-  // no floating CTA, so lg:pb-24 is enough.
+  // the mobile sticky Book CTA when it is showing -- instructor storefronts
+  // only, see showFloatingBookCta. Desktop has no floating CTA, so lg:pb-24 is
+  // enough.
   return (
-    <div className={`min-h-screen bg-theme-page lg:pb-24 ${canBook ? 'pb-40' : 'pb-32'}`}>
+    <div
+      // Clearance derives from the same variable: the nav, plus the CTA's own
+      // height when it is showing. A hardcoded pb-40 was the third independent
+      // copy of this number.
+      style={{
+        paddingBottom: showFloatingBookCta ? 'calc(var(--bottom-nav-h) + 4.5rem)' : 'calc(var(--bottom-nav-h) + 1rem)',
+      }}
+      className="min-h-screen bg-theme-page lg:pb-24"
+    >
       <div className="fixed top-0 left-0 right-0 z-40 safe-area-top bg-theme-header border-b border-theme">
         <div className="max-w-5xl mx-auto h-14 flex items-center px-4">
           <button onClick={() => goBack()} className="text-theme-primary hover:text-tribe-green transition-colors">
@@ -168,14 +195,26 @@ export default function StorefrontPage() {
           page left. `clip` (not `hidden`) avoids creating a scroll container, so
           the sticky sidebar + sticky tabs below keep working. */}
       <main className="pt-header max-w-5xl mx-auto overflow-x-clip">
-        <StorefrontHero instructor={instructor} language={lang} />
+        {/* An organisation gets the organisation identity INSTEAD of the person
+            one. Rendering both is what showed BullBox twice: two avatars, two
+            names, and three person metrics as empty dashes. */}
+        {isOrganization && d.partnerData ? (
+          <GymStorefrontHeader
+            partner={d.partnerData}
+            account={instructor}
+            coachCount={d.partnerInstructors.length}
+            sessionsPerWeek={d.sessionsPerWeek}
+          />
+        ) : (
+          <StorefrontHero instructor={instructor} language={lang} />
+        )}
 
         {!hasContent ? (
           // No offerings yet — single centered column, no empty void.
           // BUG-026: extra bottom padding so the empty state doesn't sit
           // flush against (or get covered by) the fixed bottom nav.
           <div className="px-4 md:px-6 mt-4 mb-24 max-w-xl mx-auto space-y-4">
-            <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+            {!isOrganization && <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />}
             {profileColumn}
             <StorefrontEmpty language={lang} isOwner={isOwn} />
           </div>
@@ -183,13 +222,17 @@ export default function StorefrontPage() {
           <>
             {/* Below lg: single centered column. lg+: two-column. */}
             <div className="px-4 md:px-6 mt-4 lg:hidden max-w-xl mx-auto">
-              <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+              {!isOrganization && (
+                <StorefrontTrustBar instructor={instructor} language={lang} orientation="horizontal" />
+              )}
             </div>
 
             <div className="lg:grid lg:grid-cols-[300px_1fr] lg:gap-8 px-4 md:px-6 mt-4">
               <aside className="lg:sticky lg:top-20 lg:self-start space-y-4 w-full max-w-xl mx-auto lg:mx-0 lg:max-w-none">
                 <div className="hidden lg:block">
-                  <StorefrontTrustBar instructor={instructor} language={lang} orientation="vertical" />
+                  {!isOrganization && (
+                    <StorefrontTrustBar instructor={instructor} language={lang} orientation="vertical" />
+                  )}
                 </div>
                 {profileColumn}
               </aside>
@@ -227,8 +270,11 @@ export default function StorefrontPage() {
           bottom-16 (64px) ignored the safe-area inset, so on home-indicator
           devices the nav's inset overlapped and clipped this CTA. Offset by the
           nav height PLUS the inset. */}
-      {canBook && (
-        <div className="lg:hidden fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0 z-30 px-4 pb-2 pointer-events-none">
+      {showFloatingBookCta && (
+        <div
+          style={{ bottom: 'var(--bottom-nav-h)' }}
+          className="lg:hidden fixed left-0 right-0 z-30 px-4 pb-2 pointer-events-none"
+        >
           <button
             onClick={goToSessions}
             className="pointer-events-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-tribe-green text-slate-900 font-bold text-sm shadow-tribe-green hover:opacity-90 transition"

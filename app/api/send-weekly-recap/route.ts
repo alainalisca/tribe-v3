@@ -6,6 +6,7 @@ import { fetchParticipationsWithSession, fetchSessionsByCreator, fetchUsersForEm
 import { formatSessionLocation } from '@/lib/sessionLocation';
 import { isValidCronAuth } from '@/lib/auth/cron';
 import { bogotaDateOffset } from '@/lib/time/bogotaDate';
+import { dateLocale } from '@/lib/dateLocale';
 
 function getResendClient() {
   const key = process.env.RESEND_API_KEY;
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
               isSpanish ? 'es' : 'en'
             );
             const atWord = isSpanish ? 'en' : 'at';
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString(dateLocale(lang))})</li>`;
           }
           sessionsHTML += '</ul>';
         }
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
               isSpanish ? 'es' : 'en'
             );
             const atWord = isSpanish ? 'en' : 'at';
-            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString()})</li>`;
+            sessionsHTML += `<li style="margin: 8px 0;"><strong>${session.sport}</strong> ${atWord} ${loc} (${new Date(session.date + 'T00:00:00').toLocaleDateString(dateLocale(lang))})</li>`;
           }
           sessionsHTML += '</ul>';
         }

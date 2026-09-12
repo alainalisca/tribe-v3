@@ -13,6 +13,8 @@ import { requestUserLocation } from '@/lib/location';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { type InstructorProfile } from '@/lib/dal/instructors';
 import { sportTranslations } from '@/lib/translations';
+import GymsAndStudiosSection from '@/components/instructors/GymsAndStudiosSection';
+import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 
 /**
  * Client-side interactivity for /instructors.
@@ -75,9 +77,10 @@ const getTranslations = (language: 'en' | 'es') => ({
 
 interface InstructorsPageClientProps {
   initialInstructors: InstructorProfile[];
+  gyms: GymDirectoryEntry[];
 }
 
-export default function InstructorsPageClient({ initialInstructors }: InstructorsPageClientProps) {
+export default function InstructorsPageClient({ initialInstructors, gyms }: InstructorsPageClientProps) {
   const { language } = useLanguage();
   const t = getTranslations(language);
 
@@ -386,6 +389,11 @@ export default function InstructorsPageClient({ initialInstructors }: Instructor
             ))}
           </div>
         )}
+
+        {/* Below the instructor grid: gyms are a different kind of thing, and
+            mixing organizations into a list of people is the confusion T-GYM1
+            set out to remove. Hides itself when there are none. */}
+        <GymsAndStudiosSection gyms={gyms} />
       </div>
       <BottomNav />
     </div>

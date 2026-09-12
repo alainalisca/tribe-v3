@@ -10,7 +10,9 @@
 import { describe, it, expect, vi } from 'vitest';
 
 const orgIds = vi.fn();
-vi.mock('./gymVenue', () => ({ fetchOrganizationUserIds: (...args: unknown[]) => orgIds(...args) }));
+// fetchOrganizationUserIds moved to gymDirectory when gymVenue hit the
+// 300-line limit; the mock has to follow or the real one runs.
+vi.mock('./gymDirectory', () => ({ fetchOrganizationUserIds: (...args: unknown[]) => orgIds(...args) }));
 vi.mock('@/lib/logger', () => ({ logError: vi.fn(), log: vi.fn() }));
 vi.mock('@/lib/avatar', () => ({ resolveAvatarUrl: (a: string | null) => a }));
 

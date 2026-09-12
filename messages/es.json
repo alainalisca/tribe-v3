@@ -277,6 +277,7 @@
     "coachAtLong": "Coach en {gym}",
     "ourCoaches": "Nuestros coaches",
     "coachesCount": "{n} coaches",
+    "coachesUnit": "coaches",
     "sessionsPerWeek": "sesiones / semana",
     "gymsAndStudios": "Gimnasios y estudios",
     "featuredSince": "Afiliado destacado · desde {date}",
@@ -289,16 +290,27 @@
     "autoApproveRoster": "Aprobar automáticamente a mis coaches",
     "autoApproveRosterHelp": "Los instructores de tu roster publican en {gym} sin pedir permiso.",
     "pendingTag": "Pendiente · {gym}",
-    "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio."
+    "pendingNote": "{gym} aún no ha aprobado esta sesión en su sede. Mientras tanto se publica con la dirección, sin el nombre ni el logo del gimnasio.",
+    "requestedOn": "Solicitada el {date}",
+    "recurringWarning": "Esta sesión se repite cada semana. Al aprobarla, autorizas todas las próximas fechas, no solo esta.",
+    "partnerDashboard": "Panel del gimnasio",
+    "featuredAffiliate": "Afiliado destacado",
+    "viewGym": "Ver gimnasio"
   },
   "create": {
     "whereIsSession": "¿Dónde es la sesión?",
     "otherPlace": "Otro lugar",
-    "partnerNeedsApproval": "{gym} revisará esta solicitud. Hasta que la apruebe, tu sesión se muestra con la dirección sin el nombre del gimnasio."
+    "partnerNeedsApproval": "{gym} revisará esta solicitud. Hasta que la apruebe, tu sesión se muestra con la dirección sin el nombre del gimnasio.",
+    "searchGyms": "Busca gimnasios y estudios",
+    "noGymsFound": "No se encontraron gimnasios",
+    "venueLinkFailed": "Tu sesión se guardó, pero no se pudo vincular el gimnasio. Puedes elegir la sede desde la pantalla de edición.",
+    "venueApproved": "Publicada en {gym}."
   },
   "notif": {
     "venueRequestNew": "Nueva solicitud de sede: {instructor} quiere publicar {title} en {gym}",
     "venueRequestApproved": "{gym} aprobó {title} en su sede",
-    "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección."
+    "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección.",
+    "anInstructor": "Un instructor",
+    "aSession": "una sesión"
   }
 }

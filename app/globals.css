@@ -244,6 +244,32 @@ body {
     }
   }
 
+  /* ── THE BOTTOM NAV'S REAL HEIGHT, DEFINED ONCE ──────────────────────────
+     Every consumer derives from this. The overlap bug it replaces existed
+     because three places each computed the nav height independently and one
+     dropped the 34px floor:
+
+       BottomNav      padded with .safe-area-bottom = max(inset, 34px)
+       the floating CTA  positioned at calc(4rem + env(...))  -- NO floor
+       the page         cleared with a hardcoded pb-40
+
+     iOS Safari reports safe-area-inset-bottom as 0 while the browser toolbar
+     is visible. The nav stayed 98px tall because of its floor; the CTA sat at
+     64px because it had none, and the nav covered it by exactly 34px.
+
+     Mirrors .safe-area-bottom below, INCLUDING its reset at 768px -- the
+     floating CTA is lg:hidden, so it is live from 768 to 1023 where the nav
+     has no inset padding at all. */
+  :root {
+    --bottom-nav-h: calc(4rem + max(env(safe-area-inset-bottom, 0px), 34px));
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --bottom-nav-h: 4rem;
+    }
+  }
+
   /* Use max() to ensure at least 34px on mobile for home indicator */
   /* !important needed to override other padding styles */
   .safe-area-bottom {

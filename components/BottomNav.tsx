@@ -122,8 +122,15 @@ export default function BottomNav() {
     },
   ];
 
+  // Height comes from --bottom-nav-h, the single definition in globals.css.
+  // This used .safe-area-bottom directly, which meant the floating CTA and the
+  // page clearance each re-derived the nav height independently -- and one of
+  // them lost the 34px floor, so the nav covered the CTA by exactly 34px.
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-card border-t border-gray-200 dark:border-tribe-mid shadow-lg z-50 safe-area-bottom">
+    <nav
+      style={{ height: 'var(--bottom-nav-h)' }}
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-tribe-card border-t border-gray-200 dark:border-tribe-mid shadow-lg z-50"
+    >
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center h-16 px-4">
           {navItems.map((item) => {

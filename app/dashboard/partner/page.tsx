@@ -8,11 +8,9 @@ import { fetchPartnerByUserId, fetchPartnerStats } from '@/lib/dal/featuredPartn
 import type { FeaturedPartner, PartnerStats } from '@/lib/dal/featuredPartners';
 import BottomNav from '@/components/BottomNav';
 import PartnerDashboardStats from '@/components/partner/PartnerDashboardStats';
-import PartnerBookingsChart from '@/components/partner/PartnerBookingsChart';
-import PartnerPerformance from '@/components/partner/PartnerPerformance';
 import { ArrowLeft, Loader } from 'lucide-react';
-
-type Period = '7d' | '30d' | '90d';
+import VenueRequestsSection from '@/components/partner/VenueRequestsSection';
+import { useVenueRequests } from '@/hooks/useVenueRequests';
 
 export default function PartnerDashboardPage() {
   const router = useRouter();
@@ -20,8 +18,16 @@ export default function PartnerDashboardPage() {
   const { language } = useLanguage();
 
   const [partner, setPartner] = useState<FeaturedPartner | null>(null);
+  // Hooks cannot be conditional, and `partner` is null until the guard above
+  // resolves, so the queue loads with an empty id and fetches nothing until it
+  // has one. fetchVenueRequests short-circuits on a falsy partner id.
+  const venue = useVenueRequests({
+    partnerId: partner?.id ?? '',
+    gymName: partner?.business_name ?? '',
+    gymUserId: partner?.user_id ?? '',
+    initialAutoApprove: partner?.auto_approve_roster ?? true,
+  });
   const [stats, setStats] = useState<PartnerStats | null>(null);
-  const [period, setPeriod] = useState<Period>('30d');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,12 +69,6 @@ export default function PartnerDashboardPage() {
 
   if (!partner || !stats) return null;
 
-  const periods: { value: Period; label: string }[] = [
-    { value: '7d', label: t('7 days', '7 días') },
-    { value: '30d', label: t('30 days', '30 días') },
-    { value: '90d', label: t('90 days', '90 días') },
-  ];
-
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-tribe-dark pb-32">
       {/* Header */}
@@ -95,31 +95,33 @@ export default function PartnerDashboardPage() {
           </span>
         </div>
 
-        {/* Period selector */}
-        <div className="flex gap-2 mb-5">
-          {periods.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                period === p.value
-                  ? 'bg-tribe-green text-slate-900'
-                  : 'bg-white dark:bg-tribe-surface text-stone-700 dark:text-gray-200 border border-stone-200 dark:border-tribe-mid'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        {/* Venue requests sit above the metrics: an instructor waiting on a
+            decision is more urgent than last week's impressions. */}
+        <VenueRequestsSection
+          gymName={partner.business_name}
+          requests={venue.requests}
+          loading={venue.loading}
+          deciding={venue.deciding}
+          autoApprove={venue.autoApprove}
+          onDecide={(request, decision) => void venue.decide(request, decision)}
+          onToggleAutoApprove={(next) => void venue.toggleAutoApprove(next)}
+        />
 
         {/* Stats grid */}
         <PartnerDashboardStats stats={stats} language={language} />
 
-        {/* Bookings chart */}
-        <PartnerBookingsChart language={language} period={period} />
-
-        {/* Performance metrics */}
-        <PartnerPerformance partner={partner} language={language} />
+        {/* The Bookings-by-Day chart and the Performance Metrics block were
+            removed here (T-GYM2). The chart's bars were Math.random(), and
+            "Avg Rating" / "Sessions/Month" rendered partner.min_rating and
+            partner.min_sessions_per_month -- the partnership's CONTRACT
+            MINIMUMS -- as achievements, next to a green "Target: 4.0+". A gym
+            with no sessions and no ratings read its own contract back as
+            performance it had met.
+            
+            This PR is what makes the page reachable at all, so the four tiles
+            above are the page. They read real data and their zeros are true.
+            No replacements, no empty states: see the follow-up ticket for
+            wiring real metrics. */}
       </div>
 
       <BottomNav />
