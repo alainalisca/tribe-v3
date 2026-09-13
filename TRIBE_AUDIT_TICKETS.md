@@ -2,24 +2,24 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**102 tickets** (95 del audit original + 7 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**104 tickets** (95 del audit original + 9 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
-| Producto         | 10   | 15    | 4    | 29    |
+| Producto         | 10   | 17    | 4    | 31    |
 | Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 13    | 4    | 23    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 51    | 21   | 102   |
+| **Total**        | 31   | 53    | 21   | 104   |
 
 ---
 
-## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (7)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (9)
 
-Siete hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Nueve hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -147,6 +147,70 @@ CAUSA RAÍZ, la misma en tres sitios: **verde de marca como TEXTO sobre una supe
 FIX: el mismo patrón que usaron las páginas de compartir — el verde se queda como **relleno**, y la etiqueta pasa a `text-tribe-dark` (12.6:1 sobre el chip verde). Para el item activo de `BottomNav`, mantener el indicador verde (icono o barra: 3:1 basta para UI no textual) y poner la etiqueta en un token de texto. «Feature idea» se arregla subiendo `#6B7280` a `text-theme-tertiary` (`#5B616B`), que ya existe justamente porque `#6B7280` se quedaba corto.
 
 ACEPTACIÓN: los cuatro elementos miden >= 4.5:1 contra su fondo compuesto, medido en el DOM; ningún verde de la paleta se usa como texto pequeño sobre superficie clara en `components/`.
+
+### [REC-01] Series recurrentes duplicadas: una sola serie mal creada se multiplica sola cada noche
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web + Supabase (limpieza de datos) · **Riesgo:** Medio — toca datos existentes con reservas
+- **Journey / lado:** Crear sesión recurrente / instructor
+- **Ruta/Archivo:** `app/create/page.tsx:210`; `app/api/cron/recurring-sessions/route.ts`; `lib/dal/sessions.ts:1106` (`childSessionExists`)
+
+**Descripción**
+
+QUÉ PASA: 19 grupos de sesiones duplicadas (mismo creador + fecha + hora + deporte) sobre 342 sesiones totales, 32 filas de más, 5 creadores, entre 2025-12-13 y 2026-09-12. Dos filas dentro de un grupo tienen participantes reales.
+
+QUÉ **NO** ES, comprobado antes de escribir esto:
+
+1. **NO es el formulario de crear aceptando un segundo submit.** El guard existe: `app/create/page.tsx:804` es `<Button type="submit" disabled={loading}>` y `setLoading(true)` (:236) corre antes del insert (:280). Y los datos lo respaldan: de 342 sesiones hay **un solo** grupo con dos filas humanas creadas a menos de 10s.
+
+2. **NO es el cron.** `childSessionExists` (`lib/dal/sessions.ts:1106`) comprueba `recurring_parent_id + date` antes de insertar, y funciona: de los 12 grupos duplicados generados por el cron, **0** comparten `recurring_parent_id`. En todos, los hijos cuelgan de padres DISTINTOS. El cron generó correctamente un hijo por cada padre que existía.
+
+QUÉ ES: **hay varias filas PADRE para la misma serie**, y el cron las expande todas, todas las noches. El duplicado no es un error puntual: es una serie mal creada que se multiplica sola indefinidamente.
+
+CAUSA RAÍZ del caso más claro, con la huella intacta en los datos — las tres filas padre de BullBox (creador `eaff348f`, 12:12 CrossFit) se crearon con **un segundo de diferencia** y sus `recurrence_pattern` son:
+
+```
+2026-09-11T23:29:02   weekly_0
+2026-09-11T23:29:03   weekly_0_1
+2026-09-11T23:29:04   weekly_0_1_2
+```
+
+Es decir: **cada toque en un botón de día de la semana envió el formulario**, con la lista de días acumulándose. Es exactamente el bug de `RecurringSessionToggle` — los `<button>` sin `type` dentro de un `<form>`, que por defecto son `type="submit"` — y **ya está arreglado** (el `Button` compartido ahora tiene `type="button"` por defecto). Estas filas son residuo histórico de ese bug, no una regresión viva.
+
+Los grupos de Yoga (creador `9a16aa6b`, 19:00) también tienen varios padres, pero creados con días de diferencia, no en ráfaga: ahí alguien creó la misma clase semanal más de una vez. No hay ninguna deduplicación al crear una serie.
+
+IMPACTO: cada padre de más produce una sesión fantasma por ocurrencia, para siempre, sin que nadie vuelva a tocar nada. En `/g/bullbox/` esto se ve como dos clases idénticas de CrossFit el 14 de septiembre a las 12:12.
+
+FIX, en dos partes:
+
+- **Prevención:** al crear una serie recurrente, rechazar (o fusionar) un padre que coincida en creador + hora + deporte + patrón con otro creado en los últimos minutos. Un índice único parcial sobre los padres recurrentes es la versión fuerte.
+- **Limpieza:** identificar los padres sobrantes y terminarlos, NO borrarlos — dos filas de grupos duplicados tienen participantes. Cualquier borrado se decide fila a fila, no en lote.
+
+ACEPTACIÓN: la consulta de agrupación (mismo creador+fecha+hora+deporte, `having count(*) > 1`) devuelve 0 grupos nuevos después del fix; ningún padre recurrente duplicado se puede crear desde el formulario; los grupos existentes con participantes siguen intactos hasta que alguien decida caso por caso.
+
+### [GYM-05] Volver una sesión a partner_status='pending' es completamente silencioso
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web · **Riesgo:** Bajo
+- **Journey / lado:** Aprobación de sede / instructor + atleta inscrito
+- **Ruta/Archivo:** `supabase/migrations/158_gym_venue_approval.sql` (`review_venue_request`); `lib/dal/gymVenue.ts:207`; `lib/dal/venueRequests.ts`
+
+**Descripción**
+
+QUÉ PASA: `review_venue_request` cambia `partner_status` y **no notifica a nadie**: ni al creador de la sesión, ni a los atletas ya inscritos. No hay ningún insert en `notifications` en la migración 158, ni en `lib/dal/venueRequests.ts`, ni en `lib/dal/gymVenue.ts`.
+
+QUÉ VE UN ATLETA YA INSCRITO cuando su sesión pasa de `approved` a `pending` (enumerado leyendo los consumidores de la columna, no supuesto):
+
+- **NO pierde la sesión.** `partner_status` no aparece en ningún filtro de visibilidad ni de inscripción. La sesión sigue en su lista, la página de detalle funciona y su reserva queda intacta.
+- **Sí pierde la identidad del gimnasio, en silencio.** `lib/sessionGym.ts:80` exige `partner_status = 'approved'` para renderizar el chip de sede, el nombre en negrita y el logo. Con `pending`, la tarjeta y el detalle vuelven a mostrar una dirección normal: reservó «CrossFit BullBox» y al día siguiente ve «Cra 43G #25a-50».
+- El **creador** sí ve algo: `lib/sessionGym.ts:86` le pinta «Pendiente · {gym}» en su propia tarjeta. La asimetría es deliberada (T-GYM1) y aquí juega a favor.
+- Desaparece además de `/g/[slug]` y deja de contar en las estadísticas del gimnasio en descubrimiento (`lib/dal/gymDirectory.ts:114,163`).
+
+IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0 inscritos. Deja de serlo en cuanto se aplique a una sesión reservada — que es exactamente lo que hay pendiente con la sesión de natación del 11 de noviembre, con una persona inscrita.
+
+FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
+
+ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
