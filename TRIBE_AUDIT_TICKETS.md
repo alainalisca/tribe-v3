@@ -59,7 +59,7 @@ FIX: `ALTER FUNCTION public.is_app_admin() SET search_path = public, pg_catalog;
 
 ACEPTACIÓN: `select proname, proconfig from pg_proc where proname = 'is_app_admin'` devuelve `{search_path=public,pg_catalog}`; ninguna función `SECURITY DEFINER` en `public` queda con `proconfig IS NULL`.
 
-### [GYM-01] BullBox no tiene logo propio: está mostrando la foto de perfil de su cuenta dueña
+### [GYM-01] El logo de BullBox está guardado en la columna equivocada (avatar de la cuenta, no logo_url)
 
 - **Área:** Fix rápido · **Prioridad:** Media · **Estado:** Por hacer
 - **Esfuerzo:** S · **Deploy:** Datos (sin código) · **Riesgo:** Ninguno
@@ -70,11 +70,13 @@ ACEPTACIÓN: `select proname, proconfig from pg_proc where proname = 'is_app_adm
 
 QUÉ PASA: `logo_url` es NULL en **las tres** filas de `featured_partners`. Lo que se ve como logo de BullBox en el feed, en `/instructors`, en su storefront y ahora en `/g/bullbox` es en realidad el `avatar_url` de la cuenta de usuario dueña, alcanzado por la cadena de fallback de `partnerLogoUrl()` (y, en la vista pública, por `coalesce(logo_url, u.avatar_url)` de la migración 163).
 
-IMPACTO: la foto de una persona hace de identidad de una organización. En la tarjeta de previsualización de WhatsApp del link de bio esto es lo primero que ve alguien que nunca ha oído hablar de Tribe.
+CORRECCIÓN RESPECTO A LA PRIMERA VERSIÓN DE ESTE TICKET: se renderizó la tarjeta OG el 2026-09-13 y **la imagen que hay en `avatar_url` ES el logo real de BullBox** (el logotipo del box sobre fondo blanco), no la cara de una persona. Así que hoy se ve bien. El problema es de dónde está guardado, no de qué se ve.
+
+IMPACTO: menor hoy, latente después. (1) El logo depende de que la persona dueña no cambie su propia foto de perfil: el día que lo haga, su cara pasa a ser la identidad del gimnasio en el feed, en descubrimiento, en el storefront y en la tarjeta de WhatsApp del link de bio. (2) Para el siguiente partner que se registre con una foto personal como avatar, el fallo es inmediato y no hay ninguna alerta. (3) `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder detectar este caso, y ahora mismo `logo_url` es NULL en las tres filas.
 
 FIX: subir un logo real para BullBox a `logo_url`. **El `coalesce` de la vista se queda permanentemente** — es el fallback correcto y hace que cualquier gimnasio futuro se vea bien el día que se registra, sin ningún dato extra —; el punto de este ticket es que ese fallback no se convierta en la razón por la que nadie sube nunca un logo. `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder distinguir un logo real de un avatar prestado.
 
-ACEPTACIÓN: `select logo_url from featured_partners where slug = 'bullbox'` no es NULL; `/g/bullbox/` y su tarjeta OG muestran el logo del box, no la foto de una persona. **Hacer esto antes de publicar el link de bio en ningún sitio.**
+ACEPTACIÓN: `select logo_url from featured_partners where slug = 'bullbox'` no es NULL y apunta al logo del box; `/g/bullbox/` y su tarjeta OG se ven igual que hoy pero ya sin depender del avatar de la cuenta. Idealmente hecho antes de publicar el link de bio, aunque **esto NO bloquea el DoD 3**: la tarjeta ya muestra el logo correcto.
 
 ### [GYM-03] /g/<slug inexistente> devuelve la página 404 con status HTTP 200 (soft 404)
 
