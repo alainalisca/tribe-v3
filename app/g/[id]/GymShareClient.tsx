@@ -226,14 +226,29 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
               </div>
             )}
 
-            {/* Identical for a signed-in and a signed-out visitor: this page is
+            {/* /auth/, NOT /download/.
+
+              This button pointed at /download/, and public/download/index.html
+              auto-navigates to the App Store 300ms after load on any normal
+              mobile browser (:224). So ONE tap on a gym's page ejected a
+              stranger out of the browser into the App Store, under a label that
+              promised to open Tribe. Reproduced on an iPhone UA: one tap,
+              /g/bullbox/ -> /download/ -> store.
+
+              That is the same leak as the install modal, on this page's primary
+              control. A bio link's job is to show the gym and then let someone
+              act; /auth/ keeps them in the browser and leads to the thing that
+              actually matters, which is booking. The label follows the
+              destination.
+
+              Identical for a signed-in and a signed-out visitor: this page is
               built for strangers arriving from a bio link, and an auth-dependent
               primary CTA would make the two renders differ for no gain. */}
             <Link
-              href="/download/"
+              href="/auth/"
               className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
             >
-              {t('openInApp')}
+              {t('joinCta')}
             </Link>
           </CardContent>
         </Card>
