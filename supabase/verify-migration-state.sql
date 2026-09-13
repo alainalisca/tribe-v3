@@ -1084,10 +1084,15 @@ union all
 -- commercial columns of featured_partners -- what each partner pays Tribe and
 -- what their contract minimums are.
 select 'GUARD_partners_public_hides_commercial_columns',
-       coalesce(
-         'MISSING -- exposed to anon: ' || string_agg(a.attname, ', ' order by a.attname),
-         'applied'
-       )
+       case when to_regclass('public.partners_public') is null
+            -- An absent view has no exposed columns, which would otherwise
+            -- report a green 'applied' for a state in which the feature does
+            -- not exist at all. Say so instead.
+            then 'MISSING -- view absent'
+            else coalesce(
+              'MISSING -- exposed to anon: ' || string_agg(a.attname, ', ' order by a.attname),
+              'applied'
+            ) end
 from pg_attribute a
 where a.attrelid = to_regclass('public.partners_public')
   and a.attnum > 0
