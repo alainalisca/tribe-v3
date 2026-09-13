@@ -72,6 +72,13 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
           // Only sessions the gym has approved carry its name. Anything below
           // 'approved' is a claim the gym has not agreed to.
           .eq('partner_status', 'approved')
+          // status 'active', not just any row. sessions_public filters ONLY on
+          // join_policy (158), so it carries cancelled sessions -- 25 of them
+          // live right now -- and without this a cancelled class keeps
+          // advertising itself on a gym's public page. Every other surface that
+          // reads sessions already filters this (gymDirectory:29,63,115,164;
+          // the feed at sessions.ts:409); these two share pages did not.
+          .eq('status', 'active')
           .gte('date', today)
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })

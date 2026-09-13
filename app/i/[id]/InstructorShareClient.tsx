@@ -71,6 +71,13 @@ export default function InstructorShareClient() {
           .from('sessions_public')
           .select('id, title, sport, date, start_time, location')
           .eq('creator_id', instructorId)
+          // status 'active', not just any row. sessions_public filters ONLY on
+          // join_policy (158), so it carries cancelled sessions -- 25 of them
+          // live right now -- and without this a cancelled class keeps
+          // advertising itself on a gym's public page. Every other surface that
+          // reads sessions already filters this (gymDirectory:29,63,115,164;
+          // the feed at sessions.ts:409); these two share pages did not.
+          .eq('status', 'active')
           .gte('date', today)
           .order('date', { ascending: true })
           .limit(5),

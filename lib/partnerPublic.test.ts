@@ -147,6 +147,20 @@ describe('fetchPublicPartner', () => {
   });
 });
 
+describe('the share pages hide cancelled sessions', () => {
+  // sessions_public filters ONLY on join_policy (158), so it carries cancelled
+  // rows -- 25 of them in production when this was written. Without an explicit
+  // status filter a cancelled class keeps advertising itself on a gym's public
+  // page, and no behavioural test can see it because the client is mocked.
+  it.each(['app/g/[id]/GymShareClient.tsx', 'app/i/[id]/InstructorShareClient.tsx'])(
+    '%s filters status=active on its sessions_public read',
+    (file) => {
+      const src = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(src).toMatch(/\.eq\(['"]status['"],\s*['"]active['"]\)/);
+    }
+  );
+});
+
 describe('the /g route never reads the base table', () => {
   // The static half of the same guard. A future edit that swaps the view for
   // featured_partners because "it has more columns" would pass every behavioural
