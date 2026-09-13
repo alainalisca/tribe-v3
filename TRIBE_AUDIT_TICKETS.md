@@ -2,7 +2,7 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**99 tickets** (95 del audit original + 4 añadidos el 2026-09-12 desde T-GYM3; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**100 tickets** (95 del audit original + 5 añadidos el 2026-09-12/13 desde T-GYM3; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
@@ -10,16 +10,16 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | Producto         | 10   | 15    | 4    | 29    |
 | Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
-| Infra            | 6    | 11    | 4    | 21    |
+| Infra            | 6    | 12    | 4    | 22    |
 | Fix rápido       | 3    | 8     | 10   | 21    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 48    | 21   | 99    |
+| **Total**        | 31   | 49    | 21   | 100   |
 
 ---
 
-## Añadidos 2026-09-12 (T-GYM3) (4)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3) (5)
 
-Cuatro hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Cinco hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -75,6 +75,31 @@ IMPACTO: la foto de una persona hace de identidad de una organización. En la ta
 FIX: subir un logo real para BullBox a `logo_url`. **El `coalesce` de la vista se queda permanentemente** — es el fallback correcto y hace que cualquier gimnasio futuro se vea bien el día que se registra, sin ningún dato extra —; el punto de este ticket es que ese fallback no se convierta en la razón por la que nadie sube nunca un logo. `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder distinguir un logo real de un avatar prestado.
 
 ACEPTACIÓN: `select logo_url from featured_partners where slug = 'bullbox'` no es NULL; `/g/bullbox/` y su tarjeta OG muestran el logo del box, no la foto de una persona. **Hacer esto antes de publicar el link de bio en ningún sitio.**
+
+### [GYM-03] /g/<slug inexistente> devuelve la página 404 con status HTTP 200 (soft 404)
+
+- **Área:** Infra · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Journey / lado:** Link de bio mal escrito / invitado + crawlers
+- **Ruta/Archivo:** `app/g/[id]/page.tsx` (`generateMetadata` + `notFound()`)
+
+**Descripción**
+
+QUÉ PASA: `/g/does-not-exist/` y `/g/marce-anahata/` (un partner `independent`, excluido de la vista a propósito) **renderizan la página 404 correcta pero devuelven HTTP 200**, no 404.
+
+EVIDENCIA, medida y reproducida el 2026-09-13 sobre Next 16.0.10:
+
+- preview de Vercel: `HTTP 200`, `x-matched-path: /g/[id]`, `<title>Not Found | Tribe</title>`
+- `next start` local sobre el mismo build: `HTTP 200` — así que **no es un artefacto de Vercel**
+- con `notFound()` lanzado desde el cuerpo de la página: 200
+- con `notFound()` lanzado desde dentro de `generateMetadata`: 200 también
+- **discriminador**: rutas públicas sin match en esta misma app sí devuelven un 404 real (`/legal/does-not-exist/` → 404, `/faq/nope/` → 404, `/about/nope/` → 404). O sea: el 404 del router funciona; lo que no fija el status es `notFound()` en una ruta cuyo `generateMetadata` hace `await` de una llamada de red. Hipótesis (sin confirmar): el streaming de metadata de Next manda la shell antes de que resuelva el fetch, y para cuando `notFound()` se lanza el status ya está comprometido.
+
+IMPACTO: bajo para una persona (ve la página 404 correcta, ni un 500 ni un redirect a `/auth`, así que el DoD 5 de T-GYM3 pasa tal como está escrito) y real para los buscadores: un crawler indexa cada slug mal tecleado como página viva. En una ruta de link de bio, donde los slugs son permanentes y se escriben a mano en una bio de Instagram, los slugs mal tecleados van a existir.
+
+FIX: necesita una respuesta del lado de Next, no otro intento a ciegas. Caminos a evaluar: desactivar el streaming de metadata en esta ruta; resolver el partner antes de que empiece el streaming; o un `route.ts`/middleware que valide el slug antes de llegar a la página. **No mover `notFound()` a `generateMetadata` "para arreglarlo"** — ya se probó y no cambia nada; hay un comentario en `app/g/[id]/page.tsx` que lo dice para que no se repita el intento.
+
+ACEPTACIÓN: `curl -s -o /dev/null -w '%{http_code}' <host>/g/does-not-exist/` devuelve `404`; `/g/bullbox/` sigue devolviendo `200`; la página 404 renderizada no cambia.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 

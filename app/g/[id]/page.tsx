@@ -36,19 +36,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const partner = await getPartner(id);
 
-  // A dead bio link must render the 404 page -- never a 500, and never /auth.
+  // A dead bio link must render the 404 page, so this returns generic metadata
+  // rather than throwing -- a throw here is a 500, and a 500 on a URL printed in
+  // someone's bio looks like Tribe is down.
   //
-  // notFound() HERE, not only in the page body, and the reason is measured
-  // rather than assumed. With the miss handled only in the body, the preview
-  // served /g/does-not-exist/ as **HTTP 200** carrying the 404 page: Next 16
-  // streams <head> as soon as generateMetadata resolves, so the status is
-  // already committed by the time the body raises. That is a soft 404, and on a
-  // bio-link route it means a crawler indexes every typo'd slug as a live page.
+  // KNOWN AND MEASURED, do not "fix" this by moving notFound() up here: the
+  // route renders the 404 page with a **200** status, not a 404. Reproduced on
+  // the Vercel preview and against `next start` locally, on Next 16.0.10, with
+  // notFound() raised from the page body AND from inside this function -- the
+  // status is 200 either way. An unmatched public route in this same app
+  // (/legal/does-not-exist/, /faq/nope/) returns a real 404, so this is specific
+  // to notFound() on a route whose generateMetadata awaits a network call.
   //
-  // This is not the "throw a 500" case the spec warned against. notFound() is
-  // the framework's own 404 signal: it renders app/not-found.tsx, not
-  // error.tsx, and sets the status while the response can still carry one.
-  if (!partner) notFound();
+  // DoD 5 passes as written -- the 404 page renders, not a 500 and not /auth --
+  // but a soft 404 lets a crawler index every mistyped slug as a live page.
+  // Filed as GYM-03; it needs a Next-side answer, not another guess.
+  if (!partner) {
+    return {
+      title: 'Not Found | Tribe',
+      description: 'This page is not available on Tribe.',
+    };
+  }
 
   const typeLabel = OG_TYPE_LABEL_ES[partner.business_type ?? ''] ?? '';
   const specialties = (partner.specialties ?? []).slice(0, 3).join(' · ');
