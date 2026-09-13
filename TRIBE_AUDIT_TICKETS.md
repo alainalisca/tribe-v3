@@ -308,6 +308,12 @@ Si se revisa esa decisión, el cambio es una línea en `lib/publicShareRoutes.ts
 
 EXTRA que sigue vivo: el locale `/us/` vs `/co/` y el `text-white` sobre `bg-tribe-green` (~1.9:1) del propio modal siguen sin tocar — ver [UI-A11Y-01].
 
+**RESOLUCIÓN 2026-09-13 — Smart App Banner: se queda.** `app/layout.tsx:33` declara `itunes: { appId: '6458219258' }`, que Safari en iOS convierte en una barra nativa de App Store en **todas** las rutas, incluida `/g/[slug]`. Verificado servido en `/g/bullbox/`: `<meta name="apple-itunes-app" content="app-id=6458219258"/>`.
+
+Se deja tal cual, por decisión de Al: es fina, nativa, descartable y no secuestra la página. El problema nunca fue que Tribe ofrezca una app, sino que la página le quitara la decisión al visitante — y eso era el CTA que apuntaba a `/download/`, ya corregido. Además vive en el layout raíz, así que quitarla la quitaría de todas las rutas.
+
+NOTA PARA QUIEN VERIFIQUE: esta barra es **invisible para cualquier arnés headless**. Chromium no la renderiza, así que `scripts/verify-share-routes.mjs` no puede verla ni afirmar nada sobre ella. Sólo se comprueba en un iPhone real.
+
 ### [NAV-03] Dar a 'Mis Sesiones' (/sessions) una entrada en la navegación
 
 - **Área:** Flujo/Navegación · **Prioridad:** Alta · **Estado:** Por hacer
