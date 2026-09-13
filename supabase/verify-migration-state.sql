@@ -1045,4 +1045,57 @@ select '162_revoke_partner_id_write',
        case when not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'INSERT')
              and not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'UPDATE')
             then 'applied' else 'MISSING' end
+union all
+select '163_partner_slug_and_public_view',
+       -- Three artifacts, all of which must be present: the NOT NULL slug
+       -- column, the public view, and anon's grant on it. Checking only the
+       -- column would report 'applied' for a half-run migration whose view is
+       -- missing, which is the state in which every bio link renders a 404.
+       case when exists (
+              select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'featured_partners'
+                and column_name = 'slug' and is_nullable = 'NO'
+            )
+            and to_regclass('public.partners_public') is not null
+            -- has_table_privilege, never information_schema.table_privileges:
+            -- that view cannot see table-level grants and passes either way.
+            and has_table_privilege('anon', 'public.partners_public', 'SELECT')
+            then 'applied' else 'MISSING' end
+union all
+
+-- The permanence property, as a standing check rather than a one-off probe.
+-- partners_public must NOT filter on status: the whole point of the view is
+-- that a bio link outlives the sponsorship. If a future edit adds
+-- status = 'active' to it, every partner's page dies the day their contract
+-- lapses, months after the change that caused it -- so this compares the view's
+-- row count against the non-pending row count of the base table.
+select 'GUARD_partners_public_survives_expiry',
+       case when to_regclass('public.partners_public') is null then 'MISSING -- view absent'
+            when (select count(*) from public.partners_public)
+               = (select count(*) from public.featured_partners
+                   where status is distinct from 'pending')
+            then 'applied'
+            else 'MISSING -- partners_public drops non-pending rows; a lapsed '
+                 'sponsorship would kill its bio link' end
+union all
+
+-- The security boundary, as a standing check. partners_public is
+-- owner-executed, so its SELECT list is the only thing between anon and the
+-- commercial columns of featured_partners -- what each partner pays Tribe and
+-- what their contract minimums are.
+select 'GUARD_partners_public_hides_commercial_columns',
+       coalesce(
+         'MISSING -- exposed to anon: ' || string_agg(a.attname, ', ' order by a.attname),
+         'applied'
+       )
+from pg_attribute a
+where a.attrelid = to_regclass('public.partners_public')
+  and a.attnum > 0
+  and not a.attisdropped
+  and a.attname in (
+    'monthly_fee_cents', 'min_sessions_per_month', 'min_rating',
+    'total_impressions', 'total_clicks', 'total_bookings',
+    'tier', 'status', 'starts_at', 'expires_at',
+    'auto_approve_roster', 'user_id'
+  )
 order by migration;

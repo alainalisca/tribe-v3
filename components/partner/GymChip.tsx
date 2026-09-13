@@ -14,6 +14,7 @@
  */
 
 import Link from 'next/link';
+import { partnerMonogram } from '@/lib/partnerIdentity';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
 export interface GymChipProps {
@@ -30,16 +31,6 @@ export interface GymChipProps {
    * page title directly beneath, and the same name twice reads as a bug.
    */
   hideName?: boolean;
-}
-
-/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
-function monogram(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 export default function GymChip({
@@ -73,7 +64,7 @@ export default function GymChip({
             size === 'lg' ? 'text-2xl' : size === 'md' ? 'text-xs' : 'text-[10px]'
           }`}
         >
-          {monogram(name)}
+          {partnerMonogram(name)}
         </span>
       )}
       {!hideName && (
