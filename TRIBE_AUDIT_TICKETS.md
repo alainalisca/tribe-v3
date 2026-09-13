@@ -2,7 +2,7 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**101 tickets** (95 del audit original + 6 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**102 tickets** (95 del audit original + 7 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
@@ -11,15 +11,15 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 13    | 4    | 23    |
-| Fix rápido       | 3    | 8     | 10   | 21    |
+| Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 50    | 21   | 101   |
+| **Total**        | 31   | 51    | 21   | 102   |
 
 ---
 
-## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (6)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (7)
 
-Seis hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Siete hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -122,6 +122,32 @@ FIX: extraer el chrome, NO el contenido. Un `<SharePageShell>` que reciba el hea
 
 ACEPTACIÓN: ni `GymShareClient.tsx` ni `InstructorShareClient.tsx` declaran `min-h-screen`, el header o las clases del shell de tarjeta por su cuenta; un cambio de radio o de padding en el shell se ve en las dos rutas; las capturas de las dos páginas siguen leyéndose como el mismo producto.
 
+### [UI-A11Y-01] Contraste en el chrome global de la app: FeedbackWidget y el item activo de BottomNav fallan AA
+
+- **Área:** Fix rápido · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Journey / lado:** Todas las rutas / ambos lados
+- **Ruta/Archivo:** `components/FeedbackWidget.tsx:67-68`; `components/BottomNav.tsx`; `components/IOSInstallPrompt.tsx:96`
+
+**Descripción**
+
+QUÉ PASA: tres elementos del chrome global no llegan a AA. Medidos el 2026-09-13 sobre la página desplegada con `getComputedStyle`, componiendo cada capa translúcida (no calculados a mano desde la paleta):
+
+| elemento                                | color     | sobre                                  | ratio                       | mínimo |
+| --------------------------------------- | --------- | -------------------------------------- | --------------------------- | ------ |
+| `FeedbackWidget` — «Bug report»         | `#A8DA36` | chip verde/15 sobre blanco (`#F2F9E1`) | **1.52:1**                  | 4.5:1  |
+| `FeedbackWidget` — «Feature idea»       | `#6B7280` | `#F5F5F4`                              | **4.43:1**                  | 4.5:1  |
+| `BottomNav` — item activo «Create»      | `#A8DA36` | blanco                                 | **1.65:1**                  | 4.5:1  |
+| `IOSInstallPrompt:96` — texto del botón | blanco    | `bg-tribe-green`                       | ~1.9:1 (del audit original) | 4.5:1  |
+
+CONTEXTO: los tres son anteriores a T-GYM3/T-GYM3b y son **globales**, no de las páginas de compartir. Salieron a la luz al medir `/g/[slug]` e `/i/[id]`, donde eran literalmente los elementos menos legibles de la pantalla. En las rutas de compartir el `FeedbackWidget` ya no aparece (T-GYM3b lo suprimió allí por motivos de producto, no de contraste), así que ahora sólo afectan a las superficies internas.
+
+CAUSA RAÍZ, la misma en tres sitios: **verde de marca como TEXTO sobre una superficie clara.** Ningún verde de la paleta llega a 4.5:1 en claro — `tribe-green` 1.65:1 sobre blanco, `tribe-green-100` 1.40:1, y el mejor, `tribe-green-dark`, se queda en 3.04:1. La regla está escrita en `CLAUDE.md` con la tabla de medidas.
+
+FIX: el mismo patrón que usaron las páginas de compartir — el verde se queda como **relleno**, y la etiqueta pasa a `text-tribe-dark` (12.6:1 sobre el chip verde). Para el item activo de `BottomNav`, mantener el indicador verde (icono o barra: 3:1 basta para UI no textual) y poner la etiqueta en un token de texto. «Feature idea» se arregla subiendo `#6B7280` a `text-theme-tertiary` (`#5B616B`), que ya existe justamente porque `#6B7280` se quedaba corto.
+
+ACEPTACIÓN: los cuatro elementos miden >= 4.5:1 contra su fondo compuesto, medido en el DOM; ningún verde de la paleta se usa como texto pequeño sobre superficie clara en `components/`.
+
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
 - **Área:** Fix rápido · **Prioridad:** Baja · **Estado:** Por hacer
@@ -170,6 +196,20 @@ QUÉ PASA: components/IOSInstallPrompt.tsx:23 solo suprime el modal en `/invite/
 EXTRA: :9 usa `apps.apple.com/us/` mientras public/download/index.html:132 usa `/co/`; :96 pinta `text-white` sobre `bg-tribe-green` (contraste ~1.9:1, falla AA).
 FIX: `const onShareRoute = ['/invite/','/s/','/i/','/download'].some(p => pathname?.startsWith(p))`; unificar locale a /co/; texto oscuro sobre verde.
 ACEPTACIÓN: abrir /s/<id> y /i/<id> en Safari iOS sin app no muestra el modal; /invite sigue igual; los tests de IOSInstallPrompt cubren las 4 rutas.
+
+**ACTUALIZACIÓN 2026-09-13 (T-GYM3b) — hecha la mitad, y la otra mitad es una decisión de producto, no un olvido.**
+
+HECHO: `/g/` e `/i/` ya están suprimidos, vía `lib/publicShareRoutes.ts`, que ahora consumen tanto `IOSInstallPrompt` como `FeedbackWidget`. Tests en `components/IOSInstallPrompt.test.tsx` y `components/FeedbackWidget.test.tsx`, cubriendo las dos mitades (ausente en las rutas de compartir, presente en `/home`, `/sessions`, `/storefront/<id>/`, `/instructors`).
+
+PENDIENTE, y POR QUÉ SE DEJÓ FUERA A PROPÓSITO: `/s/[id]` y `/download` siguen mostrando el modal.
+
+`/download` es obvio: la página existe para instalar la app, así que el modal es redundante pero no está fuera de lugar.
+
+`/s/[id]` es la decisión real. Es una página pública de compartir, igual que `/g/` e `/i/`, pero **no está en la misma parte del embudo**. Un link de sesión compartido va a alguien a quien ya invitaron a algo concreto, y reservar esa sesión requiere la app: ahí el prompt de instalación está haciendo su trabajo. Un link de bio de gimnasio es el tope del embudo — alguien que todavía no sabe qué es Tribe — y el modal se interpone antes de que pueda ver nada. Por eso `/s/` **no** está en `PUBLIC_SHARE_ROUTE_PREFIXES`, y hay un test que fija esa ausencia para que nadie la "arregle" sin decidirlo.
+
+Si se revisa esa decisión, el cambio es una línea en `lib/publicShareRoutes.ts`, y hay que actualizar el test que la fija.
+
+EXTRA que sigue vivo: el locale `/us/` vs `/co/` y el `text-white` sobre `bg-tribe-green` (~1.9:1) del propio modal siguen sin tocar — ver [UI-A11Y-01].
 
 ### [NAV-03] Dar a 'Mis Sesiones' (/sessions) una entrada en la navegación
 

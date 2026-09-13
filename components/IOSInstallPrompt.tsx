@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
+import { isPublicShareRoute } from '@/lib/publicShareRoutes';
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -15,19 +16,12 @@ export default function AppStoreBanner() {
   const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const pathname = usePathname();
-  // Routes a stranger lands on from outside the app. A person deciding whether
-  // Tribe is worth it must not get a full-screen store modal 3 seconds in
-  // (WhatsApp and Instagram webviews match the iOS/Android UA test below). The
-  // banner returns on whatever page they visit next.
-  //
-  //   /invite/  the growth mechanic's front door
-  //   /g/       a gym's public page -- the destination of an Instagram bio link
-  //   /i/       an instructor's public page, same funnel
-  //
-  // NAV-02 also names /s/ and /download; those stay with that ticket. T-GYM3b
-  // covers only the two share routes it touches.
-  const SHARE_ROUTES = ['/invite/', '/g/', '/i/'];
-  const onShareRoute = SHARE_ROUTES.some((prefix) => pathname?.startsWith(prefix)) ?? false;
+  // A person deciding whether Tribe is worth it must not get a full-screen
+  // store modal 3 seconds in (WhatsApp and Instagram webviews match the
+  // iOS/Android UA test below). The banner returns on whatever page they visit
+  // next. The route list is shared with FeedbackWidget -- see
+  // lib/publicShareRoutes for which routes and why /s/ is not among them.
+  const onShareRoute = isPublicShareRoute(pathname);
 
   useEffect(() => {
     if (onShareRoute) return;
