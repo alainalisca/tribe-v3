@@ -11,18 +11,9 @@
 
 import { Clock, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { partnerMonogram } from '@/lib/partnerIdentity';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { SessionGymSource } from '@/lib/sessionGym';
-
-/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
-function monogram(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .join('');
-}
 
 /**
  * "Pendiente · {gym}" — the creator's own view while the gym decides.
@@ -71,7 +62,7 @@ export function PresenterGymTag({ gym, asCoach }: { gym: SessionGymSource; asCoa
           aria-hidden="true"
           className="w-4 h-4 rounded-sm bg-tribe-dark text-tribe-green text-[8px] font-bold flex items-center justify-center flex-shrink-0"
         >
-          {monogram(gym.business_name)}
+          {partnerMonogram(gym.business_name)}
         </span>
       )}
       <span className="truncate">{label}</span>
@@ -106,7 +97,7 @@ export function GymHostRow({ gym, coachCount }: { gym: SessionGymSource; coachCo
           aria-hidden="true"
           className="w-6 h-6 rounded-md bg-tribe-dark text-tribe-green text-[9px] font-bold flex items-center justify-center flex-shrink-0"
         >
-          {monogram(gym.business_name)}
+          {partnerMonogram(gym.business_name)}
         </span>
       )}
       <span className="text-xs font-semibold text-theme-primary truncate">{gym.business_name}</span>

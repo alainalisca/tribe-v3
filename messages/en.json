@@ -321,5 +321,20 @@
     "venueRequestDeclined": "{gym} declined {title} at its venue. Your session is still published with the address.",
     "anInstructor": "An instructor",
     "aSession": "a session"
+  },
+  "gymPage": {
+    "call": "Call",
+    "copyLink": "Copy public link",
+    "copyLinkDone": "Link copied",
+    "copyLinkHelp": "Your public page. Put this in your Instagram bio.",
+    "goToTribe": "Go to Tribe",
+    "joinCta": "Join Tribe to book",
+    "noUpcomingSessions": "No sessions scheduled right now. Check back soon.",
+    "notFound": "Gym not found",
+    "notFoundBody": "This page is not available on Tribe.",
+    "openInApp": "Open in Tribe",
+    "tagline": "Train with your tribe",
+    "upcomingSessions": "Upcoming sessions",
+    "website": "Website"
   }
 }

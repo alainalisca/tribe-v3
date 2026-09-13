@@ -2,18 +2,264 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**95 tickets.** Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**104 tickets** (95 del audit original + 9 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
-| Producto         | 10   | 15    | 4    | 29    |
-| Seguridad        | 3    | 4     | 3    | 10    |
+| Producto         | 10   | 17    | 4    | 31    |
+| Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
-| Infra            | 6    | 11    | 4    | 21    |
-| Fix rápido       | 3    | 7     | 9    | 19    |
+| Infra            | 6    | 13    | 4    | 23    |
+| Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 29   | 46    | 20   | 95    |
+| **Total**        | 31   | 53    | 21   | 104   |
+
+---
+
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (9)
+
+Nueve hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+
+### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
+
+- **Área:** Seguridad · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) + Web · **Riesgo:** Alto — cualquier cambio de columnas rompe lecturas de cliente si no se audita antes
+- **Journey / lado:** Cualquiera con la anon key / ambos lados
+- **Ruta/Archivo:** `supabase/migrations/018_featured_partners.sql:8`; política «Anyone can read active...» sobre `public.featured_partners`
+
+**Descripción**
+
+QUÉ PASA: `featured_partners` NO tiene régimen de grants a nivel columna. `anon` tiene SELECT a nivel tabla y la política de lectura es `(status = 'active' OR is_app_admin())`, es decir: **fila entera, todas las columnas, de todo partner activo**. Eso incluye `monthly_fee_cents` (lo que el partner le paga a Tribe), `min_sessions_per_month` y `min_rating` (los mínimos de su contrato), y `total_impressions`, `total_clicks`, `total_bookings` (su rendimiento comercial).
+
+EVIDENCIA: verificado en vivo con la anon key contra PostgREST el 2026-09-12 — `GET /rest/v1/featured_partners?select=*` devuelve las 3 filas activas con las 29 columnas. Los privilegios a nivel tabla (`anon` SELECT, `authenticated` SELECT/INSERT/UPDATE) se confirmaron todos `true` con `has_table_privilege` en el recon de T-GYM3.
+
+IMPACTO: **la anon key se publica en el bundle del cliente por diseño.** No hace falta ninguna cuenta: cualquiera que abra el DevTools de tribe puede leer lo que paga cada gimnasio y cómo está negociado su contrato. Y cualquier partner puede leer los términos de otro partner. Esto está vivo hoy y es anterior a T-GYM3.
+
+FIX: régimen de grants a nivel columna sobre `featured_partners` para `anon` (patrón de 066/140: `REVOKE SELECT ON t FROM anon` + `GRANT SELECT (cols públicas) ON t TO anon`). **NO se puede hacer a ciegas**: primero hay que auditar qué superficie de cliente lee qué columnas, porque una columna revocada que aparezca en CUALQUIER expresión de política deja la tabla ilegible entera con `42501` (lección de las migraciones 159/160), y porque un `select('*')` superviviente en cualquier DAL falla completo en vez de degradar. Por eso es su propio ticket y no entró en T-GYM3.
+
+NOTA: T-GYM3 no amplía nada de esto. La vista `partners_public` (163) es lo contrario: excluye deliberadamente las 12 columnas comerciales y su lista de columnas es la frontera de seguridad, con un guard permanente en `supabase/verify-migration-state.sql`.
+
+ACEPTACIÓN: `has_column_privilege('anon','public.featured_partners','monthly_fee_cents','SELECT')` es `false`, igual para `min_rating`, `min_sessions_per_month`, `total_impressions`, `total_clicks`, `total_bookings`; la app cargada como visitante anónimo no produce ningún `42501`; el banner del feed, `/instructors` y la consola del partner siguen renderizando.
+
+### [SEC-14] is_app_admin() tiene el search_path sin fijar, y `featured_partners` tiene una política ALL para {public} que depende enteramente de ella
+
+- **Área:** Seguridad · **Prioridad:** Alta (**subida** — antes menor) · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Supabase (migración) · **Riesgo:** Bajo
+- **Journey / lado:** Todas las tablas con políticas de admin / ambos lados
+- **Ruta/Archivo:** `public.is_app_admin()`; políticas de `pg_policies` sobre `featured_partners`
+
+**Descripción**
+
+QUÉ PASA: `is_app_admin()` es `SECURITY DEFINER` y **no** lleva `SET search_path`. Una función `SECURITY DEFINER` sin `search_path` fijado resuelve sus nombres contra el `search_path` de quien la llama.
+
+POR QUÉ SUBE DE PRIORIDAD AHORA: el recon de T-GYM3 enumeró las políticas vivas de `featured_partners` y encontró **`"Admins manage all"` — comando `ALL`, rol `{public}`, `qual` = `is_app_admin()`**. O sea: el control de escritura completo (INSERT/UPDATE/DELETE) sobre la tabla de partners, para el rol `public`, cuelga íntegramente de esa función. No es una función auxiliar más: es el único gate de una política `ALL`.
+
+FIX: `ALTER FUNCTION public.is_app_admin() SET search_path = public, pg_catalog;` y auditar el resto de funciones `SECURITY DEFINER` por lo mismo. Las funciones nuevas de la migración 163 (`slugify_partner_name`, `set_partner_slug`) ya nacen con el `search_path` fijado precisamente para no crear una segunda instancia.
+
+ACEPTACIÓN: `select proname, proconfig from pg_proc where proname = 'is_app_admin'` devuelve `{search_path=public,pg_catalog}`; ninguna función `SECURITY DEFINER` en `public` queda con `proconfig IS NULL`.
+
+### [GYM-01] El logo de BullBox está guardado en la columna equivocada (avatar de la cuenta, no logo_url)
+
+- **Área:** Fix rápido · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Datos (sin código) · **Riesgo:** Ninguno
+- **Journey / lado:** Descubrimiento + link de bio / invitado
+- **Ruta/Archivo:** `public.featured_partners.logo_url` (fila `040cbc21-1b11-4ae1-aa99-9fe35a32bda0`)
+
+**Descripción**
+
+QUÉ PASA: `logo_url` es NULL en **las tres** filas de `featured_partners`. Lo que se ve como logo de BullBox en el feed, en `/instructors`, en su storefront y ahora en `/g/bullbox` es en realidad el `avatar_url` de la cuenta de usuario dueña, alcanzado por la cadena de fallback de `partnerLogoUrl()` (y, en la vista pública, por `coalesce(logo_url, u.avatar_url)` de la migración 163).
+
+CORRECCIÓN RESPECTO A LA PRIMERA VERSIÓN DE ESTE TICKET: se renderizó la tarjeta OG el 2026-09-13 y **la imagen que hay en `avatar_url` ES el logo real de BullBox** (el logotipo del box sobre fondo blanco), no la cara de una persona. Así que hoy se ve bien. El problema es de dónde está guardado, no de qué se ve.
+
+IMPACTO: menor hoy, latente después. (1) El logo depende de que la persona dueña no cambie su propia foto de perfil: el día que lo haga, su cara pasa a ser la identidad del gimnasio en el feed, en descubrimiento, en el storefront y en la tarjeta de WhatsApp del link de bio. (2) Para el siguiente partner que se registre con una foto personal como avatar, el fallo es inmediato y no hay ninguna alerta. (3) `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder detectar este caso, y ahora mismo `logo_url` es NULL en las tres filas.
+
+FIX: subir un logo real para BullBox a `logo_url`. **El `coalesce` de la vista se queda permanentemente** — es el fallback correcto y hace que cualquier gimnasio futuro se vea bien el día que se registra, sin ningún dato extra —; el punto de este ticket es que ese fallback no se convierta en la razón por la que nadie sube nunca un logo. `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder distinguir un logo real de un avatar prestado.
+
+ACEPTACIÓN: `select logo_url from featured_partners where slug = 'bullbox'` no es NULL y apunta al logo del box; `/g/bullbox/` y su tarjeta OG se ven igual que hoy pero ya sin depender del avatar de la cuenta. Idealmente hecho antes de publicar el link de bio, aunque **esto NO bloquea el DoD 3**: la tarjeta ya muestra el logo correcto.
+
+### [GYM-03] /g/<slug inexistente> devuelve la página 404 con status HTTP 200 (soft 404)
+
+- **Área:** Infra · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Journey / lado:** Link de bio mal escrito / invitado + crawlers
+- **Ruta/Archivo:** `app/g/[id]/page.tsx` (`generateMetadata` + `notFound()`)
+
+**Descripción**
+
+QUÉ PASA: `/g/does-not-exist/` y `/g/marce-anahata/` (un partner `independent`, excluido de la vista a propósito) **renderizan la página 404 correcta pero devuelven HTTP 200**, no 404.
+
+EVIDENCIA, medida y reproducida el 2026-09-13 sobre Next 16.0.10:
+
+- preview de Vercel: `HTTP 200`, `x-matched-path: /g/[id]`, `<title>Not Found | Tribe</title>`
+- `next start` local sobre el mismo build: `HTTP 200` — así que **no es un artefacto de Vercel**
+- con `notFound()` lanzado desde el cuerpo de la página: 200
+- con `notFound()` lanzado desde dentro de `generateMetadata`: 200 también
+- **discriminador**: rutas públicas sin match en esta misma app sí devuelven un 404 real (`/legal/does-not-exist/` → 404, `/faq/nope/` → 404, `/about/nope/` → 404). O sea: el 404 del router funciona; lo que no fija el status es `notFound()` en una ruta cuyo `generateMetadata` hace `await` de una llamada de red. Hipótesis (sin confirmar): el streaming de metadata de Next manda la shell antes de que resuelva el fetch, y para cuando `notFound()` se lanza el status ya está comprometido.
+
+IMPACTO: bajo para una persona (ve la página 404 correcta, ni un 500 ni un redirect a `/auth`, así que el DoD 5 de T-GYM3 pasa tal como está escrito) y real para los buscadores: un crawler indexa cada slug mal tecleado como página viva. En una ruta de link de bio, donde los slugs son permanentes y se escriben a mano en una bio de Instagram, los slugs mal tecleados van a existir.
+
+FIX: necesita una respuesta del lado de Next, no otro intento a ciegas. Caminos a evaluar: desactivar el streaming de metadata en esta ruta; resolver el partner antes de que empiece el streaming; o un `route.ts`/middleware que valide el slug antes de llegar a la página. **No mover `notFound()` a `generateMetadata` "para arreglarlo"** — ya se probó y no cambia nada; hay un comentario en `app/g/[id]/page.tsx` que lo dice para que no se repita el intento.
+
+ACEPTACIÓN: `curl -s -o /dev/null -w '%{http_code}' <host>/g/does-not-exist/` devuelve `404`; `/g/bullbox/` sigue devolviendo `200`; la página 404 renderizada no cambia.
+
+### [GYM-04] Extraer el shell visual compartido de /g/[slug] e /i/[id]
+
+- **Área:** Infra · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Medio — toca las dos páginas públicas del funnel
+- **Journey / lado:** Funnel de Instagram/WhatsApp / invitado
+- **Ruta/Archivo:** `app/g/[id]/GymShareClient.tsx`; `app/i/[id]/InstructorShareClient.tsx`
+
+**Descripción**
+
+QUÉ PASA: después de T-GYM3b el _chrome_ de las dos páginas de compartir es **idéntico carácter por carácter**: el wrapper de página (`min-h-screen bg-theme-page` + el `paddingBottom` de `--bottom-nav-h`), el header (wordmark centrado con `flex justify-center` + tagline), el shell de tarjeta (`<Card className="bg-theme-card border-theme"><CardContent className="p-4">`), y la fila de sesión (`p-3 rounded-xl bg-theme-inset border border-theme hover:border-tribe-green`, con fecha, hora, deporte y el título derivado por `sessionDisplayTitle`).
+
+CONTEXTO, y por qué esto contradice una decisión anterior: durante el recon de T-GYM3 se preguntó si convenía extraer un shell compartido y la respuesta fue **no, duplicar**, con el argumento de que los _datos_ de las dos páginas casi no se solapan — una es una persona (avatar circular, rating, bio, sesiones por `creator_id`), la otra una organización (logo cuadrado, dirección, sesiones por `partner_id`). Ese argumento sigue en pie y no es lo que cambió. Lo que cambió es que T-GYM3b tuvo que aplicar **la misma corrección de marca, línea por línea, en los dos archivos**: tema, shell de tarjeta, centrado del wordmark y fallback de título. Esa es la prueba de que la duplicación ya cuesta, y de que la próxima corrección costará lo mismo.
+
+IMPACTO: cada arreglo de marca en el funnel público se paga dos veces, y basta olvidar uno de los dos archivos para que las dos páginas vuelvan a divergir — que es exactamente cómo llegó aquí el fondo oscuro fijo (`/g/` lo heredó copiando `/i/`, incluido el wordmark de tinta oscura sobre casi negro).
+
+FIX: extraer el chrome, NO el contenido. Un `<SharePageShell>` que reciba el header, el padding inferior y el shell de tarjeta, más un `<ShareSessionRow>` para la fila. Los dos clientes conservan su propia cabecera de identidad y sus propias consultas.
+
+ACEPTACIÓN: ni `GymShareClient.tsx` ni `InstructorShareClient.tsx` declaran `min-h-screen`, el header o las clases del shell de tarjeta por su cuenta; un cambio de radio o de padding en el shell se ve en las dos rutas; las capturas de las dos páginas siguen leyéndose como el mismo producto.
+
+### [UI-A11Y-01] Contraste en el chrome global de la app: FeedbackWidget y el item activo de BottomNav fallan AA
+
+- **Área:** Fix rápido · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Journey / lado:** Todas las rutas / ambos lados
+- **Ruta/Archivo:** `components/FeedbackWidget.tsx:67-68`; `components/BottomNav.tsx`; `components/IOSInstallPrompt.tsx:96`
+
+**Descripción**
+
+QUÉ PASA: tres elementos del chrome global no llegan a AA. Medidos el 2026-09-13 sobre la página desplegada con `getComputedStyle`, componiendo cada capa translúcida (no calculados a mano desde la paleta):
+
+| elemento                                | color     | sobre                                  | ratio                       | mínimo |
+| --------------------------------------- | --------- | -------------------------------------- | --------------------------- | ------ |
+| `FeedbackWidget` — «Bug report»         | `#A8DA36` | chip verde/15 sobre blanco (`#F2F9E1`) | **1.52:1**                  | 4.5:1  |
+| `FeedbackWidget` — «Feature idea»       | `#6B7280` | `#F5F5F4`                              | **4.43:1**                  | 4.5:1  |
+| `BottomNav` — item activo «Create»      | `#A8DA36` | blanco                                 | **1.65:1**                  | 4.5:1  |
+| `IOSInstallPrompt:96` — texto del botón | blanco    | `bg-tribe-green`                       | ~1.9:1 (del audit original) | 4.5:1  |
+
+CONTEXTO: los tres son anteriores a T-GYM3/T-GYM3b y son **globales**, no de las páginas de compartir. Salieron a la luz al medir `/g/[slug]` e `/i/[id]`, donde eran literalmente los elementos menos legibles de la pantalla. En las rutas de compartir el `FeedbackWidget` ya no aparece (T-GYM3b lo suprimió allí por motivos de producto, no de contraste), así que ahora sólo afectan a las superficies internas.
+
+CAUSA RAÍZ, la misma en tres sitios: **verde de marca como TEXTO sobre una superficie clara.** Ningún verde de la paleta llega a 4.5:1 en claro — `tribe-green` 1.65:1 sobre blanco, `tribe-green-100` 1.40:1, y el mejor, `tribe-green-dark`, se queda en 3.04:1. La regla está escrita en `CLAUDE.md` con la tabla de medidas.
+
+FIX: el mismo patrón que usaron las páginas de compartir — el verde se queda como **relleno**, y la etiqueta pasa a `text-tribe-dark` (12.6:1 sobre el chip verde). Para el item activo de `BottomNav`, mantener el indicador verde (icono o barra: 3:1 basta para UI no textual) y poner la etiqueta en un token de texto. «Feature idea» se arregla subiendo `#6B7280` a `text-theme-tertiary` (`#5B616B`), que ya existe justamente porque `#6B7280` se quedaba corto.
+
+ACEPTACIÓN: los cuatro elementos miden >= 4.5:1 contra su fondo compuesto, medido en el DOM; ningún verde de la paleta se usa como texto pequeño sobre superficie clara en `components/`.
+
+### [REC-01] Series recurrentes duplicadas: una sola serie mal creada se multiplica sola cada noche
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web + Supabase (limpieza de datos) · **Riesgo:** Medio — toca datos existentes con reservas
+- **Journey / lado:** Crear sesión recurrente / instructor
+- **Ruta/Archivo:** `app/create/page.tsx:210`; `app/api/cron/recurring-sessions/route.ts`; `lib/dal/sessions.ts:1106` (`childSessionExists`)
+
+**Descripción**
+
+QUÉ PASA: 19 grupos de sesiones duplicadas (mismo creador + fecha + hora + deporte) sobre 342 sesiones totales, 32 filas de más, 5 creadores, entre 2025-12-13 y 2026-09-12. Dos filas dentro de un grupo tienen participantes reales.
+
+QUÉ **NO** ES, comprobado antes de escribir esto:
+
+1. **NO es el formulario de crear aceptando un segundo submit.** El guard existe: `app/create/page.tsx:804` es `<Button type="submit" disabled={loading}>` y `setLoading(true)` (:236) corre antes del insert (:280). Y los datos lo respaldan: de 342 sesiones hay **un solo** grupo con dos filas humanas creadas a menos de 10s.
+
+2. **NO es el cron.** `childSessionExists` (`lib/dal/sessions.ts:1106`) comprueba `recurring_parent_id + date` antes de insertar, y funciona: de los 12 grupos duplicados generados por el cron, **0** comparten `recurring_parent_id`. En todos, los hijos cuelgan de padres DISTINTOS. El cron generó correctamente un hijo por cada padre que existía.
+
+QUÉ ES: **hay varias filas PADRE para la misma serie**, y el cron las expande todas, todas las noches. El duplicado no es un error puntual: es una serie mal creada que se multiplica sola indefinidamente.
+
+CAUSA RAÍZ del caso más claro, con la huella intacta en los datos — las tres filas padre de BullBox (creador `eaff348f`, 12:12 CrossFit) se crearon con **un segundo de diferencia** y sus `recurrence_pattern` son:
+
+```
+2026-09-11T23:29:02   weekly_0
+2026-09-11T23:29:03   weekly_0_1
+2026-09-11T23:29:04   weekly_0_1_2
+```
+
+Es decir: **cada toque en un botón de día de la semana envió el formulario**, con la lista de días acumulándose. Es exactamente el bug de `RecurringSessionToggle` — los `<button>` sin `type` dentro de un `<form>`, que por defecto son `type="submit"` — y **ya está arreglado** (el `Button` compartido ahora tiene `type="button"` por defecto). Estas filas son residuo histórico de ese bug, no una regresión viva.
+
+Los grupos de Yoga (creador `9a16aa6b`, 19:00) también tienen varios padres, pero creados con días de diferencia, no en ráfaga: ahí alguien creó la misma clase semanal más de una vez. No hay ninguna deduplicación al crear una serie.
+
+IMPACTO: cada padre de más produce una sesión fantasma por ocurrencia, para siempre, sin que nadie vuelva a tocar nada. En `/g/bullbox/` esto se ve como dos clases idénticas de CrossFit el 14 de septiembre a las 12:12.
+
+FIX, en dos partes:
+
+- **Prevención:** al crear una serie recurrente, rechazar (o fusionar) un padre que coincida en creador + hora + deporte + patrón con otro creado en los últimos minutos. Un índice único parcial sobre los padres recurrentes es la versión fuerte.
+- **Limpieza:** identificar los padres sobrantes y terminarlos, NO borrarlos — dos filas de grupos duplicados tienen participantes. Cualquier borrado se decide fila a fila, no en lote.
+
+ACEPTACIÓN: la consulta de agrupación (mismo creador+fecha+hora+deporte, `having count(*) > 1`) devuelve 0 grupos nuevos después del fix; ningún padre recurrente duplicado se puede crear desde el formulario; los grupos existentes con participantes siguen intactos hasta que alguien decida caso por caso.
+
+---
+
+**DOS MITADES, Y NO SON LA MISMA COSA (investigado 2026-09-13).**
+
+**MITAD COSMÉTICA — residuo, ya inerte.** Las tres filas padre de BullBox del bug de `RecurringSessionToggle`, más los 10 grupos de Yoga del creador `9a16aa6b`. Los de Yoga **ya están parados**: 7 de sus 8 padres tienen `recurrence_end_date` puesto (2026-08-19 o 2026-08-31), los 10 grupos son todos de fechas pasadas, ninguna fila de esos grupos tiene participantes, y de los 8 padres sólo queda uno abierto (`51238378`, seed 2026-09-09, `weekly_2`, 0 inscritos) que genera **una** fila futura. Alguien ya cerró esas series. Esto es limpieza, no urgencia.
+
+**MITAD VIVA — está pasando ahora, y es la clase real de un instructor real.** El creador `0df617e9` (Leo Garcia) tiene **tres filas padre para la misma clase**, CrossFit 06:00, creadas con 40 y 13 minutos de diferencia el 2026-09-08:
+
+```
+f76a54be  seed 2026-09-08  weekly_0_1_2_3_4  (lun-vie)  0 inscritos  creada 01:02:45
+c1cb18a5  seed 2026-09-09  weekly_0          (lunes)    1 inscrito   creada 01:42:20
+a7b498d6  seed 2026-09-10  weekly_0          (lunes)    0 inscritos  creada 01:55:26
+```
+
+No es una ráfaga de submits: son minutos de diferencia, alguien creando la misma clase tres veces. Nada deduplica una serie al crearla.
+
+CONSECUENCIA, ya materializada: **el lunes 14 de septiembre a las 06:00 hay TRES sesiones idénticas** en el horario de Leo — `cc6d9830`, `d51aa666` y `9c81877a`, una por padre. En `/g/bullbox/` sólo se ve una porque sólo una tiene `partner_status = 'approved'`; en el feed y en su propia lista aparecen las tres.
+
+Y Darian (`eaff348f`) tiene lo mismo a las 12:12, con grupos futuros el 14 y el 15 de septiembre.
+
+¿PUEDE EL INSTRUCTOR VERLO? **Sí, y no puede distinguirlas.** No hay ninguna deduplicación ni aviso de duplicado en ningún sitio. `components/dashboard/SessionManager.tsx:86,145` pinta `session.title || sportLabel`, y como `title` es NULL en todas, las tres filas se leen exactamente igual: «CrossFit», misma fecha, misma hora. La única señal que las diferencia es el contador de inscritos de cada tarjeta.
+
+ROSTER PARTIDO: **todavía no ha ocurrido.** De los 19 grupos duplicados, en **0** hay más de una copia con inscritos — todas las reservas están sobre una sola copia. Las dos filas con inscritos dentro de un grupo son ambas **pasadas** y ninguna es de Yoga:
+
+```
+fbb9af93  eaff348f  2026-03-15 08:30 Running   2 inscritos (ambos invitados, sin cuenta)
+c1cb18a5  0df617e9  2026-09-09 06:00 CrossFit  1 inscrito  (cuenta real 804f2c28)
+```
+
+Pero el mecanismo está armado para el 14: tres copias de la misma clase, quien reserve elige una de las tres al azar, y el instructor ve tres listas separadas de la misma clase. Es esto lo que hay que arreglar, no el residuo.
+
+PRIORIDAD REAL: la mitad viva son los padres duplicados de `0df617e9` y `eaff348f`, no los grupos de Yoga.
+
+### [GYM-05] Volver una sesión a partner_status='pending' es completamente silencioso
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web · **Riesgo:** Bajo
+- **Journey / lado:** Aprobación de sede / instructor + atleta inscrito
+- **Ruta/Archivo:** `supabase/migrations/158_gym_venue_approval.sql` (`review_venue_request`); `lib/dal/gymVenue.ts:207`; `lib/dal/venueRequests.ts`
+
+**Descripción**
+
+QUÉ PASA: `review_venue_request` cambia `partner_status` y **no notifica a nadie**: ni al creador de la sesión, ni a los atletas ya inscritos. No hay ningún insert en `notifications` en la migración 158, ni en `lib/dal/venueRequests.ts`, ni en `lib/dal/gymVenue.ts`.
+
+QUÉ VE UN ATLETA YA INSCRITO cuando su sesión pasa de `approved` a `pending` (enumerado leyendo los consumidores de la columna, no supuesto):
+
+- **NO pierde la sesión.** `partner_status` no aparece en ningún filtro de visibilidad ni de inscripción. La sesión sigue en su lista, la página de detalle funciona y su reserva queda intacta.
+- **Sí pierde la identidad del gimnasio, en silencio.** `lib/sessionGym.ts:80` exige `partner_status = 'approved'` para renderizar el chip de sede, el nombre en negrita y el logo. Con `pending`, la tarjeta y el detalle vuelven a mostrar una dirección normal: reservó «CrossFit BullBox» y al día siguiente ve «Cra 43G #25a-50».
+- El **creador** sí ve algo: `lib/sessionGym.ts:86` le pinta «Pendiente · {gym}» en su propia tarjeta. La asimetría es deliberada (T-GYM1) y aquí juega a favor.
+- Desaparece además de `/g/[slug]` y deja de contar en las estadísticas del gimnasio en descubrimiento (`lib/dal/gymDirectory.ts:114,163`).
+
+IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0 inscritos. Deja de serlo en cuanto se aplique a una sesión reservada — que es exactamente lo que hay pendiente con la sesión de natación del 11 de noviembre, con una persona inscrita.
+
+FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
+
+ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
+
+### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
+
+- **Área:** Fix rápido · **Prioridad:** Baja · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Ruta/Archivo:** `lib/dal/featuredPartners.ts` (`fetchActivePartners`, cláusulas `.order(...)`)
+
+**Descripción**
+
+QUÉ PASA: BullBox tiene `display_order = 100`; los otros dos partners tienen ambos `0`. El orden es `display_order desc, tier desc, total_impressions asc`, y `total_impressions` se incrementa con cada impresión del banner, así que **el orden relativo de los dos empatados cambia entre cargas de página**. Sin una última clave estable, PostgreSQL no garantiza ningún orden para filas que empatan en todas las claves.
+
+IMPACTO: menor y sólo cosmético — el carrusel de afiliados del feed baraja sus dos últimas tarjetas. Se nota al probar el banner (dos cargas seguidas dan órdenes distintos) y hace irreproducible cualquier reporte de bug sobre «la segunda tarjeta».
+
+FIX: añadir una última clave determinista, `.order('id', { ascending: true })`, al final de la cadena de `fetchActivePartners` (y de `fetchAllPartners`, que ordena sólo por `created_at`).
+
+ACEPTACIÓN: dos cargas consecutivas del feed devuelven los partners en el mismo orden; un test sobre la cadena de `.order(...)` fija la última clave.
 
 ---
 
@@ -47,6 +293,26 @@ QUÉ PASA: components/IOSInstallPrompt.tsx:23 solo suprime el modal en `/invite/
 EXTRA: :9 usa `apps.apple.com/us/` mientras public/download/index.html:132 usa `/co/`; :96 pinta `text-white` sobre `bg-tribe-green` (contraste ~1.9:1, falla AA).
 FIX: `const onShareRoute = ['/invite/','/s/','/i/','/download'].some(p => pathname?.startsWith(p))`; unificar locale a /co/; texto oscuro sobre verde.
 ACEPTACIÓN: abrir /s/<id> y /i/<id> en Safari iOS sin app no muestra el modal; /invite sigue igual; los tests de IOSInstallPrompt cubren las 4 rutas.
+
+**ACTUALIZACIÓN 2026-09-13 (T-GYM3b) — hecha la mitad, y la otra mitad es una decisión de producto, no un olvido.**
+
+HECHO: `/g/` e `/i/` ya están suprimidos, vía `lib/publicShareRoutes.ts`, que ahora consumen tanto `IOSInstallPrompt` como `FeedbackWidget`. Tests en `components/IOSInstallPrompt.test.tsx` y `components/FeedbackWidget.test.tsx`, cubriendo las dos mitades (ausente en las rutas de compartir, presente en `/home`, `/sessions`, `/storefront/<id>/`, `/instructors`).
+
+PENDIENTE, y POR QUÉ SE DEJÓ FUERA A PROPÓSITO: `/s/[id]` y `/download` siguen mostrando el modal.
+
+`/download` es obvio: la página existe para instalar la app, así que el modal es redundante pero no está fuera de lugar.
+
+`/s/[id]` es la decisión real. Es una página pública de compartir, igual que `/g/` e `/i/`, pero **no está en la misma parte del embudo**. Un link de sesión compartido va a alguien a quien ya invitaron a algo concreto, y reservar esa sesión requiere la app: ahí el prompt de instalación está haciendo su trabajo. Un link de bio de gimnasio es el tope del embudo — alguien que todavía no sabe qué es Tribe — y el modal se interpone antes de que pueda ver nada. Por eso `/s/` **no** está en `PUBLIC_SHARE_ROUTE_PREFIXES`, y hay un test que fija esa ausencia para que nadie la "arregle" sin decidirlo.
+
+Si se revisa esa decisión, el cambio es una línea en `lib/publicShareRoutes.ts`, y hay que actualizar el test que la fija.
+
+EXTRA que sigue vivo: el locale `/us/` vs `/co/` y el `text-white` sobre `bg-tribe-green` (~1.9:1) del propio modal siguen sin tocar — ver [UI-A11Y-01].
+
+**RESOLUCIÓN 2026-09-13 — Smart App Banner: se queda.** `app/layout.tsx:33` declara `itunes: { appId: '6458219258' }`, que Safari en iOS convierte en una barra nativa de App Store en **todas** las rutas, incluida `/g/[slug]`. Verificado servido en `/g/bullbox/`: `<meta name="apple-itunes-app" content="app-id=6458219258"/>`.
+
+Se deja tal cual, por decisión de Al: es fina, nativa, descartable y no secuestra la página. El problema nunca fue que Tribe ofrezca una app, sino que la página le quitara la decisión al visitante — y eso era el CTA que apuntaba a `/download/`, ya corregido. Además vive en el layout raíz, así que quitarla la quitaría de todas las rutas.
+
+NOTA PARA QUIEN VERIFIQUE: esta barra es **invisible para cualquier arnés headless**. Chromium no la renderiza, así que `scripts/verify-share-routes.mjs` no puede verla ni afirmar nada sobre ella. Sólo se comprueba en un iPhone real.
 
 ### [NAV-03] Dar a 'Mis Sesiones' (/sessions) una entrada en la navegación
 

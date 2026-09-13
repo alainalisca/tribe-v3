@@ -10,6 +10,7 @@
 import Image from 'next/image';
 import { Star, ChevronRight } from 'lucide-react';
 import { partnerLogoUrl, type FeaturedPartner } from '@/lib/dal/featuredPartners';
+import { partnerCtaLabelKey, partnerMonogram, partnerTypeLabelKey } from '@/lib/partnerIdentity';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 
 /**
@@ -22,16 +23,6 @@ function clampToWords(text: string, max: number): string {
   const cut = clean.slice(0, max);
   const lastSpace = cut.lastIndexOf(' ');
   return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).replace(/[\s,;:.–-]+$/, '') + '…';
-}
-
-/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
-function monogram(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 export default function PartnerCard({
@@ -48,6 +39,10 @@ export default function PartnerCard({
   // picks a row value rather than a UI string and does not belong in messages/.
   const desc = (language === 'es' && partner.description_es) || partner.description;
   const logoUrl = partnerLogoUrl(partner);
+  // One derivation, shared with /g/[slug] and the gym storefront header.
+  // Null for an 'independent' partner: they are a person, and calling them a
+  // Gimnasio would be wrong.
+  const typeKey = partnerTypeLabelKey(partner.business_type);
 
   return (
     <div
@@ -76,7 +71,7 @@ export default function PartnerCard({
                  as "no logo"; initials on the brand square read as an
                  organization that simply has not uploaded one yet. */
               <span aria-hidden="true" className="text-tribe-green text-xl font-bold tracking-tight">
-                {monogram(partner.business_name)}
+                {partnerMonogram(partner.business_name)}
               </span>
             )}
           </div>
@@ -87,9 +82,9 @@ export default function PartnerCard({
               <h3 className="text-theme-primary font-bold text-base leading-tight truncate">{partner.business_name}</h3>
               {/* Only gyms and studios carry a type label; an 'independent'
                   partner is a person and calling them a Gimnasio would be wrong. */}
-              {(partner.business_type === 'gym' || partner.business_type === 'studio') && (
+              {typeKey && (
                 <span className="flex-shrink-0 text-theme-tertiary text-[10px] font-bold tracking-wide uppercase">
-                  {partner.business_type === 'gym' ? tPartner('typeGym') : tPartner('typeStudio')}
+                  {tPartner(typeKey)}
                 </span>
               )}
             </div>
@@ -147,7 +142,7 @@ export default function PartnerCard({
             onOpen();
           }}
         >
-          {partner.business_type === 'studio' ? tPartner('viewStudio') : tPartner('viewGym')}
+          {tPartner(partnerCtaLabelKey(partner.business_type))}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

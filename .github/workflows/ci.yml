@@ -60,6 +60,24 @@ jobs:
           NEXT_PUBLIC_GOOGLE_PLACES_API_KEY: 'placeholder'
           NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'placeholder'
 
+      # Public share routes: does a stranger on a phone actually see the gym?
+      #
+      # Runs against a deployed preview, so it needs a URL this job does not have
+      # today -- set SHARE_ROUTES_BASE_URL (repo variable or secret) to the Vercel
+      # preview alias and it runs; leave it unset and it skips with a notice
+      # rather than passing silently. The check itself is the important part;
+      # until the URL is wired it is a manual gate, run with:
+      #   npm run verify:share -- <preview-url>
+      - name: Public share routes reachable
+        if: ${{ vars.SHARE_ROUTES_BASE_URL != '' }}
+        run: |
+          npx playwright install --with-deps chromium
+          npm run verify:share -- "${{ vars.SHARE_ROUTES_BASE_URL }}"
+
+      - name: Public share routes (skipped)
+        if: ${{ vars.SHARE_ROUTES_BASE_URL == '' }}
+        run: echo "::notice::SHARE_ROUTES_BASE_URL is not set — share-route verification skipped. Run 'npm run verify:share -- <preview-url>' manually."
+
       - name: Bundle size budget
         # Gates on what a browser actually downloads for the home page, not on
         # the size of the build output.

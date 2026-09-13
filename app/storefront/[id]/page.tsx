@@ -204,6 +204,7 @@ export default function StorefrontPage() {
             account={instructor}
             coachCount={d.partnerInstructors.length}
             sessionsPerWeek={d.sessionsPerWeek}
+            isOwner={isOwn}
           />
         ) : (
           <StorefrontHero instructor={instructor} language={lang} />

@@ -108,6 +108,13 @@ export async function GET(request: NextRequest) {
     const av = await loadImage(avatar, 280);
     return renderInstructor({ title: title || instructor, subtitle, avatar: av });
   }
+  if (type === 'gym') {
+    // Same param name as the instructor card ('avatar') so the loader and the
+    // cache key stay one shape; the value is the gym's logo. 280px because the
+    // square is drawn at 140 @2x, same as the instructor avatar.
+    const logo = await loadImage(avatar, 280);
+    return renderGym({ title: title || 'Gym', subtitle, logo });
+  }
   if (type === 'achievement') {
     const emoji = searchParams.get('emoji') ?? '🏆';
     const userName = searchParams.get('userName') ?? '';
@@ -397,6 +404,93 @@ function renderInstructor(p: InstructorParams) {
       )}
 
       {/* Tribe branding */}
+      <div style={{ display: 'flex', alignItems: 'baseline', position: 'absolute' as const, bottom: '40px' }}>
+        <span style={{ fontSize: '28px', fontWeight: 800, color: WHITE }}>Tribe</span>
+        <span style={{ fontSize: '28px', fontWeight: 800, color: GREEN }}>.</span>
+        <span style={{ fontSize: '16px', color: GRAY, marginLeft: '12px' }}>Never Train Alone</span>
+      </div>
+    </div>,
+    OG_OPTIONS
+  );
+}
+
+// ═══════════════════════════════════════════
+// GYM CARD
+// ═══════════════════════════════════════════
+
+interface GymParams {
+  title: string;
+  subtitle: string;
+  /** Validated, loadable logo URL. Empty = monogram fallback. */
+  logo: string;
+}
+
+/**
+ * The gym card for /g/[slug].
+ *
+ * Identical layout to the instructor card with ONE deliberate difference: the
+ * image is a rounded square, not a circle. That contrast is the visual grammar
+ * from T-GYM1 -- people are circles, organisations are rounded squares -- and a
+ * link preview is the first time most people ever see a gym's identity on
+ * Tribe, so it is the last place to harmonise it away.
+ *
+ * The fallback is a two-letter monogram rather than one initial, matching every
+ * in-app gym surface. "CrossFit BullBox" reads as CB, not C.
+ */
+function renderGym(p: GymParams) {
+  const monogram = p.title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+  return new ImageResponse(
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: DARK_BG,
+        padding: '60px',
+        fontFamily: 'system-ui, sans-serif',
+      }}
+    >
+      {/* Rounded SQUARE with a green ring — not the instructor circle. */}
+      <div
+        style={{
+          width: '140px',
+          height: '140px',
+          borderRadius: '32px',
+          border: `4px solid ${GREEN}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          marginBottom: '28px',
+          backgroundColor: '#374151',
+        }}
+      >
+        {p.logo ? (
+          <img src={p.logo} alt="" width={140} height={140} style={{ objectFit: 'cover' }} />
+        ) : (
+          <span style={{ fontSize: '52px', fontWeight: 700, color: GREEN }}>{monogram || '?'}</span>
+        )}
+      </div>
+
+      <div style={{ fontSize: '48px', fontWeight: 700, color: WHITE, textAlign: 'center', marginBottom: '12px' }}>
+        {p.title}
+      </div>
+
+      {p.subtitle && (
+        <div style={{ fontSize: '24px', color: GRAY, textAlign: 'center', marginBottom: '40px', maxWidth: '700px' }}>
+          {p.subtitle}
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'baseline', position: 'absolute' as const, bottom: '40px' }}>
         <span style={{ fontSize: '28px', fontWeight: 800, color: WHITE }}>Tribe</span>
         <span style={{ fontSize: '28px', fontWeight: 800, color: GREEN }}>.</span>

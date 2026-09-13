@@ -26,20 +26,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import { trackEvent } from '@/lib/analytics';
 import { neighborhoodFromAddress } from '@/lib/sessionLocation';
+import { partnerMonogram } from '@/lib/partnerIdentity';
 import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 
 interface Props {
   gyms: GymDirectoryEntry[];
-}
-
-/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
-function monogram(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 export default function GymsAndStudiosSection({ gyms }: Props) {
@@ -75,7 +66,7 @@ export default function GymsAndStudiosSection({ gyms }: Props) {
                       <img src={logo} alt="" className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <span aria-hidden="true" className="text-lg font-bold text-tribe-green">
-                        {monogram(gym.business_name)}
+                        {partnerMonogram(gym.business_name)}
                       </span>
                     )}
                   </div>

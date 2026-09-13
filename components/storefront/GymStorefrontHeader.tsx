@@ -17,6 +17,8 @@
 import { Building2, MapPin, Star } from 'lucide-react';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
+import { partnerMonogram, partnerTypeLabelKey } from '@/lib/partnerIdentity';
+import GymPublicLinkButton from './GymPublicLinkButton';
 
 interface Props {
   partner: FeaturedPartner;
@@ -33,22 +35,17 @@ interface Props {
   account: { avatar_url?: string | null; storefront_banner_url?: string | null; banner_url?: string | null };
   coachCount: number;
   sessionsPerWeek: number;
+  /** True when the signed-in viewer owns this storefront. Gates the copy-link. */
+  isOwner?: boolean;
 }
 
-/** First letters of the first two words: "CrossFit BullBox" -> "CB". */
-function monogram(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-export default function GymStorefrontHeader({ partner, account, coachCount, sessionsPerWeek }: Props) {
+export default function GymStorefrontHeader({ partner, account, coachCount, sessionsPerWeek, isOwner }: Props) {
   const t = useTranslations('partner');
   const isStudio = partner.business_type === 'studio';
-  const typeLabel = isStudio ? t('typeStudio') : t('typeGym');
+  // This component only mounts for business_type gym/studio, so the helper
+  // never actually returns null here; the fallback keeps the types honest
+  // rather than asserting.
+  const typeLabel = t(partnerTypeLabelKey(partner.business_type) ?? 'typeGym');
   const specialties = (partner.specialties ?? []).slice(0, 2);
 
   const logo = partner.logo_url || account.avatar_url || null;
@@ -84,7 +81,7 @@ export default function GymStorefrontHeader({ partner, account, coachCount, sess
             <img src={logo} alt="" className="w-full h-full object-cover" loading="lazy" />
           ) : (
             <span aria-hidden="true" className="text-2xl font-bold text-tribe-green">
-              {monogram(partner.business_name)}
+              {partnerMonogram(partner.business_name)}
             </span>
           )}
         </div>
@@ -122,6 +119,8 @@ export default function GymStorefrontHeader({ partner, account, coachCount, sess
           <Star className="w-3 h-3 fill-tribe-green-dark" />
           {t('featuredAffiliate')}
         </p>
+
+        {isOwner && <GymPublicLinkButton slug={partner.slug} />}
 
         {stats.length > 1 && (
           <div className="mt-3 grid grid-cols-2 gap-2">

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
+import { isPublicShareRoute } from '@/lib/publicShareRoutes';
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -15,14 +16,15 @@ export default function AppStoreBanner() {
   const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const pathname = usePathname();
-  // Invite links are the growth mechanic's front door: a recipient deciding
-  // whether to accept must not get a store modal 3 seconds in (WhatsApp and
-  // Instagram webviews match the iOS/Android UA test below). The banner
-  // returns on whatever page they visit next.
-  const onInviteRoute = pathname?.startsWith('/invite/') ?? false;
+  // A person deciding whether Tribe is worth it must not get a full-screen
+  // store modal 3 seconds in (WhatsApp and Instagram webviews match the
+  // iOS/Android UA test below). The banner returns on whatever page they visit
+  // next. The route list is shared with FeedbackWidget -- see
+  // lib/publicShareRoutes for which routes and why /s/ is not among them.
+  const onShareRoute = isPublicShareRoute(pathname);
 
   useEffect(() => {
-    if (onInviteRoute) return;
+    if (onShareRoute) return;
     try {
       const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const android = /Android/.test(navigator.userAgent);
@@ -45,7 +47,7 @@ export default function AppStoreBanner() {
     } catch (error) {
       logError(error, { action: 'AppStoreBanner.init' });
     }
-  }, [onInviteRoute]);
+  }, [onShareRoute]);
 
   const handleDismiss = () => {
     setShow(false);
@@ -56,7 +58,7 @@ export default function AppStoreBanner() {
     }
   };
 
-  if (!show || onInviteRoute) return null;
+  if (!show || onShareRoute) return null;
 
   return (
     <Dialog open={show} onOpenChange={(open) => !open && handleDismiss()}>

@@ -321,5 +321,20 @@
     "venueRequestDeclined": "{gym} rechazó {title} en su sede. Tu sesión sigue publicada con la dirección.",
     "anInstructor": "Un instructor",
     "aSession": "una sesión"
+  },
+  "gymPage": {
+    "call": "Llamar",
+    "copyLink": "Copiar enlace público",
+    "copyLinkDone": "Enlace copiado",
+    "copyLinkHelp": "Tu página pública. Ponla en tu bio de Instagram.",
+    "goToTribe": "Ir a Tribe",
+    "joinCta": "Únete a Tribe para reservar",
+    "noUpcomingSessions": "No hay sesiones programadas por ahora. Vuelve pronto.",
+    "notFound": "Gimnasio no encontrado",
+    "notFoundBody": "Esta página no está disponible en Tribe.",
+    "openInApp": "Abrir en Tribe",
+    "tagline": "Entrena con tu tribu",
+    "upcomingSessions": "Próximas sesiones",
+    "website": "Sitio web"
   }
 }
