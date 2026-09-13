@@ -29,6 +29,7 @@ import SessionCardCreatorMenu from '@/components/session/SessionCardCreatorMenu'
 import SessionMetaBadges from '@/components/session/SessionMetaBadges';
 import { useCardPhotos } from '@/hooks/useCardPhotos';
 import { useRouter } from 'next/navigation';
+import { sessionDisplayTitle } from '@/lib/sessionTitle';
 
 /** Date locale per UI language. A lookup, so no `language === 'es'` ternary is needed. */
 const DATE_LOCALE: Record<'en' | 'es', string> = { en: 'en-US', es: 'es-CO' };
@@ -37,17 +38,6 @@ const DATE_LOCALE: Record<'en' | 'es', string> = { en: 'en-US', es: 'es-CO' };
 function looselyContains(haystack: string, needle: string): boolean {
   const strip = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   return strip(haystack).includes(strip(needle));
-}
-
-/**
- * First and last name only.
- *
- * The title carries the instructor's name now, and "Boxeo con Salomon Tabares
- * Adarve" wraps to two lines on a phone while saying no more than "Boxeo con
- * Salomon Tabares".
- */
-function shortName(name: string | null | undefined): string {
-  return (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
 }
 
 export default function SessionCard({
@@ -110,7 +100,14 @@ export default function SessionCard({
   const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.banner_url);
 
   const instructorName = session.creator?.name ?? '';
-  const cardTitle = session.title || `${sportName} ${tCard('with')} ${shortName(instructorName)}`.trim();
+  // One derivation, shared with /g/[slug] and /i/[id] -- both of which rendered
+  // an empty element here, because sessions.title is usually NULL.
+  const cardTitle = sessionDisplayTitle({
+    title: session.title,
+    sportName,
+    instructorName,
+    withWord: tCard('with'),
+  });
 
   const dateLine = `${new Date(session.date + 'T00:00:00').toLocaleDateString(DATE_LOCALE[language], {
     weekday: 'short',

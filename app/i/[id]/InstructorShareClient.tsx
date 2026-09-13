@@ -9,6 +9,10 @@ import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
 
 import TribeWordmark from '@/components/TribeWordmark';
+import { Card, CardContent } from '@/components/ui/card';
+import { useTranslations } from '@/lib/i18n/useTranslations';
+import { translateSport } from '@/lib/sportTranslationData';
+import { sessionDisplayTitle } from '@/lib/sessionTitle';
 interface InstructorProfile {
   id: string;
   name: string | null;
@@ -23,7 +27,8 @@ interface InstructorProfile {
 
 interface UpcomingSession {
   id: string;
-  title: string;
+  /** Usually NULL in practice. See sessionDisplayTitle. */
+  title: string | null;
   sport: string;
   date: string;
   start_time: string | null;
@@ -36,6 +41,7 @@ export default function InstructorShareClient() {
   const params = useParams();
   const instructorId = params.id as string;
   const { language } = useLanguage();
+  const tCard = useTranslations('sessionCard');
   const supabase = createClient();
 
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
@@ -99,15 +105,15 @@ export default function InstructorShareClient() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-tribe-dark flex items-center justify-center">
-        <div className="animate-pulse text-white text-lg">Loading...</div>
+      <div className="min-h-screen bg-theme-page flex items-center justify-center">
+        <div className="animate-pulse text-theme-primary text-lg">Loading...</div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-tribe-dark flex items-center justify-center p-6">
+      <div className="min-h-screen bg-theme-page flex items-center justify-center p-6">
         <div className="text-center">
           <TribeWordmark className="h-6 w-auto" />
           <p className="text-theme-tertiary mt-4">
@@ -130,10 +136,21 @@ export default function InstructorShareClient() {
   const ctaLabel = language === 'es' ? 'Reserva una sesión' : 'Book a Session';
 
   return (
-    <div className="min-h-screen bg-tribe-dark">
+    <div
+      // bg-theme-page, NOT bg-tribe-dark: the fixed dark surface painted a dark
+      // ground onto a light-mode document, so every theme token on it resolved
+      // to its LIGHT value -- grey-on-near-black body text, and TribeWordmark
+      // serving its dark-ink variant onto near-black. T-GYM3b.
+      className="min-h-screen bg-theme-page"
+    >
       {/* Header */}
       <div className="px-6 pt-10 pb-4 text-center">
-        <TribeWordmark className="h-6 w-auto" />
+        {/* flex, not text-center: TribeWordmark renders a block-level <img> and
+            text-align does nothing to a block box, which is why the wordmark sat
+            hard left while the tagline under it centred. */}
+        <div className="flex justify-center">
+          <TribeWordmark className="h-6 w-auto" />
+        </div>
         <p className="text-sm text-theme-tertiary mt-1">
           {language === 'es' ? 'Entrena con tu tribu' : 'Train with your tribe'}
         </p>
@@ -141,120 +158,136 @@ export default function InstructorShareClient() {
 
       {/* Instructor Card */}
       <div className="max-w-lg mx-auto px-4 pb-10 space-y-4">
-        <div className="bg-tribe-surface rounded-2xl p-6 border border-tribe-mid">
-          {/* Avatar + name */}
-          <div className="flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden mb-4 border-4 border-tribe-green">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.name ?? ''} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-slate-900 text-3xl font-bold">{profile.name?.[0]?.toUpperCase() || '?'}</span>
+        {/* Same shell as InstructorCard on the feed: Card's rounded-xl + base
+            shadow, CardContent's p-4, bg-theme-card, border-theme. */}
+        <Card className="bg-theme-card border-theme">
+          <CardContent className="p-4">
+            {/* Avatar + name */}
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 rounded-full bg-tribe-green flex items-center justify-center overflow-hidden mb-4 border-4 border-tribe-green">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt={profile.name ?? ''} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-slate-900 text-3xl font-bold">{profile.name?.[0]?.toUpperCase() || '?'}</span>
+                )}
+              </div>
+              <h2 className="text-2xl font-bold text-theme-primary">{profile.name}</h2>
+              {profile.location && (
+                <div className="flex items-center gap-1 mt-1 text-sm text-theme-tertiary">
+                  <MapPin className="w-3.5 h-3.5" />
+                  {profile.location}
+                </div>
               )}
             </div>
-            <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
-            {profile.location && (
-              <div className="flex items-center gap-1 mt-1 text-sm text-theme-tertiary">
-                <MapPin className="w-3.5 h-3.5" />
-                {profile.location}
-              </div>
-            )}
-          </div>
 
-          {/* Rating + sessions */}
-          <div className="flex justify-center gap-6 mt-5">
-            {rating != null && rating > 0 && (
+            {/* Rating + sessions */}
+            <div className="flex justify-center gap-6 mt-5">
+              {rating != null && rating > 0 && (
+                <div className="flex items-center gap-1.5 text-sm text-theme-secondary">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  <span className="font-semibold text-theme-primary">{rating.toFixed(1)}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1.5 text-sm text-theme-secondary">
-                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                <span className="font-semibold text-white">{rating.toFixed(1)}</span>
+                <Award className="w-4 h-4 text-tribe-green" />
+                <span>
+                  {sessionCount} {language === 'es' ? 'sesiones' : 'sessions'}
+                </span>
               </div>
-            )}
-            <div className="flex items-center gap-1.5 text-sm text-theme-secondary">
-              <Award className="w-4 h-4 text-tribe-green" />
-              <span>
-                {sessionCount} {language === 'es' ? 'sesiones' : 'sessions'}
-              </span>
             </div>
-          </div>
 
-          {/* Bio: instructor_bio first, bio second. instructor_bio is what both
+            {/* Bio: instructor_bio first, bio second. instructor_bio is what both
               instructor-facing editors write, so it matches the storefront; the
               bio fallback keeps a bio for instructors who only filled the older
               general field. */}
-          {(profile.instructor_bio || profile.bio) && (
-            <p className="mt-5 text-sm text-theme-secondary leading-relaxed text-center">
-              {profile.instructor_bio || profile.bio}
-            </p>
-          )}
+            {(profile.instructor_bio || profile.bio) && (
+              <p className="mt-5 text-sm text-theme-secondary leading-relaxed text-center">
+                {profile.instructor_bio || profile.bio}
+              </p>
+            )}
 
-          {/* Sports tags */}
-          {sports.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 mt-5">
-              {sports.map((sport) => (
-                <span
-                  key={sport}
-                  className="px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide"
-                >
-                  {sport}
-                </span>
-              ))}
-            </div>
-          )}
+            {/* Sports tags */}
+            {sports.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2 mt-5">
+                {sports.map((sport) => (
+                  <span
+                    key={sport}
+                    className="px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide"
+                  >
+                    {sport}
+                  </span>
+                ))}
+              </div>
+            )}
 
-          {/* CTA */}
-          <Link
-            href={ctaHref}
-            className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
-          >
-            {ctaLabel}
-          </Link>
-        </div>
+            {/* CTA */}
+            <Link
+              href={ctaHref}
+              className="block w-full text-center mt-6 py-4 bg-tribe-green text-slate-900 font-bold text-lg rounded-xl hover:brightness-110 transition"
+            >
+              {ctaLabel}
+            </Link>
+          </CardContent>
+        </Card>
 
         {/* Upcoming Sessions */}
         {sessions.length > 0 && (
-          <div className="bg-tribe-surface rounded-2xl p-6 border border-tribe-mid">
-            <h3 className="text-lg font-bold text-white mb-4">
-              {language === 'es' ? 'Próximas sesiones' : 'Upcoming Sessions'}
-            </h3>
-            <div className="space-y-3">
-              {sessions.map((s) => {
-                const d = new Date(s.date + 'T12:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                });
-                const tf = s.start_time
-                  ? new Date(`2000-01-01T${s.start_time}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })
-                  : null;
+          <Card className="bg-theme-card border-theme">
+            <CardContent className="p-4">
+              <h3 className="text-lg font-bold text-theme-primary mb-4">
+                {language === 'es' ? 'Próximas sesiones' : 'Upcoming Sessions'}
+              </h3>
+              <div className="space-y-3">
+                {sessions.map((s) => {
+                  const d = new Date(s.date + 'T12:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  });
+                  const tf = s.start_time
+                    ? new Date(`2000-01-01T${s.start_time}`).toLocaleTimeString(language === 'es' ? 'es-CO' : 'en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : null;
 
-                return (
-                  <Link
-                    key={s.id}
-                    href={userId ? `/session/${s.id}/` : `/s/${s.id}/`}
-                    className="block p-3 rounded-xl bg-tribe-dark/50 hover:bg-tribe-mid/50 transition border border-tribe-mid"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-semibold text-sm">{s.title}</p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-theme-tertiary">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {d}
-                          </span>
-                          {tf && (
+                  // sessions.title is usually NULL, and this row had no
+                  // fallback, so it rendered an empty element where the name
+                  // belongs. Same derivation SessionCard uses.
+                  const name = sessionDisplayTitle({
+                    title: s.title,
+                    sportName: translateSport(s.sport, language),
+                    instructorName: profile.name,
+                    withWord: tCard('with'),
+                  });
+
+                  return (
+                    <Link
+                      key={s.id}
+                      href={userId ? `/session/${s.id}/` : `/s/${s.id}/`}
+                      className="block p-3 rounded-xl bg-theme-inset hover:border-tribe-green transition border border-theme"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-theme-primary font-semibold text-sm">{name}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-theme-tertiary">
                             <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {tf}
+                              <Calendar className="w-3 h-3" /> {d}
                             </span>
-                          )}
+                            {tf && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {tf}
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        <span className="text-xs text-tribe-green font-bold uppercase">{s.sport}</span>
                       </div>
-                      <span className="text-xs text-tribe-green font-bold uppercase">{s.sport}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

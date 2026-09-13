@@ -2,7 +2,7 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**100 tickets** (95 del audit original + 5 añadidos el 2026-09-12/13 desde T-GYM3; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**101 tickets** (95 del audit original + 6 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
@@ -10,16 +10,16 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | Producto         | 10   | 15    | 4    | 29    |
 | Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
-| Infra            | 6    | 12    | 4    | 22    |
+| Infra            | 6    | 13    | 4    | 23    |
 | Fix rápido       | 3    | 8     | 10   | 21    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 49    | 21   | 100   |
+| **Total**        | 31   | 50    | 21   | 101   |
 
 ---
 
-## Añadidos 2026-09-12 / 09-13 (T-GYM3) (5)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (6)
 
-Cinco hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Seis hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -102,6 +102,25 @@ IMPACTO: bajo para una persona (ve la página 404 correcta, ni un 500 ni un redi
 FIX: necesita una respuesta del lado de Next, no otro intento a ciegas. Caminos a evaluar: desactivar el streaming de metadata en esta ruta; resolver el partner antes de que empiece el streaming; o un `route.ts`/middleware que valide el slug antes de llegar a la página. **No mover `notFound()` a `generateMetadata` "para arreglarlo"** — ya se probó y no cambia nada; hay un comentario en `app/g/[id]/page.tsx` que lo dice para que no se repita el intento.
 
 ACEPTACIÓN: `curl -s -o /dev/null -w '%{http_code}' <host>/g/does-not-exist/` devuelve `404`; `/g/bullbox/` sigue devolviendo `200`; la página 404 renderizada no cambia.
+
+### [GYM-04] Extraer el shell visual compartido de /g/[slug] e /i/[id]
+
+- **Área:** Infra · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Medio — toca las dos páginas públicas del funnel
+- **Journey / lado:** Funnel de Instagram/WhatsApp / invitado
+- **Ruta/Archivo:** `app/g/[id]/GymShareClient.tsx`; `app/i/[id]/InstructorShareClient.tsx`
+
+**Descripción**
+
+QUÉ PASA: después de T-GYM3b el _chrome_ de las dos páginas de compartir es **idéntico carácter por carácter**: el wrapper de página (`min-h-screen bg-theme-page` + el `paddingBottom` de `--bottom-nav-h`), el header (wordmark centrado con `flex justify-center` + tagline), el shell de tarjeta (`<Card className="bg-theme-card border-theme"><CardContent className="p-4">`), y la fila de sesión (`p-3 rounded-xl bg-theme-inset border border-theme hover:border-tribe-green`, con fecha, hora, deporte y el título derivado por `sessionDisplayTitle`).
+
+CONTEXTO, y por qué esto contradice una decisión anterior: durante el recon de T-GYM3 se preguntó si convenía extraer un shell compartido y la respuesta fue **no, duplicar**, con el argumento de que los _datos_ de las dos páginas casi no se solapan — una es una persona (avatar circular, rating, bio, sesiones por `creator_id`), la otra una organización (logo cuadrado, dirección, sesiones por `partner_id`). Ese argumento sigue en pie y no es lo que cambió. Lo que cambió es que T-GYM3b tuvo que aplicar **la misma corrección de marca, línea por línea, en los dos archivos**: tema, shell de tarjeta, centrado del wordmark y fallback de título. Esa es la prueba de que la duplicación ya cuesta, y de que la próxima corrección costará lo mismo.
+
+IMPACTO: cada arreglo de marca en el funnel público se paga dos veces, y basta olvidar uno de los dos archivos para que las dos páginas vuelvan a divergir — que es exactamente cómo llegó aquí el fondo oscuro fijo (`/g/` lo heredó copiando `/i/`, incluido el wordmark de tinta oscura sobre casi negro).
+
+FIX: extraer el chrome, NO el contenido. Un `<SharePageShell>` que reciba el header, el padding inferior y el shell de tarjeta, más un `<ShareSessionRow>` para la fila. Los dos clientes conservan su propia cabecera de identidad y sus propias consultas.
+
+ACEPTACIÓN: ni `GymShareClient.tsx` ni `InstructorShareClient.tsx` declaran `min-h-screen`, el header o las clases del shell de tarjeta por su cuenta; un cambio de radio o de padding en el shell se ve en las dos rutas; las capturas de las dos páginas siguen leyéndose como el mismo producto.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 

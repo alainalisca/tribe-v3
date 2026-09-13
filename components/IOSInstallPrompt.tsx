@@ -15,14 +15,22 @@ export default function AppStoreBanner() {
   const { t } = useLanguage();
   const [show, setShow] = useState(false);
   const pathname = usePathname();
-  // Invite links are the growth mechanic's front door: a recipient deciding
-  // whether to accept must not get a store modal 3 seconds in (WhatsApp and
-  // Instagram webviews match the iOS/Android UA test below). The banner
-  // returns on whatever page they visit next.
-  const onInviteRoute = pathname?.startsWith('/invite/') ?? false;
+  // Routes a stranger lands on from outside the app. A person deciding whether
+  // Tribe is worth it must not get a full-screen store modal 3 seconds in
+  // (WhatsApp and Instagram webviews match the iOS/Android UA test below). The
+  // banner returns on whatever page they visit next.
+  //
+  //   /invite/  the growth mechanic's front door
+  //   /g/       a gym's public page -- the destination of an Instagram bio link
+  //   /i/       an instructor's public page, same funnel
+  //
+  // NAV-02 also names /s/ and /download; those stay with that ticket. T-GYM3b
+  // covers only the two share routes it touches.
+  const SHARE_ROUTES = ['/invite/', '/g/', '/i/'];
+  const onShareRoute = SHARE_ROUTES.some((prefix) => pathname?.startsWith(prefix)) ?? false;
 
   useEffect(() => {
-    if (onInviteRoute) return;
+    if (onShareRoute) return;
     try {
       const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const android = /Android/.test(navigator.userAgent);
@@ -45,7 +53,7 @@ export default function AppStoreBanner() {
     } catch (error) {
       logError(error, { action: 'AppStoreBanner.init' });
     }
-  }, [onInviteRoute]);
+  }, [onShareRoute]);
 
   const handleDismiss = () => {
     setShow(false);
@@ -56,7 +64,7 @@ export default function AppStoreBanner() {
     }
   };
 
-  if (!show || onInviteRoute) return null;
+  if (!show || onShareRoute) return null;
 
   return (
     <Dialog open={show} onOpenChange={(open) => !open && handleDismiss()}>
