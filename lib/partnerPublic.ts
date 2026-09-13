@@ -92,10 +92,20 @@ export async function fetchPublicPartner(supabase: SupabaseClient, param: string
 /**
  * The description to show, in the app's language.
  *
- * Falls back to the OTHER language rather than to nothing. description is NULL
- * on every live partner and only description_es is filled, so a strict
- * language match would render an English visitor a page with no description at
- * all -- the gym's own words are better in the wrong language than absent.
+ * DELIBERATE: falls back to the OTHER language rather than to nothing. This is
+ * not a bug and should not be "fixed" by tightening it.
+ *
+ * `description` is NULL on EVERY live partner row and only `description_es` is
+ * filled, so a strict language match renders an English visitor a page with no
+ * description at all. The gym's own words in the wrong language beat a blank.
+ *
+ * THE REAL FIX IS DATA, NOT CODE: fill featured_partners.description (the
+ * English column) for each partner. Once every row carries both languages this
+ * fallback arm simply stops being reached, and it stays as the guard for the
+ * next partner who fills only one.
+ *
+ * app/g/[id]/page.tsx calls this same function for the OG card, so the link
+ * preview and the page body can never disagree about which text they show.
  *
  * This is field selection, not copy: description_es is a separate COLUMN, so it
  * picks a row value and does not belong in messages/.

@@ -1064,19 +1064,22 @@ select '163_partner_slug_and_public_view',
 union all
 
 -- The permanence property, as a standing check rather than a one-off probe.
--- partners_public must NOT filter on status: the whole point of the view is
--- that a bio link outlives the sponsorship. If a future edit adds
--- status = 'active' to it, every partner's page dies the day their contract
--- lapses, months after the change that caused it -- so this compares the view's
--- row count against the non-pending row count of the base table.
+-- partners_public must NOT filter on status beyond excluding 'pending': the
+-- whole point of the view is that a bio link outlives the sponsorship. If a
+-- future edit adds status = 'active' to it, every partner's page dies the day
+-- their contract lapses, months after the change that caused it -- so this
+-- compares the view's row count against the base table filtered by exactly the
+-- two exclusions 163 declares. The business_type arm is repeated here rather
+-- than ignored so that quietly widening or narrowing it also shows up.
 select 'GUARD_partners_public_survives_expiry',
        case when to_regclass('public.partners_public') is null then 'MISSING -- view absent'
             when (select count(*) from public.partners_public)
                = (select count(*) from public.featured_partners
-                   where status is distinct from 'pending')
+                   where status is distinct from 'pending'
+                     and business_type is distinct from 'independent')
             then 'applied'
-            else 'MISSING -- partners_public drops non-pending rows; a lapsed '
-                 'sponsorship would kill its bio link' end
+            else 'MISSING -- partners_public row count no longer matches its '
+                 'declared filters; a lapsed sponsorship may kill its bio link' end
 union all
 
 -- The security boundary, as a standing check. partners_public is

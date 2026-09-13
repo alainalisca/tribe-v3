@@ -239,10 +239,15 @@ COMMENT ON COLUMN public.featured_partners.slug IS
 -- ║    user_id                  joins the business to a person's account     ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 --
--- The WHERE clause excludes ONLY 'pending'. An expired or lapsed partner stays
--- publicly readable, which is the entire point: the bio link has to survive the
--- sponsorship. A pending applicant has not consented to a public page, and this
--- view is listable over PostgREST by anyone.
+-- The WHERE clause excludes exactly two things, and NEITHER of them is status
+-- beyond 'pending'. An expired or lapsed partner stays publicly readable, which
+-- is the entire point: the bio link has to survive the sponsorship. A pending
+-- applicant has not consented to a public page, and this view is listable over
+-- PostgREST by anyone. The second exclusion, business_type 'independent', is
+-- explained at the WHERE clause itself.
+--
+-- On the live data this means partners_public holds ONE row (CrossFit BullBox).
+-- The other two live partners are 'independent'.
 --
 -- No security_barrier, matching sessions_public.
 DROP VIEW IF EXISTS public.partners_public;
@@ -271,6 +276,10 @@ SELECT
   -- strictly narrower than exposing user_id, because it is one image URL rather
   -- than a join key.
   --
+  -- fp.logo_url is kept in the view ALONGSIDE this, so the client can tell a
+  -- real uploaded logo from a borrowed owner avatar. See the audit ticket:
+  -- BullBox is currently rendering its owner's account photo.
+  --
   -- LEFT JOIN so a partner whose owner account was deleted still resolves.
   coalesce(fp.logo_url, u.avatar_url) AS logo_image_url,
   fp.banner_url,
@@ -283,7 +292,21 @@ SELECT
   fp.display_order
 FROM public.featured_partners fp
 LEFT JOIN public.users u ON u.id = fp.user_id
-WHERE fp.status IS DISTINCT FROM 'pending';
+WHERE fp.status IS DISTINCT FROM 'pending'
+  -- An 'independent' partner is a PERSON, not a gym, and already has a public
+  -- page at /i/[id]. A second public page for the same human, at a URL whose
+  -- first letter means gym, is two indexable pages with different content and a
+  -- split canonical.
+  --
+  -- CONSEQUENCE, intended: /g/<an independent's slug> returns 404. Their slug
+  -- still exists on the base table and is harmless there.
+  --
+  -- EXCLUSION, not an allowlist. 018's CHECK permits
+  -- ('studio','gym','academy','club','independent') and the column DEFAULT is
+  -- 'studio', so an allowlist of ('gym','studio') would silently 404 every
+  -- future academy and club. Excluding the one type we know is a person keeps
+  -- an unfamiliar type visible by default.
+  AND fp.business_type IS DISTINCT FROM 'independent';
 
 GRANT SELECT ON public.partners_public TO anon, authenticated;
 
@@ -293,7 +316,10 @@ COMMENT ON VIEW public.partners_public IS
   'COLUMN LIST IS THE SECURITY BOUNDARY -- every column here is readable by '
   'anyone holding the anon key. Deliberately ignores status except to exclude '
   '''pending'', so a bio link survives a lapsed sponsorship; a pending '
-  'applicant has not consented to a public page. Never add a commercial column '
+  'applicant has not consented to a public page. Also excludes business_type '
+  '''independent'': those partners are people, not gyms, and already have a '
+  'public page at /i/[id] -- /g/<their slug> 404s, intentionally. Never add a '
+  'commercial column '
   '(monthly_fee_cents, min_*, total_*, tier, status, starts_at, expires_at, '
   'auto_approve_roster) or user_id. Mirrors 140''s sessions_public.';
 
@@ -328,6 +354,14 @@ BEGIN
   IF NOT has_table_privilege('anon', 'public.partners_public', 'SELECT') THEN
     RAISE EXCEPTION '163 guard: anon cannot SELECT public.partners_public -- '
                     'every bio link would return an empty page';
+  END IF;
+
+  -- the page this whole migration exists for actually resolves. The view now
+  -- filters on business_type as well as status, and a wrong value there empties
+  -- it silently -- no error, just a 404 on the URL going in the bio.
+  IF NOT EXISTS (SELECT 1 FROM public.partners_public WHERE slug = 'bullbox') THEN
+    RAISE EXCEPTION '163 guard: /g/bullbox would 404 -- partners_public has no '
+                    'row with slug=''bullbox''';
   END IF;
 
   -- and it leaks no commercial column

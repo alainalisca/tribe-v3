@@ -2,7 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { fetchPublicPartner, type PublicPartner } from '@/lib/partnerPublic';
+import { fetchPublicPartner, partnerDescription, type PublicPartner } from '@/lib/partnerPublic';
 import GymShareClient from './GymShareClient';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://tribe-v3.vercel.app';
@@ -50,9 +50,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const specialties = (partner.specialties ?? []).slice(0, 3).join(' · ');
   const subtitle = [typeLabel, specialties].filter(Boolean).join(' · ');
 
+  // THE SAME fallback the page body uses, through the same function, on purpose.
+  // If the card fell back to nothing while the page fell back to Spanish, the
+  // WhatsApp preview would ship with no description at all -- and nobody would
+  // notice, because the page itself looks right.
+  //
+  // 'es' because a scraper sends no language and has no session, so there is no
+  // app language to read; same reasoning as the OG subtitle above.
   const description =
-    partner.description_es?.slice(0, 160) ||
-    partner.description?.slice(0, 160) ||
+    partnerDescription(partner, 'es')?.slice(0, 160) ||
     [partner.business_name, subtitle, partner.address].filter(Boolean).join(' — ').slice(0, 160);
 
   const ogParams = new URLSearchParams({
