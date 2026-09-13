@@ -188,6 +188,39 @@ FIX, en dos partes:
 
 ACEPTACIÓN: la consulta de agrupación (mismo creador+fecha+hora+deporte, `having count(*) > 1`) devuelve 0 grupos nuevos después del fix; ningún padre recurrente duplicado se puede crear desde el formulario; los grupos existentes con participantes siguen intactos hasta que alguien decida caso por caso.
 
+---
+
+**DOS MITADES, Y NO SON LA MISMA COSA (investigado 2026-09-13).**
+
+**MITAD COSMÉTICA — residuo, ya inerte.** Las tres filas padre de BullBox del bug de `RecurringSessionToggle`, más los 10 grupos de Yoga del creador `9a16aa6b`. Los de Yoga **ya están parados**: 7 de sus 8 padres tienen `recurrence_end_date` puesto (2026-08-19 o 2026-08-31), los 10 grupos son todos de fechas pasadas, ninguna fila de esos grupos tiene participantes, y de los 8 padres sólo queda uno abierto (`51238378`, seed 2026-09-09, `weekly_2`, 0 inscritos) que genera **una** fila futura. Alguien ya cerró esas series. Esto es limpieza, no urgencia.
+
+**MITAD VIVA — está pasando ahora, y es la clase real de un instructor real.** El creador `0df617e9` (Leo Garcia) tiene **tres filas padre para la misma clase**, CrossFit 06:00, creadas con 40 y 13 minutos de diferencia el 2026-09-08:
+
+```
+f76a54be  seed 2026-09-08  weekly_0_1_2_3_4  (lun-vie)  0 inscritos  creada 01:02:45
+c1cb18a5  seed 2026-09-09  weekly_0          (lunes)    1 inscrito   creada 01:42:20
+a7b498d6  seed 2026-09-10  weekly_0          (lunes)    0 inscritos  creada 01:55:26
+```
+
+No es una ráfaga de submits: son minutos de diferencia, alguien creando la misma clase tres veces. Nada deduplica una serie al crearla.
+
+CONSECUENCIA, ya materializada: **el lunes 14 de septiembre a las 06:00 hay TRES sesiones idénticas** en el horario de Leo — `cc6d9830`, `d51aa666` y `9c81877a`, una por padre. En `/g/bullbox/` sólo se ve una porque sólo una tiene `partner_status = 'approved'`; en el feed y en su propia lista aparecen las tres.
+
+Y Darian (`eaff348f`) tiene lo mismo a las 12:12, con grupos futuros el 14 y el 15 de septiembre.
+
+¿PUEDE EL INSTRUCTOR VERLO? **Sí, y no puede distinguirlas.** No hay ninguna deduplicación ni aviso de duplicado en ningún sitio. `components/dashboard/SessionManager.tsx:86,145` pinta `session.title || sportLabel`, y como `title` es NULL en todas, las tres filas se leen exactamente igual: «CrossFit», misma fecha, misma hora. La única señal que las diferencia es el contador de inscritos de cada tarjeta.
+
+ROSTER PARTIDO: **todavía no ha ocurrido.** De los 19 grupos duplicados, en **0** hay más de una copia con inscritos — todas las reservas están sobre una sola copia. Las dos filas con inscritos dentro de un grupo son ambas **pasadas** y ninguna es de Yoga:
+
+```
+fbb9af93  eaff348f  2026-03-15 08:30 Running   2 inscritos (ambos invitados, sin cuenta)
+c1cb18a5  0df617e9  2026-09-09 06:00 CrossFit  1 inscrito  (cuenta real 804f2c28)
+```
+
+Pero el mecanismo está armado para el 14: tres copias de la misma clase, quien reserve elige una de las tres al azar, y el instructor ve tres listas separadas de la misma clase. Es esto lo que hay que arreglar, no el residuo.
+
+PRIORIDAD REAL: la mitad viva son los padres duplicados de `0df617e9` y `eaff348f`, no los grupos de Yoga.
+
 ### [GYM-05] Volver una sesión a partner_status='pending' es completamente silencioso
 
 - **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
