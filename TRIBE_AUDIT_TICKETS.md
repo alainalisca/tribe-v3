@@ -2,24 +2,24 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**104 tickets** (95 del audit original + 9 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**106 tickets** (95 del audit original + 11 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
-| Producto         | 10   | 17    | 4    | 31    |
+| Producto         | 10   | 18    | 5    | 33    |
 | Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 13    | 4    | 23    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 53    | 21   | 104   |
+| **Total**        | 31   | 54    | 22   | 106   |
 
 ---
 
-## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (9)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (11)
 
-Nueve hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Once hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -244,6 +244,47 @@ IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0
 FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
 
 ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
+
+### [GYM-06] FeedbackWidget sigue apareciendo en /s/[id], la segunda página del recorrido público
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Journey / lado:** Link de bio -> gimnasio -> clase / invitado
+- **Ruta/Archivo:** `lib/publicShareRoutes.ts`; `components/FeedbackWidget.tsx`
+
+**Descripción**
+
+QUÉ PASA: T-GYM3b quitó el `FeedbackWidget` de `/g/` , `/i/` e `/invite/`, pero **no de `/s/[id]`**. Al lo ve en el iPhone y en el Mac: la burbuja verde está sobre la página de sesión. Ya estaba así antes de T-GYM3, así que el merge no lo empeora.
+
+POR QUÉ IMPORTA AHORA: `/s/[id]` es **la segunda página del recorrido público**. El recorrido que acabamos de verificar es bio de Instagram -> `/g/bullbox/` -> tocar una clase -> `/s/[id]` -> reservar. Un desconocido que toca una clase en el link de bio de BullBox aterriza en una página que le ofrece una herramienta interna de reporte de bugs. Es exactamente la fuga que motivó quitarlo de `/g/`, una página más adelante.
+
+DECISIÓN DE DISEÑO QUE HAY QUE TOMAR: hoy `PUBLIC_SHARE_ROUTE_PREFIXES` es **una sola lista** que consumen `FeedbackWidget` e `IOSInstallPrompt`. Añadir `/s/` ahí suprimiría también el prompt de instalación, y esa es una decisión distinta y deliberadamente pendiente (ver [GYM-07]). Así que este ticket necesita una de dos:
+
+- separar la lista en dos (rutas donde no va chrome interno vs rutas donde no va el prompt de tienda), o
+- que cada componente reciba su propio conjunto de prefijos desde el mismo módulo.
+
+La segunda opción conserva el «un solo sitio donde registrar una ruta pública», que era el punto de crear el módulo. Hay un test que fija la ausencia de `/s/` en la lista actual: hay que actualizarlo, no borrarlo.
+
+ACEPTACIÓN: `/s/<id>` no muestra la burbuja de feedback a un visitante sin sesión; `/home`, `/sessions`, `/storefront/<id>/` y `/instructors` la siguen mostrando; `scripts/verify-share-routes.mjs` incluye `/s/<id>` entre sus objetivos.
+
+### [GYM-07] ¿El prompt de instalación debe seguir apareciendo en /s/[id]? (decisión de producto, no un bug)
+
+- **Área:** Producto · **Prioridad:** Baja · **Estado:** Por decidir
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Journey / lado:** Sesión compartida / invitado
+- **Ruta/Archivo:** `lib/publicShareRoutes.ts`; `components/IOSInstallPrompt.tsx`
+
+**Descripción**
+
+QUÉ PASA: `IOSInstallPrompt` sigue apareciendo en `/s/[id]` (y en `/download`). Se dejó fuera a propósito en T-GYM3b, no por olvido.
+
+EL ARGUMENTO PARA DEJARLO: `/s/[id]` está **a mitad del embudo**. A quien llega por un link de sesión compartida ya le invitaron a algo concreto, y reservar esa sesión requiere la app: ahí el prompt está haciendo su trabajo. Un link de bio de gimnasio es el tope del embudo — alguien que aún no sabe qué es Tribe — y ahí el modal se interpone antes de que pueda ver nada.
+
+POR QUÉ ESTE TICKET ESTÁ SEPARADO DE [GYM-06]: el argumento de «mitad del embudo» sostiene un prompt de instalación y **no** sostiene un reporte de bugs. Son dos decisiones con razones distintas sobre la misma ruta, y mezclarlas en un solo ticket obliga a resolverlas juntas.
+
+NOTA: el recorrido verificado en producción el 2026-09-13 (`/g/bullbox/` -> clase -> `/s/<id>`) se completa **sin salir del navegador y sin muro de login**. Si se decide suprimir el prompt aquí, ese recorrido no cambia; si se decide dejarlo, el visitante lo encuentra en el segundo paso.
+
+ACEPTACIÓN: decisión escrita en este ticket, y `PUBLIC_SHARE_ROUTE_PREFIXES` (o el conjunto que consuma `IOSInstallPrompt`) refleja lo decidido, con el test que fija esa ausencia/presencia actualizado en consecuencia.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
