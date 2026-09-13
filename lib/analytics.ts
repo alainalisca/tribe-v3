@@ -125,6 +125,8 @@ type EventName =
   | 'filter_applied'
   | 'neighborhood_selected'
   | 'instructor_profile_viewed'
+  // T-GYM3: a view of the public gym page /g/[slug], the bio-link destination.
+  | 'gym_public_page_viewed'
   | 'explore_city_tapped'
 
   // Post-session rating (LR-04 funnel)

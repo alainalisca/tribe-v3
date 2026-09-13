@@ -54,6 +54,7 @@ const publicPaths = [
   '/session',
   '/s', // public session share pages (/s/[id]) — must be viewable + scrapable without auth
   '/i', // public instructor share pages (/i/[id]) — must be viewable + scrapable without auth
+  '/g', // public gym share pages (/g/[slug]) — bio-link destination; must be viewable + scrapable without auth
   '/about',
   '/faq',
   '/for-instructors',
@@ -95,7 +96,10 @@ const publicApiPaths = [
   '/api/cron',
 ];
 
-function isPublicPath(pathname: string): boolean {
+// Exported so middleware.publicPaths.test.ts can pin which routes skip the auth
+// gate. Next.js only reserves `middleware` and `config` on this file; extra
+// named exports are fine (same reasoning as buildCsp below).
+export function isPublicPath(pathname: string): boolean {
   if (
     publicPaths.some((path) => {
       if (path === '/') return pathname === '/';

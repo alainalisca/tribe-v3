@@ -2,18 +2,95 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**95 tickets.** Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**99 tickets** (95 del audit original + 4 añadidos el 2026-09-12 desde T-GYM3; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
 | Producto         | 10   | 15    | 4    | 29    |
-| Seguridad        | 3    | 4     | 3    | 10    |
+| Seguridad        | 5    | 4     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 11    | 4    | 21    |
-| Fix rápido       | 3    | 7     | 9    | 19    |
+| Fix rápido       | 3    | 8     | 10   | 21    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 29   | 46    | 20   | 95    |
+| **Total**        | 31   | 48    | 21   | 99    |
+
+---
+
+## Añadidos 2026-09-12 (T-GYM3) (4)
+
+Cuatro hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+
+### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
+
+- **Área:** Seguridad · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) + Web · **Riesgo:** Alto — cualquier cambio de columnas rompe lecturas de cliente si no se audita antes
+- **Journey / lado:** Cualquiera con la anon key / ambos lados
+- **Ruta/Archivo:** `supabase/migrations/018_featured_partners.sql:8`; política «Anyone can read active...» sobre `public.featured_partners`
+
+**Descripción**
+
+QUÉ PASA: `featured_partners` NO tiene régimen de grants a nivel columna. `anon` tiene SELECT a nivel tabla y la política de lectura es `(status = 'active' OR is_app_admin())`, es decir: **fila entera, todas las columnas, de todo partner activo**. Eso incluye `monthly_fee_cents` (lo que el partner le paga a Tribe), `min_sessions_per_month` y `min_rating` (los mínimos de su contrato), y `total_impressions`, `total_clicks`, `total_bookings` (su rendimiento comercial).
+
+EVIDENCIA: verificado en vivo con la anon key contra PostgREST el 2026-09-12 — `GET /rest/v1/featured_partners?select=*` devuelve las 3 filas activas con las 29 columnas. Los privilegios a nivel tabla (`anon` SELECT, `authenticated` SELECT/INSERT/UPDATE) se confirmaron todos `true` con `has_table_privilege` en el recon de T-GYM3.
+
+IMPACTO: **la anon key se publica en el bundle del cliente por diseño.** No hace falta ninguna cuenta: cualquiera que abra el DevTools de tribe puede leer lo que paga cada gimnasio y cómo está negociado su contrato. Y cualquier partner puede leer los términos de otro partner. Esto está vivo hoy y es anterior a T-GYM3.
+
+FIX: régimen de grants a nivel columna sobre `featured_partners` para `anon` (patrón de 066/140: `REVOKE SELECT ON t FROM anon` + `GRANT SELECT (cols públicas) ON t TO anon`). **NO se puede hacer a ciegas**: primero hay que auditar qué superficie de cliente lee qué columnas, porque una columna revocada que aparezca en CUALQUIER expresión de política deja la tabla ilegible entera con `42501` (lección de las migraciones 159/160), y porque un `select('*')` superviviente en cualquier DAL falla completo en vez de degradar. Por eso es su propio ticket y no entró en T-GYM3.
+
+NOTA: T-GYM3 no amplía nada de esto. La vista `partners_public` (163) es lo contrario: excluye deliberadamente las 12 columnas comerciales y su lista de columnas es la frontera de seguridad, con un guard permanente en `supabase/verify-migration-state.sql`.
+
+ACEPTACIÓN: `has_column_privilege('anon','public.featured_partners','monthly_fee_cents','SELECT')` es `false`, igual para `min_rating`, `min_sessions_per_month`, `total_impressions`, `total_clicks`, `total_bookings`; la app cargada como visitante anónimo no produce ningún `42501`; el banner del feed, `/instructors` y la consola del partner siguen renderizando.
+
+### [SEC-14] is_app_admin() tiene el search_path sin fijar, y `featured_partners` tiene una política ALL para {public} que depende enteramente de ella
+
+- **Área:** Seguridad · **Prioridad:** Alta (**subida** — antes menor) · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Supabase (migración) · **Riesgo:** Bajo
+- **Journey / lado:** Todas las tablas con políticas de admin / ambos lados
+- **Ruta/Archivo:** `public.is_app_admin()`; políticas de `pg_policies` sobre `featured_partners`
+
+**Descripción**
+
+QUÉ PASA: `is_app_admin()` es `SECURITY DEFINER` y **no** lleva `SET search_path`. Una función `SECURITY DEFINER` sin `search_path` fijado resuelve sus nombres contra el `search_path` de quien la llama.
+
+POR QUÉ SUBE DE PRIORIDAD AHORA: el recon de T-GYM3 enumeró las políticas vivas de `featured_partners` y encontró **`"Admins manage all"` — comando `ALL`, rol `{public}`, `qual` = `is_app_admin()`**. O sea: el control de escritura completo (INSERT/UPDATE/DELETE) sobre la tabla de partners, para el rol `public`, cuelga íntegramente de esa función. No es una función auxiliar más: es el único gate de una política `ALL`.
+
+FIX: `ALTER FUNCTION public.is_app_admin() SET search_path = public, pg_catalog;` y auditar el resto de funciones `SECURITY DEFINER` por lo mismo. Las funciones nuevas de la migración 163 (`slugify_partner_name`, `set_partner_slug`) ya nacen con el `search_path` fijado precisamente para no crear una segunda instancia.
+
+ACEPTACIÓN: `select proname, proconfig from pg_proc where proname = 'is_app_admin'` devuelve `{search_path=public,pg_catalog}`; ninguna función `SECURITY DEFINER` en `public` queda con `proconfig IS NULL`.
+
+### [GYM-01] BullBox no tiene logo propio: está mostrando la foto de perfil de su cuenta dueña
+
+- **Área:** Fix rápido · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Datos (sin código) · **Riesgo:** Ninguno
+- **Journey / lado:** Descubrimiento + link de bio / invitado
+- **Ruta/Archivo:** `public.featured_partners.logo_url` (fila `040cbc21-1b11-4ae1-aa99-9fe35a32bda0`)
+
+**Descripción**
+
+QUÉ PASA: `logo_url` es NULL en **las tres** filas de `featured_partners`. Lo que se ve como logo de BullBox en el feed, en `/instructors`, en su storefront y ahora en `/g/bullbox` es en realidad el `avatar_url` de la cuenta de usuario dueña, alcanzado por la cadena de fallback de `partnerLogoUrl()` (y, en la vista pública, por `coalesce(logo_url, u.avatar_url)` de la migración 163).
+
+IMPACTO: la foto de una persona hace de identidad de una organización. En la tarjeta de previsualización de WhatsApp del link de bio esto es lo primero que ve alguien que nunca ha oído hablar de Tribe.
+
+FIX: subir un logo real para BullBox a `logo_url`. **El `coalesce` de la vista se queda permanentemente** — es el fallback correcto y hace que cualquier gimnasio futuro se vea bien el día que se registra, sin ningún dato extra —; el punto de este ticket es que ese fallback no se convierta en la razón por la que nadie sube nunca un logo. `partners_public` expone `logo_url` y `logo_image_url` por separado justamente para poder distinguir un logo real de un avatar prestado.
+
+ACEPTACIÓN: `select logo_url from featured_partners where slug = 'bullbox'` no es NULL; `/g/bullbox/` y su tarjeta OG muestran el logo del box, no la foto de una persona. **Hacer esto antes de publicar el link de bio en ningún sitio.**
+
+### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
+
+- **Área:** Fix rápido · **Prioridad:** Baja · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Ruta/Archivo:** `lib/dal/featuredPartners.ts` (`fetchActivePartners`, cláusulas `.order(...)`)
+
+**Descripción**
+
+QUÉ PASA: BullBox tiene `display_order = 100`; los otros dos partners tienen ambos `0`. El orden es `display_order desc, tier desc, total_impressions asc`, y `total_impressions` se incrementa con cada impresión del banner, así que **el orden relativo de los dos empatados cambia entre cargas de página**. Sin una última clave estable, PostgreSQL no garantiza ningún orden para filas que empatan en todas las claves.
+
+IMPACTO: menor y sólo cosmético — el carrusel de afiliados del feed baraja sus dos últimas tarjetas. Se nota al probar el banner (dos cargas seguidas dan órdenes distintos) y hace irreproducible cualquier reporte de bug sobre «la segunda tarjeta».
+
+FIX: añadir una última clave determinista, `.order('id', { ascending: true })`, al final de la cadena de `fetchActivePartners` (y de `fetchAllPartners`, que ordena sólo por `created_at`).
+
+ACEPTACIÓN: dos cargas consecutivas del feed devuelven los partners en el mismo orden; un test sobre la cadena de `.order(...)` fija la última clave.
 
 ---
 
