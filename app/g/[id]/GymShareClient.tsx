@@ -175,10 +175,18 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
 
             {specialties.length > 0 && (
               <div className="flex flex-wrap justify-center gap-2 mt-5">
+                {/* text-tribe-dark, NOT text-tribe-green. Measured on this surface:
+                      #A8DA36 scores 1.49:1 on the chip and 1.46:1 on the session
+                      row -- and NO green in the palette clears 4.5:1 on light
+                      (green-dark #6FA300 reaches only 2.75:1). The brand green
+                      stays as the FILL, which is where it works; the label takes
+                      the palette's own light-surface text colour at 12.6:1.
+                      On the old dark surface green-on-dark was 8.43:1 and fine,
+                      which is why this only surfaces now. */}
                 {specialties.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-tribe-green/20 text-tribe-green text-xs font-bold rounded-full uppercase tracking-wide"
+                    className="px-3 py-1 bg-tribe-green/20 text-tribe-dark text-xs font-bold rounded-full uppercase tracking-wide"
                   >
                     {tag}
                   </span>
@@ -281,7 +289,7 @@ export default function GymShareClient({ partner }: { partner: PublicPartner }) 
                             )}
                           </div>
                         </div>
-                        <span className="flex-shrink-0 text-xs text-tribe-green font-bold uppercase">{s.sport}</span>
+                        <span className="flex-shrink-0 text-xs text-tribe-dark font-bold uppercase">{s.sport}</span>
                       </div>
                     </Link>
                   );
