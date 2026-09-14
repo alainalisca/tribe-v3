@@ -10,7 +10,7 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | Producto         | 10   | 17    | 4    | 31    |
 | Seguridad        | 6    | 3     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
-| Infra            | 6    | 13    | 4    | 23    |
+| Infra            | 8    | 13    | 4    | 25    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
 | **Total**        | 31   | 53    | 21   | 104   |
@@ -244,6 +244,102 @@ IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0
 FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
 
 ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
+
+### [DRIFT-01] La base de datos de producción no se puede reconstruir desde las migraciones, y eso ya se escribió en julio
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** L · **Deploy:** Proceso + Supabase · **Riesgo:** Alto — cualquier migración futura sobre `users` se escribe contra un estado que no conocemos
+- **Journey / lado:** Todo el equipo
+- **Ruta/Archivo:** `supabase/migrations/*`; `supabase/drift-probe.sql`; `docs/DRIFT_AUDIT_2026-07-08.md:57`
+
+**Descripción**
+
+QUÉ PASA: **permisos y datos de producción se están fijando fuera del control de versiones como práctica habitual.** Una reconstrucción desde `supabase/migrations/` produce una base de datos DISTINTA de la que está sirviendo a los usuarios, y más abierta. CI no puede ver la diferencia, porque CI solo ve el repositorio.
+
+**ESTO NO ES UN FALLO DE DETECCIÓN. ES UN FALLO DE SEGUIMIENTO.** `docs/DRIFT_AUDIT_2026-07-08.md:57` ya enumeró las funciones y triggers que viven solo en producción, hace dos meses. Llamó a `protect_verified_instructor` textualmente **«a security guard living only in live»**. Su recomendación fue: _«capture each into a tracked migration verbatim, then review bodies for column-reference and logic drift»_. No se hizo nada. La nota se escribió, se archivó, y la deriva siguió creciendo.
+
+Esa es la evidencia y ese es el ticket. Una quinta instancia no es la historia; la historia es que **la cuarta se escribió y se ignoró**.
+
+INSTANCIAS CONOCIDAS (las cuatro de esta semana, más la nota de julio):
+
+1. **093 emitió `GRANT SELECT ON public.users TO authenticated;`** y el probe del 2026-09-14 mide ese privilegio en `false`. Ninguna migración lo revoca. Alguien lo revocó a mano. **Este es el bloqueante concreto**: 166 reescribe grants sobre esa tabla y no se puede escribir contra un estado que no sabemos explicar.
+2. **`is_trailblazer`**: ninguna línea del repositorio lo escribe. Las insignias de la cohorte fundadora se pusieron a mano.
+3. **`is_verified_instructor`**: ninguna línea del repositorio lo escribe tampoco — y medido con la anon key el 2026-09-14, **0 de 97 filas lo tienen en true**. Nadie ha verificado nunca a un instructor.
+4. **Funciones y triggers que no están en ninguna migración**: `protect_verified_instructor`, `update_instructor_stats`, `on_payment_approved`, `set_payment_status_on_join`, y la lista completa de julio. Ver [DRIFT-02].
+5. **Políticas RLS con el email de Al escrito dentro del cuerpo**, sobre `users` y `sessions`, que no están en ninguna migración. Ver [SEC-03].
+
+CONSECUENCIA MEDIBLE, no hipotética: la deriva de la migración 093 significa que hoy no sabemos si el régimen de columnas sobre `users` es el que creemos. Y los triggers no versionados ya están produciendo datos incorrectos en producción — ver [DRIFT-03], donde `total_participants_served` está congelado en 0 para todo el mundo excepto el único admin.
+
+FIX, y es de proceso antes que de SQL:
+
+- **Resolver primero la deriva de 093** (la tabla ACL frente a la arqueología de grants) antes de escribir 166.
+- **Capturar todo lo no versionado** — [DRIFT-02].
+- **Ejecutar `supabase/drift-probe.sql` de forma recurrente**, no una sola vez, y comparar contra lo que las migraciones afirman. Es una consulta de solo lectura y ya está validada.
+- **Regla de equipo**: nada se aplica en el editor SQL sin quedar en una migración numerada. Si hace falta un arreglo urgente a mano, la migración que lo captura se escribe en la misma sesión.
+
+ACEPTACIÓN: `drift-probe.sql` sobre producción coincide con lo que las migraciones producen sobre una base reconstruida desde cero, en grants, políticas, triggers y funciones. Cualquier diferencia está explicada por una migración numerada.
+
+### [DRIFT-02] Capturar todas las funciones y triggers que viven solo en producción (pendiente desde julio)
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración de captura, sin cambios de comportamiento) · **Riesgo:** Bajo si se captura verbatim
+- **Ruta/Archivo:** `docs/DRIFT_AUDIT_2026-07-08.md:57` (la lista original)
+
+**Descripción**
+
+QUÉ PASA: hay funciones y triggers ejecutándose en producción que no existen en ninguna migración. No se pueden revisar en un code review, no se pueden reconstruir, y pueden referenciar columnas que ya no existen sin que nada en el repositorio lo detecte.
+
+Lo pidió el audit de julio y sigue sin hacerse. Esta semana costó tiempo real: la migración 165 se quedó bloqueada porque nadie podía leer el cuerpo de `protect_verified_instructor` ni el de `update_instructor_stats` sin pedirle a Al que corriera `pg_get_functiondef` a mano.
+
+LISTA, de `docs/DRIFT_AUDIT_2026-07-08.md:57` y de lo encontrado esta semana:
+
+| función                                              | trigger / evento                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| `protect_verified_instructor`                        | `users` BEFORE UPDATE — «a security guard living only in live»            |
+| `update_instructor_stats`                            | `sessions` AFTER UPDATE (`on_session_status_change`)                      |
+| `on_payment_approved`                                | `payments` INSERT + UPDATE                                                |
+| `set_payment_status_on_join`                         | `session_participants` BEFORE INSERT                                      |
+| `sync_session_coords`                                | `sessions` BEFORE INSERT/UPDATE                                           |
+| `notify_new_chat_message`                            | `chat_messages` — segunda vía de notificación, redundante con el webhook  |
+| `update_last_login`                                  |                                                                           |
+| `update_payment_updated_at`                          |                                                                           |
+| `update_service_packages_updated_at`                 |                                                                           |
+| `on_post_like`, `on_user_follow`, `on_user_unfollow` | contadores por delta, también sin versionar                               |
+| `handle_new_user`                                    | `auth.users` — el único creador de filas en `public.users` al registrarse |
+
+FIX: una migración de captura que haga `CREATE OR REPLACE` de cada una **verbatim**, tal como devuelve `pg_get_functiondef`, sin cambiar una línea. Cero cambios de comportamiento por diseño: el objetivo es que el repositorio y producción coincidan. **Después**, y en migraciones separadas, revisar cada cuerpo por deriva de columnas y por lógica — que es donde salió [DRIFT-03].
+
+CUIDADO AL CAPTURAR: `CREATE OR REPLACE FUNCTION` reemplaza la definición COMPLETA, incluida su configuración. Si el `pg_get_functiondef` de origen no lleva `SET search_path`, capturarlo verbatim **despinnea** lo que la 164 fijó. Capturar verbatim y añadir el `SET search_path` explícito en la misma sentencia, como hace la 165.
+
+ACEPTACIÓN: `select proname from pg_proc where pronamespace='public'::regnamespace` no devuelve ninguna función que no aparezca en alguna migración; el guard de `verify-migration-state.sql` lo comprueba de forma continua.
+
+### [DRIFT-03] Los contadores derivados de instructor llevan congelados en 0 para todo el mundo menos el admin
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** En curso (lo arregla la 165)
+- **Esfuerzo:** S · **Deploy:** Supabase · **Riesgo:** Bajo
+- **Ruta/Archivo:** `public.protect_verified_instructor()`; `public.update_instructor_stats()`
+
+**Descripción**
+
+QUÉ PASA: `protect_verified_instructor` revierte en silencio cualquier escritura a `total_earnings_cents` y `total_participants_served` cuando quien llama no es admin. `update_instructor_stats` se dispara desde una acción de un instructor (AFTER UPDATE sobre `sessions`), así que `auth.uid()` NO es NULL y la reversión se lo come. El trigger que recalcula los contadores lleva ejecutándose y siendo descartado desde que existe.
+
+MEDIDO el 2026-09-14 con el service role:
+
+| instructor        | is_admin | contador dice | inscripciones confirmadas |
+| ----------------- | -------- | ------------- | ------------------------- |
+| Darian            | **true** | 6             | 34                        |
+| Alexandra Aguirre | false    | **0**         | 13                        |
+| Caroline Vanegas  | false    | **0**         | 11                        |
+
+`total_participants_served > 0` -> solo Darian. `total_earnings_cents > 0` -> solo Darian (2430). Y **Darian es el único admin de toda la base de datos.**
+
+LA PRUEBA, y es la parte que lo convierte en certeza: `total_sessions_hosted` — que el trigger NO protege — avanza correctamente para todos (97, 40, 36, 34…). Las dos columnas protegidas están congeladas; la no protegida no. El contraste es el guard.
+
+IMPACTO: «atletas atendidos» en la vitrina muestra 0 para todo instructor real, y **los ingresos de instructor no se han registrado nunca para nadie salvo el admin**. Es visible en dinero.
+
+FIX: migración 165. La regla correcta no es «admin o no», es **«originado por trigger u originado por cliente»**: un contador derivado no debería depender de quién tocó la fila. `pg_trigger_depth() > 1` distingue exactamente eso, y está validado contra un stub.
+
+ACEPTACIÓN: tras la 165, un instructor no admin cancela o cambia el estado de una sesión y su `total_participants_served` se mueve; una escritura directa desde el cliente a esa columna se sigue revirtiendo.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
