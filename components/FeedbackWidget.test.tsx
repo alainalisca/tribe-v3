@@ -38,12 +38,20 @@ describe('FeedbackWidget route suppression', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it.each([['/home'], ['/sessions'], ['/storefront/040cbc21-1b11-4ae1-aa99-9fe35a32bda0/'], ['/instructors']])(
-    'still renders on %s, so the feedback channel survives',
-    (pathname) => {
-      mockPathname = pathname;
-      const { container } = render(<FeedbackWidget />);
-      expect(container).not.toBeEmptyDOMElement();
-    }
-  );
+  it.each([
+    ['/home'],
+    ['/sessions'],
+    ['/storefront/040cbc21-1b11-4ae1-aa99-9fe35a32bda0/'],
+    ['/instructors'],
+    // The install prompt is now suppressed on these; FeedbackWidget must NOT
+    // be, because its question did not change. This is what the two-list split
+    // exists to protect.
+    ['/auth/'],
+    ['/onboarding/role/'],
+    ['/partners/apply/'],
+  ])('still renders on %s, so the feedback channel survives', (pathname) => {
+    mockPathname = pathname;
+    const { container } = render(<FeedbackWidget />);
+    expect(container).not.toBeEmptyDOMElement();
+  });
 });
