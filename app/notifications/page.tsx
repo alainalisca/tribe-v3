@@ -75,6 +75,12 @@ export function getNotificationLink(notification: NotificationWithActor): string
   // same reason as above -- trailingSlash is on and a 308 strips auth headers.
   if (type === 'venue_request_new') return '/dashboard/partner/';
   if (['venue_request_approved', 'venue_request_declined'].includes(type) && entity_id) return `/session/${entity_id}`;
+  // Both partner bells go to the admin queue, which is where the admin acts on
+  // them. entity_id is the featured_partners row and there is no per-partner
+  // admin route, so the queue is the destination for both. Trailing slash for
+  // the same reason as the dashboards above: trailingSlash is on and a 308
+  // strips the auth headers.
+  if (['partner_application', 'partner_activated'].includes(type)) return '/admin/partners/';
   return null;
 }
 
