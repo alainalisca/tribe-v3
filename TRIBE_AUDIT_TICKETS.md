@@ -9,7 +9,7 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
 | Producto         | 10   | 17    | 4    | 31    |
 | Seguridad        | 6    | 3     | 3    | 12    |
-| Pagos            | 3    | 1     | 0    | 4     |
+| Pagos            | 5    | 1     | 0    | 6     |
 | Infra            | 8    | 13    | 4    | 25    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
@@ -340,6 +340,105 @@ IMPACTO: «atletas atendidos» en la vitrina muestra 0 para todo instructor real
 FIX: migración 165. La regla correcta no es «admin o no», es **«originado por trigger u originado por cliente»**: un contador derivado no debería depender de quién tocó la fila. `pg_trigger_depth() > 1` distingue exactamente eso, y está validado contra un stub.
 
 ACEPTACIÓN: tras la 165, un instructor no admin cancela o cambia el estado de una sesión y su `total_participants_served` se mueve; una escritura directa desde el cliente a esa columna se sigue revirtiendo.
+
+### [COUNTER-01] Reconstruir total_participants_served: recomputado, un solo dueño, sobre una finalización real
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) · **Riesgo:** Medio — toca dos triggers vivos no versionados
+- **Ruta/Archivo:** `public.update_instructor_stats()`; `public.on_payment_approved()` — ninguna de las dos está en el repositorio, ver [DRIFT-02]
+- **Bloquea:** [DRIFT-03]. **Bloqueada por:** [DRIFT-02] (hay que capturar los cuerpos antes de reescribirlos).
+
+**Descripción**
+
+QUÉ PASA: `total_participants_served` lo incrementan **dos** triggers distintos, con semánticas distintas, y ninguno lo recalcula:
+
+- `update_instructor_stats` (`sessions` AFTER UPDATE) hace `total_participants_served + participant_count` en **cualquier** cambio de estado. Cancelar una sesión lo INCREMENTA. Cualquier ida y vuelta de estado lo incrementa otra vez.
+- `on_payment_approved` (`payments` INSERT+UPDATE) hace `total_participants_served + 1` sobre la misma columna.
+
+POR QUÉ NO SE PUEDE «DESCONGELAR» Y YA: hoy la columna está congelada porque `protect_verified_instructor` revierte en silencio toda escritura de un no-admin (ver [DRIFT-03]). Quitar esa reversión NO arregla el contador: lo pone a acumular basura desde una base de cero, sin histórico, con dos incrementadores pisándose. **Congelado es visiblemente incorrecto; en movimiento y mal parece que funciona**, que es estrictamente peor. La migración 165 deja la reversión puesta a propósito por esto, y lleva un guard que falla si alguien la quita sin leer el motivo.
+
+Se construyó y se validó un mecanismo `pg_trigger_depth() > 1` que distingue correctamente escrituras originadas por trigger de las originadas por cliente, y se descartó: un mecanismo correcto apuntando a un cálculo roto solo hace que el número equivocado se mueva más rápido.
+
+FIX, y las tres partes son necesarias juntas:
+
+1. **RECOMPUTAR, no incrementar.** `SELECT count(*) FROM session_participants WHERE status='confirmed'` sobre las sesiones pasadas del instructor, siguiendo el patrón de recompute de la migración 109 (que el audit de julio ya recomendó para todos los contadores).
+2. **UN solo dueño.** Quitar el incremento de `on_payment_approved` y el de `update_instructor_stats`; que un único trigger mantenga la columna.
+3. **Sobre una finalización real**, no sobre cualquier cambio de estado. OJO: hoy `sessions.status` solo toma los valores `active` y `cancelled` — no existe `completed`. Así que «finalización» hay que definirla (fecha pasada y no cancelada, probablemente) antes de escribir el trigger.
+4. Backfill de una sola vez para todas las filas existentes, ya que el histórico no está.
+
+ACEPTACIÓN: para cada instructor, `total_participants_served` coincide con el conteo real de inscripciones confirmadas en sus sesiones pasadas no canceladas; cancelar una sesión no lo incrementa; un round-trip de estado no lo mueve.
+
+### [STATS-01] sessions_completed cuenta CANCELACIONES, y se muestra en el perfil público
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) · **Riesgo:** Medio
+- **Ruta/Archivo:** `public.update_instructor_stats()` (no versionada, ver [DRIFT-02]); `lib/dal/users.ts:37` la lee; se renderiza en el perfil
+
+**Descripción**
+
+QUÉ PASA: `update_instructor_stats` hace `sessions_completed + 1` en **cada** cambio de estado de una sesión, incluidas las cancelaciones. Nada la recalcula. Y a diferencia de los otros dos contadores, esta columna **no está protegida** por `protect_verified_instructor`, así que sí se ha estado moviendo para todo el mundo, todo este tiempo.
+
+MEDIDO el 2026-09-14 con el service role. Como `sessions.status` solo tiene `active` y `cancelled`, el único cambio de estado que ocurre en la práctica es active -> cancelled, y el resultado es exacto:
+
+| instructor        | `sessions_completed` | sesiones CANCELADAS | sesiones pasadas reales |
+| ----------------- | -------------------- | ------------------- | ----------------------- |
+| Darian            | 16                   | **16**              | 97                      |
+| Alexandra Aguirre | 9                    | **9**               | 40                      |
+| Caroline Vanegas  | 3                    | **3**               | 34                      |
+| Marcela Anahata   | 1                    | **1**               | 15                      |
+| Leo Garcia        | 1                    | **1**               | 9                       |
+
+**`sessions_completed` es igual al número de sesiones canceladas para 5 de 5 instructores.** No está inflada: está contando exactamente lo contrario de lo que dice contar. En total la columna suma 30 frente a 255 sesiones pasadas reales.
+
+IMPACTO: el perfil público de un instructor muestra como «sesiones completadas» su número de cancelaciones. Alexandra, con 40 sesiones pasadas, aparece con 9 — que es su número de cancelaciones. Es una cifra de reputación, visible a desconocidos, y dice lo contrario de la verdad.
+
+FIX: mismo tratamiento que [COUNTER-01] — recomputar desde `sessions` en lugar de incrementar, sobre una definición explícita de «completada», con backfill. Las dos columnas las mantiene el mismo trigger, así que conviene arreglarlas en la misma migración.
+
+ACEPTACIÓN: `sessions_completed` coincide con el conteo real de sesiones pasadas no canceladas de cada instructor; cancelar una sesión no la incrementa.
+
+### [PAY-08] on_payment_approved no es SECURITY DEFINER, así que la escritura de ingresos no afecta a ninguna fila
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Supabase (migración) · **Riesgo:** Bajo
+- **Ruta/Archivo:** `public.on_payment_approved()` (no versionada, ver [DRIFT-02])
+
+**Descripción**
+
+QUÉ PASA: `on_payment_approved` **no** es `SECURITY DEFINER`. Corre como quien la llama. Su `UPDATE public.users SET total_earnings_cents ...` apunta a la fila del **INSTRUCTOR**, mientras que quien llama es el **PAGADOR**. La política RLS de UPDATE sobre `users` es `auth.uid() = id`, así que el UPDATE **no coincide con ninguna fila** y no hace nada, en silencio.
+
+ESTO ES UNA SEGUNDA RAZÓN, INDEPENDIENTE, de que los ingresos de instructor no se hayan registrado nunca. La primera es la reversión silenciosa de `protect_verified_instructor` ([DRIFT-03]). Están apiladas: **arreglar solo una de las dos no cambia nada.** Si se hace la función `SECURITY DEFINER` sin tocar la reversión, la escritura pasa el RLS y la revierte el trigger. Si se quita la reversión sin tocar la función, la escritura sigue sin coincidir con ninguna fila.
+
+FIX: `SECURITY DEFINER` con `SET search_path` fijado, capturada primero en una migración ([DRIFT-02]). Coordinar con [COUNTER-01], que además le quita a esta función el incremento de `total_participants_served`.
+
+ACEPTACIÓN: un pago aprobado mueve `total_earnings_cents` del instructor; verificado con un pago real de extremo a extremo, no con una escritura directa.
+
+### [PAY-09] Los registros de pago almacenados llevan un reparto de comisión que Tribe no aplica — DECISIÓN DE AL
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** **Necesita decisión de Al**
+- **Esfuerzo:** M · **Deploy:** Supabase + revisión de datos · **Riesgo:** Alto — son datos financieros almacenados
+- **Ruta/Archivo:** `public.on_payment_approved()` (no versionada, ver [DRIFT-02]); columnas `payments.platform_fee_cents`, `payments.instructor_payout_cents`
+- **Relacionado, NO duplicar:** [PAY-04] (copy de marketing «keep 85%» / 15%) y la fila de Notion «La UI muestra una tarifa de plataforma del 10% que Tribe no cobra».
+
+**Descripción**
+
+QUÉ PASA: `on_payment_approved` calcula `v_fee_cents := ROUND(NEW.amount_cents * 0.10)` y escribe `platform_fee_cents` e `instructor_payout_cents` en **cada fila de pago aprobada**.
+
+POR QUÉ ESTE ES DISTINTO DE LOS DOS TICKETS QUE YA EXISTEN, y por qué es el peor de los tres:
+
+- [PAY-04] y la fila de Notion son sobre **cadenas de texto que se muestran**: la UI decía 10%, el marketing dice 15%, y el código de config dice 15% (`lib/payments/config.ts:6`). Eso se arregla editando copy.
+- Esto **no es una cadena de texto. Son datos financieros almacenados.** Cada pago aprobado en la base de datos lleva escrito un reparto que no corresponde a lo que Tribe hace realmente, y el número que usa (10%) tampoco coincide con el 15% del código ni con el «100% al instructor» del camino de pago que está vivo (`PaidSessionRequest`, off-platform).
+
+Son por tanto **tres capas distintas**: lo que dice el marketing (15%), lo que decía la UI (10%), y lo que queda escrito en la tabla de pagos (10%). Editar el copy no toca la tercera.
+
+LO QUE NECESITA DECIDIR AL, y por eso este ticket no propone un fix:
+
+1. ¿Cuál es la comisión real, si es que hay alguna, para cada camino de pago?
+2. Las filas ya escritas: ¿se recalculan, se anulan, o se dejan con una nota de que el campo nunca fue autoritativo?
+3. ¿Debería `on_payment_approved` escribir estos campos siquiera, o el reparto lo debería decidir el gateway en el momento del cobro?
+
+Hasta que eso esté decidido, **no tocar la función**: cambiar el 0.10 por otro número sin responder (1) solo cambia qué cifra incorrecta se almacena.
+
+ACEPTACIÓN: decisión escrita en este ticket; `platform_fee_cents` e `instructor_payout_cents` o reflejan la comisión real o se retiran; las filas históricas tienen un tratamiento definido.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
