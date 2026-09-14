@@ -1,14 +1,33 @@
 'use client';
 
 import { Loader } from 'lucide-react';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 
+/**
+ * GYM AND STUDIO ONLY (T-GYM4).
+ *
+ * The column CHECK in 018_featured_partners.sql:8 still permits
+ * ('studio','gym','academy','club','independent'), and existing rows are
+ * untouched -- this list is the set the FORM is allowed to produce.
+ *
+ * academy and club are removed because nothing downstream supports them:
+ * lib/partnerIdentity.ts:32-35 returns null for anything but gym/studio (so no
+ * type line renders at all) and :46 falls back to 'viewGym' (so an academy's
+ * CTA reads "Ver gimnasio"). Six more sites hardcode the same pair --
+ * app/storefront/[id]/page.tsx:32, StorefrontProfileColumn.tsx:54,
+ * GymStorefrontHeader.tsx:44, GymsAndStudiosSection.tsx:53, GymChip.tsx:46 --
+ * and ORGANIZATION_TYPES (lib/dal/gymVenue.ts:239) excludes them from gym
+ * discovery entirely. An academy would be approved and invisible.
+ *
+ * independent is removed because partners_public excludes it
+ * (163_partner_slug_and_public_view.sql:309), so it has no /g/[slug] page.
+ *
+ * Widening this list is T-GYM6, and it means fixing those seven sites first.
+ */
 const BUSINESS_TYPES = [
-  { value: 'studio', en: 'Studio', es: 'Estudio' },
-  { value: 'gym', en: 'Gym', es: 'Gimnasio' },
-  { value: 'academy', en: 'Academy', es: 'Academia' },
-  { value: 'club', en: 'Club', es: 'Club' },
-  { value: 'independent', en: 'Independent', es: 'Independiente' },
-];
+  { value: 'gym', labelKey: 'typeGym' },
+  { value: 'studio', labelKey: 'typeStudio' },
+] as const;
 
 const SPECIALTY_OPTIONS = [
   'CrossFit',
@@ -27,8 +46,14 @@ const SPECIALTY_OPTIONS = [
   'Dance',
 ];
 
+/** The fields validate() can reject. Optional fields are absent by design. */
+export interface PartnerApplyErrors {
+  business_name?: string;
+  business_type?: string;
+  address?: string;
+}
+
 export interface PartnerApplyFormProps {
-  language: string;
   businessName: string;
   setBusinessName: (v: string) => void;
   businessType: string;
@@ -47,58 +72,74 @@ export interface PartnerApplyFormProps {
   setPhone: (v: string) => void;
   submitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  errors: PartnerApplyErrors;
+  /** Clears one field's error as soon as the user edits it. */
+  clearError: (field: keyof PartnerApplyErrors) => void;
 }
 
 export default function PartnerApplyForm(p: PartnerApplyFormProps) {
-  const t = (en: string, es: string) => (p.language === 'es' ? es : en);
-  const inputCls =
-    'w-full px-4 py-3 bg-white dark:bg-tribe-surface border border-stone-200 dark:border-tribe-mid rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
+  const t = useTranslations('gymSignup');
+
+  const baseCls =
+    'w-full px-4 py-3 bg-white dark:bg-tribe-surface border rounded-xl text-stone-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-tribe-green';
+  // Same invalid treatment as app/create/page.tsx:462 -- a red border on the
+  // control plus a message directly under it.
+  const cls = (invalid?: string) =>
+    `${baseCls} ${invalid ? 'border-red-500' : 'border-stone-200 dark:border-tribe-mid'}`;
 
   return (
-    <form onSubmit={p.onSubmit} className="space-y-4 pb-8">
+    <form onSubmit={p.onSubmit} className="space-y-4 pb-8" noValidate>
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-          {t('Business Name', 'Nombre del Negocio')} *
+          {t('fieldBusinessName')} *
         </label>
         <input
-          className={inputCls}
+          className={cls(p.errors.business_name)}
           value={p.businessName}
-          onChange={(e) => p.setBusinessName(e.target.value)}
-          required
+          aria-invalid={!!p.errors.business_name}
+          onChange={(e) => {
+            p.setBusinessName(e.target.value);
+            p.clearError('business_name');
+          }}
         />
+        {p.errors.business_name && <p className="text-red-500 text-sm mt-1">{p.errors.business_name}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-          {t('Business Type', 'Tipo de Negocio')}
+          {t('fieldBusinessType')} *
         </label>
-        <select className={inputCls} value={p.businessType} onChange={(e) => p.setBusinessType(e.target.value)}>
+        <select
+          className={cls(p.errors.business_type)}
+          value={p.businessType}
+          aria-invalid={!!p.errors.business_type}
+          onChange={(e) => {
+            p.setBusinessType(e.target.value);
+            p.clearError('business_type');
+          }}
+        >
           {BUSINESS_TYPES.map((bt) => (
             <option key={bt.value} value={bt.value}>
-              {p.language === 'es' ? bt.es : bt.en}
+              {t(bt.labelKey)}
             </option>
           ))}
         </select>
+        {p.errors.business_type && <p className="text-red-500 text-sm mt-1">{p.errors.business_type}</p>}
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-          {t('Description (English)', 'Descripción (Inglés)')}
+          {t('fieldDescriptionEn')}
         </label>
-        <textarea
-          className={inputCls}
-          rows={3}
-          value={p.description}
-          onChange={(e) => p.setDescription(e.target.value)}
-        />
+        <textarea className={cls()} rows={3} value={p.description} onChange={(e) => p.setDescription(e.target.value)} />
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-          {t('Description (Spanish)', 'Descripción (Español)')}
+          {t('fieldDescriptionEs')}
         </label>
         <textarea
-          className={inputCls}
+          className={cls()}
           rows={3}
           value={p.descriptionEs}
           onChange={(e) => p.setDescriptionEs(e.target.value)}
@@ -107,7 +148,7 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
 
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-2">
-          {t('Specialties', 'Especialidades')}
+          {t('fieldSpecialties')}
         </label>
         <div className="flex flex-wrap gap-2">
           {SPECIALTY_OPTIONS.map((s) => (
@@ -129,18 +170,27 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
 
       <div>
         <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-          {t('Address', 'Dirección')}
+          {t('fieldAddress')} *
         </label>
-        <input className={inputCls} value={p.address} onChange={(e) => p.setAddress(e.target.value)} />
+        <input
+          className={cls(p.errors.address)}
+          value={p.address}
+          aria-invalid={!!p.errors.address}
+          onChange={(e) => {
+            p.setAddress(e.target.value);
+            p.clearError('address');
+          }}
+        />
+        {p.errors.address && <p className="text-red-500 text-sm mt-1">{p.errors.address}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-            {t('Website', 'Sitio Web')}
+            {t('fieldWebsite')}
           </label>
           <input
-            className={inputCls}
+            className={cls()}
             value={p.website}
             onChange={(e) => p.setWebsite(e.target.value)}
             placeholder="https://"
@@ -148,19 +198,23 @@ export default function PartnerApplyForm(p: PartnerApplyFormProps) {
         </div>
         <div>
           <label className="block text-sm font-semibold text-stone-700 dark:text-gray-200 mb-1">
-            {t('Phone', 'Teléfono')}
+            {t('fieldPhone')}
           </label>
-          <input className={inputCls} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} />
+          <input className={cls()} value={p.phone} onChange={(e) => p.setPhone(e.target.value)} />
         </div>
       </div>
 
+      {/* Disabled ONLY while the request is in flight. It used to also be
+          disabled on an empty business name, which made the button a dead
+          control with no explanation -- the user could not tell a missing field
+          from a broken app. Validation now answers that in writing. */}
       <button
         type="submit"
-        disabled={p.submitting || !p.businessName.trim()}
+        disabled={p.submitting}
         className="w-full py-3 bg-tribe-green text-slate-900 font-bold rounded-xl text-base hover:bg-lime-500 transition disabled:opacity-50 flex items-center justify-center gap-2"
       >
         {p.submitting && <Loader className="w-4 h-4 animate-spin" />}
-        {t('Submit Application', 'Enviar Solicitud')}
+        {t('submitCta')}
       </button>
     </form>
   );

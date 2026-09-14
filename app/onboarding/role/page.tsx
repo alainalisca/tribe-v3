@@ -8,6 +8,8 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { logError } from '@/lib/logger';
 import { showError } from '@/lib/toast';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
+import { enableInstructorAccount } from '@/lib/dal';
+import { useTranslations } from '@/lib/i18n/useTranslations';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   Dumbbell,
@@ -19,6 +21,9 @@ import {
   DollarSign,
   Megaphone,
   TrendingUp,
+  Building2,
+  MapPin,
+  CalendarCheck,
 } from 'lucide-react';
 
 const getTranslations = (language: 'en' | 'es') => ({
@@ -51,7 +56,8 @@ export default function OnboardingRolePage() {
   const t = getTranslations(language);
   const supabase = createClient();
 
-  const [selectedRole, setSelectedRole] = useState<'participant' | 'instructor' | null>(null);
+  const tGym = useTranslations('gymSignup');
+  const [selectedRole, setSelectedRole] = useState<'participant' | 'instructor' | 'gym' | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -80,32 +86,32 @@ export default function OnboardingRolePage() {
         return;
       }
 
-      if (selectedRole === 'instructor') {
-        // Set is_instructor flag immediately so the onboarding knows.
-        // Use .select() so we can tell an actual write apart from a 0-row
-        // no-op (RLS, network) — silently routing a failed instructor
-        // signup to /profile/edit was the old behavior and sent users
-        // into the wrong flow with no feedback.
-        const { data: updated, error: updateError } = await supabase
-          .from('users')
-          .update({ is_instructor: true })
-          .eq('id', user.id)
-          .select('id');
+      if (selectedRole === 'instructor' || selectedRole === 'gym') {
+        // Both paths set is_instructor first: it is what gates /partners/apply
+        // and the instructor wizard, and a gym is a users row with the flag set
+        // plus a featured_partners row -- there is no account_type column.
+        //
+        // enableInstructorAccount reports a 0-row write as a failure rather
+        // than as { error: null }. Routing onward after a failed write is the
+        // old bug: an instructor landed in the wizard without the flag, and a
+        // gym owner would land on /partners/apply and hit its "account
+        // required" guard with nothing on that screen able to clear it.
+        const result = await enableInstructorAccount(supabase, user.id);
 
-        if (updateError || !updated || updated.length === 0) {
-          logError(updateError ?? new Error('is_instructor update returned 0 rows'), {
+        if (!result.success) {
+          logError(new Error(result.error ?? 'is_instructor update returned 0 rows'), {
             action: 'onboardingRoleSelection.instructorUpdate',
             userId: user.id,
+            role: selectedRole,
           });
-          showError(
-            language === 'es'
-              ? 'No se pudo guardar tu rol. Intenta de nuevo.'
-              : "Couldn't save your role. Please try again."
-          );
+          showError(tGym('roleSaveFailed'));
           setSubmitting(false);
           return;
         }
-        router.push('/onboarding/instructor');
+
+        // Trailing slash: next.config has trailingSlash: true, so /partners/apply
+        // would otherwise 308 on the way in.
+        router.push(selectedRole === 'gym' ? '/partners/apply/' : '/onboarding/instructor');
       } else {
         // Participant — onboarding ends here. A parked returnTo (T-C1 Gate 2:
         // the invite or shared link this signup started from) wins over the
@@ -248,6 +254,57 @@ export default function OnboardingRolePage() {
                 }`}
               >
                 {selectedRole === 'instructor' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+              </div>
+            </div>
+          </button>
+
+          {/* Gym Card (T-GYM4). Sets the same is_instructor flag as the
+              instructor card and then routes to the application form that
+              already exists, rather than adding a second onboarding route. */}
+          <button
+            onClick={() => setSelectedRole('gym')}
+            className={`w-full text-left rounded-2xl border-2 p-5 transition-all duration-200 ${
+              selectedRole === 'gym'
+                ? 'border-tribe-green bg-tribe-green/5 shadow-lg shadow-tribe-green/10'
+                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-tribe-card hover:border-stone-300 dark:hover:border-gray-500'
+            }`}
+          >
+            <div className="flex items-start gap-4">
+              {/* Rounded SQUARE, not the circle/rounded-xl the two person cards
+                  use: organisations are squares throughout the app (T-GYM1). */}
+              <div
+                className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${
+                  selectedRole === 'gym'
+                    ? 'bg-tribe-green text-slate-900'
+                    : 'bg-stone-100 dark:bg-tribe-mid text-stone-500 dark:text-gray-400'
+                }`}
+              >
+                <Building2 className="w-7 h-7" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">{tGym('roleTitle')}</h2>
+                <p className="text-sm text-stone-600 dark:text-gray-300 mb-3">{tGym('roleDesc')}</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
+                    <Building2 className="w-3.5 h-3.5 text-tribe-green shrink-0" />
+                    <span>{tGym('roleFeature1')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
+                    <MapPin className="w-3.5 h-3.5 text-tribe-green shrink-0" />
+                    <span>{tGym('roleFeature2')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-gray-400">
+                    <CalendarCheck className="w-3.5 h-3.5 text-tribe-green shrink-0" />
+                    <span>{tGym('roleFeature3')}</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                className={`w-6 h-6 rounded-full border-2 shrink-0 mt-1 flex items-center justify-center transition ${
+                  selectedRole === 'gym' ? 'border-tribe-green bg-tribe-green' : 'border-stone-300 dark:border-gray-500'
+                }`}
+              >
+                {selectedRole === 'gym' && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </div>
           </button>
