@@ -285,6 +285,84 @@ POR QUÉ ESTE TICKET ESTÁ SEPARADO DE [GYM-06]: el argumento de «mitad del emb
 NOTA: el recorrido verificado en producción el 2026-09-13 (`/g/bullbox/` -> clase -> `/s/<id>`) se completa **sin salir del navegador y sin muro de login**. Si se decide suprimir el prompt aquí, ese recorrido no cambia; si se decide dejarlo, el visitante lo encuentra en el segundo paso.
 
 ACEPTACIÓN: decisión escrita en este ticket, y `PUBLIC_SHARE_ROUTE_PREFIXES` (o el conjunto que consuma `IOSInstallPrompt`) refleja lo decidido, con el test que fija esa ausencia/presencia actualizado en consecuencia.
+### [T-GYM5] Subida de logo y banner para partners, y captura de lat/lng en el formulario
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) + Supabase (bucket + políticas) · **Riesgo:** Bajo
+- **Journey / lado:** Alta de gimnasio / dueño de gimnasio
+- **Ruta/Archivo:** `app/partners/apply/page.tsx`; `components/partner/PartnerApplyForm.tsx`; `lib/dal/featuredPartners.ts:417-421`
+- **Bloqueada por:** [T-GYM7] (una activación de prueba en producción no es segura hasta que las cuentas de prueba estén excluidas).
+
+**Descripción**
+
+QUÉ PASA, dos huecos distintos que comparten formulario:
+
+**1. No existe camino de subida para `logo_url` ni `banner_url`.** `applyForPartnership` acepta `logo_url` (`lib/dal/featuredPartners.ts:421`) y la página nunca lo envía; el formulario no tiene campo de imagen. Tampoco existe un bucket de storage para partners: los que hay son `profile-images`, `session-photos`, `session-stories`, `media`, `community-banners`, `product-images`, `instructor-posts` y `community-bulletin-flyers`. Ninguno es adecuado.
+
+Consecuencia medible: los tres partners reales tienen `logo_url` NULL y lo que se ve como su logo es en realidad el `avatar_url` de la cuenta dueña, vía el `coalesce` de `partners_public` (163). Ver [GYM-01]. Todo gimnasio que se registre solo empieza igual.
+
+**2. `lat` y `lng` nunca se envían.** El DAL los acepta (`:417-418`) y `app/partners/apply/page.tsx` los omite. Cada gimnasio de alta propia queda con `lat = NULL, lng = NULL`, **invisible para cualquier superficie de distancia o de mapa**, sin nada que lo indique. La dirección se guarda como texto libre.
+
+FIX:
+
+- Bucket nuevo (`partner-images` o similar) con políticas de escritura acotadas al dueño, siguiendo el patrón de `profile-images`. Reutilizar `components/ImageCropModal.tsx`.
+- Campo de dirección con autocompletado que devuelva coordenadas, como hace `app/create/page.tsx` para las sesiones, y pasarlas en el payload.
+- Migración de datos aparte para las tres filas existentes: NO forzar la subida retroactiva, el `coalesce` sigue siendo el fallback correcto.
+
+ACEPTACIÓN: un gimnasio nuevo puede subir logo y banner desde el formulario; `lat`/`lng` no son NULL tras enviar una dirección con autocompletado; `/g/[slug]` muestra el logo subido y no el avatar de la cuenta.
+
+### [T-GYM6] Ampliar ORGANIZATION_TYPES a gym, studio, academy y club, y arreglar los siete sitios que fijan el par a mano
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Medio — toca siete superficies de identidad
+- **Ruta/Archivo:** `lib/dal/gymVenue.ts:239` (la constante); los siete consumidores listados abajo
+
+**Descripción**
+
+QUÉ PASA: `ORGANIZATION_TYPES = ['gym', 'studio']` (`lib/dal/gymVenue.ts:239`) tiene **dos** consumidores reales (`lib/dal/gymDirectory.ts:30,64`). Otros siete sitios escriben el par a mano, así que ampliar la constante no los toca:
+
+| sitio                                                  | qué hace hoy con `academy` / `club`                                               |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `lib/partnerIdentity.ts:32-35`                         | `partnerTypeLabelKey` devuelve **null** → no se renderiza ninguna línea de tipo   |
+| `lib/partnerIdentity.ts:46`                            | `partnerCtaLabelKey` cae a `viewGym` → el CTA de una academia dice «Ver gimnasio» |
+| `app/storefront/[id]/page.tsx:32`                      | `isOrganization` falso → tratamiento de PERSONA, no de organización               |
+| `components/storefront/StorefrontProfileColumn.tsx:54` | igual                                                                             |
+| `components/storefront/GymStorefrontHeader.tsx:44,48`  | `isStudio` falso → etiquetado «Gimnasio»                                          |
+| `components/instructors/GymsAndStudiosSection.tsx:53`  | ternario `studio ? typeStudio : typeGym` → la tarjeta dice «Gimnasio»             |
+| `components/partner/GymChip.tsx:46`                    | mismo ternario, mismo resultado en la tarjeta de sesión                           |
+
+Ninguno lanza error y ninguno pinta una clave sin traducir: **todos fallan en silencio**, o etiquetando mal o no mostrando nada.
+
+YA ESTÁ PASANDO, no es hipotético: `partners_public` sólo excluye `'independent'` (`163_partner_slug_and_public_view.sql:309`), así que **una academia o un club YA obtiene su página `/g/[slug]` hoy, sin línea de tipo**. La inconsistencia está viva; lo único que la contiene es que el formulario de alta ya no ofrece esos valores (T-GYM4).
+
+FIX: ampliar la constante Y hacer que los siete sitios la importen en lugar de repetir el par. `partnerIdentity.ts` es el que hay que mirar de cerca: es el helper _compartido_, así que parece la fuente única de verdad mientras por dentro sigue siendo un ternario de dos valores. Hacen falta claves i18n nuevas (`typeAcademy`, `typeClub`, `viewAcademy`, `viewClub`) en los dos ficheros de mensajes.
+
+NO ampliar el CHECK de la columna: 018 ya permite los cinco valores.
+
+ACEPTACIÓN: una fila con `business_type = 'academy'` renderiza su propia línea de tipo en la tarjeta del feed, en el tile de descubrimiento, en el storefront y en `/g/[slug]`; su CTA no dice «gimnasio»; ninguna búsqueda de `'gym' || 'studio'` queda en `app/` ni en `components/`.
+
+### [T-GYM7] Excluir partners cuya cuenta dueña es is_test_account de descubrimiento, del feed y de la cola de admin
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Ruta/Archivo:** `lib/dal/gymDirectory.ts:27,61`; `lib/dal/featuredPartners.ts:99` (`fetchActivePartners`) y `:275` (`fetchAllPartners`, la cola de admin)
+- **Bloquea:** [T-GYM5]. **Ships antes que T-GYM5.**
+
+**Descripción**
+
+QUÉ PASA: nada filtra partners por `users.is_test_account`. Una cuenta de prueba que se active aparece en el feed principal, en descubrimiento de gimnasios y en la cola de admin, igual que un gimnasio real.
+
+POR QUÉ AHORA: T-GYM4 necesitó una activación real de extremo a extremo en producción para verificar el paso 7, y durante esos minutos «Walkthrough Barbell Club» estuvo **visible para usuarios reales** en el feed. Se revirtió a `pending` en cuanto se comprobó el paso 8 y luego se borró, pero el hueco es que **no había forma segura de hacer esa prueba**. Este ticket es lo que la hace segura.
+
+EL PATRÓN YA EXISTE en cuatro sitios y sólo hay que aplicarlo aquí:
+
+- `lib/dal/featuredPartners.ts:178` — `users!inner(...)` con `.eq('user.is_test_account', false)`
+- migración 052, que introdujo la regla
+- `gym_revenue_totals` y `gym_revenue_buckets`, que ya excluyen cuentas de prueba
+
+FIX: el mismo `users!inner` + `.eq('user.is_test_account', false)` en `fetchActivePartners`, en las dos consultas de `gymDirectory`, y en `fetchAllPartners`. OJO con el embed: `users` está bajo régimen de columnas, así que el `!inner` debe pedir sólo columnas garantizadas (`is_test_account` lo está; ver la auditoría de embeds del SEC-SWEEP, donde ésta es la única consulta que la usa).
+
+ACEPTACIÓN: un partner activo cuyo dueño tiene `is_test_account = true` no aparece en el banner del feed, ni en `/instructors`, ni en `/admin/partners`; un partner real sigue apareciendo en los tres. Verificado activando una cuenta de prueba en producción y comprobando que ninguna superficie la muestra — que es exactamente la prueba que T-GYM4 no pudo hacer con seguridad.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
