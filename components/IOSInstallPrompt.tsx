@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { logError } from '@/lib/logger';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/lib/LanguageContext';
-import { isPublicShareRoute } from '@/lib/publicShareRoutes';
+import { shouldSuppressInstallPrompt } from '@/lib/publicShareRoutes';
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/tribe-never-train-alone/id6458219258';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=prod.tribe.android';
@@ -21,7 +21,9 @@ export default function AppStoreBanner() {
   // iOS/Android UA test below). The banner returns on whatever page they visit
   // next. The route list is shared with FeedbackWidget -- see
   // lib/publicShareRoutes for which routes and why /s/ is not among them.
-  const onShareRoute = isPublicShareRoute(pathname);
+  // The union: public share routes PLUS the signup flow. See
+  // lib/publicShareRoutes for why those are two lists and not one.
+  const onShareRoute = shouldSuppressInstallPrompt(pathname);
 
   useEffect(() => {
     if (onShareRoute) return;

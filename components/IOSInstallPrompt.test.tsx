@@ -48,6 +48,11 @@ describe('AppStoreBanner route suppression', () => {
     ['/g/040cbc21-1b11-4ae1-aa99-9fe35a32bda0/', 'a gym bio link by UUID'],
     ['/i/eaff348f-5df3-4df5-bd80-69ec233aad0e/', 'an instructor share link'],
     ['/invite/abc123', 'an invite link'],
+    // T-GYM4's funnel: an install wall here sends a gym owner to the App Store
+    // in the middle of creating the account they came to create.
+    ['/auth/', 'the sign-in screen'],
+    ['/onboarding/role/', 'the role picker'],
+    ['/partners/apply/', 'the gym application form'],
   ])('stays hidden on %s (%s)', (pathname) => {
     mockPathname = pathname;
     renderAndAdvance();
@@ -62,6 +67,8 @@ describe('AppStoreBanner route suppression', () => {
     // following slash, so nothing else is swept up.
     ['/instructors'],
     ['/groups/1'],
+    // shares a prefix with a suppressed route without being one
+    ['/partners'],
   ])('still appears on %s, so the install funnel is untouched', (pathname) => {
     mockPathname = pathname;
     renderAndAdvance();

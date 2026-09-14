@@ -56,6 +56,19 @@ const CONTEXT = {
 const TARGETS = [
   { path: '/g/bullbox/', h1: 'CrossFit BullBox' },
   { path: '/i/eaff348f-5df3-4df5-bd80-69ec233aad0e/', h1: null }, // /i/ uses an h2
+
+  // The signup funnel. An install wall in front of these sends someone to the
+  // App Store in the middle of creating the account they came to create.
+  //
+  // landsOn: /onboarding/role/ and /partners/apply/ are AUTH-GATED, so a
+  // signed-out visitor is redirected to /auth -- which is the correct
+  // behaviour and not a failure. The check that matters is unchanged either
+  // way: wherever the request comes to rest, nothing full-viewport may sit
+  // over the content. Declaring the destination keeps the redirect from being
+  // reported as a fault while still asserting the real outcome.
+  { path: '/auth/', h1: null },
+  { path: '/onboarding/role/', h1: null, landsOn: '/auth' },
+  { path: '/partners/apply/', h1: null, landsOn: '/auth' },
 ];
 
 function probe() {
@@ -115,7 +128,10 @@ for (const t of TARGETS) {
   const r = await page.evaluate(probe);
 
   const problems = [];
-  if (!r.url.startsWith(target)) problems.push(`navigated away to ${r.url}`);
+  const expected = t.landsOn ? BASE + t.landsOn : target;
+  if (!r.url.startsWith(expected)) {
+    problems.push(t.landsOn ? `expected to land on ${t.landsOn}, got ${r.url}` : `navigated away to ${r.url}`);
+  }
   if (!r.headingVisible) problems.push('the heading is not on screen');
   if (t.h1 && r.heading !== t.h1) problems.push(`heading is ${JSON.stringify(r.heading)}, expected ${JSON.stringify(t.h1)}`);
   if (r.covering) problems.push(`something is painted over the heading: ${r.covering}`);
@@ -125,7 +141,7 @@ for (const t of TARGETS) {
   // view excludes), and inferring from the href is the shortcut that hid the
   // CTA bug in the first place.
   const linkResults = [];
-  for (const href of [...new Set(r.links)]) {
+  for (const href of t.landsOn ? [] : [...new Set(r.links)]) {
     if (EJECTING_PATHS.some((p) => href === p || href.startsWith(p + '/'))) {
       problems.push(`link to an app-store bounce: ${href}`);
       linkResults.push({ href, verdict: 'app-store bounce' });
@@ -159,7 +175,11 @@ for (const t of TARGETS) {
   console.log(`  heading      : ${JSON.stringify(r.heading)} visible=${r.headingVisible}`);
   console.log(`  navigations  : ${trail.map((u) => u.replace(BASE, '') || '/').join(' -> ')}`);
   console.log(`  links        : ${linkResults.length} followed`);
-  linkResults.forEach((l) => console.log(`     ${l.verdict === 'lands where it says' ? 'ok  ' : 'FAIL'} ${l.href} — ${l.verdict}`));
+  // 'external, not followed' is a skip, not a fault: an off-site link cannot be
+  // asserted here and never contributed to `problems`. Printing it as FAIL made
+  // a passing run look broken.
+  const OK = new Set(['lands where it says', 'external, not followed']);
+  linkResults.forEach((l) => console.log(`     ${OK.has(l.verdict) ? 'ok  ' : 'FAIL'} ${l.href} — ${l.verdict}`));
   if (problems.length === 0) {
     console.log('  RESULT       : PASS — the gym is what a visitor sees, nothing over it');
   } else {
