@@ -201,6 +201,40 @@ export async function fetchUsersByIds(
   }
 }
 
+/**
+ * Turn on the instructor flag for a user, and report whether a row actually
+ * changed.
+ *
+ * ONE writer for a field three surfaces need to set: the "I Want to Teach" and
+ * "I Represent a Gym" cards on /onboarding/role, and the recovery button on
+ * /partners/apply for someone who arrived without it. Before T-GYM4 the write
+ * was inline in the role picker only, so the apply page's guard was a dead end
+ * with nothing that could clear it.
+ *
+ * .select('id') is the point of the function, not a detail: a plain update
+ * returns { error: null } when RLS or a missing row matched nothing, so a
+ * failed write looked identical to a successful one and routed the user onward
+ * anyway. Callers must treat success=false as "do not navigate".
+ *
+ * NOTE ON THE NAME: `is_instructor` is what gates /partners/apply, so a gym
+ * account needs it too. There is no account_type column -- a gym is a users row
+ * with is_instructor = true plus a featured_partners row (see
+ * lib/instructorExclusion.ts, which is how gyms are kept out of the instructor
+ * directory).
+ */
+export async function enableInstructorAccount(supabase: SupabaseClient, userId: string): Promise<DalResult<null>> {
+  try {
+    const { data, error } = await supabase.from('users').update({ is_instructor: true }).eq('id', userId).select('id');
+
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) return { success: false, error: 'no_rows_updated' };
+    return { success: true, data: null };
+  } catch (error) {
+    logError(error, { action: 'enableInstructorAccount', userId });
+    return { success: false, error: 'Failed to enable the instructor account' };
+  }
+}
+
 export async function updateUser(supabase: SupabaseClient, userId: string, data: UserUpdate): Promise<DalResult<null>> {
   try {
     // .select() so we can tell an actual write apart from a 0-row no-op

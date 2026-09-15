@@ -2,17 +2,19 @@
 import { useState } from 'react';
 import { formatTime12Hour } from '@/lib/utils';
 import { detectNeighborhood, getNearestNeighborhood } from '@/lib/city-config';
-import { formatSessionLocation } from '@/lib/sessionLocation';
+import { formatSessionLocationShortParts } from '@/lib/sessionLocation';
+import { resolveSessionGym } from '@/lib/sessionGym';
+import SessionCardPresenter from '@/components/session/SessionCardPresenter';
+import SessionCardLocation from '@/components/session/SessionCardLocation';
 import { useUserCurrency } from '@/lib/useUserCurrency';
 import { formatPriceForUser } from '@/lib/userCurrency';
 import type { Currency } from '@/lib/payments/config';
-import { getSessionHeroImage, getSportGradient } from '@/lib/sport-images';
+import { getSessionHeroImage } from '@/lib/sport-images';
 
-import { Calendar, MapPin, Star, MoreVertical, Pencil, Trash2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Calendar } from 'lucide-react';
+import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
-import { sportTranslations } from '@/lib/translations';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { translateSport } from '@/lib/translations';
 import AvatarStack from '@/components/AvatarStack';
 import type { AvatarStackParticipant } from '@/components/AvatarStack';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +22,23 @@ import { computeSessionStatus } from './SessionCardHelpers';
 import type { SessionCardProps } from './SessionCardHelpers';
 import { shareSession as shareSessionFn } from '@/lib/share';
 import ShareButton from '@/components/ShareButton';
+import SessionCardHero from '@/components/SessionCardHero';
+import PhotoLightbox from '@/components/PhotoLightbox';
+import { useTranslations } from '@/lib/i18n/useTranslations';
+import SessionCardCreatorMenu from '@/components/session/SessionCardCreatorMenu';
+import SessionMetaBadges from '@/components/session/SessionMetaBadges';
+import { useCardPhotos } from '@/hooks/useCardPhotos';
+import { useRouter } from 'next/navigation';
+import { sessionDisplayTitle } from '@/lib/sessionTitle';
+
+/** Date locale per UI language. A lookup, so no `language === 'es'` ternary is needed. */
+const DATE_LOCALE: Record<'en' | 'es', string> = { en: 'en-US', es: 'es-CO' };
+
+/** Case- and accent-insensitive containment: "does the address already name the barrio". */
+function looselyContains(haystack: string, needle: string): boolean {
+  const strip = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return strip(haystack).includes(strip(needle));
+}
 
 export default function SessionCard({
   session,
@@ -28,16 +47,20 @@ export default function SessionCard({
   onShare: _onShareLegacy, // deprecated: kept for callsite compat, internal share uses lib/share
   distance,
   liveData,
+  sessionPartner,
+  creatorPartner,
+  partnerCoachCount = 0,
   currentUserId,
   featuredPartnerUserIds,
+  priority = false,
+  recapPhotos,
 }: SessionCardProps) {
-  const router = useRouter();
   const { language } = useLanguage();
+  const tCard = useTranslations('sessionCard');
   const { currency: userCurrency } = useUserCurrency();
   const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
-  const [imageError, setImageError] = useState(false);
-  const [showCreatorMenu, setShowCreatorMenu] = useState(false);
-  const isCreator = Boolean(currentUserId && session.creator_id === currentUserId);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const router = useRouter();
 
   // Detected neighborhood — used for the share-button payload and the
   // little inline neighborhood badge next to the location label.
@@ -47,65 +70,122 @@ export default function SessionCard({
         getNearestNeighborhood(session.location_lat, session.location_lng)
       : null;
 
-  // Centralised location-render so cards never show raw "6.22, -75.57"
-  // strings. Falls back to detected neighborhood or "Location not
-  // specified". See lib/sessionLocation.ts.
-  const displayLocation = formatSessionLocation(
+  // Short, deduped address. The detail page keeps the full string. Google
+  // repeats the barrio and city on Medellin addresses and 45 live sessions
+  // carry the repeat; see lib/sessionLocation.ts.
+  // T-GYM1; the rules live in lib/sessionGym.ts.
+  const gym = resolveSessionGym({
+    sessionPartner,
+    sessionPartnerStatus: session.partner_status ?? null,
+    creatorPartner,
+    creatorId: session.creator_id ?? session.creator?.id ?? null,
+    viewerId: currentUserId ?? null,
+  });
+
+  // Venue name leads the address, bolded and de-duplicated against the street.
+  const { venue: venueName, address: displayLocation } = formatSessionLocationShortParts(
     session.location,
     session.location_lat ?? null,
     session.location_lng ?? null,
-    language === 'es' ? 'es' : 'en'
+    language,
+    gym.venue?.business_name ?? null
   );
 
-  const sportName =
-    language === 'es' && sportTranslations[session.sport] ? sportTranslations[session.sport].es : session.sport;
+  const sportName = translateSport(session.sport, language);
 
   const spotsLeft = session.max_participants - confirmedParticipants.length;
   const isFree = !session.price_cents;
   const fillingFast = confirmedParticipants.length >= session.max_participants * 0.7 && !isPast && !isFull;
 
-  const heroImage = getSessionHeroImage(session.sport, session.photos, (session.creator as any)?.banner_url);
+  const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.banner_url);
 
-  // Urgency badge: priority order
-  const urgencyBadge =
+  const instructorName = session.creator?.name ?? '';
+  // One derivation, shared with /g/[slug] and /i/[id] -- both of which rendered
+  // an empty element here, because sessions.title is usually NULL.
+  const cardTitle = sessionDisplayTitle({
+    title: session.title,
+    sportName,
+    instructorName,
+    withWord: tCard('with'),
+  });
+
+  const dateLine = `${new Date(session.date + 'T00:00:00').toLocaleDateString(DATE_LOCALE[language], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })} · ${formatTime12Hour(session.start_time)}${
+    session.duration ? ` · ${tCard('minutesShort', { count: session.duration })}` : ''
+  }`;
+
+  // Urgency badge: priority order. The hero owns the colour, keyed off type.
+  const urgencyBadge: { text: string; type: 'starting_soon' | 'full' | 'spots_left' | 'filling_up' } | null =
     isStartingSoon && !isPast && !isFull
-      ? { text: `🔥 ${language === 'es' ? 'Empieza pronto' : 'Starting soon'}`, color: 'bg-orange-500 animate-pulse' }
+      ? { text: `🔥 ${tCard('startingSoon')}`, type: 'starting_soon' }
       : isFull && !isPast
-        ? { text: language === 'es' ? 'Lleno' : 'Full', color: 'bg-red-500' }
+        ? { text: tCard('full'), type: 'full' }
         : spotsLeft <= 3 && spotsLeft > 0 && !isPast
-          ? { text: `${spotsLeft} ${language === 'es' ? 'cupos' : 'spots left'}`, color: 'bg-amber-500' }
+          ? { text: tCard('spotsLeft', { count: spotsLeft }), type: 'spots_left' }
           : fillingFast
-            ? { text: `🔥 ${language === 'es' ? 'Llenándose' : 'Filling up'}`, color: 'bg-tribe-amber' }
+            ? { text: `🔥 ${tCard('fillingUp')}`, type: 'filling_up' }
             : null;
 
+  // Every photo this card can show: the session's own, then the instructor's
+  // recent recap photos, then the banner only if nothing else exists.
+  const photos = useCardPhotos({
+    sessionId: session.id,
+    sessionPhotos: session.photos,
+    recapPhotos,
+    bannerUrl: session.creator?.banner_url ?? null,
+    fallbackSrc: heroImage,
+  });
+  const canExpand = heroImage.startsWith('/images/') || heroImage.startsWith('http');
+
+  const sessionsHosted = session.creator?.total_sessions_hosted ?? 0;
+
   return (
-    <div onClick={() => router.push(`/session/${session.id}`)} className="cursor-pointer">
+    <div className="relative" onKeyDown={photos.onKeyDown}>
       <Card
-        className={`dark:bg-tribe-card shadow-none hover:shadow-md transition-shadow duration-200 overflow-hidden ${
+        className={`bg-theme-card shadow-none hover:shadow-md transition-shadow duration-200 overflow-hidden ${
           featuredPartnerUserIds && session.creator_id && featuredPartnerUserIds.has(session.creator_id)
             ? 'border-tribe-green/40'
-            : 'border-stone-200 dark:border-gray-600/30'
+            : 'border-theme'
         }`}
       >
-        {/* Hero Image */}
-        <div className="relative h-40 w-full overflow-hidden">
-          {!imageError && (heroImage.startsWith('/images/') || heroImage.startsWith('http')) ? (
-            <img
-              src={heroImage}
-              alt={session.sport}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className={`w-full h-full bg-gradient-to-br ${getSportGradient(session.sport)}`} />
-          )}
+        {/* Whole-card link, as an overlay rather than a wrapper: a <button>
+            inside an <a> is invalid HTML and breaks keyboard and screen-reader
+            behaviour. The overlay still gets prefetch, middle-click,
+            open-in-new-tab, a focus ring and Enter. Controls sit above it. */}
+        <Link
+          href={`/session/${session.id}`}
+          aria-label={`${cardTitle}, ${dateLine}`}
+          className="absolute inset-0 z-[1] rounded-xl focus-visible:ring-2 focus-visible:ring-tribe-green focus-visible:ring-offset-2"
+        >
+          <span className="sr-only">{tCard('openSession')}</span>
+        </Link>
 
-          {/* Dark gradient for readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
-
-          {/* Top-right actions: share + creator menu */}
-          <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        <SessionCardHero
+          sport={session.sport}
+          sportName={sportName}
+          heroImage={heroImage}
+          imageAlt={cardTitle}
+          urgencyLabel={urgencyBadge?.text}
+          urgencyType={urgencyBadge?.type ?? null}
+          onExpand={
+            canExpand
+              ? () => {
+                  photos.onExpand();
+                  setLightboxOpen(true);
+                }
+              : undefined
+          }
+          photos={photos.photos}
+          onTap={() => router.push(`/session/${session.id}`)}
+          onIndexChange={photos.onIndexChange}
+          controlsRef={photos.controlsRef}
+          liveCount={liveData?.count ?? 0}
+          liveLabel={tCard('live')}
+          eager={priority}
+          shareButton={
             <ShareButton
               size="sm"
               variant="icon"
@@ -124,164 +204,58 @@ export default function SessionCard({
                 );
                 return null;
               }}
-              className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 border-0 rounded-full"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 border-0 rounded-full"
             />
-
-            {/* Creator-only edit/delete menu */}
-            {isCreator && (onEdit || onDelete) && (
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowCreatorMenu((prev) => !prev);
-                  }}
-                  aria-label={language === 'es' ? 'Opciones' : 'Options'}
-                  className="p-1.5 bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {showCreatorMenu && (
-                  <>
-                    {/* Backdrop to close menu on outside click */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setShowCreatorMenu(false);
-                      }}
-                    />
-                    <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-tribe-surface rounded-lg shadow-xl border border-stone-200 dark:border-tribe-mid z-20 overflow-hidden">
-                      {onEdit && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowCreatorMenu(false);
-                            onEdit(session.id);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-stone-700 dark:text-gray-200 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          {language === 'es' ? 'Editar' : 'Edit'}
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowCreatorMenu(false);
-                            onDelete(session.id);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-tribe-mid transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          {language === 'es' ? 'Eliminar' : 'Delete'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Bottom overlay: sport badge + urgency */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between z-10">
-            <span className="px-3 py-1.5 bg-tribe-green text-slate-900 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
-              {sportName}
-            </span>
-
-            {urgencyBadge && (
-              <span className={`px-3 py-1.5 text-white rounded-full text-xs font-bold shadow-lg ${urgencyBadge.color}`}>
-                {urgencyBadge.text}
-              </span>
-            )}
-          </div>
-
-          {/* Live indicator */}
-          {liveData && liveData.count > 0 && (
-            <div className="absolute top-3 left-3 z-10">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-bold animate-pulse shadow-lg">
-                <span className="w-2 h-2 bg-white rounded-full" />
-                {language === 'es' ? 'EN VIVO' : 'LIVE'}
-              </span>
-            </div>
-          )}
-        </div>
+          }
+          actions={
+            currentUserId && session.creator_id === currentUserId ? (
+              <SessionCardCreatorMenu sessionId={session.id} onEdit={onEdit} onDelete={onDelete} />
+            ) : null
+          }
+        />
 
         <CardContent className="p-4 space-y-2.5">
           {/* Title */}
-          <h3 className="text-base font-bold text-stone-900 dark:text-white leading-snug line-clamp-2">
-            {session.title || `${sportName} ${language === 'es' ? 'con' : 'with'} ${session.creator?.name || ''}`}
-          </h3>
+          <h3 className="text-base font-bold text-theme-primary leading-snug line-clamp-2">{cardTitle}</h3>
 
           {/* Date + Time */}
-          <div className="flex items-center text-sm text-stone-600 dark:text-gray-400">
+          <div className="flex items-center text-sm text-theme-secondary">
             <Calendar className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
-            <span>
-              {new Date(session.date + 'T00:00:00').toLocaleDateString(language === 'es' ? 'es-CO' : 'en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
-              {' · '}
-              {formatTime12Hour(session.start_time)}
-              {session.duration ? ` · ${session.duration} min` : ''}
-            </span>
+            <span>{dateLine}</span>
           </div>
 
-          {/* Location */}
-          <div className="flex items-center text-sm text-stone-600 dark:text-gray-400">
-            <MapPin className="w-3.5 h-3.5 mr-1.5 text-tribe-green flex-shrink-0" />
-            <span className="truncate">{displayLocation}</span>
-            {sessionHood && displayLocation !== sessionHood.name && (
-              <span className="ml-1.5 text-xs text-blue-400 font-medium flex-shrink-0">· {sessionHood.name}</span>
-            )}
-            {distance && (
-              <span className="ml-1.5 text-xs text-tribe-green font-medium flex-shrink-0">· {distance}</span>
-            )}
-          </div>
+          <SessionCardLocation
+            venueName={venueName}
+            address={displayLocation}
+            neighborhood={sessionHood && !looselyContains(displayLocation, sessionHood.name) ? sessionHood.name : null}
+            distance={distance}
+          />
 
-          {/* Instructor + Price row */}
+          <SessionMetaBadges genderPreference={session.gender_preference} skillLevel={session.skill_level} />
+
+          {/* Instructor + Price. No name text: the title already carries it. */}
           <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              {session.creator && (
-                <>
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage loading="lazy" src={session.creator.avatar_url || undefined} />
-                    <AvatarFallback className="bg-tribe-green text-slate-900 font-bold text-[10px]">
-                      {session.creator.name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-stone-500 dark:text-gray-400 font-medium">{session.creator.name}</span>
-                  {Number(session.creator.average_rating) > 0 && (
-                    <span className="text-xs text-yellow-500 font-semibold flex items-center gap-0.5">
-                      <Star className="w-3 h-3 fill-yellow-500" />
-                      {Number(session.creator.average_rating).toFixed(1)}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
+            <SessionCardPresenter
+              gym={gym}
+              creator={session.creator ?? null}
+              instructorName={instructorName}
+              sessionsHosted={sessionsHosted}
+              coachCount={partnerCoachCount}
+              tCard={tCard}
+            />
 
-            <span className={`text-sm font-bold ${isFree ? 'text-tribe-green' : 'text-stone-900 dark:text-white'}`}>
+            <span className={`text-sm font-bold ${isFree ? 'text-tribe-green' : 'text-theme-primary'}`}>
               {isFree
-                ? language === 'es'
-                  ? 'Gratis'
-                  : 'Free'
+                ? tCard('free')
                 : session.price_cents
                   ? formatPriceForUser(session.price_cents, (session.currency || 'COP') as Currency, userCurrency)
                   : `$0 ${session.currency || 'COP'}`}
             </span>
           </div>
 
-          {/* Avatar stack + capacity */}
+          {/* Avatar stack + capacity. z-[2] so its profile links beat the overlay. */}
           {confirmedParticipants.length > 0 && (
-            <div className="flex items-center justify-between pt-1 border-t border-stone-100 dark:border-tribe-mid">
+            <div className="relative z-[2] flex items-center justify-between pt-1 border-t border-theme">
               <AvatarStack
                 participants={confirmedParticipants.map(
                   (p): AvatarStackParticipant => ({
@@ -294,13 +268,24 @@ export default function SessionCard({
                 size="sm"
                 linkToProfile
               />
-              <span className="text-xs text-stone-500 dark:text-gray-400">
-                {confirmedParticipants.length}/{session.max_participants} {language === 'es' ? 'atletas' : 'athletes'}
+              <span className="text-xs text-theme-tertiary">
+                {confirmedParticipants.length}/{session.max_participants} {tCard('athletes')}
               </span>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Feed lightbox. Closing just clears local state: the detail page's
+          history.back() pattern belongs to its pushState flow and would
+          navigate the athlete away from the feed. */}
+      {lightboxOpen && (
+        <PhotoLightbox
+          photos={photos.lightboxPhotos}
+          initialIndex={photos.lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -75,9 +75,66 @@ npm start        # Start production server
 - Brand colors defined in `tailwind.config.ts`: `tribe-green`, `tribe-dark`, `tribe-gray-*`, `tribe-red`
 - Dark mode uses class-based switching
 
+**No green in the palette reaches AA as small text on a light surface. Green is a fill, a border, an icon or a large heading — never body copy on light.**
+
+Measured 2026-09-13 on the deployed page, not derived from the palette file:
+
+| token                        | on white   | on `bg-theme-inset` `#F0F1F3` | on a `tribe-green/20` chip `#EEF8D7` | on `#272D34` |
+| ---------------------------- | ---------- | ----------------------------- | ------------------------------------ | ------------ |
+| `tribe-green` `#A8DA36`      | 1.65:1     | 1.46:1                        | 1.49:1                               | 8.43:1       |
+| `tribe-green-100` `#C0E863`  | 1.40:1     | 1.24:1                        | 1.27:1                               | 9.90:1       |
+| `tribe-green-dark` `#6FA300` | **3.04:1** | 2.69:1                        | 2.75:1                               | 4.58:1       |
+
+`tribe-green-dark` is the best available and still fails: 3.04:1 clears the 3:1 bar for large text (≥24px, or ≥18.66px bold) and for non-text UI like borders and icons, and fails the 4.5:1 bar for body copy. There is no value to reach for — do not go looking.
+
+For a green-branded label on a light surface, keep the green as the **background** and use `text-tribe-dark` (`#272D34`, the palette's own "primary text on light"): 12.6:1 on the chip, 12.3:1 on the inset row.
+
+Green-on-dark is fine and always was — `tribe-green` is 8.43:1 on `#272D34`. That is exactly why this stays hidden until a surface stops being dark, which is how the share pages shipped a 1.46:1 sport label.
+
 **Toast Notifications**
 
 - Use helpers from `@/lib/toast`: `showSuccess()`, `showError()`, `showInfo()`
+
+**In-app chrome does not belong on a public share route.** `/g/[slug]`, `/i/[id]` and `/invite/` are where a stranger forms their first impression, so the app-install modal and the FeedbackWidget are both suppressed there. One list — `lib/publicShareRoutes.ts` — consumed by both components; register a new public route there rather than adding a second route check. It is deliberately NOT middleware's `publicPaths`, which answers a different question ("does this need a session") and is a superset.
+
+**Never exercise venue, partner or approval flows against a real gym's live record.** Use a dedicated test partner row. The cost is not hypothetical: T-GYM2's venue-approval testing was run against CrossFit BullBox's production `featured_partners` record, and six invented classes — including a 9:10 PM swimming session at a CrossFit box — ended up on the gym's own public page at `/g/bullbox/`, under their name, waiting for the owner to open his own bio link. One of them was booked by a real athlete for a class that was never going to happen.
+
+Two properties make this worse than ordinary test residue: `sessions.partner_status` is written only by `review_venue_request`, so approvals made while testing are indistinguishable from real ones afterwards; and nothing in the venue-review path notifies anyone, so neither the gym nor a booked participant is told when a session's venue changes. Create the test partner, test against it, and leave live partner rows alone.
+
+**A detector that searches for a NAME answers "is this spelled the way I expected", not "does this do the thing".** Assert on the capability or the observable outcome, never on an identifier.
+
+Caught four times in 48 hours on 2026-09-13/14, each time producing a confident wrong answer that survived until something unrelated contradicted it:
+
+| the check that was written                                                  | what it actually answered                                        | what it missed                                                                                                                                                                               |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "is `IOSInstallPrompt` present on the page?"                                | whether that component was mounted                               | a CTA whose destination auto-navigated to the App Store. Both suppression checks passed while the page still ejected a visitor in one tap.                                                   |
+| `.select()` scanned with a single-line window                               | whether a column list happened to fit on one line                | `fetchUserProfile`'s multi-line list, producing an 18-column "dead" list. Revoking it would have failed the profile page's main read with `42501`, invisible to every test.                  |
+| `grep getServiceRoleClient`                                                 | whether a file spells the helper that way                        | two routes that build a service client inline with `createClient as createServiceClient`. Would have widened the `users` UPDATE allowlist by five Tribe.OS columns for every logged-in user. |
+| migration 165's guard counting the bare string `auth.uid() IS NOT NULL AND` | how many times that phrase appears anywhere in the function body | that a COMMENT inside the body quoted the phrase while explaining the fix. Counted 4 where 3 were expected and failed the migration — a guard matching its own author's prose.               |
+
+The rewrites that worked, in the same order: look for _any_ element that intercepts a tap at the heading's centre and follow _every_ link to where it lands; parse the call rather than a line; ask whether the file constructs a client with `SUPABASE_SERVICE_ROLE_KEY` by any spelling; anchor on the whole `IF` statement rather than on a phrase prose can contain.
+
+Same family as the privilege rule below: `has_table_privilege` answers "can this role do it", `information_schema.table_privileges` answers "is there a row that says so". Prefer the capability question every time.
+
+**A SECOND WAY THE SAME PASS GOES WRONG: the check asked the right question, but the scenario was never reproduced.**
+
+A check can pass because the situation it guards against never occurred, not because the detector was mis-aimed. The question was fine; the setup did not put the system into the state being tested.
+
+T-GYM4 step 6 — "submit again from a second tab, expect a written sentence rather than a unique-violation message". The first attempt opened the second tab **after** the first submit had created the row. A tab loaded at that point takes the "you already have an application" guard path and never reaches submit at all. The assertion passed. **The unique violation the check existed to catch was never raised.** The real scenario needed a tab loaded _before_ the row existed — a second account, both tabs on the form, then submit in both — which produced the violation and the mapped sentence.
+
+A second worked example, from the cleanup of those same test rows. The statement used data-modifying CTEs and verified the result in its own main `SELECT`:
+
+```sql
+WITH deleted AS (
+  DELETE FROM featured_partners WHERE slug IN (...) RETURNING slug
+)
+SELECT (SELECT count(*) FROM featured_partners WHERE slug IN (...)) AS still_there,
+       (SELECT count(*) FROM deleted) AS removed;   -- disagreed with each other
+```
+
+`RETURNING` reported the rows removed while the verification subquery reported them still present. Both were right: in PostgreSQL every CTE and the main query run against **one snapshot taken before the statement began**, and data-modifying CTEs cannot see one another's effects. **A verification that runs inside the same statement as the mutation cannot observe that mutation** — it is structurally incapable of it, however the query is written. Verify in a separate statement, after the first has committed.
+
+**The tell is specific and easy to look for: a test written to catch an error passed without that error ever occurring.** When a check is for a failure path, confirm the failure actually fired before recording a pass — assert on the error having happened, not only on the handling being correct. The same shape applies to a guard in a migration: 165's `pg_trigger_depth` and counter-revert guards were each proved by deliberately reintroducing the mistake and watching them raise, rather than by observing them stay quiet.
 
 ### Database Schema
 
@@ -87,6 +144,10 @@ Core tables in `supabase/schema.sql`:
 - `sessions` - Training sessions with location, sport, date/time
 - `session_participants` - Join table with status (pending/confirmed)
 - `match_requests` - Request system for curated sessions
+
+**A public route is not the same as visible content.** `/` does not redirect, but logged out it renders `LandingPage` — the home feed and everything mounted inside `{f.user && ...}` is invisible without a session, including `FeaturedPartnerBanner`. `/storefront/[id]` and `/instructors` redirect outright. So **nothing on the authenticated feed can be verified in a browser without signing in**, and changes to it must be confirmed on a device before merging rather than on CI alone. Two banner changes shipped broken on iPhone in September 2026 because "the route is public" was read as "the surface is observable".
+
+**Anything that renders for logged-out visitors reads sessions through `public.sessions_public`, never `public.sessions`.** Migration 140 revoked `anon` from the base table, so a query against `sessions` passes every test — the DAL is mocked — and returns zero rows in production for every signed-out user.
 
 RLS enabled on all tables. Key policies allow:
 

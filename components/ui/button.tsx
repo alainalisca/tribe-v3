@@ -35,10 +35,39 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
+/**
+ * Defaults to type="button". Pass type="submit" explicitly on a form's submit
+ * control.
+ *
+ * HTML defaults a typeless <button> inside a <form> to type="submit", which
+ * makes every unlabelled control a submit control the moment it is composed
+ * into a form. That shipped on 2026-09-11: a day-of-week toggle in the
+ * recurring picker published the session on the first click, and the venue
+ * request reached the gym twice.
+ *
+ * Inverting the default removes the class rather than policing it. A forgotten
+ * type now fails LOUDLY in development -- the form does not submit, which is
+ * immediately visible -- instead of silently submitting early, which is the
+ * failure mode that reached production.
+ *
+ * Changed at the one moment it is safe: a scan of every <form> in the app found
+ * zero untyped <Button> inside one, so no call site relies on the old default.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    // asChild renders whatever child was passed -- frequently a Link or an
+    // anchor, where `type` is invalid HTML -- so the default applies only to a
+    // real <button>. An explicit type is still forwarded either way.
+    const resolvedType = asChild ? type : (type ?? 'button');
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...(resolvedType === undefined ? {} : { type: resolvedType })}
+        {...props}
+      />
+    );
   }
 );
 Button.displayName = 'Button';

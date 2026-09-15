@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import SessionCard from './SessionCard';
 import type { SessionWithRelations } from '@/lib/dal';
 
@@ -38,7 +38,8 @@ vi.mock('@/lib/LanguageContext', () => ({
 }));
 
 vi.mock('@/lib/translations', () => ({
-  sportTranslations: { Running: { es: 'Correr' } },
+  sportTranslations: { Running: { en: 'Running', es: 'Correr' } },
+  translateSport: (sport: string) => sport,
   TranslationKey: {},
 }));
 
@@ -47,13 +48,21 @@ vi.mock('@/lib/utils', () => ({
   cn: (...inputs: string[]) => inputs.filter(Boolean).join(' '),
 }));
 
-vi.mock('@/lib/city-config', () => ({
+// Keep the real config (formatSessionLocationShort reads ACTIVE_CITY for the
+// city/department/country it strips) and stub only the coord lookups.
+vi.mock('@/lib/city-config', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/city-config')>()),
   detectNeighborhood: () => null,
   getNearestNeighborhood: () => null,
 }));
 
+// Steerable per test: '' is the no-photo case that falls back to the
+// gradient, a URL is the real-image case. SessionCard branches on this to
+// decide whether the expand affordance exists at all.
+const mockHeroImage = { value: 'https://example.com/hero.jpg' };
+
 vi.mock('@/lib/sport-images', () => ({
-  getSessionHeroImage: () => 'https://example.com/hero.jpg',
+  getSessionHeroImage: () => mockHeroImage.value,
   getSportGradient: () => 'from-blue-500 to-purple-500',
 }));
 
@@ -103,19 +112,23 @@ function baseSession(overrides: Partial<SessionWithRelations> = {}): SessionWith
 }
 
 describe('<SessionCard />', () => {
+  beforeEach(() => {
+    mockHeroImage.value = 'https://example.com/hero.jpg';
+    mockPush.mockClear();
+  });
+
   it('renders without crashing and shows the session location', () => {
     render(<SessionCard session={baseSession()} />);
     expect(screen.getByText(/Medellín Park/)).toBeInTheDocument();
   });
 
-  it('navigates to /session/:id when the card is clicked', () => {
-    mockPush.mockClear();
+  it('links to the session with a real anchor, not an onClick div', () => {
     const { container } = render(<SessionCard session={baseSession()} />);
-    // The outermost div has the onClick handler.
-    const clickable = container.querySelector('div[class*="cursor-pointer"]');
-    expect(clickable).toBeTruthy();
-    (clickable as HTMLElement).click();
-    expect(mockPush).toHaveBeenCalledWith('/session/session-1');
+    const link = container.querySelector('a[href="/session/session-1"]');
+    expect(link).toBeTruthy();
+    // The old div[onClick] gave no keyboard access, no middle-click and no
+    // open-in-new-tab. Nothing should have reintroduced it.
+    expect(container.querySelector('div[class*="cursor-pointer"]')).toBeNull();
   });
 
   it('shows a Full badge when confirmed participants match max', () => {
@@ -130,5 +143,204 @@ describe('<SessionCard />', () => {
     ];
     render(<SessionCard session={full} />);
     expect(screen.getByText(/Full/)).toBeInTheDocument();
+  });
+
+  describe('hero photo expand', () => {
+    it('renders the expand button when the card has a real image', () => {
+      render(<SessionCard session={baseSession()} />);
+      expect(screen.getByLabelText('View full photo')).toBeInTheDocument();
+    });
+
+    it('does not render the expand button for a gradient-only card', () => {
+      // No session photo and no instructor banner: getSessionHeroImage
+      // returns '', the card falls back to the sport gradient, and there is
+      // nothing to expand.
+      mockHeroImage.value = '';
+      render(<SessionCard session={baseSession()} />);
+      expect(screen.queryByLabelText('View full photo')).not.toBeInTheDocument();
+    });
+
+    it('opens the lightbox without navigating to the session', () => {
+      render(<SessionCard session={baseSession()} />);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+
+      // The expand button stops propagation, so the card's own click
+      // handler must not fire.
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('shows the session photos in the lightbox when it has them', () => {
+      const withPhotos = baseSession({
+        photos: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+      } as Partial<SessionWithRelations>);
+      render(<SessionCard session={withPhotos} />);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+      // Two photos is now a carousel, whose own counter also reads "1 / 2", so
+      // scope this to the lightbox rather than matching the text globally.
+      expect(within(screen.getByRole('dialog')).getByText('1 / 2')).toBeInTheDocument();
+    });
+
+    it('loads eagerly at high fetch priority only when marked priority', () => {
+      // Regression guard: React 18 silently drops a camelCase fetchPriority
+      // prop, which would make the above-the-fold hint a no-op.
+      const { container: eagerCard } = render(<SessionCard session={baseSession()} priority />);
+      const eagerImg = eagerCard.querySelector('img[src="https://example.com/hero.jpg"]');
+      expect(eagerImg?.getAttribute('fetchpriority')).toBe('high');
+      expect(eagerImg?.getAttribute('loading')).toBe('eager');
+      expect(eagerImg?.getAttribute('decoding')).toBe('async');
+
+      const { container: lazyCard } = render(<SessionCard session={baseSession()} />);
+      const lazyImg = lazyCard.querySelector('img[src="https://example.com/hero.jpg"]');
+      expect(lazyImg?.getAttribute('fetchpriority')).toBe('auto');
+      expect(lazyImg?.getAttribute('loading')).toBe('lazy');
+    });
+
+    it('renders the hero in an aspect-ratio box rather than a fixed strip', () => {
+      const { container } = render(<SessionCard session={baseSession()} />);
+      expect(container.querySelector('.aspect-\\[4\\/3\\]')).toBeTruthy();
+      expect(container.querySelector('.h-40')).toBeNull();
+    });
+  });
+
+  describe('content polish', () => {
+    it('builds the title from first and last name only, and never repeats it below', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).name = 'Salomon Tabares Adarve';
+      render(<SessionCard session={session} />);
+
+      expect(screen.getByRole('heading')).toHaveTextContent('Running with Salomon Tabares');
+      // The instructor row carries trust signals now, not a second copy of the name.
+      expect(screen.queryByText('Salomon Tabares Adarve')).not.toBeInTheDocument();
+    });
+
+    it('keeps a custom title and still drops the name from the row', () => {
+      const session = baseSession({ title: 'Sunrise 5k' } as Partial<SessionWithRelations>);
+      (session.creator as unknown as Record<string, unknown>).name = 'Salomon Tabares Adarve';
+      render(<SessionCard session={session} />);
+      expect(screen.getByRole('heading')).toHaveTextContent('Sunrise 5k');
+      expect(screen.queryByText(/Salomon/)).not.toBeInTheDocument();
+    });
+
+    it('shows the instructor session count when there is one', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).total_sessions_hosted = 39;
+      render(<SessionCard session={session} />);
+      expect(screen.getByText(/39 sessions/)).toBeInTheDocument();
+    });
+
+    it('omits the session count when the instructor has none', () => {
+      const session = baseSession();
+      (session.creator as unknown as Record<string, unknown>).total_sessions_hosted = 0;
+      render(<SessionCard session={session} />);
+      expect(screen.queryByText(/sessions/)).not.toBeInTheDocument();
+    });
+
+    it('shortens a repeating Google address', () => {
+      const session = baseSession({
+        location: 'Cl. 20 #43g - 155, El Poblado, Medellín, El Poblado, Medellín, Antioquia, Colombia',
+      } as Partial<SessionWithRelations>);
+      render(<SessionCard session={session} />);
+      expect(screen.getByText('Cl. 20 #43g - 155, El Poblado')).toBeInTheDocument();
+    });
+  });
+
+  describe('meta badges', () => {
+    it('badges women-only and men-only sessions', () => {
+      render(
+        <SessionCard session={baseSession({ gender_preference: 'women_only' } as Partial<SessionWithRelations>)} />
+      );
+      expect(screen.getByText('Women only')).toBeInTheDocument();
+    });
+
+    it('does not badge a session open to everyone', () => {
+      render(<SessionCard session={baseSession({ gender_preference: 'all' } as Partial<SessionWithRelations>)} />);
+      expect(screen.queryByText('Women only')).not.toBeInTheDocument();
+      expect(screen.queryByText('Men only')).not.toBeInTheDocument();
+    });
+
+    it('badges a specific skill level', () => {
+      render(<SessionCard session={baseSession({ skill_level: 'beginner' } as Partial<SessionWithRelations>)} />);
+      expect(screen.getByText('Beginner')).toBeInTheDocument();
+    });
+
+    it('does not badge all-levels, which is most sessions and says nothing', () => {
+      render(<SessionCard session={baseSession({ skill_level: 'all_levels' } as Partial<SessionWithRelations>)} />);
+      for (const label of ['Beginner', 'Intermediate', 'Advanced', 'All levels']) {
+        expect(screen.queryByText(label)).not.toBeInTheDocument();
+      }
+    });
+
+    it('renders no emoji in the badges', () => {
+      const { container } = render(
+        <SessionCard
+          session={baseSession({
+            gender_preference: 'women_only',
+            skill_level: 'advanced',
+          } as Partial<SessionWithRelations>)}
+        />
+      );
+      expect(container.textContent ?? '').not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+    });
+  });
+
+  describe('photo carousel', () => {
+    const twoPhotos = ['https://example.com/p1.jpg', 'https://example.com/p2.jpg'];
+
+    beforeEach(() => {
+      // The index hook throttles on rAF, which jsdom runs asynchronously. Make
+      // it synchronous so a scroll's effect is visible by the next assertion.
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+      vi.stubGlobal('cancelAnimationFrame', () => {});
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function scrollToSlide(container: HTMLElement, slide: number, width = 300) {
+      const track = container.querySelector('.carousel-track') as HTMLElement;
+      Object.defineProperty(track, 'clientWidth', { value: width, configurable: true });
+      Object.defineProperty(track, 'scrollLeft', { value: slide * width, configurable: true });
+      fireEvent.scroll(track);
+      return track;
+    }
+
+    it('opens the lightbox on the slide the athlete is looking at', () => {
+      const { container } = render(
+        <SessionCard session={baseSession({ photos: twoPhotos } as Partial<SessionWithRelations>)} />
+      );
+      scrollToSlide(container, 1);
+      fireEvent.click(screen.getByLabelText('View full photo'));
+
+      // Slide 2 of 2, not reset to the first.
+      expect(within(screen.getByRole('dialog')).getByText('2 / 2')).toBeInTheDocument();
+    });
+
+    it('shows carousel chrome only when there is more than one photo', () => {
+      const { container: single } = render(
+        <SessionCard session={baseSession({ photos: [twoPhotos[0]] } as Partial<SessionWithRelations>)} />
+      );
+      expect(single.querySelector('.carousel-track')).toBeNull();
+
+      const { container: many } = render(
+        <SessionCard session={baseSession({ photos: twoPhotos } as Partial<SessionWithRelations>)} />
+      );
+      expect(many.querySelector('.carousel-track')).toBeTruthy();
+    });
+
+    it('appends the instructor recap photos after the session photos', () => {
+      const { container } = render(
+        <SessionCard
+          session={baseSession({ photos: [twoPhotos[0]] } as Partial<SessionWithRelations>)}
+          recapPhotos={['https://example.com/r1.jpg']}
+        />
+      );
+      expect(container.querySelector('.carousel-track')).toBeTruthy();
+      expect(screen.getByLabelText('Photo 2 of 2')).toBeInTheDocument();
+    });
   });
 });

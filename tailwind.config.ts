@@ -3,6 +3,13 @@ import tailwindcssAnimate from 'tailwindcss-animate';
 
 const config: Config = {
   darkMode: 'class',
+  future: {
+    // Wrap every `hover:` utility in @media (hover: hover). Without it a tap on
+    // a touch device leaves the element stuck in its hover state until the next
+    // tap elsewhere. Anything that was relying on hover to become *visible*
+    // needed a real fallback; those are fixed alongside this flag.
+    hoverOnlyWhenSupported: true,
+  },
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',

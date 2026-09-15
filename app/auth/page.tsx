@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTranslations } from '@/lib/i18n/useTranslations';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -65,7 +65,7 @@ export default function AuthPage() {
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-50/90 via-stone-50/85 to-stone-50/90 dark:from-tribe-mid/90 dark:via-tribe-mid/85 dark:to-tribe-mid/90"
       />
       {/* Subtle animated gradient background */}
-      <motion.div
+      <m.div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-60 dark:opacity-40"
         initial={{ backgroundPosition: '0% 50%' }}
@@ -82,7 +82,7 @@ export default function AuthPage() {
         <LanguageToggle />
       </div>
 
-      <motion.div
+      <m.div
         className="w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl relative z-10"
         animate={isError ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
         transition={{ duration: 0.45 }}
@@ -105,7 +105,7 @@ export default function AuthPage() {
 
             <AnimatePresence>
               {referrerName && (
-                <motion.div
+                <m.div
                   key="referral-banner"
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ export default function AuthPage() {
                   <p className="text-sm text-stone-900 dark:text-white">
                     {t('invitedBy', { name: referrerName ?? '' })}
                   </p>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
 
@@ -202,7 +202,7 @@ export default function AuthPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

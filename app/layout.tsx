@@ -9,6 +9,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { PostHogProvider } from '@/components/PostHogProvider';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import PageTransition from '@/components/PageTransition';
+import ReducedMotionProvider from '@/components/ReducedMotionProvider';
 import { ConfirmProvider } from '@/components/ConfirmProvider';
 import './globals.css';
 import type { Metadata } from 'next';
@@ -74,29 +75,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <PostHogProvider>
-          <ThemeProvider>
-            <LanguageProvider>
-              <Toaster
-                position="top-center"
-                containerStyle={{
-                  top: 'calc(max(env(safe-area-inset-top, 0px), 20px) + 12px)',
-                }}
-                toastOptions={{
-                  style: {
-                    marginTop: '8px',
-                  },
-                }}
-              />
-              <ServiceWorkerRegistration />
-              <AppStoreBanner />
-              <BackButtonHandler />
-              <InAppNotificationToast />
-              <ConfirmProvider>
-                <PageTransition>{children}</PageTransition>
-              </ConfirmProvider>
-              <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
-            </LanguageProvider>
-          </ThemeProvider>
+          <ReducedMotionProvider>
+            <ThemeProvider>
+              <LanguageProvider>
+                <Toaster
+                  position="top-center"
+                  containerStyle={{
+                    top: 'calc(max(env(safe-area-inset-top, 0px), 20px) + 12px)',
+                  }}
+                  toastOptions={{
+                    style: {
+                      marginTop: '8px',
+                    },
+                  }}
+                />
+                <ServiceWorkerRegistration />
+                <AppStoreBanner />
+                <BackButtonHandler />
+                <InAppNotificationToast />
+                <ConfirmProvider>
+                  <PageTransition>{children}</PageTransition>
+                </ConfirmProvider>
+                <FeedbackWidget appVersion="2.5.0" bottomOffset={80} />
+              </LanguageProvider>
+            </ThemeProvider>
+          </ReducedMotionProvider>
         </PostHogProvider>
       </body>
     </html>

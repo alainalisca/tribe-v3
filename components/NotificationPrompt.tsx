@@ -7,13 +7,14 @@ import { log, logError } from '@/lib/logger';
 import { showInfo, showError as showErrorToast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 
-interface NotificationPromptProps {
-  hideWhenOnboarding?: boolean;
-}
-
-export default function NotificationPrompt({ hideWhenOnboarding = false }: NotificationPromptProps) {
+export default function NotificationPrompt() {
   const { t } = useLanguage();
+  // T-ONB1: the old key was 'notification-prompt-shown' with no user id in it,
+  // so one person dismissing this hid it from everyone else on that device.
+  // Now per-athlete and server-side, like the other banners.
+  const { dismissed, loading: dismissalLoading, dismiss } = useBannerDismissal(BANNER_IDS.notificationPrompt);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -48,10 +49,11 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
     const msSinceFirstVisit = Date.now() - Number(firstVisit);
     if (msSinceFirstVisit < 60_000) return;
 
-    const hasAsked = localStorage.getItem('notification-prompt-shown');
     const permission = typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied';
 
-    if (!hasAsked && permission === 'default') {
+    // Whether they have already been asked is the hook's answer now, and the
+    // render below is gated on it.
+    if (permission === 'default') {
       setTimeout(() => setShow(true), 10_000);
     }
   }
@@ -69,7 +71,8 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
       if (success) {
         setShow(false);
-        localStorage.setItem('notification-prompt-shown', 'true');
+        // Enabling settles the ask as firmly as dismissing it does.
+        dismiss();
       } else {
         showInfo(t('enableNotifInSettings'));
       }
@@ -83,10 +86,11 @@ export default function NotificationPrompt({ hideWhenOnboarding = false }: Notif
 
   function handleDismiss() {
     setShow(false);
-    localStorage.setItem('notification-prompt-shown', 'true');
+    dismiss();
   }
 
-  if (!show || hideWhenOnboarding) return null;
+  // Unknown means render nothing.
+  if (!show || dismissalLoading || dismissed) return null;
 
   return (
     <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white dark:bg-stone-800 rounded-lg shadow-xl border-2 border-tribe-green p-4 z-50 animate-slide-up">

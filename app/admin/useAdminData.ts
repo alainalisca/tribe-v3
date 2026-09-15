@@ -20,9 +20,13 @@ import type {
  * longer read; the API gates on is_app_admin() and reads under service-role.
  * Returns a DalResult-shaped object so the loaders keep their existing handling.
  */
-async function fetchAdminApi<T>(tab: string): Promise<{ success: boolean; data?: T; error?: string }> {
+async function fetchAdminApi<T>(
+  tab: string,
+  params: Record<string, string> = {}
+): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
-    const res = await fetch(`/api/admin/data?tab=${encodeURIComponent(tab)}`);
+    const qs = new URLSearchParams({ tab, ...params });
+    const res = await fetch(`/api/admin/data?${qs.toString()}`);
     if (!res.ok) {
       return { success: false, error: `admin_api_${res.status}` };
     }
@@ -154,14 +158,21 @@ export function useAdminData(supabase: SupabaseClient) {
     }
   }
 
-  async function loadUsers() {
+  // ADMIN-01: the query travels to the server. Passing it here rather than
+  // filtering `users` after the fact is the whole point -- a client-side filter
+  // can only ever see the page it was given.
+  async function loadUsers(query: { search?: string; filter?: string; sort?: string } = {}) {
     setLoadingUsers(true);
     try {
       const result = await fetchAdminApi<{
         users: Array<{ id: string } & Record<string, unknown>>;
         sessionCounts: Array<{ creator_id: string }>;
         participantCounts: Array<{ user_id: string | null }>;
-      }>('users');
+      }>('users', {
+        search: query.search ?? '',
+        filter: query.filter ?? 'all',
+        sort: query.sort ?? 'newest',
+      });
       if (!result.success || !result.data) throw new Error(result.error);
 
       const { users: data, sessionCounts, participantCounts } = result.data;

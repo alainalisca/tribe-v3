@@ -28,7 +28,7 @@ import LiveStatusSection from '@/components/session/LiveStatusSection';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
-import PhotoLightbox from './PhotoLightbox';
+import PhotoLightbox from '@/components/PhotoLightbox';
 import ActionButtons from './ActionButtons';
 import GuestJoinModal from './GuestJoinModal';
 import InviteModal from './InviteModal';
@@ -220,6 +220,8 @@ export default function SessionDetailPage() {
 
       <div className="pt-header max-w-2xl md:max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         <SessionDetails
+          gym={d.gym}
+          coachCount={d.gymCoachCount}
           session={d.session}
           creator={d.creator}
           participants={d.participants}

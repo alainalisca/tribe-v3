@@ -43,6 +43,13 @@ export interface SessionWithRelations extends Session {
     avatar_url: string | null;
     average_rating: number | null;
     total_reviews: number | null;
+    /** Trust signal on the card's instructor row. Only fetched by the feed query. */
+    total_sessions_hosted?: number | null;
+    /**
+     * Instructor's profile banner, the card hero's last fallback before the
+     * sport photo. Only fetched by the feed query.
+     */
+    banner_url?: string | null;
   } | null;
 }
 
@@ -85,11 +92,15 @@ export type RecurringParentSession = Pick<
   | 'start_time'
   | 'title'
   | 'visibility'
+  // T-GYM2: the venue travels with the series. See createChildSession.
+  | 'partner_id'
+  | 'partner_status'
+  | 'partner_reviewed_at'
 >;
 
 /** Column list matching RecurringParentSession, for the cron's SELECT. */
 export const RECURRING_PARENT_COLUMNS =
-  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility';
+  'id, date, recurrence_pattern, recurrence_end_date, creator_id, currency, description, duration, equipment, gender_preference, is_paid, join_policy, latitude, location, location_lat, location_lng, longitude, max_participants, photos, platform_fee_percent, price_cents, skill_level, sport, start_time, title, visibility, partner_id, partner_status, partner_reviewed_at';
 
 /**
  * Every column on public.sessions EXCEPT payment_instructions — enumerated from
@@ -110,7 +121,7 @@ export const RECURRING_PARENT_COLUMNS =
  * no consumer of these lists reads it.
  */
 export const SESSION_ALL_COLUMNS =
-  'community_id, created_at, creator_id, currency, current_participants, date, description, duration, early_access_only_until, end_time, equipment, followup_sent, gender_preference, id, is_immediate, is_paid, is_recurring, is_training_now, join_policy, latitude, location, location_lat, location_lng, longitude, max_paid_spots, max_participants, payment_gateway, photo_verified, photos, platform_fee_percent, price_cents, recap_photos, recurrence_days, recurrence_end_date, recurrence_pattern, recurring_parent_id, reminder_15min_sent, reminder_1hr_sent, reminder_sent, skill_level, sport, start_time, status, title, updated_at, verified_at, verified_by, visibility, waitlist_count';
+  'community_id, created_at, creator_id, currency, current_participants, date, description, duration, early_access_only_until, end_time, equipment, followup_sent, gender_preference, id, is_immediate, is_paid, is_recurring, is_training_now, join_policy, latitude, location, location_lat, location_lng, longitude, max_paid_spots, max_participants, partner_id, partner_reviewed_at, partner_status, payment_gateway, photo_verified, photos, platform_fee_percent, price_cents, recap_photos, recurrence_days, recurrence_end_date, recurrence_pattern, recurring_parent_id, reminder_15min_sent, reminder_1hr_sent, reminder_sent, skill_level, sport, start_time, status, title, updated_at, verified_at, verified_by, visibility, waitlist_count';
 
 // --- Read operations ---
 
@@ -130,7 +141,7 @@ export async function fetchSession(supabase: SupabaseClient, sessionId: string):
         // fetchSessionPaymentInstructions. Keeping it out of this list is also
         // what makes the anon column REVOKE safe: after the revoke, any select
         // naming the column fails for anon and would break the whole page.
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .single();
@@ -173,7 +184,7 @@ export async function fetchSessionWithDetails(
         // fetchSessionPaymentInstructions. Keeping it out of this list is also
         // what makes the anon column REVOKE safe: after the revoke, any select
         // naming the column fails for anon and would break the whole page.
-        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at'
+        'id, creator_id, sport, location, date, start_time, duration, end_time, max_participants, current_participants, description, equipment, skill_level, gender_preference, join_policy, is_paid, price_cents, currency, max_paid_spots, payment_gateway, photos, latitude, longitude, location_lat, location_lng, title, status, visibility, is_immediate, is_recurring, is_training_now, recurrence_pattern, recurrence_days, recurrence_end_date, recurring_parent_id, platform_fee_percent, photo_verified, verified_at, verified_by, recap_photos, reminder_sent, reminder_1hr_sent, reminder_15min_sent, followup_sent, created_at, updated_at, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .maybeSingle();
@@ -265,7 +276,7 @@ export async function fetchSessionPublicView(
     const { data: row, error } = await supabase
       .from('sessions_public')
       .select(
-        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng'
+        'id, title, sport, date, start_time, end_time, duration, description, equipment, skill_level, photos, max_participants, current_participants, waitlist_count, join_policy, status, is_paid, price_cents, currency, creator_id, creator_name, creator_avatar_url, creator_average_rating, location, latitude, longitude, location_lat, location_lng, partner_id, partner_status, partner_reviewed_at'
       )
       .eq('id', sessionId)
       .maybeSingle();
@@ -392,7 +403,7 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
       .select(
         `
         *,
-        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews)
+        creator:users!sessions_creator_id_fkey(id, name, avatar_url, average_rating, total_reviews, total_sessions_hosted, banner_url)
       `
       )
       .eq('status', 'active')
@@ -405,6 +416,59 @@ export async function fetchUpcomingSessions(supabase: SupabaseClient): Promise<D
   } catch (error) {
     logError(error, { action: 'fetchUpcomingSessions' });
     return { success: false, error: 'Failed to fetch sessions' };
+  }
+}
+
+/**
+ * The most recent recap photos for each of the given instructors, newest first.
+ *
+ * One request for a whole feed page rather than one per card: the creator ids
+ * on screen go in as a single `in.()` filter and the caller groups the result.
+ * Indexed by idx_session_recap_photos_session and idx_sessions_creator.
+ *
+ * `reported` photos are excluded — a photo someone flagged must never surface
+ * on the feed. RLS on session_recap_photos is `TO authenticated`, so a logged
+ * out visitor gets an empty map and the carousel simply has fewer slides.
+ *
+ * Ordered by created_at. The table also carries uploaded_at, which currently
+ * holds the identical value on every row; that redundancy is a follow-up.
+ */
+export async function fetchRecapPhotosByCreators(
+  supabase: SupabaseClient,
+  creatorIds: string[],
+  perCreator: number = 4
+): Promise<DalResult<Record<string, string[]>>> {
+  if (creatorIds.length === 0) return { success: true, data: {} };
+
+  try {
+    const { data, error } = await supabase
+      .from('session_recap_photos')
+      .select('photo_url, created_at, session:sessions!inner(creator_id)')
+      .in('session.creator_id', creatorIds)
+      .eq('reported', false)
+      .order('created_at', { ascending: false })
+      .limit(perCreator * creatorIds.length);
+
+    if (error) return { success: false, error: error.message };
+
+    // REASON: PostgREST types the embedded row as an array; at runtime an
+    // !inner join on a to-one relationship returns a single object.
+    const rows = (data ?? []) as unknown as Array<{
+      photo_url: string | null;
+      session: { creator_id: string | null } | null;
+    }>;
+
+    const byCreator: Record<string, string[]> = {};
+    for (const row of rows) {
+      const creatorId = row.session?.creator_id;
+      if (!creatorId || !row.photo_url) continue;
+      const bucket = (byCreator[creatorId] ??= []);
+      if (bucket.length < perCreator) bucket.push(row.photo_url);
+    }
+    return { success: true, data: byCreator };
+  } catch (error) {
+    logError(error, { action: 'fetchRecapPhotosByCreators' });
+    return { success: false, error: 'Failed to fetch recap photos' };
   }
 }
 
@@ -1175,6 +1239,19 @@ export async function createChildSession(
       is_recurring: false,
       current_participants: 0,
       status: 'active',
+      // T-GYM2: the venue travels with the series. Without this the address
+      // text was copied while the gym link was not, so every future occurrence
+      // of an approved series silently lost its gym -- live on a7b498d6, a
+      // CrossFit series approved at BullBox.
+      //
+      // Written directly, not through set_session_partner. This job runs as the
+      // SERVICE ROLE (getServiceRoleClient in the recurring-sessions cron), which
+      // bypasses 162's column grants, and copying preserves the gym's ACTUAL
+      // decision. Recomputing would flip a declined series back to pending and
+      // put it in the gym's queue again on every occurrence.
+      partner_id: parent.partner_id,
+      partner_status: parent.partner_status,
+      partner_reviewed_at: parent.partner_reviewed_at,
     };
 
     const { data: session, error } = await supabase.from('sessions').insert(childData).select('id').single();

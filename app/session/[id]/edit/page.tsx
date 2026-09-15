@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import LocationPicker from '@/components/LocationPicker';
+import VenuePicker from '@/components/VenuePicker';
 import { ArrowLeft, Repeat } from 'lucide-react';
 import Link from 'next/link';
 import { getEditSessionTranslations } from './translations';
@@ -23,6 +24,7 @@ export default function EditSessionPage() {
   const {
     loading,
     saving,
+    venue,
     formData,
     setFormData,
     recurringValue,
@@ -144,6 +146,14 @@ export default function EditSessionPage() {
 
           <div>
             <Label className="mb-2 text-theme-primary">{txt.location}</Label>
+            <VenuePicker
+              selected={venue.selected}
+              onSelect={venue.select}
+              status={venue.status}
+              failed={venue.failed}
+              disabled={saving}
+            />
+
             <LocationPicker
               value={formData.location}
               onChange={(location, coords) => {

@@ -6,6 +6,8 @@ import { logError } from '@/lib/logger';
 import { resolveAvatarUrl } from '@/lib/avatar';
 import { isInstructorProfileComplete } from '@/lib/instructorProfile';
 import type { DalResult } from './types';
+import { fetchOrganizationUserIds } from './gymDirectory';
+import { buildExclusionFilter } from '@/lib/instructorExclusion';
 
 /** Full instructor profile for Browse Instructors page */
 export interface InstructorProfile {
@@ -82,6 +84,21 @@ export async function fetchInstructors(
 
     if (options?.limit) {
       query = query.limit(options.limit);
+    }
+
+    // T-GYM1: gym and studio accounts are ordinary users rows with
+    // is_instructor = true -- there is no account_type column -- so without
+    // this they appear among the instructor tiles as if they were people.
+    // Filtered by business_type, not by partner membership: both partners live
+    // today are 'independent' solo trainers who belong in this list.
+    // The filter string is built by a pure function so the rule is unit
+    // testable: from a browser this exclusion is indistinguishable from the
+    // T-PROF1 completeness filter, which drops the same accounts for a
+    // different reason. See lib/instructorExclusion.ts.
+    const orgResult = await fetchOrganizationUserIds(supabase);
+    const exclusion = orgResult.success ? buildExclusionFilter(orgResult.data) : null;
+    if (exclusion) {
+      query = query.not('id', 'in', exclusion);
     }
 
     const { data, error } = await query;

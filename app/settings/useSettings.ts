@@ -8,7 +8,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { getSettingsTranslations } from './translations';
-import { fetchUserField, fetchUserIsAdmin, updateUser } from '@/lib/dal';
+import { fetchUserField, fetchUserIsAdmin, updateUser, fetchMyLocation, type MyLocation } from '@/lib/dal';
 import { getNotificationPreferences, updateNotificationPreferences } from '@/lib/dal/notificationPreferences';
 import { requestUserLocation } from '@/lib/location';
 import { resetUser } from '@/lib/analytics';
@@ -36,6 +36,37 @@ async function readNativeLocationPermission(): Promise<PermissionState | null> {
   }
 }
 
+/**
+ * T-LOC1 PART B: what the location section should show.
+ *
+ * THE BUG THIS REPLACES: the button was disabled whenever the OS permission
+ * read 'granted', and `enableLocation` is the only code path that writes
+ * users.location_lat/lng. So every user who had allowed location at the OS
+ * level — which is most of them, since other screens prompt for it — saw a
+ * green "Location Enabled" button they could not press, while their stored
+ * coordinates stayed null forever. OS permission and a stored coordinate are
+ * different facts; the screen reported the first and claimed the second.
+ *
+ * The button now tracks STORED COORDINATES, not permission. Pure so the
+ * state machine can be unit-tested without a browser.
+ */
+export type LocationSectionState = 'unsupported' | 'denied' | 'prompt' | 'granted-unsaved' | 'saved';
+
+export function computeLocationSectionState(
+  permission: PermissionState | 'unsupported',
+  stored: MyLocation | null
+): LocationSectionState {
+  if (permission === 'unsupported') return 'unsupported';
+  const hasStored = stored?.location_lat != null && stored?.location_lng != null;
+  // Stored coordinates win over a denied permission: the value is already
+  // saved and still useful, and offering a dead re-prompt would be worse than
+  // showing what we have.
+  if (hasStored) return 'saved';
+  if (permission === 'denied') return 'denied';
+  if (permission === 'granted') return 'granted-unsaved';
+  return 'prompt';
+}
+
 export function useSettings(language: 'en' | 'es') {
   const router = useRouter();
   const supabase = createClient();
@@ -53,6 +84,11 @@ export function useSettings(language: 'en' | 'es') {
   const [debugRunning, setDebugRunning] = useState(false);
   const [locationPermission, setLocationPermission] = useState<PermissionState | 'unsupported'>('prompt');
   const [loadingLocation, setLoadingLocation] = useState(false);
+  // T-LOC1 PART B: the user's OWN stored coordinates, read through the
+  // get_my_location() definer RPC because users.location_lat/lng are not
+  // client-readable (migration 115). This, not the OS permission, decides
+  // whether the button is actionable.
+  const [storedLocation, setStoredLocation] = useState<MyLocation | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -92,6 +128,22 @@ export function useSettings(language: 'en' | 'es') {
     }
     checkNotificationStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-check when user loads
+  }, [user]);
+
+  // T-LOC1 PART B: load the stored coordinates. Keyed on `user` because the
+  // RPC is scoped to auth.uid() and returns null before sign-in resolves.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const result = await fetchMyLocation(supabase);
+      if (cancelled || !result.success) return;
+      setStoredLocation(result.data ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
   }, [user]);
 
   // Read the current geolocation permission state so the button can reflect it.
@@ -439,6 +491,10 @@ export function useSettings(language: 'en' | 'es') {
         });
         if (!result.success) throw new Error(result.error);
         setLocationPermission('granted');
+        // T-LOC1 PART B: reflect the write locally so the section flips to
+        // 'saved' without a reload. This is the same value we just persisted,
+        // so no refetch is needed.
+        setStoredLocation({ location_lat: loc.latitude, location_lng: loc.longitude });
         showSuccess(txt.locationSuccessToast);
       } else if (!loc) {
         // null return means the user denied, or permission was blocked
@@ -486,6 +542,9 @@ export function useSettings(language: 'en' | 'es') {
     debugRunning,
     runNotificationDiagnostic,
     locationPermission,
+    storedLocation,
+    // T-LOC1 PART B: the section renders off this, not off the raw permission.
+    locationSectionState: computeLocationSectionState(locationPermission, storedLocation),
     loadingLocation,
     enableLocation,
   };

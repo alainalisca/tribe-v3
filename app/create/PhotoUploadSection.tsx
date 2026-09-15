@@ -7,6 +7,7 @@ import { showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Label } from '@/components/ui/label';
+import { logError } from '@/lib/logger';
 
 interface PhotoUploadSectionProps {
   supabase: SupabaseClient;
@@ -93,6 +94,15 @@ export default function PhotoUploadSection({
       }
       onPhotosChange([...photos, ...uploadedUrls]);
     } catch (error: unknown) {
+      // The toast is deliberately vague, so the real error has to survive
+      // somewhere: a storage RLS denial, an expired session and a duplicate
+      // filename (upsert is false) are indistinguishable to the user and were
+      // previously lost entirely.
+      logError(error, {
+        action: 'PhotoUploadSection.handleUpload',
+        fileCount: files.length,
+        existingPhotos: photos.length,
+      });
       showError(getErrorMessage(error, 'upload_photo', language));
     } finally {
       setUploading(false);

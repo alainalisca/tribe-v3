@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "prepare": "husky"
+    "prepare": "husky",
+    "verify:share": "node scripts/verify-share-routes.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",

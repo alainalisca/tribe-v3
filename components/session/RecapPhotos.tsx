@@ -79,7 +79,7 @@ export default function RecapPhotos({
                     {photo.user?.name}
                   </div>
 
-                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <div className="hover-reveal absolute top-1 right-1 flex gap-1 transition">
                     {(photo.user_id === user?.id || canModerate) && (
                       <button
                         onClick={() => setConfirmDeletePhotoId(photo.id)}

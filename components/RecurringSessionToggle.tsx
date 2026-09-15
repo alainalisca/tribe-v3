@@ -18,6 +18,16 @@ interface RecurringSessionToggleProps {
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
+/**
+ * EVERY button in here MUST carry type="button".
+ *
+ * This component renders inside <form onSubmit={handleSubmit}> on both the
+ * create page and the edit page, and HTML defaults a button with no type
+ * attribute to type="submit". Without it, clicking a single day-of-week toggle
+ * submitted the form and published the session immediately -- the instructor
+ * never got to pick the remaining days, and the request reached the gym's queue
+ * twice (2026-09-11, P0).
+ */
 export default function RecurringSessionToggle({ value, onChange }: RecurringSessionToggleProps) {
   const { language } = useLanguage();
   const isRecurring = value.is_recurring;
@@ -118,6 +128,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
           {language === 'es' ? 'Sesión Recurrente' : 'Recurring Session'}
         </label>
         <button
+          type="button"
           onClick={handleToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             isRecurring ? 'bg-tribe-green' : 'bg-stone-300 dark:bg-tribe-mid'
@@ -142,6 +153,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
             <div className="flex gap-2">
               {['weekly', 'biweekly', 'monthly'].map((freq) => (
                 <button
+                  type="button"
                   key={freq}
                   onClick={() => handleFrequencyChange(freq)}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
@@ -170,6 +182,7 @@ export default function RecurringSessionToggle({ value, onChange }: RecurringSes
                   const isSelected = selectedDays.includes(String(idx));
                   return (
                     <button
+                      type="button"
                       key={idx}
                       onClick={() => handleDayToggle(idx)}
                       className={`py-2 text-xs font-semibold rounded transition-colors ${

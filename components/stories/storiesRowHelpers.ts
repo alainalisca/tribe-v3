@@ -57,6 +57,7 @@ export function getSportEmoji(sport: string): string {
     Cycling: '\u{1F6B4}',
     Swimming: '\u{1F3CA}',
     CrossFit: '\u{1F3CB}\uFE0F',
+    HYROX: '\u{1F3CB}\uFE0F',
     Boxing: '\u{1F94A}',
     'Jiu-Jitsu': '\u{1F94B}',
     Soccer: '\u26BD',

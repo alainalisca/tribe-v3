@@ -13,9 +13,11 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageSquare, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/LanguageContext';
+import { isPublicShareRoute } from '@/lib/publicShareRoutes';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { FeedbackCategory, DeviceInfo, FeedbackSubmitPayload, FeedbackSubmitResponse } from '@/types/feedback';
 
@@ -120,6 +122,13 @@ export default function FeedbackWidget({ appVersion, bottomOffset = 80 }: Feedba
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Not on a public share route. This is an internal tool -- it writes to
+  // user_feedback and asks for a bug category -- and offering it to a stranger
+  // who arrived from a gym's Instagram bio is the same leak the install modal
+  // was, on the same surfaces. Same list, same mechanism.
+  const pathname = usePathname();
+  if (isPublicShareRoute(pathname)) return null;
 
   if (!mounted) return null;
 

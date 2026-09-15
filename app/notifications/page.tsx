@@ -17,7 +17,7 @@ import {
   UserCog,
   Repeat,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
 import { createClient } from '@/lib/supabase/client';
 import { useNotifications } from './useNotifications';
@@ -43,7 +43,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   general: <Bell className="w-5 h-5 text-stone-400" />,
 };
 
-function getNotificationLink(notification: NotificationWithActor): string | null {
+export function getNotificationLink(notification: NotificationWithActor): string | null {
   const { type, entity_type, entity_id, actor_id } = notification;
   if (type === 'follow' && actor_id) return `/profile/${actor_id}`;
   if (
@@ -70,6 +70,17 @@ function getNotificationLink(notification: NotificationWithActor): string | null
   // the recurring-series section lives. Trailing slash: trailingSlash is on and
   // a 308 would strip the auth headers.
   if (type === 'series_occurrences_generated') return '/dashboard/instructor/';
+  // T-GYM2: the gym's request lands on its queue; the instructor's verdict
+  // lands on the session it is about. Trailing slash on the dashboard for the
+  // same reason as above -- trailingSlash is on and a 308 strips auth headers.
+  if (type === 'venue_request_new') return '/dashboard/partner/';
+  if (['venue_request_approved', 'venue_request_declined'].includes(type) && entity_id) return `/session/${entity_id}`;
+  // Both partner bells go to the admin queue, which is where the admin acts on
+  // them. entity_id is the featured_partners row and there is no per-partner
+  // admin route, so the queue is the destination for both. Trailing slash for
+  // the same reason as the dashboards above: trailingSlash is on and a 308
+  // strips the auth headers.
+  if (['partner_application', 'partner_activated'].includes(type)) return '/admin/partners/';
   return null;
 }
 
@@ -181,7 +192,7 @@ export default function NotificationsPage() {
         {!loading && !error && notifications.length > 0 && (
           <div className="space-y-2">
             {notifications.map((notification, index) => (
-              <motion.button
+              <m.button
                 key={notification.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -226,7 +237,7 @@ export default function NotificationsPage() {
                 {!notification.is_read && (
                   <div className="w-2.5 h-2.5 rounded-full bg-tribe-green flex-shrink-0 mt-2" />
                 )}
-              </motion.button>
+              </m.button>
             ))}
           </div>
         )}

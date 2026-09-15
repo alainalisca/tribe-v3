@@ -85,6 +85,10 @@ type EventName =
   | 'session_completed'
   | 'session_shared'
 
+  // Card photo carousel (T-UI4)
+  | 'card_photo_swipe' // first swipe per card only; arrows and keys fire every time
+  | 'card_photo_expand'
+
   // Sessions (Instructor)
   | 'session_created'
   | 'session_edited'
@@ -121,6 +125,8 @@ type EventName =
   | 'filter_applied'
   | 'neighborhood_selected'
   | 'instructor_profile_viewed'
+  // T-GYM3: a view of the public gym page /g/[slug], the bio-link destination.
+  | 'gym_public_page_viewed'
   | 'explore_city_tapped'
 
   // Post-session rating (LR-04 funnel)
@@ -231,6 +237,13 @@ type EventName =
   | 'promote_pro_interest' // user tapped Promote Pro upgrade before billing is live
   | 'tip_interest' // legacy: user tried to tip before tip charging was wired
   | 'tip_initiated' // user started a real tip checkout (post tip-payment wiring)
+
+  // Gym venues (T-GYM2). All five are new; no dashboard reads them yet.
+  | 'venue_selected' // instructor attached a gym; auto_approved says whether it published at once
+  | 'venue_request_approved' // gym approved a pending request from its dashboard
+  | 'venue_request_declined' // gym declined one
+  | 'gym_storefront_viewed' // a gym storefront opened; `source` says where from
+  | 'gym_tile_tapped' // a gym tile tapped in Gimnasios y estudios on /instructors
 
   // Errors
   | 'error_occurred'

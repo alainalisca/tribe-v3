@@ -1249,6 +1249,9 @@ export type Database = {
           max_participants: number
           payment_gateway: string | null
           payment_instructions: string | null
+          partner_id: string | null
+          partner_reviewed_at: string | null
+          partner_status: string | null
           photo_verified: boolean | null
           photos: string[] | null
           platform_fee_percent: number | null
@@ -1298,6 +1301,9 @@ export type Database = {
           max_participants: number
           payment_gateway?: string | null
           payment_instructions?: string | null
+          partner_id?: string | null
+          partner_reviewed_at?: string | null
+          partner_status?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
           platform_fee_percent?: number | null
@@ -1347,6 +1353,9 @@ export type Database = {
           max_participants?: number
           payment_gateway?: string | null
           payment_instructions?: string | null
+          partner_id?: string | null
+          partner_reviewed_at?: string | null
+          partner_status?: string | null
           photo_verified?: boolean | null
           photos?: string[] | null
           platform_fee_percent?: number | null
@@ -1456,6 +1465,8 @@ export type Database = {
           last_reengagement_sent: string | null
           last_weekly_recap_sent: string | null
           welcome_email_sent_at: string | null
+          onboarding_completed_at: string | null
+          dismissed_banners: string[]
           location: string | null
           location_lat: number | null
           location_lng: number | null
@@ -1523,6 +1534,8 @@ export type Database = {
           last_reengagement_sent?: string | null
           last_weekly_recap_sent?: string | null
           welcome_email_sent_at?: string | null
+          onboarding_completed_at?: string | null
+          dismissed_banners?: string[]
           location?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1590,6 +1603,8 @@ export type Database = {
           last_reengagement_sent?: string | null
           last_weekly_recap_sent?: string | null
           welcome_email_sent_at?: string | null
+          onboarding_completed_at?: string | null
+          dismissed_banners?: string[]
           location?: string | null
           location_lat?: number | null
           location_lng?: number | null

@@ -85,8 +85,15 @@ export function getErrorMessage(error: unknown, context: string, language: 'en' 
       es: 'No se pudo crear la sesión. Verifica los detalles.',
     },
     upload_photo: {
-      en: 'Could not upload photo. File may be too large.',
-      es: 'No se pudo subir la foto. El archivo puede ser muy grande.',
+      // Deliberately states no cause. Nothing on any upload path checks file
+      // size -- all seven call sites route any thrown error here, so a storage
+      // permission denial, an expired session, a missing bucket and a duplicate
+      // filename all used to read as "the file may be too large". That sent a
+      // real investigation after a size problem that never existed
+      // (2026-09-11). The size hint belongs only where a size check ran, and
+      // today that is nowhere.
+      en: 'Could not upload photo. Please try again.',
+      es: 'No se pudo subir la foto. Inténtalo de nuevo.',
     },
     update_profile: {
       en: 'Could not update profile. Please try again.',

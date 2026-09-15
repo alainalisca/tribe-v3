@@ -17,7 +17,14 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation } from '@/lib/dal';
+import {
+  fetchUpcomingSessions,
+  fetchUserProfileMaybe,
+  fetchMyLocation,
+  fetchRecapPhotosByCreators,
+  updateUser,
+} from '@/lib/dal';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
@@ -27,8 +34,10 @@ import { identifyUser, setSessionContext, trackEvent } from '@/lib/analytics';
 import { detectNeighborhood } from '@/lib/city-config';
 
 import { useSessionFiltering } from './hooks/useSessionFiltering';
+import { isPastFeedGrace } from '@/components/SessionCardHelpers';
 import { useLiveStatus } from './hooks/useLiveStatus';
 import { useSessionActions } from './hooks/useSessionActions';
+import { fetchPartnersByIds, fetchPartnersForInstructors, type GymIdentity } from '@/lib/dal/gymVenue';
 
 /** Subset of user profile fields loaded on the home page */
 export interface UserProfile {
@@ -59,6 +68,50 @@ export function computeLocationKnown(
   return profile?.location_lat != null && profile?.location_lng != null;
 }
 
+/**
+ * T-LOC1 PART A: passively backfill `users.location_lat/lng`.
+ *
+ * The app asked for the OS location permission from several places and then
+ * threw the answer away: every geolocation call site except the settings
+ * button held the coordinates in React state and discarded them on unmount.
+ * Result: 0 of 104 users had stored coordinates, so nearby-athletes, the
+ * smart-match cron and every distance display were empty for everyone.
+ *
+ * This runs off the silent `getUserLocation()` the home feed ALREADY performs
+ * on idle, so it adds no prompt and no request the user was not already making.
+ * It only ever fills a gap: if coordinates are already stored, it writes
+ * nothing, so a precise value set from /settings is never clobbered by a
+ * coarse passive read.
+ *
+ * Returns whether a write was attempted, so callers (and tests) can tell
+ * "skipped because already set" apart from "wrote".
+ */
+export async function persistLocationIfMissing(
+  supabase: SupabaseClient,
+  userId: string,
+  coords: { latitude: number; longitude: number },
+  stored: Pick<UserProfile, 'location_lat' | 'location_lng'> | null
+): Promise<boolean> {
+  // Do not overwrite coordinates that are already set. Both halves must be
+  // present to count as stored; a half-written row is treated as missing and
+  // gets repaired, matching computeLocationKnown's BOTH-required rule.
+  if (stored?.location_lat != null && stored?.location_lng != null) return false;
+
+  const result = await updateUser(supabase, userId, {
+    location_lat: coords.latitude,
+    location_lng: coords.longitude,
+  });
+  // Silent by contract: this is a background backfill the user never asked
+  // for, so a failure is logged for us and never surfaced to them.
+  if (!result.success) {
+    logError(new Error(result.error ?? 'updateUser failed'), {
+      action: 'persistLocationIfMissing',
+      userId,
+    });
+  }
+  return true;
+}
+
 export function useHomeFeed() {
   const router = useRouter();
   const supabase = createClient();
@@ -73,7 +126,6 @@ export function useHomeFeed() {
   // signal the settings page uses). 'granted' means location is enabled even
   // before the deferred silent fetch resolves — so the banner shouldn't show.
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // T-C1: true when a pending destination (a shared /s/[id] link the user signed
   // in from) is in flight. It suppresses BOTH the onboarding modal and the welcome
   // tour so a fresh localStorage context (e.g. the WhatsApp in-app browser) can't
@@ -84,8 +136,22 @@ export function useHomeFeed() {
   const [fixedHeight, setFixedHeight] = useState(0);
   const [fetchError, setFetchError] = useState(false);
   const identifiedRef = useRef(false);
+  // T-LOC1 PART A: one backfill attempt per mount. Without this the effect
+  // would re-fire on its own setUserProfile-free re-renders.
+  const locationPersistedRef = useRef(false);
 
   // --- Composed hooks ---
+  // Instructor recap photos for the card carousel, keyed by creator id.
+  // Fetched once for the whole visible page rather than per card.
+  const [recapPhotosByCreator, setRecapPhotosByCreator] = useState<Record<string, string[]>>({});
+
+  // T-GYM1. Two questions, both answered once for the whole visible page:
+  // which gym is each session held at (the venue, which needed the gym's
+  // approval), and which gym does each creator coach at (the affiliation tag,
+  // which describes the person). Keyed by partner id and creator id.
+  const [partnersById, setPartnersById] = useState<Map<string, GymIdentity>>(new Map());
+  const [partnersByCreator, setPartnersByCreator] = useState<Map<string, GymIdentity>>(new Map());
+
   const filtering = useSessionFiltering({ sessions, userLocation });
   const liveStatus = useLiveStatus(supabase);
 
@@ -105,10 +171,36 @@ export function useHomeFeed() {
       setFetchError(false);
       const result = await fetchUpcomingSessions(supabase);
       if (!result.success) throw new Error(result.error);
-      setSessions(result.data || []);
-      // Defer live status loading so session list renders immediately
+      // fetchUpcomingSessions filters on date alone, so a session that ended
+      // hours ago is still "today". Drop anything more than the grace period
+      // past its end time; history surfaces show those instead.
+      const upcoming = (result.data || []).filter((s) => !isPastFeedGrace(s));
+      setSessions(upcoming);
+      // Defer live status and recap photos so the session list renders
+      // immediately. Recap photos are ONE request for the whole page, keyed by
+      // the distinct creators on screen — never one per card.
       requestAnimationFrame(() => {
-        liveStatus.loadLiveStatuses((result.data || []).map((s) => s.id));
+        liveStatus.loadLiveStatuses(upcoming.map((s) => s.id));
+        const creatorIds = [...new Set(upcoming.map((s) => s.creator_id).filter(Boolean))] as string[];
+        if (creatorIds.length > 0) {
+          void fetchRecapPhotosByCreators(supabase, creatorIds).then((recap) => {
+            // A failure costs the carousel a few slides and nothing else, so the
+            // feed keeps its sessions rather than surfacing an error.
+            if (recap.success && recap.data) setRecapPhotosByCreator(recap.data);
+          });
+          // Same rule as recap photos: one request each, never per card. A
+          // failure costs the gym chip and nothing else, so the feed keeps its
+          // sessions rather than surfacing an error.
+          void fetchPartnersForInstructors(supabase, creatorIds).then((res) => {
+            if (res.success && res.data) setPartnersByCreator(res.data);
+          });
+        }
+        const partnerIds = [...new Set(upcoming.map((s) => s.partner_id).filter(Boolean))] as string[];
+        if (partnerIds.length > 0) {
+          void fetchPartnersByIds(supabase, partnerIds).then((res) => {
+            if (res.success && res.data) setPartnersById(res.data);
+          });
+        }
       });
     } catch (error) {
       logError(error, { action: 'loadSessions' });
@@ -166,6 +258,20 @@ export function useHomeFeed() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // T-LOC1 PART A: persist the coordinates the silent idle read already
+  // obtained. Waits for the profile so it knows whether anything is stored;
+  // `userLocation` and `userProfile` land in either order, so this is its own
+  // effect rather than a branch inside the geolocation or profile paths.
+  // Fire-and-forget: nothing here is awaited on a render path.
+  useEffect(() => {
+    if (locationPersistedRef.current) return;
+    if (!user || !userLocation || !userProfile) return;
+    if (userProfile.location_lat != null && userProfile.location_lng != null) return;
+    locationPersistedRef.current = true;
+    void persistLocationIfMissing(supabase, user.id, userLocation, userProfile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
+  }, [user, userLocation, userProfile]);
+
   useEffect(() => {
     if (!userChecked) return;
     loadProfile();
@@ -213,17 +319,6 @@ export function useHomeFeed() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
-
-  useEffect(() => {
-    if (!user || !userProfile) return;
-    if (suppressOnboarding) return; // T-C1: a pending destination wins over onboarding.
-    const isProfileComplete = userProfile.avatar_url && (userProfile.sports?.length ?? 0) > 0;
-    if (isProfileComplete) {
-      setShowOnboarding(false);
-      return;
-    }
-    if (!localStorage.getItem(`hasSeenOnboarding_${user.id}`)) setShowOnboarding(true);
-  }, [user, userProfile, suppressOnboarding]);
 
   // --- Analytics: identify user + session context + app_opened ---
   useEffect(() => {
@@ -316,8 +411,6 @@ export function useHomeFeed() {
     // BUG-008: hide the Enable-location banner once location is known
     // (in-memory coords, granted permission, or stored profile coords).
     locationKnown: computeLocationKnown(userLocation, locationPermission, userProfile),
-    showOnboarding,
-    setShowOnboarding,
     suppressOnboarding,
     filteredSessions: filtering.filteredSessions,
     liveNowSessions: filtering.liveNowSessions,
@@ -340,6 +433,9 @@ export function useHomeFeed() {
     setShowSafetyWaiver: actions.setShowSafetyWaiver,
     setPendingSessionId: actions.setPendingSessionId,
     liveStatusMap: liveStatus.liveStatusMap,
+    recapPhotosByCreator,
+    partnersById,
+    partnersByCreator,
     liveUserIdSet: liveStatus.liveUserIdSet,
     fixedHeight,
     setFixedHeight,

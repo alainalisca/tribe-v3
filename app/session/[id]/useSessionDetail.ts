@@ -22,12 +22,19 @@ import { useLiveStatus } from '@/hooks/useLiveStatus';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import type { RecapPhotoWithUser, SessionStoryJoined } from './types';
+import { fetchPartnersByIds, fetchRosterCount, type GymIdentity } from '@/lib/dal/gymVenue';
+import { resolveSessionGym } from '@/lib/sessionGym';
 
 export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNavigate: (path: string) => void) {
   const supabase = createClient();
 
   // REASON: Session/creator/athletes are complex DB shapes — full typing deferred
   const [session, setSession] = useState<any>(null);
+  // T-GYM2: the gym was on the card and vanished on tap-through. fetchSession
+  // and the anon view both already select the three partner columns (T-GYM1),
+  // so this is one extra read for the partner row itself.
+  const [gymPartner, setGymPartner] = useState<GymIdentity | null>(null);
+  const [gymCoachCount, setGymCoachCount] = useState(0);
   const [participants, setParticipants] = useState<any[]>([]);
   const [creator, setCreator] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +100,31 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     if (session && !loading) liveStatus.loadLiveStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once when session loaded
   }, [session, user, loading]);
+
+  useEffect(() => {
+    const partnerId = session?.partner_id ?? null;
+    if (!partnerId) {
+      setGymPartner(null);
+      setGymCoachCount(0);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const [partners, count] = await Promise.all([
+        fetchPartnersByIds(supabase, [partnerId]),
+        fetchRosterCount(supabase, partnerId),
+      ]);
+      if (cancelled) return;
+      // A failure costs the gym mark and nothing else: the page still renders
+      // with the plain address, which is what an unlinked session shows.
+      if (partners.success && partners.data) setGymPartner(partners.data.get(partnerId) ?? null);
+      if (count.success) setGymCoachCount(count.data ?? 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase is stable
+  }, [session?.partner_id]);
 
   // Scroll lock for non-Dialog overlays (lightbox, story upload/viewer)
   // GuestJoinModal and InviteModal scroll locking handled by Radix Dialog
@@ -305,8 +337,20 @@ export function useSessionDetail(sessionId: string, language: 'en' | 'es', onNav
     history.pushState({ lightbox: true }, '');
   }
 
+  // Resolved with the same helper the card uses, so the two surfaces cannot
+  // drift: identity renders only for an approved link on an active partner,
+  // and a pending tag is the creator's own view.
+  const gym = resolveSessionGym({
+    sessionPartner: gymPartner,
+    sessionPartnerStatus: session?.partner_status ?? null,
+    creatorId: session?.creator_id ?? null,
+    viewerId: user?.id ?? null,
+  });
+
   return {
     session,
+    gym,
+    gymCoachCount,
     creator,
     participants,
     loading,

@@ -47,9 +47,18 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
     onBook,
   } = props;
 
+  // 'gym' | 'studio' are organizations; 'independent' is a solo trainer and
+  // keeps the person treatment. business_type is the only thing that tells
+  // them apart -- the users row looks identical either way.
+  const isOrganization =
+    !!partnerData && (partnerData.business_type === 'gym' || partnerData.business_type === 'studio');
+
   return (
     <div className="space-y-4">
-      {partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />}
+      {/* An organisation's identity is the page-level GymStorefrontHeader, which
+          replaces StorefrontHero. Nothing organisation-shaped renders here, or
+          the storefront shows the gym twice -- which is what shipped. */}
+      {!isOrganization && partnerData && <PartnerStorefrontBadge partner={partnerData} language={lang} />}
       {/* instructor_bio first, bio second: instructor_bio is the field both
           instructor-facing editors (the Storefront Editor and the profile-edit
           Professional Bio) write, so it reflects what the instructor last saved
@@ -66,12 +75,19 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
         isVerified={!!instructor.verified}
         language={lang}
       />
-      <VideoIntro
-        videoUrl={instructor.storefront_video_url}
-        posterUrl={instructor.storefront_banner_url}
-        isOwnStorefront={isOwn}
-        language={lang}
-      />
+      {/* Suppressed for organisations rather than reworded. The uploader behind
+          this prompt writes to the instructor profile's video field, which is
+          person-scoped plumbing -- a reworded prompt would open it and file a
+          gym's video into a personal instructor record. Suppressing is honest;
+          rewording would be a lie with a nicer tone. */}
+      {!isOrganization && (
+        <VideoIntro
+          videoUrl={instructor.storefront_video_url}
+          posterUrl={instructor.storefront_banner_url}
+          isOwnStorefront={isOwn}
+          language={lang}
+        />
+      )}
       <AvailabilityPreview instructorId={instructorId} language={lang} />
       {isAthleteViewer && (
         // T-DM Gate 2: instructors are publicly soliciting business, so an athlete
@@ -128,9 +144,7 @@ export default function StorefrontProfileColumn(props: StorefrontProfileColumnPr
           {lang === 'es' ? 'Compartir Perfil' : 'Share Profile'}
         </button>
       )}
-      {partnerData && partnerInstructors.length > 0 && (
-        <PartnerInstructorRoster instructors={partnerInstructors} language={lang} />
-      )}
+      {partnerData && partnerInstructors.length > 0 && <PartnerInstructorRoster instructors={partnerInstructors} />}
       {canBook && (
         <button
           onClick={onBook}

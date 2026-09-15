@@ -16,7 +16,7 @@
  * and reuses the same sheet UI for the actual content.
  *
  * Suppressed when the user's profile is still incomplete AND they haven't
- * dismissed the OnboardingModal — the modal needs to finish first. Mirrors
+ * finished the first-run introduction — that needs to land first. Mirrors
  * the isProfileComplete check in useHomeFeed.ts.
  *
  * Per Claude_Code_Whats_New_Spec.md (with header-button UX swap, 2026-05-20).
@@ -31,6 +31,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { haptic } from '@/lib/haptics';
 import { logError } from '@/lib/logger';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
+import { fetchOnboardingState } from '@/lib/dal';
 import {
   getLatestReleaseNote,
   getUserLastSeenRelease,
@@ -67,20 +68,21 @@ export default function WhatsNewBadge() {
           return;
         }
 
-        const [latestResult, lastSeenResult, profileProbe] = await Promise.all([
+        const [latestResult, lastSeenResult, onboardingResult] = await Promise.all([
           getLatestReleaseNote(supabase),
           getUserLastSeenRelease(supabase, user.id),
-          supabase.from('users').select('avatar_url, sports').eq('id', user.id).maybeSingle(),
+          fetchOnboardingState(supabase, user.id),
         ]);
 
         if (cancelled) return;
 
-        // Suppress while new-user onboarding is still in progress. Profile-
-        // complete OR explicit OnboardingModal dismissal counts as "ready".
-        const flagSet = typeof window !== 'undefined' && !!window.localStorage.getItem(`hasSeenOnboarding_${user.id}`);
-        const profile = profileProbe.data as { avatar_url: string | null; sports: string[] | null } | null;
-        const profileComplete = !!profile?.avatar_url && (profile?.sports?.length ?? 0) > 0;
-        if (!flagSet && !profileComplete) {
+        // Suppress while the first-run introduction is still outstanding: a
+        // "what's new" badge is noise to someone who has not seen what the app
+        // is yet. T-ONB1 moved this off the old hasSeenOnboarding localStorage
+        // key, which no longer exists. Unknown counts as not-ready, so a failed
+        // read hides the badge rather than showing it mid-onboarding.
+        const onboarded = onboardingResult.success && !!onboardingResult.data?.onboardingCompletedAt;
+        if (!onboarded) {
           setLoadState({ kind: 'no-release' });
           return;
         }

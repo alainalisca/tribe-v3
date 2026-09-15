@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 interface PullToRefreshIndicatorProps {
   pullDistance: number;
@@ -15,7 +15,7 @@ export default function PullToRefreshIndicator({ pullDistance, isRefreshing, thr
   const rotation = progress * 360;
 
   return (
-    <motion.div
+    <m.div
       className="flex items-center justify-center overflow-hidden"
       animate={{ height: pullDistance }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -36,6 +36,6 @@ export default function PullToRefreshIndicator({ pullDistance, isRefreshing, thr
           </svg>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

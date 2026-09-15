@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 
 // UI-A05: users with prefers-reduced-motion get a no-movement variant.
@@ -33,16 +33,9 @@ export default function PageTransition({ children }: PageTransitionProps) {
 
   return (
     <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={variants}
-        transition={pageTransition}
-      >
+      <m.div key={pathname} initial="initial" animate="in" exit="out" variants={variants} transition={pageTransition}>
         {children}
-      </motion.div>
+      </m.div>
     </AnimatePresence>
   );
 }

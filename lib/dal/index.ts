@@ -1,6 +1,7 @@
 export * from './types';
 export * from './sessions';
 export * from './users';
+export * from './onboarding';
 export * from './participants';
 export * from './doorCheckin';
 export * from './chat';
@@ -48,3 +49,8 @@ export * from './tribeOSWaitlist';
 export * from './releaseNotes';
 // Note: instructorPosts is NOT re-exported from here because its symbol names
 // collide with comments.ts / promote.ts. Import directly from './instructorPosts'.
+
+// T-GYM1: gym venue identity and approval
+export * from './gymVenue';
+export * from './gymDirectory';
+export * from './venueRequests';

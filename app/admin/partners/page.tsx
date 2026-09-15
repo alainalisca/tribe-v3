@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Store, Clock, CheckCircle, PauseCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
+import { dateLocale } from '@/lib/dateLocale';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAdminPartners } from './useAdminPartners';
 import type { FeaturedPartner } from '@/lib/dal/featuredPartners';
@@ -126,6 +127,7 @@ function PartnerCard({
   onTierChange: (id: string, tier: string) => void;
   t: (en: string, es: string) => string;
 }) {
+  const { language } = useLanguage();
   const isLoading = actionLoading === p.id;
 
   return (
@@ -152,12 +154,12 @@ function PartnerCard({
         </div>
         <div>
           <span className="text-tribe-gray-60">{t('Created', 'Creado')}:</span>{' '}
-          {new Date(p.created_at).toLocaleDateString()}
+          {new Date(p.created_at).toLocaleDateString(dateLocale(language))}
         </div>
         {p.expires_at && (
           <div>
             <span className="text-tribe-gray-60">{t('Expires', 'Expira')}:</span>{' '}
-            {new Date(p.expires_at).toLocaleDateString()}
+            {new Date(p.expires_at).toLocaleDateString(dateLocale(language))}
           </div>
         )}
         <div>

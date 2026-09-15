@@ -2,16 +2,13 @@
 'use client';
 
 import { X, Gift } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 import Link from 'next/link';
 import { useLanguage } from '@/lib/LanguageContext';
 
-interface ReferralBannerProps {
-  userId: string;
-}
-
-export default function ReferralBanner({ userId }: ReferralBannerProps) {
-  const [dismissed, setDismissed] = useState(false);
+export default function ReferralBanner() {
+  // T-ONB1: dismissal is server-side now, so it holds across devices.
+  const { dismissed, loading, dismiss } = useBannerDismissal(BANNER_IDS.referral);
   const { language } = useLanguage();
 
   const txt = {
@@ -27,15 +24,8 @@ export default function ReferralBanner({ userId }: ReferralBannerProps) {
 
   const t = txt[language as keyof typeof txt] || txt.en;
 
-  // Check localStorage for persistent dismissal on mount
-  useEffect(() => {
-    const wasDismissed = localStorage.getItem(`referralBannerDismissed_${userId}`);
-    if (wasDismissed) {
-      setDismissed(true);
-    }
-  }, [userId]);
-
-  if (dismissed) return null;
+  // Unknown means render nothing.
+  if (loading || dismissed) return null;
 
   return (
     <div className="bg-tribe-green/15 border border-tribe-green/40 rounded-lg p-4 mb-4">
@@ -45,10 +35,7 @@ export default function ReferralBanner({ userId }: ReferralBannerProps) {
           <p className="text-stone-900 dark:text-white font-medium">{t.message}</p>
         </div>
         <button
-          onClick={() => {
-            setDismissed(true);
-            localStorage.setItem(`referralBannerDismissed_${userId}`, 'true');
-          }}
+          onClick={dismiss}
           aria-label="Dismiss referral banner"
           className="text-stone-500 hover:text-stone-700 dark:text-gray-400 dark:hover:text-gray-300 flex-shrink-0 ml-2"
         >

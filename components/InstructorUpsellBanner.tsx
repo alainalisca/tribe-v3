@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useBannerDismissal, BANNER_IDS } from '@/hooks/useBannerDismissal';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { checkInstructorUpsellEligibility } from '@/lib/dal/instructors';
@@ -10,9 +11,6 @@ interface InstructorUpsellBannerProps {
   userId: string;
   language: string;
 }
-
-const DISMISS_KEY_PREFIX = 'tribe_upsell_dismissed_';
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // PAY-01 layer 2: the banner invites people to teach, it does not sell
 // charging through Tribe. Plain en/es object, no language ternaries.
@@ -30,16 +28,13 @@ const copy = {
 } as const;
 
 export default function InstructorUpsellBanner({ userId, language }: InstructorUpsellBannerProps) {
-  const [visible, setVisible] = useState(false);
+  const [eligible, setEligible] = useState(false);
+  // T-ONB1: was a 30-day localStorage snooze, so it returned on a timer and
+  // was per-device. Dismissal is permanent and server-side now.
+  const { dismissed, loading, dismiss } = useBannerDismissal(BANNER_IDS.instructorUpsell);
 
   useEffect(() => {
-    // Check localStorage dismissal
-    const dismissKey = `${DISMISS_KEY_PREFIX}${userId}`;
-    const dismissedAt = localStorage.getItem(dismissKey);
-    if (dismissedAt) {
-      const elapsed = Date.now() - Number(dismissedAt);
-      if (elapsed < THIRTY_DAYS_MS) return;
-    }
+    if (loading || dismissed) return;
 
     // Check eligibility via DAL
     const supabase = createClient();
@@ -49,20 +44,18 @@ export default function InstructorUpsellBanner({ userId, language }: InstructorU
         return;
       }
       if (result.data?.eligible) {
-        setVisible(true);
+        setEligible(true);
       }
     });
-  }, [userId]);
+  }, [userId, loading, dismissed]);
 
-  if (!visible) return null;
+  // Unknown means render nothing.
+  if (loading || dismissed || !eligible) return null;
 
   // The language prop is a plain string; anything that is not a known key falls back to English.
   const t = copy[language as keyof typeof copy] ?? copy.en;
 
-  const handleDismiss = () => {
-    localStorage.setItem(`${DISMISS_KEY_PREFIX}${userId}`, String(Date.now()));
-    setVisible(false);
-  };
+  const handleDismiss = () => dismiss();
 
   return (
     <div className="relative bg-gradient-to-r from-tribe-green-light/10 to-emerald-50 dark:from-tribe-green-light/5 dark:to-emerald-900/20 border-l-4 border-tribe-green rounded-xl p-4">

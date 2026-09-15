@@ -1,4 +1,8 @@
-// Sport translations for Colombia/Medellin market
+// Sport translations for Colombia/Medellin market.
+// Keep in sync with `SPORTS_LIST` in lib/sports.ts. The two lists are
+// separate modules and neither imports the other; the sync guard in
+// sportTranslationData.test.ts fails if they drift. This record carries one
+// extra key, `All`, used by the filter UIs.
 export const sportTranslations: { [key: string]: { en: string; es: string } } = {
   All: { en: 'All', es: 'Todos' },
   Running: { en: 'Running', es: 'Correr' },
@@ -6,6 +10,7 @@ export const sportTranslations: { [key: string]: { en: string; es: string } } = 
   Cycling: { en: 'Cycling', es: 'Ciclismo' },
   Swimming: { en: 'Swimming', es: 'Natacion' },
   CrossFit: { en: 'CrossFit', es: 'CrossFit' },
+  HYROX: { en: 'HYROX', es: 'HYROX' },
   Weightlifting: { en: 'Weightlifting', es: 'Levantamiento de Pesas' },
   Calisthenics: { en: 'Calisthenics', es: 'Calistenia' },
   Boxing: { en: 'Boxing', es: 'Boxeo' },

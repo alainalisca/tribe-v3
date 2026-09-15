@@ -807,4 +807,303 @@ select '155_door_guest_payment_not_required',
        case when pg_get_functiondef('public.host_add_session_guest(uuid, text, text, text)'::regprocedure)
                  ilike '%payment_status%not_required%'
             then 'applied' else 'MISSING' end
+union all
+select '156_onboarding_state',
+       -- First-run state moved off localStorage onto the user row. Probes all
+       -- three parts: both columns AND the dismiss_banner RPC, since the
+       -- columns without the function would leave every banner dismissal
+       -- failing silently at runtime.
+       case when exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'users'
+                    and column_name = 'onboarding_completed_at'
+                )
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'users'
+                    and column_name = 'dismissed_banners'
+                )
+             and exists (
+                  select 1 from pg_proc p
+                  join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = 'dismiss_banner'
+                )
+            then 'applied' else 'MISSING' end
+union all
+select '157_grant_onboarding_columns',
+       -- Grants SELECT on 156's two columns. 156 added them without a grant,
+       -- so the client could not read them at all -- see the guards below.
+       case when has_column_privilege('authenticated', 'public.users', 'onboarding_completed_at', 'SELECT')
+             and has_column_privilege('authenticated', 'public.users', 'dismissed_banners', 'SELECT')
+            then 'applied' else 'MISSING' end
+union all
+
+-- ---------------------------------------------------------------------------
+-- GUARDS (not migrations): column-level SELECT grants on public.users.
+--
+-- public.users has NO table-level SELECT grant for authenticated or anon. 066
+-- revoked it and re-granted SELECT column by column; 067 extended the list.
+-- Any column added afterwards is invisible to every non-service caller until
+-- it is granted explicitly, and the client fails with
+--   42501 permission denied for table users
+-- That is exactly how 156 shipped: it added two columns, granted neither, and
+-- blanked the first-run introduction, all five dismissible banners and the
+-- What's New badge. Before this guard the rule existed only as a comment in
+-- 066's header, which is why it was missed. Three attempts went into finding
+-- it, because the DAL is mocked in every unit test and no test can see a
+-- permission error.
+--
+-- USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.
+-- That view lists only explicitly granted COLUMN privileges and cannot see a
+-- table-level grant. A column readable through a table-level grant is absent
+-- from it; a column that is genuinely unreadable is also absent from it. It
+-- returns identical output for the two cases this guard exists to tell apart,
+-- and it gave a false pass while this bug was being diagnosed.
+-- has_column_privilege() resolves table-level and column-level grants together
+-- and is the only correct test here.
+--
+-- The exclusion list is the set of columns deliberately withheld from the
+-- client by 066, 067, 113, 115 and 118. Anything NOT on it must be readable.
+-- Adding a column to public.users means either granting it or listing it here
+-- with the migration that restricts it -- never leaving it in neither.
+-- ---------------------------------------------------------------------------
+select 'GUARD_users_columns_readable',
+       coalesce(
+         'MISSING -- not readable by authenticated: '
+           || string_agg(c.column_name, ', ' order by c.column_name),
+         'applied'
+       )
+from information_schema.columns c
+where c.table_schema = 'public'
+  and c.table_name = 'users'
+  and c.column_name not in (
+    -- 066/067: Tribe.OS billing, push and device identity (service-role only)
+    'tribe_os_stripe_customer_id', 'tribe_os_stripe_subscription_id',
+    'tribe_os_granted_at', 'tribe_os_granted_by',
+    'push_subscription', 'fcm_token', 'fcm_platform', 'fcm_updated_at',
+    -- 113: admin flag and payout identity
+    'is_admin', 'payout_method', 'stripe_account_id', 'wompi_merchant_id',
+    'total_earnings_cents',
+    -- 115: precise home coordinates
+    'location_lat', 'location_lng',
+    -- 118: email
+    'email'
+  )
+  and not has_column_privilege('authenticated', 'public.users', c.column_name, 'SELECT')
+union all
+
+-- The mirror of the guard above: a column the app believes is withheld must
+-- actually be withheld. This catches the failure mode 093 introduced, where a
+-- table-level GRANT silently re-exposes every restricted column, because a
+-- column-level REVOKE cannot take a table-level privilege away. Verified clean
+-- against production on 2026-09-09 (auth_email = false).
+select 'GUARD_users_columns_restricted',
+       coalesce(
+         'MISSING -- unexpectedly READABLE by authenticated: '
+           || string_agg(r.column_name, ', ' order by r.column_name),
+         'applied'
+       )
+from (values
+    ('tribe_os_stripe_customer_id'), ('tribe_os_stripe_subscription_id'),
+    ('tribe_os_granted_at'), ('tribe_os_granted_by'),
+    ('push_subscription'), ('fcm_token'), ('fcm_platform'), ('fcm_updated_at'),
+    ('is_admin'), ('payout_method'), ('stripe_account_id'), ('wompi_merchant_id'),
+    ('total_earnings_cents'),
+    ('location_lat'), ('location_lng'),
+    ('email')
+) as r(column_name)
+where exists (
+        select 1 from information_schema.columns c
+        where c.table_schema = 'public' and c.table_name = 'users'
+          and c.column_name = r.column_name
+      )
+  and has_column_privilege('authenticated', 'public.users', r.column_name, 'SELECT')
+union all
+select '158_gym_venue_approval',
+       -- Probes all four parts: the three sessions columns, auto_approve_roster,
+       -- both RPCs, and the view carrying the columns to anon. The columns
+       -- without the RPCs would leave every approval failing silently.
+       case when exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'sessions'
+                    and column_name in ('partner_id', 'partner_status', 'partner_reviewed_at')
+                  having count(*) = 3
+                )
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'featured_partners'
+                    and column_name = 'auto_approve_roster'
+                )
+             and (select to_regprocedure('public.set_session_partner(uuid,uuid)')) is not null
+             and (select to_regprocedure('public.review_venue_request(uuid,text)')) is not null
+             and exists (
+                  select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'sessions_public'
+                    and column_name = 'partner_status'
+                )
+            then 'applied' else 'MISSING' end
+union all
+
+-- ---------------------------------------------------------------------------
+-- GUARD: column-level INSERT/UPDATE grants on public.sessions.
+--
+-- 158 put public.sessions under column-level write grants so the creator cannot
+-- set partner_status themselves: the table-level INSERT and UPDATE are revoked
+-- from authenticated and re-granted column by column, excluding the two verdict
+-- columns. A column added to sessions afterwards is therefore NOT writable by
+-- authenticated until it is granted, and it fails in production while every
+-- test passes -- the same shape of bug as 156's missing SELECT grant, which
+-- took three attempts to find.
+--
+-- USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.
+-- That view lists only explicitly granted COLUMN privileges and cannot see a
+-- table-level grant, so it returns the same "absent" answer for a column that
+-- is writable via a table-level grant and for one that is genuinely not
+-- writable -- identical output for the two cases this guard exists to tell
+-- apart. It gave a false pass while 156's bug was being diagnosed.
+--
+-- partner_status and partner_reviewed_at are excluded on purpose: they are
+-- deliberately not writable, and GUARD_sessions_verdict_locked below asserts
+-- that they stay that way.
+-- ---------------------------------------------------------------------------
+select 'GUARD_sessions_columns_writable',
+       coalesce(
+         'MISSING -- not writable by authenticated: '
+           || string_agg(c.column_name || '(' || c.missing || ')', ', ' order by c.column_name),
+         'applied'
+       )
+from (
+  select column_name,
+         case
+           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+            and not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT')
+             then 'insert+update'
+           when not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+             then 'update'
+           else 'insert'
+         end as missing
+  from information_schema.columns
+  where table_schema = 'public' and table_name = 'sessions'
+    -- THREE, not two: partner_id is revoked by 162 because it is the only way
+    -- the verdict gets computed. See GUARD_sessions_verdict_locked below.
+    and column_name not in ('partner_status', 'partner_reviewed_at', 'partner_id')
+    and (not has_column_privilege('authenticated', 'public.sessions', column_name, 'UPDATE')
+      or not has_column_privilege('authenticated', 'public.sessions', column_name, 'INSERT'))
+) c
+union all
+
+-- The mirror: the verdict columns must stay unwritable by authenticated, or the
+-- gym no longer owns its own name and a creator can approve themselves. Catches
+-- a well-meaning future migration re-granting sessions at table level, which
+-- would silently re-open it (a column-level REVOKE cannot close it again -- see
+-- 093).
+select 'GUARD_sessions_verdict_locked',
+       coalesce(
+         'MISSING -- unexpectedly WRITABLE by authenticated: '
+           || string_agg(v.column_name, ', ' order by v.column_name),
+         'applied'
+       )
+from (values ('partner_status'), ('partner_reviewed_at'), ('partner_id')) as v(column_name)
+where has_column_privilege('authenticated', 'public.sessions', v.column_name, 'UPDATE')
+   or has_column_privilege('authenticated', 'public.sessions', v.column_name, 'INSERT')
+union all
+select '159_rls_admin_helper_not_inline_is_admin',
+       -- Policy-only migration, so the artifact is the policy text itself.
+       -- An untouched policy still reads "... FROM users WHERE id = auth.uid()
+       -- AND is_admin"; a fixed one reads is_app_admin(). Matching on
+       -- "from users" rather than on "is_admin" avoids matching the helper's
+       -- own name.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public'
+           and tablename in ('featured_partners', 'community_news',
+                             'local_fitness_events', 'community_bulletin')
+           and coalesce(qual, '') ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
+union all
+select '160_drop_duplicate_partner_read_policy',
+       -- The duplicate is gone when no policy on featured_partners reads users
+       -- directly any more. Same text probe the migration asserts on, so this
+       -- row and the migration cannot disagree.
+       case when not exists (
+         select 1 from pg_policies
+         where schemaname = 'public' and tablename = 'featured_partners'
+           and (coalesce(qual, '') || ' ' || coalesce(with_check, '')) ilike '%from users%'
+       ) then 'applied' else 'MISSING' end
+union all
+select '161_featured_partners_display_order',
+       case when exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = 'featured_partners'
+           and column_name = 'display_order'
+       ) then 'applied' else 'MISSING' end
+union all
+select '162_revoke_partner_id_write',
+       -- Applied when authenticated can no longer write partner_id by either
+       -- privilege. GUARD_sessions_verdict_locked below covers the same ground
+       -- continuously; this row answers "did 162 run" specifically.
+       case when not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'INSERT')
+             and not has_column_privilege('authenticated', 'public.sessions', 'partner_id', 'UPDATE')
+            then 'applied' else 'MISSING' end
+union all
+select '163_partner_slug_and_public_view',
+       -- Three artifacts, all of which must be present: the NOT NULL slug
+       -- column, the public view, and anon's grant on it. Checking only the
+       -- column would report 'applied' for a half-run migration whose view is
+       -- missing, which is the state in which every bio link renders a 404.
+       case when exists (
+              select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'featured_partners'
+                and column_name = 'slug' and is_nullable = 'NO'
+            )
+            and to_regclass('public.partners_public') is not null
+            -- has_table_privilege, never information_schema.table_privileges:
+            -- that view cannot see table-level grants and passes either way.
+            and has_table_privilege('anon', 'public.partners_public', 'SELECT')
+            then 'applied' else 'MISSING' end
+union all
+
+-- The permanence property, as a standing check rather than a one-off probe.
+-- partners_public must NOT filter on status beyond excluding 'pending': the
+-- whole point of the view is that a bio link outlives the sponsorship. If a
+-- future edit adds status = 'active' to it, every partner's page dies the day
+-- their contract lapses, months after the change that caused it -- so this
+-- compares the view's row count against the base table filtered by exactly the
+-- two exclusions 163 declares. The business_type arm is repeated here rather
+-- than ignored so that quietly widening or narrowing it also shows up.
+select 'GUARD_partners_public_survives_expiry',
+       case when to_regclass('public.partners_public') is null then 'MISSING -- view absent'
+            when (select count(*) from public.partners_public)
+               = (select count(*) from public.featured_partners
+                   where status is distinct from 'pending'
+                     and business_type is distinct from 'independent')
+            then 'applied'
+            else 'MISSING -- partners_public row count no longer matches its '
+                 'declared filters; a lapsed sponsorship may kill its bio link' end
+union all
+
+-- The security boundary, as a standing check. partners_public is
+-- owner-executed, so its SELECT list is the only thing between anon and the
+-- commercial columns of featured_partners -- what each partner pays Tribe and
+-- what their contract minimums are.
+select 'GUARD_partners_public_hides_commercial_columns',
+       case when to_regclass('public.partners_public') is null
+            -- An absent view has no exposed columns, which would otherwise
+            -- report a green 'applied' for a state in which the feature does
+            -- not exist at all. Say so instead.
+            then 'MISSING -- view absent'
+            else coalesce(
+              'MISSING -- exposed to anon: ' || string_agg(a.attname, ', ' order by a.attname),
+              'applied'
+            ) end
+from pg_attribute a
+where a.attrelid = to_regclass('public.partners_public')
+  and a.attnum > 0
+  and not a.attisdropped
+  and a.attname in (
+    'monthly_fee_cents', 'min_sessions_per_month', 'min_rating',
+    'total_impressions', 'total_clicks', 'total_bookings',
+    'tier', 'status', 'starts_at', 'expires_at',
+    'auto_approve_roster', 'user_id'
+  )
 order by migration;
