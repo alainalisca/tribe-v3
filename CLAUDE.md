@@ -101,6 +101,20 @@ Green-on-dark is fine and always was — `tribe-green` is 8.43:1 on `#272D34`. T
 
 Two properties make this worse than ordinary test residue: `sessions.partner_status` is written only by `review_venue_request`, so approvals made while testing are indistinguishable from real ones afterwards; and nothing in the venue-review path notifies anyone, so neither the gym nor a booked participant is told when a session's venue changes. Create the test partner, test against it, and leave live partner rows alone.
 
+**A detector that searches for a NAME answers "is this spelled the way I expected", not "does this do the thing".** Assert on the capability or the observable outcome, never on an identifier.
+
+Caught three times in 24 hours on 2026-09-13/14, each time producing a confident wrong answer that survived until something unrelated contradicted it:
+
+| the check that was written                    | what it actually answered                         | what it missed                                                                                                                                                                               |
+| --------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "is `IOSInstallPrompt` present on the page?"  | whether that component was mounted                | a CTA whose destination auto-navigated to the App Store. Both suppression checks passed while the page still ejected a visitor in one tap.                                                   |
+| `.select()` scanned with a single-line window | whether a column list happened to fit on one line | `fetchUserProfile`'s multi-line list, producing an 18-column "dead" list. Revoking it would have failed the profile page's main read with `42501`, invisible to every test.                  |
+| `grep getServiceRoleClient`                   | whether a file spells the helper that way         | two routes that build a service client inline with `createClient as createServiceClient`. Would have widened the `users` UPDATE allowlist by five Tribe.OS columns for every logged-in user. |
+
+The rewrites that worked, in the same order: look for _any_ element that intercepts a tap at the heading's centre and follow _every_ link to where it lands; parse the call rather than a line; ask whether the file constructs a client with `SUPABASE_SERVICE_ROLE_KEY` by any spelling.
+
+Same family as the privilege rule below: `has_table_privilege` answers "can this role do it", `information_schema.table_privileges` answers "is there a row that says so". Prefer the capability question every time.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:

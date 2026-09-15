@@ -8,9 +8,9 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
 | Producto         | 10   | 17    | 4    | 31    |
-| Seguridad        | 5    | 4     | 3    | 12    |
-| Pagos            | 3    | 1     | 0    | 4     |
-| Infra            | 6    | 13    | 4    | 23    |
+| Seguridad        | 6    | 3     | 3    | 12    |
+| Pagos            | 5    | 1     | 0    | 6     |
+| Infra            | 8    | 13    | 4    | 25    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
 | **Total**        | 31   | 53    | 21   | 104   |
@@ -244,6 +244,368 @@ IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0
 FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
 
 ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
+
+### [DRIFT-01] La base de datos de producción no se puede reconstruir desde las migraciones, y eso ya se escribió en julio
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** L · **Deploy:** Proceso + Supabase · **Riesgo:** Alto — cualquier migración futura sobre `users` se escribe contra un estado que no conocemos
+- **Journey / lado:** Todo el equipo
+- **Ruta/Archivo:** `supabase/migrations/*`; `supabase/drift-probe.sql`; `docs/DRIFT_AUDIT_2026-07-08.md:57`
+
+**Descripción**
+
+QUÉ PASA: **permisos y datos de producción se están fijando fuera del control de versiones como práctica habitual.** Una reconstrucción desde `supabase/migrations/` produce una base de datos DISTINTA de la que está sirviendo a los usuarios, y más abierta. CI no puede ver la diferencia, porque CI solo ve el repositorio.
+
+**ESTO NO ES UN FALLO DE DETECCIÓN. ES UN FALLO DE SEGUIMIENTO.** `docs/DRIFT_AUDIT_2026-07-08.md:57` ya enumeró las funciones y triggers que viven solo en producción, hace dos meses. Llamó a `protect_verified_instructor` textualmente **«a security guard living only in live»**. Su recomendación fue: _«capture each into a tracked migration verbatim, then review bodies for column-reference and logic drift»_. No se hizo nada. La nota se escribió, se archivó, y la deriva siguió creciendo.
+
+Esa es la evidencia y ese es el ticket. Una quinta instancia no es la historia; la historia es que **la cuarta se escribió y se ignoró**.
+
+INSTANCIAS CONOCIDAS (las cuatro de esta semana, más la nota de julio):
+
+1. **093 emitió `GRANT SELECT ON public.users TO authenticated;`** y el probe del 2026-09-14 mide ese privilegio en `false`. **CERRADO el 2026-09-14 por medición: causa explicada, 166 desbloqueado.** Medido en producción el 2026-09-14, solo lectura:
+
+   | medición                                                                 | resultado                                         |
+   | ------------------------------------------------------------------------ | ------------------------------------------------- |
+   | `has_table_privilege` SELECT en `public.users`                           | `anon` **false**, `authenticated` **false**       |
+   | grants SELECT de columna para anon/authenticated sobre `users`           | **168**                                           |
+   | `email`, `is_admin`, `location_lat`, `location_lng`, `push_subscription` | `has_column_privilege` **false** para AMBOS roles |
+
+   **LO QUE ESTO CIERRA:** el estado efectivo del régimen SELECT sobre `users` ya no es desconocido, está medido columna por columna. 166 toca el allowlist de **UPDATE** y ahora puede escribirse contra realidad medida en lugar de contra una incógnita. **166 queda desbloqueado.**
+
+   **LA CAUSA, Y POR QUÉ NO ES LO QUE PARECÍA.** Se propuso que 113, 115 y 118 hubieran revocado a nivel de tabla y re-concedido por columna, y que por tanto esto fuera el patrón correcto y no deriva. **Eso no es lo que hacen esas tres migraciones.** Las tres emiten únicamente `REVOKE SELECT (columnas)` — revoke de COLUMNA — y un revoke de columna no puede restar de un grant de tabla; es la lección documentada de 093 y de CLAUDE.md. Verificado sobre el repositorio completo: los únicos `REVOKE SELECT ON public.users` a nivel de tabla están en **066** (`:45-46`) y **067** (`:55-56`), ambas ANTERIORES a 093, y **ninguna migración posterior a 093 revoca ese grant**. 114 concede sobre `users_discoverable`, que es otro objeto.
+
+   Es decir: 093 concedió el grant de tabla, el control de versiones no lo retira en ningún sitio, y producción lo mide en `false`. **Eso es deriva por definición.** Y 093 se escribió para reparar una caída real, así que sí se aplicó. Los perfiles siguen funcionando hoy porque el allowlist de columnas cubre lo que la app lee. Lo que queda por explicar es solo qué retiró el grant de tabla — y la aritmética de abajo lo contesta.
+
+   **CERRADO EL 2026-09-14. CAUSA EXPLICADA.** La aritmética de los grants de columna lo resuelve sin ambigüedad. `public.users` tiene 100 columnas (medido). 067 concede todas menos 8 — los cuatro `tribe_os_*` más `push_subscription`, `fcm_token`, `fcm_platform`, `fcm_updated_at` — y concede la misma lista a los dos roles (`067:30-58`):
+
+   | paso                                                                                                     | columnas por rol |
+   | -------------------------------------------------------------------------------------------------------- | ---------------- |
+   | regenerado de 067                                                                                        | 100 − 8 = **92** |
+   | 113 revoca `is_admin`, `payout_method`, `stripe_account_id`, `wompi_merchant_id`, `total_earnings_cents` | 92 − 5 = 87      |
+   | 115 revoca `location_lat`, `location_lng`                                                                | 87 − 2 = 85      |
+   | 118 revoca `email`                                                                                       | 85 − 1 = **84**  |
+
+   84 × 2 roles = **168**, que es exactamente lo medido. **Un re-run a mano del patrón regenerador de 066/067 habría dado 184**, porque el regenerado devuelve las 92 y no sabe nada de 113, 115 ni 118. Por tanto ese re-run NO ocurrió: **los ACL de columna están intactos y explicados al completo por el control de versiones.**
+
+   Lo único que falta es el grant **a nivel de tabla** que 093 restauró. Un `REVOKE SELECT ON public.users FROM authenticated` suelto, ejecutado a mano, elimina exactamente eso y deja los 168 grants de columna intactos. **Es la única acción compatible con todos los números medidos.**
+
+   VEREDICTO: **deriva, sí; peligro, no.** 093 restauró un grant de tabla en blanco para reparar una caída real — todas las páginas de perfil en blanco con `permission denied for table users` — y al hacerlo **volvió a exponer todas las columnas que 067 había retirado deliberadamente, las claves de push incluidas**. Alguien lo detectó y lo revocó. **La acción fue correcta y quien la tomó tenía razón.** El defecto es el registro que falta, no la acción. Esto no se vuelve a abrir: se vuelve a contar en la regla de equipo de más abajo, que es donde pertenece.
+
+   CONSECUENCIA PARA 166: se puede escribir ya, pero **su guarda debe afirmar el hecho positivo** — que exactamente las N columnas del allowlist tienen UPDATE y ninguna otra — y no que un conjunto de columnas indebidas esté vacío. La misma mano que reescribió los grants de SELECT sin dejar rastro puede reescribir los de UPDATE después de que 166 aterrice, y una afirmación de vacuidad no distingue «lo arreglé» de «nunca se ejecutó». Ver el mensaje de commit de 164 y [DRIFT-04].
+
+2. **`is_trailblazer`**: ninguna línea del repositorio lo escribe. Las insignias de la cohorte fundadora se pusieron a mano.
+3. **`is_verified_instructor`**: ninguna línea del repositorio lo escribe tampoco — y medido con la anon key el 2026-09-14, **0 de 97 filas lo tienen en true**. Nadie ha verificado nunca a un instructor.
+4. **Funciones y triggers que no están en ninguna migración**: `protect_verified_instructor`, `update_instructor_stats`, `on_payment_approved`, `set_payment_status_on_join`, y la lista completa de julio. Ver [DRIFT-02].
+5. **Políticas RLS con el email de Al escrito dentro del cuerpo**, sobre `users` y `sessions`, que no están en ninguna migración. Ver [SEC-03].
+6. **`authenticated` sobre `public.sessions` tiene grant a nivel de TABLA **y** 3 grants a nivel de COLUMNA a la vez** (medido en producción el 2026-09-14). Los tres de columna son inertes: un `GRANT SELECT (col)` no puede restar de un `GRANT SELECT` sobre la tabla — la misma lección que dejó 093. Alguien empezó un régimen por columnas sobre `sessions` y quedó a medias, o el grant de tabla se volvió a emitir por encima. No sabemos cuál, y ninguna migración explica la mezcla. No es trabajo de 164 y no se toca ahí; queda anotado porque es exactamente la forma de deriva que persigue este ticket, y porque cualquiera que lea los grants de columna sobre `sessions` concluirá que hay un régimen restrictivo que en realidad no está vigente.
+
+CONSECUENCIA MEDIBLE, no hipotética: la deriva de la migración 093 significa que hoy no sabemos si el régimen de columnas sobre `users` es el que creemos. Y los triggers no versionados ya están produciendo datos incorrectos en producción — ver [DRIFT-03], donde `total_participants_served` está congelado en 0 para todo el mundo excepto el único admin.
+
+FIX, y es de proceso antes que de SQL:
+
+- ~~Resolver primero la deriva de 093 antes de escribir 166.~~ **Superado el 2026-09-14:** el estado efectivo está medido (punto 1) y 166 está desbloqueado. Queda pendiente explicar la CAUSA, que es un ticket de proceso, no un bloqueante de 166.
+- **Capturar todo lo no versionado** — [DRIFT-02].
+- **Ejecutar `supabase/drift-probe.sql` de forma recurrente**, no una sola vez, y comparar contra lo que las migraciones afirman. Es una consulta de solo lectura y ya está validada.
+- **Regla de equipo**: nada se aplica en el editor SQL sin quedar en una migración numerada. Si hace falta un arreglo urgente a mano, la migración que lo captura se escribe en la misma sesión.
+
+ACEPTACIÓN: `drift-probe.sql` sobre producción coincide con lo que las migraciones producen sobre una base reconstruida desde cero, en grants, políticas, triggers y funciones. Cualquier diferencia está explicada por una migración numerada.
+
+### [DRIFT-02] Capturar todas las funciones y triggers que viven solo en producción (pendiente desde julio)
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración de captura, sin cambios de comportamiento) · **Riesgo:** Bajo si se captura verbatim
+- **Ruta/Archivo:** `docs/DRIFT_AUDIT_2026-07-08.md:57` (la lista original)
+
+**Descripción**
+
+QUÉ PASA: hay funciones y triggers ejecutándose en producción que no existen en ninguna migración. No se pueden revisar en un code review, no se pueden reconstruir, y pueden referenciar columnas que ya no existen sin que nada en el repositorio lo detecte.
+
+Lo pidió el audit de julio y sigue sin hacerse. Esta semana costó tiempo real: la migración 165 se quedó bloqueada porque nadie podía leer el cuerpo de `protect_verified_instructor` ni el de `update_instructor_stats` sin pedirle a Al que corriera `pg_get_functiondef` a mano.
+
+LISTA, de `docs/DRIFT_AUDIT_2026-07-08.md:57` y de lo encontrado esta semana:
+
+| función                                              | trigger / evento                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| `protect_verified_instructor`                        | `users` BEFORE UPDATE — «a security guard living only in live»            |
+| `update_instructor_stats`                            | `sessions` AFTER UPDATE (`on_session_status_change`)                      |
+| `on_payment_approved`                                | `payments` INSERT + UPDATE                                                |
+| `set_payment_status_on_join`                         | `session_participants` BEFORE INSERT                                      |
+| `sync_session_coords`                                | `sessions` BEFORE INSERT/UPDATE                                           |
+| `notify_new_chat_message`                            | `chat_messages` — segunda vía de notificación, redundante con el webhook  |
+| `update_last_login`                                  |                                                                           |
+| `update_payment_updated_at`                          |                                                                           |
+| `update_service_packages_updated_at`                 |                                                                           |
+| `on_post_like`, `on_user_follow`, `on_user_unfollow` | contadores por delta, también sin versionar                               |
+| `handle_new_user`                                    | `auth.users` — el único creador de filas en `public.users` al registrarse |
+
+FIX: una migración de captura que haga `CREATE OR REPLACE` de cada una **verbatim**, tal como devuelve `pg_get_functiondef`, sin cambiar una línea. Cero cambios de comportamiento por diseño: el objetivo es que el repositorio y producción coincidan. **Después**, y en migraciones separadas, revisar cada cuerpo por deriva de columnas y por lógica — que es donde salió [DRIFT-03].
+
+CUIDADO AL CAPTURAR: `CREATE OR REPLACE FUNCTION` reemplaza la definición COMPLETA, incluida su configuración. Si el `pg_get_functiondef` de origen no lleva `SET search_path`, capturarlo verbatim **despinnea** lo que la 164 fijó. Capturar verbatim y añadir el `SET search_path` explícito en la misma sentencia, como hace la 165.
+
+ACEPTACIÓN: `select proname from pg_proc where pronamespace='public'::regnamespace` no devuelve ninguna función que no aparezca en alguna migración; el guard de `verify-migration-state.sql` lo comprueba de forma continua.
+
+### [DRIFT-03] Los contadores derivados de instructor llevan congelados en 0 para todo el mundo menos el admin
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** En curso (lo arregla la 165)
+- **Esfuerzo:** S · **Deploy:** Supabase · **Riesgo:** Bajo
+- **Ruta/Archivo:** `public.protect_verified_instructor()`; `public.update_instructor_stats()`
+
+**Descripción**
+
+QUÉ PASA: `protect_verified_instructor` revierte en silencio cualquier escritura a `total_earnings_cents` y `total_participants_served` cuando quien llama no es admin. `update_instructor_stats` se dispara desde una acción de un instructor (AFTER UPDATE sobre `sessions`), así que `auth.uid()` NO es NULL y la reversión se lo come. El trigger que recalcula los contadores lleva ejecutándose y siendo descartado desde que existe.
+
+MEDIDO el 2026-09-14 con el service role:
+
+| instructor        | is_admin | contador dice | inscripciones confirmadas |
+| ----------------- | -------- | ------------- | ------------------------- |
+| Darian            | **true** | 6             | 34                        |
+| Alexandra Aguirre | false    | **0**         | 13                        |
+| Caroline Vanegas  | false    | **0**         | 11                        |
+
+`total_participants_served > 0` -> solo Darian. `total_earnings_cents > 0` -> solo Darian (2430). Y **Darian es el único admin de toda la base de datos.**
+
+LA PRUEBA, y es la parte que lo convierte en certeza: `total_sessions_hosted` — que el trigger NO protege — avanza correctamente para todos (97, 40, 36, 34…). Las dos columnas protegidas están congeladas; la no protegida no. El contraste es el guard.
+
+IMPACTO: «atletas atendidos» en la vitrina muestra 0 para todo instructor real, y **los ingresos de instructor no se han registrado nunca para nadie salvo el admin**. Es visible en dinero.
+
+FIX: migración 165. La regla correcta no es «admin o no», es **«originado por trigger u originado por cliente»**: un contador derivado no debería depender de quién tocó la fila. `pg_trigger_depth() > 1` distingue exactamente eso, y está validado contra un stub.
+
+ACEPTACIÓN: tras la 165, un instructor no admin cancela o cambia el estado de una sesión y su `total_participants_served` se mueve; una escritura directa desde el cliente a esa columna se sigue revirtiendo.
+
+### [DRIFT-04] El propio verificador de migraciones da falsos "applied": cuatro comprobaciones de REVOKE usan `information_schema.column_privileges`
+
+- **Área:** Infra · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Solo SQL de verificación · **Riesgo:** Medio — **defecto de herramienta únicamente, NO incidente de privacidad** (medido 2026-09-14, ver abajo). La herramienta con la que comprobamos si una migración se aplicó puede mentir, y ya lo ha hecho
+- **Journey / lado:** Todo el equipo
+- **Ruta/Archivo:** `supabase/verify-migration-state.sql:218,374,386,425,455`; contra-comentarios en `:856,:958,:1060`
+
+**Descripción**
+
+QUÉ PASA: `verify-migration-state.sql` contiene **cinco** comprobaciones de privilegios que consultan `information_schema`, en el mismo archivo que advierte tres veces contra hacer exactamente eso (`:856`, `:958`, `:1060` — _«USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.»_).
+
+`information_schema.column_privileges` y `role_table_grants` **solo muestran los grants en los que el usuario actual es el que concede, el que recibe, o miembro del rol que recibe**. No ven los grants a nivel de tabla. Por eso están prohibidos en CLAUDE.md, y por eso `has_table_privilege` / `has_column_privilege` son la única respuesta fiable: contestan _«¿puede este rol hacerlo?»_, no _«¿existe una fila que lo diga?»_.
+
+CUATRO DE ELLAS SON `NOT EXISTS`, que es la peor dirección posible: verifican que un REVOKE se aplicó, y **reportan `applied` precisamente cuando la vista no puede ver el grant**. Un grant que sigue vivo y es invisible para la vista se lee como éxito. Estas cuatro llevan dando falsos positivos desde que existen:
+
+| línea | migración                            | columna de `public.users` | qué debería probar                                         |
+| ----- | ------------------------------------ | ------------------------- | ---------------------------------------------------------- |
+| 374   | `067_users_push_token_revoke`        | `push_subscription`       | claves privadas de push no legibles por anon/authenticated |
+| 386   | `113_revoke_users_sensitive_columns` | `is_admin`                | el flag de admin no es legible entre usuarios              |
+| 425   | `115_revoke_users_coords`            | `location_lat`            | las coordenadas del usuario no son legibles entre usuarios |
+| 455   | `118_revoke_users_email`             | `email`                   | el correo no es legible entre usuarios                     |
+
+Las cuatro columnas son sensibles: claves de push, el flag de administrador, la ubicación y el correo. **Si alguno de esos REVOKE no se aplicó, hoy no lo sabríamos**, porque la fila del verificador dice `applied` en ambos mundos. No está medido todavía; medirlo es el primer paso del fix.
+
+LA QUINTA (`:218`, `093_restore_users_select_grant`) es `EXISTS` sobre `role_table_grants`, dirección contraria: puede dar un falso **MISSING**, no un falso `applied`. Pero importa más de lo que parece, porque **093 es justo el bloqueante de la migración 166** descrito en [DRIFT-01] punto 1: la migración emitió `GRANT SELECT ON public.users TO authenticated` y el probe lo mide en `false`. Si esta fila dice `applied`, tenemos las dos herramientas contradiciéndose sobre el hecho exacto que impide escribir 166. Resolver esa contradicción puede desbloquear 166 sin arqueología adicional.
+
+ESTE ARCHIVO NO FUE LA FUENTE DEL FALSO "164 APLICADA". Su cobertura termina en `163_partner_slug_and_public_view` (`:1049`); **no tiene sección para 164 ni para 165**. El falso positivo de 164 vino de otro sitio (una guarda que afirmaba un conjunto vacío, ver el mensaje de commit de 164). Es el mismo defecto de clase — _preguntar si existe una fila en vez de preguntar si la capacidad existe_ — encontrado de forma independiente en dos herramientas distintas el mismo día. Esa coincidencia es la razón de la prioridad Alta: no es un error aislado, es un hábito.
+
+**MEDIDO EL 2026-09-14 — LAS CUATRO SE APLICARON. NO REABRIR COMO INCIDENTE.**
+
+Contra producción, solo lectura, con `has_table_privilege` / `has_column_privilege`:
+
+| medición                                                                 | resultado                                         |
+| ------------------------------------------------------------------------ | ------------------------------------------------- |
+| SELECT a nivel de tabla sobre `public.users`                             | `anon` **false**, `authenticated` **false**       |
+| `email`, `is_admin`, `location_lat`, `location_lng`, `push_subscription` | `has_column_privilege` **false** para AMBOS roles |
+| grants SELECT de columna para anon/authenticated                         | 168                                               |
+| las cinco columnas existen                                               | sí                                                |
+
+Las cuatro migraciones de REVOKE — **067** (`push_subscription`), **113** (`is_admin`), **115** (`location_lat`/`location_lng`) y **118** (`email`) — **están aplicadas y en vigor**. Ninguna columna sensible es legible por anon ni por authenticated. El riesgo de privacidad que este ticket planteaba como hipótesis queda descartado por medición, no por razonamiento.
+
+**NO EXISTE LIBRO DE REGISTRO. CERO FILAS.** Medido el 2026-09-14: `supabase_migrations.schema_migrations` contiene **0 filas**, frente a **163 migraciones en el repositorio**. No es que falte 093 — no consta ninguna. Este proyecto no lleva contabilidad de migraciones aplicadas.
+
+Ese número es el argumento entero de este ticket. **«¿Se aplicó X?» no se puede contestar nunca desde los propios registros de la base de datos aquí; solo midiendo efectos.** Y es también lo que hace que las filas de `information_schema` sean peores que simplemente inexactas: **son lo único que se parece a un registro, y no pueden ver lo que dicen comprobar.** Un verificador que miente es estrictamente peor que no tener verificador, porque ocupa el sitio donde alguien buscaría la verdad. Fue exactamente lo que ocurrió con 164 durante un día entero.
+
+Corolario para todo lo demás: cualquier afirmación de «aplicada» en este repositorio vale lo que valga la medición de efectos que la acompañe. Sin medición, es una suposición con formato de hecho.
+
+Lo que queda es exactamente lo que dice el título: **el verificador informa `applied` sin poder saberlo**. Cuatro filas que hoy aciertan por casualidad, porque la respuesta correcta y la respuesta que la vista no puede ver coinciden en ser la misma. El día que un REVOKE no se aplique, esas filas seguirán diciendo `applied`. Por eso sigue siendo un ticket y no se cierra: la corrección es del instrumento, no del estado.
+
+**FIX**
+
+1. ~~**Medir primero, antes de tocar el verificador.**~~ **HECHO el 2026-09-14, resultado arriba.** La consulta, para repetirla: Las cuatro columnas, con la función correcta:
+
+```sql
+begin;
+select c.col,
+       has_column_privilege('anon',          'public.users', c.col, 'SELECT') as anon_select,
+       has_column_privilege('authenticated', 'public.users', c.col, 'SELECT') as auth_select
+from (values ('push_subscription'), ('is_admin'), ('location_lat'), ('email')) c(col);
+rollback;
+```
+
+Las ocho celdas deben ser `false`. Cualquier `true` es un REVOKE que nunca se aplicó y que el verificador lleva reportando como `applied`; eso deja de ser un ticket de herramientas y pasa a ser un incidente de privacidad.
+
+2. **Sustituir las cuatro filas** por la forma basada en capacidad. Patrón, para `067`:
+
+```sql
+select '067_users_push_token_revoke',
+       case when not has_column_privilege('anon',          'public.users', 'push_subscription', 'SELECT')
+             and not has_column_privilege('authenticated', 'public.users', 'push_subscription', 'SELECT')
+            then 'applied' else 'MISSING' end
+```
+
+`has_column_privilege` devuelve `true` si el rol tiene el privilegio por grant de columna **o** por grant de tabla, que es exactamente lo que una verificación de REVOKE necesita saber.
+
+3. **Sustituir `:218`** por `has_table_privilege('authenticated', 'public.users', 'SELECT')`, y anotar el resultado en [DRIFT-01] punto 1 sea cual sea, porque contesta directamente a la pregunta que bloquea 166.
+
+4. **Regla, no solo parche:** ninguna comprobación de privilegios en este repositorio consulta `information_schema`. Los tres comentarios que ya lo dicen no bastaron — el archivo los contiene y los incumple a la vez. Vale la pena una regla de lint o un grep en CI sobre `supabase/**/*.sql` que falle ante `information_schema.(table_privileges|column_privileges|role_table_grants)`.
+
+5. **Añadir secciones para 164 y 165**, ambas aplicadas el 2026-09-14 y ninguna cubierta por este archivo.
+
+**ACEPTACIÓN:** `verify-migration-state.sql` no contiene ninguna referencia a `information_schema.(table_privileges|column_privileges|role_table_grants)`; las cuatro filas de REVOKE usan `has_column_privilege`; ~~existe la medición del punto 1~~ (hecha, arriba); 164 y 165 tienen sección; y CI falla si alguien reintroduce el patrón.
+
+### [COUNTER-01] Reconstruir total_participants_served: recomputado, un solo dueño, sobre una finalización real
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) · **Riesgo:** Medio — toca dos triggers vivos no versionados
+- **Ruta/Archivo:** `public.update_instructor_stats()`; `public.on_payment_approved()` — ninguna de las dos está en el repositorio, ver [DRIFT-02]
+- **Bloquea:** [DRIFT-03]. **Bloqueada por:** [DRIFT-02] (hay que capturar los cuerpos antes de reescribirlos).
+
+**Descripción**
+
+QUÉ PASA: `total_participants_served` lo incrementan **dos** triggers distintos, con semánticas distintas, y ninguno lo recalcula:
+
+- `update_instructor_stats` (`sessions` AFTER UPDATE) hace `total_participants_served + participant_count` en **cualquier** cambio de estado. Cancelar una sesión lo INCREMENTA. Cualquier ida y vuelta de estado lo incrementa otra vez.
+- `on_payment_approved` (`payments` INSERT+UPDATE) hace `total_participants_served + 1` sobre la misma columna.
+
+POR QUÉ NO SE PUEDE «DESCONGELAR» Y YA: hoy la columna está congelada porque `protect_verified_instructor` revierte en silencio toda escritura de un no-admin (ver [DRIFT-03]). Quitar esa reversión NO arregla el contador: lo pone a acumular basura desde una base de cero, sin histórico, con dos incrementadores pisándose. **Congelado es visiblemente incorrecto; en movimiento y mal parece que funciona**, que es estrictamente peor. La migración 165 deja la reversión puesta a propósito por esto, y lleva un guard que falla si alguien la quita sin leer el motivo.
+
+Se construyó y se validó un mecanismo `pg_trigger_depth() > 1` que distingue correctamente escrituras originadas por trigger de las originadas por cliente, y se descartó: un mecanismo correcto apuntando a un cálculo roto solo hace que el número equivocado se mueva más rápido.
+
+FIX, y las tres partes son necesarias juntas:
+
+1. **RECOMPUTAR, no incrementar.** `SELECT count(*) FROM session_participants WHERE status='confirmed'` sobre las sesiones pasadas del instructor, siguiendo el patrón de recompute de la migración 109 (que el audit de julio ya recomendó para todos los contadores).
+2. **UN solo dueño.** Quitar el incremento de `on_payment_approved` y el de `update_instructor_stats`; que un único trigger mantenga la columna.
+3. **Sobre una finalización real**, no sobre cualquier cambio de estado. OJO: hoy `sessions.status` solo toma los valores `active` y `cancelled` — no existe `completed`. Así que «finalización» hay que definirla (fecha pasada y no cancelada, probablemente) antes de escribir el trigger.
+4. Backfill de una sola vez para todas las filas existentes, ya que el histórico no está.
+
+ACEPTACIÓN: para cada instructor, `total_participants_served` coincide con el conteo real de inscripciones confirmadas en sus sesiones pasadas no canceladas; cancelar una sesión no lo incrementa; un round-trip de estado no lo mueve.
+
+### [STATS-01] sessions_completed cuenta CANCELACIONES, y se muestra en el perfil público
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Supabase (migración) · **Riesgo:** Medio
+- **Ruta/Archivo:** `public.update_instructor_stats()` (no versionada, ver [DRIFT-02]); `lib/dal/users.ts:37` la lee; se renderiza en el perfil
+
+**Descripción**
+
+QUÉ PASA: `update_instructor_stats` hace `sessions_completed + 1` en **cada** cambio de estado de una sesión, incluidas las cancelaciones. Nada la recalcula. Y a diferencia de los otros dos contadores, esta columna **no está protegida** por `protect_verified_instructor`, así que sí se ha estado moviendo para todo el mundo, todo este tiempo.
+
+MEDIDO el 2026-09-14 con el service role. Como `sessions.status` solo tiene `active` y `cancelled`, el único cambio de estado que ocurre en la práctica es active -> cancelled, y el resultado es exacto:
+
+| instructor        | `sessions_completed` | sesiones CANCELADAS | sesiones pasadas reales |
+| ----------------- | -------------------- | ------------------- | ----------------------- |
+| Darian            | 16                   | **16**              | 97                      |
+| Alexandra Aguirre | 9                    | **9**               | 40                      |
+| Caroline Vanegas  | 3                    | **3**               | 34                      |
+| Marcela Anahata   | 1                    | **1**               | 15                      |
+| Leo Garcia        | 1                    | **1**               | 9                       |
+
+**`sessions_completed` es igual al número de sesiones canceladas para 5 de 5 instructores.** No está inflada: está contando exactamente lo contrario de lo que dice contar. En total la columna suma 30 frente a 255 sesiones pasadas reales.
+
+IMPACTO: el perfil público de un instructor muestra como «sesiones completadas» su número de cancelaciones. Alexandra, con 40 sesiones pasadas, aparece con 9 — que es su número de cancelaciones. Es una cifra de reputación, visible a desconocidos, y dice lo contrario de la verdad.
+
+FIX: mismo tratamiento que [COUNTER-01] — recomputar desde `sessions` en lugar de incrementar, sobre una definición explícita de «completada», con backfill. Las dos columnas las mantiene el mismo trigger, así que conviene arreglarlas en la misma migración.
+
+ACEPTACIÓN: `sessions_completed` coincide con el conteo real de sesiones pasadas no canceladas de cada instructor; cancelar una sesión no la incrementa.
+
+### [PAY-08] on_payment_approved no es SECURITY DEFINER, así que la escritura de ingresos no afecta a ninguna fila
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Supabase (migración) · **Riesgo:** Bajo
+- **Ruta/Archivo:** `public.on_payment_approved()` (no versionada, ver [DRIFT-02])
+
+**Descripción**
+
+QUÉ PASA: `on_payment_approved` **no** es `SECURITY DEFINER`. Corre como quien la llama. Su `UPDATE public.users SET total_earnings_cents ...` apunta a la fila del **INSTRUCTOR**, mientras que quien llama es el **PAGADOR**. La política RLS de UPDATE sobre `users` es `auth.uid() = id`, así que el UPDATE **no coincide con ninguna fila** y no hace nada, en silencio.
+
+ESTO ES UNA SEGUNDA RAZÓN, INDEPENDIENTE, de que los ingresos de instructor no se hayan registrado nunca. La primera es la reversión silenciosa de `protect_verified_instructor` ([DRIFT-03]). Están apiladas: **arreglar solo una de las dos no cambia nada.** Si se hace la función `SECURITY DEFINER` sin tocar la reversión, la escritura pasa el RLS y la revierte el trigger. Si se quita la reversión sin tocar la función, la escritura sigue sin coincidir con ninguna fila.
+
+FIX: `SECURITY DEFINER` con `SET search_path` fijado, capturada primero en una migración ([DRIFT-02]). Coordinar con [COUNTER-01], que además le quita a esta función el incremento de `total_participants_served`.
+
+ACEPTACIÓN: un pago aprobado mueve `total_earnings_cents` del instructor; verificado con un pago real de extremo a extremo, no con una escritura directa.
+
+### [PAY-09] Los registros de pago almacenados llevan un reparto de comisión que Tribe no aplica — DECISIÓN DE AL
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** **Necesita decisión de Al**
+- **Esfuerzo:** M · **Deploy:** Supabase + revisión de datos · **Riesgo:** Alto — son datos financieros almacenados
+- **Ruta/Archivo:** `public.on_payment_approved()` (no versionada, ver [DRIFT-02]); columnas `payments.platform_fee_cents`, `payments.instructor_payout_cents`
+- **Relacionado, NO duplicar:** [PAY-04] (copy de marketing «keep 85%» / 15%) y la fila de Notion «La UI muestra una tarifa de plataforma del 10% que Tribe no cobra».
+
+**Descripción**
+
+QUÉ PASA: `on_payment_approved` calcula `v_fee_cents := ROUND(NEW.amount_cents * 0.10)` y escribe `platform_fee_cents` e `instructor_payout_cents` en **cada fila de pago aprobada**.
+
+POR QUÉ ESTE ES DISTINTO DE LOS DOS TICKETS QUE YA EXISTEN, y por qué es el peor de los tres:
+
+- [PAY-04] y la fila de Notion son sobre **cadenas de texto que se muestran**: la UI decía 10%, el marketing dice 15%, y el código de config dice 15% (`lib/payments/config.ts:6`). Eso se arregla editando copy.
+- Esto **no es una cadena de texto. Son datos financieros almacenados.** Cada pago aprobado en la base de datos lleva escrito un reparto que no corresponde a lo que Tribe hace realmente, y el número que usa (10%) tampoco coincide con el 15% del código ni con el «100% al instructor» del camino de pago que está vivo (`PaidSessionRequest`, off-platform).
+
+Son por tanto **tres capas distintas**: lo que dice el marketing (15%), lo que decía la UI (10%), y lo que queda escrito en la tabla de pagos (10%). Editar el copy no toca la tercera.
+
+LO QUE NECESITA DECIDIR AL, y por eso este ticket no propone un fix:
+
+1. ¿Cuál es la comisión real, si es que hay alguna, para cada camino de pago?
+2. Las filas ya escritas: ¿se recalculan, se anulan, o se dejan con una nota de que el campo nunca fue autoritativo?
+3. ¿Debería `on_payment_approved` escribir estos campos siquiera, o el reparto lo debería decidir el gateway en el momento del cobro?
+
+Hasta que eso esté decidido, **no tocar la función**: cambiar el 0.10 por otro número sin responder (1) solo cambia qué cifra incorrecta se almacena.
+
+ACEPTACIÓN: decisión escrita en este ticket; `platform_fee_cents` e `instructor_payout_cents` o reflejan la comisión real o se retiran; las filas históricas tienen un tratamiento definido.
+
+### [PAY-10] El camino de pago automático nunca se ha completado ni una sola vez: 0 aprobados, 12 errores, 5 pendientes, y ninguna fila desde el 2026-07-06
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Ninguno todavía — el primer paso es solo lectura · **Riesgo:** Alto cuando se cobre, **cero hoy** porque no se cobra
+- **Journey / lado:** Atleta que paga · Instructor que cobra
+- **Ruta/Archivo:** `public.payments`; `public.on_payment_approved()` (no versionada, ver [DRIFT-02]); camino manual en `lib/dal/sessions.ts:1283`
+- **CONDICIÓN BLOQUEANTE:** hay que resolverlo **antes de habilitar el cobro**, NO antes de la próxima release. Al no está cobrando.
+
+**Descripción**
+
+MEDIDO EN PRODUCCIÓN el 2026-09-14, `public.payments` completa:
+
+| estado | filas | rango de fechas |
+|---|---|---|
+| `error` | **12** | 2026-05-02 → 2026-07-06 |
+| `pending` | **5** | 2026-05-03 → 2026-07-01 |
+| `approved` | **0** | — |
+
+**Cero aprobados de 17 intentos, y ninguna fila nueva desde el 2026-07-06.** El camino automático de pago no ha llegado a término nunca. No es que falle a veces: no ha funcionado ni una vez, y lleva más de dos meses sin recibir siquiera un intento.
+
+**ESTO REENCUADRA [PAY-08].** Ese ticket dice que `on_payment_approved` no es `SECURITY DEFINER`, así que su `UPDATE public.users SET total_earnings_cents ...` corre como el PAGADOR contra la fila del INSTRUCTOR, no coincide con ninguna fila por la política `auth.uid() = id`, y no hace nada en silencio. **Eso sigue siendo cierto y sigue siendo un defecto real — pero nunca ha tenido efecto, porque el trigger nunca se ha disparado.** Se dispara con `payments` INSERT + UPDATE hacia `approved`, y aprobados hay cero. PAY-08 no baja de prioridad: es una bomba con la espoleta puesta que se armará el día que el primer pago se apruebe. Lo que cambia es que hoy no está causando daño y no explica ningún dato observado.
+
+**CONSECUENCIA PARA LOS CONTADORES.** `total_earnings_cents = 0` para todo el mundo tiene ahora **dos** causas independientes, y conviene no seguir atribuyéndolo solo a una:
+
+1. El revert silencioso de `protect_verified_instructor` — ver [COUNTER-01] y [DRIFT-03], y la migración 165, que lo dejó congelado a propósito.
+2. **La escritura nunca ocurre.** Aunque el revert no existiera y `on_payment_approved` fuese `SECURITY DEFINER`, el contador seguiría en 0, porque no hay ningún pago aprobado que lo incremente.
+
+Arreglar cualquiera de las dos por separado no moverá el número. Quien retome [COUNTER-01] debe leer esto primero para no volver a derivarlo desde cero: **la causa raíz de los ingresos en cero es que no ha habido ingresos que registrar por esta vía**, no la lógica del trigger.
+
+**EL ÚNICO CAMINO QUE HA FUNCIONADO ES EL MANUAL.** Las confirmaciones de pago que sí han ocurrido no pasaron por `public.payments`: van por `session_participants.payment_confirmed_by` (escrito en `lib/dal/sessions.ts:1283`) y por el trigger `set_payment_status_on_join`, es decir, el instructor marca a mano que le pagaron en efectivo o por transferencia. Esa es la realidad operativa de la plataforma hoy y coincide con [PAY-04]: Tribe no procesa pagos, los instructores reciben el 100%. La tabla `payments` es infraestructura montada que nunca entró en servicio.
+
+**FIX — EL PRIMER PASO ES LEER, NO TOCAR LA PASARELA**
+
+1. **Leer las 12 filas en `error` y decir qué falló realmente.** Antes de que nadie mire el código de la pasarela, hay que saber si son 12 fallos de una misma causa o de varias: credenciales, firma de webhook, moneda, un campo requerido, o llamadas de prueba abandonadas. Doce filas es una muestra que se lee entera en diez minutos y descarta la mitad de las hipótesis posibles.
+
+   ```sql
+   begin;
+   select id, created_at, status, amount_cents, currency, payment_type,
+          provider, provider_payment_id, error_message, metadata
+   from public.payments
+   order by created_at;
+   rollback;
+   ```
+
+   Son 17 filas en total: caben todas, no hace falta muestrear.
+
+2. **Averiguar por qué no hay intentos desde el 2026-07-06.** ¿Se retiró el punto de entrada de la UI, se apagó por configuración, o simplemente nadie lo intentó? Es una pregunta distinta de por qué fallaron los 12, y la respuesta cambia el alcance.
+
+3. Solo después de 1 y 2, decidir sobre la pasarela. Cruza con [PAY-01] (el kill switch `INSTRUCTOR_PAYMENTS_ENABLED` que no existe en código) y [PAY-02] (decisión de Al sobre los branches Stripe/Wompi).
+
+**ACEPTACIÓN:** las 12 filas `error` están clasificadas por causa en este ticket; se sabe por qué no hay intentos desde julio; y existe una decisión escrita de Al sobre si el camino automático se arregla o se retira antes de habilitar el cobro.
+
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
@@ -820,18 +1182,41 @@ QUÉ PASA: :108 salta el check de participante para kind 'guest' y 'leave'. join
 FIX: exigir fila de participante también en 'leave' (llamar notify ANTES del delete); para 'guest' atar al guest_token que devuelve join_session_as_guest (120:100-104); derivar joiner_name de users.name en servidor (como ya hace notify-interest :72,81).
 ACEPTACIÓN: POST con kind 'leave' sin fila de participante -> 403; joiner_name del body ignorado para usuarios autenticados.
 
-### [SEC-03] Unificar los dos gates de admin (is_app_admin() vs ADMIN_EMAILS hardcodeado) en las rutas destructivas
+### [SEC-03] Dos sistemas de admin en paralelo, en TRES sitios, y no coinciden
 
-- **Área:** Seguridad · **Prioridad:** Media · **Estado:** Por hacer
-- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Auth
+- **Área:** Seguridad · **Prioridad:** **Alta** (subida el 2026-09-14: el tercer sitio son políticas RLS vivas, no código) · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) + Supabase (migración) · **Riesgo:** Auth
 - **Journey / lado:** Admin
-- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:36; app/api/admin/tribe-os/grant-premium/route.ts:33`
+- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:24; app/api/admin/tribe-os/grant-premium/route.ts:18,33`; políticas RLS sobre `public.users` y `public.sessions`
 
 **Descripción**
 
 QUÉ PASA: dos definiciones de "admin" conviven: flag de DB vía RPC is_app_admin() (lib/auth/adminApi.ts:47-48, gatea /api/admin/data y páginas /admin/\*) y allowlist de emails literal (lib/admin.ts:10-16 + lib/admin-config.ts:12) que gatea las DOS rutas más destructivas: borrar usuario (:36) y otorgar premium (:33). Consecuencias: un admin legítimo (is_admin=true) ve el control de borrar y recibe 403; quien controle una de las dos direcciones literales borra usuarios y otorga premium SIN fila is_admin y sin pasar por admin_role_audit (043:66-85); la comparación es case-sensitive.
 FIX: isAdmin() sobre is_app_admin(); retirar ADMIN_EMAILS; un solo helper requireApiAdmin.
 ACEPTACIÓN: las dos rutas responden 403 a un email de la lista sin is_admin y 200 a un is_admin real.
+
+---
+
+**ACTUALIZACIÓN 2026-09-14 (SEC-SWEEP) — ya no es categórico, son tres sitios concretos y hay uno que no es código.**
+
+Los **tres** lugares donde vive el gate de admin, y lo que decide cada uno:
+
+1. **`is_app_admin()`** — el flag en base de datos. `lib/auth/adminApi.ts:47-48` (`requireApiAdmin`) lo usa para `/api/admin/data` y las páginas `/admin/*`. Es el mecanismo bueno: consulta una fila real y queda registrado.
+
+2. **`ADMIN_EMAILS`**, allowlist literal de dos direcciones en `lib/admin-config.ts:12`, consumida por `isAdmin()` en `lib/admin.ts:10-16`. Gatea exactamente las **dos rutas más destructivas** — `app/api/admin/users/[id]/delete/route.ts` (borrar una cuenta) y `app/api/admin/tribe-os/grant-premium/route.ts` (otorgar un tier de pago). Comparación sensible a mayúsculas.
+
+3. **NUEVO, y es el que sube la prioridad: políticas RLS vivas con el email escrito dentro del cuerpo.** El volcado de `pg_policies` del 2026-09-14 muestra sobre `public.users` la política `"Admin can update users"` con `qual` = el email del JWT comparado contra `alainalisca@…` literal, **conviviendo** con `"Admins can update any user"` que usa `is_app_admin()`. `public.sessions` carga políticas de la misma forma. Esto no está en ningún archivo del repositorio: se aplicó a mano, igual que el re-revoke de 093 (ver el ticket de deriva).
+
+**LA CONSECUENCIA, en las dos direcciones:**
+
+- Un **admin real** (`is_admin = true`, con su fila y su rastro en `admin_role_audit`) recibe **403** de la ruta que otorga tiers de pago y de la que borra cuentas. El mecanismo legítimo no sirve donde más importa.
+- Quien **controle una de las dos direcciones literales** —incluida la recuperación de ese buzón— borra cuentas y otorga tiers de pago **sin fila `is_admin`**, sin pasar por `admin_role_audit` (043:66-85), y ahora además **escribe filas de `users` vía RLS** por la política del punto 3. Nada de eso deja rastro en el sistema de auditoría que existe precisamente para eso.
+
+Los dos sistemas no coinciden en ninguna dirección: ni el admin de base de datos puede hacer lo que hace el email, ni el email aparece en la auditoría del admin de base de datos.
+
+**FIX (sin cambios respecto al original, ampliado al tercer sitio):** `isAdmin()` pasa a apoyarse en `is_app_admin()`; se retira `ADMIN_EMAILS`; un solo helper `requireApiAdmin` para las rutas; y una migración que elimine las políticas RLS con el email literal dejando únicamente las de `is_app_admin()`. **Enumerar las políticas vivas primero** (`pg_policies`), por la lección de 159/160: `DROP POLICY IF EXISTS` es silencioso cuando el nombre no coincide.
+
+**NO se toca en el SEC-SWEEP en curso.** El orden acordado es 164 (el trigger, solo) → el revoke de la allowlist de UPDATE. Este ticket va después y lleva su propia puerta en dispositivo.
 
 ### [SEC-04] T-SEC4-B: mover la escritura del bucket media a una ruta service-role con path derivado del uid (INSERT sigue siendo bucket-only)
 
