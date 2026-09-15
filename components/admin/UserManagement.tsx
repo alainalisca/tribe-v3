@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Calendar, ExternalLink } from 'lucide-react';
+import { Search, MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
 import { lastSeenLabel } from '@/lib/lastSeen';
@@ -58,7 +58,6 @@ interface UserManagementProps {
   actionLoading: string | null;
   onBan: (userId: string) => void;
   onUnban: (userId: string) => void;
-  onDelete: (userId: string) => void;
 }
 
 export default function UserManagement({
@@ -73,11 +72,11 @@ export default function UserManagement({
   actionLoading,
   onBan,
   onUnban,
-  onDelete,
 }: UserManagementProps) {
   const { language } = useLanguage();
   const isEs = language === 'es';
   const [showBots, setShowBots] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const botCount = users.filter((u) => isBotAccount(u.email)).length;
 
@@ -92,28 +91,28 @@ export default function UserManagement({
     `px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
       active
         ? 'bg-tribe-green text-slate-900'
-        : 'bg-stone-100 dark:bg-tribe-mid text-stone-600 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-card'
+        : 'bg-tribe-dark/[0.06] dark:bg-tribe-mid text-tribe-dark-80 dark:text-tribe-dark-60 hover:bg-tribe-dark/10 dark:hover:bg-tribe-card'
     }`;
 
   return (
-    <div className="bg-white dark:bg-tribe-surface rounded-xl shadow border border-stone-200 dark:border-tribe-mid">
-      <div className="p-4 border-b border-stone-200 dark:border-tribe-mid space-y-3">
+    <div className="bg-white dark:bg-tribe-surface rounded-xl shadow border border-tribe-dark/10 dark:border-tribe-mid">
+      <div className="p-4 border-b border-tribe-dark/10 dark:border-tribe-mid space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tribe-dark-80 dark:text-tribe-dark-60" />
             <input
               type="text"
               placeholder={isEs ? 'Buscar en TODOS los usuarios...' : 'Search ALL users...'}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-theme-primary placeholder-stone-400"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-tribe-dark/[0.04] dark:bg-tribe-mid border border-tribe-dark/10 dark:border-tribe-card rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-theme-primary placeholder-tribe-dark-80"
             />
           </div>
           <select
             value={sort}
             onChange={(e) => onSortChange(e.target.value as AdminUserSort)}
             aria-label={isEs ? 'Ordenar por' : 'Sort by'}
-            className="py-2 px-3 text-sm bg-stone-50 dark:bg-tribe-mid border border-stone-200 dark:border-tribe-card rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-theme-primary"
+            className="py-2 px-3 text-sm bg-tribe-dark/[0.04] dark:bg-tribe-mid border border-tribe-dark/10 dark:border-tribe-card rounded-lg focus:outline-none focus:ring-2 focus:ring-tribe-green text-theme-primary"
           >
             {(Object.keys(SORT_LABELS) as AdminUserSort[]).map((s) => (
               <option key={s} value={s}>
@@ -134,19 +133,22 @@ export default function UserManagement({
           ))}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-stone-500 dark:text-gray-400">
+        <div className="flex items-center justify-between text-xs text-tribe-dark-80 dark:text-tribe-dark-60">
           <span>
             {visibleUsers.length} {isEs ? 'usuarios' : 'users'}
             {users.length >= 100 && (
-              <span className="ml-1 text-stone-400">
+              <span className="ml-1 text-tribe-dark-80 dark:text-tribe-dark-60">
                 {isEs ? '(primeros 100 — acota la búsqueda)' : '(first 100 — narrow the search)'}
               </span>
             )}
           </span>
+          <span className="text-[11px] text-tribe-dark-80 dark:text-tribe-dark-60 tabular-nums">
+            {isEs ? 'visto · creadas/unidas/completadas' : 'seen · created/joined/completed'}
+          </span>
           {botCount > 0 && (
             <button
               onClick={() => setShowBots((v) => !v)}
-              className="underline hover:text-stone-700 dark:hover:text-white"
+              className="underline hover:text-tribe-dark dark:hover:text-white"
             >
               {showBots
                 ? isEs
@@ -160,133 +162,124 @@ export default function UserManagement({
         </div>
       </div>
 
-      <div className="divide-y divide-stone-200 dark:divide-tribe-mid">
+      <div className="divide-y divide-tribe-dark/10 dark:divide-tribe-mid">
         {loading ? (
-          <div className="p-8 text-center text-sm text-stone-500 dark:text-gray-400">
+          <div className="p-8 text-center text-sm text-tribe-dark-80 dark:text-tribe-dark-60">
             {isEs ? 'Cargando usuarios...' : 'Loading users...'}
           </div>
         ) : visibleUsers.length === 0 ? (
-          <div className="p-8 text-center text-sm text-stone-500 dark:text-gray-400">
+          <div className="p-8 text-center text-sm text-tribe-dark-80 dark:text-tribe-dark-60">
             {isEs ? 'Ningún usuario coincide' : 'No users match'}
           </div>
         ) : (
-          visibleUsers.map((u) => (
-            <div
-              key={u.id}
-              className={`px-4 py-3 transition ${u.banned ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-stone-50 dark:hover:bg-tribe-mid/40'}`}
-            >
-              {/* Compact single row from sm up; stacked card below it. */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <Link href={`/profile/${u.id}`} className="flex items-center gap-3 min-w-0 flex-1 group">
-                  <Avatar className="w-9 h-9 flex-shrink-0">
-                    <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt={`${u.name || 'User'} avatar`} />
-                    <AvatarFallback>{u.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-bold text-tribe-dark dark:text-white truncate group-hover:underline">
-                        {u.name || (isEs ? 'Sin nombre' : 'No name')}
-                      </p>
-                      <ExternalLink className="w-3 h-3 text-stone-400 group-hover:text-tribe-green transition flex-shrink-0" />
-                      {u.banned && (
-                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded flex-shrink-0">
-                          {isEs ? 'BANEADO' : 'BANNED'}
+          visibleUsers.map((u) => {
+            // Badge the exception, not the rule. MEASURED on production
+            // 2026-09-14 over 91 live rows: 24 instructors (26%), 67 athletes
+            // (74%), 0 null, 10 test accounts (11%), 0 banned. Athletes are the
+            // majority, so THEY get no mark; the instructor role is a quiet text
+            // label, and only genuinely unusual states get a pill.
+            const role = u.is_instructor ? (isEs ? 'Instructor' : 'Instructor') : null;
+            const menuOpen = openMenu === u.id;
+            return (
+              <div
+                key={u.id}
+                className={
+                  u.banned
+                    ? 'bg-tribe-dark/5 dark:bg-tribe-dark/40'
+                    : 'hover:bg-tribe-dark/[0.03] dark:hover:bg-tribe-mid/40'
+                }
+              >
+                <div className="flex items-center gap-2.5 px-3 py-2">
+                  <Link href={`/profile/${u.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage loading="lazy" src={u.avatar_url || undefined} alt={`${u.name || 'User'} avatar`} />
+                      <AvatarFallback className="text-xs">{u.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold text-tribe-dark dark:text-white truncate group-hover:underline">
+                          {u.name || (isEs ? 'Sin nombre' : 'No name')}
                         </span>
-                      )}
-                      {u.is_admin && (
-                        <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded flex-shrink-0">
-                          ADMIN
-                        </span>
-                      )}
-                      {u.is_test_account && (
-                        <span className="px-1.5 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded flex-shrink-0">
-                          TEST
-                        </span>
-                      )}
-                      {u.is_instructor && (
-                        <span className="px-1.5 py-0.5 bg-tribe-green text-slate-900 text-[10px] font-bold rounded flex-shrink-0">
-                          INSTRUCTOR
-                        </span>
-                      )}
-                      {isBotAccount(u.email) && (
-                        <span className="px-1.5 py-0.5 bg-orange-400 text-white text-[10px] rounded flex-shrink-0">
-                          BOT
-                        </span>
-                      )}
-                      {isAppleRelay(u.email) && (
-                        <span className="px-1.5 py-0.5 bg-stone-500 text-white text-[10px] rounded flex-shrink-0">
-                          Apple Relay
-                        </span>
-                      )}
+                        {u.banned && (
+                          <span className="px-1.5 py-px bg-tribe-dark text-white dark:bg-white dark:text-tribe-dark text-[10px] font-bold rounded flex-shrink-0 tracking-wide">
+                            {isEs ? 'BANEADO' : 'BANNED'}
+                          </span>
+                        )}
+                        {u.is_admin && (
+                          <span className="px-1.5 py-px bg-tribe-green text-tribe-dark text-[10px] font-bold rounded flex-shrink-0 tracking-wide">
+                            ADMIN
+                          </span>
+                        )}
+                        {u.is_test_account && (
+                          <span className="px-1.5 py-px border border-tribe-dark-80 text-tribe-dark-80 dark:border-tribe-dark-60 dark:text-tribe-dark-60 text-[10px] font-bold rounded flex-shrink-0 tracking-wide">
+                            TEST
+                          </span>
+                        )}
+                        {isBotAccount(u.email) && (
+                          <span className="px-1.5 py-px border border-tribe-dark-80 text-tribe-dark-80 dark:border-tribe-dark-60 dark:text-tribe-dark-60 text-[10px] rounded flex-shrink-0">
+                            BOT
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] leading-tight text-tribe-dark-80 dark:text-tribe-dark-60 truncate">
+                        {role && <span className="font-medium">{role} · </span>}
+                        {u.email}
+                      </div>
                     </div>
-                    <p className="text-xs text-stone-500 dark:text-gray-400 truncate">{u.email}</p>
-                  </div>
-                </Link>
+                  </Link>
 
-                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-gray-400 sm:flex-nowrap sm:justify-end">
-                  <span className="flex items-center gap-1" title={isEs ? 'Última sesión iniciada' : 'Last login'}>
-                    <span className="text-stone-400">{isEs ? 'visto' : 'seen'}</span>
-                    <span
-                      className={`font-semibold ${u.last_login_at ? 'text-stone-700 dark:text-gray-200' : 'text-stone-400'}`}
-                    >
+                  {/* Signals. Right-aligned, two short lines, legend in the header. */}
+                  <div className="text-[11px] leading-tight text-right text-tribe-dark-80 dark:text-tribe-dark-60 flex-shrink-0 tabular-nums">
+                    <div className={u.last_login_at ? '' : 'text-tribe-dark-60 dark:text-tribe-dark-80'}>
                       {lastSeenLabel(u.last_login_at, language)}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-1" title={isEs ? 'Se unió' : 'Joined'}>
-                    <Calendar className="w-3 h-3" />
-                    {new Date(u.created_at ?? '').toLocaleDateString(isEs ? 'es-CO' : 'en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </span>
-                  <span title={isEs ? 'Sesiones creadas' : 'Sessions created'}>
-                    <span className="font-semibold text-blue-600 dark:text-blue-400">{u.sessions_created ?? 0}</span>{' '}
-                    {isEs ? 'creadas' : 'created'}
-                  </span>
-                  <span title={isEs ? 'Sesiones unidas' : 'Sessions joined'}>
-                    <span className="font-semibold text-green-600 dark:text-green-400">{u.sessions_joined ?? 0}</span>{' '}
-                    {isEs ? 'unidas' : 'joined'}
-                  </span>
-                  <span title={isEs ? 'Sesiones completadas' : 'Sessions completed'}>
-                    <span className="font-semibold text-stone-700 dark:text-gray-200">{u.sessions_completed ?? 0}</span>{' '}
-                    {isEs ? 'completadas' : 'completed'}
-                  </span>
-                </div>
+                    </div>
+                    <div>
+                      {u.sessions_created ?? 0}/{u.sessions_joined ?? 0}/{u.sessions_completed ?? 0}
+                    </div>
+                  </div>
 
-                <div className="flex gap-2 sm:flex-shrink-0">
-                  {u.banned ? (
-                    <button
-                      onClick={() => onUnban(u.id)}
-                      disabled={actionLoading === u.id}
-                      className="flex-1 sm:flex-none sm:px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition"
-                    >
-                      {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Desbanear' : 'Unban'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onBan(u.id)}
-                      disabled={actionLoading === u.id}
-                      className="flex-1 sm:flex-none sm:px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition"
-                    >
-                      {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Banear' : 'Ban'}
-                    </button>
-                  )}
-                  {/* ADMIN-01: delete left EXACTLY as found, on purpose. It gates on
-                      the ADMIN_EMAILS allowlist while /admin gates on is_app_admin(),
-                      so it 403s silently for a DB admin who is not on the list.
-                      Flagged, not fixed here -- see SEC-03. */}
                   <button
-                    onClick={() => onDelete(u.id)}
-                    disabled={actionLoading === u.id}
-                    className="flex-1 sm:flex-none sm:px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition"
+                    onClick={() => setOpenMenu(menuOpen ? null : u.id)}
+                    aria-label={isEs ? 'Acciones' : 'Actions'}
+                    aria-expanded={menuOpen}
+                    className="p-1.5 -mr-1 rounded text-tribe-dark-80 hover:bg-tribe-dark/10 dark:text-tribe-dark-60 dark:hover:bg-tribe-mid flex-shrink-0"
                   >
-                    {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Eliminar' : 'Delete'}
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
+
+                {menuOpen && (
+                  <div className="px-3 pb-2 flex items-center gap-2">
+                    {u.banned ? (
+                      <button
+                        onClick={() => onUnban(u.id)}
+                        disabled={actionLoading === u.id}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-tribe-green text-tribe-dark hover:bg-tribe-green-100 disabled:opacity-50 transition"
+                      >
+                        {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Desbanear' : 'Unban'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onBan(u.id)}
+                        disabled={actionLoading === u.id}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-tribe-dark text-white hover:bg-tribe-dark-80 disabled:opacity-50 transition"
+                      >
+                        {actionLoading === u.id ? (isEs ? 'Espera...' : 'Wait...') : isEs ? 'Banear' : 'Ban'}
+                      </button>
+                    )}
+                    {/* Delete is NOT here. It gates on ADMIN_EMAILS while /admin
+                        gates on is_app_admin(), so it 403s silently for a DB
+                        admin who is not on the list. Removing it from the list
+                        is the interim mitigation until SEC-03; it returns in the
+                        detail view (ADMIN-02) behind a confirmation. */}
+                    <span className="text-[11px] text-tribe-dark-80 dark:text-tribe-dark-60">
+                      {isEs ? 'Eliminar se mueve a la vista de detalle' : 'Delete moves to the detail view'}
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

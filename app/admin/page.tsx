@@ -301,7 +301,6 @@ export default function AdminPage() {
             actionLoading={actions.actionLoading}
             onBan={actions.banUser}
             onUnban={actions.unbanUser}
-            onDelete={actions.deleteUser}
           />
         )}
         {activeTab === 'reports' && (

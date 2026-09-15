@@ -58,7 +58,6 @@ function renderList(props: Partial<React.ComponentProps<typeof UserManagement>> 
       actionLoading={null}
       onBan={vi.fn()}
       onUnban={vi.fn()}
-      onDelete={vi.fn()}
       {...props}
     />
   );
@@ -101,16 +100,50 @@ describe('UserManagement — the server owns the query', () => {
     expect(screen.getAllByText('TEST')).toHaveLength(1);
   });
 
-  it('shows "never" for an account that has never logged in, and an age for one that has', () => {
+  it('badges the exception, not the rule: no INSTRUCTOR pill on any row', () => {
+    // Measured on production 2026-09-14: 24 of 91 users are instructors and 67
+    // are athletes. A pill on every instructor row was carrying no information
+    // at the top of a newest-first list, where recent gym signups cluster.
+    // The role is a quiet text label now; pills are reserved for TEST/BANNED/ADMIN.
     renderList();
-    expect(screen.getByText('never')).toBeTruthy();
-    expect(screen.getAllByText('seen')).toHaveLength(2);
+    expect(screen.queryByText('INSTRUCTOR')).toBeNull();
+    expect(screen.getByText(/^Instructor ·/)).toBeTruthy();
   });
 
-  it('surfaces sessions_completed alongside the derived created/joined counts', () => {
+  it('keeps destructive actions out of the scan surface until the row is opened', () => {
     renderList();
-    expect(screen.getAllByText('completed').length).toBe(2);
-    expect(screen.getAllByText('created').length).toBe(2);
-    expect(screen.getAllByText('joined').length).toBe(2);
+    // Nothing destructive renders by default...
+    expect(screen.queryByText('Ban')).toBeNull();
+    expect(screen.queryByText('Delete')).toBeNull();
+
+    fireEvent.click(screen.getAllByLabelText('Actions')[0]);
+
+    // ...Ban appears behind the overflow...
+    expect(screen.getByText('Ban')).toBeTruthy();
+    // ...and Delete is gone from the list entirely (ADMIN_EMAILS 403 mitigation).
+    expect(screen.queryByText('Delete')).toBeNull();
+  });
+
+  it('opens only one row menu at a time', () => {
+    renderList();
+    const buttons = screen.getAllByLabelText('Actions');
+    fireEvent.click(buttons[0]);
+    expect(screen.getAllByText('Ban')).toHaveLength(1);
+    fireEvent.click(buttons[1]);
+    expect(screen.getAllByText('Ban')).toHaveLength(1);
+  });
+
+  it('shows "never" for an account that has never logged in', () => {
+    renderList();
+    expect(screen.getByText('never')).toBeTruthy();
+  });
+
+  it('surfaces created/joined/completed per row, with the legend carried once in the header', () => {
+    // Density: the three counts ride as one compact triple instead of three
+    // labelled spans per row, and the words live once in the header legend.
+    renderList();
+    expect(screen.getByText('2/7/4')).toBeTruthy(); // Ana: 2 created, 7 joined, 4 completed
+    expect(screen.getByText('0/0/0')).toBeTruthy(); // Bruno
+    expect(screen.getAllByText('seen · created/joined/completed')).toHaveLength(1);
   });
 });
