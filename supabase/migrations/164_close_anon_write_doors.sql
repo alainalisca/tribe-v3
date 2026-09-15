@@ -54,7 +54,16 @@
 -- If signup breaks after this, nobody can register, so this is the claim to
 -- re-verify on a device first: create a brand-new account in an incognito
 -- window and confirm the profile row appears.
-REVOKE INSERT ON public.users FROM anon;
+-- REVISED 2026-09-14, and this is why 164 applied as nothing the first time.
+-- Guard 5a below asserts anon holds NO write privilege on users: INSERT,
+-- UPDATE *and* DELETE. This statement revoked only INSERT. On a database
+-- still carrying Supabase's default broad grant to anon -- and it is, because
+-- anon was measured holding UPDATE and DELETE on public.sessions on
+-- 2026-09-14 -- guard 5a raises, and the SQL editor rolls the whole script
+-- back. Sections 1-5 then leave no trace, which is exactly what was measured.
+-- REVOKE of a privilege the role does not hold is a no-op, never an error,
+-- so widening is safe whatever the live state turns out to be.
+REVOKE INSERT, UPDATE, DELETE ON public.users FROM anon;
 
 -- ══════════════════════════════════════════════════════════════════════════
 -- 2. The INSERT policy stops accepting anything
@@ -149,7 +158,8 @@ END $$;
 -- ══════════════════════════════════════════════════════════════════════════
 DO $$
 DECLARE
-  bad TEXT;
+  bad      TEXT;
+  n_pinned INT;
 BEGIN
   -- 5a. anon can no longer write users or sessions.
   --     has_table_privilege, never information_schema.table_privileges: that
@@ -163,15 +173,39 @@ BEGIN
     RAISE EXCEPTION '164 guard: anon still holds write privileges: %', bad;
   END IF;
 
-  -- 5b. anon keeps SELECT on sessions. 140 made sessions_public the anon read
-  --     path, but revoking the base-table SELECT is NOT this migration's job
-  --     and an over-broad REVOKE here would be a silent outage.
-  IF NOT has_table_privilege('anon', 'public.sessions'::regclass, 'SELECT') THEN
-    RAISE EXCEPTION '164 guard: anon lost SELECT on sessions -- this migration '
-                    'only revokes writes';
+  -- 5b. The anon read path survives. REWRITTEN 2026-09-14 -- the original
+  --     asserted anon holds SELECT on public.sessions, aborted the migration,
+  --     and was simply wrong about this database. MEASURED on production:
+  --       anon SELECT on public.sessions       : false
+  --       anon column-level SELECTs on sessions: 0
+  --       public.sessions_public exists        : true
+  --       anon SELECT on sessions_public       : true
+  --     anon reads sessions through public.sessions_public (140), an
+  --     owner-executed view, exactly as designed. The base-table SELECT was
+  --     never anon's to lose.
+  --
+  --     LABEL, honestly: this is a PRECONDITION, not an outcome of 164.
+  --     Nothing in this migration touches sessions_public, and because the
+  --     view is owner-executed it does not depend on anon's base-table grants
+  --     either. It is kept as forward insurance against a later edit widening
+  --     a REVOKE onto the view, and it is safe to keep ONLY because both
+  --     halves were measured true on 2026-09-14.
+  IF to_regclass('public.sessions_public') IS NULL THEN
+    RAISE EXCEPTION '164 guard 5b: public.sessions_public is missing -- that '
+                    'view is the anon read path for sessions (140)';
+  END IF;
+  IF NOT has_table_privilege('anon', 'public.sessions_public'::regclass, 'SELECT') THEN
+    RAISE EXCEPTION '164 guard 5b: anon lost SELECT on public.sessions_public '
+                    '-- the anon read path for sessions is broken';
   END IF;
 
   -- 5c. authenticated keeps INSERT on users, or signup dies.
+  --     LABEL: a PRECONDITION that 164 could plausibly break. This migration
+  --     issues REVOKEs against public.users, so a mis-edit of section 1 (FROM
+  --     anon -> FROM anon, authenticated) would remove it and kill every
+  --     signup silently. Kept for that reason. NOT measured on production as
+  --     of 2026-09-14 -- run the pre-flight before this migration, because a
+  --     false value here aborts the whole script and is NOT caused by 164.
   IF NOT has_table_privilege('authenticated', 'public.users'::regclass, 'INSERT') THEN
     RAISE EXCEPTION '164 guard: authenticated lost INSERT on users -- '
                     'upsertUserProfile runs post-session and needs it';
@@ -198,33 +232,40 @@ BEGIN
     RAISE EXCEPTION '164 guard: no self-scoped INSERT policy on users';
   END IF;
 
-  -- 5f. The four functions are pinned.
-  SELECT string_agg(p.proname, ', ' ORDER BY p.proname)
-  INTO bad
+  -- 5f. The four functions are pinned. POSITIVE assertion against an expected
+  --     count, not an emptiness check. REVISED 2026-09-14: the original
+  --     asserted that the set of UNPINNED functions was empty, and that is
+  --     silent in three different worlds -- "I pinned them", "they were
+  --     already pinned", and "the loop never ran". It cannot tell them apart.
+  --     The loop's counter was the only thing that could, and it was emitted
+  --     on RAISE NOTICE, which the Supabase SQL editor discards entirely.
+  SELECT count(*)
+  INTO n_pinned
   FROM pg_proc p
   WHERE p.pronamespace = 'public'::regnamespace
     AND p.prosecdef
     AND p.proname IN ('is_app_admin', 'protect_verified_instructor',
                       'set_payment_status_on_join', 'update_instructor_stats')
-    AND NOT EXISTS (
+    AND EXISTS (
       SELECT 1 FROM unnest(coalesce(p.proconfig, '{}'::text[])) cfg
-      WHERE cfg LIKE 'search_path=%'
+      WHERE cfg = 'search_path=public'
     );
-  IF bad IS NOT NULL THEN
-    RAISE EXCEPTION '164 guard: SECURITY DEFINER function(s) still unpinned: %', bad;
+  IF n_pinned <> 4 THEN
+    SELECT string_agg(
+             p.proname || '=' ||
+             coalesce((SELECT c FROM unnest(coalesce(p.proconfig, '{}'::text[])) c
+                        WHERE c LIKE 'search_path=%'), 'NULL'),
+             ', ' ORDER BY p.proname)
+    INTO bad
+    FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace
+      AND p.proname IN ('is_app_admin', 'protect_verified_instructor',
+                        'set_payment_status_on_join', 'update_instructor_stats');
+    RAISE EXCEPTION '164 guard 5f: expected 4 functions pinned to '
+                    'search_path=public, found %. Live state: %',
+                    n_pinned, coalesce(bad, '(no such functions)');
   END IF;
 
-  -- 5g. handle_new_user survives. It is the only thing creating a public.users
-  --     row at signup now, so its properties are asserted rather than assumed.
-  --     SECURITY DEFINER means it runs as its owner and is unaffected by the
-  --     anon revoke above; this fails loudly if that ever stops being true.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_proc p
-    WHERE p.proname = 'handle_new_user' AND p.prosecdef
-  ) THEN
-    RAISE EXCEPTION '164 guard: handle_new_user is missing or is no longer '
-                    'SECURITY DEFINER -- signup creates no profile row';
-  END IF;
 END $$;
 
 COMMENT ON TABLE public.users IS
@@ -232,3 +273,76 @@ COMMENT ON TABLE public.users IS
   'INSERT for upsertUserProfile, which runs only after a session exists, and '
   'the INSERT policy is scoped to auth.uid() = id. Table-level UPDATE is still '
   'wide open to authenticated across all 100 columns -- that is 165.';
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- 6. POST-STATE. A result set, not a notice.
+-- ══════════════════════════════════════════════════════════════════════════
+--
+-- The guards above abort on failure; this returns the evidence on success, in
+-- the one channel the Supabase SQL editor actually displays. Paste the whole
+-- grid back. Every row must read PASS.
+WITH post_state(sort, check_name, actual, expected) AS (
+  VALUES
+    -- OUTCOMES of section 1
+    (1, 'anon INSERT on public.users',
+        has_table_privilege('anon', 'public.users'::regclass, 'INSERT')::text, 'false'),
+    (2, 'anon UPDATE on public.users',
+        has_table_privilege('anon', 'public.users'::regclass, 'UPDATE')::text, 'false'),
+    (3, 'anon DELETE on public.users',
+        has_table_privilege('anon', 'public.users'::regclass, 'DELETE')::text, 'false'),
+    -- OUTCOMES of section 3
+    (4, 'anon INSERT on public.sessions',
+        has_table_privilege('anon', 'public.sessions'::regclass, 'INSERT')::text, 'false'),
+    (5, 'anon UPDATE on public.sessions',
+        has_table_privilege('anon', 'public.sessions'::regclass, 'UPDATE')::text, 'false'),
+    (6, 'anon DELETE on public.sessions',
+        has_table_privilege('anon', 'public.sessions'::regclass, 'DELETE')::text, 'false'),
+    -- The read path. Row 7 records that anon has NO base-table SELECT and is
+    -- not supposed to; row 8 is the privilege that actually carries anon reads.
+    (7, 'anon SELECT on public.sessions (base table -- never held)',
+        has_table_privilege('anon', 'public.sessions'::regclass, 'SELECT')::text, 'false'),
+    (8, 'anon SELECT on public.sessions_public (THE anon read path)',
+        (SELECT CASE WHEN to_regclass('public.sessions_public') IS NULL THEN 'MISSING'
+                ELSE has_table_privilege('anon', 'public.sessions_public'::regclass,
+                                         'SELECT')::text END), 'true'),
+    -- PRECONDITIONS. Reported, never asserted here. 164 establishes neither.
+    (9, 'PRECONDITION authenticated INSERT on public.users (signup)',
+        has_table_privilege('authenticated', 'public.users'::regclass, 'INSERT')::text, 'true'),
+    (10, 'PRECONDITION handle_new_user is SECURITY DEFINER (was guard 5g)',
+        (SELECT coalesce((SELECT p.prosecdef::text FROM pg_proc p
+                           WHERE p.proname = 'handle_new_user' LIMIT 1), 'MISSING')), 'true'),
+    -- OUTCOME of section 2
+    (11, 'INSERT policies on public.users',
+        (SELECT coalesce(string_agg(policyname || ' [' || array_to_string(roles, ',') || '] '
+                                    || coalesce(with_check, 'NULL'), ' | ' ORDER BY policyname),
+                         '(none)')
+           FROM pg_policies
+          WHERE schemaname = 'public' AND tablename = 'users' AND cmd = 'INSERT'),
+        'Users can insert own profile [authenticated] (auth.uid() = id)'),
+    -- OUTCOME of section 4 (protect_verified_instructor was pinned by 165)
+    (12, 'SECURITY DEFINER functions pinned to search_path=public',
+        (SELECT count(*)::text FROM pg_proc p
+          WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+            AND p.proname IN ('is_app_admin', 'protect_verified_instructor',
+                              'set_payment_status_on_join', 'update_instructor_stats')
+            AND EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig, '{}'::text[])) cfg
+                         WHERE cfg = 'search_path=public')),
+        '4'),
+    (13, 'per-function proconfig',
+        (SELECT string_agg(p.proname || '=' ||
+                  coalesce((SELECT c FROM unnest(coalesce(p.proconfig, '{}'::text[])) c
+                             WHERE c LIKE 'search_path=%'), 'NULL'), ' | ' ORDER BY p.proname)
+           FROM pg_proc p
+          WHERE p.pronamespace = 'public'::regnamespace
+            AND p.proname IN ('is_app_admin', 'protect_verified_instructor',
+                              'set_payment_status_on_join', 'update_instructor_stats')),
+        'is_app_admin=search_path=public | protect_verified_instructor=search_path=public'
+        ' | set_payment_status_on_join=search_path=public'
+        ' | update_instructor_stats=search_path=public')
+)
+SELECT check_name,
+       actual,
+       expected,
+       CASE WHEN actual = expected THEN 'PASS' ELSE 'FAIL' END AS result
+FROM post_state
+ORDER BY sort;
