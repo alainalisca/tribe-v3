@@ -564,6 +564,11 @@ ACEPTACIÓN: decisión escrita en este ticket; `platform_fee_cents` e `instructo
 
 **Descripción**
 
+> **CORRECCIÓN 2026-09-15 — LA CAUSA NO ES LA QUE ESTE TICKET SUPUSO AL ABRIRSE.**
+> Se leyeron las 12 filas en `error`. No son un fallo de Wompi. Son un fallo de
+> **selección de pasarela**, y son deliberadas: alguien enrutó COP a Stripe a
+> propósito. Ver «Diagnóstico corregido» más abajo antes que nada.
+
 MEDIDO EN PRODUCCIÓN el 2026-09-14, `public.payments` completa:
 
 | estado | filas | rango de fechas |
@@ -585,9 +590,55 @@ Arreglar cualquiera de las dos por separado no moverá el número. Quien retome 
 
 **EL ÚNICO CAMINO QUE HA FUNCIONADO ES EL MANUAL.** Las confirmaciones de pago que sí han ocurrido no pasaron por `public.payments`: van por `session_participants.payment_confirmed_by` (escrito en `lib/dal/sessions.ts:1283`) y por el trigger `set_payment_status_on_join`, es decir, el instructor marca a mano que le pagaron en efectivo o por transferencia. Esa es la realidad operativa de la plataforma hoy y coincide con [PAY-04]: Tribe no procesa pagos, los instructores reciben el 100%. La tabla `payments` es infraestructura montada que nunca entró en servicio.
 
+**DIAGNÓSTICO CORREGIDO — LEÍDAS LAS 12 FILAS `error` (2026-09-15)**
+
+| pasarela | moneda | filas | fechas |
+|---|---|---|---|
+| stripe | **COP** | **8** | 2026-06-25 → 2026-07-06 |
+| stripe | USD | 3 | mayo |
+| wompi | COP | 1 | 2026-05-03 |
+
+**Wompi se alcanzó UNA vez de doce.** Once fallos fueron a Stripe y ocho de esos en COP, una moneda que Stripe no liquida en Colombia. El problema no está en el código de ninguna pasarela: está en **cuál se elige**.
+
+**1. DÓNDE SE ELIGE.** `lib/payments/config.ts:28-42`, `getPaymentGateway(currency)`. La decisión completa es:
+
+```ts
+const override = process.env.PAYMENT_GATEWAY_OVERRIDE?.toLowerCase();
+if (override === 'stripe' || override === 'wompi') return override;
+switch (currency) { case 'COP': return 'wompi'; case 'USD': return 'stripe'; }
+```
+
+Ramifica sobre **la moneda y una variable de entorno, y sobre nada más**. No mira el país, ni `users.stripe_account_id`, ni si el instructor tiene cuenta de cobro, ni si la pasarela elegida puede liquidar esa moneda. El override gana siempre y se aplica a TODAS las monedas a la vez: no existe forma de enrutar USD a Stripe y COP a Wompi mientras esté puesto.
+
+**2. POR QUÉ COP FUE A STRIPE DESDE EL 2026-06-25.** No hubo cambio de código: `git log` sobre `lib/payments` y `app/api/payment` entre el 2026-06-20 y el 2026-07-08 está **vacío**. El override se introdujo antes, el 2026-05-28 (`62d7463`), y lo que cambió en junio fue el **valor de la variable en el panel de Vercel**. `PAYMENT_GATEWAY_OVERRIDE` no está en `.env.local.example` ni en `vercel.json`: **el interruptor que decide por dónde va el dinero de todos los usuarios es invisible para el control de versiones.** Es la misma clase de deriva que [DRIFT-01], aplicada a pagos.
+
+Y fue **deliberado y está documentado**: `docs/PAYMENTS_HANDOFF.md:11-13` dice que Wompi está roto porque `WOMPI_PRIVATE_KEY` y `WOMPI_EVENTS_SECRET` están vacías, y que **el alta como comerciante en Wompi está bloqueada porque Al no tiene teléfono colombiano, cuenta bancaria colombiana ni RUT**. El override fue el arreglo temporal. El comentario en `config.ts:22-24` lo dice con todas las letras.
+
+Es decir: Wompi nunca fue alcanzable desde la UI en la práctica — ni por un bug de código, sino porque **no hay entidad legal colombiana detrás**.
+
+**3. ¿STRIPE FUNCIONÓ ALGUNA VEZ? NO. NUNCA. EN NINGUNA MONEDA.** Los 3 fallos USD de mayo son anteriores a los 8 de COP, y de las 17 filas totales de `public.payments` hay **cero aprobadas**. Stripe no ha completado un solo cobro en USD ni en COP. Conviene decirlo sin rodeos porque la narrativa cómoda — «Wompi está roto, Stripe es el plan B» — implica que el plan B funciona, y no hay ni una fila que lo respalde.
+
+Peor: aunque un cobro en Stripe llegara a aprobarse, **no hay camino de pago al instructor**. Stripe Connect es US-only — ver [PAY-05] — así que un instructor colombiano no puede recibir el dinero. No existe hoy ninguna ruta completa de extremo a extremo, en ninguna de las dos pasarelas.
+
+**4. ¿SE PRUEBA LA SELECCIÓN? A NIVEL DE RUTA, NO — SE FALSEA.** En `app/api/payment/create/route.test.ts` la propia `getPaymentGateway` está mockeada (`vi.mock('@/lib/payments/config')`, líneas 44, 321, 361, 382, 394, 426): cada test **dice** qué pasarela quiere y la ruta nunca ejecuta la decisión real. Y las dos ramas tienen la misma forma de stub:
+
+- `createWompiTransaction` → `{ redirect_url: 'https://checkout.wompi.co/p/…' }` (:362, :427) — un valor que la implementación real **no puede producir**, que es el bug de #71.
+- `createStripeCheckoutSession` → `{ url: 'https://checkout.stripe.com/pay/cs_test', sessionId: … }` (:322) — misma forma, y nunca se ha verificado contra la función real en COP.
+
+`lib/payments/config.test.ts:38-68` **sí** prueba `getPaymentGateway` de verdad, incluido `PAYMENT_GATEWAY_OVERRIDE=stripe forces stripe for COP`. Esos tests no están mal: describen exactamente lo que producción hace. **El defecto no es la lógica de selección, es la decisión que codifica.** La suite está en verde afirmando que COP va a Stripe, que es precisamente lo que falla.
+
+**#71 NO ARREGLA ESTO. NO LO MERGEES ESPERANDO QUE LOS PAGOS EMPIECEN A FUNCIONAR.**
+El PR #71 (`fix(wompi): switch COP charges to Web Checkout`) corrige un bug real y todavía vivo en `main`: `lib/payments/wompi.ts:90` postea a `/transactions`, que exige una fuente de pago tokenizada y nunca devuelve `redirect_url`, así que `:130` lee `undefined`. Eso es cierto y hay que arreglarlo. **Pero explica 1 de las 12 filas de error, no 12.** Y aunque se mergee:
+
+- Wompi sigue sin credenciales (`WOMPI_PRIVATE_KEY` vacía), y
+- el alta como comerciante sigue bloqueada por falta de entidad colombiana, y
+- mientras `PAYMENT_GATEWAY_OVERRIDE=stripe` esté puesto en Vercel, **el código de Wompi ni siquiera se ejecuta**.
+
+Mergear #71 deja los pagos exactamente igual de rotos que ahora. Su valor es que la ruta de Wompi esté correcta el día que haya entidad colombiana, no que desbloquee el cobro.
+
 **FIX — EL PRIMER PASO ES LEER, NO TOCAR LA PASARELA**
 
-1. **Leer las 12 filas en `error` y decir qué falló realmente.** Antes de que nadie mire el código de la pasarela, hay que saber si son 12 fallos de una misma causa o de varias: credenciales, firma de webhook, moneda, un campo requerido, o llamadas de prueba abandonadas. Doce filas es una muestra que se lee entera en diez minutos y descarta la mitad de las hipótesis posibles.
+1. ~~**Leer las 12 filas en `error` y decir qué falló realmente.**~~ **HECHO el 2026-09-15 — resultado arriba.** Antes de que nadie mire el código de la pasarela, hay que saber si son 12 fallos de una misma causa o de varias: credenciales, firma de webhook, moneda, un campo requerido, o llamadas de prueba abandonadas. Doce filas es una muestra que se lee entera en diez minutos y descarta la mitad de las hipótesis posibles.
 
    ```sql
    begin;
@@ -600,9 +651,13 @@ Arreglar cualquiera de las dos por separado no moverá el número. Quien retome 
 
    Son 17 filas en total: caben todas, no hace falta muestrear.
 
-2. **Averiguar por qué no hay intentos desde el 2026-07-06.** ¿Se retiró el punto de entrada de la UI, se apagó por configuración, o simplemente nadie lo intentó? Es una pregunta distinta de por qué fallaron los 12, y la respuesta cambia el alcance.
+2. **Decidir la pasarela ANTES de tocar código.** La pregunta no es técnica: o se consigue la entidad colombiana que Wompi exige, o se acepta que Stripe no liquida COP ni paga a instructores colombianos ([PAY-05]). Ningún PR resuelve eso.
 
-3. Solo después de 1 y 2, decidir sobre la pasarela. Cruza con [PAY-01] (el kill switch `INSTRUCTOR_PAYMENTS_ENABLED` que no existe en código) y [PAY-02] (decisión de Al sobre los branches Stripe/Wompi).
+3. **Sacar `PAYMENT_GATEWAY_OVERRIDE` del panel de Vercel y meterlo en control de versiones**, o como mínimo documentar su valor vivo aquí. Hoy la ruta del dinero cambia sin dejar rastro en git.
+
+4. **Averiguar por qué no hay intentos desde el 2026-07-06.** ¿Se retiró el punto de entrada de la UI, se apagó por configuración, o simplemente nadie lo intentó? Es una pregunta distinta de por qué fallaron los 12, y la respuesta cambia el alcance.
+
+5. Solo después de lo anterior, decidir sobre el código. Cruza con [PAY-01] (el kill switch `INSTRUCTOR_PAYMENTS_ENABLED` que no existe en código) y [PAY-02] (decisión de Al sobre los branches Stripe/Wompi).
 
 **ACEPTACIÓN:** las 12 filas `error` están clasificadas por causa en este ticket; se sabe por qué no hay intentos desde julio; y existe una decisión escrita de Al sobre si el camino automático se arregla o se retira antes de habilitar el cobro.
 
