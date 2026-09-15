@@ -8,6 +8,10 @@ import {
   fetchAdminFeedback,
   fetchAdminBugs,
   fetchAdminMessages,
+  ADMIN_USER_FILTERS,
+  ADMIN_USER_SORTS,
+  type AdminUserFilter,
+  type AdminUserSort,
 } from '@/lib/dal/admin';
 
 /**
@@ -38,9 +42,22 @@ export async function GET(request: NextRequest) {
         // service-role behind the is_app_admin() gate.
         result = await fetchAdminStatsRaw(service);
         break;
-      case 'users':
-        result = await fetchAdminUsersWithCounts(service);
+      case 'users': {
+        // ADMIN-01: search/filter/sort are applied in the DAL query, not on the
+        // returned page. Unknown values fall back to the defaults rather than
+        // erroring -- a bad querystring should not blank the admin's list.
+        const sp = request.nextUrl.searchParams;
+        const filter = sp.get('filter');
+        const sort = sp.get('sort');
+        result = await fetchAdminUsersWithCounts(service, {
+          search: sp.get('search') ?? '',
+          filter: (ADMIN_USER_FILTERS as readonly string[]).includes(filter ?? '')
+            ? (filter as AdminUserFilter)
+            : 'all',
+          sort: (ADMIN_USER_SORTS as readonly string[]).includes(sort ?? '') ? (sort as AdminUserSort) : 'newest',
+        });
         break;
+      }
       case 'reports':
         result = await fetchAdminReports(service);
         break;
