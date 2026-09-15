@@ -8,7 +8,7 @@ Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
 | Producto         | 10   | 18    | 5    | 33    |
-| Seguridad        | 5    | 4     | 3    | 12    |
+| Seguridad        | 6    | 3     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 13    | 4    | 23    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
@@ -861,18 +861,41 @@ QUÉ PASA: :108 salta el check de participante para kind 'guest' y 'leave'. join
 FIX: exigir fila de participante también en 'leave' (llamar notify ANTES del delete); para 'guest' atar al guest_token que devuelve join_session_as_guest (120:100-104); derivar joiner_name de users.name en servidor (como ya hace notify-interest :72,81).
 ACEPTACIÓN: POST con kind 'leave' sin fila de participante -> 403; joiner_name del body ignorado para usuarios autenticados.
 
-### [SEC-03] Unificar los dos gates de admin (is_app_admin() vs ADMIN_EMAILS hardcodeado) en las rutas destructivas
+### [SEC-03] Dos sistemas de admin en paralelo, en TRES sitios, y no coinciden
 
-- **Área:** Seguridad · **Prioridad:** Media · **Estado:** Por hacer
-- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Auth
+- **Área:** Seguridad · **Prioridad:** **Alta** (subida el 2026-09-14: el tercer sitio son políticas RLS vivas, no código) · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) + Supabase (migración) · **Riesgo:** Auth
 - **Journey / lado:** Admin
-- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:36; app/api/admin/tribe-os/grant-premium/route.ts:33`
+- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:24; app/api/admin/tribe-os/grant-premium/route.ts:18,33`; políticas RLS sobre `public.users` y `public.sessions`
 
 **Descripción**
 
 QUÉ PASA: dos definiciones de "admin" conviven: flag de DB vía RPC is_app_admin() (lib/auth/adminApi.ts:47-48, gatea /api/admin/data y páginas /admin/\*) y allowlist de emails literal (lib/admin.ts:10-16 + lib/admin-config.ts:12) que gatea las DOS rutas más destructivas: borrar usuario (:36) y otorgar premium (:33). Consecuencias: un admin legítimo (is_admin=true) ve el control de borrar y recibe 403; quien controle una de las dos direcciones literales borra usuarios y otorga premium SIN fila is_admin y sin pasar por admin_role_audit (043:66-85); la comparación es case-sensitive.
 FIX: isAdmin() sobre is_app_admin(); retirar ADMIN_EMAILS; un solo helper requireApiAdmin.
 ACEPTACIÓN: las dos rutas responden 403 a un email de la lista sin is_admin y 200 a un is_admin real.
+
+---
+
+**ACTUALIZACIÓN 2026-09-14 (SEC-SWEEP) — ya no es categórico, son tres sitios concretos y hay uno que no es código.**
+
+Los **tres** lugares donde vive el gate de admin, y lo que decide cada uno:
+
+1. **`is_app_admin()`** — el flag en base de datos. `lib/auth/adminApi.ts:47-48` (`requireApiAdmin`) lo usa para `/api/admin/data` y las páginas `/admin/*`. Es el mecanismo bueno: consulta una fila real y queda registrado.
+
+2. **`ADMIN_EMAILS`**, allowlist literal de dos direcciones en `lib/admin-config.ts:12`, consumida por `isAdmin()` en `lib/admin.ts:10-16`. Gatea exactamente las **dos rutas más destructivas** — `app/api/admin/users/[id]/delete/route.ts` (borrar una cuenta) y `app/api/admin/tribe-os/grant-premium/route.ts` (otorgar un tier de pago). Comparación sensible a mayúsculas.
+
+3. **NUEVO, y es el que sube la prioridad: políticas RLS vivas con el email escrito dentro del cuerpo.** El volcado de `pg_policies` del 2026-09-14 muestra sobre `public.users` la política `"Admin can update users"` con `qual` = el email del JWT comparado contra `alainalisca@…` literal, **conviviendo** con `"Admins can update any user"` que usa `is_app_admin()`. `public.sessions` carga políticas de la misma forma. Esto no está en ningún archivo del repositorio: se aplicó a mano, igual que el re-revoke de 093 (ver el ticket de deriva).
+
+**LA CONSECUENCIA, en las dos direcciones:**
+
+- Un **admin real** (`is_admin = true`, con su fila y su rastro en `admin_role_audit`) recibe **403** de la ruta que otorga tiers de pago y de la que borra cuentas. El mecanismo legítimo no sirve donde más importa.
+- Quien **controle una de las dos direcciones literales** —incluida la recuperación de ese buzón— borra cuentas y otorga tiers de pago **sin fila `is_admin`**, sin pasar por `admin_role_audit` (043:66-85), y ahora además **escribe filas de `users` vía RLS** por la política del punto 3. Nada de eso deja rastro en el sistema de auditoría que existe precisamente para eso.
+
+Los dos sistemas no coinciden en ninguna dirección: ni el admin de base de datos puede hacer lo que hace el email, ni el email aparece en la auditoría del admin de base de datos.
+
+**FIX (sin cambios respecto al original, ampliado al tercer sitio):** `isAdmin()` pasa a apoyarse en `is_app_admin()`; se retira `ADMIN_EMAILS`; un solo helper `requireApiAdmin` para las rutas; y una migración que elimine las políticas RLS con el email literal dejando únicamente las de `is_app_admin()`. **Enumerar las políticas vivas primero** (`pg_policies`), por la lección de 159/160: `DROP POLICY IF EXISTS` es silencioso cuando el nombre no coincide.
+
+**NO se toca en el SEC-SWEEP en curso.** El orden acordado es 164 (el trigger, solo) → el revoke de la allowlist de UPDATE. Este ticket va después y lleva su propia puerta en dispositivo.
 
 ### [SEC-04] T-SEC4-B: mover la escritura del bucket media a una ruta service-role con path derivado del uid (INSERT sigue siendo bucket-only)
 
