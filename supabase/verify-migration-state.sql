@@ -1062,6 +1062,60 @@ select '163_partner_slug_and_public_view',
             and has_table_privilege('anon', 'public.partners_public', 'SELECT')
             then 'applied' else 'MISSING' end
 union all
+select '166_capture_session_attendance',
+       -- Capture-only: 166 creates nothing that did not already exist on
+       -- production, so "did it run" cannot be answered by looking for a new
+       -- object. What it guarantees is that the repo can REBUILD the table, so
+       -- this row asserts the table still has the shape 166 records. The
+       -- created_at type is the specific thing checked: both timestamps are
+       -- `timestamp without time zone`, against the grain of the rest of this
+       -- schema, and it is the detail a hand-reconstruction gets wrong. The
+       -- unique constraint is checked alongside it because it is the conflict
+       -- target upsertAttendance depends on -- losing it breaks writes, not
+       -- reads, so nothing else would notice.
+       case when to_regclass('public.session_attendance') is not null
+             and exists (
+               select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = 'session_attendance'
+                 and column_name = 'created_at'
+                 and data_type = 'timestamp without time zone'
+             )
+             and exists (
+               select 1 from pg_constraint
+               where conname = 'session_attendance_session_id_user_id_key'
+             )
+            then 'applied' else 'MISSING' end
+union all
+select '167_lock_session_attendance_reads',
+       -- Five artifacts, all of which must hold. Checking the policy alone
+       -- would report 'applied' for a half-run migration in which anon still
+       -- holds SELECT -- which is precisely the state this migration exists to
+       -- end, and the state in which the whole table is world-readable.
+       --
+       -- TRUNCATE is checked for BOTH client roles, separately from SELECT: it
+       -- is the only privilege in the set that escapes RLS entirely, so a
+       -- database with perfect policies and a surviving TRUNCATE grant is not
+       -- locked down. authenticated is included because its seven grants were
+       -- DIRECT, not inherited from PUBLIC, so a revoke aimed only at anon
+       -- leaves it holding TRUNCATE.
+       --
+       -- has_table_privilege, never information_schema.table_privileges: that
+       -- view cannot see table-level grants and passes either way.
+       case when exists (
+              select 1 from pg_policies
+              where schemaname = 'public' and tablename = 'session_attendance'
+                and policyname = 'sa_select_own_or_host'
+            )
+            and not exists (
+              select 1 from pg_policies
+              where schemaname = 'public' and tablename = 'session_attendance'
+                and policyname = 'Anyone can view attendance'
+            )
+            and not has_table_privilege('anon', 'public.session_attendance', 'SELECT')
+            and not has_table_privilege('anon', 'public.session_attendance', 'TRUNCATE')
+            and not has_table_privilege('authenticated', 'public.session_attendance', 'TRUNCATE')
+            then 'applied' else 'MISSING' end
+union all
 
 -- The permanence property, as a standing check rather than a one-off probe.
 -- partners_public must NOT filter on status beyond excluding 'pending': the
