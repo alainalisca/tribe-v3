@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, Clock, MapPin, Star, Award } from 'lucide-react';
+import { Calendar, Clock, Star, Award } from 'lucide-react';
 import { useLanguage } from '@/lib/LanguageContext';
 import { createClient } from '@/lib/supabase/client';
 import { trackEvent } from '@/lib/analytics';
@@ -21,8 +21,9 @@ interface InstructorProfile {
   instructor_bio: string | null;
   sports: string[] | null;
   average_rating: number | null;
-  // Schema column is `location`, not `city`. Audit S-2.
-  location: string | null;
+  // No `location`. The select above does not fetch it (anon cannot read it
+  // after 168), so declaring it here would let future code read a field that
+  // typechecks and is always undefined at runtime.
 }
 
 interface UpcomingSession {
@@ -62,7 +63,16 @@ export default function InstructorShareClient() {
       const [profileRes, sessionsRes, countRes, userRes] = await Promise.all([
         supabase
           .from('users')
-          .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating, location')
+          // `location` is deliberately NOT selected. This page is in
+          // middleware's publicPaths, so for a logged-out visitor this fetch
+          // runs in the browser as ANON. users.location is free text that
+          // routinely holds the barrio ('Laureles, Medellín' is the onboarding
+          // placeholder), and migration 168 revokes SELECT (location) on
+          // public.users from anon. PostgREST rejects the WHOLE request when a
+          // select names an ungranted column, so keeping it here would 401 this
+          // fetch, leave `profile` null, and blank the entire share page --
+          // not just drop the city line.
+          .select('id, name, avatar_url, bio, instructor_bio, sports, average_rating')
           .eq('id', instructorId)
           .single(),
         supabase
@@ -179,12 +189,6 @@ export default function InstructorShareClient() {
                 )}
               </div>
               <h2 className="text-2xl font-bold text-theme-primary">{profile.name}</h2>
-              {profile.location && (
-                <div className="flex items-center gap-1 mt-1 text-sm text-theme-tertiary">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {profile.location}
-                </div>
-              )}
             </div>
 
             {/* Rating + sessions */}
