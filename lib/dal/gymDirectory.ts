@@ -59,7 +59,18 @@ export async function fetchGymsAndStudios(supabase: SupabaseClient): Promise<Dal
   try {
     const { data, error } = await supabase
       .from('featured_partners')
-      .select(`${GYM_IDENTITY_COLUMNS}, address, specialties, display_order, user:users(avatar_url)`)
+      .select(
+        `${GYM_IDENTITY_COLUMNS}, address, specialties, display_order, user:users!inner(avatar_url, is_test_account)`
+      )
+      // T-GYM7: `users!inner` + the embedded filter drops partners whose owner
+      // account is flagged as a seeded/test account (migration 052), the same
+      // shape as fetchPartnerInstructors and gym_revenue_totals.
+      // `!inner` matters twice: it applies the filter, and it drops a partner
+      // whose owner row is gone rather than surfacing it with a null user.
+      // The embed requests ONLY granted columns -- avatar_url and
+      // is_test_account are both outside the 067/113/115/118 revokes. An
+      // ungranted column does not degrade the embed, it fails the whole read.
+      .eq('user.is_test_account', false)
       .eq('status', 'active')
       .in('business_type', [...ORGANIZATION_TYPES])
       // Editorial placement first (161), then alphabetical. Same precedence as
