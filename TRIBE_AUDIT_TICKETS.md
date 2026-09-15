@@ -554,6 +554,59 @@ Hasta que eso esté decidido, **no tocar la función**: cambiar el 0.10 por otro
 
 ACEPTACIÓN: decisión escrita en este ticket; `platform_fee_cents` e `instructor_payout_cents` o reflejan la comisión real o se retiran; las filas históricas tienen un tratamiento definido.
 
+### [PAY-10] El camino de pago automático nunca se ha completado ni una sola vez: 0 aprobados, 12 errores, 5 pendientes, y ninguna fila desde el 2026-07-06
+
+- **Área:** Pagos · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Ninguno todavía — el primer paso es solo lectura · **Riesgo:** Alto cuando se cobre, **cero hoy** porque no se cobra
+- **Journey / lado:** Atleta que paga · Instructor que cobra
+- **Ruta/Archivo:** `public.payments`; `public.on_payment_approved()` (no versionada, ver [DRIFT-02]); camino manual en `lib/dal/sessions.ts:1283`
+- **CONDICIÓN BLOQUEANTE:** hay que resolverlo **antes de habilitar el cobro**, NO antes de la próxima release. Al no está cobrando.
+
+**Descripción**
+
+MEDIDO EN PRODUCCIÓN el 2026-09-14, `public.payments` completa:
+
+| estado | filas | rango de fechas |
+|---|---|---|
+| `error` | **12** | 2026-05-02 → 2026-07-06 |
+| `pending` | **5** | 2026-05-03 → 2026-07-01 |
+| `approved` | **0** | — |
+
+**Cero aprobados de 17 intentos, y ninguna fila nueva desde el 2026-07-06.** El camino automático de pago no ha llegado a término nunca. No es que falle a veces: no ha funcionado ni una vez, y lleva más de dos meses sin recibir siquiera un intento.
+
+**ESTO REENCUADRA [PAY-08].** Ese ticket dice que `on_payment_approved` no es `SECURITY DEFINER`, así que su `UPDATE public.users SET total_earnings_cents ...` corre como el PAGADOR contra la fila del INSTRUCTOR, no coincide con ninguna fila por la política `auth.uid() = id`, y no hace nada en silencio. **Eso sigue siendo cierto y sigue siendo un defecto real — pero nunca ha tenido efecto, porque el trigger nunca se ha disparado.** Se dispara con `payments` INSERT + UPDATE hacia `approved`, y aprobados hay cero. PAY-08 no baja de prioridad: es una bomba con la espoleta puesta que se armará el día que el primer pago se apruebe. Lo que cambia es que hoy no está causando daño y no explica ningún dato observado.
+
+**CONSECUENCIA PARA LOS CONTADORES.** `total_earnings_cents = 0` para todo el mundo tiene ahora **dos** causas independientes, y conviene no seguir atribuyéndolo solo a una:
+
+1. El revert silencioso de `protect_verified_instructor` — ver [COUNTER-01] y [DRIFT-03], y la migración 165, que lo dejó congelado a propósito.
+2. **La escritura nunca ocurre.** Aunque el revert no existiera y `on_payment_approved` fuese `SECURITY DEFINER`, el contador seguiría en 0, porque no hay ningún pago aprobado que lo incremente.
+
+Arreglar cualquiera de las dos por separado no moverá el número. Quien retome [COUNTER-01] debe leer esto primero para no volver a derivarlo desde cero: **la causa raíz de los ingresos en cero es que no ha habido ingresos que registrar por esta vía**, no la lógica del trigger.
+
+**EL ÚNICO CAMINO QUE HA FUNCIONADO ES EL MANUAL.** Las confirmaciones de pago que sí han ocurrido no pasaron por `public.payments`: van por `session_participants.payment_confirmed_by` (escrito en `lib/dal/sessions.ts:1283`) y por el trigger `set_payment_status_on_join`, es decir, el instructor marca a mano que le pagaron en efectivo o por transferencia. Esa es la realidad operativa de la plataforma hoy y coincide con [PAY-04]: Tribe no procesa pagos, los instructores reciben el 100%. La tabla `payments` es infraestructura montada que nunca entró en servicio.
+
+**FIX — EL PRIMER PASO ES LEER, NO TOCAR LA PASARELA**
+
+1. **Leer las 12 filas en `error` y decir qué falló realmente.** Antes de que nadie mire el código de la pasarela, hay que saber si son 12 fallos de una misma causa o de varias: credenciales, firma de webhook, moneda, un campo requerido, o llamadas de prueba abandonadas. Doce filas es una muestra que se lee entera en diez minutos y descarta la mitad de las hipótesis posibles.
+
+   ```sql
+   begin;
+   select id, created_at, status, amount_cents, currency, payment_type,
+          provider, provider_payment_id, error_message, metadata
+   from public.payments
+   order by created_at;
+   rollback;
+   ```
+
+   Son 17 filas en total: caben todas, no hace falta muestrear.
+
+2. **Averiguar por qué no hay intentos desde el 2026-07-06.** ¿Se retiró el punto de entrada de la UI, se apagó por configuración, o simplemente nadie lo intentó? Es una pregunta distinta de por qué fallaron los 12, y la respuesta cambia el alcance.
+
+3. Solo después de 1 y 2, decidir sobre la pasarela. Cruza con [PAY-01] (el kill switch `INSTRUCTOR_PAYMENTS_ENABLED` que no existe en código) y [PAY-02] (decisión de Al sobre los branches Stripe/Wompi).
+
+**ACEPTACIÓN:** las 12 filas `error` están clasificadas por causa en este ticket; se sabe por qué no hay intentos desde julio; y existe una decisión escrita de Al sobre si el camino automático se arregla o se retira antes de habilitar el cobro.
+
+
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
 - **Área:** Fix rápido · **Prioridad:** Baja · **Estado:** Por hacer
