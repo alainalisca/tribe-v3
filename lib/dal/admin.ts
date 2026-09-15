@@ -77,30 +77,117 @@ export async function fetchAdminStatsRaw(supabase: SupabaseClient): Promise<DalR
   }
 }
 
+/** ADMIN-01: how the users list is narrowed. Applied SERVER side -- a client-side
+ *  filter over the page would only ever search the newest 100 rows, which is the
+ *  bug this replaces: a user outside that window looked like they did not exist. */
+export const ADMIN_USER_FILTERS = ['all', 'instructors', 'athletes', 'test', 'banned', 'new'] as const;
+export const ADMIN_USER_SORTS = ['newest', 'last_active', 'most_hosted'] as const;
+export type AdminUserFilter = (typeof ADMIN_USER_FILTERS)[number];
+export type AdminUserSort = (typeof ADMIN_USER_SORTS)[number];
+
+export interface AdminUserQuery {
+  search?: string;
+  filter?: AdminUserFilter;
+  sort?: AdminUserSort;
+  limit?: number;
+}
+
+export const ADMIN_USERS_PAGE_SIZE = 100;
+
+/** PostgREST builds `or=(name.ilike.*x*,email.ilike.*x*)` as a STRING, so a comma
+ *  or paren in the term silently changes the filter's shape rather than matching
+ *  literally. Values are still parameterised -- this is a correctness guard, not
+ *  an injection one. `%` and `_` are stripped so a user cannot turn their search
+ *  into a wildcard that matches the whole table. */
+function sanitizeSearch(term: string): string {
+  return term.replace(/[,()*%_\\"']/g, ' ').trim();
+}
+
 /**
- * Fetches all users with session created/joined counts for the admin user management tab.
+ * Fetches users for the admin user management tab, with session created/joined counts.
+ *
+ * ADMIN-01: search, filter and sort are all applied server side. The page size is
+ * still 100, but the WINDOW now moves -- a search covers the whole table instead
+ * of the first page of it.
  */
-export async function fetchAdminUsersWithCounts(supabase: SupabaseClient): Promise<
+export async function fetchAdminUsersWithCounts(
+  supabase: SupabaseClient,
+  query: AdminUserQuery = {}
+): Promise<
   DalResult<{
     users: unknown[];
     sessionCounts: Array<{ creator_id: string }>;
     participantCounts: Array<{ user_id: string }>;
   }>
 > {
+  const { search = '', filter = 'all', sort = 'newest', limit = ADMIN_USERS_PAGE_SIZE } = query;
   try {
+    let usersQuery = supabase
+      .from('users')
+      .select(
+        // is_test_account added by ADMIN-01: the panel could not tell a real
+        // signup from a seeded one, which is the first question asked of this list.
+        'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, is_test_account, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
+      )
+      // Exclude soft-deleted users. The admin delete button calls the
+      // admin_delete_user RPC which sets deleted_at = NOW() (migration 050).
+      // Without this filter the "deleted" user reappeared on the next list
+      // reload — the row was gone optimistically, then re-fetched.
+      .is('deleted_at', null);
+
+    switch (filter) {
+      case 'instructors':
+        usersQuery = usersQuery.eq('is_instructor', true);
+        break;
+      case 'athletes':
+        // NOT true, not `eq false`: is_instructor is nullable and a null is an
+        // athlete. `eq('is_instructor', false)` would silently drop every null.
+        usersQuery = usersQuery.not('is_instructor', 'is', true);
+        break;
+      case 'test':
+        // eq, not `not is false`: is_test_account is `boolean NOT NULL DEFAULT
+        // false` (migration 052), so there are no nulls to miss here. That is
+        // NOT true of is_instructor above, which is nullable.
+        usersQuery = usersQuery.eq('is_test_account', true);
+        break;
+      case 'banned':
+        usersQuery = usersQuery.eq('banned', true);
+        break;
+      case 'new':
+        usersQuery = usersQuery.gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+        break;
+      case 'all':
+      default:
+        break;
+    }
+
+    const term = sanitizeSearch(search);
+    if (term) {
+      usersQuery = usersQuery.or(`name.ilike.%${term}%,email.ilike.%${term}%`);
+    }
+
+    switch (sort) {
+      case 'last_active':
+        // nullsFirst:false — an account that has NEVER logged in must sort to the
+        // bottom of "last active", not the top. Postgres defaults DESC to NULLS
+        // FIRST, which would put every dormant account above every live one.
+        usersQuery = usersQuery.order('last_login_at', { ascending: false, nullsFirst: false });
+        break;
+      case 'most_hosted':
+        // total_sessions_hosted is NOT in the select list (ADMIN-01 scope), but
+        // ordering does not require selecting. It is also the one instructor
+        // counter that moves correctly for everyone -- DRIFT-03 froze
+        // total_participants_served and total_earnings_cents, not this one.
+        usersQuery = usersQuery.order('total_sessions_hosted', { ascending: false, nullsFirst: false });
+        break;
+      case 'newest':
+      default:
+        usersQuery = usersQuery.order('created_at', { ascending: false });
+        break;
+    }
+
     const [{ data, error }, { data: sessionCounts }, { data: participantCounts }] = await Promise.all([
-      supabase
-        .from('users')
-        .select(
-          'id, name, email, avatar_url, bio, location, sports, preferred_sports, specialties, is_instructor, is_verified_instructor, is_admin, banned, created_at, updated_at, last_login_at, sessions_completed, average_rating, total_reviews, follower_count, following_count'
-        )
-        // Exclude soft-deleted users. The admin delete button calls the
-        // admin_delete_user RPC which sets deleted_at = NOW() (migration 050).
-        // Without this filter the "deleted" user reappeared on the next list
-        // reload — the row was gone optimistically, then re-fetched.
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(100),
+      usersQuery.limit(limit),
       supabase.from('sessions').select('creator_id'),
       supabase.from('session_participants').select('user_id'),
     ]);

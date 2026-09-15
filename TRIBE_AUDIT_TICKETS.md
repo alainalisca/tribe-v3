@@ -2,24 +2,24 @@
 
 Generated from a read-only audit of `tribe-v3` at `main` @ `613eddf` (migrations through 155) plus the live Supabase project `twyplulysepbeypqralz` (schema pulled 2026-09-04 via `supabase gen types --linked`, `supabase inspect db`, `supabase db lint --linked`). Companion files: `TRIBE_AUDIT_SUMMARY.md` (map, route table, top 10, themes) and `TRIBE_AUDIT_TICKETS.csv` (Notion import).
 
-**104 tickets** (95 del audit original + 9 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
+**106 tickets** (95 del audit original + 11 añadidos el 2026-09-12/13 desde T-GYM3 y T-GYM3b; ver la sección «Añadidos 2026-09-12» arriba de Flujo/Navegación). Grouped by Área, then Prioridad. Every ticket carries: Título, Área, Prioridad, Estado, Descripción (qué pasa, evidencia file:line, impacto, fix propuesto, criterios de aceptación), Esfuerzo, Deploy, Riesgo, Journey/lado, Ruta/Archivo. `Notion:` names the existing Build Backlog row this ticket updates (de-duplicated against the board on 2026-09-04; 46 tickets update existing rows, 50 Notion pages were created (49 new findings + PAY-01, which complements the existing DECISIÓN row)).
 
 | Área             | Alta | Media | Baja | Total |
 | ---------------- | ---- | ----- | ---- | ----- |
 | Flujo/Navegación | 3    | 3     | 0    | 6     |
-| Producto         | 10   | 17    | 4    | 31    |
-| Seguridad        | 5    | 4     | 3    | 12    |
+| Producto         | 10   | 18    | 5    | 33    |
+| Seguridad        | 6    | 3     | 3    | 12    |
 | Pagos            | 3    | 1     | 0    | 4     |
 | Infra            | 6    | 13    | 4    | 23    |
 | Fix rápido       | 3    | 9     | 10   | 22    |
 | Negocio          | 1    | 5     | 0    | 6     |
-| **Total**        | 31   | 53    | 21   | 104   |
+| **Total**        | 31   | 54    | 22   | 106   |
 
 ---
 
-## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (9)
+## Añadidos 2026-09-12 / 09-13 (T-GYM3 + T-GYM3b) (11)
 
-Nueve hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
+Once hallazgos levantados mientras se construía la página pública de gimnasios `/g/[slug]` (T-GYM3, PR #156). **Ninguno lo introduce T-GYM3**: los dos primeros ya están vivos en producción hoy y son anteriores al ticket. Se archivan aquí, fuera del alcance de T-GYM3, porque cada uno necesita su propia auditoría antes de tocar nada.
 
 ### [SEC-13] anon puede leer los términos comerciales de TODO partner activo (cuota mensual, mínimos de contrato, métricas)
 
@@ -244,6 +244,125 @@ IMPACTO: bajo mientras el movimiento sea de nuestra parte y sobre sesiones con 0
 FIX: notificar al creador y a los participantes confirmados cuando una sede aprobada deja de estarlo. Como mínimo, que la herramienta de revisión avise a quien la usa de cuántos inscritos va a afectar antes de confirmar.
 
 ACEPTACIÓN: quitar la aprobación de una sede con inscritos genera una notificación por participante; la interfaz de revisión muestra el número de inscritos afectados antes de confirmar.
+
+### [GYM-06] FeedbackWidget sigue apareciendo en /s/[id], la segunda página del recorrido público
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Journey / lado:** Link de bio -> gimnasio -> clase / invitado
+- **Ruta/Archivo:** `lib/publicShareRoutes.ts`; `components/FeedbackWidget.tsx`
+
+**Descripción**
+
+QUÉ PASA: T-GYM3b quitó el `FeedbackWidget` de `/g/` , `/i/` e `/invite/`, pero **no de `/s/[id]`**. Al lo ve en el iPhone y en el Mac: la burbuja verde está sobre la página de sesión. Ya estaba así antes de T-GYM3, así que el merge no lo empeora.
+
+POR QUÉ IMPORTA AHORA: `/s/[id]` es **la segunda página del recorrido público**. El recorrido que acabamos de verificar es bio de Instagram -> `/g/bullbox/` -> tocar una clase -> `/s/[id]` -> reservar. Un desconocido que toca una clase en el link de bio de BullBox aterriza en una página que le ofrece una herramienta interna de reporte de bugs. Es exactamente la fuga que motivó quitarlo de `/g/`, una página más adelante.
+
+DECISIÓN DE DISEÑO QUE HAY QUE TOMAR: hoy `PUBLIC_SHARE_ROUTE_PREFIXES` es **una sola lista** que consumen `FeedbackWidget` e `IOSInstallPrompt`. Añadir `/s/` ahí suprimiría también el prompt de instalación, y esa es una decisión distinta y deliberadamente pendiente (ver [GYM-07]). Así que este ticket necesita una de dos:
+
+- separar la lista en dos (rutas donde no va chrome interno vs rutas donde no va el prompt de tienda), o
+- que cada componente reciba su propio conjunto de prefijos desde el mismo módulo.
+
+La segunda opción conserva el «un solo sitio donde registrar una ruta pública», que era el punto de crear el módulo. Hay un test que fija la ausencia de `/s/` en la lista actual: hay que actualizarlo, no borrarlo.
+
+ACEPTACIÓN: `/s/<id>` no muestra la burbuja de feedback a un visitante sin sesión; `/home`, `/sessions`, `/storefront/<id>/` y `/instructors` la siguen mostrando; `scripts/verify-share-routes.mjs` incluye `/s/<id>` entre sus objetivos.
+
+### [GYM-07] ¿El prompt de instalación debe seguir apareciendo en /s/[id]? (decisión de producto, no un bug)
+
+- **Área:** Producto · **Prioridad:** Baja · **Estado:** Por decidir
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Ninguno
+- **Journey / lado:** Sesión compartida / invitado
+- **Ruta/Archivo:** `lib/publicShareRoutes.ts`; `components/IOSInstallPrompt.tsx`
+
+**Descripción**
+
+QUÉ PASA: `IOSInstallPrompt` sigue apareciendo en `/s/[id]` (y en `/download`). Se dejó fuera a propósito en T-GYM3b, no por olvido.
+
+EL ARGUMENTO PARA DEJARLO: `/s/[id]` está **a mitad del embudo**. A quien llega por un link de sesión compartida ya le invitaron a algo concreto, y reservar esa sesión requiere la app: ahí el prompt está haciendo su trabajo. Un link de bio de gimnasio es el tope del embudo — alguien que aún no sabe qué es Tribe — y ahí el modal se interpone antes de que pueda ver nada.
+
+POR QUÉ ESTE TICKET ESTÁ SEPARADO DE [GYM-06]: el argumento de «mitad del embudo» sostiene un prompt de instalación y **no** sostiene un reporte de bugs. Son dos decisiones con razones distintas sobre la misma ruta, y mezclarlas en un solo ticket obliga a resolverlas juntas.
+
+NOTA: el recorrido verificado en producción el 2026-09-13 (`/g/bullbox/` -> clase -> `/s/<id>`) se completa **sin salir del navegador y sin muro de login**. Si se decide suprimir el prompt aquí, ese recorrido no cambia; si se decide dejarlo, el visitante lo encuentra en el segundo paso.
+
+ACEPTACIÓN: decisión escrita en este ticket, y `PUBLIC_SHARE_ROUTE_PREFIXES` (o el conjunto que consuma `IOSInstallPrompt`) refleja lo decidido, con el test que fija esa ausencia/presencia actualizado en consecuencia.
+### [T-GYM5] Subida de logo y banner para partners, y captura de lat/lng en el formulario
+
+- **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) + Supabase (bucket + políticas) · **Riesgo:** Bajo
+- **Journey / lado:** Alta de gimnasio / dueño de gimnasio
+- **Ruta/Archivo:** `app/partners/apply/page.tsx`; `components/partner/PartnerApplyForm.tsx`; `lib/dal/featuredPartners.ts:417-421`
+- **Bloqueada por:** [T-GYM7] (una activación de prueba en producción no es segura hasta que las cuentas de prueba estén excluidas).
+
+**Descripción**
+
+QUÉ PASA, dos huecos distintos que comparten formulario:
+
+**1. No existe camino de subida para `logo_url` ni `banner_url`.** `applyForPartnership` acepta `logo_url` (`lib/dal/featuredPartners.ts:421`) y la página nunca lo envía; el formulario no tiene campo de imagen. Tampoco existe un bucket de storage para partners: los que hay son `profile-images`, `session-photos`, `session-stories`, `media`, `community-banners`, `product-images`, `instructor-posts` y `community-bulletin-flyers`. Ninguno es adecuado.
+
+Consecuencia medible: los tres partners reales tienen `logo_url` NULL y lo que se ve como su logo es en realidad el `avatar_url` de la cuenta dueña, vía el `coalesce` de `partners_public` (163). Ver [GYM-01]. Todo gimnasio que se registre solo empieza igual.
+
+**2. `lat` y `lng` nunca se envían.** El DAL los acepta (`:417-418`) y `app/partners/apply/page.tsx` los omite. Cada gimnasio de alta propia queda con `lat = NULL, lng = NULL`, **invisible para cualquier superficie de distancia o de mapa**, sin nada que lo indique. La dirección se guarda como texto libre.
+
+FIX:
+
+- Bucket nuevo (`partner-images` o similar) con políticas de escritura acotadas al dueño, siguiendo el patrón de `profile-images`. Reutilizar `components/ImageCropModal.tsx`.
+- Campo de dirección con autocompletado que devuelva coordenadas, como hace `app/create/page.tsx` para las sesiones, y pasarlas en el payload.
+- Migración de datos aparte para las tres filas existentes: NO forzar la subida retroactiva, el `coalesce` sigue siendo el fallback correcto.
+
+ACEPTACIÓN: un gimnasio nuevo puede subir logo y banner desde el formulario; `lat`/`lng` no son NULL tras enviar una dirección con autocompletado; `/g/[slug]` muestra el logo subido y no el avatar de la cuenta.
+
+### [T-GYM6] Ampliar ORGANIZATION_TYPES a gym, studio, academy y club, y arreglar los siete sitios que fijan el par a mano
+
+- **Área:** Producto · **Prioridad:** Media · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) · **Riesgo:** Medio — toca siete superficies de identidad
+- **Ruta/Archivo:** `lib/dal/gymVenue.ts:239` (la constante); los siete consumidores listados abajo
+
+**Descripción**
+
+QUÉ PASA: `ORGANIZATION_TYPES = ['gym', 'studio']` (`lib/dal/gymVenue.ts:239`) tiene **dos** consumidores reales (`lib/dal/gymDirectory.ts:30,64`). Otros siete sitios escriben el par a mano, así que ampliar la constante no los toca:
+
+| sitio                                                  | qué hace hoy con `academy` / `club`                                               |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `lib/partnerIdentity.ts:32-35`                         | `partnerTypeLabelKey` devuelve **null** → no se renderiza ninguna línea de tipo   |
+| `lib/partnerIdentity.ts:46`                            | `partnerCtaLabelKey` cae a `viewGym` → el CTA de una academia dice «Ver gimnasio» |
+| `app/storefront/[id]/page.tsx:32`                      | `isOrganization` falso → tratamiento de PERSONA, no de organización               |
+| `components/storefront/StorefrontProfileColumn.tsx:54` | igual                                                                             |
+| `components/storefront/GymStorefrontHeader.tsx:44,48`  | `isStudio` falso → etiquetado «Gimnasio»                                          |
+| `components/instructors/GymsAndStudiosSection.tsx:53`  | ternario `studio ? typeStudio : typeGym` → la tarjeta dice «Gimnasio»             |
+| `components/partner/GymChip.tsx:46`                    | mismo ternario, mismo resultado en la tarjeta de sesión                           |
+
+Ninguno lanza error y ninguno pinta una clave sin traducir: **todos fallan en silencio**, o etiquetando mal o no mostrando nada.
+
+YA ESTÁ PASANDO, no es hipotético: `partners_public` sólo excluye `'independent'` (`163_partner_slug_and_public_view.sql:309`), así que **una academia o un club YA obtiene su página `/g/[slug]` hoy, sin línea de tipo**. La inconsistencia está viva; lo único que la contiene es que el formulario de alta ya no ofrece esos valores (T-GYM4).
+
+FIX: ampliar la constante Y hacer que los siete sitios la importen en lugar de repetir el par. `partnerIdentity.ts` es el que hay que mirar de cerca: es el helper _compartido_, así que parece la fuente única de verdad mientras por dentro sigue siendo un ternario de dos valores. Hacen falta claves i18n nuevas (`typeAcademy`, `typeClub`, `viewAcademy`, `viewClub`) en los dos ficheros de mensajes.
+
+NO ampliar el CHECK de la columna: 018 ya permite los cinco valores.
+
+ACEPTACIÓN: una fila con `business_type = 'academy'` renderiza su propia línea de tipo en la tarjeta del feed, en el tile de descubrimiento, en el storefront y en `/g/[slug]`; su CTA no dice «gimnasio»; ninguna búsqueda de `'gym' || 'studio'` queda en `app/` ni en `components/`.
+
+### [T-GYM7] Excluir partners cuya cuenta dueña es is_test_account de descubrimiento, del feed y de la cola de admin
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Bajo
+- **Ruta/Archivo:** `lib/dal/gymDirectory.ts:27,61`; `lib/dal/featuredPartners.ts:99` (`fetchActivePartners`) y `:275` (`fetchAllPartners`, la cola de admin)
+- **Bloquea:** [T-GYM5]. **Ships antes que T-GYM5.**
+
+**Descripción**
+
+QUÉ PASA: nada filtra partners por `users.is_test_account`. Una cuenta de prueba que se active aparece en el feed principal, en descubrimiento de gimnasios y en la cola de admin, igual que un gimnasio real.
+
+POR QUÉ AHORA: T-GYM4 necesitó una activación real de extremo a extremo en producción para verificar el paso 7, y durante esos minutos «Walkthrough Barbell Club» estuvo **visible para usuarios reales** en el feed. Se revirtió a `pending` en cuanto se comprobó el paso 8 y luego se borró, pero el hueco es que **no había forma segura de hacer esa prueba**. Este ticket es lo que la hace segura.
+
+EL PATRÓN YA EXISTE en cuatro sitios y sólo hay que aplicarlo aquí:
+
+- `lib/dal/featuredPartners.ts:178` — `users!inner(...)` con `.eq('user.is_test_account', false)`
+- migración 052, que introdujo la regla
+- `gym_revenue_totals` y `gym_revenue_buckets`, que ya excluyen cuentas de prueba
+
+FIX: el mismo `users!inner` + `.eq('user.is_test_account', false)` en `fetchActivePartners`, en las dos consultas de `gymDirectory`, y en `fetchAllPartners`. OJO con el embed: `users` está bajo régimen de columnas, así que el `!inner` debe pedir sólo columnas garantizadas (`is_test_account` lo está; ver la auditoría de embeds del SEC-SWEEP, donde ésta es la única consulta que la usa).
+
+ACEPTACIÓN: un partner activo cuyo dueño tiene `is_test_account = true` no aparece en el banner del feed, ni en `/instructors`, ni en `/admin/partners`; un partner real sigue apareciendo en los tres. Verificado activando una cuenta de prueba en producción y comprobando que ninguna superficie la muestra — que es exactamente la prueba que T-GYM4 no pudo hacer con seguridad.
 
 ### [GYM-02] display_order sin desempate: el orden relativo de dos partners empatados cambia entre cargas
 
@@ -820,18 +939,41 @@ QUÉ PASA: :108 salta el check de participante para kind 'guest' y 'leave'. join
 FIX: exigir fila de participante también en 'leave' (llamar notify ANTES del delete); para 'guest' atar al guest_token que devuelve join_session_as_guest (120:100-104); derivar joiner_name de users.name en servidor (como ya hace notify-interest :72,81).
 ACEPTACIÓN: POST con kind 'leave' sin fila de participante -> 403; joiner_name del body ignorado para usuarios autenticados.
 
-### [SEC-03] Unificar los dos gates de admin (is_app_admin() vs ADMIN_EMAILS hardcodeado) en las rutas destructivas
+### [SEC-03] Dos sistemas de admin en paralelo, en TRES sitios, y no coinciden
 
-- **Área:** Seguridad · **Prioridad:** Media · **Estado:** Por hacer
-- **Esfuerzo:** S · **Deploy:** Web (Vercel) · **Riesgo:** Auth
+- **Área:** Seguridad · **Prioridad:** **Alta** (subida el 2026-09-14: el tercer sitio son políticas RLS vivas, no código) · **Estado:** Por hacer
+- **Esfuerzo:** M · **Deploy:** Web (Vercel) + Supabase (migración) · **Riesgo:** Auth
 - **Journey / lado:** Admin
-- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:36; app/api/admin/tribe-os/grant-premium/route.ts:33`
+- **Ruta/Archivo:** `lib/admin.ts:10-16; lib/admin-config.ts:12; lib/auth/adminApi.ts:47-48; app/api/admin/users/[id]/delete/route.ts:24; app/api/admin/tribe-os/grant-premium/route.ts:18,33`; políticas RLS sobre `public.users` y `public.sessions`
 
 **Descripción**
 
 QUÉ PASA: dos definiciones de "admin" conviven: flag de DB vía RPC is_app_admin() (lib/auth/adminApi.ts:47-48, gatea /api/admin/data y páginas /admin/\*) y allowlist de emails literal (lib/admin.ts:10-16 + lib/admin-config.ts:12) que gatea las DOS rutas más destructivas: borrar usuario (:36) y otorgar premium (:33). Consecuencias: un admin legítimo (is_admin=true) ve el control de borrar y recibe 403; quien controle una de las dos direcciones literales borra usuarios y otorga premium SIN fila is_admin y sin pasar por admin_role_audit (043:66-85); la comparación es case-sensitive.
 FIX: isAdmin() sobre is_app_admin(); retirar ADMIN_EMAILS; un solo helper requireApiAdmin.
 ACEPTACIÓN: las dos rutas responden 403 a un email de la lista sin is_admin y 200 a un is_admin real.
+
+---
+
+**ACTUALIZACIÓN 2026-09-14 (SEC-SWEEP) — ya no es categórico, son tres sitios concretos y hay uno que no es código.**
+
+Los **tres** lugares donde vive el gate de admin, y lo que decide cada uno:
+
+1. **`is_app_admin()`** — el flag en base de datos. `lib/auth/adminApi.ts:47-48` (`requireApiAdmin`) lo usa para `/api/admin/data` y las páginas `/admin/*`. Es el mecanismo bueno: consulta una fila real y queda registrado.
+
+2. **`ADMIN_EMAILS`**, allowlist literal de dos direcciones en `lib/admin-config.ts:12`, consumida por `isAdmin()` en `lib/admin.ts:10-16`. Gatea exactamente las **dos rutas más destructivas** — `app/api/admin/users/[id]/delete/route.ts` (borrar una cuenta) y `app/api/admin/tribe-os/grant-premium/route.ts` (otorgar un tier de pago). Comparación sensible a mayúsculas.
+
+3. **NUEVO, y es el que sube la prioridad: políticas RLS vivas con el email escrito dentro del cuerpo.** El volcado de `pg_policies` del 2026-09-14 muestra sobre `public.users` la política `"Admin can update users"` con `qual` = el email del JWT comparado contra `alainalisca@…` literal, **conviviendo** con `"Admins can update any user"` que usa `is_app_admin()`. `public.sessions` carga políticas de la misma forma. Esto no está en ningún archivo del repositorio: se aplicó a mano, igual que el re-revoke de 093 (ver el ticket de deriva).
+
+**LA CONSECUENCIA, en las dos direcciones:**
+
+- Un **admin real** (`is_admin = true`, con su fila y su rastro en `admin_role_audit`) recibe **403** de la ruta que otorga tiers de pago y de la que borra cuentas. El mecanismo legítimo no sirve donde más importa.
+- Quien **controle una de las dos direcciones literales** —incluida la recuperación de ese buzón— borra cuentas y otorga tiers de pago **sin fila `is_admin`**, sin pasar por `admin_role_audit` (043:66-85), y ahora además **escribe filas de `users` vía RLS** por la política del punto 3. Nada de eso deja rastro en el sistema de auditoría que existe precisamente para eso.
+
+Los dos sistemas no coinciden en ninguna dirección: ni el admin de base de datos puede hacer lo que hace el email, ni el email aparece en la auditoría del admin de base de datos.
+
+**FIX (sin cambios respecto al original, ampliado al tercer sitio):** `isAdmin()` pasa a apoyarse en `is_app_admin()`; se retira `ADMIN_EMAILS`; un solo helper `requireApiAdmin` para las rutas; y una migración que elimine las políticas RLS con el email literal dejando únicamente las de `is_app_admin()`. **Enumerar las políticas vivas primero** (`pg_policies`), por la lección de 159/160: `DROP POLICY IF EXISTS` es silencioso cuando el nombre no coincide.
+
+**NO se toca en el SEC-SWEEP en curso.** El orden acordado es 164 (el trigger, solo) → el revoke de la allowlist de UPDATE. Este ticket va después y lleva su propia puerta en dispositivo.
 
 ### [SEC-04] T-SEC4-B: mover la escritura del bucket media a una ruta service-role con path derivado del uid (INSERT sigue siendo bucket-only)
 
