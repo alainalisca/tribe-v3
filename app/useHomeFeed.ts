@@ -17,7 +17,14 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { getUserLocation } from '@/lib/location';
 import { scheduleSessionReminders } from '@/lib/reminders';
-import { fetchUpcomingSessions, fetchUserProfileMaybe, fetchMyLocation, fetchRecapPhotosByCreators } from '@/lib/dal';
+import {
+  fetchUpcomingSessions,
+  fetchUserProfileMaybe,
+  fetchMyLocation,
+  fetchRecapPhotosByCreators,
+  updateUser,
+} from '@/lib/dal';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { logError } from '@/lib/logger';
 import type { User } from '@supabase/supabase-js';
@@ -61,6 +68,50 @@ export function computeLocationKnown(
   return profile?.location_lat != null && profile?.location_lng != null;
 }
 
+/**
+ * T-LOC1 PART A: passively backfill `users.location_lat/lng`.
+ *
+ * The app asked for the OS location permission from several places and then
+ * threw the answer away: every geolocation call site except the settings
+ * button held the coordinates in React state and discarded them on unmount.
+ * Result: 0 of 104 users had stored coordinates, so nearby-athletes, the
+ * smart-match cron and every distance display were empty for everyone.
+ *
+ * This runs off the silent `getUserLocation()` the home feed ALREADY performs
+ * on idle, so it adds no prompt and no request the user was not already making.
+ * It only ever fills a gap: if coordinates are already stored, it writes
+ * nothing, so a precise value set from /settings is never clobbered by a
+ * coarse passive read.
+ *
+ * Returns whether a write was attempted, so callers (and tests) can tell
+ * "skipped because already set" apart from "wrote".
+ */
+export async function persistLocationIfMissing(
+  supabase: SupabaseClient,
+  userId: string,
+  coords: { latitude: number; longitude: number },
+  stored: Pick<UserProfile, 'location_lat' | 'location_lng'> | null
+): Promise<boolean> {
+  // Do not overwrite coordinates that are already set. Both halves must be
+  // present to count as stored; a half-written row is treated as missing and
+  // gets repaired, matching computeLocationKnown's BOTH-required rule.
+  if (stored?.location_lat != null && stored?.location_lng != null) return false;
+
+  const result = await updateUser(supabase, userId, {
+    location_lat: coords.latitude,
+    location_lng: coords.longitude,
+  });
+  // Silent by contract: this is a background backfill the user never asked
+  // for, so a failure is logged for us and never surfaced to them.
+  if (!result.success) {
+    logError(new Error(result.error ?? 'updateUser failed'), {
+      action: 'persistLocationIfMissing',
+      userId,
+    });
+  }
+  return true;
+}
+
 export function useHomeFeed() {
   const router = useRouter();
   const supabase = createClient();
@@ -85,6 +136,9 @@ export function useHomeFeed() {
   const [fixedHeight, setFixedHeight] = useState(0);
   const [fetchError, setFetchError] = useState(false);
   const identifiedRef = useRef(false);
+  // T-LOC1 PART A: one backfill attempt per mount. Without this the effect
+  // would re-fire on its own setUserProfile-free re-renders.
+  const locationPersistedRef = useRef(false);
 
   // --- Composed hooks ---
   // Instructor recap photos for the card carousel, keyed by creator id.
@@ -203,6 +257,20 @@ export function useHomeFeed() {
       permCleanup?.();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T-LOC1 PART A: persist the coordinates the silent idle read already
+  // obtained. Waits for the profile so it knows whether anything is stored;
+  // `userLocation` and `userProfile` land in either order, so this is its own
+  // effect rather than a branch inside the geolocation or profile paths.
+  // Fire-and-forget: nothing here is awaited on a render path.
+  useEffect(() => {
+    if (locationPersistedRef.current) return;
+    if (!user || !userLocation || !userProfile) return;
+    if (userProfile.location_lat != null && userProfile.location_lng != null) return;
+    locationPersistedRef.current = true;
+    void persistLocationIfMissing(supabase, user.id, userLocation, userProfile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- supabase client is stable
+  }, [user, userLocation, userProfile]);
 
   useEffect(() => {
     if (!userChecked) return;

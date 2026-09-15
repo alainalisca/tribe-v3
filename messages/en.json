@@ -114,7 +114,9 @@
     },
     "location": {
       "deniedGuidance": "Location is blocked. To use nearby features, allow location for Tribe in your device settings, then reopen this screen.",
-      "unsupportedHint": "Location isn't available on this device or browser."
+      "unsupportedHint": "Location isn't available on this device or browser.",
+      "updateMyLocation": "Update my location",
+      "refresh": "Refresh my location"
     },
     "account": {
       "changePassword": "Change password",

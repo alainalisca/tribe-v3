@@ -6,6 +6,7 @@ import { showSuccess, showError, showInfo } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { log, logError } from '@/lib/logger';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
+import { getUserLocation } from '@/lib/location';
 import { insertSession } from '@/lib/dal';
 
 interface TrainingNowFormData {
@@ -48,32 +49,41 @@ export function useTrainingNowForm({ isOpen, userId, language, onSessionCreated,
     }
   }, [isOpen]);
 
+  /**
+   * T-LOC1 PART C: goes through `getUserLocation()` instead of calling
+   * navigator.geolocation.getCurrentPosition directly.
+   *
+   * This fires every time the sheet opens, so the direct call re-prompted on
+   * every open, bypassing the permission gating lib/location.ts exists to
+   * provide. `getUserLocation()` is the silent variant: coordinates when
+   * permission is already granted, null otherwise, never a prompt. The user
+   * can still type or pick a location in the form.
+   */
   async function getCurrentLocation() {
-    if (!navigator.geolocation) return;
-
     setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        setFormData((prev) => ({ ...prev, latitude, longitude }));
+    try {
+      const loc = await getUserLocation();
+      if (!loc) {
+        setGettingLocation(false);
+        return;
+      }
+      const { latitude, longitude } = loc;
+      setFormData((prev) => ({ ...prev, latitude, longitude }));
 
-        // Reverse geocode to get address
-        try {
-          const name = await reverseGeocodeGoogle(latitude, longitude);
-          if (name) {
-            setFormData((prev) => ({ ...prev, location: name }));
-          }
-        } catch (e) {
-          logError(e, { action: 'reverseGeocode' });
+      // Reverse geocode to get address
+      try {
+        const name = await reverseGeocodeGoogle(latitude, longitude);
+        if (name) {
+          setFormData((prev) => ({ ...prev, location: name }));
         }
-        setGettingLocation(false);
-      },
-      (error) => {
-        logError(error, { action: 'getCurrentLocation' });
-        setGettingLocation(false);
-      },
-      { enableHighAccuracy: true }
-    );
+      } catch (e) {
+        logError(e, { action: 'reverseGeocode' });
+      }
+      setGettingLocation(false);
+    } catch (error) {
+      logError(error, { action: 'getCurrentLocation' });
+      setGettingLocation(false);
+    }
   }
 
   async function handleSubmit() {

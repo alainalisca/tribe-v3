@@ -7,6 +7,7 @@ import { log, logError } from '@/lib/logger';
 import { showSuccess, showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { reverseGeocodeGoogle } from '@/lib/google-maps';
+import { getUserLocation } from '@/lib/location';
 import { insertSession } from '@/lib/dal';
 import type { User } from '@supabase/supabase-js';
 
@@ -51,38 +52,44 @@ export function useTrainingNow(language: 'en' | 'es') {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
+  /**
+   * T-LOC1 PART C: goes through `getUserLocation()` instead of calling
+   * navigator.geolocation.getCurrentPosition directly.
+   *
+   * This runs on mount. The direct call prompted on every single mount,
+   * bypassing the permission gating lib/location.ts exists to provide \u2014 and if
+   * the user dismissed the dialog with the X rather than choosing, the state
+   * stayed 'prompt' and it asked again on the next visit, forever. That is the
+   * repeated-prompt loop. `getUserLocation()` is the silent variant: it returns
+   * coordinates when permission is already granted and otherwise returns null
+   * without asking. The user can still set the location by hand in the picker,
+   * which is what the form's location field is for.
+   */
   async function getCurrentLocation() {
     setGettingLocation(true);
     try {
-      if (!navigator.geolocation) {
-        showError(language === 'es' ? 'Geolocalizaci\u00f3n no soportada' : 'Geolocation not supported');
+      const loc = await getUserLocation();
+      if (!loc) {
+        // No stored grant. Stay silent: this is a background read on mount, so
+        // an error toast here would be noise about something the user never
+        // asked for.
         setGettingLocation(false);
         return;
       }
+      const { latitude, longitude } = loc;
+      setFormData((prev) => ({ ...prev, latitude, longitude }));
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          setFormData((prev) => ({ ...prev, latitude, longitude }));
-
-          try {
-            const name = await reverseGeocodeGoogle(latitude, longitude);
-            if (name) {
-              setFormData((prev) => ({ ...prev, location: name }));
-            }
-          } catch (error) {
-            logError(error, { action: 'getCurrentLocation' });
-          }
-          setGettingLocation(false);
-        },
-        (error) => {
-          logError(error, { action: 'getCurrentLocation' });
-          showError(language === 'es' ? 'No se pudo obtener ubicaci\u00f3n' : 'Could not get location');
-          setGettingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } catch {
+      try {
+        const name = await reverseGeocodeGoogle(latitude, longitude);
+        if (name) {
+          setFormData((prev) => ({ ...prev, location: name }));
+        }
+      } catch (error) {
+        logError(error, { action: 'getCurrentLocation' });
+      }
+      setGettingLocation(false);
+    } catch (error) {
+      logError(error, { action: 'getCurrentLocation' });
       setGettingLocation(false);
     }
   }

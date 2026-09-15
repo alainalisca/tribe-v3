@@ -70,7 +70,8 @@ export default function SettingsPage() {
     debugInfo,
     debugRunning,
     runNotificationDiagnostic,
-    locationPermission,
+    locationSectionState,
+    storedLocation,
     loadingLocation,
     enableLocation,
   } = useSettings(language);
@@ -242,28 +243,53 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-stone-500 dark:text-gray-400 mb-4">{txt.locationDesc}</p>
 
-          {locationPermission === 'unsupported' ? (
+          {/* T-LOC1 PART B: driven by locationSectionState, which asks whether
+              COORDINATES ARE STORED — not whether the OS permission is granted.
+              The old gate disabled this button for every user who had allowed
+              location at the OS level, which made the app's only writer of
+              users.location_lat/lng unreachable for exactly the people who had
+              already said yes. */}
+          {locationSectionState === 'unsupported' ? (
             // Location unavailable (insecure context / device without it): a
             // short hint instead of hiding the whole section.
             <p className="text-sm text-stone-500 dark:text-gray-400">{tLoc('unsupportedHint')}</p>
-          ) : locationPermission === 'denied' ? (
-            // Denied: the browser/OS won't let us re-prompt, so show clear
-            // re-enable guidance instead of a dead button.
+          ) : locationSectionState === 'denied' ? (
+            // Denied AND nothing stored: the browser/OS won't let us re-prompt,
+            // so show clear re-enable guidance instead of a dead button.
             <div className="rounded-xl bg-stone-100 dark:bg-tribe-surface p-4">
               <p className="text-sm font-semibold text-stone-700 dark:text-gray-300">{txt.locationDenied}</p>
               <p className="mt-1 text-xs text-stone-500 dark:text-gray-400">{tLoc('deniedGuidance')}</p>
             </div>
+          ) : locationSectionState === 'saved' ? (
+            // Coordinates stored: show them, and offer a refresh. The refresh
+            // button stays enabled — re-reading location is always allowed.
+            <div className="space-y-3">
+              <div className="rounded-xl bg-stone-100 dark:bg-tribe-surface p-4">
+                <p className="text-sm font-semibold text-stone-700 dark:text-gray-300">{txt.locationGranted}</p>
+                <p className="mt-1 text-xs font-mono text-stone-500 dark:text-gray-400">
+                  {storedLocation?.location_lat?.toFixed(4)}, {storedLocation?.location_lng?.toFixed(4)}
+                </p>
+              </div>
+              <button
+                onClick={enableLocation}
+                disabled={loadingLocation}
+                className="w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid disabled:opacity-50"
+              >
+                <span>{tLoc('refresh')}</span>
+                {loadingLocation && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />}
+              </button>
+            </div>
           ) : (
+            // 'prompt'  → permission not granted yet: ask for it.
+            // 'granted-unsaved' → permission held but nothing stored: this is
+            // the case the old gate locked out. The button is ENABLED and says
+            // "update my location", because pressing it is what actually saves.
             <button
               onClick={enableLocation}
-              disabled={loadingLocation || locationPermission === 'granted'}
-              className={`w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between ${
-                locationPermission === 'granted'
-                  ? 'bg-tribe-green text-slate-900'
-                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
-              }`}
+              disabled={loadingLocation}
+              className="w-full p-4 rounded-xl text-left transition font-semibold flex items-center justify-between bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-gray-300 hover:bg-stone-200 dark:hover:bg-tribe-mid disabled:opacity-50"
             >
-              <span>{locationPermission === 'granted' ? txt.locationGranted : txt.enableLocation}</span>
+              <span>{locationSectionState === 'granted-unsaved' ? tLoc('updateMyLocation') : txt.enableLocation}</span>
               {loadingLocation && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />}
             </button>
           )}
