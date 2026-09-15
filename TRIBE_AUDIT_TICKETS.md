@@ -262,7 +262,7 @@ Esa es la evidencia y ese es el ticket. Una quinta instancia no es la historia; 
 
 INSTANCIAS CONOCIDAS (las cuatro de esta semana, más la nota de julio):
 
-1. **093 emitió `GRANT SELECT ON public.users TO authenticated;`** y el probe del 2026-09-14 mide ese privilegio en `false`. **SIGUE ABIERTO, pero ya no bloquea 166.** Medido en producción el 2026-09-14, solo lectura:
+1. **093 emitió `GRANT SELECT ON public.users TO authenticated;`** y el probe del 2026-09-14 mide ese privilegio en `false`. **CERRADO el 2026-09-14 por medición: causa explicada, 166 desbloqueado.** Medido en producción el 2026-09-14, solo lectura:
 
    | medición                                                                 | resultado                                         |
    | ------------------------------------------------------------------------ | ------------------------------------------------- |
@@ -272,18 +272,24 @@ INSTANCIAS CONOCIDAS (las cuatro de esta semana, más la nota de julio):
 
    **LO QUE ESTO CIERRA:** el estado efectivo del régimen SELECT sobre `users` ya no es desconocido, está medido columna por columna. 166 toca el allowlist de **UPDATE** y ahora puede escribirse contra realidad medida en lugar de contra una incógnita. **166 queda desbloqueado.**
 
-   **LO QUE ESTO NO CIERRA, y conviene no darlo por cerrado:** la causa. Se propuso que 113, 115 y 118 hubieran revocado a nivel de tabla y re-concedido por columna, y que por tanto esto fuera el patrón correcto y no deriva. **Eso no es lo que hacen esas tres migraciones.** Las tres emiten únicamente `REVOKE SELECT (columnas)` — revoke de COLUMNA — y un revoke de columna no puede restar de un grant de tabla; es la lección documentada de 093 y de CLAUDE.md. Verificado sobre el repositorio completo: los únicos `REVOKE SELECT ON public.users` a nivel de tabla están en **066** (`:45-46`) y **067** (`:55-56`), ambas ANTERIORES a 093, y **ninguna migración posterior a 093 revoca ese grant**. 114 concede sobre `users_discoverable`, que es otro objeto.
+   **LA CAUSA, Y POR QUÉ NO ES LO QUE PARECÍA.** Se propuso que 113, 115 y 118 hubieran revocado a nivel de tabla y re-concedido por columna, y que por tanto esto fuera el patrón correcto y no deriva. **Eso no es lo que hacen esas tres migraciones.** Las tres emiten únicamente `REVOKE SELECT (columnas)` — revoke de COLUMNA — y un revoke de columna no puede restar de un grant de tabla; es la lección documentada de 093 y de CLAUDE.md. Verificado sobre el repositorio completo: los únicos `REVOKE SELECT ON public.users` a nivel de tabla están en **066** (`:45-46`) y **067** (`:55-56`), ambas ANTERIORES a 093, y **ninguna migración posterior a 093 revoca ese grant**. 114 concede sobre `users_discoverable`, que es otro objeto.
 
-   Es decir: 093 concedió el grant de tabla, el control de versiones no lo retira en ningún sitio, y producción lo mide en `false`. **Eso es deriva por definición.** Y 093 se escribió para reparar una caída real (todas las páginas de perfil en blanco con `permission denied for table users`), así que casi con certeza sí se aplicó. La hipótesis que queda es que alguien volvió a ejecutar a mano el patrón regenerador de 066/067 — `REVOKE` de tabla seguido de `GRANT` por columna — lo que borraría el grant de 093 e instalaría los 168 grants de columna. Los perfiles siguen funcionando porque el allowlist cubre lo que la app lee.
+   Es decir: 093 concedió el grant de tabla, el control de versiones no lo retira en ningún sitio, y producción lo mide en `false`. **Eso es deriva por definición.** Y 093 se escribió para reparar una caída real, así que sí se aplicó. Los perfiles siguen funcionando hoy porque el allowlist de columnas cubre lo que la app lee. Lo que queda por explicar es solo qué retiró el grant de tabla — y la aritmética de abajo lo contesta.
 
-   PARA CERRARLO DEL TODO, una sola pregunta: ¿consta 093 como aplicada?
+   **CERRADO EL 2026-09-14. CAUSA EXPLICADA.** La aritmética de los grants de columna lo resuelve sin ambigüedad. `public.users` tiene 100 columnas (medido). 067 concede todas menos 8 — los cuatro `tribe_os_*` más `push_subscription`, `fcm_token`, `fcm_platform`, `fcm_updated_at` — y concede la misma lista a los dos roles (`067:30-58`):
 
-   ```sql
-   begin;
-   select version, name from supabase_migrations.schema_migrations
-   where version like '%093%' or name ilike '%restore_users_select%';
-   rollback;
-   ```
+   | paso                                                                                                     | columnas por rol |
+   | -------------------------------------------------------------------------------------------------------- | ---------------- |
+   | regenerado de 067                                                                                        | 100 − 8 = **92** |
+   | 113 revoca `is_admin`, `payout_method`, `stripe_account_id`, `wompi_merchant_id`, `total_earnings_cents` | 92 − 5 = 87      |
+   | 115 revoca `location_lat`, `location_lng`                                                                | 87 − 2 = 85      |
+   | 118 revoca `email`                                                                                       | 85 − 1 = **84**  |
+
+   84 × 2 roles = **168**, que es exactamente lo medido. **Un re-run a mano del patrón regenerador de 066/067 habría dado 184**, porque el regenerado devuelve las 92 y no sabe nada de 113, 115 ni 118. Por tanto ese re-run NO ocurrió: **los ACL de columna están intactos y explicados al completo por el control de versiones.**
+
+   Lo único que falta es el grant **a nivel de tabla** que 093 restauró. Un `REVOKE SELECT ON public.users FROM authenticated` suelto, ejecutado a mano, elimina exactamente eso y deja los 168 grants de columna intactos. **Es la única acción compatible con todos los números medidos.**
+
+   VEREDICTO: **deriva, sí; peligro, no.** 093 restauró un grant de tabla en blanco para reparar una caída real — todas las páginas de perfil en blanco con `permission denied for table users` — y al hacerlo **volvió a exponer todas las columnas que 067 había retirado deliberadamente, las claves de push incluidas**. Alguien lo detectó y lo revocó. **La acción fue correcta y quien la tomó tenía razón.** El defecto es el registro que falta, no la acción. Esto no se vuelve a abrir: se vuelve a contar en la regla de equipo de más abajo, que es donde pertenece.
 
    CONSECUENCIA PARA 166: se puede escribir ya, pero **su guarda debe afirmar el hecho positivo** — que exactamente las N columnas del allowlist tienen UPDATE y ninguna otra — y no que un conjunto de columnas indebidas esté vacío. La misma mano que reescribió los grants de SELECT sin dejar rastro puede reescribir los de UPDATE después de que 166 aterrice, y una afirmación de vacuidad no distingue «lo arreglé» de «nunca se ejecutó». Ver el mensaje de commit de 164 y [DRIFT-04].
 
@@ -406,6 +412,12 @@ Contra producción, solo lectura, con `has_table_privilege` / `has_column_privil
 | las cinco columnas existen                                               | sí                                                |
 
 Las cuatro migraciones de REVOKE — **067** (`push_subscription`), **113** (`is_admin`), **115** (`location_lat`/`location_lng`) y **118** (`email`) — **están aplicadas y en vigor**. Ninguna columna sensible es legible por anon ni por authenticated. El riesgo de privacidad que este ticket planteaba como hipótesis queda descartado por medición, no por razonamiento.
+
+**NO EXISTE LIBRO DE REGISTRO. CERO FILAS.** Medido el 2026-09-14: `supabase_migrations.schema_migrations` contiene **0 filas**, frente a **163 migraciones en el repositorio**. No es que falte 093 — no consta ninguna. Este proyecto no lleva contabilidad de migraciones aplicadas.
+
+Ese número es el argumento entero de este ticket. **«¿Se aplicó X?» no se puede contestar nunca desde los propios registros de la base de datos aquí; solo midiendo efectos.** Y es también lo que hace que las filas de `information_schema` sean peores que simplemente inexactas: **son lo único que se parece a un registro, y no pueden ver lo que dicen comprobar.** Un verificador que miente es estrictamente peor que no tener verificador, porque ocupa el sitio donde alguien buscaría la verdad. Fue exactamente lo que ocurrió con 164 durante un día entero.
+
+Corolario para todo lo demás: cualquier afirmación de «aplicada» en este repositorio vale lo que valga la medición de efectos que la acompañe. Sin medición, es una suposición con formato de hecho.
 
 Lo que queda es exactamente lo que dice el título: **el verificador informa `applied` sin poder saberlo**. Cuatro filas que hoy aciertan por casualidad, porque la respuesta correcta y la respuesta que la vista no puede ver coinciden en ser la misma. El día que un REVOKE no se aplique, esas filas seguirán diciendo `applied`. Por eso sigue siendo un ticket y no se cierra: la corrección es del instrumento, no del estado.
 
