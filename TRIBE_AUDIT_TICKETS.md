@@ -342,6 +342,68 @@ FIX: migración 165. La regla correcta no es «admin o no», es **«originado po
 
 ACEPTACIÓN: tras la 165, un instructor no admin cancela o cambia el estado de una sesión y su `total_participants_served` se mueve; una escritura directa desde el cliente a esa columna se sigue revirtiendo.
 
+### [DRIFT-04] El propio verificador de migraciones da falsos "applied": cuatro comprobaciones de REVOKE usan `information_schema.column_privileges`
+
+- **Área:** Infra · **Prioridad:** Alta · **Estado:** Por hacer
+- **Esfuerzo:** S · **Deploy:** Solo SQL de verificación · **Riesgo:** Alto — la herramienta con la que comprobamos si una migración se aplicó puede mentir, y ya lo ha hecho
+- **Journey / lado:** Todo el equipo
+- **Ruta/Archivo:** `supabase/verify-migration-state.sql:218,374,386,425,455`; contra-comentarios en `:856,:958,:1060`
+
+**Descripción**
+
+QUÉ PASA: `verify-migration-state.sql` contiene **cinco** comprobaciones de privilegios que consultan `information_schema`, en el mismo archivo que advierte tres veces contra hacer exactamente eso (`:856`, `:958`, `:1060` — _«USE has_column_privilege(). DO NOT swap in information_schema.column_privileges.»_).
+
+`information_schema.column_privileges` y `role_table_grants` **solo muestran los grants en los que el usuario actual es el que concede, el que recibe, o miembro del rol que recibe**. No ven los grants a nivel de tabla. Por eso están prohibidos en CLAUDE.md, y por eso `has_table_privilege` / `has_column_privilege` son la única respuesta fiable: contestan _«¿puede este rol hacerlo?»_, no _«¿existe una fila que lo diga?»_.
+
+CUATRO DE ELLAS SON `NOT EXISTS`, que es la peor dirección posible: verifican que un REVOKE se aplicó, y **reportan `applied` precisamente cuando la vista no puede ver el grant**. Un grant que sigue vivo y es invisible para la vista se lee como éxito. Estas cuatro llevan dando falsos positivos desde que existen:
+
+| línea | migración                            | columna de `public.users` | qué debería probar                                         |
+| ----- | ------------------------------------ | ------------------------- | ---------------------------------------------------------- |
+| 374   | `067_users_push_token_revoke`        | `push_subscription`       | claves privadas de push no legibles por anon/authenticated |
+| 386   | `113_revoke_users_sensitive_columns` | `is_admin`                | el flag de admin no es legible entre usuarios              |
+| 425   | `115_revoke_users_coords`            | `location_lat`            | las coordenadas del usuario no son legibles entre usuarios |
+| 455   | `118_revoke_users_email`             | `email`                   | el correo no es legible entre usuarios                     |
+
+Las cuatro columnas son sensibles: claves de push, el flag de administrador, la ubicación y el correo. **Si alguno de esos REVOKE no se aplicó, hoy no lo sabríamos**, porque la fila del verificador dice `applied` en ambos mundos. No está medido todavía; medirlo es el primer paso del fix.
+
+LA QUINTA (`:218`, `093_restore_users_select_grant`) es `EXISTS` sobre `role_table_grants`, dirección contraria: puede dar un falso **MISSING**, no un falso `applied`. Pero importa más de lo que parece, porque **093 es justo el bloqueante de la migración 166** descrito en [DRIFT-01] punto 1: la migración emitió `GRANT SELECT ON public.users TO authenticated` y el probe lo mide en `false`. Si esta fila dice `applied`, tenemos las dos herramientas contradiciéndose sobre el hecho exacto que impide escribir 166. Resolver esa contradicción puede desbloquear 166 sin arqueología adicional.
+
+ESTE ARCHIVO NO FUE LA FUENTE DEL FALSO "164 APLICADA". Su cobertura termina en `163_partner_slug_and_public_view` (`:1049`); **no tiene sección para 164 ni para 165**. El falso positivo de 164 vino de otro sitio (una guarda que afirmaba un conjunto vacío, ver el mensaje de commit de 164). Es el mismo defecto de clase — _preguntar si existe una fila en vez de preguntar si la capacidad existe_ — encontrado de forma independiente en dos herramientas distintas el mismo día. Esa coincidencia es la razón de la prioridad Alta: no es un error aislado, es un hábito.
+
+**FIX**
+
+1. **Medir primero, antes de tocar el verificador.** Las cuatro columnas, con la función correcta:
+
+```sql
+begin;
+select c.col,
+       has_column_privilege('anon',          'public.users', c.col, 'SELECT') as anon_select,
+       has_column_privilege('authenticated', 'public.users', c.col, 'SELECT') as auth_select
+from (values ('push_subscription'), ('is_admin'), ('location_lat'), ('email')) c(col);
+rollback;
+```
+
+Las ocho celdas deben ser `false`. Cualquier `true` es un REVOKE que nunca se aplicó y que el verificador lleva reportando como `applied`; eso deja de ser un ticket de herramientas y pasa a ser un incidente de privacidad.
+
+2. **Sustituir las cuatro filas** por la forma basada en capacidad. Patrón, para `067`:
+
+```sql
+select '067_users_push_token_revoke',
+       case when not has_column_privilege('anon',          'public.users', 'push_subscription', 'SELECT')
+             and not has_column_privilege('authenticated', 'public.users', 'push_subscription', 'SELECT')
+            then 'applied' else 'MISSING' end
+```
+
+`has_column_privilege` devuelve `true` si el rol tiene el privilegio por grant de columna **o** por grant de tabla, que es exactamente lo que una verificación de REVOKE necesita saber.
+
+3. **Sustituir `:218`** por `has_table_privilege('authenticated', 'public.users', 'SELECT')`, y anotar el resultado en [DRIFT-01] punto 1 sea cual sea, porque contesta directamente a la pregunta que bloquea 166.
+
+4. **Regla, no solo parche:** ninguna comprobación de privilegios en este repositorio consulta `information_schema`. Los tres comentarios que ya lo dicen no bastaron — el archivo los contiene y los incumple a la vez. Vale la pena una regla de lint o un grep en CI sobre `supabase/**/*.sql` que falle ante `information_schema.(table_privileges|column_privileges|role_table_grants)`.
+
+5. **Añadir secciones para 164 y 165**, ambas aplicadas el 2026-09-14 y ninguna cubierta por este archivo.
+
+**ACEPTACIÓN:** `verify-migration-state.sql` no contiene ninguna referencia a `information_schema.(table_privileges|column_privileges|role_table_grants)`; las cuatro filas de REVOKE usan `has_column_privilege`; existe la medición del punto 1 pegada en este ticket; 164 y 165 tienen sección; y CI falla si alguien reintroduce el patrón.
+
 ### [COUNTER-01] Reconstruir total_participants_served: recomputado, un solo dueño, sobre una finalización real
 
 - **Área:** Producto · **Prioridad:** Alta · **Estado:** Por hacer
