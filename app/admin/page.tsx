@@ -22,6 +22,8 @@ import { SkeletonCard } from '@/components/Skeleton';
 import { AdminRevenueTab } from '@/components/admin/AdminRevenueTab';
 import type { User as AuthUser } from '@supabase/supabase-js';
 
+import type { AdminUserFilter, AdminUserSort } from '@/lib/dal/admin';
+
 import { useAdminData } from './useAdminData';
 import { useAdminActions } from './useAdminActions';
 
@@ -34,6 +36,9 @@ export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  // ADMIN-01: these drive the SERVER query, not a client-side pass over the page.
+  const [userFilter, setUserFilter] = useState<AdminUserFilter>('all');
+  const [userSort, setUserSort] = useState<AdminUserSort>('newest');
   // QA-14: surface pending-bulletin count so admin notices when submissions
   // are waiting. Fetched alongside main admin bootstrap below.
   const [pendingBulletinCount, setPendingBulletinCount] = useState(0);
@@ -88,9 +93,22 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
 
+  // ADMIN-01: the users tab re-queries whenever the query changes. Debounced so a
+  // typed search is one request per pause, not one per keystroke.
   useEffect(() => {
-    if (activeTab === 'users') data.loadUsers();
-    else if (activeTab === 'reports') data.loadReports();
+    if (activeTab !== 'users') return;
+    const id = setTimeout(
+      () => {
+        data.loadUsers({ search: searchQuery, filter: userFilter, sort: userSort });
+      },
+      searchQuery ? 300 : 0
+    );
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- data identity is unstable
+  }, [activeTab, searchQuery, userFilter, userSort]);
+
+  useEffect(() => {
+    if (activeTab === 'reports') data.loadReports();
     else if (activeTab === 'feedback') data.loadFeedback();
     else if (activeTab === 'bugs') data.loadBugs();
     else if (activeTab === 'messages') data.loadMessages();
@@ -275,6 +293,10 @@ export default function AdminPage() {
             users={data.users}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            filter={userFilter}
+            onFilterChange={setUserFilter}
+            sort={userSort}
+            onSortChange={setUserSort}
             loading={data.loadingUsers}
             actionLoading={actions.actionLoading}
             onBan={actions.banUser}
