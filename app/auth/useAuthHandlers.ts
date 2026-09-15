@@ -96,56 +96,24 @@ export function useAuthHandlers(language: 'en' | 'es') {
     setMessage('');
     trackEvent('signup_started', { method: 'google' });
     try {
-      const { Capacitor } = await import('@capacitor/core');
-      if (Capacitor.isNativePlatform()) {
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-        await GoogleAuth.initialize();
-        const googleUser = await GoogleAuth.signIn();
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: googleUser.authentication.idToken,
-        });
-        if (error) throw error;
-        if (data.user) {
-          trackEvent('signup_completed', { method: 'google' });
-          const { isNewUser } = await upsertUserProfile(data.user);
-          if (isNewUser) {
-            const refCode = localStorage.getItem('tribe_referral_code');
-            if (refCode) {
-              await applyReferralCode(supabase, refCode, data.user.id);
-              localStorage.removeItem('tribe_referral_code');
-              trackEvent('referral_sent', { referral_code: refCode, referred_user_id: data.user.id });
-            }
-          }
-          // T-C1 Gate 2: onboarding used to swallow returnTo for new users.
-          // Park it for the final onboarding step to consume.
-          if (isNewUser) storePendingReturnTo(getSafeReturnTo());
-          window.location.href = isNewUser ? '/onboarding/role' : getSafeReturnTo();
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
-          },
-        });
-        if (error) throw error;
-      }
+      // Use web OAuth flow for all platforms (native plugin removed: it declared
+      // Capacitor 6 against a project on 8, shipped as a release candidate, was
+      // never registered in the iOS binary, and needed a client id that was not
+      // set in any deployed environment). Same flow Apple uses below.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?returnTo=${encodeURIComponent(getSafeReturnTo())}`,
+        },
+      });
+      if (error) throw error;
     } catch (err) {
-      if (err && typeof err === 'object' && 'code' in err) {
-        const code = (err as Record<string, unknown>).code;
-        if (code === '12501' || code === 12501) {
-          setGoogleLoading(false);
-          return;
-        }
-      }
-      if (
-        err instanceof Error &&
-        (err.message.includes('popup_closed') ||
-          err.message.includes('cancelled') ||
-          err.message.includes('canceled') ||
-          err.message.includes('user denied'))
-      ) {
+      // Only a genuine user cancellation is silent, matching Apple below.
+      // The previous version also swallowed 12501, popup_closed and user
+      // denied. Those were native and popup artefacts this flow cannot
+      // produce, and keeping them meant any error whose message merely
+      // contained one of those words vanished with no toast and no log.
+      if (err instanceof Error && (err.message.includes('cancelled') || err.message.includes('canceled'))) {
         setGoogleLoading(false);
         return;
       }

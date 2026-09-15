@@ -29,13 +29,6 @@ const config: CapacitorConfig = {
       // Present notifications when app is in foreground
       presentationOptions: ['badge', 'sound', 'alert'],
     },
-    GoogleAuth: {
-      scopes: ['profile', 'email'],
-      // Must be the WEB client ID from Google Cloud Console
-      // (same one configured in Supabase Auth > Google provider)
-      serverClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
-      forceCodeForRefreshToken: false,
-    },
   },
 };
 

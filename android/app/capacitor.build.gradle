@@ -15,7 +15,6 @@ dependencies {
     implementation project(':capacitor-geolocation')
     implementation project(':capacitor-haptics')
     implementation project(':capacitor-keyboard')
-    implementation project(':codetrix-studio-capacitor-google-auth')
 
 }
 
