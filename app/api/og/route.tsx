@@ -299,7 +299,23 @@ function renderSession(p: SessionParams) {
     </div>
   ) : null;
 
-  // ── Photo mode: the host's session photo as a full-bleed background ──
+  // ── Photo mode: the session photo as a bounded thumbnail on a flat ground ──
+  //
+  // WAS full-bleed: the photo covered all 1200x630 with a gradient scrim over
+  // it. That is the best-looking of the three cards and it is why this one was
+  // 1,148,866 bytes while the gym and instructor cards are 41KB and 53KB.
+  // next/og emits lossless PNG, and PNG's worst case is photographic pixels, so
+  // the cost tracks the AREA of photo on the canvas, not the source resolution
+  // — the same card with no photo at all is 30,167 bytes, 38x smaller.
+  //
+  // Measured alternatives on one real session photo (640/q60 source):
+  //   300x300 thumbnail   244,125 bytes
+  //   1200x200 band       459,767 bytes
+  //   full-bleed        1,148,866 bytes
+  //
+  // The thumbnail is the same construction the gym and instructor cards use: a
+  // bounded image with a green ring on DARK_BG. Square with a 32px radius, not
+  // a circle, matching the gym card's grammar — the circle is the instructor's.
   if (p.image) {
     return new ImageResponse(
       <div
@@ -307,79 +323,60 @@ function renderSession(p: SessionParams) {
           width: '100%',
           height: '100%',
           display: 'flex',
-          position: 'relative',
+          flexDirection: 'column',
+          backgroundColor: DARK_BG,
+          padding: '56px 60px',
           fontFamily: 'system-ui, sans-serif',
         }}
       >
-        <img
-          src={p.image}
-          alt=""
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            background:
-              'linear-gradient(to top, rgba(10,12,14,0.95) 0%, rgba(10,12,14,0.55) 45%, rgba(10,12,14,0.30) 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '50px 60px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {wordmark}
+        {wordmark}
+        <div style={{ display: 'flex', flexGrow: 1, alignItems: 'center', gap: '48px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
             {p.sport && (
-              <div
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(163,230,53,0.22)',
-                  padding: '10px 22px',
-                  borderRadius: '24px',
+                  fontSize: '64px',
+                  fontWeight: 800,
+                  color: GREEN,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '2px',
+                  lineHeight: 1,
+                  marginBottom: '18px',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 700,
-                    color: GREEN,
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '1px',
-                  }}
-                >
-                  {sportLabel}
-                </span>
-              </div>
+                {sportLabel}
+              </span>
             )}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
-                fontSize: '60px',
-                fontWeight: 800,
+                fontSize: '40px',
+                fontWeight: 700,
                 color: WHITE,
-                lineHeight: 1.1,
-                maxWidth: '1040px',
-                marginBottom: '20px',
+                lineHeight: 1.15,
+                maxWidth: '700px',
+                marginBottom: '18px',
               }}
             >
               {p.title || 'Training Session'}
             </div>
             {details && <div style={{ display: 'flex', marginBottom: '24px' }}>{details}</div>}
             {instructorRow}
+          </div>
+          <div
+            style={{
+              width: '300px',
+              height: '300px',
+              flexShrink: 0,
+              borderRadius: '32px',
+              border: `4px solid ${GREEN}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              backgroundColor: '#374151',
+            }}
+          >
+            <img src={p.image} alt="" width={300} height={300} style={{ objectFit: 'cover' }} />
           </div>
         </div>
       </div>,
