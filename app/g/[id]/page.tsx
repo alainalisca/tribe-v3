@@ -82,10 +82,41 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     avatar: partner.logo_image_url || '',
   });
 
+  // ⚠⚠ DIAGNOSTIC PROBE — REVERT THIS. NOT A FIX. ⚠⚠
+  //
+  // Facebook's Sharing Debugger reports "Corrupted Image" for the /api/og URL
+  // on every share route, and WhatsApp therefore renders bare link text. The
+  // bytes are NOT corrupt: the exact response below was downloaded, CRC-checked
+  // chunk by chunk (IHDR/IDAT/IEND all valid), decompressed to 3,024,630 bytes
+  // = 1200*630*4 + 630 filter bytes exactly, and confirmed byte-identical
+  // across three cache-busted renders and across HTTP/1.1 and HTTP/2.
+  //
+  // So the bytes are fine and something about the SERVING PATH is not.
+  // /api/og runs on the edge runtime and returns a ReadableStream, which means
+  // no content-length, no Accept-Ranges, and a Range request answered with a
+  // full 200 instead of a 206.
+  //
+  // This probe removes every variable except the serving path: public/
+  // og-probe-static.png IS the byte-for-byte output of that same /api/og URL
+  // (sha256 dd100db6...d139f4), committed to disk, so it is served as a static
+  // file with a real content-length and working Range support.
+  //
+  //   Scrape https://tribe-v3.vercel.app/g/bullbox/ and compare.
+  //     card renders  -> the problem is /api/og's streamed response shape
+  //     still corrupt -> the problem is upstream of the image entirely
+  //
+  // Scoped to this ONE route on purpose: /g/[id] is the lowest-traffic share
+  // surface, and only one partner (bullbox) resolves through partners_public,
+  // so the blast radius is a single page for the length of one scrape.
+  //
+  // REVERT BY: restoring the line below and deleting public/og-probe-static.png.
+  const ogImageUrl = `${BASE_URL}/og-probe-static.png`;
+  void ogParams; // the real builder, unused while the probe is in place
+
   // Trailing slash matches next.config trailingSlash:true, so scrapers fetch
   // the image directly instead of chasing a 308 redirect -- a scraper that does
   // not follow the redirect drops the card entirely.
-  const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
+  // const ogImageUrl = `${BASE_URL}/api/og/?${ogParams.toString()}`;
 
   // The slug URL, always, even when the visitor arrived by UUID: otherwise the
   // two forms read as two separate pages to every crawler and to every share
