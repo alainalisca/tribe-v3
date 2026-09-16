@@ -1,6 +1,7 @@
 import type { TranslationKey } from '@/lib/translations';
 import type { SessionWithRelations } from '@/lib/dal';
 import type { SessionGymSource } from '@/lib/sessionGym';
+import { athleteRoster } from '@/lib/sessionRoster';
 
 export interface SessionCardProps {
   session: SessionWithRelations;
@@ -118,7 +119,10 @@ export function computeSessionStatus(session: SessionWithRelations) {
       return diffHours > 0 && diffHours <= 2;
     })();
 
-  const confirmedParticipants = session.participants?.filter((p) => p.status === 'confirmed') || [];
+  // Athletes only: the host is rendered as the host and never occupies a seat.
+  // Shared with ParticipantList through lib/sessionRoster so the feed card and
+  // the detail page cannot drift apart again (see that module's header).
+  const confirmedParticipants = athleteRoster(session.participants, session.creator_id);
 
   return { isPast, isFull, isStartingSoon, confirmedParticipants };
 }

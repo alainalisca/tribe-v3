@@ -463,6 +463,7 @@ export default function SessionDetailPage() {
 
         <ParticipantList
           creator={d.creator}
+          creatorId={d.session.creator_id}
           participants={d.participants}
           canKick={canKick}
           isCreator={isCreator}
@@ -475,6 +476,7 @@ export default function SessionDetailPage() {
         {d.user && (
           <AttendanceTracker
             sessionId={params.id as string}
+            creatorId={d.session.creator_id}
             isHost={isCreator}
             isAdmin={d.userIsAdmin}
             sessionDate={d.session.date}
