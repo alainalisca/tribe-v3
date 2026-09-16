@@ -1117,6 +1117,36 @@ select '167_lock_session_attendance_reads',
             then 'applied' else 'MISSING' end
 union all
 
+select '170_users_hide_from_attendee_lists',
+       -- Three facts, all required. Checking only that the column exists would
+       -- report 'applied' for exactly the 156 state: a column present and
+       -- ungranted, where the first query naming it fails 42501 and takes its
+       -- whole caller down.
+       --
+       -- The anon arm is asserted as an ABSENCE, because Supabase re-grants
+       -- anon by default on some object changes -- the default-grant trap that
+       -- has caught this project four times. An anon grant appearing here later
+       -- is a regression, not a missing migration, and should be just as loud.
+       --
+       -- has_column_privilege, never information_schema.column_privileges: that
+       -- view cannot see table-level grants and answers 'is there a row saying
+       -- so' rather than 'can this role do it'.
+       case when not exists (
+              select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'users'
+                and column_name = 'hide_from_attendee_lists'
+            )
+            then 'MISSING -- column absent'
+            when not has_column_privilege('authenticated', 'public.users', 'hide_from_attendee_lists', 'SELECT')
+            then 'MISSING -- column present but NOT granted to authenticated; '
+                 'every select naming it fails 42501 (the 156/157 failure)'
+            when has_column_privilege('anon', 'public.users', 'hide_from_attendee_lists', 'SELECT')
+            then 'MISSING -- anon can read it; 170 deliberately does not grant anon'
+            when not has_column_privilege('authenticated', 'public.users', 'hide_from_attendee_lists', 'UPDATE')
+            then 'MISSING -- authenticated cannot UPDATE it, so the settings toggle cannot save'
+            else 'applied' end
+union all
+
 -- The permanence property, as a standing check rather than a one-off probe.
 -- partners_public must NOT filter on status beyond excluding 'pending': the
 -- whole point of the view is that a bio link outlives the sponsorship. If a
