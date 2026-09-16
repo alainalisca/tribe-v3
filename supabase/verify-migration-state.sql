@@ -1117,6 +1117,39 @@ select '167_lock_session_attendance_reads',
             then 'applied' else 'MISSING' end
 union all
 
+select '169_delete_host_participant_rows',
+       -- The applied state is a property of the data, not of a schema object:
+       -- no session may record its own host as one of its participants. Asked
+       -- as a capability question ("does such a row exist") rather than by
+       -- looking for a migration name, so it also catches a row recreated after
+       -- the migration ran -- which would be a live regression of the join path,
+       -- not a missing migration, and is worth surfacing either way.
+       --
+       -- The counter is checked alongside, because the reason these rows matter
+       -- is that trg_sync_session_participant_count (087) turns them into
+       -- consumed capacity. A database with the rows gone but
+       -- current_participants still overstated is not in the state 169 leaves.
+       case when exists (
+              select 1
+              from public.session_participants sp
+              join public.sessions s on s.id = sp.session_id
+              where sp.user_id = s.creator_id
+                and sp.status = 'confirmed'
+                and sp.is_guest = false
+            )
+            then 'MISSING -- a session still records its own host as a participant, '
+                 'which consumes a capacity seat'
+            when exists (
+              select 1 from public.sessions s
+              where s.current_participants <> (
+                select count(*) from public.session_participants sp
+                where sp.session_id = s.id and sp.status = 'confirmed')
+            )
+            then 'MISSING -- current_participants disagrees with the confirmed-row '
+                 'count on at least one session'
+            else 'applied' end
+union all
+
 -- The permanence property, as a standing check rather than a one-off probe.
 -- partners_public must NOT filter on status beyond excluding 'pending': the
 -- whole point of the view is that a bio link outlives the sponsorship. If a
