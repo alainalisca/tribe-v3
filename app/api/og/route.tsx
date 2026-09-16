@@ -80,7 +80,49 @@ async function loadImage(rawUrl: string, width: number): Promise<string> {
   return transformed === rawUrl ? '' : fetchAsDataUri(rawUrl);
 }
 
+/**
+ * Drain an ImageResponse into memory and re-emit it as a plain Response with an
+ * explicit Content-Length.
+ *
+ * WHY THIS EXISTS — measured, not theorised. Facebook's Sharing Debugger
+ * reported "Corrupted Image" for every /api/og URL, so WhatsApp rendered bare
+ * link text on every share route: every instructor bio link, every gym page,
+ * every session share.
+ *
+ * The bytes were never corrupt. The exact responses were CRC-validated chunk by
+ * chunk (IHDR/IDAT/IEND all clean, IEND present, zero trailing bytes) and
+ * inflated to exactly 1200*630*4 + 630 filter bytes, byte-identical across
+ * repeated renders and across HTTP/1.1 and HTTP/2, for the 52KB instructor card,
+ * the 41KB gym card and the 838KB session card alike.
+ *
+ * What was wrong was the response SHAPE. next/og wraps its body in a
+ * ReadableStream unconditionally (see next/dist/server/og/image-response.js --
+ * the wrapping happens outside the runtime branch, which is why switching to the
+ * Node runtime would not have helped). A streamed Response carries no
+ * Content-Length, advertises no Accept-Ranges, and answers a Range request with
+ * a full 200 instead of a 206. Meta's fetcher reads that as a corrupt image.
+ *
+ * PROVED BY EXPERIMENT, not inference: the byte-identical PNG committed to
+ * public/ and served as a static file scraped clean and rendered a full card on
+ * the same route, same domain, same headers. Serving path was the only variable.
+ *
+ * Cost: the whole card is held in memory, ~52KB-838KB depending on the type.
+ * Acceptable at this size, and the alternative is no link previews at all.
+ */
+async function withContentLength(res: Response): Promise<Response> {
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Copy the ImageResponse's own headers (content-type: image/png, plus the
+  // Cache-Control from OG_OPTIONS) so this changes the framing and nothing else.
+  const headers = new Headers(res.headers);
+  headers.set('Content-Length', String(bytes.byteLength));
+  return new Response(bytes, { status: res.status, headers });
+}
+
 export async function GET(request: NextRequest) {
+  return withContentLength(await renderCard(request));
+}
+
+async function renderCard(request: NextRequest): Promise<Response> {
   const { searchParams } = request.nextUrl;
   const type = searchParams.get('type') ?? 'default';
   const title = searchParams.get('title') ?? '';
