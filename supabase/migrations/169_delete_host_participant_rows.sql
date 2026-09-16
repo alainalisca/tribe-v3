@@ -93,6 +93,18 @@
 -- recomputes sessions.current_participants from the surviving confirmed rows,
 -- so the counter corrects itself to 0 on all 23 without this file touching
 -- sessions at all. The rehearsal asserts that rather than assuming it.
+--
+-- THE CASCADE THAT FOLLOWS, stated so it is expected rather than discovered.
+-- That counter UPDATE on public.sessions itself fires two more triggers:
+--   trg_sessions_updated_at  (144) -- sessions.updated_at WILL move on all 23
+--   trg_sessions_hosted_upd  (148) -- recomputes users.total_sessions_hosted,
+--                                     which must come out unchanged, since no
+--                                     sessions row is added or removed
+-- Both are asserted in the rehearsal. Nothing else fires: the push triggers
+-- that once sat on session_participants (on_join_request_created,
+-- on_join_accepted) were dropped with their functions by migration 136, and no
+-- surviving trigger on this table calls net.http_post -- so nothing escapes a
+-- ROLLBACK, which is what makes the rehearsal safe to run against production.
 
 DO $$
 DECLARE

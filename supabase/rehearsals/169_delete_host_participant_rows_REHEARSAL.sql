@@ -20,6 +20,23 @@
 --     synthetic row is created inside a plpgsql subtransaction, so the raise
 --     rolls it back automatically and part B still sees exactly 23.
 --
+--  4. The cascade is bounded. Deleting a session_participants row fires
+--     trg_sync_session_participant_count, which UPDATEs public.sessions -- and
+--     that UPDATE in turn fires trg_sessions_updated_at (144, bumps
+--     sessions.updated_at) and trg_sessions_hosted_upd (148, recomputes
+--     users.total_sessions_hosted). Both are transactional, so the rollback
+--     undoes them here; but when 169 is really applied, sessions.updated_at
+--     WILL move on the 23 affected sessions. That is expected, not incidental,
+--     so it is asserted rather than left to be discovered. The hosted counter
+--     recomputes from truth and no sessions row is added or removed, so it must
+--     come out unchanged -- which is also asserted.
+--
+--     The push-notification triggers that once sat on session_participants
+--     (on_join_request_created, on_join_accepted) were dropped with their
+--     functions by migration 136, and nothing left on this table calls
+--     net.http_post. So no side effect escapes the ROLLBACK. The surviving
+--     INSERT trigger is trg_challenge_progress (011), pure SQL.
+--
 -- RUN IT IN THE SUPABASE SQL EDITOR AS ONE SCRIPT. Reading a PASS/FAIL table is
 -- the point; do not run the statements piecemeal.
 
@@ -48,6 +65,20 @@ JOIN public.sessions s ON s.id = sp.session_id
 WHERE sp.user_id = s.creator_id
   AND sp.status = 'confirmed'
   AND sp.is_guest = false;
+
+-- The cascade's reach, captured before anything is deleted.
+CREATE TEMP TABLE reh_updated_at ON COMMIT DROP AS
+SELECT s.id AS session_id, s.updated_at AS ua_before
+FROM public.sessions s
+WHERE s.id IN (SELECT session_id FROM reh_sessions);
+
+CREATE TEMP TABLE reh_hosted ON COMMIT DROP AS
+SELECT u.id AS user_id, u.total_sessions_hosted AS hosted_before
+FROM public.users u
+WHERE u.id IN (
+  SELECT DISTINCT s.creator_id FROM public.sessions s
+  WHERE s.id IN (SELECT session_id FROM reh_sessions)
+);
 
 CREATE TEMP TABLE reh_guard (fired boolean, msg text) ON COMMIT DROP;
 
@@ -187,6 +218,18 @@ WITH checks AS (
            WHERE EXISTS (SELECT 1 FROM public.session_participants sp
                          WHERE sp.session_id = r.session_id AND sp.status = 'confirmed')),
          '0'
+  -- The cascade, asserted rather than discovered. sessions.updated_at moving on
+  -- all 23 is the expected consequence of the counter trigger's UPDATE.
+  UNION ALL SELECT 'updated_at_moved_on_all_23',
+         (SELECT count(*)::text FROM reh_updated_at r
+            JOIN public.sessions s ON s.id = r.session_id
+           WHERE s.updated_at IS DISTINCT FROM r.ua_before), '23'
+  -- trg_sessions_hosted_upd recomputes from truth and no sessions row is added
+  -- or removed, so the hosted counter must not move for any affected creator.
+  UNION ALL SELECT 'hosted_counter_unchanged_for_affected_creators',
+         (SELECT count(*)::text FROM reh_hosted r
+            JOIN public.users u ON u.id = r.user_id
+           WHERE u.total_sessions_hosted IS DISTINCT FROM r.hosted_before), '0'
   UNION ALL SELECT 'no_session_row_deleted',
          (SELECT count(*)::text FROM public.sessions),
          (SELECT session_rows::text FROM reh_before)
