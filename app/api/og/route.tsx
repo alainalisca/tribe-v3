@@ -81,45 +81,51 @@ async function loadImage(rawUrl: string, width: number): Promise<string> {
 }
 
 /**
- * Drain an ImageResponse into memory and re-emit it as a plain Response with an
- * explicit Content-Length.
+ * Drain the ImageResponse stream fully, then return the bytes as a plain
+ * Response.
  *
- * WHY THIS EXISTS — measured, not theorised. Facebook's Sharing Debugger
- * reported "Corrupted Image" for every /api/og URL, so WhatsApp rendered bare
- * link text on every share route: every instructor bio link, every gym page,
- * every session share.
+ * ⚠ CORRECTION. An earlier version of this comment claimed this sets an
+ * explicit Content-Length and thereby fixes link previews. BOTH CLAIMS WERE
+ * WRONG and the second was never established.
  *
- * The bytes were never corrupt. The exact responses were CRC-validated chunk by
- * chunk (IHDR/IDAT/IEND all clean, IEND present, zero trailing bytes) and
- * inflated to exactly 1200*630*4 + 630 filter bytes, byte-identical across
- * repeated renders and across HTTP/1.1 and HTTP/2, for the 52KB instructor card,
- * the 41KB gym card and the 838KB session card alike.
+ * Content-Length is a FORBIDDEN HEADER NAME in the Fetch API: Headers.set on it
+ * is silently ignored, and Vercel's edge frames the body as
+ * Transfer-Encoding: chunked regardless. Measured on the deployed code, on a
+ * fresh cache MISS, forced to HTTP/1.1, on the smallest card (type=default,
+ * 10,988 bytes): chunked, no Content-Length. The header this function tried to
+ * set does not reach the wire, so the setHeader call was dropped.
  *
- * What was wrong was the response SHAPE. next/og wraps its body in a
- * ReadableStream unconditionally (see next/dist/server/og/image-response.js --
- * the wrapping happens outside the runtime branch, which is why switching to the
- * Node runtime would not have helped). A streamed Response carries no
- * Content-Length, advertises no Accept-Ranges, and answers a Range request with
- * a full 200 instead of a 206. Meta's fetcher reads that as a corrupt image.
+ * What buffering DOES change is delivery timing: bytes leave only once the
+ * render has finished, rather than trickling as Satori produces them.
+ * WHETHER THAT MATTERS IS UNESTABLISHED. It is not known to fix link previews
+ * and must not be described as doing so. It is kept — rather than reverted —
+ * only because /i and /g flipped from failing to rendering around the same
+ * deploy and nobody has isolated why; removing it blind risks re-breaking a
+ * working state for an unproven mechanism.
  *
- * PROVED BY EXPERIMENT, not inference: the byte-identical PNG committed to
- * public/ and served as a static file scraped clean and rendered a full card on
- * the same route, same domain, same headers. Serving path was the only variable.
+ * THE MEASURED DEFECT IS ELSEWHERE, and this function does not address it: the
+ * session card is 1,413,383 bytes and takes 5.3-11.2s to generate COLD against
+ * 0.59s warm, because loadImage requests the session photo at width=1200 from a
+ * source already 1200px wide (an 8% saving) and Satori then re-encodes that
+ * photograph full-bleed as lossless PNG. A scraper's first fetch is always the
+ * cold one. Dropping the image param alone takes the same card to 30,167 bytes
+ * and 0.69s.
  *
- * Cost: the whole card is held in memory, ~52KB-838KB depending on the type.
- * Acceptable at this size, and the alternative is no link previews at all.
+ * Cost of buffering: the whole card is held in memory, 30KB-1.4MB by type.
+ *
+ * Tests: app/api/og/route.buffering.test.ts — which asserts the stream is
+ * drained before returning, NOT that any header is set.
  */
-async function withContentLength(res: Response): Promise<Response> {
+async function bufferBody(res: Response): Promise<Response> {
   const bytes = new Uint8Array(await res.arrayBuffer());
-  // Copy the ImageResponse's own headers (content-type: image/png, plus the
-  // Cache-Control from OG_OPTIONS) so this changes the framing and nothing else.
+  // Copy the ImageResponse's own headers: content-type: image/png, plus the
+  // Cache-Control from OG_OPTIONS. Both of these DO survive to the wire.
   const headers = new Headers(res.headers);
-  headers.set('Content-Length', String(bytes.byteLength));
   return new Response(bytes, { status: res.status, headers });
 }
 
 export async function GET(request: NextRequest) {
-  return withContentLength(await renderCard(request));
+  return bufferBody(await renderCard(request));
 }
 
 async function renderCard(request: NextRequest): Promise<Response> {
