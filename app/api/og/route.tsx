@@ -28,17 +28,46 @@ const OG_OPTIONS = {
 } as const;
 
 /**
+ * Hard ceiling on any transform request, regardless of what a caller asks for.
+ * The session background used to ask for width=1200 against sources that are
+ * often already 1200px, so the transform saved 8% and did nothing useful. This
+ * is the clamp half of the budget: a caller cannot request an arbitrarily large
+ * render, whatever the source dimensions are.
+ */
+const MAX_TRANSFORM_WIDTH = 640;
+
+/**
+ * Hard ceiling on the bytes of any single source image embedded in a card.
+ *
+ * This is the teeth of the budget, and it guards the path the width clamp
+ * cannot: loadImage falls back to the ORIGINAL object URL when the transform is
+ * unavailable, and the original is whatever the host uploaded — potentially a
+ * 4000px, multi-megabyte photo, embedded whole. Over this limit the image is
+ * dropped and the card falls back to its clean no-photo layout, which is a
+ * worse-looking card but a bounded one.
+ *
+ * 150KB is ~1.6x the measured 640/q60 transform of a real session photo
+ * (90,757 bytes), so ordinary photos pass and outliers do not.
+ */
+const MAX_SOURCE_BYTES = 150_000;
+
+/**
  * Rewrite a Supabase public-object URL to the render/image transform endpoint
  * so we fetch a DISPLAY-SIZED jpeg instead of the full-resolution original
  * (e.g. a 1638px, 132KB avatar drawn as a 52px dot). Verified available on this
  * project's plan. Non-Supabase URLs (the local /tribe-wordmark.png) pass
  * through unchanged.
+ *
+ * Width is clamped to MAX_TRANSFORM_WIDTH. Note the transform constrains WIDTH
+ * only, not height: asking for 640 against a 1200x675 source returns 640x675,
+ * not 640x360. That is fine for a background that gets scaled to cover.
  */
 function toTransformUrl(url: string, width: number, quality = 75): string {
   if (!url.includes('/storage/v1/object/public/')) return url;
   const base = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
   const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}width=${width}&quality=${quality}`;
+  const w = Math.min(width, MAX_TRANSFORM_WIDTH);
+  return `${base}${sep}width=${w}&quality=${quality}`;
 }
 
 /**
@@ -56,6 +85,12 @@ async function fetchAsDataUri(url: string): Promise<string> {
     const ct = res.headers.get('content-type') ?? '';
     if (!ct.startsWith('image/')) return '';
     const bytes = new Uint8Array(await res.arrayBuffer());
+    // Budget ceiling. Checked AFTER the fetch rather than from Content-Length,
+    // because the transform endpoint does not always declare one and a missing
+    // header would silently skip the check — the same class of mistake as
+    // asserting a Content-Length that never reaches the wire. Returning ''
+    // takes the caller down its existing clean-fallback path.
+    if (bytes.byteLength > MAX_SOURCE_BYTES) return '';
     let binary = '';
     const CHUNK = 0x8000;
     for (let i = 0; i < bytes.length; i += CHUNK) {
@@ -72,11 +107,15 @@ async function fetchAsDataUri(url: string): Promise<string> {
  * transform is unavailable (non-200) fall back to the ORIGINAL URL; if neither
  * loads return '' (clean no-photo / initials fallback).
  */
-async function loadImage(rawUrl: string, width: number): Promise<string> {
+async function loadImage(rawUrl: string, width: number, quality = 75): Promise<string> {
   if (!rawUrl) return '';
-  const transformed = toTransformUrl(rawUrl, width);
+  const transformed = toTransformUrl(rawUrl, width, quality);
   const resized = await fetchAsDataUri(transformed);
   if (resized) return resized;
+  // Fallback to the ORIGINAL object URL. This is the unbounded path — the
+  // original is whatever the host uploaded — which is exactly why
+  // fetchAsDataUri enforces MAX_SOURCE_BYTES rather than trusting the width
+  // clamp alone. A too-large original returns '' and the card renders clean.
   return transformed === rawUrl ? '' : fetchAsDataUri(rawUrl);
 }
 
@@ -148,8 +187,19 @@ async function renderCard(request: NextRequest): Promise<Response> {
   if (type === 'session') {
     // Fetch the session photo, host avatar, and logo ONCE each, at display size,
     // as embeddable data URIs. Any that won't load come back '' so the render
-    // can't blank out. Photo full-bleed at 1200px; avatar 104px (52 @2x).
-    const [bg, av, logo] = await Promise.all([loadImage(image, 1200), loadImage(avatar, 104), loadImage(logoUrl, 152)]);
+    // can't blank out.
+    //
+    // The background is requested at 640/q60, not 1200/q75. It is painted
+    // full-bleed and then scaled to cover a 1200x630 canvas UNDER a dark scrim
+    // with text over it, so native resolution buys nothing visible at card
+    // scale. Measured on a real session photo: 1200/q75 -> 211,606 bytes,
+    // 640/q60 -> 90,757 bytes. The old 1200 request was close to a no-op
+    // anyway, because session photos are commonly already 1200px wide.
+    const [bg, av, logo] = await Promise.all([
+      loadImage(image, 640, 60),
+      loadImage(avatar, 104),
+      loadImage(logoUrl, 152),
+    ]);
     return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg, logo });
   }
   if (type === 'instructor') {
