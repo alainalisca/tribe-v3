@@ -10,6 +10,7 @@ import { showError } from '@/lib/toast';
 import { getErrorMessage } from '@/lib/errorMessages';
 import { useLanguage } from '@/lib/LanguageContext';
 import { fetchConfirmedParticipantsWithUsers, fetchAttendanceForSession, upsertAttendance } from '@/lib/dal';
+import { athleteParticipants } from '@/lib/sessionRoster';
 
 interface AttendanceParticipant {
   user_id: string;
@@ -18,6 +19,11 @@ interface AttendanceParticipant {
 }
 
 interface AttendanceTrackerProps {
+  /**
+   * sessions.creator_id. The host marks attendance; they are not an item on
+   * their own checklist. See lib/sessionRoster.
+   */
+  creatorId: string | null;
   sessionId: string;
   isHost: boolean;
   isAdmin: boolean;
@@ -49,6 +55,7 @@ export function sessionHasEnded(
 
 export default function AttendanceTracker({
   sessionId,
+  creatorId,
   isHost,
   isAdmin,
   sessionDate,
@@ -71,7 +78,7 @@ export default function AttendanceTracker({
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: depends on sessionId via closure
-  }, [sessionId, canManageAttendance, sessionHasPassed]);
+  }, [sessionId, creatorId, canManageAttendance, sessionHasPassed]);
 
   async function loadParticipants() {
     try {
@@ -87,7 +94,13 @@ export default function AttendanceTracker({
           | Array<{ id: string; name: string; avatar_url: string | null }>;
       }>;
 
-      const userIds = participantsData.map((p) => p.user_id).filter(Boolean);
+      // Athletes only. A host row here would render the host as a checkbox on
+      // their own roster and pull a host attendance row into the totals.
+      // The DAL already returns confirmed rows only, so this is the host filter
+      // alone rather than athleteRoster.
+      const athletes = athleteParticipants(participantsData, creatorId);
+
+      const userIds = athletes.map((p) => p.user_id).filter(Boolean);
       const attendanceResult = await fetchAttendanceForSession(supabase, sessionId, userIds);
       const allAttendance = attendanceResult.success ? (attendanceResult.data ?? []) : [];
 
@@ -99,7 +112,7 @@ export default function AttendanceTracker({
         {} as Record<string, boolean>
       );
 
-      const participantsWithAttendance = participantsData.map((p) => {
+      const participantsWithAttendance = athletes.map((p) => {
         const rawUser = p.user;
         const userObj = Array.isArray(rawUser) ? rawUser[0] : rawUser;
         return {
