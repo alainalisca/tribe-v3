@@ -184,6 +184,22 @@ and it failed with `42703: column "instance_id" of relation "users" does not exi
 
 **When a check iterates a catalog, prefer `pg_attribute` keyed on `regclass` over `information_schema` filtered by name.** `users`, `sessions` and `notifications` all exist in more than one schema here, and `information_schema` will happily hand you all of them.
 
+**A SIXTH, AND IT IS NOT A CHECK THAT CANNOT FAIL.** The five above are checks aimed at the wrong thing or unable to report. This one is aimed correctly and is **structurally blind to the exact shape it was written for.**
+
+The T-AUD3 guard exists to catch a dotted translation key that cannot resolve. It skipped any key containing `${`, because a template key cannot be resolved statically. **The T-AUD3 defect _is_ a template literal** — ``t(`fields.${field}`)`` — so the guard could not catch the bug it was written for, and passed when that bug was reverted. The fix was to flag a dotted STATIC PREFIX, which can never resolve under a flat lookup whatever the substitution is.
+
+**So: when writing a guard for a specific bug, the first mutation is always reverting that bug.** Not a similar one, not a simpler one — that one. If the guard survives, it does not guard what its name says.
+
+**A DEFECT REPORTED FROM A SCREENSHOT GETS FIXED AT THE FIRST MATCHING STRING, NOT AT EVERY SOURCE OF IT — and the report then reads as resolved.**
+
+`Anos de Experiencia` (missing the tilde on `Años`, which in Spanish is not a near-miss) was reported on 2026-09-14 from the Descubre Instructores screenshots. It was still rendering three days later, because **the same text lived in two independent places**: `components/InstructorCard.tsx` and `messages/es.json`. Whoever looked found one, fixed it, and closed the report. Half the defect shipped on, and the ticket said done.
+
+**Before closing anything reported from a screenshot, ask how many places produce that text.** Grep the rendered string, not the file you happen to be looking at. In this codebase the same copy can live in `messages/es.json`, a bilingual table, an inline `language === 'es'` ternary, and an `if (language === 'es')` block — four systems, any of which can render the screen you were sent.
+
+**AND THE SAME FAMILY AGAIN: the instrument read a narrower set than it believed.** The first accent sweep reported **109** strings. The real surface was **157**, because the sweep had three scan patterns and the codebase has five Spanish-bearing shapes — it never saw `export const baseEs = {...}`, `if (language === 'es')` blocks, or lines too long for a `^key: '...'$` match.
+
+That is the same failure as `vercel ls` writing its status to stderr while the monitor read stdout, and as the 168 rehearsal counting `auth.users` columns it believed it had filtered out. **Three instances in two days of a tool confidently reporting a number that was a property of the tool, not of the thing measured.** When a sweep returns a count, ask what shapes it cannot see before quoting it.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**

@@ -65,6 +65,50 @@ function getNamespace(dict: Dict, namespace: string): Record<string, MessageNode
   return node as Record<string, MessageNode>;
 }
 
+/**
+ * Dev-only notice that a lookup fell through to `?? key`.
+ *
+ * WHY THIS EXISTS. The fallback below returns the KEY when nothing resolves, so
+ * an unresolved lookup renders as `fields.photo` and is indistinguishable at
+ * runtime from a deliberate literal. That is how T-AUD3 shipped: the banner
+ * listed raw keys to instructors in both languages and nothing anywhere said so.
+ * The fallback is the right behaviour -- a missing string must not blank the UI
+ * -- but it must not be silent in development.
+ *
+ * lib/i18n/i18nGuards.test.ts is the primary guard and fails CI. It can only see
+ * LITERAL keys, so the nine call sites that pass a variable -- t(weather.condition),
+ * tPartner(typeKey) and the rest -- are invisible to it. Only a runtime check
+ * sees those, which is why both exist.
+ *
+ * NO ALLOWLIST, DELIBERATELY. Every message in en.json and es.json resolves
+ * today, so this starts silent and any noise is a real defect. If a message is
+ * ever legitimately key-shaped -- where `raw === key` is the intended copy --
+ * this will warn falsely and will need an explicit allowlist keyed on
+ * `namespace + '.' + key`. Do not add that mechanism before it has a member: an
+ * empty allowlist is a place for the next false positive to be silenced rather
+ * than understood.
+ *
+ * Warns once per namespace+key so a key inside a list does not flood the console.
+ */
+const warnedKeys = new Set<string>();
+
+function warnUnresolved(namespace: string, key: string): void {
+  const id = `${namespace}.${key}`;
+  if (warnedKeys.has(id)) return;
+  warnedKeys.add(id);
+  // eslint-disable-next-line no-console -- dev-only diagnostic; see the docblock
+  console.warn(
+    `[i18n] useTranslations('${namespace}') could not resolve t('${key}'), so the KEY ITSELF will render. ` +
+      (key.includes('.')
+        ? `The key contains a dot: a nested message is addressed through the NAMESPACE, ` +
+          `e.g. useTranslations('${namespace}.${key.split('.')[0]}') then t('${key
+            .split('.')
+            .slice(1)
+            .join('.')}'). The lookup inside a namespace is flat.`
+        : `Add it to messages/en.json under "${namespace}", or correct the key.`)
+  );
+}
+
 export function useTranslations(namespace: string) {
   const { language } = useLanguage();
 
@@ -78,7 +122,13 @@ export function useTranslations(namespace: string) {
       return typeof v === 'string' ? v : undefined;
     };
 
-    const raw = pick(activeNs) ?? pick(fallbackNs) ?? key;
+    const resolved = pick(activeNs) ?? pick(fallbackNs);
+
+    if (resolved === undefined && process.env.NODE_ENV !== 'production') {
+      warnUnresolved(namespace, key);
+    }
+
+    const raw = resolved ?? key;
     return interpolate(raw, vars);
   };
 }
