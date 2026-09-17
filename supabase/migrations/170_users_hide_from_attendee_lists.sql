@@ -107,3 +107,26 @@ BEGIN
 
   RAISE NOTICE '170: hide_from_attendee_lists added; authenticated has SELECT and UPDATE, anon has neither.';
 END $$;
+
+-- ── 4. Visible confirmation ────────────────────────────────────────────────
+-- The assertions above RAISE on failure, which is loud. Success is not: the
+-- Supabase SQL editor has no Notices panel, so a script ending in a DO block
+-- reports only "success, no rows returned" and the RAISE NOTICE goes nowhere.
+-- That was the lesson from applying 169 by hand -- the operator could not tell a
+-- real apply from a silent no-op branch without running a separate query, and
+-- "success, no rows returned" is also exactly what a wrong-target run prints.
+--
+-- So this migration ends by RETURNING ITS OWN END STATE AS ROWS. Read the table;
+-- it is the confirmation. Do not infer success from silence.
+SELECT 'hide_from_attendee_lists' AS column_name,
+       (SELECT count(*) FROM information_schema.columns
+         WHERE table_schema='public' AND table_name='users'
+           AND column_name='hide_from_attendee_lists')                    AS column_present,
+       has_column_privilege('authenticated','public.users','hide_from_attendee_lists','SELECT')
+                                                                          AS authenticated_select,
+       has_column_privilege('authenticated','public.users','hide_from_attendee_lists','UPDATE')
+                                                                          AS authenticated_update,
+       has_column_privilege('anon','public.users','hide_from_attendee_lists','SELECT')
+                                                                          AS anon_select_must_be_false,
+       (SELECT count(*) FROM public.users WHERE hide_from_attendee_lists)  AS rows_currently_true,
+       (SELECT count(*) FROM public.users)                                 AS total_user_rows;
