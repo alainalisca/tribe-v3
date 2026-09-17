@@ -200,6 +200,26 @@ The T-AUD3 guard exists to catch a dotted translation key that cannot resolve. I
 
 That is the same failure as `vercel ls` writing its status to stderr while the monitor read stdout, and as the 168 rehearsal counting `auth.users` columns it believed it had filtered out. **Three instances in two days of a tool confidently reporting a number that was a property of the tool, not of the thing measured.** When a sweep returns a count, ask what shapes it cannot see before quoting it.
 
+**A FOURTH, and it is the one most likely to recur: an attribute-matching regex over JSX is blind to any handler containing an arrow function.**
+
+Counting form controls below 16px, the scan used `<(input|textarea|select)\b((?:[^<>]|\n)*?)/?>` and reported **2**. The real number was **89**. The `[^<>]` character class terminates on the `>` in `=>`, so every control with an inline handler — `onChange={(e) => setForm(...)}`, which in this codebase is most of them — had its attributes truncated before `className` was reached.
+
+**`[^<>]` cannot be used to span JSX attributes.** Walk forward from the tag name tracking brace depth, and treat `>` as a tag close only at depth 0:
+
+```js
+let i = tagNameEnd,
+  depth = 0;
+while (i < src.length) {
+  const c = src[i];
+  if (c === '{') depth++;
+  else if (c === '}') depth--;
+  else if (c === '>' && depth === 0) break;
+  i++;
+}
+```
+
+**This was caught by the CLAUDE.md entry written an hour earlier** — the "ask what shapes it cannot see before quoting the count" rule, applied to the very next count. That is the entry working as intended, and it is the argument for writing these down the same day rather than at the end of the week.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
