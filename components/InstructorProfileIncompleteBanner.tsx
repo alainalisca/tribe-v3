@@ -18,6 +18,18 @@ interface InstructorProfileIncompleteBannerProps {
 
 export default function InstructorProfileIncompleteBanner({ missingFields }: InstructorProfileIncompleteBannerProps) {
   const t = useTranslations('instructorIncomplete');
+  // T-AUD3: the field names live one level down, so they are addressed through
+  // the NAMESPACE, not through a dotted key. useTranslations dot-walks the
+  // namespace; the key lookup inside it is flat (useTranslations.ts:78), so
+  // t('fields.photo') searched for a literal key "fields.photo", missed, and
+  // fell through to `?? key` -- rendering the raw string "fields.photo" to
+  // instructors in both languages.
+  //
+  // Fixed here rather than by making the key lookup dot-walk, because
+  // settings.location, settings.account and tribeOs.waitlist all already use
+  // this form. One addressing convention, enforced by the shape of the code.
+  // Two ways to address the same message is what produced the bug.
+  const tField = useTranslations('instructorIncomplete.fields');
 
   if (missingFields.length === 0) return null;
 
@@ -30,7 +42,7 @@ export default function InstructorProfileIncompleteBanner({ missingFields }: Ins
           <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">{t('description')}</p>
           <ul className="mt-2 list-disc pl-4 space-y-0.5 text-xs text-amber-800 dark:text-amber-300">
             {missingFields.map((field) => (
-              <li key={field}>{t(`fields.${field}`)}</li>
+              <li key={field}>{tField(field)}</li>
             ))}
           </ul>
           <Link
