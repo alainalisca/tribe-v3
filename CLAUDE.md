@@ -230,6 +230,20 @@ That means gating a tier-3 feature on `tier === 3` hides it from exactly the peo
 
 Gate on the underlying relation (`tiers.past.has(id)`, `tiers.upcoming.has(id)`). Use the resolved tier for copy and styling, never for access.
 
+**THE SAME CONSTANT NAME IN FIVE MODULES IS NOT FIVE CONSTANTS, IT IS ONE DEFECT.**
+
+`SPORTS_LIST` is declared independently in five files — `lib/sports.ts` (23 sports), `app/onboarding/instructor/page.tsx` (21), `app/instructors/InstructorsPageClient.tsx` (13), `app/training-partners/page.tsx` (11) and `components/FindTrainingPartners.tsx` (11). None imports another. Because each shadows the name in its own module scope, **nothing ever collides and nothing ever warns.** They drifted until an instructor who teaches Jiu-Jitsu could not tag it: the onboarding chips offer `Martial Arts`, and `Jiu-Jitsu` exists only in the canonical list.
+
+Exactly one pair had a sync guard — `lib/sports.ts` ↔ `lib/sportTranslationData.ts` — and its header says the guard "fails if they drift." It works. It covers the one pair that was never the problem.
+
+**A shared vocabulary belongs in one exported constant that every consumer imports, and a guard must cover EVERY pair, not the pair someone happened to think of.** When you find a second copy of a list, assume there is a third.
+
+**FIXING THE SAME STRING IN TWO PLACES IS A SIGNAL, NOT A CHORE.**
+
+The Spanish accent work changed `Natación` and `Fútbol` in **both** `lib/sports.ts` (`SPORTS_TRANSLATIONS`) and `lib/sportTranslationData.ts` (`sportTranslations`) — two translation maps for the same 23 keys. Both edits were made without registering that their both existing _is_ the bug. The duplicate map was then still there to diverge again.
+
+If a change has to be applied twice to take effect, stop and ask why there are two. The second edit is the codebase telling you where the real defect is, and it is the cheapest moment to notice — you already have both files open.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:
