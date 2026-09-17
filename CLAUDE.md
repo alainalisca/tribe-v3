@@ -136,6 +136,35 @@ SELECT (SELECT count(*) FROM featured_partners WHERE slug IN (...)) AS still_the
 
 **The tell is specific and easy to look for: a test written to catch an error passed without that error ever occurring.** When a check is for a failure path, confirm the failure actually fired before recording a pass — assert on the error having happened, not only on the handling being correct. The same shape applies to a guard in a migration: 165's `pg_trigger_depth` and counter-revert guards were each proved by deliberately reintroducing the mistake and watching them raise, rather than by observing them stay quiet.
 
+**A THIRD WAY, and the hardest to see: the check asserted the OUTCOME of a failure rather than the RECOGNITION of it.**
+
+Correct handling and total absence of handling frequently produce the same visible result. When they do, an assertion on the result cannot tell them apart, and it will pass against code that has no error handling at all.
+
+Found on 2026-09-17 in `useVisibilityTier`. The test asserted that a failed tier query falls back to tier 1. Deleting the `if (!result.success)` branch entirely makes the code read `result.data!.past` on `undefined`, throw, and land in the outer `catch` — **which also yields tier 1.** Identical outcome, completely different behaviour, test still green. The same mutation against `ProfileUpcomingSessions` rendered nothing either way, because an empty list and a null list both render nothing.
+
+The fix in both cases was to assert the thing that actually differs: **that the failure was recognised** — `logError` called, carrying the original reason — not that the aftermath looked tidy. Mutation testing is what exposed it; neither test looked weak by inspection.
+
+**FOUR DISTINCT FLAVOURS OF VACUOUS CHECK WERE FOUND IN ONE DAY.** They share nothing in their shape, so there is no single pattern to grep for — only the habit of breaking the production path and watching the check fail:
+
+| what happened                                                                                                | why it passed anyway                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| A rehearsal recorded its finding with an `INSERT` inside the subtransaction it then deliberately rolled back | The probe row vanished with the thing it described; the check read `NULL`, which renders as a FAIL and says nothing either way                |
+| `SessionCard.test.tsx` set `session_participants` on its fixture                                             | `computeSessionStatus` reads `session.participants`; the setup was dead and the assertion passed on an unrelated `current_participants` value |
+| A test asserted an avatar stack was absent                                                                   | `AvatarStack` was mocked to `() => null`, so the element could never have existed and the assertion could never have failed                   |
+| A test asserted tier 1 after a failed query                                                                  | Deleting the error branch crashes into an outer `catch` that also produces tier 1                                                             |
+
+**The habit that catches all four: after a check passes, break the code it guards and confirm it fails, naming the test.** Every one of these survived review by a careful reader and died to a one-line mutation.
+
+**And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
+
+**`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
+
+`tierFor` (`lib/dal/participants.ts`) lets an UPCOMING shared session outrank a PAST one, because two people training together next week are more connected than two who trained in March. So a pair who share **both** history and a shared plan resolves to **tier 2**, not 3.
+
+That means gating a tier-3 feature on `tier === 3` hides it from exactly the people with the strongest relationship in the app. Caught while building T-ATH1 step 8; the upcoming-sessions list now gates on `hasTrainedTogether` — membership of the `past` set — and the resolved tier only decides what to call the relationship.
+
+Gate on the underlying relation (`tiers.past.has(id)`, `tiers.upcoming.has(id)`). Use the resolved tier for copy and styling, never for access.
+
 ### Database Schema
 
 Core tables in `supabase/schema.sql`:

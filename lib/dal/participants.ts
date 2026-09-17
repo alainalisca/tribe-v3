@@ -403,10 +403,21 @@ export interface CoAthleteTiers {
 }
 
 /**
- * The tier a target athlete occupies for this viewer.
+ * The tier a target athlete occupies for this viewer -- A LABEL, NOT AN
+ * ENTITLEMENT.
  *
  * Upcoming wins over past: two people training together next week are more
  * connected than two who trained together in March, and a pair can be in both.
+ *
+ * SO DO NOT GATE ACCESS ON `tierFor(...) === 3`. Because upcoming outranks past,
+ * a pair who share BOTH history and a shared plan resolves to 2 -- so a
+ * tier-3 gate written that way hides the feature from exactly the people with
+ * the strongest relationship in the app. This was caught building T-ATH1 step 8,
+ * where the upcoming-sessions list would have been invisible to the most
+ * connected pairs.
+ *
+ * Gate on the underlying relation instead -- `tiers.past.has(id)` or
+ * `tiers.upcoming.has(id)` -- and use this function only for copy and styling.
  */
 export function tierFor(targetUserId: string, tiers: CoAthleteTiers): VisibilityTier {
   if (tiers.upcoming.has(targetUserId)) return 2;
