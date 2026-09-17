@@ -143,12 +143,27 @@ body {
 /* iOS auto-zooms any focused input/textarea/select with font-size < 16px.
    That zoom shifts the layout and detaches position:fixed headers/nav, which
    reads as "everything jumps and overlaps." Force 16px on small screens so
-   focus never triggers zoom. Desktop keeps the design's smaller sizes. */
+   focus never triggers zoom. Desktop keeps the design's smaller sizes.
+
+   !important IS LOAD-BEARING, and this rule was INERT without it for two weeks.
+   Tailwind v3's `@tailwind utilities` is a build-time directive, not a native
+   cascade layer, so `.text-sm` and this rule are both unlayered and SPECIFICITY
+   decides: .text-sm (0,1,0) beats input (0,0,1). Measured on production at
+   375px before this change -- an input with text-base computed 16px (because of
+   the utility, not because of this rule) while a textarea with text-sm computed
+   14px and still auto-zoomed. 89 of 249 form controls carry text-xs or text-sm.
+
+   Same mechanism the .safe-area-top / .pt-header utilities below already use,
+   and for the same reason: they also have to beat a Tailwind padding utility.
+
+   A font-size on a control is a DESIGN choice on desktop and a FUNCTIONAL
+   defect on mobile, so this deliberately overrides the utility rather than
+   asking 89 call sites to remember. */
 @media (max-width: 767px) {
   input,
   textarea,
   select {
-    font-size: 16px;
+    font-size: 16px !important;
   }
 }
 
