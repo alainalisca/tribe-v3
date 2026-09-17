@@ -1,4 +1,4 @@
--- 171_rehearsal.sql
+-- 171_backfill_instructor_sports_REHEARSAL.sql
 --
 -- Rehearsal for 171_backfill_instructor_sports.sql. Run in the Supabase SQL
 -- editor. Everything happens inside BEGIN ... ROLLBACK, so production is not
