@@ -131,18 +131,108 @@ describe('<SessionCard />', () => {
     expect(container.querySelector('div[class*="cursor-pointer"]')).toBeNull();
   });
 
-  it('shows a Full badge when confirmed participants match max', () => {
-    // computeSessionStatus reads session.session_participants, which isn't
-    // on the strict SessionWithRelations type. Build the base session then
-    // patch the field directly via a local cast rather than adding a
-    // test-only property to the public type.
-    const full = baseSession({ max_participants: 2 });
-    (full as unknown as Record<string, unknown>).session_participants = [
-      { user_id: 'u1', status: 'confirmed' },
-      { user_id: 'u2', status: 'confirmed' },
-    ];
-    render(<SessionCard session={full} />);
-    expect(screen.getByText(/Full/)).toBeInTheDocument();
+  /**
+   * The Full badge is driven by sessions.current_participants, NOT by the
+   * participants array. That is a deliberate decision, and these tests exist to
+   * hold it in place.
+   *
+   * WHAT WAS HERE BEFORE, and why it proved nothing. The old test was named
+   * "shows a Full badge when confirmed participants match max" and set
+   * `session_participants` on the fixture through a cast. computeSessionStatus
+   * has never read `session_participants` -- it reads `session.participants` --
+   * so that line was dead. The assertion passed anyway because baseSession sets
+   * current_participants: 3 while the test overrode max_participants: 2, which
+   * makes isFull true no matter what the fixture array contains. A check that
+   * passed without the scenario it names ever being reproduced.
+   *
+   * WHY isFull READS THE COUNTER AND SHOULD KEEP DOING SO. fetchUpcomingSessions
+   * (lib/dal/sessions.ts:415) returns every session with `participants: []` --
+   * the array is simply not populated on that feed path. An isFull computed from
+   * the array would report every session on the main feed as never full, on a
+   * surface where "Full" is the whole point of the badge. The counter is
+   * maintained in the database by trg_sync_session_participant_count (087) and
+   * is always present, so it is the only source that works everywhere.
+   *
+   * KNOWN AND OUT OF SCOPE HERE: spotsLeft and fillingFast in SessionCard read
+   * confirmedParticipants.length (the array) while isFull reads the counter, so
+   * on the fetchUpcomingSessions path a session can hold current_participants: 9
+   * and still compute spotsLeft: 10. Unifying those two sources is its own
+   * ticket and is blocked on migration 169; these tests deliberately do not
+   * assert on spotsLeft, so they will not have to change when it lands.
+   */
+  describe('Full badge', () => {
+    /**
+     * A roster that agrees with the counter, so these two tests are full under
+     * EITHER implementation. That is the point: it leaves the empty-array test
+     * below as the only one that can tell the counter and the array apart. With
+     * baseSession's default `participants: []` all three would have failed
+     * together the moment isFull switched source, and none of them would have
+     * been isolating anything.
+     */
+    const athletes = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        user_id: `athlete-${i}`,
+        status: 'confirmed',
+        is_guest: false,
+        guest_name: null,
+        user: { id: `athlete-${i}`, name: `Athlete ${i}`, avatar_url: null },
+      }));
+
+    it('shows when the participant counter reaches max', () => {
+      render(
+        <SessionCard
+          session={baseSession({
+            max_participants: 2,
+            current_participants: 2,
+            participants: athletes(2),
+          } as Partial<SessionWithRelations>)}
+        />
+      );
+      expect(screen.getByText('Full')).toBeInTheDocument();
+    });
+
+    it('shows when the counter has somehow exceeded max', () => {
+      render(
+        <SessionCard
+          session={baseSession({
+            max_participants: 2,
+            current_participants: 5,
+            participants: athletes(3),
+          } as Partial<SessionWithRelations>)}
+        />
+      );
+      expect(screen.getByText('Full')).toBeInTheDocument();
+    });
+
+    // The negative half. Without this the positive assertions above would pass
+    // against an isFull hardcoded to true, which is exactly the failure the old
+    // test had: an outcome that did not depend on the setup.
+    it('does NOT show when the counter is below max', () => {
+      render(<SessionCard session={baseSession({ max_participants: 10, current_participants: 9 })} />);
+      expect(screen.queryByText('Full')).toBeNull();
+    });
+
+    // THE LOAD-BEARING ONE. The array is empty and the counter is at max --
+    // exactly the shape fetchUpcomingSessions produces. The two tests above use
+    // a roster that agrees with the counter, so they pass under either source;
+    // this is the only test in the file that fails if isFull is switched to
+    // read confirmedParticipants.length. Verified by mutation, not by hope.
+    it('shows from the counter alone, with an empty participants array', () => {
+      const full = baseSession({ max_participants: 2, current_participants: 2, participants: [] });
+      render(<SessionCard session={full} />);
+      expect(screen.getByText('Full')).toBeInTheDocument();
+    });
+
+    it('is suppressed on a past session, which cannot be joined anyway', () => {
+      const past = baseSession({
+        max_participants: 2,
+        current_participants: 2,
+        date: '2020-01-01',
+        start_time: '10:00',
+      });
+      render(<SessionCard session={past} />);
+      expect(screen.queryByText('Full')).toBeNull();
+    });
   });
 
   describe('hero photo expand', () => {
