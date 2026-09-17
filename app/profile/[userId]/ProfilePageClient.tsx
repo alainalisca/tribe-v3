@@ -38,6 +38,8 @@ import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { getProfileTranslations } from './translations';
 import ProfileLightbox from './ProfileLightbox';
 import BlockReportControls from '@/components/BlockReportControls';
+import { useVisibilityTier } from './useVisibilityTier';
+import ProfileUpcomingSessions from './ProfileUpcomingSessions';
 
 import TribeWordmark from '@/components/TribeWordmark';
 type UserProfile = Database['public']['Tables']['users']['Row'];
@@ -81,6 +83,11 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
   // QA-06: inline avatar carousel — index into [avatar_url, ...photos]
   const [avatarIndex, setAvatarIndex] = useState(0);
   const [showInviteSheet, setShowInviteSheet] = useState(false);
+
+  // T-ATH1: computed AFTER mount, as the viewer. The server render of this page
+  // is ISR-cached (revalidate = 60) and shared across viewers, so a tier can
+  // never be computed there -- see useVisibilityTier's header.
+  const visibility = useVisibilityTier(userId, currentUser?.id ?? null);
 
   useEffect(() => {
     checkCurrentUser();
@@ -294,6 +301,34 @@ export default function ProfilePageClient({ userId, initialProfile, statsSlot }:
               and has always only fired on other users' profiles, which we
               can infer from the ProfileStatsClient's own logic). */}
           {statsSlot}
+
+          {/*
+            T-ATH1. The banner is not decoration: ?previewTier= forces a tier for
+            an admin so the tier-2 branch can be seen on a device at all -- it
+            renders for NOBODY in production today, because no upcoming session
+            has a confirmed participant. A forced tier that looked identical to a
+            real one would be the most misleading thing on this page, so it says
+            so, and says what the real tier is.
+          */}
+          {visibility.previewOf !== null && (
+            <div
+              data-testid="tier-preview-banner"
+              className="mt-6 rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-3 text-sm text-stone-900 dark:text-amber-100"
+            >
+              {language === 'es'
+                ? `Vista previa: nivel ${visibility.tier} forzado. Tu nivel real es ${visibility.previewOf}.`
+                : `Preview: tier ${visibility.tier} forced. Your real tier is ${visibility.previewOf}.`}
+            </div>
+          )}
+
+          <div className="mt-6">
+            <ProfileUpcomingSessions
+              userId={userId}
+              hasTrainedTogether={visibility.hasTrainedTogether && !visibility.isSelf}
+              language={language}
+              heading={language === 'es' ? 'Próximas sesiones' : 'Upcoming sessions'}
+            />
+          </div>
 
           {/* Reviews preview — instructors only */}
           {profile?.is_instructor && (
