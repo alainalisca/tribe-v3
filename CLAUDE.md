@@ -228,6 +228,21 @@ Writing migration 171's guard, the three backfill targets looked identical from 
 
 The connection to the instrument findings is not the SQL, it is the shape: the instrument reported a number that was a property of how it asked, not of the data. The three-valued logic is just a quieter version of `2>/dev/null` eating the column being read — there is no error, no empty result, only a count that is wrong in the safe-looking direction. **A guard that aborts on correct data is as broken as one that passes on wrong data, and it is harder to notice, because an abort reads as the guard doing its job.** Prove both arms fire (171's rehearsal, Parts B and C) rather than trusting a clean run.
 
+**A PATCH whose payload is built from component state will blank any column that state does not know about.**
+
+Adding a sports chip row to the instructor storefront editor was nearly a data-loss bug dressed as a feature. `updateStorefrontProfile` PATCHes `public.users`, and the editor builds its payload from four pieces of local state. The new `sports` key initialised to `[]` instead of from the prop would have sent `sports: []` on **every save**, wiping a column the instructor had set on a different screen -- and it would have fired on an unrelated action, saving a bio, with no error and a "Saved!" toast. Caught only by a mutation (`useState<string[]>([])` instead of `useState<string[]>(initialSports)`), which failed one test.
+
+**The rule: when adding a field to a form that PATCHes, read what else that PATCH writes, and ask whether the new field's EMPTY state can overwrite something the form never loaded.** A partial update is only safe for the columns the form actually owns. The fix is either to prefill from the row (what the storefront editor does) or to omit the key when the form has nothing to say about it -- the pattern INS-01 already uses for `location`, which is omitted rather than written blank precisely so re-running the wizard cannot clear a value set from `/profile/edit`.
+
+**A guard's exemption list is itself something that goes stale, and a stale exemption silently re-permits exactly what the guard exists to catch.**
+
+`lib/sports.singleSource.test.ts` fails if any module declares its own sport list, and two production files legitimately still do (`PartnerApplyForm`'s partner-application vocabulary, `venues/nearby`'s derived suggestions). They sit in `KNOWN_RIVAL_LISTS` with a reason each. The second test asserts that **every entry still offends**: fix `PartnerApplyForm` and the guard fails with "Remove these from KNOWN_RIVAL_LISTS -- they are fixed". Without it, the day someone aligns that file its exemption becomes a permanent hole, and the next rival list added to it passes unnoticed.
+
+**Assert the exemption, not just the rule. It belongs anywhere an allow-list is introduced.** Two shapes, and both were used deliberately:
+
+- An allow-list **with** a rot test, where the exempted cases are real and enumerable (this guard; `DELIBERATELY_EXCLUDED` in `lib/i18n/spanishAccents.ts`, which carries the RAE-2010 citation for `este`/`solo`).
+- **No allow-list at all**, where exemptions would accumulate faster than anyone audits them. The unresolved-key warning in `useTranslations`' `pick` fallback was shipped with none for exactly this reason: an allowlist there would have filled up with keys nobody re-checked, and the guard's whole value is that it fires on a key shape rather than on a list of known-bad keys. The two decisions are the same judgement, not a contradiction -- take the allow-list only when you can commit to proving each entry still earns its place.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
