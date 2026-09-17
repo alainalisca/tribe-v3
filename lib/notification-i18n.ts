@@ -49,7 +49,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎉 ¡Nuevo compañero de entrenamiento!',
-      body: '{{name}} se unio a tu sesion de {{sport}}',
+      body: '{{name}} se unio a tu sesión de {{sport}}',
     },
   },
   join_request: {
@@ -59,7 +59,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '📩 Nueva solicitud de unirse',
-      body: '{{name}} quiere unirse a tu sesion de {{sport}}',
+      body: '{{name}} quiere unirse a tu sesión de {{sport}}',
     },
   },
   join_guest: {
@@ -69,7 +69,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎉 ¡Nuevo compañero de entrenamiento!',
-      body: '{{name}} (invitado) se unio a tu sesion de {{sport}}',
+      body: '{{name}} (invitado) se unio a tu sesión de {{sport}}',
     },
   },
   waitlist_offered: {
@@ -79,7 +79,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎟️ ¡Cupo disponible!',
-      body: 'Se abrio un cupo en una sesion en la que estabas en lista de espera.',
+      body: 'Se abrio un cupo en una sesión en la que estabas en lista de espera.',
     },
   },
   waitlist_expired: {
@@ -89,7 +89,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '⏰ Oferta de cupo vencida',
-      body: 'La oferta de cupo para una sesion en lista de espera ha vencido.',
+      body: 'La oferta de cupo para una sesión en lista de espera ha vencido.',
     },
   },
   spotlight_selected: {
@@ -109,7 +109,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🤝 Coincidencia de entrenamiento',
-      body: '{{name}} tambien entrena {{sport}} cerca de ti',
+      body: '{{name}} también entrena {{sport}} cerca de ti',
     },
   },
   // T-NOTIF1: recipient = host (someone left their session).
@@ -120,7 +120,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '👋 Alguien salio',
-      body: '{{name}} salio de tu sesion de {{sport}}',
+      body: '{{name}} salio de tu sesión de {{sport}}',
     },
   },
   // T-NOTIF1: recipient = athlete (host approved their join request).
@@ -177,7 +177,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '📝 Completa tu perfil de instructor',
-      body: 'Estas oculto en la pagina Entrena con un Instructor hasta que completes tu perfil. Toca para terminarlo.',
+      body: 'Estas oculto en la página Entrena con un Instructor hasta que completes tu perfil. Toca para terminarlo.',
     },
   },
 };

@@ -231,7 +231,7 @@ export function useSessionActions({
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('tribe_sessions_dirty', '1');
       }
-      showSuccess(language === 'es' ? 'Has salido de la sesion' : 'You have left the session');
+      showSuccess(language === 'es' ? 'Has salido de la sesión' : 'You have left the session');
       onNavigate('/');
     } catch (error) {
       showError(getErrorMessage(error, 'join_session', language));

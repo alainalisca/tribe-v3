@@ -259,7 +259,7 @@ export default function ActionButtons({
             </p>
           )}
           <p className="text-xs text-stone-500 dark:text-gray-400">
-            {_language === 'es' ? 'Agrega esta sesion a tu calendario' : 'Add this session to your calendar'}
+            {_language === 'es' ? 'Agrega esta sesión a tu calendario' : 'Add this session to your calendar'}
           </p>
           <div className="flex gap-2">
             {/* Primary: Google Calendar — reliable on desktop and mobile web */}

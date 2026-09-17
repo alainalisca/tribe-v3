@@ -90,7 +90,7 @@ export async function handleRecapUpload(
 
   if (userPhotoCount + files.length > 3) {
     showInfo(
-      language === 'es' ? 'Puedes subir maximo 3 fotos por sesion' : 'You can upload maximum 3 photos per session'
+      language === 'es' ? 'Puedes subir máximo 3 fotos por sesión' : 'You can upload maximum 3 photos per session'
     );
     return;
   }

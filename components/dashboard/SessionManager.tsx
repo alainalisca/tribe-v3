@@ -24,9 +24,9 @@ export default function SessionManager({ language, upcoming, past, series, onEnd
   const [showPast, setShowPast] = useState(false);
 
   const txt = {
-    upcoming: language === 'es' ? 'Proximas Sesiones' : 'Upcoming Sessions',
+    upcoming: language === 'es' ? 'Próximas Sesiones' : 'Upcoming Sessions',
     past: language === 'es' ? 'Sesiones Pasadas' : 'Past Sessions',
-    createNew: language === 'es' ? 'Crear Sesion' : 'Create Session',
+    createNew: language === 'es' ? 'Crear Sesión' : 'Create Session',
     noUpcoming: language === 'es' ? 'No tienes sesiones programadas' : 'No upcoming sessions scheduled',
     spots: language === 'es' ? 'cupos' : 'spots',
     cancelled: language === 'es' ? 'Cancelada' : 'Cancelled',

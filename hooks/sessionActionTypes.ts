@@ -50,15 +50,15 @@ const JOIN_ERROR_MESSAGES: Record<'en' | 'es', Record<string, string>> = {
     invite_expired: 'This invitation has expired. Ask the host for a new link.',
   },
   es: {
-    session_not_found: 'Sesion no encontrada',
-    session_not_active: 'Esta sesion ya no esta activa',
-    self_join: 'No puedes unirte a tu propia sesion!',
-    already_joined: 'Ya te uniste a esta sesion!',
-    capacity_full: 'Esta sesion esta llena',
-    invite_only: 'Sesion privada. Necesitas una invitacion del organizador.',
+    session_not_found: 'Sesión no encontrada',
+    session_not_active: 'Esta sesión ya no esta activa',
+    self_join: 'No puedes unirte a tu propia sesión!',
+    already_joined: 'Ya te uniste a esta sesión!',
+    capacity_full: 'Esta sesión esta llena',
+    invite_only: 'Sesión privada. Necesitas una invitación del organizador.',
     // T-INV1: invite link acceptance failures.
-    invite_invalid: 'Esta invitacion no es valida. Pide al organizador un nuevo enlace.',
-    invite_expired: 'Esta invitacion ya expiro. Pide al organizador un nuevo enlace.',
+    invite_invalid: 'Esta invitación no es válida. Pide al organizador un nuevo enlace.',
+    invite_expired: 'Esta invitación ya expiro. Pide al organizador un nuevo enlace.',
   },
 };
 

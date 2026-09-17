@@ -110,7 +110,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
       {/* Row 3: Session Analytics */}
       <div>
         <h3 className="text-xs font-bold text-stone-700 dark:text-gray-300 mb-2 uppercase">
-          {language === 'es' ? 'Analisis de Sesiones' : 'Session Analytics'}
+          {language === 'es' ? 'Análisis de Sesiones' : 'Session Analytics'}
         </h3>
         <div className="grid grid-cols-2 gap-2">
           <StatCard

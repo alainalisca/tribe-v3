@@ -71,7 +71,7 @@ export default function SessionManagement({
 
                     <div className="flex items-center gap-3 text-xs text-stone-500 mb-2">
                       <span>
-                        {session.creator?.name || (language === 'es' ? 'Anfitrion Desconocido' : 'Unknown Host')}
+                        {session.creator?.name || (language === 'es' ? 'Anfitrión Desconocido' : 'Unknown Host')}
                       </span>
                       <span>&bull;</span>
                       <span>

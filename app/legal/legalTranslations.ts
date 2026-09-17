@@ -18,17 +18,17 @@ interface TermsContent {
 export function getTermsContent(language: 'en' | 'es'): TermsContent {
   if (language === 'es') {
     return {
-      title: 'Terminos de Servicio',
-      lastUpdated: 'Ultima actualizacion: 24 de noviembre de 2025',
+      title: 'Términos de Servicio',
+      lastUpdated: 'Última actualizacion: 24 de noviembre de 2025',
       businessName: 'Razon social: A Plus Fitness LLC',
       sections: [
         {
-          heading: '1. ACEPTACION DE LOS TERMINOS',
+          heading: '1. ACEPTACIÓN DE LOS TÉRMINOS',
           paragraphs: [
             {
-              text: 'Al acceder, descargar o utilizar la aplicacion movil Tribe, el sitio web o los servicios relacionados (colectivamente, la "Plataforma"), usted acepta regirse por estos Terminos de Servicio ("Terminos") y nuestra Politica de Privacidad, la cual se incorpora por referencia.',
+              text: 'Al acceder, descargar o utilizar la aplicacion movil Tribe, el sitio web o los servicios relacionados (colectivamente, la "Plataforma"), usted acepta regirse por estos Términos de Servicio ("Términos") y nuestra Política de Privacidad, la cual se incorpora por referencia.',
             },
-            { text: 'Si no esta de acuerdo con estos Terminos, no debe acceder ni utilizar Tribe.' },
+            { text: 'Si no esta de acuerdo con estos Términos, no debe acceder ni utilizar Tribe.' },
           ],
         },
         {
@@ -36,7 +36,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
           paragraphs: [
             { text: 'Para usar Tribe, usted debe:' },
             {
-              text: 'Al crear una cuenta, usted declara y garantiza que toda la informacion proporcionada es verdadera, precisa y completa.',
+              text: 'Al crear una cuenta, usted declara y garantiza que toda la información proporcionada es verdadera, precisa y completa.',
             },
             {
               text: 'Tribe es operado por A Plus Fitness LLC, una sociedad de responsabilidad limitada de Nueva York, y actualmente se encuentra en fase de prueba beta en Medellin, Colombia.',
@@ -44,7 +44,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
             },
           ],
           list: [
-            'Tener al menos 18 anos de edad (o la mayoria de edad legal en su jurisdiccion, si es mayor);',
+            'Tener al menos 18 años de edad (o la mayoría de edad legal en su jurisdicción, si es mayor);',
             'Tener la capacidad legal para celebrar contratos vinculantes; y',
             'Usar la Plataforma unicamente con fines licitos y en cumplimiento de todas las leyes aplicables.',
           ],
@@ -57,7 +57,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
             },
             { text: 'Usted reconoce que:' },
             {
-              text: 'Si bien Tribe puede ser accesible internacionalmente, estos Terminos se rigen por la legislacion estadounidense y la Plataforma se opera desde Nueva York.',
+              text: 'Si bien Tribe puede ser accesible internacionalmente, estos Términos se rigen por la legislacion estadounidense y la Plataforma se opera desde Nueva York.',
               italic: true,
             },
           ],
@@ -76,7 +76,7 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
               text: 'La actividad fisica y los deportes conllevan riesgos inherentes, incluyendo pero no limitados a lesiones graves, discapacidad permanente o muerte. Al participar en cualquier actividad organizada a traves de Tribe, usted acepta que:',
             },
             {
-              text: 'Tribe renuncia a todas las garantias, expresas o implicitas, con respecto a la seguridad, idoneidad o resultados de cualquier actividad o sesion organizada a traves de la Plataforma.',
+              text: 'Tribe renuncia a todas las garantias, expresas o implicitas, con respecto a la seguridad, idoneidad o resultados de cualquier actividad o sesión organizada a traves de la Plataforma.',
             },
           ],
           list: [
@@ -111,15 +111,15 @@ export function getTermsContent(language: 'en' | 'es'): TermsContent {
               text: 'Entre Usuarios: Tribe no es responsable de mediar o resolver disputas entre usuarios. Debe resolver cualquier disputa directamente.',
             },
             {
-              text: 'Con Tribe: Estos Terminos y cualquier disputa con Tribe se regiran e interpretaran de acuerdo con las leyes del Estado de Nueva York, Estados Unidos, sin tener en cuenta sus principios de conflicto de leyes. Usted acepta someterse a la jurisdiccion exclusiva de los tribunales estatales y federales ubicados en el Condado de Nueva York, Nueva York.',
+              text: 'Con Tribe: Estos Términos y cualquier disputa con Tribe se regirán e interpretaran de acuerdo con las leyes del Estado de Nueva York, Estados Unidos, sin tener en cuenta sus principios de conflicto de leyes. Usted acepta someterse a la jurisdicción exclusiva de los tribunales estatales y federales ubicados en el Condado de Nueva York, Nueva York.',
             },
           ],
         },
         {
-          heading: '15. INFORMACION DE CONTACTO',
+          heading: '15. INFORMACIÓN DE CONTACTO',
           paragraphs: [
             {
-              text: 'Las preguntas, asuntos legales o solicitudes relacionadas con estos Terminos pueden dirigirse a:',
+              text: 'Las preguntas, asuntos legales o solicitudes relacionadas con estos Términos pueden dirigirse a:',
             },
           ],
           contact: true,
@@ -254,25 +254,25 @@ interface PrivacyContent {
 export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
   if (language === 'es') {
     return {
-      title: 'Politica de Privacidad',
-      lastUpdated: 'Ultima actualizacion: 24 de noviembre de 2025',
+      title: 'Política de Privacidad',
+      lastUpdated: 'Última actualizacion: 24 de noviembre de 2025',
       businessName: 'Razon social: A Plus Fitness LLC',
       sections: [
         {
-          heading: '1. Informacion que Recopilamos',
-          paragraphs: ['Recopilamos la informacion que usted proporciona directamente:'],
+          heading: '1. Información que Recopilamos',
+          paragraphs: ['Recopilamos la información que usted proporciona directamente:'],
           list: [
-            'Informacion de cuenta: nombre, correo electronico, fecha de nacimiento, telefono (opcional)',
-            'Informacion de perfil: fotos, biografia, deportes, niveles de habilidad, ubicacion (ciudad)',
+            'Información de cuenta: nombre, correo electronico, fecha de nacimiento, teléfono (opcional)',
+            'Información de perfil: fotos, biografía, deportes, niveles de habilidad, ubicación (ciudad)',
             'Datos de uso: sesiones creadas/unidas, mensajes enviados, actividad en la app',
-            'Datos de ubicacion: ubicacion aproximada cuando usa funciones de localizacion',
+            'Datos de ubicación: ubicación aproximada cuando usa funciones de localizacion',
           ],
         },
         {
-          heading: '2. Como Usamos su Informacion',
-          paragraphs: ['Usamos su informacion para:'],
+          heading: '2. Como Usamos su Información',
+          paragraphs: ['Usamos su información para:'],
           list: [
-            'Proporcionar el servicio Tribe (conectarlo con companeros de entrenamiento)',
+            'Proporcionar el servicio Tribe (conectarlo con compañeros de entrenamiento)',
             'Enviar notificaciones sobre sesiones y mensajes',
             'Mejorar la plataforma y la experiencia del usuario',
             'Prevenir fraude, abuso y garantizar la seguridad de la plataforma',
@@ -280,22 +280,22 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
           ],
         },
         {
-          heading: '3. Compartir Informacion',
-          paragraphs: ['Compartimos su informacion con:'],
+          heading: '3. Compartir Información',
+          paragraphs: ['Compartimos su información con:'],
           list: [
-            '<strong>Otros usuarios:</strong> La informacion del perfil (nombre, foto, biografia, deportes, ubicacion) es visible para otros usuarios',
+            '<strong>Otros usuarios:</strong> La información del perfil (nombre, foto, biografía, deportes, ubicación) es visible para otros usuarios',
             '<strong>Proveedores de servicios:</strong> Hosting (Vercel), base de datos (Supabase), analiticas (PostHog)',
             '<strong>Requisitos legales:</strong> Cuando lo exija la ley o para proteger derechos y seguridad',
           ],
-          highlight: 'NO vendemos su informacion personal a terceros.',
+          highlight: 'NO vendemos su información personal a terceros.',
         },
         {
           heading: '4. Sus Derechos',
           paragraphs: ['Usted tiene derecho a:'],
           list: [
-            'Acceder a sus datos (Configuracion → Descargar mis datos)',
-            'Actualizar su informacion (Configuracion → Editar perfil)',
-            'Eliminar su cuenta (Configuracion → Eliminar cuenta)',
+            'Acceder a sus datos (Configuración → Descargar mis datos)',
+            'Actualizar su información (Configuración → Editar perfil)',
+            'Eliminar su cuenta (Configuración → Eliminar cuenta)',
             'Optar por no recibir comunicaciones promocionales',
             'Solicitar una copia de sus datos',
           ],
@@ -303,7 +303,7 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
         {
           heading: '5. Retencion de Datos',
           paragraphs: [
-            'Conservamos sus datos mientras su cuenta este activa. Despues de eliminar su cuenta, retenemos los datos durante 30 dias para fines de recuperacion y luego los eliminamos permanentemente. Algunos datos pueden retenerse por mas tiempo si la ley lo requiere.',
+            'Conservamos sus datos mientras su cuenta este activa. Después de eliminar su cuenta, retenemos los datos durante 30 días para fines de recuperacion y luego los eliminamos permanentemente. Algunos datos pueden retenerse por mas tiempo si la ley lo requiere.',
           ],
         },
         {
@@ -322,13 +322,13 @@ export function getPrivacyContent(language: 'en' | 'es'): PrivacyContent {
         {
           heading: '7. Privacidad de Menores',
           paragraphs: [
-            'Tribe no esta destinado a usuarios menores de 18 anos. No recopilamos intencionalmente informacion de menores de 18 anos. Si descubrimos que hemos recopilado dicha informacion, la eliminaremos de inmediato.',
+            'Tribe no esta destinado a usuarios menores de 18 años. No recopilamos intencionalmente información de menores de 18 años. Si descubrimos que hemos recopilado dicha información, la eliminaremos de inmediato.',
           ],
         },
         {
-          heading: '8. Cambios a esta Politica',
+          heading: '8. Cambios a esta Política',
           paragraphs: [
-            'Podemos actualizar esta Politica de Privacidad de vez en cuando. Le notificaremos sobre cambios significativos por correo electronico o notificacion en la aplicacion.',
+            'Podemos actualizar esta Política de Privacidad de vez en cuando. Le notificaremos sobre cambios significativos por correo electronico o notificacion en la aplicacion.',
           ],
         },
         {
@@ -454,30 +454,30 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
         'Tribe conecta personas pero no puede verificar identidades ni supervisar sesiones. Sigue estas recomendaciones para mantenerte seguro.',
       checklistSections: [
         {
-          heading: 'Antes de la Sesion',
+          heading: 'Antes de la Sesión',
           items: [
             'Revisa los perfiles, calificaciones y actividad de los atletas',
             'Elige lugares de encuentro publicos y bien iluminados (parques, gimnasios, instalaciones deportivas)',
             'Informa a alguien a donde vas, con quien te reuniras y cuando volveras',
             'Confia en tu instinto — si algo se siente mal, no vayas',
-            'Revisa los detalles de la sesion y confirma la hora y el lugar con el anfitrion',
+            'Revisa los detalles de la sesión y confirma la hora y el lugar con el anfitrión',
           ],
         },
         {
-          heading: 'Durante la Sesion',
+          heading: 'Durante la Sesión',
           items: [
             'Reunete en espacios publicos donde haya otras personas presentes',
-            'Manten tu telefono cargado y accesible',
+            'Manten tu teléfono cargado y accesible',
             'Permanece en areas bien iluminadas y con gente',
             'Escucha a tu cuerpo y no te excedas de tus limites',
             'Si te sientes inseguro en algun momento, vete de inmediato',
           ],
         },
         {
-          heading: 'Despues de la Sesion',
+          heading: 'Después de la Sesión',
           items: [
-            'Marca la sesion como completada en la aplicacion',
-            'Deja una calificacion y resena honesta para ayudar a otros usuarios',
+            'Marca la sesión como completada en la aplicacion',
+            'Deja una calificación y reseña honesta para ayudar a otros usuarios',
             'Reporta cualquier comportamiento preocupante de inmediato',
           ],
         },
@@ -486,10 +486,10 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
       redFlags: [
         'Te presiona para reunirse en lugares privados o aislados',
         'Envia mensajes inapropiados o incomodos',
-        'No tiene foto de perfil o tiene informacion muy limitada',
+        'No tiene foto de perfil o tiene información muy limitada',
         'Se comporta de manera agresiva, amenazante o irrespetuosa',
-        'Solicita informacion personal (direccion, datos financieros, etc.)',
-        'Cancela o reprograma repetidamente a ultima hora',
+        'Solicita información personal (dirección, datos financieros, etc.)',
+        'Cancela o reprograma repetidamente a última hora',
       ],
       reportingTitle: 'Reportar Problemas',
       reportingDesc: 'Si experimentas acoso, comportamiento inapropiado o preocupaciones de seguridad:',
@@ -503,7 +503,7 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
       emergencyDesc: 'Llama a los servicios de emergencia locales de inmediato:',
       rememberLabel: 'Recuerda:',
       rememberText:
-        'La mayoria de los usuarios de Tribe son personas genuinas que buscan companeros de entrenamiento. Siguiendo estas recomendaciones y confiando en tu instinto, puedes disfrutar de sesiones de entrenamiento seguras y productivas.',
+        'La mayoría de los usuarios de Tribe son personas genuinas que buscan compañeros de entrenamiento. Siguiendo estas recomendaciones y confiando en tu instinto, puedes disfrutar de sesiones de entrenamiento seguras y productivas.',
     };
   }
 

@@ -13,19 +13,19 @@ import { ChevronLeft, CalendarPlus, Loader2 } from 'lucide-react';
 
 const getT = (language: 'en' | 'es') => ({
   title: language === 'es' ? 'Nuevo Evento' : 'New Event',
-  eventTitle: language === 'es' ? 'Titulo del evento' : 'Event title',
-  description: language === 'es' ? 'Descripcion (opcional)' : 'Description (optional)',
+  eventTitle: language === 'es' ? 'Título del evento' : 'Event title',
+  description: language === 'es' ? 'Descripción (opcional)' : 'Description (optional)',
   location: language === 'es' ? 'Lugar (opcional)' : 'Location (optional)',
   startDate: language === 'es' ? 'Fecha y hora de inicio' : 'Start date & time',
   endDate: language === 'es' ? 'Fecha y hora de fin (opcional)' : 'End date & time (optional)',
   create: language === 'es' ? 'Crear evento' : 'Create event',
   creating: language === 'es' ? 'Creando...' : 'Creating...',
   cancel: language === 'es' ? 'Cancelar' : 'Cancel',
-  required: language === 'es' ? 'El titulo y la fecha son requeridos' : 'Title and start date are required',
+  required: language === 'es' ? 'El título y la fecha son requeridos' : 'Title and start date are required',
   pastDate: language === 'es' ? 'La fecha de inicio debe ser en el futuro' : 'The start date must be in the future',
   endBeforeStart:
     language === 'es'
-      ? 'La fecha de fin debe ser despues de la fecha de inicio'
+      ? 'La fecha de fin debe ser después de la fecha de inicio'
       : 'The end date must be after the start date',
   success: language === 'es' ? 'Evento creado' : 'Event created',
   error: language === 'es' ? 'No se pudo crear el evento' : 'Failed to create event',

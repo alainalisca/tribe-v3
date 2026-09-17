@@ -117,7 +117,7 @@ export async function removeGuestParticipant(
   // table, and no read path ever returns it. The token is required: it is the
   // guest's proof of ownership (phone alone is enumerable, so it is not accepted).
   if (!storedGuestToken) {
-    showError(language === 'es' ? 'No se encontro la informacion del invitado' : 'Guest information not found');
+    showError(language === 'es' ? 'No se encontro la información del invitado' : 'Guest information not found');
     return false;
   }
 

@@ -120,7 +120,7 @@ export default function PostSessionFlow({
   // --- Step 1: Rate & Review ---
   async function handleSubmitReview() {
     if (rating === 0) {
-      setReviewError(t('Select a rating to continue', 'Selecciona una calificacion para continuar'));
+      setReviewError(t('Select a rating to continue', 'Selecciona una calificación para continuar'));
       return;
     }
 
@@ -143,9 +143,9 @@ export default function PostSessionFlow({
 
       if (error) {
         log('error', 'PostSessionFlow review insert failed', { error: error.message });
-        setReviewError(t('Error submitting rating', 'Error al enviar calificacion'));
+        setReviewError(t('Error submitting rating', 'Error al enviar calificación'));
       } else {
-        showSuccess(t('Rating submitted', 'Calificacion enviada'));
+        showSuccess(t('Rating submitted', 'Calificación enviada'));
         haptic('success');
         // Fire-and-forget: progress referral status on first session complete
         progressReferralOnSessionComplete(supabase, userId).catch(() => {});
@@ -153,7 +153,7 @@ export default function PostSessionFlow({
       }
     } catch (err) {
       log('error', 'PostSessionFlow review exception', { error: String(err) });
-      setReviewError(t('Error submitting rating', 'Error al enviar calificacion'));
+      setReviewError(t('Error submitting rating', 'Error al enviar calificación'));
     } finally {
       setIsSubmittingReview(false);
     }
@@ -164,7 +164,7 @@ export default function PostSessionFlow({
       <div className="space-y-5">
         <div className="text-center">
           <h3 className="text-lg font-bold text-stone-900 dark:text-white">
-            {t(`How was your session with ${creatorName}?`, `Como fue tu sesion con ${creatorName}?`)}
+            {t(`How was your session with ${creatorName}?`, `¿Cómo fue tu sesión con ${creatorName}?`)}
           </h3>
         </div>
 
@@ -221,7 +221,7 @@ export default function PostSessionFlow({
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                {t('Submit rating', 'Enviar calificacion')}
+                {t('Submit rating', 'Enviar calificación')}
               </>
             )}
           </button>
@@ -299,7 +299,7 @@ export default function PostSessionFlow({
             {t('Add a Recap Photo', 'Agrega una Foto del Resumen')}
           </h3>
           <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
-            {t('Share a moment from your session', 'Comparte un momento de tu sesion')}
+            {t('Share a moment from your session', 'Comparte un momento de tu sesión')}
           </p>
         </div>
 
@@ -484,7 +484,7 @@ export default function PostSessionFlow({
         className="max-w-md bg-white dark:bg-tribe-card border-gray-200 dark:border-gray-700 rounded-2xl p-6"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogTitle className="sr-only">{t('Post-Session Flow', 'Flujo Post-Sesion')}</DialogTitle>
+        <DialogTitle className="sr-only">{t('Post-Session Flow', 'Flujo Post-Sesión')}</DialogTitle>
         <DialogDescription className="sr-only">
           {t('Rate, share photos, connect, and train again', 'Califica, comparte fotos, conecta y entrena de nuevo')}
         </DialogDescription>

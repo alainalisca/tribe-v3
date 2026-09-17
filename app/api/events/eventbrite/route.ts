@@ -18,7 +18,10 @@ function detectSport(title: string, description: string = ''): string {
     hiking: ['hike', 'hiking', 'trail', 'trek', 'backpack'],
     yoga: ['yoga', 'pilates'],
     crossfit: ['crossfit', 'cross-fit', 'wod', 'functional fitness'],
-    soccer: ['soccer', 'football', 'futbol'],
+    // BOTH spellings on purpose. This is a keyword MATCHER against third-party
+    // event titles, not display copy -- real listings write it both ways, and
+    // dropping the unaccented form would silently stop matching most of them.
+    soccer: ['soccer', 'football', 'futbol', 'fútbol'],
     swimming: ['swim', 'swimming', 'pool', 'water sports'],
     fitness: ['gym', 'workout', 'training', 'bootcamp', 'zumba', 'dance'],
   };

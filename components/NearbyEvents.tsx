@@ -59,8 +59,8 @@ const SPORT_LABELS: Record<string, Record<string, string>> = {
     hiking: 'Senderismo',
     yoga: 'Yoga',
     crossfit: 'Crossfit',
-    soccer: 'Futbol',
-    swimming: 'Natacion',
+    soccer: 'Fútbol',
+    swimming: 'Natación',
     fitness: 'Fitness',
   },
 };

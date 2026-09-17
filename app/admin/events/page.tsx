@@ -205,7 +205,7 @@ export default function AdminEventsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>{t('Description (EN)', 'Descripcion (EN)')}</label>
+                <label className={labelClass}>{t('Description (EN)', 'Descripción (EN)')}</label>
                 <textarea
                   className={inputClass}
                   rows={2}
@@ -214,7 +214,7 @@ export default function AdminEventsPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>{t('Description (ES)', 'Descripcion (ES)')}</label>
+                <label className={labelClass}>{t('Description (ES)', 'Descripción (ES)')}</label>
                 <textarea
                   className={inputClass}
                   rows={2}
@@ -272,7 +272,7 @@ export default function AdminEventsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>{t('Day', 'Dia')}</label>
+                  <label className={labelClass}>{t('Day', 'Día')}</label>
                   <select
                     className={inputClass}
                     value={form.recurrence_day ?? 'saturday'}
@@ -298,7 +298,7 @@ export default function AdminEventsPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>{t('Address', 'Direccion')}</label>
+                <label className={labelClass}>{t('Address', 'Dirección')}</label>
                 <input
                   className={inputClass}
                   value={form.address ?? ''}

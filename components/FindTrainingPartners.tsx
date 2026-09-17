@@ -99,7 +99,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
     const translations: Record<string, Record<string, string>> = {
       findTrainingPartners: {
         en: 'Find Training Partners',
-        es: 'Encontrar Companeros de Entrenamiento',
+        es: 'Encontrar Compañeros de Entrenamiento',
       },
       seeAll: { en: 'See All', es: 'Ver Todo' },
       noPartnersFound: {
@@ -108,7 +108,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
       },
       createSession: {
         en: 'Be the first to create a session!',
-        es: 'Se el primero en crear una sesion!',
+        es: 'Se el primero en crear una sesión!',
       },
       allSports: { en: 'All', es: 'Todo' },
     };

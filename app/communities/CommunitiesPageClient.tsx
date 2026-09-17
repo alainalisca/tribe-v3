@@ -254,7 +254,7 @@ function CommunitiesTabContent({
               onClick={() => setShowAllSports(true)}
               className="px-4 py-2 rounded-full text-sm font-medium transition bg-stone-200 dark:bg-tribe-mid text-tribe-green hover:bg-stone-300 dark:hover:bg-tribe-card"
             >
-              {language === 'es' ? 'Mas' : 'More'}
+              {language === 'es' ? 'Más' : 'More'}
             </button>
           )}
           {showAllSports && (
