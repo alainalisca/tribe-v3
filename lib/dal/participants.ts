@@ -68,10 +68,7 @@ export async function deleteParticipant(supabase: SupabaseClient, id: string): P
   try {
     // BUG-206 + RLS-H3: use affected-row COUNT, not a RETURNING readback — a host
     // removing another user's row cannot SELECT it back under sp_select_own.
-    const { count, error } = await supabase
-      .from('session_participants')
-      .delete({ count: 'exact' })
-      .eq('id', id);
+    const { count, error } = await supabase.from('session_participants').delete({ count: 'exact' }).eq('id', id);
     if (error) return { success: false, error: error.message };
     if (!count) {
       return { success: false, error: 'No rows deleted — RLS may have blocked the write' };
@@ -342,7 +339,9 @@ export async function fetchPendingParticipantsForSessions(
     // mapped back to the nested {user} shape.
     const { data, error } = await supabase
       .from('session_participants_roster')
-      .select('id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language')
+      .select(
+        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language'
+      )
       .in('session_id', sessionIds)
       .eq('status', 'pending');
     if (error) return { success: false, error: error.message };
@@ -364,7 +363,9 @@ export async function fetchPendingParticipantsForSession(
     // the athlete's language. Flat view rows mapped back to the nested {user} shape.
     const { data, error } = await supabase
       .from('session_participants_roster')
-      .select('id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language')
+      .select(
+        'id, user_id, session_id, joined_at, status, user_profile_id, user_name, user_avatar_url, user_preferred_language'
+      )
       .eq('session_id', sessionId)
       .eq('status', 'pending')
       .order('joined_at', { ascending: true });
@@ -373,5 +374,161 @@ export async function fetchPendingParticipantsForSession(
   } catch (error) {
     logError(error, { action: 'fetchPendingParticipantsForSession' });
     return { success: false, error: 'Failed' };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// T-ATH1: athlete visibility tiers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * How visible one athlete is to another.
+ *
+ *   1  a stranger -- no shared session, now or ever
+ *   2  shares an UPCOMING session with the viewer
+ *   3  co-attended a PAST session with the viewer
+ *
+ * The relation is symmetric by construction: it is derived from co-membership
+ * of a session, so if A is tier 3 to B then B is tier 3 to A. Verified against
+ * production -- zero asymmetric pairs across all 94 live athletes.
+ */
+export type VisibilityTier = 1 | 2 | 3;
+
+/** The viewer's co-athletes, split by when they shared a session. */
+export interface CoAthleteTiers {
+  /** Athletes on a session the viewer is also on, dated today or later. */
+  upcoming: Set<string>;
+  /** Athletes the viewer shared a session with that has already passed. */
+  past: Set<string>;
+}
+
+/**
+ * The tier a target athlete occupies for this viewer.
+ *
+ * Upcoming wins over past: two people training together next week are more
+ * connected than two who trained together in March, and a pair can be in both.
+ */
+export function tierFor(targetUserId: string, tiers: CoAthleteTiers): VisibilityTier {
+  if (tiers.upcoming.has(targetUserId)) return 2;
+  if (tiers.past.has(targetUserId)) return 3;
+  return 1;
+}
+
+/** Local wall-clock date, matching how sessions.date is stored and compared. */
+function todayIso(now: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+}
+
+interface TierRosterRow {
+  user_id: string | null;
+  session_id: string | null;
+  sessions: { date: string | null; status: string | null; creator_id: string | null } | null;
+}
+
+/**
+ * Split roster rows into the viewer's tier-2 and tier-3 co-athlete sets.
+ *
+ * Exported for testing: the query is one round trip and trivially mockable, but
+ * the grouping is where every real decision lives, so it is asserted directly
+ * rather than only through a mocked client.
+ */
+export function computeCoAthleteTiers(
+  rows: TierRosterRow[],
+  viewerId: string,
+  today: string = todayIso()
+): CoAthleteTiers {
+  // Group first, because membership is a property of the SESSION, not of a row.
+  const bySession = new Map<
+    string,
+    { date: string | null; status: string | null; creatorId: string | null; members: Set<string> }
+  >();
+
+  for (const row of rows) {
+    if (!row.session_id || !row.sessions) continue;
+    let entry = bySession.get(row.session_id);
+    if (!entry) {
+      entry = {
+        date: row.sessions.date,
+        status: row.sessions.status,
+        creatorId: row.sessions.creator_id,
+        members: new Set<string>(),
+      };
+      // The host is on the session without holding a participant row -- that is
+      // the T-ATH7 convention. Without this, co-attendance with an instructor,
+      // which is most of what Tribe is, would be invisible to the tiers.
+      if (entry.creatorId) entry.members.add(entry.creatorId);
+      bySession.set(row.session_id, entry);
+    }
+    // Guests have a null user_id and no profile to tier.
+    if (row.user_id) entry.members.add(row.user_id);
+  }
+
+  const upcoming = new Set<string>();
+  const past = new Set<string>();
+
+  for (const entry of bySession.values()) {
+    // AN APP ADMIN SEES EVERY ROSTER ROW. session_participants_roster (152)
+    // grants admins full reach for moderation, so without this an admin's tier
+    // map would contain the entire app and every stranger would read as tier 3.
+    // The tier is about the viewer's own relationships, never their moderation
+    // reach -- so drop any session the viewer is not actually on. Harmless for
+    // everyone else, whose rows only ever cover their own sessions anyway.
+    if (!entry.members.has(viewerId)) continue;
+
+    // A cancelled session is not a shared plan. It still counts as shared
+    // history only if it already happened.
+    const isUpcoming = !!entry.date && entry.date >= today && entry.status === 'active';
+    const bucket = isUpcoming ? upcoming : past;
+
+    for (const member of entry.members) {
+      if (member !== viewerId) bucket.add(member);
+    }
+  }
+
+  return { upcoming, past };
+}
+
+/**
+ * Every athlete the viewer shares a session with, in ONE round trip.
+ *
+ * HOW THIS CAN WORK AT ALL. session_participants_roster (migration 152) is
+ * owner-executed and row-scoped to `is_app_admin() OR viewer-is-creator OR
+ * viewer-is-a-confirmed-participant`. So an unfiltered read already returns
+ * exactly the sessions the viewer is on, and every confirmed row of each --
+ * which is the co-attendance set. No session id list is needed and no second
+ * query: the scoping does the work.
+ *
+ * THE EMBED CARRIES creator_id ON PURPOSE. A host has no participant row
+ * (T-ATH7), so co-attendance with the person leading the session -- most of
+ * what Tribe is -- cannot be derived from participant rows alone. It is
+ * disambiguated explicitly because PostgREST finds three candidate
+ * relationships between this view and sessions (creator_id, verified_by, and
+ * session_id) and returns PGRST201 without the hint.
+ *
+ * MUST RUN AS THE VIEWER. auth.uid() is NULL for service_role and server jobs,
+ * which makes the view return ZERO rows -- not an error, just nothing. Call
+ * this with a browser client, or a cookie-backed server client carrying the
+ * user's JWT. A service-role caller gets an empty, wrong answer silently.
+ */
+export async function fetchCoAthleteTiers(
+  supabase: SupabaseClient,
+  viewerId: string
+): Promise<DalResult<CoAthleteTiers>> {
+  try {
+    const { data, error } = await supabase
+      .from('session_participants_roster')
+      .select('user_id, session_id, sessions!session_participants_session_id_fkey(date, status, creator_id)')
+      .eq('status', 'confirmed');
+
+    if (error) {
+      logError(error, { action: 'fetchCoAthleteTiers', viewerId });
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: computeCoAthleteTiers((data || []) as unknown as TierRosterRow[], viewerId) };
+  } catch (error) {
+    logError(error, { action: 'fetchCoAthleteTiers', viewerId });
+    return { success: false, error: 'Failed to fetch co-athlete tiers' };
   }
 }
