@@ -400,7 +400,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // OnboardingModal
   neverTrainAlone: 'Nunca Entrenes Solo',
-  onboardingDesc1: 'Encuentra companeros de entrenamiento en tu ciudad. Unete a sesiones, haz amigos, mejoren juntos.',
+  onboardingDesc1: 'Encuentra compañeros de entrenamiento en tu ciudad. Unete a sesiones, haz amigos, mejoren juntos.',
   joinSessionsInstantly: 'Unete a Sesiones al Instante',
   onboardingDesc2: 'Explora sesiones cerca o crea la tuya. Toma 30 segundos.',
   completeYourProfile: 'Completa tu Perfil',
