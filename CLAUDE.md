@@ -155,6 +155,17 @@ The fix in both cases was to assert the thing that actually differs: **that the 
 
 **The habit that catches all four: after a check passes, break the code it guards and confirm it fails, naming the test.** Every one of these survived review by a careful reader and died to a one-line mutation.
 
+**A MUTATION PROOF EXPIRES. Re-run it against current code before trusting an old branch.** A test's strength is a property of the test _and_ the code around it, and only one of those is frozen when a branch is parked.
+
+`fix/language-honors-stored-preference` was written on 2026-09-04 with twelve tests and a mutation proof, and sat unmerged for two weeks while main moved 68 commits. It rebased cleanly and all twelve still passed. Re-running the proof found **two mutations that no longer failed anything**:
+
+- `.select('preferred_language')` → `.select('id')` broke nothing, because the Supabase mock answered any query with its fixed row. The column name was never pinned — and `public.users` is under column-level grants, so a wrong column name is a `42501` that takes the whole provider down, not a missing field.
+- _"does not query at all for a signed out visitor"_ asserted only that `maybeSingle` was never called. Deleting the `if (!data.user) return null` guard makes the code call `.from()` and `.select()` and then throw on `undefined.id` — so `maybeSingle` is still never reached and the assertion still passed. It now asserts on `.from()`, the earliest observable point.
+
+Both were the outcome-versus-recognition flavour above, in code that had already passed review once. **That makes five instances of this taxonomy found in two days, every one in code a careful reader had already approved.**
+
+So when picking up a branch older than a few days: rebase, run the suite, and then **re-run the mutation proof from its own commit message**. Passing tests prove the tests pass. They do not prove the tests still bite.
+
 **It is not only tests. The same class shows up in any instrument that watches something.** A deploy monitor built the same day ran `vercel ls --yes --prod 2>/dev/null` and polled the result for `Ready` or `Building`. It never saw either: **`vercel ls` writes the status table to stderr and only bare URLs to stdout**, so `2>/dev/null` discarded the exact column being read. The monitor could not observe the thing it existed to observe — structurally, the same failure as the rehearsal probe that vanished inside its own rollback.
 
 The first version had no guard and looped silently for fifteen minutes, which is indistinguishable from "still building". The second reported `state unreadable` and stopped, and **that loud failure is what located the cause.** So: when a watcher reads a field, make "the field could not be read" a distinct, noisy outcome — never a value that happens to look like waiting. A silent watcher and a working one look identical for exactly as long as it takes to matter.
