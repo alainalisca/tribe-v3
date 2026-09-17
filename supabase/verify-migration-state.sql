@@ -1116,6 +1116,25 @@ select '167_lock_session_attendance_reads',
             and not has_table_privilege('authenticated', 'public.session_attendance', 'TRUNCATE')
             then 'applied' else 'MISSING' end
 union all
+select '168_revoke_users_location_from_anon',
+       -- EXPECTED TO REPORT 'MISSING' UNTIL GATE 0 IS DEPLOYED AND 168 IS RUN.
+       -- That is the verifier working, not a fault: 168 is deliberately held
+       -- until app/i/[id]/InstructorShareClient.tsx stops selecting location
+       -- as anon, because PostgREST 401s a whole request over one ungranted
+       -- column and that page blanks entirely on a failed profile fetch.
+       --
+       -- Both directions are asserted. Checking only that anon LOST the column
+       -- would report 'applied' for a revoke that went too far and took
+       -- authenticated with it -- which would break /storefront/[id],
+       -- /instructors, ExploreCitySection, leadDiscovery, admin, and
+       -- fetchUserProfile on /profile/[userId], all at once and silently.
+       --
+       -- has_column_privilege, never information_schema.column_privileges:
+       -- the capability question, not "is there a row saying so".
+       case when not has_column_privilege('anon', 'public.users', 'location', 'SELECT')
+             and has_column_privilege('authenticated', 'public.users', 'location', 'SELECT')
+            then 'applied' else 'MISSING' end
+union all
 
 select '169_delete_host_participant_rows',
        -- The applied state is a property of the data, not of a schema object:

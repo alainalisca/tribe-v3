@@ -159,6 +159,20 @@ The fix in both cases was to assert the thing that actually differs: **that the 
 
 The first version had no guard and looped silently for fifteen minutes, which is indistinguishable from "still building". The second reported `state unreadable` and stopped, and **that loud failure is what located the cause.** So: when a watcher reads a field, make "the field could not be read" a distinct, noisy outcome — never a value that happens to look like waiting. A silent watcher and a working one look identical for exactly as long as it takes to matter.
 
+**The sharpest version of "reading a wider set than you believe": a `WHERE` clause that does not constrain what you think, because `AND` does not short-circuit.** Migration 168's rehearsal counted anon-readable columns with
+
+```sql
+SELECT count(*) FROM information_schema.columns c
+ WHERE c.table_schema = 'public' AND c.table_name = 'users'
+   AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT')
+```
+
+and it failed with `42703: column "instance_id" of relation "users" does not exist`. `instance_id` belongs to `auth.users`. **The schema filter was correct and was not the problem** — the planner is free to evaluate the `has_column_privilege` predicate _before_ the two filters, since it is `STABLE` and cheap, and it then receives a column name from `auth.users`. This is migration 159's finding wearing different clothes: Postgres evaluates the whole expression, and `OR` does not short-circuit either.
+
+**A tighter filter would not have fixed it, because the bug is evaluation order, not matching.** Make the wrong rows unreachable instead: `'public.users'::regclass` resolves to exactly one table, so every row is by construction a column of it whatever order the planner picks. Add `attnum > 0` (system columns) and `NOT attisdropped` (DROP COLUMN tombstones, whose `attname` is mangled and raises the same way), and materialise the set before the function sees it.
+
+**When a check iterates a catalog, prefer `pg_attribute` keyed on `regclass` over `information_schema` filtered by name.** `users`, `sessions` and `notifications` all exist in more than one schema here, and `information_schema` will happily hand you all of them.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**

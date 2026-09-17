@@ -4,7 +4,7 @@
 -- attendee to other athletes. Additive; nothing reads it yet.
 --
 -- THE COLUMN GOES ON public.users. There is no public.profiles table -- the
--- live database returns PGRST205 for it. The 104-column users table is the
+-- live database returns PGRST205 for it. The (then 100-column) users table is the
 -- profile table, and it currently has NO privacy or visibility flag of any
 -- kind: no hide_*, no visibility, no private. This is the first.
 --
