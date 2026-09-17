@@ -28,17 +28,46 @@ const OG_OPTIONS = {
 } as const;
 
 /**
+ * Hard ceiling on any transform request, regardless of what a caller asks for.
+ * The session background used to ask for width=1200 against sources that are
+ * often already 1200px, so the transform saved 8% and did nothing useful. This
+ * is the clamp half of the budget: a caller cannot request an arbitrarily large
+ * render, whatever the source dimensions are.
+ */
+const MAX_TRANSFORM_WIDTH = 640;
+
+/**
+ * Hard ceiling on the bytes of any single source image embedded in a card.
+ *
+ * This is the teeth of the budget, and it guards the path the width clamp
+ * cannot: loadImage falls back to the ORIGINAL object URL when the transform is
+ * unavailable, and the original is whatever the host uploaded — potentially a
+ * 4000px, multi-megabyte photo, embedded whole. Over this limit the image is
+ * dropped and the card falls back to its clean no-photo layout, which is a
+ * worse-looking card but a bounded one.
+ *
+ * 150KB is ~1.6x the measured 640/q60 transform of a real session photo
+ * (90,757 bytes), so ordinary photos pass and outliers do not.
+ */
+const MAX_SOURCE_BYTES = 150_000;
+
+/**
  * Rewrite a Supabase public-object URL to the render/image transform endpoint
  * so we fetch a DISPLAY-SIZED jpeg instead of the full-resolution original
  * (e.g. a 1638px, 132KB avatar drawn as a 52px dot). Verified available on this
  * project's plan. Non-Supabase URLs (the local /tribe-wordmark.png) pass
  * through unchanged.
+ *
+ * Width is clamped to MAX_TRANSFORM_WIDTH. Note the transform constrains WIDTH
+ * only, not height: asking for 640 against a 1200x675 source returns 640x675,
+ * not 640x360. That is fine for a background that gets scaled to cover.
  */
 function toTransformUrl(url: string, width: number, quality = 75): string {
   if (!url.includes('/storage/v1/object/public/')) return url;
   const base = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
   const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}width=${width}&quality=${quality}`;
+  const w = Math.min(width, MAX_TRANSFORM_WIDTH);
+  return `${base}${sep}width=${w}&quality=${quality}`;
 }
 
 /**
@@ -56,6 +85,12 @@ async function fetchAsDataUri(url: string): Promise<string> {
     const ct = res.headers.get('content-type') ?? '';
     if (!ct.startsWith('image/')) return '';
     const bytes = new Uint8Array(await res.arrayBuffer());
+    // Budget ceiling. Checked AFTER the fetch rather than from Content-Length,
+    // because the transform endpoint does not always declare one and a missing
+    // header would silently skip the check — the same class of mistake as
+    // asserting a Content-Length that never reaches the wire. Returning ''
+    // takes the caller down its existing clean-fallback path.
+    if (bytes.byteLength > MAX_SOURCE_BYTES) return '';
     let binary = '';
     const CHUNK = 0x8000;
     for (let i = 0; i < bytes.length; i += CHUNK) {
@@ -72,15 +107,67 @@ async function fetchAsDataUri(url: string): Promise<string> {
  * transform is unavailable (non-200) fall back to the ORIGINAL URL; if neither
  * loads return '' (clean no-photo / initials fallback).
  */
-async function loadImage(rawUrl: string, width: number): Promise<string> {
+async function loadImage(rawUrl: string, width: number, quality = 75): Promise<string> {
   if (!rawUrl) return '';
-  const transformed = toTransformUrl(rawUrl, width);
+  const transformed = toTransformUrl(rawUrl, width, quality);
   const resized = await fetchAsDataUri(transformed);
   if (resized) return resized;
+  // Fallback to the ORIGINAL object URL. This is the unbounded path — the
+  // original is whatever the host uploaded — which is exactly why
+  // fetchAsDataUri enforces MAX_SOURCE_BYTES rather than trusting the width
+  // clamp alone. A too-large original returns '' and the card renders clean.
   return transformed === rawUrl ? '' : fetchAsDataUri(rawUrl);
 }
 
+/**
+ * Drain the ImageResponse stream fully, then return the bytes as a plain
+ * Response.
+ *
+ * ⚠ CORRECTION. An earlier version of this comment claimed this sets an
+ * explicit Content-Length and thereby fixes link previews. BOTH CLAIMS WERE
+ * WRONG and the second was never established.
+ *
+ * Content-Length is a FORBIDDEN HEADER NAME in the Fetch API: Headers.set on it
+ * is silently ignored, and Vercel's edge frames the body as
+ * Transfer-Encoding: chunked regardless. Measured on the deployed code, on a
+ * fresh cache MISS, forced to HTTP/1.1, on the smallest card (type=default,
+ * 10,988 bytes): chunked, no Content-Length. The header this function tried to
+ * set does not reach the wire, so the setHeader call was dropped.
+ *
+ * What buffering DOES change is delivery timing: bytes leave only once the
+ * render has finished, rather than trickling as Satori produces them.
+ * WHETHER THAT MATTERS IS UNESTABLISHED. It is not known to fix link previews
+ * and must not be described as doing so. It is kept — rather than reverted —
+ * only because /i and /g flipped from failing to rendering around the same
+ * deploy and nobody has isolated why; removing it blind risks re-breaking a
+ * working state for an unproven mechanism.
+ *
+ * THE MEASURED DEFECT IS ELSEWHERE, and this function does not address it: the
+ * session card is 1,413,383 bytes and takes 5.3-11.2s to generate COLD against
+ * 0.59s warm, because loadImage requests the session photo at width=1200 from a
+ * source already 1200px wide (an 8% saving) and Satori then re-encodes that
+ * photograph full-bleed as lossless PNG. A scraper's first fetch is always the
+ * cold one. Dropping the image param alone takes the same card to 30,167 bytes
+ * and 0.69s.
+ *
+ * Cost of buffering: the whole card is held in memory, 30KB-1.4MB by type.
+ *
+ * Tests: app/api/og/route.buffering.test.ts — which asserts the stream is
+ * drained before returning, NOT that any header is set.
+ */
+async function bufferBody(res: Response): Promise<Response> {
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Copy the ImageResponse's own headers: content-type: image/png, plus the
+  // Cache-Control from OG_OPTIONS. Both of these DO survive to the wire.
+  const headers = new Headers(res.headers);
+  return new Response(bytes, { status: res.status, headers });
+}
+
 export async function GET(request: NextRequest) {
+  return bufferBody(await renderCard(request));
+}
+
+async function renderCard(request: NextRequest): Promise<Response> {
   const { searchParams } = request.nextUrl;
   const type = searchParams.get('type') ?? 'default';
   const title = searchParams.get('title') ?? '';
@@ -100,8 +187,19 @@ export async function GET(request: NextRequest) {
   if (type === 'session') {
     // Fetch the session photo, host avatar, and logo ONCE each, at display size,
     // as embeddable data URIs. Any that won't load come back '' so the render
-    // can't blank out. Photo full-bleed at 1200px; avatar 104px (52 @2x).
-    const [bg, av, logo] = await Promise.all([loadImage(image, 1200), loadImage(avatar, 104), loadImage(logoUrl, 152)]);
+    // can't blank out.
+    //
+    // The background is requested at 640/q60, not 1200/q75. It is painted
+    // full-bleed and then scaled to cover a 1200x630 canvas UNDER a dark scrim
+    // with text over it, so native resolution buys nothing visible at card
+    // scale. Measured on a real session photo: 1200/q75 -> 211,606 bytes,
+    // 640/q60 -> 90,757 bytes. The old 1200 request was close to a no-op
+    // anyway, because session photos are commonly already 1200px wide.
+    const [bg, av, logo] = await Promise.all([
+      loadImage(image, 640, 60),
+      loadImage(avatar, 104),
+      loadImage(logoUrl, 152),
+    ]);
     return renderSession({ title, sport, date, price, instructor, avatar: av, spots, neighborhood, image: bg, logo });
   }
   if (type === 'instructor') {
@@ -201,7 +299,23 @@ function renderSession(p: SessionParams) {
     </div>
   ) : null;
 
-  // ── Photo mode: the host's session photo as a full-bleed background ──
+  // ── Photo mode: the session photo as a bounded thumbnail on a flat ground ──
+  //
+  // WAS full-bleed: the photo covered all 1200x630 with a gradient scrim over
+  // it. That is the best-looking of the three cards and it is why this one was
+  // 1,148,866 bytes while the gym and instructor cards are 41KB and 53KB.
+  // next/og emits lossless PNG, and PNG's worst case is photographic pixels, so
+  // the cost tracks the AREA of photo on the canvas, not the source resolution
+  // — the same card with no photo at all is 30,167 bytes, 38x smaller.
+  //
+  // Measured alternatives on one real session photo (640/q60 source):
+  //   300x300 thumbnail   244,125 bytes
+  //   1200x200 band       459,767 bytes
+  //   full-bleed        1,148,866 bytes
+  //
+  // The thumbnail is the same construction the gym and instructor cards use: a
+  // bounded image with a green ring on DARK_BG. Square with a 32px radius, not
+  // a circle, matching the gym card's grammar — the circle is the instructor's.
   if (p.image) {
     return new ImageResponse(
       <div
@@ -209,79 +323,60 @@ function renderSession(p: SessionParams) {
           width: '100%',
           height: '100%',
           display: 'flex',
-          position: 'relative',
+          flexDirection: 'column',
+          backgroundColor: DARK_BG,
+          padding: '56px 60px',
           fontFamily: 'system-ui, sans-serif',
         }}
       >
-        <img
-          src={p.image}
-          alt=""
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            background:
-              'linear-gradient(to top, rgba(10,12,14,0.95) 0%, rgba(10,12,14,0.55) 45%, rgba(10,12,14,0.30) 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '50px 60px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {wordmark}
+        {wordmark}
+        <div style={{ display: 'flex', flexGrow: 1, alignItems: 'center', gap: '48px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
             {p.sport && (
-              <div
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(163,230,53,0.22)',
-                  padding: '10px 22px',
-                  borderRadius: '24px',
+                  fontSize: '64px',
+                  fontWeight: 800,
+                  color: GREEN,
+                  textTransform: 'uppercase' as const,
+                  letterSpacing: '2px',
+                  lineHeight: 1,
+                  marginBottom: '18px',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 700,
-                    color: GREEN,
-                    textTransform: 'uppercase' as const,
-                    letterSpacing: '1px',
-                  }}
-                >
-                  {sportLabel}
-                </span>
-              </div>
+                {sportLabel}
+              </span>
             )}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
-                fontSize: '60px',
-                fontWeight: 800,
+                fontSize: '40px',
+                fontWeight: 700,
                 color: WHITE,
-                lineHeight: 1.1,
-                maxWidth: '1040px',
-                marginBottom: '20px',
+                lineHeight: 1.15,
+                maxWidth: '700px',
+                marginBottom: '18px',
               }}
             >
               {p.title || 'Training Session'}
             </div>
             {details && <div style={{ display: 'flex', marginBottom: '24px' }}>{details}</div>}
             {instructorRow}
+          </div>
+          <div
+            style={{
+              width: '300px',
+              height: '300px',
+              flexShrink: 0,
+              borderRadius: '32px',
+              border: `4px solid ${GREEN}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              backgroundColor: '#374151',
+            }}
+          >
+            <img src={p.image} alt="" width={300} height={300} style={{ objectFit: 'cover' }} />
           </div>
         </div>
       </div>,

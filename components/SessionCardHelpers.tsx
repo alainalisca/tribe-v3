@@ -1,6 +1,7 @@
 import type { TranslationKey } from '@/lib/translations';
 import type { SessionWithRelations } from '@/lib/dal';
 import type { SessionGymSource } from '@/lib/sessionGym';
+import { athleteRoster } from '@/lib/sessionRoster';
 
 export interface SessionCardProps {
   session: SessionWithRelations;
@@ -103,10 +104,35 @@ export function isPastFeedGrace(
   return now.getTime() - getSessionEndsAt(session).getTime() > FEED_ENDED_GRACE_MINUTES * 60 * 1000;
 }
 
+/**
+ * ONE capacity source, and it is the database counter.
+ *
+ * `sessions.current_participants` is maintained by
+ * trg_sync_session_participant_count (migration 087) as
+ * `count(*) WHERE status = 'confirmed'`, recomputed from scratch on every
+ * session_participants write. Three reasons it wins over counting the roster
+ * array client-side:
+ *
+ *  1. THE ARRAY IS NOT ALWAYS THERE. fetchUpcomingSessions
+ *     (lib/dal/sessions.ts:415) returns every session with `participants: []`,
+ *     and that is the home feed -- the only production consumer of this
+ *     component. Counting the array there yields 0 for every session forever.
+ *  2. THE REST OF THE APP ALREADY DOES THIS. app/os/schedule reads
+ *     `current_participants ?? 0` as "enrolled"; postSession/RebookingStep
+ *     computes spotsLeft from it. SessionCard was the outlier.
+ *  3. It is one number rather than a length that depends on which query loaded
+ *     the page.
+ *
+ * Since migration 169 the counter IS the athlete count: the 23 rows in which a
+ * host was recorded as a participant of their own session are gone, and
+ * verify-migration-state.sql asserts none has come back. If one ever does the
+ * counter over-counts again by one, and that guard is what says so.
+ */
 export function computeSessionStatus(session: SessionWithRelations) {
   const isPast = getSessionEndsAt(session) < new Date();
 
-  const isFull = (session.current_participants ?? 0) >= session.max_participants;
+  const athleteCount = session.current_participants ?? 0;
+  const isFull = athleteCount >= session.max_participants;
 
   const isStartingSoon =
     !isPast &&
@@ -118,7 +144,15 @@ export function computeSessionStatus(session: SessionWithRelations) {
       return diffHours > 0 && diffHours <= 2;
     })();
 
-  const confirmedParticipants = session.participants?.filter((p) => p.status === 'confirmed') || [];
+  // The roster rows this particular query happened to load. For rendering
+  // AVATARS ONLY -- you cannot draw a face you do not have -- and never for
+  // counting, which is what athleteCount is for. Named to make the misuse
+  // awkward: it used to be called confirmedParticipants and was silently the
+  // source of spotsLeft, fillingFast and the rendered n/max.
+  //
+  // Still filtered through lib/sessionRoster so the host does not appear among
+  // the avatars, matching ParticipantList (see that module's header).
+  const rosterForAvatars = athleteRoster(session.participants, session.creator_id);
 
-  return { isPast, isFull, isStartingSoon, confirmedParticipants };
+  return { isPast, isFull, isStartingSoon, athleteCount, rosterForAvatars };
 }

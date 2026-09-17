@@ -1136,6 +1136,66 @@ select '168_revoke_users_location_from_anon',
             then 'applied' else 'MISSING' end
 union all
 
+select '169_delete_host_participant_rows',
+       -- The applied state is a property of the data, not of a schema object:
+       -- no session may record its own host as one of its participants. Asked
+       -- as a capability question ("does such a row exist") rather than by
+       -- looking for a migration name, so it also catches a row recreated after
+       -- the migration ran -- which would be a live regression of the join path,
+       -- not a missing migration, and is worth surfacing either way.
+       --
+       -- The counter is checked alongside, because the reason these rows matter
+       -- is that trg_sync_session_participant_count (087) turns them into
+       -- consumed capacity. A database with the rows gone but
+       -- current_participants still overstated is not in the state 169 leaves.
+       case when exists (
+              select 1
+              from public.session_participants sp
+              join public.sessions s on s.id = sp.session_id
+              where sp.user_id = s.creator_id
+                and sp.status = 'confirmed'
+                and sp.is_guest = false
+            )
+            then 'MISSING -- a session still records its own host as a participant, '
+                 'which consumes a capacity seat'
+            when exists (
+              select 1 from public.sessions s
+              where s.current_participants <> (
+                select count(*) from public.session_participants sp
+                where sp.session_id = s.id and sp.status = 'confirmed')
+            )
+            then 'MISSING -- current_participants disagrees with the confirmed-row '
+                 'count on at least one session'
+select '170_users_hide_from_attendee_lists',
+       -- Three facts, all required. Checking only that the column exists would
+       -- report 'applied' for exactly the 156 state: a column present and
+       -- ungranted, where the first query naming it fails 42501 and takes its
+       -- whole caller down.
+       --
+       -- The anon arm is asserted as an ABSENCE, because Supabase re-grants
+       -- anon by default on some object changes -- the default-grant trap that
+       -- has caught this project four times. An anon grant appearing here later
+       -- is a regression, not a missing migration, and should be just as loud.
+       --
+       -- has_column_privilege, never information_schema.column_privileges: that
+       -- view cannot see table-level grants and answers 'is there a row saying
+       -- so' rather than 'can this role do it'.
+       case when not exists (
+              select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'users'
+                and column_name = 'hide_from_attendee_lists'
+            )
+            then 'MISSING -- column absent'
+            when not has_column_privilege('authenticated', 'public.users', 'hide_from_attendee_lists', 'SELECT')
+            then 'MISSING -- column present but NOT granted to authenticated; '
+                 'every select naming it fails 42501 (the 156/157 failure)'
+            when has_column_privilege('anon', 'public.users', 'hide_from_attendee_lists', 'SELECT')
+            then 'MISSING -- anon can read it; 170 deliberately does not grant anon'
+            when not has_column_privilege('authenticated', 'public.users', 'hide_from_attendee_lists', 'UPDATE')
+            then 'MISSING -- authenticated cannot UPDATE it, so the settings toggle cannot save'
+            else 'applied' end
+union all
+
 -- The permanence property, as a standing check rather than a one-off probe.
 -- partners_public must NOT filter on status beyond excluding 'pending': the
 -- whole point of the view is that a bio link outlives the sponsorship. If a

@@ -4,6 +4,7 @@ import { UserX, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useLanguage } from '@/lib/LanguageContext';
+import { athleteRoster } from '@/lib/sessionRoster';
 
 interface CreatorInfo {
   id: string;
@@ -24,6 +25,14 @@ interface ParticipantInfo {
 
 interface ParticipantListProps {
   creator: CreatorInfo | null;
+  /**
+   * sessions.creator_id -- NOT creator?.id. The creator profile is a
+   * best-effort sub-fetch in fetchSessionWithDetails and can come back null
+   * (deleted profile, RLS, transient failure); the foreign key cannot. Keying
+   * the host filter off the profile fetch would put the host back in the
+   * athlete list on exactly the requests where the profile failed to load.
+   */
+  creatorId: string | null;
   participants: ParticipantInfo[];
   canKick: boolean;
   isCreator?: boolean;
@@ -35,6 +44,7 @@ interface ParticipantListProps {
 
 export default function ParticipantList({
   creator,
+  creatorId,
   participants,
   canKick,
   isCreator = false,
@@ -44,12 +54,24 @@ export default function ParticipantList({
   onConfirmPayment,
 }: ParticipantListProps) {
   const { t } = useLanguage();
-  if (!creator && participants.length === 0) return null;
+
+  // The host is rendered once, as the host, in the card below. A
+  // session_participants row for the host is a duplicate of sessions.creator_id
+  // (23 such rows exist live, all pre-2026-03-15) and must not render again as
+  // an ordinary athlete with an action column beside it.
+  //
+  // athleteRoster also applies the confirmed-status filter that SessionCard
+  // applies. This component used to render whatever it was handed; production
+  // only looked correct because fetchSessionWithDetails filters status at the
+  // database. See lib/sessionRoster.
+  const athletes = athleteRoster(participants, creatorId);
+
+  if (!creator && athletes.length === 0) return null;
 
   return (
     <div className="bg-white dark:bg-tribe-card rounded-xl p-6 shadow-lg">
       <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-4">
-        {t('participants')} ({participants.length + 1})
+        {t('participants')} ({athletes.length})
       </h2>
       <div className="grid grid-cols-1 gap-3">
         {creator && (
@@ -69,7 +91,7 @@ export default function ParticipantList({
           </div>
         )}
 
-        {participants.map((participant, index) => {
+        {athletes.map((participant, index) => {
           // A participant row with a null user_id is a guest. A row with a
           // user_id but no joined user object is a registered athlete whose
           // profile we couldn't join (deleted/RLS) — render the row without

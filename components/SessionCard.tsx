@@ -58,7 +58,7 @@ export default function SessionCard({
   const { language } = useLanguage();
   const tCard = useTranslations('sessionCard');
   const { currency: userCurrency } = useUserCurrency();
-  const { isPast, isFull, isStartingSoon, confirmedParticipants } = computeSessionStatus(session);
+  const { isPast, isFull, isStartingSoon, athleteCount, rosterForAvatars } = computeSessionStatus(session);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const router = useRouter();
 
@@ -93,9 +93,9 @@ export default function SessionCard({
 
   const sportName = translateSport(session.sport, language);
 
-  const spotsLeft = session.max_participants - confirmedParticipants.length;
+  const spotsLeft = session.max_participants - athleteCount;
   const isFree = !session.price_cents;
-  const fillingFast = confirmedParticipants.length >= session.max_participants * 0.7 && !isPast && !isFull;
+  const fillingFast = athleteCount >= session.max_participants * 0.7 && !isPast && !isFull;
 
   const heroImage = getSessionHeroImage(session.sport, session.photos, session.creator?.banner_url);
 
@@ -253,23 +253,42 @@ export default function SessionCard({
             </span>
           </div>
 
-          {/* Avatar stack + capacity. z-[2] so its profile links beat the overlay. */}
-          {confirmedParticipants.length > 0 && (
+          {/* Avatar stack + capacity. z-[2] so its profile links beat the overlay.
+
+              The ROW is gated on athleteCount, the counter -- not on the roster
+              array. Gating it on the array is why this whole row never rendered
+              on the home feed: fetchUpcomingSessions returns participants: [],
+              so the old `confirmedParticipants.length > 0` was false for every
+              session on the app's main surface.
+
+              The AVATARS are gated separately, on the array, because those we
+              genuinely cannot draw without the rows. So a card can show
+              "3/10 athletes" with no faces beside it. That is deliberate: the
+              number is the information and it is now correct everywhere, while
+              the faces appear on whichever surfaces load a roster. Populating
+              the roster on the feed path is a separate change
+              (fetchParticipantsForSessions already exists; app/matches uses
+              it). */}
+          {athleteCount > 0 && (
             <div className="relative z-[2] flex items-center justify-between pt-1 border-t border-theme">
-              <AvatarStack
-                participants={confirmedParticipants.map(
-                  (p): AvatarStackParticipant => ({
-                    user_id: p.user_id || p.user?.id || '',
-                    name: p.user?.name || 'U',
-                    avatar_url: p.user?.avatar_url ?? null,
-                  })
-                )}
-                max={4}
-                size="sm"
-                linkToProfile
-              />
+              {rosterForAvatars.length > 0 ? (
+                <AvatarStack
+                  participants={rosterForAvatars.map(
+                    (p): AvatarStackParticipant => ({
+                      user_id: p.user_id || p.user?.id || '',
+                      name: p.user?.name || 'U',
+                      avatar_url: p.user?.avatar_url ?? null,
+                    })
+                  )}
+                  max={4}
+                  size="sm"
+                  linkToProfile
+                />
+              ) : (
+                <span />
+              )}
               <span className="text-xs text-theme-tertiary">
-                {confirmedParticipants.length}/{session.max_participants} {tCard('athletes')}
+                {athleteCount}/{session.max_participants} {tCard('athletes')}
               </span>
             </div>
           )}
