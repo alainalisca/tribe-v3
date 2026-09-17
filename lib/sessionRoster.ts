@@ -16,6 +16,13 @@
  *   - SessionCard:     `confirmedParticipants.length` / max   (no host added)
  *   - ParticipantList: `participants.length + 1`              (host added)
  *
+ * SINCE 2026-09-17, SessionCard no longer counts a roster at all: every
+ * capacity number on the card comes from sessions.current_participants, because
+ * the array is empty on the home feed's query. athleteRoster still decides
+ * WHICH AVATARS it draws, and still decides ParticipantList's count -- so this
+ * module is now about who is listed, and the counter is about how many seats
+ * are taken. See computeSessionStatus's header for that split.
+ *
  * so a session with three athletes read "3/10" on the feed card and
  * "Atletas (4)" on its own detail page. Neither surface was reading a
  * different roster; they were applying different arithmetic to the same one.
