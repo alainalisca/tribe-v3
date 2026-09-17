@@ -13,6 +13,7 @@ import { requestUserLocation } from '@/lib/location';
 import { calculateDistance, formatDistance } from '@/lib/distance';
 import { type InstructorProfile } from '@/lib/dal/instructors';
 import { sportTranslations } from '@/lib/translations';
+import { SPORTS_LIST } from '@/lib/sports';
 import GymsAndStudiosSection from '@/components/instructors/GymsAndStudiosSection';
 import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 
@@ -38,21 +39,13 @@ import type { GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 type SortOption = 'most_sessions' | 'highest_rated' | 'newest' | 'nearest';
 type ViewMode = 'list' | 'map';
 
-const SPORTS_LIST = [
-  'Running',
-  'Cycling',
-  'CrossFit',
-  'HYROX',
-  'Yoga',
-  'Boxing',
-  'Swimming',
-  'Weightlifting',
-  'Tennis',
-  'Hiking',
-  'Soccer',
-  'Basketball',
-  'Dance',
-];
+/**
+ * The sport filter chips. Drawn from the canonical SPORTS_LIST so this row can
+ * never drift from what an instructor is offered when they pick their sports.
+ * `Other` is a real stored value but meaningless as a filter, so it is hidden
+ * here the same way TrainingPreferencesForm hides it.
+ */
+const FILTER_SPORTS = SPORTS_LIST.filter((sport) => sport !== 'Other');
 
 const getTranslations = (language: 'en' | 'es') => ({
   title: language === 'es' ? 'Descubre Instructores' : 'Discover Instructors',
@@ -110,12 +103,13 @@ export default function InstructorsPageClient({ initialInstructors, gyms }: Inst
           ? calculateDistance(userLat, userLng, inst.location_lat, inst.location_lng)
           : null,
     }));
-    if (selectedSport) list = list.filter((i) => i.specialties.includes(selectedSport));
+    if (selectedSport) list = list.filter((i) => i.sports.includes(selectedSport));
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
         (i) =>
           i.name?.toLowerCase().includes(q) ||
+          i.sports.some((s) => s.toLowerCase().includes(q)) ||
           i.specialties.some((s) => s.toLowerCase().includes(q)) ||
           i.location?.toLowerCase().includes(q)
       );
@@ -281,7 +275,7 @@ export default function InstructorsPageClient({ initialInstructors, gyms }: Inst
           >
             {t.all}
           </button>
-          {SPORTS_LIST.map((sport) => (
+          {FILTER_SPORTS.map((sport) => (
             <button
               key={sport}
               onClick={() => setSelectedSport(selectedSport === sport ? null : sport)}

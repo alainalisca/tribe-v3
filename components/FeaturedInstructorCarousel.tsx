@@ -19,6 +19,7 @@ function toProfile(row: Record<string, unknown>): InstructorProfile {
     avatar_url: row.avatar_url as string | null,
     tagline: (row.storefront_tagline as string) ?? null,
     location: (row.location as string) ?? null,
+    sports: (row.sports as string[]) || [],
     specialties: (row.specialties as string[]) || [],
     verified: (row.is_verified_instructor as boolean) ?? false,
     average_rating: (row.average_rating as number) ?? 0,
@@ -43,7 +44,7 @@ function initials(name: string | null): string {
 }
 
 const SELECT_COLS =
-  'id, name, avatar_url, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, location_lat, location_lng, years_experience, created_at';
+  'id, name, avatar_url, sports, specialties, average_rating, total_reviews, total_sessions_hosted, storefront_tagline, is_verified_instructor, location, location_lat, location_lng, years_experience, created_at';
 
 export default function FeaturedInstructorCarousel({ language }: Props) {
   const supabase = createClient();

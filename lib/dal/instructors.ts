@@ -16,6 +16,9 @@ export interface InstructorProfile {
   avatar_url: string | null;
   tagline: string | null;
   location: string | null;
+  /** Canonical sports from lib/sports.ts. What the sport filter and search match on. */
+  sports: string[];
+  /** Free text the instructor writes about themselves. Searchable, never filtered on. */
   specialties: string[];
   verified: boolean;
   average_rating: number;
@@ -52,13 +55,16 @@ export async function fetchInstructors(
       .from('users_discoverable')
       .select(
         // bio + instructor_bio are needed for the T-PROF1 completeness filter.
-        'id, name, avatar_url, photos, storefront_tagline, location, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience, bio, instructor_bio'
+        'id, name, avatar_url, photos, storefront_tagline, location, sports, specialties, is_verified_instructor, average_rating, total_reviews, total_sessions_hosted, is_instructor, created_at, location_lat, location_lng, years_experience, bio, instructor_bio'
       )
       .eq('is_instructor', true);
 
-    // Filter by sport in specialties array
+    // Filter on `sports`, the canonical vocabulary (lib/sports.ts), NOT on
+    // `specialties`, which is free text an instructor types. Filtering on free
+    // text meant a chip only matched when the instructor happened to spell the
+    // sport exactly the way the chip did.
     if (options?.sport) {
-      query = query.contains('specialties', [options.sport]);
+      query = query.contains('sports', [options.sport]);
     }
 
     // Search by name
@@ -121,6 +127,7 @@ export async function fetchInstructors(
         avatar_url: resolveAvatarUrl(row.avatar_url, row.photos as string[] | null),
         tagline: row.storefront_tagline ?? null,
         location: row.location ?? null,
+        sports: (row.sports as string[]) || [],
         specialties: (row.specialties as string[]) || [],
         verified: row.is_verified_instructor ?? false,
         average_rating: row.average_rating ?? 0,
