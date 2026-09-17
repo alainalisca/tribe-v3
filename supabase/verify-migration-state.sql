@@ -1196,6 +1196,54 @@ select '170_users_hide_from_attendee_lists',
             else 'applied' end
 union all
 
+select '171_backfill_instructor_sports',
+       -- Like 169, the applied state is a property of the DATA, not of a schema
+       -- object, so it is asked as a data question rather than by looking for a
+       -- migration name.
+       --
+       -- Phrased as "no target row still needs the backfill", which is correct
+       -- in both worlds: on production the three rows exist and must carry
+       -- their canonical arrays, and on a database rebuilt from these
+       -- migrations the rows do not exist at all and there is nothing to
+       -- backfill. A check written as "all three rows have sports" would report
+       -- MISSING forever on any fresh rebuild.
+       --
+       -- coalesce(array_length(...), 0) = 0 rather than `sports = '{}'`:
+       -- BullBox's column was NULL where the other two were empty arrays, and
+       -- an equality test against a NULL array yields NULL, not false, so the
+       -- obvious predicate would silently match nothing and report 'applied'
+       -- on a database that had never been backfilled.
+       case when exists (
+              select 1 from public.users u
+              where u.id in (
+                      '307cf7fa-a12e-468d-83f5-1a1cb82226e7'::uuid,   -- Salomon Tabares Adarve
+                      '7c4e29a2-7689-4e83-8787-113ebd2c6a42'::uuid,   -- BullBox (instructor row)
+                      '804f2c28-9851-4f7f-95ce-4bf5ce85caca'::uuid    -- Dennis
+                    )
+                and coalesce(array_length(u.sports, 1), 0) = 0
+            )
+            then 'MISSING -- an instructor row named in 171 still has no sports array, '
+                 'so the sport filter on /instructors cannot reach them'
+            else 'applied' end
+union all
+
+-- Walter White is the control 171 deliberately did NOT touch, asserted here so
+-- a later widening of that migration's predicate shows up as a regression
+-- rather than as a tidier-looking database. His only offering is Meditation,
+-- which has no canonical sport, so he is complete on free text alone (the
+-- T-PROF1 rule widened by Issue 1) and must gain no sports value.
+select 'GUARD_171_left_its_control_alone',
+       case when exists (
+              select 1 from public.users u
+              where u.id = '673834b4-d9be-4782-86c9-ff27376233a7'::uuid
+                and coalesce(array_length(u.sports, 1), 0) > 0
+            )
+            then 'MISSING -- Walter White has gained a sports array; 171 mapped a '
+                 'row it was scoped never to touch'
+            else 'applied' end
+
+union all
+
 -- The permanence property, as a standing check rather than a one-off probe.
 -- partners_public must NOT filter on status beyond excluding 'pending': the
 -- whole point of the view is that a bio link outlives the sponsorship. If a
