@@ -80,3 +80,33 @@
 -- Rehearsal: supabase/rehearsals/168_revoke_users_location_from_anon_REHEARSAL.sql
 
 REVOKE SELECT (location) ON public.users FROM anon;
+
+-- ── Visible confirmation ───────────────────────────────────────────────────
+-- A bare REVOKE reports only "success, no rows returned" in the Supabase SQL
+-- editor, which is also exactly what a wrong-target run prints. That was the
+-- lesson from applying 169 by hand: never hand over a migration whose only
+-- confirmation is silence. This returns the end state as rows -- read it.
+--
+-- pub_cols is a MATERIALIZED CTE, and both of those words are load-bearing.
+-- 'public.users'::regclass resolves to exactly ONE table, so the auth.users
+-- columns that broke the first rehearsal cannot appear. MATERIALIZED forces the
+-- CTE to be evaluated before has_column_privilege sees anything, because SQL's
+-- AND does not short-circuit and the planner would otherwise be free to hand the
+-- function a DROP COLUMN tombstone, whose attname is mangled and raises 42703.
+WITH pub_cols AS MATERIALIZED (
+  SELECT a.attname
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.users'::regclass
+    AND a.attnum > 0
+    AND NOT a.attisdropped
+)
+SELECT
+  has_column_privilege('anon', 'public.users', 'location', 'SELECT')
+    AS anon_location_must_be_false,
+  has_column_privilege('authenticated', 'public.users', 'location', 'SELECT')
+    AS authenticated_location_must_be_true,
+  (SELECT count(*) FROM pub_cols
+    WHERE has_column_privilege('anon', 'public.users', attname, 'SELECT'))
+    AS anon_readable_columns,
+  (SELECT count(*) FROM pub_cols) AS total_columns,
+  (SELECT count(*) FROM public.users) AS user_rows;
