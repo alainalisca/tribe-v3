@@ -41,6 +41,17 @@
 -- impersonation -- because if that comes back NULL the RLS policy simply matches
 -- no rows, which is a SILENT zero-row update, not an error at all.
 --
+-- THE RULE BOTH PART A AND PART C HAD TO LEARN, stated once: a rehearsal's
+-- recording mechanism must outlive the thing it observes. Part C wrote its
+-- results while impersonating a role that could not write them; Part A wrote its
+-- result inside a subtransaction it then deliberately threw away. Both lost the
+-- answer in the act of recording it. Findings are captured into plpgsql
+-- variables and written to reh_probe only once the role is restored and the
+-- subtransaction has unwound. Every probe-backed check below also COALESCEs a
+-- missing row to '(probe row missing)', so "the check could not report" is
+-- visibly different from "the check reported the wrong value" -- a NULL reads as
+-- a FAIL and hides which of the two happened.
+--
 -- RUN IT IN THE SUPABASE SQL EDITOR AS ONE SCRIPT. The output is a PASS/FAIL
 -- table; do not run the statements piecemeal.
 
@@ -62,9 +73,23 @@ CREATE TEMP TABLE reh_probe (name text, result text) ON COMMIT DROP;
 -- The column added with no grant. The inner BEGIN ... EXCEPTION is a
 -- subtransaction, so everything it does -- the ALTER included -- is rolled back
 -- when it finishes, and Part B starts from a table without the column.
+-- THE RECORDING RULE, same one Part C had to learn: the finding is captured into
+-- a plpgsql VARIABLE declared outside the subtransaction, and written to
+-- reh_probe only after that subtransaction has unwound. PostgreSQL's documented
+-- behaviour makes this work -- when an error is caught by an EXCEPTION clause,
+-- "the local variables of the PL/pgSQL function remain as they were when the
+-- error occurred, but all persistent database state within the block is rolled
+-- back". An INSERT is persistent database state. A variable is not.
+--
+-- The first version wrote the finding INSIDE the block and then deliberately
+-- unwound it, so the probe row vanished with the ALTER and the check read NULL.
+-- That is worse than having no check at all: NULL renders as a FAIL, so it looks
+-- like the migration misbehaved while actually saying nothing about it either
+-- way.
 DO $$
 DECLARE
   v_authed_can_read boolean;
+  v_result          text := '(not reached -- the ALTER never ran)';
 BEGIN
   BEGIN
     EXECUTE 'ALTER TABLE public.users ADD COLUMN hide_from_attendee_lists boolean NOT NULL DEFAULT false';
@@ -72,22 +97,30 @@ BEGIN
     v_authed_can_read :=
       has_column_privilege('authenticated','public.users','hide_from_attendee_lists','SELECT');
 
-    INSERT INTO reh_probe VALUES (
-      'ungranted_column_is_unreadable',
-      CASE WHEN v_authed_can_read THEN 'readable -- 066 column-level grants are NOT in force'
-           ELSE 'unreadable' END
-    );
+    v_result := CASE WHEN v_authed_can_read
+                     THEN 'readable -- 066 column-level grants are NOT in force'
+                     ELSE 'unreadable' END;
 
     -- Force the subtransaction to unwind so the column disappears again.
     RAISE EXCEPTION 'rehearsal: rolling back part A';
   EXCEPTION WHEN others THEN
-    NULL;
+    -- Our own raise is the expected exit. Anything else is a real failure of
+    -- the ALTER or the privilege probe, and must be surfaced rather than
+    -- swallowed -- otherwise this handler becomes the next thing that hides a
+    -- cause.
+    IF SQLERRM <> 'rehearsal: rolling back part A' THEN
+      v_result := 'UNEXPECTED ' || SQLSTATE || ': ' || SQLERRM;
+    END IF;
   END;
+
+  -- Outside the unwound subtransaction, so this survives.
+  INSERT INTO reh_probe VALUES ('ungranted_column_is_unreadable', v_result);
 END $$;
 
--- The INSERT above was rolled back with the subtransaction, so re-record the
--- finding here, outside it, by asking the same question a second way: is the
--- column gone, i.e. did part A really unwind?
+-- An independent second question, asked from out here: did Part A really unwind?
+-- The check above reports what the privilege WAS while the ungranted column
+-- existed; this one reports that the column is gone again, so Part B starts from
+-- a clean table. Two separate facts, deliberately not inferred from each other.
 INSERT INTO reh_probe
 SELECT 'part_a_left_no_column',
        CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns
@@ -219,7 +252,7 @@ WITH checks AS (
   -- Measured straight after the ALTER, before Part C writes anything, so this
   -- asks only "did the DEFAULT reach every row".
   UNION ALL SELECT 'default_reached_every_row',
-         (SELECT result FROM reh_probe WHERE name='rows_not_false_after_alter'), '0'
+         COALESCE((SELECT result FROM reh_probe WHERE name='rows_not_false_after_alter'), '(probe row missing)'), '0'
   -- And afterwards exactly one row is true: the one Part C flipped.
   UNION ALL SELECT 'exactly_one_row_true_after_part_c',
          (SELECT count(*)::text FROM public.users WHERE hide_from_attendee_lists), '1'
@@ -232,28 +265,28 @@ WITH checks AS (
          has_column_privilege('authenticated','public.users','hide_from_attendee_lists','UPDATE')::text, 'true'
   -- The failure the grant prevents, actually reproduced in part A.
   UNION ALL SELECT 'ungranted_column_was_unreadable',
-         (SELECT result FROM reh_probe WHERE name='ungranted_column_is_unreadable'), 'unreadable'
+         COALESCE((SELECT result FROM reh_probe WHERE name='ungranted_column_is_unreadable'), '(probe row missing)'), 'unreadable'
   UNION ALL SELECT 'part_a_rolled_back_cleanly',
-         (SELECT result FROM reh_probe WHERE name='part_a_left_no_column'), 'clean'
+         COALESCE((SELECT result FROM reh_probe WHERE name='part_a_left_no_column'), '(probe row missing)'), 'clean'
   -- The toggle genuinely persists for a real user under RLS.
   UNION ALL SELECT 'self_update_wrote_one_row',
-         (SELECT result FROM reh_probe WHERE name='self_update_rows'), '1'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_update_rows'), '(probe row missing)'), '1'
   UNION ALL SELECT 'self_update_value_persisted',
-         (SELECT result FROM reh_probe WHERE name='self_update_value_read_back'), 'true'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_update_value_read_back'), '(probe row missing)'), 'true'
   -- THE DIAGNOSTICS. These carry the answer when the three checks above fail,
   -- instead of leaving a bare "0 rows" to be guessed at. auth.uid() resolving to
   -- NULL is a silent zero-row update; a real SQLSTATE is a denial. They are
   -- different problems with different fixes.
   UNION ALL SELECT 'self_update_auth_uid_resolved',
-         (SELECT result FROM reh_probe WHERE name='self_update_auth_uid'), 'matches'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_update_auth_uid'), '(probe row missing)'), 'matches'
   UNION ALL SELECT 'self_update_raised_nothing',
-         (SELECT result FROM reh_probe WHERE name='self_update_sqlstate'), 'ok'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_update_sqlstate'), '(probe row missing)'), 'ok'
   UNION ALL SELECT 'self_update_error_text',
-         (SELECT result FROM reh_probe WHERE name='self_update_sqlerrm'), '(none)'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_update_sqlerrm'), '(probe row missing)'), '(none)'
   UNION ALL SELECT 'self_read_raised_nothing',
-         (SELECT result FROM reh_probe WHERE name='self_read_sqlstate'), 'ok'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_read_sqlstate'), '(probe row missing)'), 'ok'
   UNION ALL SELECT 'self_read_error_text',
-         (SELECT result FROM reh_probe WHERE name='self_read_sqlerrm'), '(none)'
+         COALESCE((SELECT result FROM reh_probe WHERE name='self_read_sqlerrm'), '(probe row missing)'), '(none)'
   -- Nothing else moved.
   UNION ALL SELECT 'user_row_count_unchanged',
          (SELECT count(*)::text FROM public.users), (SELECT user_rows::text FROM reh_before)
