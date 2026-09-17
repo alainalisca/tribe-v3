@@ -12,7 +12,7 @@ import PageTransition from '@/components/PageTransition';
 import ReducedMotionProvider from '@/components/ReducedMotionProvider';
 import { ConfirmProvider } from '@/components/ConfirmProvider';
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin', 'latin-ext'],
@@ -22,6 +22,31 @@ const jakartaSans = Plus_Jakarta_Sans({
 });
 
 // Title and description mirror ACTIVE_CITY in lib/city-config.ts (Medellín)
+/**
+ * T-AUD6. This MUST be the Next viewport export, never a hand-written
+ * <meta name="viewport"> in <head>.
+ *
+ * WHY: a raw tag does not suppress Next's default. The App Router emits its own
+ * `width=device-width, initial-scale=1` whenever this export is absent, so the
+ * hand-written tag produced TWO viewport metas in production -- measured on the
+ * deployed page, ours at byte offset 148 and Next's at 237 -- and the second one
+ * carries no viewport-fit.
+ *
+ * WHY THAT MATTERS MORE THAN IT SOUNDS: without viewport-fit=cover every
+ * env(safe-area-inset-*) resolves to 0. This app has 66 fixed/sticky headers
+ * that handle the safe area correctly, and all of them fall back to their 44px
+ * floor -- which is LESS than an iPhone notch inset. So headers rendering under
+ * the status bar is not missing padding, it is padding computing against a zero
+ * inset. The rules are right; the environment they read was wrong.
+ *
+ * lib/__tests__/viewportMeta.test.ts asserts exactly one viewport source exists.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
+
 export const metadata: Metadata = {
   title: 'Tribe — Never Train Alone in Medellín',
   description:
@@ -82,7 +107,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{var l=localStorage.getItem('language');if(l==='en'||l==='es'){document.documentElement.lang=l;}}catch(e){}})();`,
           }}
         />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
