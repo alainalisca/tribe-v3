@@ -22,10 +22,28 @@ const { mockGetUser, mockMaybeSingle, mockUpdateUser } = vi.hoisted(() => ({
   mockUpdateUser: vi.fn(),
 }));
 
+// The table and column are RECORDED, not just accepted. The mock previously
+// returned its fixed row whatever the query asked for, so changing
+// .select('preferred_language') to .select('id') broke nothing -- proved by
+// mutation on 2026-09-17. That matters beyond tidiness: public.users is under
+// column-level SELECT grants (066), and PostgREST rejects the WHOLE request when
+// a select names an ungranted column, so a wrong column name here is a 401 that
+// takes the whole provider down, not a missing field.
+const mockFrom = vi.fn();
+const mockSelect = vi.fn();
+
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: { getUser: mockGetUser },
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mockMaybeSingle }) }) }),
+    from: (table: string) => {
+      mockFrom(table);
+      return {
+        select: (cols: string) => {
+          mockSelect(cols);
+          return { eq: () => ({ maybeSingle: mockMaybeSingle }) };
+        },
+      };
+    },
   }),
 }));
 vi.mock('@/lib/dal', () => ({ updateUser: mockUpdateUser }));
@@ -50,6 +68,8 @@ function setBrowserLanguages(langs: string[]) {
 }
 
 beforeEach(() => {
+  mockFrom.mockClear();
+  mockSelect.mockClear();
   vi.clearAllMocks();
   localStorage.clear();
   setBrowserLanguages(['en-US']);
@@ -119,6 +139,14 @@ describe('priority 2: the stored account preference', () => {
     renderProvider();
 
     await waitFor(() => expect(mockGetUser).toHaveBeenCalled());
+    // mockFrom, not just mockMaybeSingle. Asserting only the LAST call in the
+    // chain cannot tell an early return from a crash: deleting the
+    // `if (!data.user) return null` guard makes the code call .from() and
+    // .select() and then throw on `undefined.id`, so maybeSingle is still never
+    // reached and the old assertion still passed. Proved by mutation
+    // 2026-09-17. from() is the earliest observable point, so it is the one
+    // that distinguishes "did not query" from "query blew up".
+    expect(mockFrom).not.toHaveBeenCalled();
     expect(mockMaybeSingle).not.toHaveBeenCalled();
   });
 });
@@ -208,5 +236,25 @@ describe('document language', () => {
     renderProvider();
 
     await waitFor(() => expect(document.documentElement.lang).toBe('es'));
+  });
+});
+
+describe('the profile read itself', () => {
+  it('asks public.users for preferred_language by name', async () => {
+    // Without this, the column name is unpinned: the mock answers any select,
+    // so swapping preferred_language for another column passes every other test
+    // in this file while the feature silently stops working in production.
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockMaybeSingle.mockResolvedValue({ data: { preferred_language: 'es' } });
+
+    render(
+      <LanguageProvider>
+        <Probe />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => expect(mockSelect).toHaveBeenCalled());
+    expect(mockFrom).toHaveBeenCalledWith('users');
+    expect(mockSelect).toHaveBeenCalledWith('preferred_language');
   });
 });
