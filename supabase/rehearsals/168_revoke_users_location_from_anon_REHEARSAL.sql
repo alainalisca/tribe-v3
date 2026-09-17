@@ -44,8 +44,36 @@
 -- Supabase default-grant trap has re-granted anon on object changes four times
 -- in this project's history.
 --
--- PREMISE RE-MEASURED AGAINST PRODUCTION 2026-09-17T11:22Z, not carried over
--- from when the file was written:
+-- WHY pg_attribute + regclass, AND NOT information_schema.columns. The first
+-- version of this file counted anon-readable columns with
+--
+--   SELECT count(*) FROM information_schema.columns c
+--    WHERE c.table_schema = 'public' AND c.table_name = 'users'
+--      AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT')
+--
+-- and it failed with 42703: column "instance_id" of relation "users" does not
+-- exist. instance_id is a column of auth.users, not public.users.
+--
+-- The schema filter is correct and was not the problem. **SQL's AND does not
+-- short-circuit**, and the planner is free to evaluate the has_column_privilege
+-- predicate BEFORE the two filter predicates -- it is STABLE and cheap, so it
+-- gets hoisted -- at which point it is handed a column name from auth.users and
+-- raises. The same trap migration 159 documents for RLS policies: Postgres
+-- evaluates the whole expression, and OR does not short-circuit either.
+--
+-- So the fix is not a tighter filter, which would still depend on evaluation
+-- order. It is to make the wrong rows UNREACHABLE: 'public.users'::regclass
+-- resolves to exactly one table, so every row of pub_cols is by construction a
+-- live column of it, whatever order the planner picks. attnum > 0 drops system
+-- columns and NOT attisdropped drops the tombstones left by DROP COLUMN, whose
+-- attname is mangled and would raise the same way. Materialising pub_cols as a
+-- temp table is the fence: the function can only ever see rows that already
+-- exist in it.
+--
+-- PREMISE RE-MEASURED AGAINST PRODUCTION 2026-09-17T11:33Z with a method that
+-- CANNOT have the same fault -- probing each column through PostgREST, which
+-- exposes only the public schema -- and confirmed free of auth.users signature
+-- columns (instance_id, aud, encrypted_password, raw_app_meta_data, ...):
 --   public.users columns ....................................... 101
 --   anon-readable ............................................... 84
 --   denied to anon .............................................. 17
@@ -62,18 +90,30 @@
 BEGIN;
 
 -- ── SNAPSHOT ───────────────────────────────────────────────────────────────
+-- Every column of public.users, and NOTHING else. See the header for why this
+-- is pg_attribute + regclass inside a MATERIALIZED fence rather than the obvious
+-- information_schema query.
+CREATE TEMP TABLE pub_cols ON COMMIT DROP AS
+SELECT a.attname
+FROM pg_attribute a
+WHERE a.attrelid = 'public.users'::regclass
+  AND a.attnum > 0            -- exclude system columns (ctid, xmin, ...)
+  AND NOT a.attisdropped;     -- dropped columns leave tombstones whose attname
+                              -- is '........pg.dropped.N........', which
+                              -- has_column_privilege would also reject
+
 CREATE TEMP TABLE before_state ON COMMIT DROP AS
 SELECT has_column_privilege('anon', 'public.users', 'location', 'SELECT') AS anon_location,
        has_column_privilege('authenticated', 'public.users', 'location', 'SELECT') AS authed_location,
        (SELECT count(*) FROM public.users) AS n_rows,
        -- How many columns anon can read AT ALL, so the revoke can be shown to be
-       -- surgical rather than merely effective. Measured 84 on 2026-09-17; the
-       -- check asserts the DELTA, not the absolute, so it survives the table
-       -- gaining columns.
-       (SELECT count(*) FROM information_schema.columns c
-         WHERE c.table_schema = 'public' AND c.table_name = 'users'
-           AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT'))
-         AS anon_readable_cols;
+       -- surgical rather than merely effective. Measured 84 of 101 on
+       -- 2026-09-17; the check asserts the DELTA, not the absolute, so it
+       -- survives the table gaining columns.
+       (SELECT count(*) FROM pub_cols
+         WHERE has_column_privilege('anon', 'public.users', attname, 'SELECT'))
+         AS anon_readable_cols,
+       (SELECT count(*) FROM pub_cols) AS total_cols;
 
 -- ============================================================================
 -- APPLY 168 VERBATIM
@@ -201,10 +241,16 @@ WITH checks(check_name, actual, expected) AS (
   -- A wider revoke would still pass every check above.
   UNION ALL SELECT 'anon_lost_exactly_one_column',
          ((SELECT anon_readable_cols FROM before_state)
-          - (SELECT count(*) FROM information_schema.columns c
-              WHERE c.table_schema = 'public' AND c.table_name = 'users'
-                AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT')))::text,
+          - (SELECT count(*) FROM pub_cols
+              WHERE has_column_privilege('anon', 'public.users', attname, 'SELECT')))::text,
          '1'
+  -- The instrument itself, asserted. If pub_cols ever stops being exactly the
+  -- public.users columns, the check above silently measures the wrong set --
+  -- which is how the first version of this file failed.
+  UNION ALL SELECT 'pub_cols_is_exactly_public_users',
+         (SELECT total_cols::text FROM before_state),
+         (SELECT count(*)::text FROM pg_attribute
+           WHERE attrelid = 'public.users'::regclass AND attnum > 0 AND NOT attisdropped)
 
   -- 170 added this column and deliberately did NOT grant it to anon. Supabase
   -- re-grants anon by default on some object changes -- four times in this
