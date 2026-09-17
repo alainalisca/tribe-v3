@@ -1,15 +1,27 @@
 -- 168_revoke_users_location_from_anon.sql
 --
 -- ⚠ DO NOT APPLY UNTIL GATE 0 IS DEPLOYED AND VERIFIED IN PRODUCTION.
---   Gate 0 = commit d272ccf, "fix(share): stop reading users.location as anon
---   on /i/[id]". See the ORDERING section below. This is the one migration in
---   this sequence that can blank a live public page if it runs early.
+--   Gate 0 = d272ccf, "fix(share): stop reading users.location as anon on
+--   /i/[id]", merged as 9bd31da on 2026-09-15. Both are on main; cite whichever,
+--   they are the work commit and its merge. See the ORDERING section below.
+--   This is the one migration in this sequence that can blank a live public page
+--   if it runs early.
+--
+--   RE-VERIFIED ON MAIN 2026-09-17, because 33 commits landed after it merged:
+--   InstructorShareClient.tsx selects 'id, name, avatar_url, bio,
+--   instructor_bio, sports, average_rating' from users -- no location -- the
+--   InstructorProfile interface omits the field with a comment saying why, and
+--   no instructor city is rendered. The `location` that does appear in that file
+--   belongs to UpcomingSession and comes from sessions_public: that is the
+--   SESSION's location, which is public by design.
 --
 -- EXPOSURE (measured live, column by column, against the deployed anon key):
 -- public.users has NO RLS SELECT policy at all. Access is governed purely by
 -- column grants, so every ROW is readable and only COLUMNS are restricted. A
 -- logged-out caller holding the public anon key reads id, name, avatar_url,
--- bio, location, sports, created_at and is_instructor for all 104 users.
+-- bio, location, sports, created_at and is_instructor for every user. 107 rows
+-- today; 104 when this was written, which is why the count is stated as a
+-- measurement with a date rather than baked into the prose.
 --
 -- users.location is the one in that set that is not obviously public. It is
 -- free text, and it routinely holds the BARRIO rather than the city: the
