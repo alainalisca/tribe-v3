@@ -29,12 +29,28 @@
 --
 -- SERVICE ROLE / SERVER SIDE: auth.uid() is NULL when there is no end-user JWT
 -- (service_role connections, server jobs). Under this WHERE that yields zero
--- rows. That is acceptable here because NOTHING server side reads this view: the
--- only readers are browser-client, end-user calls (fetchSessionWithDetails,
+-- rows -- silently, with no error. A service-role caller does not get denied, it
+-- gets a confident empty answer, which is the more dangerous failure.
+--
+-- Readers, all browser-client / end-user calls: fetchSessionWithDetails,
 -- fetchConfirmedParticipantsWithUsers, fetchParticipantsForSessions,
--- fetchPendingParticipantsForSession(s)). A future service-role job that needs
--- the full roster must read the base table directly (service_role bypasses RLS)
--- or a dedicated SECURITY DEFINER RPC, NOT this view.
+-- fetchPendingParticipantsForSession(s), and since 2026-09-17
+-- fetchCoAthleteTiers (T-ATH1). A service-role job that needs the full roster
+-- must read the base table directly (service_role bypasses RLS) or a dedicated
+-- SECURITY DEFINER RPC, NOT this view.
+--
+-- UPDATED 2026-09-17. This header used to say "NOTHING server side reads this
+-- view". fetchCoAthleteTiers may run from a cookie-backed server client, which
+-- DOES carry the end-user JWT and so does resolve auth.uid() correctly -- the
+-- rule that matters is not browser-vs-server, it is whether the caller carries a
+-- user JWT. Stated precisely because the old wording would have read as a
+-- prohibition on a call that is in fact safe.
+--
+-- ONE CONSEQUENCE WORTH NAMING FOR TIER WORK: the is_app_admin() branch below
+-- means an ADMIN reading this view sees every roster row in the app. A tier
+-- computed straight from those rows would make every stranger a co-athlete, on
+-- the single admin account among 107 users. computeCoAthleteTiers therefore
+-- drops any session the viewer is not actually a member of.
 --
 -- ADMIN NOTE (flagged deviation from the literal "host + confirmed participants
 -- only" decision): app admins moderate any session across the app today
