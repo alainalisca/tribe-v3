@@ -155,6 +155,10 @@ The fix in both cases was to assert the thing that actually differs: **that the 
 
 **The habit that catches all four: after a check passes, break the code it guards and confirm it fails, naming the test.** Every one of these survived review by a careful reader and died to a one-line mutation.
 
+**It is not only tests. The same class shows up in any instrument that watches something.** A deploy monitor built the same day ran `vercel ls --yes --prod 2>/dev/null` and polled the result for `Ready` or `Building`. It never saw either: **`vercel ls` writes the status table to stderr and only bare URLs to stdout**, so `2>/dev/null` discarded the exact column being read. The monitor could not observe the thing it existed to observe — structurally, the same failure as the rehearsal probe that vanished inside its own rollback.
+
+The first version had no guard and looped silently for fifteen minutes, which is indistinguishable from "still building". The second reported `state unreadable` and stopped, and **that loud failure is what located the cause.** So: when a watcher reads a field, make "the field could not be read" a distinct, noisy outcome — never a value that happens to look like waiting. A silent watcher and a working one look identical for exactly as long as it takes to matter.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
