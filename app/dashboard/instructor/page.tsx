@@ -272,6 +272,7 @@ export default function InstructorDashboardPage() {
                 language={language as 'en' | 'es'}
                 initialBio={profile.instructor_bio || profile.bio || ''}
                 initialTagline={profile.storefront_tagline || ''}
+                initialSports={(profile.sports as string[]) || []}
                 initialSpecialties={(profile.specialties as string[]) || []}
                 initialBannerUrl={profile.storefront_banner_url || ''}
                 initialVideoUrl={profile.storefront_video_url ?? null}

@@ -9,12 +9,21 @@ import { createClient } from '@/lib/supabase/client';
 import { updateStorefrontProfile } from '@/lib/dal/instructorDashboard';
 import { showSuccess, showError } from '@/lib/toast';
 import VideoUploadSection from '@/components/dashboard/VideoUploadSection';
+import { SPORTS_LIST, getSportTranslation } from '@/lib/sports';
+
+/**
+ * The sport chips, from the canonical SPORTS_LIST. `Other` is excluded: it is a
+ * real stored value but meaningless as a filter, and an instructor who does
+ * something outside the list has the specialties field for exactly that.
+ */
+const SPORT_CHOICES = SPORTS_LIST.filter((sport) => sport !== 'Other');
 
 interface StorefrontEditorProps {
   userId: string;
   language: 'en' | 'es';
   initialBio: string;
   initialTagline: string;
+  initialSports: string[];
   initialSpecialties: string[];
   initialBannerUrl: string;
   initialVideoUrl?: string | null;
@@ -25,6 +34,7 @@ export default function StorefrontEditor({
   language,
   initialBio,
   initialTagline,
+  initialSports,
   initialSpecialties,
   initialBannerUrl,
   initialVideoUrl = null,
@@ -33,6 +43,7 @@ export default function StorefrontEditor({
 
   const [bio, setBio] = useState(initialBio);
   const [tagline, setTagline] = useState(initialTagline);
+  const [sports, setSports] = useState<string[]>(initialSports);
   const [specialties, setSpecialties] = useState(initialSpecialties.join(', '));
   const [bannerUrl, setBannerUrl] = useState(initialBannerUrl);
   const [saving, setSaving] = useState(false);
@@ -44,8 +55,10 @@ export default function StorefrontEditor({
     bioPlaceholder: language === 'es' ? 'Describe tu experiencia...' : 'Describe your experience...',
     tagline: language === 'es' ? 'Eslogan' : 'Tagline',
     taglinePlaceholder: language === 'es' ? 'Frase corta que te define' : 'Short phrase that defines you',
+    sports: language === 'es' ? 'Deportes' : 'Sports',
+    sportsHint: language === 'es' ? 'Por lo que la gente busca' : 'What people search by',
     specialties: language === 'es' ? 'Especialidades' : 'Specialties',
-    specialtiesHint: language === 'es' ? 'Separadas por coma' : 'Comma separated',
+    specialtiesHint: language === 'es' ? 'Lo que te hace diferente' : 'What makes you different',
     banner: language === 'es' ? 'Foto de Portada' : 'Banner Photo',
     changeBanner: language === 'es' ? 'Cambiar Portada' : 'Change Banner',
     uploadBanner: language === 'es' ? 'Sube tu foto de portada' : 'Upload your banner photo',
@@ -56,7 +69,14 @@ export default function StorefrontEditor({
     saveError: language === 'es' ? 'Error al guardar' : 'Failed to save',
     uploadError:
       language === 'es' ? 'No pudimos subir la imagen. Intenta de nuevo.' : "Couldn't upload image. Please try again.",
-    specialtiesPlaceholder: language === 'es' ? 'Yoga, HIIT, Crossfit' : 'Yoga, HIIT, Boxing',
+    // Names no sport, on purpose. This placeholder used to read
+    // 'Yoga, HIIT, Crossfit' -- three sport names, one of them misspelled
+    // against the canonical list -- and is where most of the free-text sport
+    // names in production came from.
+    specialtiesPlaceholder:
+      language === 'es'
+        ? 'Terapia de sonido, prenatal, preparación para competencia'
+        : 'Sound healing, prenatal, competition prep',
   };
 
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -117,6 +137,7 @@ export default function StorefrontEditor({
     const result = await updateStorefrontProfile(supabase, userId, {
       instructor_bio: bio,
       storefront_tagline: tagline,
+      sports,
       specialties: specialtiesArr,
       storefront_banner_url: bannerUrl || null,
     });
@@ -198,7 +219,32 @@ export default function StorefrontEditor({
         />
       </div>
 
-      {/* Specialties */}
+      {/* Sports: the canonical vocabulary, written to users.sports */}
+      <div>
+        <label className="block text-sm font-medium text-theme-secondary mb-1">
+          {txt.sports} <span className="text-xs text-muted-foreground">({txt.sportsHint})</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {SPORT_CHOICES.map((sport) => (
+            <button
+              key={sport}
+              type="button"
+              onClick={() =>
+                setSports((prev) => (prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport]))
+              }
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                sports.includes(sport)
+                  ? 'bg-tribe-green text-slate-900 font-semibold'
+                  : 'bg-stone-100 dark:bg-tribe-surface text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-tribe-mid'
+              }`}
+            >
+              {getSportTranslation(sport, language)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Specialties: free text, written to users.specialties */}
       <div>
         <label className="block text-sm font-medium text-theme-secondary mb-1">
           {txt.specialties} <span className="text-xs text-muted-foreground">({txt.specialtiesHint})</span>
