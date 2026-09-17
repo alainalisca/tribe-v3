@@ -21,6 +21,26 @@
 --  4. Nothing else on users moved: row count, and the SELECT privilege on a
 --     sample of existing columns, are unchanged against values captured before.
 --
+-- RULE LEARNED THE HARD WAY, 2026-09-17. NOTHING running under the
+-- `authenticated` role may touch the rehearsal's own scaffolding. The first
+-- version of Part C wrote its results into reh_probe while still impersonating
+-- the user, and reh_probe is a temp table owned by postgres -- so the write
+-- failed with 42501, on the SUCCESS path as well as in the handler, and the
+-- handler's own INSERT then aborted the entire script.
+--
+-- That bug was not merely noisy, it was BLINDING: because both the success path
+-- and the error path died the same way, the failure could not distinguish "the
+-- UPDATE was denied" from "the bookkeeping INSERT was denied". The real reason
+-- was swallowed by a secondary failure in the thing meant to record it.
+--
+-- So Part C now: captures everything into plpgsql variables, restores the role,
+-- and only then writes to reh_probe. It also wraps the UPDATE and the read-back
+-- in SEPARATE subtransactions and records each one's SQLSTATE and SQLERRM, so a
+-- failure names which statement failed and why instead of collapsing into one
+-- opaque 'ERROR'. And it records what auth.uid() actually resolved to under the
+-- impersonation -- because if that comes back NULL the RLS policy simply matches
+-- no rows, which is a SILENT zero-row update, not an error at all.
+--
 -- RUN IT IN THE SUPABASE SQL EDITOR AS ONE SCRIPT. The output is a PASS/FAIL
 -- table; do not run the statements piecemeal.
 
@@ -99,35 +119,88 @@ BEGIN
   END IF;
 END $$;
 
+-- Captured BEFORE Part C writes anything, so "the DEFAULT reached every row"
+-- and "the toggle saved" stay separate questions. Conflating them was how the
+-- first draft ended up with a check whose expected value was 1 because of a
+-- side effect three statements away.
+INSERT INTO reh_probe
+SELECT 'rows_not_false_after_alter',
+       (SELECT count(*)::text FROM public.users WHERE hide_from_attendee_lists IS DISTINCT FROM false);
+
 -- ── Part C: prove the toggle saves, as a real user, under RLS ──────────────
 -- request.jwt.claims is what auth.uid() reads, so this is the same path the
 -- browser takes, not an owner-role write that would bypass every policy.
+--
+-- STRUCTURE MATTERS HERE. The UPDATE and the read-back sit in their own
+-- subtransactions and NOTHING else shares them, so a raise can only mean that
+-- statement. All results land in variables; reh_probe is written only after the
+-- role has been restored. See the header for why.
 DO $$
 DECLARE
-  v_uid   uuid;
-  v_back  boolean;
-  v_rows  integer;
+  v_uid         uuid;
+  v_orig_role   text;
+  v_auth_uid    text := '(not reached)';
+  v_rows_txt    text := '(not reached)';
+  v_back_txt    text := '(not reached)';
+  v_upd_state   text := 'ok';
+  v_upd_msg     text := '(none)';
+  v_read_state  text := 'ok';
+  v_read_msg    text := '(none)';
+  v_rows        integer;
+  v_back        boolean;
 BEGIN
   SELECT id INTO v_uid FROM public.users WHERE deleted_at IS NULL ORDER BY created_at LIMIT 1;
+
+  -- Save whatever role we are actually running as; 'none' when unset. Restoring
+  -- this exact value is safer than assuming the session user is postgres.
+  v_orig_role := current_setting('role');
 
   PERFORM set_config('role', 'authenticated', true);
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_uid, 'role', 'authenticated')::text, true);
 
+  -- What the database thinks the caller is. If this is NULL the self-update RLS
+  -- policy matches nothing and the UPDATE reports ZERO ROWS WITHOUT RAISING --
+  -- a silent no-op that looks identical to a permission problem unless it is
+  -- recorded here.
+  BEGIN
+    v_auth_uid := COALESCE(auth.uid()::text, '<null>');
+  EXCEPTION WHEN others THEN
+    v_auth_uid := 'ERROR ' || SQLSTATE;
+  END;
+
+  -- The UPDATE, alone.
   BEGIN
     UPDATE public.users SET hide_from_attendee_lists = true WHERE id = v_uid;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
-
-    SELECT hide_from_attendee_lists INTO v_back FROM public.users WHERE id = v_uid;
-
-    INSERT INTO reh_probe VALUES ('self_update_rows', v_rows::text);
-    INSERT INTO reh_probe VALUES ('self_update_value_read_back', COALESCE(v_back::text, '<null>'));
+    v_rows_txt := v_rows::text;
   EXCEPTION WHEN others THEN
-    INSERT INTO reh_probe VALUES ('self_update_rows', 'ERROR ' || SQLSTATE || ': ' || SQLERRM);
-    INSERT INTO reh_probe VALUES ('self_update_value_read_back', 'n/a');
+    v_upd_state := SQLSTATE;
+    v_upd_msg   := SQLERRM;
+    v_rows_txt  := 'RAISED';
   END;
 
-  PERFORM set_config('role', 'postgres', true);
+  -- The read-back, alone.
+  BEGIN
+    SELECT hide_from_attendee_lists INTO v_back FROM public.users WHERE id = v_uid;
+    v_back_txt := COALESCE(v_back::text, '<null>');
+  EXCEPTION WHEN others THEN
+    v_read_state := SQLSTATE;
+    v_read_msg   := SQLERRM;
+    v_back_txt   := 'RAISED';
+  END;
+
+  -- Back to the owning role BEFORE touching any rehearsal scaffolding.
   PERFORM set_config('request.jwt.claims', NULL, true);
+  PERFORM set_config('role', v_orig_role, true);
+
+  INSERT INTO reh_probe VALUES ('self_update_auth_uid',
+    CASE WHEN v_auth_uid = v_uid::text THEN 'matches' ELSE v_auth_uid END);
+  INSERT INTO reh_probe VALUES ('self_update_rows', v_rows_txt);
+  INSERT INTO reh_probe VALUES ('self_update_value_read_back', v_back_txt);
+  INSERT INTO reh_probe VALUES ('self_update_sqlstate', v_upd_state);
+  INSERT INTO reh_probe VALUES ('self_update_sqlerrm', v_upd_msg);
+  INSERT INTO reh_probe VALUES ('self_read_sqlstate', v_read_state);
+  INSERT INTO reh_probe VALUES ('self_read_sqlerrm', v_read_msg);
 END $$;
 
 -- ── Every check, one result set ────────────────────────────────────────────
@@ -143,10 +216,13 @@ WITH checks AS (
            WHERE table_schema='public' AND table_name='users'
              AND column_name='hide_from_attendee_lists'),
          'NO/false'
-  UNION ALL SELECT 'every_existing_row_defaults_false',
-         (SELECT count(*)::text FROM public.users WHERE hide_from_attendee_lists IS DISTINCT FROM false),
-         -- Part C flipped exactly one row to true, on purpose.
-         '1'
+  -- Measured straight after the ALTER, before Part C writes anything, so this
+  -- asks only "did the DEFAULT reach every row".
+  UNION ALL SELECT 'default_reached_every_row',
+         (SELECT result FROM reh_probe WHERE name='rows_not_false_after_alter'), '0'
+  -- And afterwards exactly one row is true: the one Part C flipped.
+  UNION ALL SELECT 'exactly_one_row_true_after_part_c',
+         (SELECT count(*)::text FROM public.users WHERE hide_from_attendee_lists), '1'
   -- The 157 lesson, both directions.
   UNION ALL SELECT 'authenticated_can_select',
          has_column_privilege('authenticated','public.users','hide_from_attendee_lists','SELECT')::text, 'true'
@@ -164,6 +240,20 @@ WITH checks AS (
          (SELECT result FROM reh_probe WHERE name='self_update_rows'), '1'
   UNION ALL SELECT 'self_update_value_persisted',
          (SELECT result FROM reh_probe WHERE name='self_update_value_read_back'), 'true'
+  -- THE DIAGNOSTICS. These carry the answer when the three checks above fail,
+  -- instead of leaving a bare "0 rows" to be guessed at. auth.uid() resolving to
+  -- NULL is a silent zero-row update; a real SQLSTATE is a denial. They are
+  -- different problems with different fixes.
+  UNION ALL SELECT 'self_update_auth_uid_resolved',
+         (SELECT result FROM reh_probe WHERE name='self_update_auth_uid'), 'matches'
+  UNION ALL SELECT 'self_update_raised_nothing',
+         (SELECT result FROM reh_probe WHERE name='self_update_sqlstate'), 'ok'
+  UNION ALL SELECT 'self_update_error_text',
+         (SELECT result FROM reh_probe WHERE name='self_update_sqlerrm'), '(none)'
+  UNION ALL SELECT 'self_read_raised_nothing',
+         (SELECT result FROM reh_probe WHERE name='self_read_sqlstate'), 'ok'
+  UNION ALL SELECT 'self_read_error_text',
+         (SELECT result FROM reh_probe WHERE name='self_read_sqlerrm'), '(none)'
   -- Nothing else moved.
   UNION ALL SELECT 'user_row_count_unchanged',
          (SELECT count(*)::text FROM public.users), (SELECT user_rows::text FROM reh_before)
