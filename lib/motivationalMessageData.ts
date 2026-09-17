@@ -3,27 +3,27 @@ import type { BilingualMessage } from './motivational-messages';
 export const morningMotivationMessages: BilingualMessage[] = [
   {
     en: { title: 'Rise and Train!', body: "Who's joining you for a workout today? Find partners on Tribe." },
-    es: { title: 'Arriba y a Entrenar!', body: 'Quien te acompana a entrenar hoy? Encuentra companeros en Tribe.' },
+    es: { title: 'Arriba y a Entrenar!', body: 'Quien te acompaña a entrenar hoy? Encuentra compañeros en Tribe.' },
   },
   {
     en: { title: 'Good Morning, Athlete!', body: 'Never train alone - check out sessions near you.' },
-    es: { title: 'Buenos Dias, Atleta!', body: 'Nunca entrenes solo - mira las sesiones cerca de ti.' },
+    es: { title: 'Buenos Días, Atleta!', body: 'Nunca entrenes solo - mira las sesiones cerca de ti.' },
   },
   {
     en: { title: 'Start Your Day Strong!', body: 'Your tribe is ready to train. Are you?' },
-    es: { title: 'Empieza el Dia Fuerte!', body: 'Tu tribu esta lista para entrenar. Y tu?' },
+    es: { title: 'Empieza el Día Fuerte!', body: 'Tu tribu esta lista para entrenar. Y tu?' },
   },
   {
     en: { title: 'Morning Motivation!', body: "Today's sessions are live - find your workout crew." },
-    es: { title: 'Motivacion Matutina!', body: 'Las sesiones de hoy estan activas - encuentra tu equipo.' },
+    es: { title: 'Motivación Matutina!', body: 'Las sesiones de hoy estan activas - encuentra tu equipo.' },
   },
   {
     en: { title: "Don't Skip Today!", body: 'Your fitness community awaits. Join a session now.' },
-    es: { title: 'No Te Lo Saltes Hoy!', body: 'Tu comunidad fitness te espera. Unete a una sesion.' },
+    es: { title: 'No Te Lo Saltes Hoy!', body: 'Tu comunidad fitness te espera. Unete a una sesión.' },
   },
   {
     en: { title: 'Make Today Count!', body: 'Every workout is better with a partner.' },
-    es: { title: 'Haz Que Hoy Cuente!', body: 'Cada entrenamiento es mejor con un companero.' },
+    es: { title: 'Haz Que Hoy Cuente!', body: 'Cada entrenamiento es mejor con un compañero.' },
   },
   {
     en: { title: 'Your Tribe Awaits!', body: 'New sessions posted - never train alone again.' },
@@ -35,7 +35,7 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Morning Energy!', body: 'Training partners boost your motivation by 60%.' },
-    es: { title: 'Energia Matutina!', body: 'Los companeros aumentan tu motivacion un 60%.' },
+    es: { title: 'Energia Matutina!', body: 'Los compañeros aumentan tu motivación un 60%.' },
   },
   {
     en: { title: 'Rise, Shine, Train!', body: "Check today's sessions and find your tribe." },
@@ -47,15 +47,15 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'No Excuses Today!', body: 'Your workout partners are waiting on Tribe.' },
-    es: { title: 'Sin Excusas Hoy!', body: 'Tus companeros de entrenamiento te esperan en Tribe.' },
+    es: { title: 'Sin Excusas Hoy!', body: 'Tus compañeros de entrenamiento te esperan en Tribe.' },
   },
   {
     en: { title: "Champion's Morning!", body: 'Winners train together. Find your crew today.' },
-    es: { title: 'Manana de Campeon!', body: 'Los ganadores entrenan juntos. Encuentra tu equipo.' },
+    es: { title: 'Mañana de Campeon!', body: 'Los ganadores entrenan juntos. Encuentra tu equipo.' },
   },
   {
     en: { title: 'New Day, New Gains!', body: 'Sessions available near you - join the movement.' },
-    es: { title: 'Nuevo Dia, Nuevas Ganancias!', body: 'Sesiones disponibles cerca de ti - unete al movimiento.' },
+    es: { title: 'Nuevo Día, Nuevas Ganancias!', body: 'Sesiones disponibles cerca de ti - unete al movimiento.' },
   },
   {
     en: { title: 'Your Best Self Awaits!', body: 'Train with others and push your limits today.' },
@@ -63,11 +63,11 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Morning Call to Action!', body: "Don't be a solo trainer - find your tribe." },
-    es: { title: 'Llamado a la Accion!', body: 'No entrenes solo - encuentra tu tribu.' },
+    es: { title: 'Llamado a la Acción!', body: 'No entrenes solo - encuentra tu tribu.' },
   },
   {
     en: { title: 'Workout Buddies Needed!', body: 'Join a session and make training social.' },
-    es: { title: 'Se Necesitan Companeros!', body: 'Unete a una sesion y haz el entrenamiento social.' },
+    es: { title: 'Se Necesitan Compañeros!', body: 'Unete a una sesión y haz el entrenamiento social.' },
   },
   {
     en: { title: 'Community Gains!', body: 'The best workouts happen together. Check sessions.' },
@@ -86,19 +86,19 @@ export const morningMotivationMessages: BilingualMessage[] = [
 export const sessionNearbyMessages: BilingualMessage[] = [
   {
     en: { title: 'Session Near You!', body: "A {{sport}} session is happening nearby. Don't miss it!" },
-    es: { title: 'Sesion Cerca de Ti!', body: 'Una sesion de {{sport}} esta cerca. No te la pierdas!' },
+    es: { title: 'Sesión Cerca de Ti!', body: 'Una sesión de {{sport}} esta cerca. No te la pierdas!' },
   },
   {
     en: { title: 'Training Happening Now!', body: '{{sport}} session just {{distance}} away. Join in!' },
-    es: { title: 'Entrenamiento en Curso!', body: 'Sesion de {{sport}} a solo {{distance}}. Unete!' },
+    es: { title: 'Entrenamiento en Curso!', body: 'Sesión de {{sport}} a solo {{distance}}. Unete!' },
   },
   {
     en: { title: 'Join the Action!', body: '{{count}} people are training {{sport}} near you.' },
-    es: { title: 'Unete a la Accion!', body: '{{count}} personas entrenan {{sport}} cerca de ti.' },
+    es: { title: 'Unete a la Acción!', body: '{{count}} personas entrenan {{sport}} cerca de ti.' },
   },
   {
     en: { title: "Don't Train Alone!", body: "There's a {{sport}} session {{distance}} from you." },
-    es: { title: 'No Entrenes Solo!', body: 'Hay una sesion de {{sport}} a {{distance}} de ti.' },
+    es: { title: 'No Entrenes Solo!', body: 'Hay una sesión de {{sport}} a {{distance}} de ti.' },
   },
   {
     en: { title: 'Workout Alert!', body: '{{sport}} happening nearby. Perfect timing to join.' },
@@ -106,19 +106,19 @@ export const sessionNearbyMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Your Tribe is Close!', body: 'Found a {{sport}} session near your location.' },
-    es: { title: 'Tu Tribu Esta Cerca!', body: 'Encontramos una sesion de {{sport}} cerca de ti.' },
+    es: { title: 'Tu Tribu Esta Cerca!', body: 'Encontramos una sesión de {{sport}} cerca de ti.' },
   },
   {
     en: { title: 'Local Training!', body: '{{sport}} session available in your area right now.' },
-    es: { title: 'Entrenamiento Local!', body: 'Sesion de {{sport}} disponible en tu zona ahora.' },
+    es: { title: 'Entrenamiento Local!', body: 'Sesión de {{sport}} disponible en tu zona ahora.' },
   },
   {
     en: { title: 'Spots Available!', body: 'A {{sport}} session near you has {{spots}} spots left.' },
-    es: { title: 'Cupos Disponibles!', body: 'Una sesion de {{sport}} cerca tiene {{spots}} cupos.' },
+    es: { title: 'Cupos Disponibles!', body: 'Una sesión de {{sport}} cerca tiene {{spots}} cupos.' },
   },
   {
     en: { title: 'Perfect Match!', body: '{{sport}} session matches your interests - {{distance}} away.' },
-    es: { title: 'Coincidencia Perfecta!', body: 'Sesion de {{sport}} coincide con tus intereses - a {{distance}}.' },
+    es: { title: 'Coincidencia Perfecta!', body: 'Sesión de {{sport}} coincide con tus intereses - a {{distance}}.' },
   },
   {
     en: { title: 'Nearby Activity!', body: 'Athletes are gathering for {{sport}} close to you.' },
@@ -134,7 +134,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   {
     en: { title: 'Weekly Tribe Stats!', body: '{{count}} workouts completed. {{next_goal}} to beat last week!' },
     es: {
-      title: 'Estadisticas Semanales!',
+      title: 'Estadísticas Semanales!',
       body: '{{count}} entrenamientos completados. {{next_goal}} para superar la semana pasada!',
     },
   },
@@ -152,7 +152,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: "You're on Fire!", body: '{{streak}} day training streak! Keep it going next week.' },
-    es: { title: 'Estas en Llamas!', body: 'Racha de {{streak}} dias! Sigue asi la proxima semana.' },
+    es: { title: 'Estas en Llamas!', body: 'Racha de {{streak}} días! Sigue asi la próxima semana.' },
   },
   {
     en: { title: 'Week Highlights!', body: 'Most active day: {{day}}. Top sport: {{sport}}.' },
@@ -160,7 +160,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Tribe Growing!', body: 'You connected with {{new_connections}} new training partners.' },
-    es: { title: 'Tribu Creciendo!', body: 'Conectaste con {{new_connections}} nuevos companeros.' },
+    es: { title: 'Tribu Creciendo!', body: 'Conectaste con {{new_connections}} nuevos compañeros.' },
   },
   {
     en: { title: 'Weekly Champion!', body: 'You showed up {{count}} times this week. Consistency wins!' },
@@ -168,7 +168,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Keep Building!', body: "Next week's goal: beat this week's {{count}} sessions." },
-    es: { title: 'Sigue Construyendo!', body: 'Meta de la proxima semana: superar las {{count}} sesiones de esta.' },
+    es: { title: 'Sigue Construyendo!', body: 'Meta de la próxima semana: superar las {{count}} sesiones de esta.' },
   },
 ];
 
@@ -179,15 +179,15 @@ export const reEngagementMessages: BilingualMessage[] = [
   },
   {
     en: { title: "Don't Break the Streak!", body: "It's been {{days}} days. Get back on track today." },
-    es: { title: 'No Rompas la Racha!', body: 'Han pasado {{days}} dias. Vuelve al ritmo hoy.' },
+    es: { title: 'No Rompas la Racha!', body: 'Han pasado {{days}} días. Vuelve al ritmo hoy.' },
   },
   {
     en: { title: 'Your Partners Miss You!', body: 'New sessions in your area - time to return.' },
-    es: { title: 'Tus Companeros Te Extranan!', body: 'Nuevas sesiones en tu zona - es hora de volver.' },
+    es: { title: 'Tus Compañeros Te Extrañan!', body: 'Nuevas sesiones en tu zona - es hora de volver.' },
   },
   {
     en: { title: 'Time to Come Back!', body: '{{count}} new sessions since your last workout.' },
-    es: { title: 'Es Hora de Volver!', body: '{{count}} nuevas sesiones desde tu ultimo entrenamiento.' },
+    es: { title: 'Es Hora de Volver!', body: '{{count}} nuevas sesiones desde tu último entrenamiento.' },
   },
   {
     en: { title: 'Your Tribe Needs You!', body: 'Sessions are waiting. Never train alone - join again!' },
@@ -199,7 +199,7 @@ export const reEngagementMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Comeback Time!', body: 'Your fitness journey continues. Find a session today.' },
-    es: { title: 'Hora del Regreso!', body: 'Tu viaje fitness continua. Encuentra una sesion hoy.' },
+    es: { title: 'Hora del Regreso!', body: 'Tu viaje fitness continua. Encuentra una sesión hoy.' },
   },
   {
     en: { title: "We've Got Sessions!", body: 'Perfect opportunities to never train alone again.' },
@@ -211,6 +211,6 @@ export const reEngagementMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Back in Action?', body: 'One tap to reconnect with your training community.' },
-    es: { title: 'De Vuelta a la Accion?', body: 'Un toque para reconectarte con tu comunidad.' },
+    es: { title: 'De Vuelta a la Acción?', body: 'Un toque para reconectarte con tu comunidad.' },
   },
 ];

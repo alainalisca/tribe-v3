@@ -73,7 +73,7 @@ export default function PostSessionShareStep({
     <div className="space-y-5">
       <div className="text-center">
         <h3 className="text-lg font-bold text-stone-900 dark:text-white">
-          {t('Share Your Session', 'Comparte Tu Sesion')}
+          {t('Share Your Session', 'Comparte Tu Sesión')}
         </h3>
         <p className="text-sm text-stone-500 dark:text-gray-400 mt-1">
           {t('Let your friends know you trained!', 'Deja que tus amigos sepan que entrenaste!')}

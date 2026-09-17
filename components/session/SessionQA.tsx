@@ -193,7 +193,7 @@ export default function SessionQA({ sessionId, currentUserId, isCreator, creator
             </div>
           ) : (
             <p className="text-sm text-theme-secondary italic mt-4">
-              {isEs ? 'Inicia sesion para hacer una pregunta.' : 'Sign in to ask a question.'}
+              {isEs ? 'Inicia sesión para hacer una pregunta.' : 'Sign in to ask a question.'}
             </p>
           )}
         </div>
@@ -242,7 +242,7 @@ function CommentItem({ comment, currentUserId, isCreator, sessionCreatorId, lang
             </p>
             {isHostComment && (
               <span className="text-[10px] font-bold bg-tribe-green/20 text-tribe-green px-1.5 py-0.5 rounded">
-                {isEs ? 'Anfitrion' : 'Host'}
+                {isEs ? 'Anfitrión' : 'Host'}
               </span>
             )}
           </div>

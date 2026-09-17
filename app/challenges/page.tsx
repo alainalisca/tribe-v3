@@ -247,7 +247,7 @@ export default function ChallengesPage() {
                       onClick={() => setShowAllSports(true)}
                       className="px-4 py-2 rounded-full whitespace-nowrap font-semibold transition bg-stone-100 dark:bg-tribe-surface text-tribe-green hover:bg-tribe-green/20"
                     >
-                      {language === 'es' ? 'Mas' : 'More'}
+                      {language === 'es' ? 'Más' : 'More'}
                     </button>
                   )}
                   {showAllSports && (

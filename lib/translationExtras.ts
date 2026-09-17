@@ -282,28 +282,28 @@ export const extEn = {
 
 export const extEs: Record<keyof typeof extEn, string> = {
   // EditSessionModal
-  editSession: 'Editar Sesion',
-  durationMinutes: 'Duracion (minutos)',
+  editSession: 'Editar Sesión',
+  durationMinutes: 'Duración (minutos)',
   saveChanges: 'Guardar Cambios',
 
   // RecapPhotos
   shareYourExperience: 'Comparte tu Experiencia!',
-  uploadPhotosDesc: 'Asististe a esta sesion - sube hasta 3 fotos para compartir con la comunidad!',
-  sessionRecap: 'Resumen de la Sesion',
+  uploadPhotosDesc: 'Asististe a esta sesión - sube hasta 3 fotos para compartir con la comunidad!',
+  sessionRecap: 'Resumen de la Sesión',
   uploaded: 'subidas',
   reported: 'Reportado',
   uploading: 'Subiendo...',
   noRecapPhotos: 'Aun no hay fotos. Los asistentes verificados pueden subir.',
-  recapPhotosAfterSession: 'Las fotos estaran disponibles despues de que termine la sesion.',
+  recapPhotosAfterSession: 'Las fotos estaran disponibles después de que termine la sesión.',
 
   // NotificationPrompt
-  enableNotifInSettings: 'Habilita las notificaciones en la configuracion de tu navegador/dispositivo',
+  enableNotifInSettings: 'Habilita las notificaciones en la configuración de tu navegador/dispositivo',
   failedNotifications: 'No se pudieron activar las notificaciones. Intenta de nuevo.',
   stayUpdated: 'Mantente Informado',
   notifDescription: 'Recibe avisos de nuevas coincidencias, solicitudes y recordatorios.',
   enabling: 'Activando...',
   enable: 'Activar',
-  later: 'Despues',
+  later: 'Después',
 
   // AppStoreBanner
   getTheTribeApp: 'Descarga la App de Tribe',
@@ -315,7 +315,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   addToCalendarGoogle: 'Google Calendar',
   addToCalendarApple: 'Apple Calendar',
   addToCalendarOpened: 'Abriendo Google Calendar en una nueva pestaña.',
-  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Abrelo para agregar la sesion.',
+  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Abrelo para agregar la sesión.',
 
   // Error page
   somethingWentWrong: 'Algo salio mal',
@@ -328,23 +328,23 @@ export const extEs: Record<keyof typeof extEn, string> = {
   markAttendanceDesc: 'Marca quienes asistieron para que puedan subir fotos',
 
   // Session detail
-  sessionNotFound: 'Sesion no encontrada',
-  sessionDetails: 'Detalles de la Sesion',
+  sessionNotFound: 'Sesión no encontrada',
+  sessionDetails: 'Detalles de la Sesión',
   participants: 'Atletas',
-  host: 'Anfitrion',
+  host: 'Anfitrión',
   unknown: 'Desconocido',
   locationPhotos: 'Fotos del Lugar',
 
   // ActionButtons
-  leaveSession: 'Salir de la Sesion',
-  sessionEnded: 'Sesion Finalizada',
-  sessionFull: 'Sesion Llena',
+  leaveSession: 'Salir de la Sesión',
+  sessionEnded: 'Sesión Finalizada',
+  sessionFull: 'Sesión Llena',
   joinAsGuest: 'Unirse como Invitado',
-  hostingThisSession: 'Estas organizando esta sesion',
-  editSessionBtn: 'Editar Sesion',
-  cancelSession: 'Cancelar Sesion',
+  hostingThisSession: 'Estás organizando esta sesión',
+  editSessionBtn: 'Editar Sesión',
+  cancelSession: 'Cancelar Sesión',
   joining: 'Uniendose...',
-  joinSession: 'Unirse a la Sesion',
+  joinSession: 'Unirse a la Sesión',
   groupChat: 'Chat Grupal',
   generating: 'Generando...',
   inviteFriend: 'Invitar Amigo',
@@ -352,24 +352,24 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // GuestJoinModal
   enterDetailsToConfirm: 'Ingresa tus datos para confirmar asistencia',
   fullName: 'Nombre completo *',
-  phone: 'Telefono *',
+  phone: 'Teléfono *',
   emailOptional: 'Correo (opcional)',
   confirming: 'Confirmando...',
   confirmAttendance: 'Confirmar Asistencia',
   alreadyHaveAccount: 'Ya tienes cuenta?',
-  signInLink: 'Inicia sesion',
+  signInLink: 'Inicia sesión',
 
   // InviteModal
   linkCopied: 'Enlace copiado!',
   copy: 'Copiar',
-  shareInviteDesc: 'Comparte este enlace con amigos para invitarlos a esta sesion.',
+  shareInviteDesc: 'Comparte este enlace con amigos para invitarlos a esta sesión.',
 
   // Stories
   stories: 'Historias',
   deleteThisStory: 'Eliminar esta historia?',
   mediaUnavailable: 'Medio no disponible',
-  viewSession: 'Ver Sesion',
-  joinOrCreateFirst: 'Unete o crea una sesion para publicar una historia',
+  viewSession: 'Ver Sesión',
+  joinOrCreateFirst: 'Unete o crea una sesión para publicar una historia',
   yourStory: 'Tu historia',
 
   // LiveStatusSection
@@ -383,7 +383,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   trainingNow: 'Entrenando Ahora',
 
   // ReviewSection
-  howWasSession: 'Como estuvo la sesion?',
+  howWasSession: 'Como estuvo la sesión?',
   feedbackHelpsOthers: 'Tu opinion ayuda a otros a encontrar buenos anfitriones',
   rate: 'Calificar',
   shareExperiencePlaceholder: 'Comparte tu experiencia...',
@@ -420,9 +420,9 @@ export const extEs: Record<keyof typeof extEn, string> = {
   dist: 'Dist.',
 
   // Home page
-  enableLocationSettings: 'Habilita la ubicacion en la configuracion del navegador',
+  enableLocationSettings: 'Habilita la ubicación en la configuración del navegador',
   enableLocationSettingsNative: 'Ve a Ajustes > Apps > Tribe > Permisos para activar la ubicación',
-  enableLocationNearby: 'Activa la ubicacion para ver sesiones cerca',
+  enableLocationNearby: 'Activa la ubicación para ver sesiones cerca',
   trainingNowLabel: 'ENTRENANDO AHORA',
   connectNearby: 'Conecta con personas entrenando cerca',
   couldNotLoadSessions: 'No se pudieron cargar las sesiones',
@@ -432,40 +432,40 @@ export const extEs: Record<keyof typeof extEn, string> = {
   requestAccepted: 'Solicitud aceptada!',
   requestDeclined: 'Solicitud rechazada',
   noPendingRequests: 'Sin Solicitudes Pendientes',
-  requestsDescription: 'Cuando alguien quiera unirse a tus sesiones, veras sus solicitudes aqui.',
-  createASession: 'Crear una Sesion',
+  requestsDescription: 'Cuando alguien quiera unirse a tus sesiones, veras sus solicitudes aquí.',
+  createASession: 'Crear una Sesión',
 
   // Invite page
   inviteExpired: 'Invitacion expirada',
   invalidInvite: 'Invitacion invalida',
   acceptInvitation: 'Aceptar invitacion',
   askHostForNewLink: 'Pide al organizador un nuevo enlace.',
-  fillNameAndPhone: 'Completa nombre y telefono',
+  fillNameAndPhone: 'Completa nombre y teléfono',
   confirmedSeeYou: 'Confirmado! Nos vemos ahi',
   inviteNotFound: 'Invitacion no encontrada',
   goHome: 'Ir al inicio',
-  youreInvited: 'Estas Invitado!',
+  youreInvited: 'Estás Invitado!',
   by: 'Por',
   confirmed: 'confirmados',
   confirmYourSpot: 'Confirma tu cupo',
-  infoSharedWithOrganizer: 'Tu informacion sera compartida con el organizador',
+  infoSharedWithOrganizer: 'Tu información sera compartida con el organizador',
   haveAccountJoinFromApp: 'Tienes una cuenta. Unete desde la app!',
 
   // Create page
   sportRequired: 'El deporte es obligatorio',
   dateRequired: 'La fecha es obligatoria',
   startTimeRequired: 'La hora de inicio es obligatoria',
-  locationRequired: 'La ubicacion es obligatoria',
-  sessionCreationFailed: 'Error al crear la sesion',
+  locationRequired: 'La ubicación es obligatoria',
+  sessionCreationFailed: 'Error al crear la sesión',
   locationPlaceholder: 'ej. Parque Central',
   openJoinPolicy: 'Abierta - Cualquiera puede unirse',
   curatedJoinPolicy: 'Curada - Tu revisas solicitudes',
   inviteOnlyJoinPolicy: 'Solo Invitacion - Privada',
-  describeSession: 'Describe tu sesion...',
-  joinPolicy: 'Politica de Ingreso',
+  describeSession: 'Describe tu sesión...',
+  joinPolicy: 'Política de Ingreso',
 
   // TemplateSection
-  fillSportAndLocation: 'Completa deporte y ubicacion primero',
+  fillSportAndLocation: 'Completa deporte y ubicación primero',
   nameForTemplate: 'Nombre para esta plantilla:',
   templateSaved: 'Plantilla guardada!',
   errorSavingTemplate: 'Error al guardar plantilla',
@@ -478,7 +478,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   use: 'Usar',
 
   // PhotoUploadSection
-  maxPhotosAllowed: 'Maximo 3 fotos permitidas',
+  maxPhotosAllowed: 'Máximo 3 fotos permitidas',
   locationPhotosMax: 'Fotos del lugar (max 3)',
   helpFindMeetingSpot: 'Ayuda a los atletas a encontrar el punto de encuentro',
 
@@ -505,9 +505,9 @@ export const extEs: Record<keyof typeof extEn, string> = {
   banUserConfirm: '¿Banear este usuario?',
   unbanUserConfirm: '¿Desbanear este usuario?',
   deleteUserConfirm: '¿ELIMINAR usuario y TODOS sus datos?',
-  deleteSessionConfirm: '¿Estas seguro que quieres eliminar esta sesion? Esto no se puede deshacer.',
+  deleteSessionConfirm: '¿Estás seguro que quieres eliminar esta sesión? Esto no se puede deshacer.',
   geolocationNotAvailable: 'Geolocalizacion no disponible',
-  couldNotGetLocation: 'No se pudo obtener tu ubicacion. Selecciona en el mapa.',
+  couldNotGetLocation: 'No se pudo obtener tu ubicación. Selecciona en el mapa.',
   photoReported: 'Foto reportada. Un admin la revisara.',
   confirmAction: 'Confirmar',
   verifyPhotos: 'Verificar Fotos',
@@ -536,7 +536,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // P1 fixes
   guest: 'Invitado',
   findYourTribe: 'Encuentra tu Tribu',
-  onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicacion. Unete con un toque.',
+  onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicación. Unete con un toque.',
   inviteOnlyLabel: 'Solo con Invitacion',
 
   // BUG-211: Instructor intro video upload (StorefrontEditor)

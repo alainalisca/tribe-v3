@@ -55,7 +55,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
 
                   <div className="flex items-center gap-3 text-xs text-stone-500">
                     <span>
-                      {language === 'es' ? 'Sesion:' : 'Session:'} {msg.session?.sport} @ {msg.session?.location}
+                      {language === 'es' ? 'Sesión:' : 'Session:'} {msg.session?.sport} @ {msg.session?.location}
                     </span>
                     <span>&bull;</span>
                     <span>{new Date(msg.created_at ?? '').toLocaleString(language === 'es' ? 'es-CO' : 'en-US')}</span>

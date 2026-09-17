@@ -71,8 +71,8 @@ export default function StorefrontSessionCard({
     joinFree: language === 'es' ? 'Unirse Gratis' : 'Join Free',
     requestToJoin: language === 'es' ? 'Solicitar unirse' : 'Request to join',
     joined: language === 'es' ? 'Inscrito' : 'Joined',
-    ownSession: language === 'es' ? 'Tu sesion' : 'Your session',
-    loginRequired: language === 'es' ? 'Inicia sesion para unirte' : 'Log in to join',
+    ownSession: language === 'es' ? 'Tu sesión' : 'Your session',
+    loginRequired: language === 'es' ? 'Inicia sesión para unirte' : 'Log in to join',
   };
 
   async function handleJoinFree(): Promise<void> {
@@ -118,7 +118,7 @@ export default function StorefrontSessionCard({
         showError(
           joinData?.error === 'Session is full'
             ? language === 'es'
-              ? 'La sesion esta llena'
+              ? 'La sesión esta llena'
               : 'Session is full'
             : joinData?.error || (language === 'es' ? 'No se pudo unir' : 'Could not join')
         );

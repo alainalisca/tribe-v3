@@ -37,7 +37,7 @@ export default function StorefrontPackageCard({
 
   const t = {
     sessions: language === 'es' ? 'Sesiones' : 'Sessions',
-    duration: language === 'es' ? 'Duracion' : 'Duration',
+    duration: language === 'es' ? 'Duración' : 'Duration',
     bookPackage: language === 'es' ? 'Reservar Paquete' : 'Book Package',
   };
 

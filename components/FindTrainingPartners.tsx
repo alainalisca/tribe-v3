@@ -108,7 +108,7 @@ export default function FindTrainingPartners({ language }: FindTrainingPartnersP
       },
       createSession: {
         en: 'Be the first to create a session!',
-        es: 'Se el primero en crear una sesion!',
+        es: 'Se el primero en crear una sesión!',
       },
       allSports: { en: 'All', es: 'Todo' },
     };

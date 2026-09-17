@@ -99,7 +99,7 @@ export default function BookingConfirmModal({
           {/* Price breakdown */}
           <div className="bg-stone-50 dark:bg-tribe-surface rounded-xl p-3 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-theme-secondary">{language === 'es' ? 'Sesion' : 'Session'}</span>
+              <span className="text-theme-secondary">{language === 'es' ? 'Sesión' : 'Session'}</span>
               <span className="text-theme-primary font-semibold">
                 {displayPrice} {currency}
               </span>
@@ -127,7 +127,7 @@ export default function BookingConfirmModal({
                   ? 'Pago con Wompi (Nequi, PSE, tarjeta)'
                   : 'Pay with Wompi (Nequi, PSE, card)'
                 : language === 'es'
-                  ? 'Pago con Stripe (tarjeta de credito/debito)'
+                  ? 'Pago con Stripe (tarjeta de crédito/debito)'
                   : 'Pay with Stripe (credit/debit card)'}
             </span>
           </div>

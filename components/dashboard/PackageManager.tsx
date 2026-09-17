@@ -40,7 +40,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
     title: language === 'es' ? 'Paquetes y Servicios' : 'Packages & Services',
     addNew: language === 'es' ? 'Agregar Paquete' : 'Add Package',
     name: language === 'es' ? 'Nombre' : 'Name',
-    description: language === 'es' ? 'Descripcion' : 'Description',
+    description: language === 'es' ? 'Descripción' : 'Description',
     price: language === 'es' ? 'Precio (centavos)' : 'Price (cents)',
     currency: language === 'es' ? 'Moneda' : 'Currency',
     type: language === 'es' ? 'Tipo' : 'Type',
@@ -52,7 +52,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
     deleted: language === 'es' ? 'Paquete eliminado' : 'Package removed',
     noPackages: language === 'es' ? 'Aun no tienes paquetes de servicio' : 'No service packages yet',
     single: language === 'es' ? 'Individual' : 'Single',
-    multi: language === 'es' ? 'Multi-sesion' : 'Multi-session',
+    multi: language === 'es' ? 'Multi-sesión' : 'Multi-session',
     subscription: language === 'es' ? 'Suscripcion' : 'Subscription',
   };
 

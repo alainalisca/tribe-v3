@@ -36,7 +36,7 @@ const SPORT_LABELS: Record<string, { en: string; es: string; icon: string }> = {
   hiking: { en: 'Hiking', es: 'Senderismo', icon: '🥾' },
   yoga: { en: 'Yoga', es: 'Yoga', icon: '🧘' },
   crossfit: { en: 'CrossFit', es: 'CrossFit', icon: '💪' },
-  swimming: { en: 'Swimming', es: 'Natacion', icon: '🏊' },
+  swimming: { en: 'Swimming', es: 'Natación', icon: '🏊' },
 };
 
 export default function LocalFitnessEventsSection({ language }: LocalFitnessEventsSectionProps) {

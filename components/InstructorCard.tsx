@@ -16,9 +16,9 @@ interface InstructorCardProps {
 const t = (language: 'en' | 'es') => ({
   specialties: language === 'es' ? 'Especialidades' : 'Specialties',
   sessionsHosted: language === 'es' ? 'Sesiones Alojadas' : 'Sessions Hosted',
-  yearsExperience: language === 'es' ? 'Anos de Experiencia' : 'Years Experience',
-  noRating: language === 'es' ? 'Sin Calificacion' : 'No Rating',
-  reviews: language === 'es' ? 'resenas' : 'reviews',
+  yearsExperience: language === 'es' ? 'Años de Experiencia' : 'Years Experience',
+  noRating: language === 'es' ? 'Sin Calificación' : 'No Rating',
+  reviews: language === 'es' ? 'reseñas' : 'reviews',
   viewStorefront: language === 'es' ? 'Ver Perfil' : 'View Storefront',
   away: language === 'es' ? 'de distancia' : 'away',
 });

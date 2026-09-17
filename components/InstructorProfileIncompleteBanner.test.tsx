@@ -44,18 +44,17 @@ const EXPECTED: Record<'en' | 'es', Record<InstructorField, string>> = {
     location: 'Location',
     years_experience: 'Years of experience',
   },
-  // NOTE: these are the strings as they exist in messages/es.json today, and
-  // three of them are missing accents -- Biografia, Ubicacion, and
-  // "Anos de experiencia", which should be "Años". Asserted as-is rather than
-  // silently corrected here: fixing the copy is a separate change and Ana
-  // reviews Spanish. If you fix the accents, this test SHOULD fail; update it
-  // in the same commit.
+  // The accents landed. These three used to read Biografia, Ubicacion and
+  // "Anos de experiencia" -- and "Anos" without the tilde is not a near-miss in
+  // Spanish. Updated in the same commit that fixed the copy, because this test
+  // correctly failed the moment the strings changed, which is the point of
+  // asserting on rendered text.
   es: {
     photo: 'Foto de perfil',
-    bio: 'Biografia',
+    bio: 'Biografía',
     specialties: 'Al menos una especialidad',
-    location: 'Ubicacion',
-    years_experience: 'Anos de experiencia',
+    location: 'Ubicación',
+    years_experience: 'Años de experiencia',
   },
 };
 

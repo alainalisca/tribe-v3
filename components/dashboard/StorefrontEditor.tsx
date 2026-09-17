@@ -40,7 +40,7 @@ export default function StorefrontEditor({
 
   const txt = {
     title: language === 'es' ? 'Editor de Vitrina' : 'Storefront Editor',
-    bio: language === 'es' ? 'Biografia' : 'Bio',
+    bio: language === 'es' ? 'Biografía' : 'Bio',
     bioPlaceholder: language === 'es' ? 'Describe tu experiencia...' : 'Describe your experience...',
     tagline: language === 'es' ? 'Eslogan' : 'Tagline',
     taglinePlaceholder: language === 'es' ? 'Frase corta que te define' : 'Short phrase that defines you',

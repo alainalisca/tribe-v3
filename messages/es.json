@@ -203,14 +203,14 @@
   },
   "instructorIncomplete": {
     "title": "Completa tu perfil de instructor",
-    "description": "Estas oculto en la pagina Entrena con un Instructor hasta que agregues:",
+    "description": "Estás oculto en la página Entrena con un Instructor hasta que agregues:",
     "cta": "Terminar mi perfil",
     "fields": {
       "photo": "Foto de perfil",
-      "bio": "Biografia",
+      "bio": "Biografía",
       "specialties": "Al menos una especialidad",
-      "location": "Ubicacion",
-      "years_experience": "Anos de experiencia"
+      "location": "Ubicación",
+      "years_experience": "Años de experiencia"
     }
   },
   "tribeOs": {
