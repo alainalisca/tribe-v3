@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import SessionCard from './SessionCard';
 import ParticipantList from './session/ParticipantList';
 import type { SessionWithRelations } from '@/lib/dal';
@@ -29,9 +29,24 @@ import type { SessionWithRelations } from '@/lib/dal';
  *
  * So each test reads the number out of the RENDERED DOM of both components and
  * asserts they are equal AND equal to the athlete count. Reading the DOM rather
- * than calling the shared helper is deliberate: both surfaces now call
- * athleteParticipants(), so a helper-level test would assert that one function
- * equals itself and would pass through any arithmetic a component added on top.
+ * than calling the shared helper is deliberate: a helper-level test would
+ * assert that one function equals itself and would pass through any arithmetic
+ * a component added on top.
+ *
+ * UPDATED 2026-09-17, and this changes what the parity tests are worth.
+ * SessionCard no longer counts the roster array at all -- it reads
+ * sessions.current_participants, because fetchUpcomingSessions returns
+ * `participants: []` and that is the home feed, the card's only production
+ * consumer. ParticipantList still enumerates the array, because its job is to
+ * list WHO is coming, not how many seats are taken.
+ *
+ * So the two surfaces now read genuinely different things, and the parity tests
+ * below assert the weaker but still useful property: GIVEN a session whose
+ * counter and roster agree, the two surfaces print the same number. They no
+ * longer catch a change of source on their own -- the "one capacity source"
+ * block at the bottom of this file does that, by handing the card a session
+ * whose counter and array DISAGREE and pinning every capacity-derived output to
+ * the counter.
  */
 
 const mockPush = vi.fn();
@@ -73,7 +88,13 @@ vi.mock('@/lib/sport-images', () => ({
 }));
 
 vi.mock('@/lib/share', () => ({ shareSession: vi.fn() }));
-vi.mock('@/components/AvatarStack', () => ({ default: () => null }));
+// Rendered as an observable marker, NOT null. A null mock would make
+// "the avatars come from the roster array" pass whatever the component did.
+vi.mock('@/components/AvatarStack', () => ({
+  default: ({ participants }: { participants: unknown[] }) => (
+    <div data-testid="avatar-stack">{participants.length}</div>
+  ),
+}));
 vi.mock('@/components/ShareButton', () => ({ default: () => null }));
 
 const HOST_ID = 'creator-1';
@@ -254,5 +275,95 @@ describe('the host renders once, as the host', () => {
     expect(container.textContent).toContain('Ana');
     expect(container.textContent).toContain('Victor');
     expect(container.textContent).toContain('Veronica');
+  });
+});
+
+/**
+ * ONE CAPACITY SOURCE.
+ *
+ * Every capacity-derived thing SessionCard renders -- the n/max readout, the
+ * "N spots left" badge, the "Filling up" badge -- must come from
+ * sessions.current_participants and nothing else. The way to prove that is to
+ * hand the card a session whose counter and roster array DISAGREE and check
+ * which number comes out. A fixture where they agree proves nothing, which is
+ * exactly why the parity tests above can no longer carry this on their own.
+ *
+ * WHAT WAS WRONG BEFORE. spotsLeft and fillingFast counted the roster array
+ * while isFull read the counter. Because fetchUpcomingSessions
+ * (lib/dal/sessions.ts:415) returns `participants: []`, and app/page.tsx is the
+ * ONLY production consumer of this component, the array was always empty in
+ * production. So on the app's main surface: spotsLeft was always
+ * max_participants, "Filling up" could never fire, and the whole avatar +
+ * capacity row was gated on `confirmedParticipants.length > 0` and therefore
+ * never rendered at all. Three pieces of UI were dead, not merely inconsistent.
+ */
+describe('one capacity source: the counter, never the roster array', () => {
+  /** A session whose counter and roster deliberately disagree. */
+  function disagreeing(counter: number, max: number, rosterSize: number): SessionWithRelations {
+    return {
+      ...session(),
+      max_participants: max,
+      current_participants: counter,
+      participants: Array.from({ length: rosterSize }, (_, i) => ({
+        user_id: `athlete-${i}`,
+        status: 'confirmed',
+        is_guest: false,
+        guest_name: null,
+        payment_status: null,
+        user: { id: `athlete-${i}`, name: `Athlete ${i}`, avatar_url: null },
+      })),
+    } as unknown as SessionWithRelations;
+  }
+
+  it('prints the counter in the n/max readout, not the roster length', () => {
+    // Counter says 7, the array holds 2. 7 is the answer.
+    const { container } = render(<SessionCard session={disagreeing(7, 10, 2)} />);
+    expect(container.textContent).toContain('7/10');
+    expect(container.textContent).not.toContain('2/10');
+  });
+
+  it('derives the spots-left badge from the counter', () => {
+    // 10 - 7 = 3 spots. From the array it would have been 10 - 2 = 8.
+    render(<SessionCard session={disagreeing(7, 10, 2)} />);
+    expect(screen.getByText('3 spots left')).toBeInTheDocument();
+    expect(screen.queryByText('8 spots left')).toBeNull();
+  });
+
+  it('derives the filling-up badge from the counter', () => {
+    // 14/20 is exactly 70%, so fillingFast. spotsLeft is 6, which keeps the
+    // higher-priority spots-left branch (<= 3) out of the way so this badge is
+    // reachable at all. From the array, 2/20 would never fill up.
+    render(<SessionCard session={disagreeing(14, 20, 2)} />);
+    expect(screen.getByText(/Filling up/)).toBeInTheDocument();
+  });
+
+  /**
+   * THE HOME-FEED CASE. Counter populated, array empty -- exactly what
+   * fetchUpcomingSessions produces for every session on app/page.tsx. Before
+   * this change the row did not render here at all.
+   */
+  it('renders the capacity row from the counter alone, with an empty roster', () => {
+    const { container } = render(<SessionCard session={disagreeing(4, 10, 0)} />);
+    expect(container.textContent).toContain('4/10');
+  });
+
+  it('takes the avatars from the roster array, on a separate gate from the count', () => {
+    // Empty roster: the number renders, no avatar stack. The count is the
+    // information; the faces are whichever rows the query happened to load.
+    const empty = render(<SessionCard session={disagreeing(4, 10, 0)} />);
+    expect(empty.container.textContent).toContain('4/10');
+    expect(empty.container.querySelector('[data-testid="avatar-stack"]')).toBeNull();
+
+    // Populated roster: the stack renders, and it is fed the ARRAY's length,
+    // not the counter's value.
+    const loaded = render(<SessionCard session={disagreeing(7, 10, 2)} />);
+    const stack = loaded.container.querySelector('[data-testid="avatar-stack"]');
+    expect(stack).not.toBeNull();
+    expect(stack!.textContent).toBe('2');
+  });
+
+  it('does not render the capacity row when the counter is zero', () => {
+    const { container } = render(<SessionCard session={disagreeing(0, 10, 0)} />);
+    expect(container.textContent).not.toContain('0/10');
   });
 });

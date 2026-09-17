@@ -153,12 +153,14 @@ describe('<SessionCard />', () => {
    * maintained in the database by trg_sync_session_participant_count (087) and
    * is always present, so it is the only source that works everywhere.
    *
-   * KNOWN AND OUT OF SCOPE HERE: spotsLeft and fillingFast in SessionCard read
-   * confirmedParticipants.length (the array) while isFull reads the counter, so
-   * on the fetchUpcomingSessions path a session can hold current_participants: 9
-   * and still compute spotsLeft: 10. Unifying those two sources is its own
-   * ticket and is blocked on migration 169; these tests deliberately do not
-   * assert on spotsLeft, so they will not have to change when it lands.
+   * RESOLVED 2026-09-17, after migration 169 landed: spotsLeft, fillingFast and
+   * the rendered n/max used to read the roster array while isFull read the
+   * counter, so on the fetchUpcomingSessions path a session could hold
+   * current_participants: 9 and still compute spotsLeft: 10. All of them now
+   * read the counter through computeSessionStatus's `athleteCount`. The
+   * single-source assertions live in components/rosterCountParity.test.tsx;
+   * these tests still deliberately avoid asserting on spotsLeft, so the two
+   * files do not overlap.
    */
   describe('Full badge', () => {
     /**
@@ -216,7 +218,8 @@ describe('<SessionCard />', () => {
     // exactly the shape fetchUpcomingSessions produces. The two tests above use
     // a roster that agrees with the counter, so they pass under either source;
     // this is the only test in the file that fails if isFull is switched to
-    // read confirmedParticipants.length. Verified by mutation, not by hope.
+    // read the roster array instead of the counter. Verified by mutation, not
+    // by hope.
     it('shows from the counter alone, with an empty participants array', () => {
       const full = baseSession({ max_participants: 2, current_participants: 2, participants: [] });
       render(<SessionCard session={full} />);
