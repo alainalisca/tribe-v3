@@ -220,6 +220,14 @@ while (i < src.length) {
 
 **This was caught by the CLAUDE.md entry written an hour earlier** — the "ask what shapes it cannot see before quoting the count" rule, applied to the very next count. That is the entry working as intended, and it is the argument for writing these down the same day rather than at the end of the week.
 
+**SAME FAMILY, DIFFERENT MECHANISM: an array column can be NULL _or_ `{}`, and `col = '{}'` silently returns NULL rather than false.** So a guard written the obvious way aborts on a correct database.
+
+Writing migration 171's guard, the three backfill targets looked identical from the application: `users.sports` read as an empty list on all of them. In the database two were `{}` and one was **NULL**. `sports = '{}'` against a NULL column evaluates to NULL, not false, so `count(*) WHERE sports = '{}'` would have counted **2**, the guard would have compared 2 to its expected 3, and the migration would have refused to run on data that was exactly as measured.
+
+**Use `coalesce(array_length(col, 1), 0) = 0` for "this array is empty or absent",** and reach for `IS DISTINCT FROM` rather than `<>` whenever either side can be NULL.
+
+The connection to the instrument findings is not the SQL, it is the shape: the instrument reported a number that was a property of how it asked, not of the data. The three-valued logic is just a quieter version of `2>/dev/null` eating the column being read — there is no error, no empty result, only a count that is wrong in the safe-looking direction. **A guard that aborts on correct data is as broken as one that passes on wrong data, and it is harder to notice, because an abort reads as the guard doing its job.** Prove both arms fire (171's rehearsal, Parts B and C) rather than trusting a clean run.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
