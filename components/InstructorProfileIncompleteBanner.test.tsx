@@ -10,7 +10,7 @@ import { getMissingInstructorFields, type InstructorField } from '@/lib/instruct
  * (lib/i18n/useTranslations.ts:78), so t('fields.photo') searched for a literal
  * key "fields.photo", missed, and fell through to `?? key`. An instructor with
  * an incomplete profile saw a bullet list reading "fields.photo",
- * "fields.bio", "fields.specialties" -- in both languages.
+ * "fields.bio", "fields.sports_or_specialties" -- in both languages.
  *
  * THESE TESTS ASSERT ON RENDERED TEXT, NOT ON THE MESSAGES FILE. The messages
  * were always present and correct in both en and es; only the lookup was
@@ -40,7 +40,7 @@ const EXPECTED: Record<'en' | 'es', Record<InstructorField, string>> = {
   en: {
     photo: 'Profile photo',
     bio: 'Bio',
-    specialties: 'At least one specialty',
+    sports_or_specialties: 'At least one sport or specialty',
     location: 'Location',
     years_experience: 'Years of experience',
   },
@@ -52,7 +52,7 @@ const EXPECTED: Record<'en' | 'es', Record<InstructorField, string>> = {
   es: {
     photo: 'Foto de perfil',
     bio: 'Biografía',
-    specialties: 'Al menos una especialidad',
+    sports_or_specialties: 'Al menos un deporte o una especialidad',
     location: 'Ubicación',
     years_experience: 'Años de experiencia',
   },

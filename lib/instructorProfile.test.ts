@@ -8,7 +8,14 @@ import {
 /**
  * T-PROF1: an instructor is discoverable only with all five required fields.
  * Rules: photo (avatar_url OR photos[]), bio (instructor_bio OR bio),
- * >=1 specialty, location text, years_experience > 0.
+ * >=1 entry in sports OR specialties, location text, years_experience > 0.
+ *
+ * Issue 1 (2026-09-17) widened the third rule from `specialties` alone to
+ * either column. `sports` is what discovery filters on, so gating visibility
+ * on the free-text column would have hidden the instructors the sport filter
+ * exists to surface. These tests pin BOTH directions of the OR, because a
+ * predicate that reads only one column still passes every test that supplies
+ * both.
  */
 
 const complete: InstructorProfileFields = {
@@ -44,9 +51,33 @@ describe('isInstructorProfileComplete', () => {
     expect(getMissingInstructorFields(p)).toContain('bio');
   });
 
-  it('empty specialties → incomplete', () => {
-    expect(getMissingInstructorFields({ ...complete, specialties: [] })).toContain('specialties');
-    expect(getMissingInstructorFields({ ...complete, specialties: null })).toContain('specialties');
+  it('both sports and specialties empty → incomplete', () => {
+    expect(getMissingInstructorFields({ ...complete, sports: [], specialties: [] })).toContain('sports_or_specialties');
+    expect(getMissingInstructorFields({ ...complete, sports: null, specialties: null })).toContain(
+      'sports_or_specialties'
+    );
+  });
+
+  it('sports alone is enough, with no free text at all', () => {
+    // The instructor who picks their sports and writes nothing has filled in
+    // the field discovery actually uses. Hiding them was the hole.
+    const p = { ...complete, sports: ['Boxing'], specialties: [] };
+    expect(getMissingInstructorFields(p)).toEqual([]);
+    expect(isInstructorProfileComplete(p)).toBe(true);
+  });
+
+  it('specialties alone is still enough, for an offering with no canonical sport', () => {
+    // Marcela Anahata's sound healing and women's circles map to no sport in
+    // lib/sports.ts. She was complete before Issue 1 and must stay complete.
+    const p = { ...complete, sports: [], specialties: ['Terapia de sonido'] };
+    expect(getMissingInstructorFields(p)).toEqual([]);
+    expect(isInstructorProfileComplete(p)).toBe(true);
+  });
+
+  it('a whitespace-only entry does not satisfy either column', () => {
+    expect(getMissingInstructorFields({ ...complete, sports: ['   '], specialties: ['  '] })).toContain(
+      'sports_or_specialties'
+    );
   });
 
   it('empty location text → incomplete (coords do not count)', () => {
@@ -60,6 +91,12 @@ describe('isInstructorProfileComplete', () => {
   });
 
   it('reports every missing field for an empty profile, in display order', () => {
-    expect(getMissingInstructorFields({})).toEqual(['photo', 'bio', 'specialties', 'location', 'years_experience']);
+    expect(getMissingInstructorFields({})).toEqual([
+      'photo',
+      'bio',
+      'sports_or_specialties',
+      'location',
+      'years_experience',
+    ]);
   });
 });

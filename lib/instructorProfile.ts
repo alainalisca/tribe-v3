@@ -1,6 +1,15 @@
 /**
  * T-PROF1: instructor profile completeness.
  *
+ * ISSUE 1, 2026-09-17: the specialties requirement now accepts `sports` OR
+ * `specialties`. `sports` is the canonical discovery vocabulary (lib/sports.ts)
+ * and is what /instructors filters on; `specialties` is free text that is shown
+ * and searched but never filtered. Gating visibility on the free-text column
+ * alone would hide exactly the instructors the sport filter exists to surface:
+ * someone who picks their sports and writes no free text has filled in the
+ * field that matters and would still be invisible. That is the same read/write
+ * mismatch as the original bug, one layer up.
+ *
  * An instructor is shown on the "Train with an Instructor" discover page (and
  * in sport-matching results) only once all five required fields are present.
  * While any is missing they are hidden and prompted to finish their profile.
@@ -8,7 +17,7 @@
  * Rules (confirmed with Al):
  *  - photo:            avatar_url OR the first photos[] entry is non-empty
  *  - bio:              instructor_bio OR bio is non-empty (matches the storefront)
- *  - specialties:      at least one entry
+ *  - sports/specialties: at least one entry in EITHER column
  *  - location:         the `location` TEXT field is non-empty (coords don't count)
  *  - years_experience: set AND greater than 0
  *
@@ -16,7 +25,13 @@
  * banner, and unit tests.
  */
 
-export const REQUIRED_INSTRUCTOR_FIELDS = ['photo', 'bio', 'specialties', 'location', 'years_experience'] as const;
+export const REQUIRED_INSTRUCTOR_FIELDS = [
+  'photo',
+  'bio',
+  'sports_or_specialties',
+  'location',
+  'years_experience',
+] as const;
 
 export type InstructorField = (typeof REQUIRED_INSTRUCTOR_FIELDS)[number];
 
@@ -26,6 +41,9 @@ export interface InstructorProfileFields {
   photos?: string[] | null;
   bio?: string | null;
   instructor_bio?: string | null;
+  /** Canonical sports (lib/sports.ts). What discovery filters on. */
+  sports?: string[] | null;
+  /** Free text. Shown and searched, never filtered on. */
   specialties?: string[] | null;
   location?: string | null;
   years_experience?: number | null;
@@ -43,8 +61,15 @@ function hasBio(p: InstructorProfileFields): boolean {
   return hasText(p.instructor_bio) || hasText(p.bio);
 }
 
-function hasSpecialty(p: InstructorProfileFields): boolean {
-  return Array.isArray(p.specialties) && p.specialties.some(hasText);
+/**
+ * Either column satisfies this. An instructor whose offering has no canonical
+ * sport (sound healing, women's circles) is complete on free text alone, and
+ * one who picked sports and wrote nothing is complete on sports alone.
+ */
+function hasSportOrSpecialty(p: InstructorProfileFields): boolean {
+  return (
+    (Array.isArray(p.sports) && p.sports.some(hasText)) || (Array.isArray(p.specialties) && p.specialties.some(hasText))
+  );
 }
 
 function hasLocation(p: InstructorProfileFields): boolean {
@@ -63,7 +88,7 @@ export function getMissingInstructorFields(p: InstructorProfileFields): Instruct
   const missing: InstructorField[] = [];
   if (!hasPhoto(p)) missing.push('photo');
   if (!hasBio(p)) missing.push('bio');
-  if (!hasSpecialty(p)) missing.push('specialties');
+  if (!hasSportOrSpecialty(p)) missing.push('sports_or_specialties');
   if (!hasLocation(p)) missing.push('location');
   if (!hasYearsExperience(p)) missing.push('years_experience');
   return missing;

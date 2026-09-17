@@ -12,6 +12,7 @@ import { fetchUserProfile, updateUser } from '@/lib/dal';
 import { haptic } from '@/lib/haptics';
 import { consumePendingReturnTo } from '@/lib/pendingReturnTo';
 import { isInstructorProfileComplete, type InstructorProfileFields } from '@/lib/instructorProfile';
+import { SPORTS_LIST, getSportTranslation } from '@/lib/sports';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Image from 'next/image';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -34,29 +35,17 @@ import {
   Zap,
 } from 'lucide-react';
 
-const SPORTS_LIST = [
-  'Yoga',
-  'CrossFit',
-  'HYROX',
-  'Running',
-  'Cycling',
-  'Swimming',
-  'Boxing',
-  'Pilates',
-  'Functional Training',
-  'HIIT',
-  'Strength Training',
-  'Dance',
-  'Martial Arts',
-  'Tennis',
-  'Basketball',
-  'Soccer',
-  'Volleyball',
-  'Calisthenics',
-  'Stretching',
-  'Meditation',
-  'Other',
-];
+/**
+ * The sports an instructor can pick, drawn from the canonical SPORTS_LIST so
+ * this screen can never offer a sport that discovery cannot filter on. That
+ * was Issue 1: this file used to declare its own 21-item list, six of whose
+ * values existed nowhere else in the app.
+ *
+ * `Other` is excluded. It is a real stored value but meaningless as a filter,
+ * and an instructor who does something outside the list now has a field for
+ * exactly that: specialties, immediately below.
+ */
+const SPORT_CHOICES = SPORTS_LIST.filter((sport) => sport !== 'Other');
 
 // PAY-01 layer 2: step 3 must not imply Tribe processes or holds money.
 // Instructors collect directly and Tribe takes nothing. Plain en/es object,
@@ -123,11 +112,17 @@ const getTranslations = (language: 'en' | 'es') => ({
     language === 'es'
       ? 'Tu experiencia, enfoque de entrenamiento, qué te hace único...'
       : 'Your experience, training approach, what makes you unique...',
+  sports: language === 'es' ? 'Deportes' : 'Sports',
+  sportsHint: language === 'es' ? 'Por lo que la gente busca' : 'What people search by',
   specialties: language === 'es' ? 'Especialidades' : 'Specialties',
+  specialtiesHint: language === 'es' ? 'Lo que te hace diferente' : 'What makes you different',
+  // Deliberately names no sport. The storefront editor's old placeholder read
+  // 'Yoga, HIIT, Crossfit' and is where most of the free-text sport names in
+  // production came from.
   customSpecialtyPlaceholder:
     language === 'es'
-      ? 'Agregar otras especialidades separadas por coma...'
-      : 'Add other specialties, comma-separated...',
+      ? 'Terapia de sonido, prenatal, preparación para competencia...'
+      : 'Sound healing, prenatal, competition prep...',
   certifications: language === 'es' ? 'Certificaciones' : 'Certifications',
   certPlaceholder: language === 'es' ? 'Ej: ACE, NASM, Yoga Alliance...' : 'E.g. ACE, NASM, Yoga Alliance...',
   yearsExperience: language === 'es' ? 'Años de experiencia' : 'Years of experience',
@@ -210,6 +205,7 @@ export default function InstructorOnboardingPage() {
     location: '',
     bio: '',
     instructor_bio: '',
+    sports: [] as string[],
     specialties: [] as string[],
     certifications: '',
     years_experience: '' as string,
@@ -254,6 +250,7 @@ export default function InstructorOnboardingPage() {
           location: p.location || '',
           bio: p.bio || '',
           instructor_bio: p.instructor_bio || '',
+          sports: p.sports || [],
           specialties: p.specialties || [],
           certifications: (p.certifications || []).join(', '),
           years_experience: p.years_experience?.toString() || '',
@@ -338,13 +335,23 @@ export default function InstructorOnboardingPage() {
     }
   }
 
-  function toggleSpecialty(sport: string) {
+  /** The canonical chips. Writes `sports`, the column discovery filters on. */
+  function toggleSport(sport: string) {
     setForm((prev) => ({
       ...prev,
-      specialties: prev.specialties.includes(sport)
-        ? prev.specialties.filter((s) => s !== sport)
-        : [...prev.specialties, sport],
+      sports: prev.sports.includes(sport) ? prev.sports.filter((s) => s !== sport) : [...prev.sports, sport],
     }));
+  }
+
+  /**
+   * Removes one free-text specialty. Every specialty is now a removable tag:
+   * before Issue 1 this list was filtered by `!SPORTS_LIST.includes(s)`,
+   * because the chips and the free text shared one array and the chips had to
+   * be excluded. They are separate arrays now, so that filter would only hide
+   * a specialty that happens to be spelled like a sport.
+   */
+  function removeSpecialty(value: string) {
+    setForm((prev) => ({ ...prev, specialties: prev.specialties.filter((s) => s !== value) }));
   }
 
   function handleCustomSpecialtyKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -397,6 +404,7 @@ export default function InstructorOnboardingPage() {
         is_instructor: true,
         instructor_since: new Date().toISOString(), // Trial period starts now
         instructor_bio: form.instructor_bio || null,
+        sports: form.sports,
         specialties: form.specialties,
         certifications: certsArray,
         years_experience: yearsExperience,
@@ -437,6 +445,7 @@ export default function InstructorOnboardingPage() {
         photos: form.photos,
         bio: form.bio,
         instructor_bio: form.instructor_bio || null,
+        sports: form.sports,
         specialties: form.specialties,
         location: trimmedLocation || loadedProfile?.location || null,
         years_experience: yearsExperience,
@@ -619,50 +628,55 @@ export default function InstructorOnboardingPage() {
               />
             </div>
 
-            {/* Specialties */}
+            {/* Sports: the canonical vocabulary, written to users.sports */}
             <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-2 block">{t.specialties}</Label>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-2 block">
+                {t.sports} <span className="text-stone-400 dark:text-gray-500">({t.sportsHint})</span>
+              </Label>
               <div className="flex flex-wrap gap-2">
-                {SPORTS_LIST.map((sport) => (
+                {SPORT_CHOICES.map((sport) => (
                   <button
                     key={sport}
-                    onClick={() => toggleSpecialty(sport)}
+                    onClick={() => toggleSport(sport)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      form.specialties.includes(sport)
+                      form.sports.includes(sport)
                         ? 'bg-tribe-green text-slate-900'
                         : 'bg-stone-100 dark:bg-tribe-surface text-stone-600 dark:text-gray-400 hover:bg-stone-200'
                     }`}
                   >
-                    {sport}
+                    {getSportTranslation(sport, language as 'en' | 'es')}
                   </button>
                 ))}
               </div>
-              {/* Custom specialties as removable tags */}
-              {form.specialties.filter((s) => !SPORTS_LIST.includes(s)).length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {form.specialties
-                    .filter((s) => !SPORTS_LIST.includes(s))
-                    .map((s) => (
-                      <span
-                        key={s}
-                        className="px-3 py-1 rounded-full text-xs font-medium bg-tribe-green text-slate-900 flex items-center gap-1"
-                      >
-                        {s}
-                        <button type="button" onClick={() => toggleSpecialty(s)} className="ml-0.5 hover:text-red-700">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
+            </div>
+
+            {/* Specialties: free text, written to users.specialties */}
+            <div>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-2 block">
+                {t.specialties} <span className="text-stone-400 dark:text-gray-500">({t.specialtiesHint})</span>
+              </Label>
+              {form.specialties.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {form.specialties.map((s) => (
+                    <span
+                      key={s}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-tribe-green text-slate-900 flex items-center gap-1"
+                    >
+                      {s}
+                      <button type="button" onClick={() => removeSpecialty(s)} className="ml-0.5 hover:text-red-700">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
-              {/* Custom specialty input */}
               <Input
                 value={customSpecialty}
                 onChange={(e) => setCustomSpecialty(e.target.value)}
                 onKeyDown={handleCustomSpecialtyKeyDown}
                 onBlur={addCustomSpecialties}
                 placeholder={t.customSpecialtyPlaceholder}
-                className="mt-2 bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
+                className="bg-white dark:bg-tribe-mid border-stone-300 dark:border-gray-600"
               />
             </div>
 
@@ -845,9 +859,9 @@ export default function InstructorOnboardingPage() {
                   {form.storefront_tagline && (
                     <p className="text-sm text-stone-500 dark:text-gray-400 mt-0.5">{form.storefront_tagline}</p>
                   )}
-                  {form.specialties.length > 0 && (
+                  {form.sports.length + form.specialties.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {form.specialties.slice(0, 4).map((s) => (
+                      {[...form.sports, ...form.specialties].slice(0, 4).map((s) => (
                         <span
                           key={s}
                           className="px-2 py-0.5 bg-tribe-green/20 text-tribe-green text-[10px] font-medium rounded-full"

@@ -217,6 +217,9 @@ export interface StorefrontProfileUpdate {
   bio?: string | null;
   instructor_bio?: string | null;
   storefront_tagline?: string | null;
+  /** Canonical sports from lib/sports.ts. What discovery filters on. */
+  sports?: string[] | null;
+  /** Free text. Shown and searched, never filtered on. */
   specialties?: string[] | null;
   storefront_banner_url?: string | null;
   storefront_video_url?: string | null;

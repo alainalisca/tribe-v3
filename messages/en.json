@@ -208,7 +208,7 @@
     "fields": {
       "photo": "Profile photo",
       "bio": "Bio",
-      "specialties": "At least one specialty",
+      "sports_or_specialties": "At least one sport or specialty",
       "location": "Location",
       "years_experience": "Years of experience"
     }

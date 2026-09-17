@@ -9,21 +9,16 @@ import { fetchNearbyAthletes } from '@/lib/dal/connections';
 import TrainingPartnerCard from '@/components/TrainingPartnerCard';
 import InviteToSessionSheet from '@/components/InviteToSessionSheet';
 import { sportTranslations } from '@/lib/translations';
+import { SPORTS_LIST } from '@/lib/sports';
 import type { TrainingPartner } from '@/lib/dal/connections';
 
-const SPORTS_LIST = [
-  'Running',
-  'Cycling',
-  'CrossFit',
-  'HYROX',
-  'Basketball',
-  'Tennis',
-  'Soccer',
-  'Swimming',
-  'Yoga',
-  'Boxing',
-  'Hiking',
-];
+/**
+ * The sport filter chips. Drawn from the canonical SPORTS_LIST so this row can
+ * never drift from what an athlete is offered when they pick their sports.
+ * `Other` is a real stored value but meaningless as a filter, so it is hidden
+ * here the same way TrainingPreferencesForm hides it.
+ */
+const FILTER_SPORTS = SPORTS_LIST.filter((sport) => sport !== 'Other');
 
 function getTranslations(language: 'en' | 'es') {
   return {
@@ -146,7 +141,7 @@ export default function TrainingPartnersPage() {
               >
                 {t.allSports}
               </button>
-              {SPORTS_LIST.map((sport) => (
+              {FILTER_SPORTS.map((sport) => (
                 <button
                   key={sport}
                   onClick={() => setSelectedSport(sport)}
