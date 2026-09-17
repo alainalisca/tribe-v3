@@ -64,6 +64,19 @@
 -- surfaces and keep the grant. Narrowing location for authenticated VIEWERS is
 -- the T-ATH5 tier work, not this file.
 --
+-- ORDERING, since the number no longer matches the sequence. 168 was written
+-- first and HELD unapplied while 169 (delete host participant rows) and 170
+-- (users.hide_from_attendee_lists) were written, rehearsed and applied. So this
+-- lands THIRD despite being numbered first. Nothing here depends on the order:
+-- it is one REVOKE on one column, it touches no object either of those created,
+-- and the verifier keys its entry by name rather than position. The file keeps
+-- its number so that the applied history and the repo agree.
+--
+-- PREMISE RE-MEASURED AGAINST PRODUCTION 2026-09-17T11:22Z: public.users has 101
+-- columns, 84 readable by anon and 17 denied, and `location` is still among the
+-- readable ones. The exposure is still open. The rehearsal's precheck fails
+-- loudly if that ever stops being true rather than reporting a vacuous pass.
+--
 -- Rehearsal: supabase/rehearsals/168_revoke_users_location_from_anon_REHEARSAL.sql
 
 REVOKE SELECT (location) ON public.users FROM anon;

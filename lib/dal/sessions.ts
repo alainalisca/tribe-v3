@@ -1003,7 +1003,19 @@ export async function fetchActiveSessionCount(supabase: SupabaseClient, fromDate
   }
 }
 
-/** Fetch sessions by creator with optional date filters. */
+/**
+ * Fetch sessions by creator with optional date filters.
+ *
+ * SHARP EDGE FOR THE NEXT CALLER: there is NO status filter here. This returns
+ * cancelled sessions along with active ones, and the date options only bound the
+ * range. 25 cancelled sessions exist live, so a caller that renders these rows
+ * straight out will show classes that are not happening.
+ *
+ * app/profile/[userId]/ProfileUpcomingSessions.tsx handles it in `selectUpcoming`
+ * rather than here, because widening this shared signature would change every
+ * existing caller. If you are adding a third caller, filter status yourself or
+ * add an opt -- do not assume these rows are live.
+ */
 export async function fetchSessionsByCreator(
   supabase: SupabaseClient,
   creatorId: string,

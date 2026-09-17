@@ -34,6 +34,25 @@
 --   * discoverable_unaffected           users_discoverable is owner-executed
 --   * row_count_unchanged               a grant change touches no data
 --
+-- ORDERING. 168 was written first and HELD, so it now lands AFTER 169 and 170,
+-- both of which are already applied. Nothing in this file depends on that order:
+-- it is one REVOKE on one column, the verifier entry is keyed by name not
+-- position, and the numbering is unchanged. The one thing the reordering did
+-- change is that public.users has gained a column since 168 was written --
+-- hide_from_attendee_lists, added by 170 and deliberately never granted to anon
+-- -- so this rehearsal now also asserts that it is still denied, since the
+-- Supabase default-grant trap has re-granted anon on object changes four times
+-- in this project's history.
+--
+-- PREMISE RE-MEASURED AGAINST PRODUCTION 2026-09-17T11:22Z, not carried over
+-- from when the file was written:
+--   public.users columns ....................................... 101
+--   anon-readable ............................................... 84
+--   denied to anon .............................................. 17
+--   `location` still anon-readable .............................. YES
+-- So the exposure this migration closes is still open, and the precheck below
+-- fails loudly if that ever stops being true.
+--
 -- This rehearsal does NOT and CANNOT prove Gate 0 shipped. That is a deployed-
 -- code fact, checked in a logged-out browser against a real /i/[id] URL plus a
 -- WhatsApp preview. A green run here with Gate 0 unshipped still means a blank
@@ -46,7 +65,15 @@ BEGIN;
 CREATE TEMP TABLE before_state ON COMMIT DROP AS
 SELECT has_column_privilege('anon', 'public.users', 'location', 'SELECT') AS anon_location,
        has_column_privilege('authenticated', 'public.users', 'location', 'SELECT') AS authed_location,
-       (SELECT count(*) FROM public.users) AS n_rows;
+       (SELECT count(*) FROM public.users) AS n_rows,
+       -- How many columns anon can read AT ALL, so the revoke can be shown to be
+       -- surgical rather than merely effective. Measured 84 on 2026-09-17; the
+       -- check asserts the DELTA, not the absolute, so it survives the table
+       -- gaining columns.
+       (SELECT count(*) FROM information_schema.columns c
+         WHERE c.table_schema = 'public' AND c.table_name = 'users'
+           AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT'))
+         AS anon_readable_cols;
 
 -- ============================================================================
 -- APPLY 168 VERBATIM
@@ -169,6 +196,21 @@ WITH checks(check_name, actual, expected) AS (
   UNION ALL SELECT 'discoverable_unaffected',
          (SELECT CASE WHEN v ~ '^[0-9]+$' THEN 'ok' ELSE v END FROM proofs
            WHERE name = 'discoverable_location_rows'), 'ok'
+
+  -- SURGICAL, not merely effective: anon loses exactly ONE column, not a set.
+  -- A wider revoke would still pass every check above.
+  UNION ALL SELECT 'anon_lost_exactly_one_column',
+         ((SELECT anon_readable_cols FROM before_state)
+          - (SELECT count(*) FROM information_schema.columns c
+              WHERE c.table_schema = 'public' AND c.table_name = 'users'
+                AND has_column_privilege('anon', 'public.users', c.column_name, 'SELECT')))::text,
+         '1'
+
+  -- 170 added this column and deliberately did NOT grant it to anon. Supabase
+  -- re-grants anon by default on some object changes -- four times in this
+  -- project -- so its absence is asserted, not assumed.
+  UNION ALL SELECT 'hide_from_attendee_lists_still_denied_to_anon',
+         has_column_privilege('anon', 'public.users', 'hide_from_attendee_lists', 'SELECT')::text, 'false'
 
   -- A grant change touches no data.
   UNION ALL SELECT 'row_count_unchanged',
