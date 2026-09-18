@@ -7,14 +7,14 @@
  * "+57 300 111 2233" and "300-111-2233" must produce one value, or Leo sees
  * three leads and cannot tell they are one person.
  *
- * COLOMBIA IS THE DEFAULT, NOT THE ONLY OPTION. A bare 10-digit number is
- * Colombian (the mobile plan is 3XXXXXXXXX), which covers the Medellín
- * audience these passes are printed for. An explicit + is honoured as written,
- * so a visitor from anywhere can still claim a pass.
+ * A bare 10 digit number is read as Colombian (the mobile plan is
+ * 3XXXXXXXXX), which covers the Medellín audience these passes are printed
+ * for. Every other form that carries its own country code is honoured as
+ * written. See normalizeWhatsApp for the full rule list and why it grew.
  */
 
-/** Colombia. The only country we infer rather than read. */
-const DEFAULT_COUNTRY_CODE = '57';
+/** Colombia. Inferred for a bare 10 digit number, never imposed on one that carries its own code. */
+const COLOMBIA = '57';
 
 /**
  * E.164: a leading +, a non-zero first digit, 8 to 15 digits total. Matches
@@ -26,6 +26,22 @@ const E164 = /^\+[1-9][0-9]{7,14}$/;
 /**
  * Normalise a typed WhatsApp number to E.164, or null if it cannot be.
  *
+ * COLOMBIA IS A DEFAULT, NOT A CEILING. An explicit country code is always
+ * honoured, so a visitor from anywhere can claim a pass. This was not
+ * academic: the first live test typed a US mobile as 13472132947 and the form
+ * rejected it, because the only bare form accepted was a 10 digit Colombian
+ * one.
+ *
+ * The rules, in the order they are tried:
+ *
+ *   +<8 to 15 digits>     accepted as written
+ *   00<digits>            00 is the international prefix across Latin America
+ *                         and reads as + to the person typing it
+ *   10 bare digits        Colombia. The common case on the printed QR
+ *   11 bare digits, 1...  US or Canada, typed without the plus
+ *   12 bare digits, 57... Colombia, country code typed without the plus
+ *   anything else         rejected
+ *
  * Returning null rather than throwing: the caller turns this into one field
  * error on a form, and a thrown exception there would be indistinguishable
  * from a bug.
@@ -33,25 +49,23 @@ const E164 = /^\+[1-9][0-9]{7,14}$/;
 export function normalizeWhatsApp(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
 
-  // Strip everything a person might type as punctuation or grouping, including
-  // the (0) some people copy out of an international format. Unicode spaces
-  // are in here because a pasted number from WhatsApp itself often carries
-  // U+00A0.
-  const trimmed = raw.replace(/[\s ​().-]/g, '');
+  // Everything a person might type as punctuation or grouping, including the
+  // (0) some people copy out of an international format. Unicode spaces are in
+  // here because a number pasted from WhatsApp itself often carries U+00A0.
+  const trimmed = raw.replace(/[\s\u00A0\u200B().-]/g, '');
   if (trimmed === '') return null;
 
-  // An explicit country code, however it was written. 00 is the international
-  // prefix used across Latin America and reads as + to the person typing it.
   let digits: string;
   if (trimmed.startsWith('+')) {
     digits = trimmed.slice(1);
   } else if (trimmed.startsWith('00')) {
     digits = trimmed.slice(2);
   } else if (/^\d{10}$/.test(trimmed)) {
-    // A bare Colombian mobile. This is the common case on the printed QR.
-    digits = DEFAULT_COUNTRY_CODE + trimmed;
+    digits = COLOMBIA + trimmed;
+  } else if (/^1\d{10}$/.test(trimmed)) {
+    // Already carries its own country code, so it is prefixed by nothing.
+    digits = trimmed;
   } else if (/^57\d{10}$/.test(trimmed)) {
-    // Someone typed the country code without a plus.
     digits = trimmed;
   } else {
     return null;

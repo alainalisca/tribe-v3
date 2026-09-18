@@ -65,7 +65,32 @@ function sanitizeChoice(value: unknown, allowed: string[][]): string | null {
   return allowed.some((group) => group.includes(trimmed)) ? trimmed : null;
 }
 
-/** One shape for every rejection, so probing cannot learn which rule fired. */
+/**
+ * Two shapes of 400, and the split is deliberate.
+ *
+ * A VALIDATION failure is about something the person typed, and they can only
+ * fix it if we say which field and why. The first live test on the preview
+ * typed a US number, got one unplaced generic banner, and had no way to know
+ * what the form wanted.
+ *
+ * A BOT check failure is not about the person at all. Honeypot, timing and the
+ * rate limit keep one flat message, because naming the rule that fired tells a
+ * script exactly what to change.
+ */
+const FIELD_MESSAGES = {
+  name: 'Escribe tu nombre completo.',
+  email: 'Escribe un correo válido.',
+  whatsapp: 'Escribe tu número con código de país, por ejemplo +57 300 123 4567 o +1 347 213 2947.',
+  consent: 'Necesitamos tu autorización para compartir tus datos con el aliado.',
+} as const;
+
+type ErrorField = keyof typeof FIELD_MESSAGES;
+
+function fieldError(field: ErrorField): NextResponse {
+  return NextResponse.json({ field, message: FIELD_MESSAGES[field] }, { status: 400 });
+}
+
+/** Bot checks and malformed bodies. Says nothing about which rule fired. */
 function badRequest(): NextResponse {
   return NextResponse.json(
     { error: 'No pudimos procesar tu solicitud. Revisa tus datos e intenta de nuevo.' },
@@ -122,7 +147,7 @@ export async function POST(request: NextRequest) {
     const t = typeof raw.t === 'number' ? raw.t : Number(raw.t);
     if (!Number.isFinite(t) || Date.now() - t < MIN_TIME_ON_PAGE_MS) return badRequest();
 
-    if (raw.consent !== true) return badRequest();
+    if (raw.consent !== true) return fieldError('consent');
 
     const slug = typeof raw.slug === 'string' ? raw.slug.trim().toLowerCase() : '';
     if (!slug || !/^[a-z0-9-]{1,80}$/.test(slug)) return notFound();
@@ -131,13 +156,13 @@ export async function POST(request: NextRequest) {
     if (!config) return notFound();
 
     const name = typeof raw.name === 'string' ? raw.name.trim() : '';
-    if (name.length < 2 || name.length > 80) return badRequest();
+    if (name.length < 2 || name.length > 80) return fieldError('name');
 
     const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '';
-    if (!email || email.length > 255 || !isValidEmail(email)) return badRequest();
+    if (!email || email.length > 255 || !isValidEmail(email)) return fieldError('email');
 
     const whatsapp = normalizeWhatsApp(typeof raw.whatsapp === 'string' ? raw.whatsapp : '');
-    if (!whatsapp) return badRequest();
+    if (!whatsapp) return fieldError('whatsapp');
 
     const groups = Object.values(config.options);
     const choice1 = sanitizeChoice(raw.choice_1, groups);

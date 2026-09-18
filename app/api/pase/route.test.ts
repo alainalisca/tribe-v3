@@ -113,6 +113,16 @@ describe('POST /api/pase', () => {
     );
   });
 
+  /** The exact input that failed on the preview, end to end through the route. */
+  it('accepts a US number typed bare with its country code', async () => {
+    const res = await POST(request(validBody({ whatsapp: '13472132947' })));
+    expect(res.status).toBe(200);
+    expect(insertPassLead).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ whatsapp: '+13472132947' })
+    );
+  });
+
   /**
    * The consent sentence is evidence that a person agreed to their details
    * going to a third party. A client that supplies its own chooses what it
@@ -181,6 +191,7 @@ describe('POST /api/pase', () => {
     it('rejects a missing consent server side, not only in the browser', async () => {
       const res = await POST(request(validBody({ consent: false })));
       expect(res.status).toBe(400);
+      expect((await res.json()).field).toBe('consent');
       expect(insertPassLead).not.toHaveBeenCalled();
     });
 
@@ -206,14 +217,52 @@ describe('POST /api/pase', () => {
       expect(insertPassLead).not.toHaveBeenCalled();
     });
 
-    it('rejects a malformed email and a one-character name', async () => {
-      expect((await POST(request(validBody({ email: 'ana@' })))).status).toBe(400);
-      expect((await POST(request(validBody({ name: 'A' })))).status).toBe(400);
+    /**
+     * The live failure this contract exists for: a US number was rejected with
+     * one unplaced banner and the person had no way to know what the form
+     * wanted. A validation 400 now names its field.
+     */
+    it.each([
+      ['email', { email: 'ana@' }],
+      ['name', { name: 'A' }],
+      ['whatsapp', { whatsapp: '12345' }],
+    ])('names %s as the field at fault', async (field, override) => {
+      const res = await POST(request(validBody(override)));
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.field).toBe(field);
+      expect(typeof json.message).toBe('string');
+      expect(json.message.length).toBeGreaterThan(0);
       expect(insertPassLead).not.toHaveBeenCalled();
     });
 
-    it('rejects a phone that cannot be normalised', async () => {
-      expect((await POST(request(validBody({ whatsapp: '12345' })))).status).toBe(400);
+    it('tells someone with a valid foreign number what the form wants', async () => {
+      const res = await POST(request(validBody({ whatsapp: 'not a phone' })));
+      const json = await res.json();
+      expect(json.field).toBe('whatsapp');
+      expect(json.message).toContain('+57 300 123 4567');
+      expect(json.message).toContain('+1 347 213 2947');
+    });
+
+    /**
+     * The other half of the split. Naming the rule that fired would tell a
+     * script exactly what to change, so these stay flat and field-less.
+     */
+    it('never names a field for a bot check or a rate limit', async () => {
+      const honeypot = await POST(request(validBody({ website: 'http://spam.example' })));
+      expect(await honeypot.json()).not.toHaveProperty('field');
+
+      const tooFast = await POST(request(validBody({ t: Date.now() - 500 })));
+      expect(await tooFast.json()).not.toHaveProperty('field');
+
+      vi.mocked(checkRateLimit).mockResolvedValue({
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(),
+      });
+      const limited = await POST(request(validBody()));
+      expect(limited.status).toBe(429);
+      expect(await limited.json()).not.toHaveProperty('field');
     });
 
     it('rate limits with 429', async () => {

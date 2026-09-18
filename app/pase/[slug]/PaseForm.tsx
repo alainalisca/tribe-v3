@@ -25,7 +25,11 @@ interface ClaimedPass {
   email: string;
 }
 
-type FieldErrors = Partial<Record<'name' | 'whatsapp' | 'email', string>>;
+type ErrorField = 'name' | 'whatsapp' | 'email' | 'consent';
+type FieldErrors = Partial<Record<ErrorField, string>>;
+
+/** The fields the route is willing to name in a 400. */
+const SERVER_ERROR_FIELDS: readonly ErrorField[] = ['name', 'whatsapp', 'email', 'consent'];
 
 /**
  * Survives a refresh.
@@ -94,10 +98,12 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
     if (trimmed.length < 2 || trimmed.length > 80) {
       errors.name = 'Escribe tu nombre completo.';
     }
-    // Deliberately loose: the server normalizes and is the authority. This only
-    // catches an obviously empty or too-short entry before a round trip.
-    if (whatsapp.replace(/\D/g, '').length < 10) {
-      errors.whatsapp = 'Escribe tu número de WhatsApp, con 10 dígitos.';
+    // Deliberately loose, and looser than it was. The server normalizes and is
+    // the authority on what a valid number is; this only catches an obviously
+    // empty entry before a round trip. The old rule demanded 10 digits, which
+    // is a Colombian assumption the server no longer makes.
+    if (whatsapp.replace(/\D/g, '').length < 8) {
+      errors.whatsapp = 'Escribe tu número con código de país, por ejemplo +57 300 123 4567 o +1 347 213 2947.';
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errors.email = 'Escribe un correo válido.';
@@ -137,14 +143,27 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
       });
 
       if (!response.ok) {
-        // One banner for every server-side rejection. The route answers
-        // generically on purpose, so echoing its reason would add nothing and
-        // inventing a specific one would be a guess.
-        setBanner(
-          response.status === 429
-            ? 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'
-            : 'No pudimos procesar tu solicitud. Revisa tus datos e intenta de nuevo.'
-        );
+        if (response.status === 429) {
+          setBanner('Demasiados intentos. Espera unos minutos e intenta de nuevo.');
+          return;
+        }
+
+        // A validation 400 names the field it is about, so it lands under that
+        // field rather than in a banner the person has to map back themselves.
+        // Bot checks and rate limits deliberately do not, and fall through to
+        // the banner.
+        const payload = (await response.json().catch(() => null)) as {
+          field?: string;
+          message?: string;
+          error?: string;
+        } | null;
+        const field = payload?.field;
+        if (field && payload?.message && SERVER_ERROR_FIELDS.includes(field as ErrorField)) {
+          setFieldErrors({ [field as ErrorField]: payload.message });
+          return;
+        }
+
+        setBanner(payload?.error ?? 'No pudimos procesar tu solicitud. Revisa tus datos e intenta de nuevo.');
         return;
       }
 
@@ -227,7 +246,7 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder="300 123 4567"
+          placeholder="+57 300 123 4567"
           value={whatsapp}
           onChange={(e) => setWhatsapp(e.target.value)}
           className="w-full rounded-xl border border-stone-300 px-4 py-3 text-base text-tribe-dark"
@@ -313,6 +332,12 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
           </a>
         </span>
       </label>
+
+      {fieldErrors.consent ? (
+        <p role="alert" className="mt-2 text-xs text-red-700">
+          {fieldErrors.consent}
+        </p>
+      ) : null}
 
       <button
         type="submit"
