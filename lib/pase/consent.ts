@@ -7,7 +7,7 @@
  * it appears to have agreed to, which makes the stored consent worthless as
  * evidence of anything.
  *
- * Al is writing the política de tratamiento de datos this links to; the page
+ * The política de tratamiento de datos this links to is being prepared; the page
  * at /legal/tratamiento-de-datos is a stub until then. When the wording
  * changes, add a new constant rather than editing this one -- rows already
  * written must keep the sentence their signer actually saw.

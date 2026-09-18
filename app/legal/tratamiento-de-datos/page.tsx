@@ -1,7 +1,7 @@
 /**
  * Page: /legal/tratamiento-de-datos -- Política de Tratamiento de Datos Personales
  *
- * STUB. Al is writing the text.
+ * STUB. The policy text is being prepared.
  *
  * It exists ahead of its content because the pass form's consent checkbox has
  * to link somewhere, and the one thing it must not link to is /legal/privacy.

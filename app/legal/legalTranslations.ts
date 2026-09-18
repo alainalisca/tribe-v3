@@ -568,7 +568,7 @@ export function getSafetyContent(language: 'en' | 'es'): SafetyContent {
 }
 
 /**
- * T-LEAD1 stub. Al is writing the real text.
+ * T-LEAD1 stub. The real policy text is being prepared.
  *
  * Kept beside the other legal copy rather than inline in the page so the
  * component has no language ternary, matching getPrivacyContent above.
@@ -583,7 +583,7 @@ export interface DataPolicyContent {
 const DATA_POLICY_CONTENT: Record<'en' | 'es', DataPolicyContent> = {
   es: {
     title: 'Política de Tratamiento de Datos Personales (Ley 1581 de 2012)',
-    pending: 'Texto pendiente. Al lo redacta.',
+    pending: 'Política en preparación.',
     paragraphs: [
       'Esta página va a contener la política completa de tratamiento de datos personales de Tribe, incluida la finalidad de la recoleccion, los derechos del titular y los canales de contacto.',
       'Mientras tanto, si dejaste tus datos en un pase y quieres que los eliminemos, escríbenos y lo hacemos.',
@@ -592,7 +592,7 @@ const DATA_POLICY_CONTENT: Record<'en' | 'es', DataPolicyContent> = {
   },
   en: {
     title: 'Personal Data Processing Policy (Law 1581 of 2012)',
-    pending: 'Text pending. Al is writing it.',
+    pending: 'Policy in preparation.',
     paragraphs: [
       "This page will hold Tribe's full personal data processing policy, including the purpose of collection, the data subject's rights, and contact channels.",
       'In the meantime, if you left your details on a pass and want them deleted, write to us and we will do it.',

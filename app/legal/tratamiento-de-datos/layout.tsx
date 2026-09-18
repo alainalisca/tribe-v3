@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
  * noindex while the page is a stub.
  *
  * The page itself is a client component and cannot export metadata, so the
- * robots directive lives here. REMOVE THIS FILE when Al's text lands -- a
+ * robots directive lives here. REMOVE THIS FILE when the policy text lands -- a
  * data-processing policy that search engines cannot see is not much of a
  * public policy, and Ley 1581 expects it to be findable.
  */
