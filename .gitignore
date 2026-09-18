@@ -57,3 +57,6 @@ SINTRA-BRAIN-SEED.md
 docs/BUILD_AUDIT_2026-08-16.md
 docs/QA_HANDOFF_FOR_COWORK.md
 docs/ROUTE_INVENTORY_2026-08-16.md
+
+# T-LEAD1 recon output: a live schema dump, never committed
+supabase/recon-t-lead1.out.json
