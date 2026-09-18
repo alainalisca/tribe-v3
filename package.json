@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
-    "verify:share": "node scripts/verify-share-routes.mjs"
+    "verify:share": "node scripts/verify-share-routes.mjs",
+    "test:complete": "vitest run --reporter=json --outputFile=.vitest-results.json; node scripts/assertSuiteComplete.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",
