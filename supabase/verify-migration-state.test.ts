@@ -417,9 +417,30 @@ describe('public.sessions columns added after 158 carry an explicit write grant'
   });
 });
 
-// Dropped the third 'malformed row' check — it tripped on the
-// stylistic difference between `select 'NNN' as migration,` (first
-// row, has alias) vs `select 'NNN',` (subsequent rows, no alias).
-// Postgres parses both fine, and a truly broken row would fail at
-// the SQL editor on first invocation anyway. The first two tests
-// cover the real drift modes (missing checks, orphan references).
+// The third check used to be dropped, with this reasoning: "a truly broken row
+// would fail at the SQL editor on first invocation anyway."
+//
+// It did, and nobody noticed for as long as nobody pasted the file in.
+// 169_delete_host_participant_rows was added with its CASE unterminated -- two
+// `then` arms, no `else ... end`, and no `union all` after it -- so the whole
+// script died at line 1144 with `syntax error at or near "select"`. Every
+// branch after it, including the four newest, was unreachable. A verifier that
+// does not parse reports nothing, which is indistinguishable from a verifier
+// that reports all green until someone tries to use it.
+//
+// The test below is the structural check, rewritten to key on the invariant
+// rather than on the row style that tripped the original: N branches are joined
+// by exactly N-1 `union all`. That is what the unterminated CASE violated.
+describe('verify-migration-state.sql is a single well-formed UNION', () => {
+  it('joins every branch with exactly one union all', () => {
+    const sql = fs.readFileSync(path.join(__dirname, 'verify-migration-state.sql'), 'utf-8');
+
+    // Branch selects start at column 0; the `select 1 from ...` inside a
+    // subquery is always indented, which is what keeps them out of this count.
+    const branches = sql.match(/^select '/gm) ?? [];
+    const unions = sql.match(/^union all\s*$/gm) ?? [];
+
+    expect(branches.length).toBeGreaterThan(100);
+    expect(unions.length).toBe(branches.length - 1);
+  });
+});
