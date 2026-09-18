@@ -28,43 +28,77 @@ import { fetchInstructors, type InstructorProfile } from '@/lib/dal/instructors'
 import { fetchGymsAndStudios, type GymDirectoryEntry } from '@/lib/dal/gymDirectory';
 import { logError } from '@/lib/logger';
 import InstructorsPageClient from './InstructorsPageClient';
+import { resolveFetchOutcome } from './fetchOutcome';
 
-// ISR: cache the rendered page for 60 seconds between fetches. The instructor
-// list doesn't need per-request freshness — new instructors onboarding don't
-// expect their profile to appear in the discover list within milliseconds.
-// 60s is the cheapest setting that still feels live:
-//   - A new sign-up gets discoverability in under a minute.
-//   - A rating change propagates in under a minute.
-//   - At steady-state traffic, ~98% of requests are cache hits instead of
-//     hitting Supabase cold-start round-trips.
-// `dynamic = 'auto'` (the default) + `revalidate` gets us ISR behavior. We
-// don't set `dynamic = 'force-dynamic'` here for that reason.
-export const revalidate = 60;
+// THIS ROUTE IS DYNAMIC, NOT CACHED. It used to carry `export const
+// revalidate = 60` and a comment claiming ~98% cache hits. There is no cache:
+// `createClient()` (lib/supabase/server.ts) awaits `cookies()`, which opts the
+// route into dynamic rendering, and `revalidate` has no effect on a route Next
+// cannot cache. The build's own route table is the proof -- /instructors is
+// listed as `ƒ (Dynamic) server-rendered on demand`, not `○ (Static)`.
+//
+// The setting is removed rather than left in place with a corrected comment: a
+// config value that does nothing reads as a fact about how the route behaves,
+// and the one it asserted was false for as long as it was here.
+//
+// The two errors this route logs during `npm run build` are the same mechanism.
+// Next probes the route by prerendering it, `cookies()` throws
+// DynamicServerError, the catch below logs it, and Next then marks the route
+// dynamic. Harmless, and not a sign the fetch is broken.
+//
+// If per-request rendering ever becomes too expensive, the fix is not
+// `revalidate`: it is splitting the public shell (which needs no cookies) from
+// the viewer-specific parts, at which point see the cache-poisoning warning in
+// app/profile/[userId]/useVisibilityTier.ts before moving anything viewer-
+// specific into the cached render.
 
 export default async function InstructorsPage() {
   let initialInstructors: InstructorProfile[] = [];
   let gyms: GymDirectoryEntry[] = [];
+  // An empty list is NOT evidence that the directory is empty. These flags are
+  // what let the client tell "we could not load this" apart from "there is
+  // nothing to show", which used to render the identical screen -- complete
+  // with a Clear Search button that could not possibly help.
+  let instructorsFailed = false;
+  let gymsFailed = false;
 
   try {
     const supabase = await createClient();
-    // Both on the server, in parallel: the gym section is part of the first
-    // paint, not a client fetch that pops in after it.
-    const [result, gymResult] = await Promise.all([fetchInstructors(supabase), fetchGymsAndStudios(supabase)]);
-    if (gymResult.success && gymResult.data) gyms = gymResult.data;
-    if (result.success && result.data) {
-      initialInstructors = result.data;
-    } else if (!result.success) {
-      logError(new Error(result.error ?? 'fetchInstructors failed'), {
-        action: 'InstructorsPage.serverFetch',
-      });
+    // allSettled, not all: these two fetches are independent, and with
+    // Promise.all a rejection from either emptied BOTH lists. The gym
+    // directory failing is not a reason to report zero instructors.
+    const [result, gymResult] = await Promise.allSettled([fetchInstructors(supabase), fetchGymsAndStudios(supabase)]);
+
+    const instructorOutcome = resolveFetchOutcome(result, 'fetchInstructors');
+    initialInstructors = instructorOutcome.data;
+    instructorsFailed = instructorOutcome.failed;
+    if (instructorOutcome.failed) {
+      logError(instructorOutcome.cause, { action: 'InstructorsPage.serverFetch' });
+    }
+
+    // Previously `if (gymResult.success && gymResult.data) gyms = ...` with no
+    // else at all: a gym-directory failure was discarded without a log, so it
+    // left no trace anywhere. Built, broken and silent.
+    const gymOutcome = resolveFetchOutcome(gymResult, 'fetchGymsAndStudios');
+    gyms = gymOutcome.data;
+    gymsFailed = gymOutcome.failed;
+    if (gymOutcome.failed) {
+      logError(gymOutcome.cause, { action: 'InstructorsPage.serverGymFetch' });
     }
   } catch (error) {
-    // If server-side fetch breaks (e.g. DB down), fall through with an
-    // empty array — the client page will render its empty state rather
-    // than crashing the whole route. A client-triggered refresh will
-    // retry later.
+    // Reached when createClient() itself throws, which is what Next's
+    // prerender probe does. Both lists are unknown, not empty.
+    instructorsFailed = true;
+    gymsFailed = true;
     logError(error, { action: 'InstructorsPage.serverFetch' });
   }
 
-  return <InstructorsPageClient initialInstructors={initialInstructors} gyms={gyms} />;
+  return (
+    <InstructorsPageClient
+      initialInstructors={initialInstructors}
+      instructorsFailed={instructorsFailed}
+      gyms={gyms}
+      gymsFailed={gymsFailed}
+    />
+  );
 }

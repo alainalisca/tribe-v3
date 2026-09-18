@@ -15,7 +15,7 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Morning Motivation!', body: "Today's sessions are live - find your workout crew." },
-    es: { title: 'Motivación Matutina!', body: 'Las sesiones de hoy estan activas - encuentra tu equipo.' },
+    es: { title: 'Motivación Matutina!', body: 'Las sesiones de hoy están activas - encuentra tu equipo.' },
   },
   {
     en: { title: "Don't Skip Today!", body: 'Your fitness community awaits. Join a session now.' },
@@ -31,11 +31,11 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Fresh Start!', body: 'Begin your day with a group workout - find one now.' },
-    es: { title: 'Nuevo Comienzo!', body: 'Empieza tu dia con un entrenamiento grupal.' },
+    es: { title: 'Nuevo Comienzo!', body: 'Empieza tu día con un entrenamiento grupal.' },
   },
   {
     en: { title: 'Morning Energy!', body: 'Training partners boost your motivation by 60%.' },
-    es: { title: 'Energia Matutina!', body: 'Los compañeros aumentan tu motivación un 60%.' },
+    es: { title: 'Energía Matutina!', body: 'Los compañeros aumentan tu motivación un 60%.' },
   },
   {
     en: { title: 'Rise, Shine, Train!', body: "Check today's sessions and find your tribe." },
@@ -51,7 +51,7 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: "Champion's Morning!", body: 'Winners train together. Find your crew today.' },
-    es: { title: 'Mañana de Campeon!', body: 'Los ganadores entrenan juntos. Encuentra tu equipo.' },
+    es: { title: 'Mañana de Campeón!', body: 'Los ganadores entrenan juntos. Encuentra tu equipo.' },
   },
   {
     en: { title: 'New Day, New Gains!', body: 'Sessions available near you - join the movement.' },
@@ -59,7 +59,7 @@ export const morningMotivationMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Your Best Self Awaits!', body: 'Train with others and push your limits today.' },
-    es: { title: 'Tu Mejor Version Te Espera!', body: 'Entrena con otros y supera tus limites hoy.' },
+    es: { title: 'Tu Mejor Versión Te Espera!', body: 'Entrena con otros y supera tus limites hoy.' },
   },
   {
     en: { title: 'Morning Call to Action!', body: "Don't be a solo trainer - find your tribe." },
@@ -122,14 +122,14 @@ export const sessionNearbyMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Nearby Activity!', body: 'Athletes are gathering for {{sport}} close to you.' },
-    es: { title: 'Actividad Cercana!', body: 'Atletas se reunen para {{sport}} cerca de ti.' },
+    es: { title: 'Actividad Cercana!', body: 'Atletas se reúnen para {{sport}} cerca de ti.' },
   },
 ];
 
 export const weeklyRecapMessages: BilingualMessage[] = [
   {
     en: { title: 'Your Week in Review!', body: 'You joined {{count}} sessions this week. Keep the momentum!' },
-    es: { title: 'Tu Semana en Resumen!', body: 'Te uniste a {{count}} sesiones esta semana. Sigue asi!' },
+    es: { title: 'Tu Semana en Resumen!', body: 'Te uniste a {{count}} sesiones esta semana. Sigue así!' },
   },
   {
     en: { title: 'Weekly Tribe Stats!', body: '{{count}} workouts completed. {{next_goal}} to beat last week!' },
@@ -152,11 +152,11 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: "You're on Fire!", body: '{{streak}} day training streak! Keep it going next week.' },
-    es: { title: 'Estas en Llamas!', body: 'Racha de {{streak}} días! Sigue asi la próxima semana.' },
+    es: { title: 'Estas en Llamas!', body: 'Racha de {{streak}} días! Sigue así la próxima semana.' },
   },
   {
     en: { title: 'Week Highlights!', body: 'Most active day: {{day}}. Top sport: {{sport}}.' },
-    es: { title: 'Destacados de la Semana!', body: 'Dia mas activo: {{day}}. Deporte top: {{sport}}.' },
+    es: { title: 'Destacados de la Semana!', body: 'Día más activo: {{day}}. Deporte top: {{sport}}.' },
   },
   {
     en: { title: 'Tribe Growing!', body: 'You connected with {{new_connections}} new training partners.' },
@@ -164,7 +164,7 @@ export const weeklyRecapMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Weekly Champion!', body: 'You showed up {{count}} times this week. Consistency wins!' },
-    es: { title: 'Campeon Semanal!', body: 'Apareciste {{count}} veces esta semana. La constancia gana!' },
+    es: { title: 'Campeón Semanal!', body: 'Apareciste {{count}} veces esta semana. La constancia gana!' },
   },
   {
     en: { title: 'Keep Building!', body: "Next week's goal: beat this week's {{count}} sessions." },
@@ -195,7 +195,7 @@ export const reEngagementMessages: BilingualMessage[] = [
   },
   {
     en: { title: 'Fresh Start!', body: 'Every champion takes breaks. Ready to jump back in?' },
-    es: { title: 'Nuevo Comienzo!', body: 'Todo campeon toma descansos. Listo para volver?' },
+    es: { title: 'Nuevo Comienzo!', body: 'Todo campeón toma descansos. Listo para volver?' },
   },
   {
     en: { title: 'Comeback Time!', body: 'Your fitness journey continues. Find a session today.' },

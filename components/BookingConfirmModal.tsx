@@ -127,7 +127,7 @@ export default function BookingConfirmModal({
                   ? 'Pago con Wompi (Nequi, PSE, tarjeta)'
                   : 'Pay with Wompi (Nequi, PSE, card)'
                 : language === 'es'
-                  ? 'Pago con Stripe (tarjeta de crédito/debito)'
+                  ? 'Pago con Stripe (tarjeta de crédito/débito)'
                   : 'Pay with Stripe (credit/debit card)'}
             </span>
           </div>

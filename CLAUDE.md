@@ -253,6 +253,81 @@ Both numbers are true statements about _something_. Only one is a statement abou
 
 Same family as the instrument findings ([[the `[^<>]` and `vercel ls` entries above]]), and the mechanism is the mirror image: there the tool could not see everything that was there, here the tool saw more than the user ever would. A number that is too big reads exactly as confidently as a number that is too small.
 
+**A FOURTH INSTANCE, and the clearest: 157 was the number of Spanish strings the guard could SEE, not the number that exist.**
+
+The accent sweep on 2026-09-17 reported 157 strings and shipped a CI guard over them. Two days' worth of confidence in that number was misplaced in two independent ways, both found by reading one file's copy by eye.
+
+**Hole 1, the word list is an allow-list by inversion.** `REQUIRES_ACCENT` held **60 words**. It enumerates what to CHECK, so every Spanish word nobody thought of may lose its accent with the guard green. Found live in the `/instructors` empty state, a screen that had been read several times that day: `busqueda`, `mas`, `mi`. The most damning was `recuperacion` in the legal copy -- the seed already held **nineteen** `-ción` words, so the family was obviously known, and this one still slipped, because the seed lists words rather than the rule.
+
+**Hole 2, a fifth source shape was never scanned.** Pattern (c) was `/language\s*===\s*'es'\s*\?\s*'([^']*)'/` -- it requires a STRING after the `?`. The codebase also writes
+
+```ts
+return language === 'es'
+  ? { pageTitle: 'Ayudanos a Mejorar', title: 'Titulo', ... }
+  : { ... }
+```
+
+an object literal, which that pattern matches not at all. Measured: **254 Spanish strings across 15 files** are invisible to the guard in this shape, and **3 of them violate words already in the seed** (`Titulo`, `Descripcion`, `descripcion` in `app/feedback/useFeedback.ts`). Those three are the proof the shape hole is real rather than theoretical: the guard had the rule and could not see the string.
+
+So the real Spanish surface is at least **411** strings, and "157 covered" described the instrument.
+
+**`mi` is the floor of the whole approach, and it is worth knowing where the floor is.** `mi` (possessive, "mi perfil") and `mí` (stressed pronoun, "cerca de mí") are different words. Seeding `mi -> mí` would fail on every "mi sesión" in the app. **No word list of any size catches `Cerca de mi`** -- it needs the grammatical role, not the spelling. It is in `DELIBERATELY_EXCLUDED` with that reasoning, so the next person knows it was considered and not missed.
+
+**The rule.** When a sweep returns a count, that count is a property of the sweep until you have shown otherwise. Before quoting it: enumerate the SHAPES the source can take and prove the scanner sees each one (one mutation per shape -- the rule that already found two holes here), and say plainly whether the matching is a rule or a list, because a list is an allow-list wearing the other way round. Same family as `[^<>]` breaking on `=>`, `vercel ls` writing status to stderr, and counting instructors without the gates the page applies -- **four instances in two days of a number that described the tool rather than the thing.**
+
+**A TEST AT THE WRONG LAYER FOR THE DEFECT. Fifteen passing tests with the bug fully restored, because the bug does not live in what the component does.**
+
+The instructor storefront editor was copying `users.bio` into `users.instructor_bio`, leaving the column that `/profile/[userId]` and `/search` still display behind as stale. The mechanism was one prop expression at the call site:
+
+```tsx
+initialBio={profile.instructor_bio || profile.bio || ''}
+```
+
+Fifteen behaviour tests covered that component — what it writes, what it never writes, when its empty state appears. Restoring that exact expression left **all fifteen green**, because they mount the component with props they supply themselves. They can see everything the component _does_ and nothing about how it is _called_.
+
+**When a bug lives in how a component is called rather than in what it does, component tests cannot reach it, however many you write.** Ask which layer the defect actually occupies before choosing the instrument:
+
+- behaviour inside the component -> mount it and assert on its output
+- **what the component is handed** -> assert on the CALL SITE, in source. `components/dashboard/StorefrontEditor.callsite.test.ts` parses the `<StorefrontEditor ... />` props out of the dashboard and fails if `initialBio` reads `bio` at all. Same shape as `lib/sports.singleSource.test.ts`.
+- whether a module imports rather than redeclares -> source scan (the sport-list guard)
+- data-state left by a migration -> a check in `verify-migration-state.sql`
+
+**And the mutation that proves such a guard is restoring the original call-site expression**, not a variation on it. A guard written for a one-line prop expression is only shown to work by putting that line back.
+
+**Close the obvious way to make the new guard pass without fixing anything.** The call-site guard has a third case asserting the two bio props do not read the same column -- otherwise someone silences the first case by passing `instructor_bio` to both, and the empty-state note becomes permanently wrong instead. That is the same instinct as the allow-list rot test in the sport-list guard: both assume the next person will reach for the cheapest way to make the suite green, and both take it away in advance. **When you add a guard, spend one more minute asking how you would satisfy it dishonestly, and assert against that too.**
+
+**A REFERENCE CORPUS CAN BE WRONG IN THE EXACT DIMENSION YOU ARE CHECKING, and then it makes the guard confidently wrong instead of silently incomplete.**
+
+Replacing the accent guard's hand-written word list meant taking a Spanish dictionary as a dev dependency. `an-array-of-spanish-words` looked ideal: **636,598 wordforms**, 8.3 MB, no engine needed, pure data. It is **ASCII-FOLDED**. It contains `busqueda`, `mas`, `dia`, and does not contain `búsqueda`, `más`, `día`, `sesión`, `información`, `corazón`. It keeps `ñ` and strips every acute accent.
+
+Had it shipped, the guard would have asserted that **`busqueda` is valid Spanish** -- a spell-checking accent guard whose dictionary has no accents. That is worse than the 60-word list it replaced: an incomplete guard stays quiet about what it cannot see, while a guard reading a folded corpus actively certifies the misspelling. It would also have "passed" its own mutation tests, because a mutation reverting `búsqueda` to `busqueda` produces a word the corpus says is fine.
+
+**Before trusting a reference corpus, probe it for the exact property you are checking.** Not its size, not its name, not its download count. Three lookups would have settled it: is `búsqueda` in here, is `busqueda` in here, and is exactly one of them?
+
+**And note how it was caught.** Not by inspection -- I had already written an analysis on top of it that reported "14,148 unambiguous accent rules derivable", a confident and entirely fictional number. It was caught because a sanity probe on the words this session had actually tripped over returned **`busqueda` -> not in the dictionary at all**, which made no sense for a 636,598-word Spanish list and was the thread worth pulling. The lesson is to include known-answer cases in the first probe of any new data source, precisely so a nonsensical result surfaces before the analysis built on it does.
+
+What works instead is `nspell` (42 KB, pure JS, no native build) plus `dictionary-es` (880 KB Hunspell). Verified against the same known-answer set before being trusted: `busqueda` -> `búsqueda`, `dia` -> `día`, `informacion` -> `información`, `cuentanos` -> `cuéntanos`, and `mas`/`mi`/`anos` correctly declined as ambiguous because the unaccented form is also a real Spanish word.
+
+**THE HARNESS THAT CHECKS EVERYTHING ELSE WAS UNDERCOUNTING ITSELF. A green suite summary is a claim about the tests that RAN, not about the tests that EXIST, and the two are only the same number if something asserts it.**
+
+Repeated full-suite runs of an UNCHANGED commit, 2026-09-18:
+
+```
+201 of 204 files   1838 tests   3 runner errors
+204 of 204 files   1869 tests   0
+201 of 204 files   1843 tests   0   <- reported GREEN, three files never ran
+```
+
+Vitest reports a dropped file by shrinking its own denominator. The run exits 0, the summary says passed, and a partial run is indistinguishable from a complete one at the only place anyone looks. The three "runner errors" in the first line were `STACK_TRACE_ERROR` with stacks entirely inside `@vitest/runner` -- no application frames, no assertion message. Nothing was broken; workers were dying, and the loss surfaced either as a smaller denominator or as a failure pinned to an arbitrary test.
+
+Every other instrument finding in this file is a tool undercounting the thing it MEASURED. This is the first where the thing doing the checking silently reduced its own coverage and called it success. `npm run test:complete` now compares files-run against files-on-disk and fails naming the difference.
+
+**IT WENT UNNOTICED BECAUSE THE NUMBER MOVED IN THE DIRECTION THAT LOOKS LIKE PROGRESS.** Across one day the suite reported 1836, 1854, 1869, 1874. That reads as a suite growing, and some of it was -- but some of those differences were the denominator moving. **A count that goes up is not audited the way a count that goes down is.** A drop invites "what broke?"; a rise invites nothing at all. When a total changes, establish which way and why before deciding it is good news, because only one of those two directions gets questioned by instinct.
+
+**And the near-miss on the diagnosis is the part worth remembering.** A pre-merge run read 1836 against 1854 measured minutes earlier on the same branch -- exactly 18 tests, exactly the three new files. It was written off as "a stale run", with the evidence already in hand and no explanation offered for how a run goes stale. The correct reading only surfaced later, while chasing something else entirely. **The comfortable explanation was available, cost nothing to accept, and was wrong.** When a number does not reconcile, "probably a flake" is a hypothesis with a testable consequence -- run it again and count -- not a reason to move on.
+
+**Parallelism was left alone on purpose.** `--no-file-parallelism` made the drop rarer but not impossible (one file still went missing) and cost 3296s against ~30s. A 110x slowdown for a partial fix is not a trade. The reporting is the defect and it is a defect at any pool setting.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**

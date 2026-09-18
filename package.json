@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
-    "verify:share": "node scripts/verify-share-routes.mjs"
+    "verify:share": "node scripts/verify-share-routes.mjs",
+    "test:complete": "vitest run --reporter=json --outputFile=.vitest-results.json; node scripts/assertSuiteComplete.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",
@@ -80,12 +81,14 @@
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "canvas": "^3.2.1",
+    "dictionary-es": "^4.0.0",
     "eslint": "^8",
     "eslint-config-next": "15.0.2",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.2.7",
+    "nspell": "^2.1.5",
     "postcss": "^8",
     "prettier": "^3.8.1",
     "puppeteer": "^24.34.0",

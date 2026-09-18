@@ -150,7 +150,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
             icon={<Award className="w-4 h-4 text-yellow-500" />}
           />
           <StatCard
-            label={language === 'es' ? 'Retencion' : 'Retention'}
+            label={language === 'es' ? 'Retención' : 'Retention'}
             value={`${stats.retentionPercent}%`}
             icon={<TrendingUp className="w-4 h-4 text-green-500" />}
           />
