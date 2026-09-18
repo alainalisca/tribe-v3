@@ -519,8 +519,20 @@ export default function SessionDetailPage() {
         />
       )}
 
-      {/* Post-Session Flow Modal */}
-      {d.user && d.creator && (
+      {/* Post-Session Flow Modal.
+          `!isCreator` matters: this flow asks the viewer to RATE THE HOST, and
+          without it a host is asked to rate themselves. It is not hypothetical
+          -- production holds one review row where reviewer_id = host_id, a
+          5-star self-rating, on session 21a301f1-3c77-4551-a527-00d38943362e,
+          which is one of the 23 sessions migration 169 cleaned up.
+
+          That is also why the hole is currently unreachable rather than
+          harmless: the flow opens on `hasJoined`, which is computed purely from
+          session_participants rows, and 169 deleted every host's row. So the
+          display was being held shut by a DATA migration. Anything that
+          recreates a host participant row reopens it. The guard belongs here,
+          next to the SubscribeButton three lines up that already has one. */}
+      {d.user && d.creator && !isCreator && (
         <PostSessionFlow
           open={showPostSessionFlow}
           onClose={() => setShowPostSessionFlow(false)}
