@@ -296,6 +296,18 @@ Fifteen behaviour tests covered that component — what it writes, what it never
 
 **Close the obvious way to make the new guard pass without fixing anything.** The call-site guard has a third case asserting the two bio props do not read the same column -- otherwise someone silences the first case by passing `instructor_bio` to both, and the empty-state note becomes permanently wrong instead. That is the same instinct as the allow-list rot test in the sport-list guard: both assume the next person will reach for the cheapest way to make the suite green, and both take it away in advance. **When you add a guard, spend one more minute asking how you would satisfy it dishonestly, and assert against that too.**
 
+**A REFERENCE CORPUS CAN BE WRONG IN THE EXACT DIMENSION YOU ARE CHECKING, and then it makes the guard confidently wrong instead of silently incomplete.**
+
+Replacing the accent guard's hand-written word list meant taking a Spanish dictionary as a dev dependency. `an-array-of-spanish-words` looked ideal: **636,598 wordforms**, 8.3 MB, no engine needed, pure data. It is **ASCII-FOLDED**. It contains `busqueda`, `mas`, `dia`, and does not contain `búsqueda`, `más`, `día`, `sesión`, `información`, `corazón`. It keeps `ñ` and strips every acute accent.
+
+Had it shipped, the guard would have asserted that **`busqueda` is valid Spanish** -- a spell-checking accent guard whose dictionary has no accents. That is worse than the 60-word list it replaced: an incomplete guard stays quiet about what it cannot see, while a guard reading a folded corpus actively certifies the misspelling. It would also have "passed" its own mutation tests, because a mutation reverting `búsqueda` to `busqueda` produces a word the corpus says is fine.
+
+**Before trusting a reference corpus, probe it for the exact property you are checking.** Not its size, not its name, not its download count. Three lookups would have settled it: is `búsqueda` in here, is `busqueda` in here, and is exactly one of them?
+
+**And note how it was caught.** Not by inspection -- I had already written an analysis on top of it that reported "14,148 unambiguous accent rules derivable", a confident and entirely fictional number. It was caught because a sanity probe on the words this session had actually tripped over returned **`busqueda` -> not in the dictionary at all**, which made no sense for a 636,598-word Spanish list and was the thread worth pulling. The lesson is to include known-answer cases in the first probe of any new data source, precisely so a nonsensical result surfaces before the analysis built on it does.
+
+What works instead is `nspell` (42 KB, pure JS, no native build) plus `dictionary-es` (880 KB Hunspell). Verified against the same known-answer set before being trusted: `busqueda` -> `búsqueda`, `dia` -> `día`, `informacion` -> `información`, `cuentanos` -> `cuéntanos`, and `mas`/`mi`/`anos` correctly declined as ambiguous because the unaccented form is also a real Spanish word.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
