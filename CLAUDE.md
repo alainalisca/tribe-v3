@@ -243,6 +243,16 @@ Adding a sports chip row to the instructor storefront editor was nearly a data-l
 - An allow-list **with** a rot test, where the exempted cases are real and enumerable (this guard; `DELIBERATELY_EXCLUDED` in `lib/i18n/spanishAccents.ts`, which carries the RAE-2010 citation for `este`/`solo`).
 - **No allow-list at all**, where exemptions would accumulate faster than anyone audits them. The unresolved-key warning in `useTranslations`' `pick` fallback was shipped with none for exactly this reason: an allowlist there would have filled up with keys nobody re-checked, and the guard's whole value is that it fires on a key shape rather than on a list of known-bad keys. The two decisions are the same judgement, not a contradiction -- take the allow-list only when you can commit to proving each entry still earns its place.
 
+**A count measured without the gates the page actually applies is a different number from the one a user sees, and both look equally authoritative in a commit message.**
+
+Issue 1's commit messages say the sport filter took chip-reachable instructors from **4 of 15 to 11**. The real figures are **3 of 11 to 10**, and 11 once migration 171 applies. The measurement queried `users_discoverable` and counted rows whose `sports` array held a canonical sport. `/instructors` does three more things before rendering: it excludes organization accounts (T-GYM1, keyed on `featured_partners.business_type`), it drops anyone failing the five-field T-PROF1 completeness gate, and only then does it filter. Skipping those put **Leo Garcia** in the "now reachable" list -- he is a `gym` account and has never appeared on that page at all.
+
+Both numbers are true statements about _something_. Only one is a statement about what an instructor or a searcher experiences, and nothing in the smaller number's presentation reveals which kind it is.
+
+**Before quoting a count in a commit message or a report, name the surface and apply every filter that surface applies.** In this codebase that means: the row-visibility view (`users_discoverable` excludes soft-deleted, banned and test accounts), any exclusion list (organization accounts), and any completeness or eligibility gate, in the order the DAL applies them. Replicate the DAL function rather than writing a fresh query -- the fresh query is how the gates get left out.
+
+Same family as the instrument findings ([[the `[^<>]` and `vercel ls` entries above]]), and the mechanism is the mirror image: there the tool could not see everything that was there, here the tool saw more than the user ever would. A number that is too big reads exactly as confidently as a number that is too small.
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**

@@ -270,7 +270,8 @@ export default function InstructorDashboardPage() {
               <StorefrontEditor
                 userId={profile.id}
                 language={language as 'en' | 'es'}
-                initialBio={profile.instructor_bio || profile.bio || ''}
+                initialBio={profile.instructor_bio || ''}
+                initialShortBio={profile.bio || ''}
                 initialTagline={profile.storefront_tagline || ''}
                 initialSports={(profile.sports as string[]) || []}
                 initialSpecialties={(profile.specialties as string[]) || []}

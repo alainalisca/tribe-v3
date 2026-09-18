@@ -105,13 +105,26 @@ const getTranslations = (language: 'en' | 'es') => ({
     language === 'es'
       ? 'Agrega tu ubicación para aparecer en el directorio.'
       : 'Add your location so you appear in the directory.',
-  bio: language === 'es' ? 'Sobre ti (bio)' : 'About you (bio)',
-  bioPlaceholder: language === 'es' ? 'Cuéntale a tu comunidad quién eres...' : 'Tell your community who you are...',
-  professionalBio: language === 'es' ? 'Bio profesional' : 'Professional bio',
-  profBioPlaceholder:
+  // Issue 2: these two labels used to read "About you (bio)" and "Professional
+  // bio", which describe a TONE. Seven of the ten instructors with both fields
+  // filled hold byte-identical text, because nothing on screen said the two
+  // went to different places. The labels now name the DESTINATION, which is the
+  // only difference that is real, and the two fields no longer sit adjacent.
+  bio: language === 'es' ? 'Bio corta' : 'Short bio',
+  bioHint:
     language === 'es'
-      ? 'Tu experiencia, enfoque de entrenamiento, qué te hace único...'
-      : 'Your experience, training approach, what makes you unique...',
+      ? 'Aparece en tu perfil y en los resultados de búsqueda'
+      : 'Shown on your profile and in search results',
+  bioPlaceholder: language === 'es' ? 'Una o dos líneas sobre quién eres' : 'One or two lines about who you are',
+  storefrontBio: language === 'es' ? 'Bio de tu vitrina' : 'Storefront bio',
+  storefrontBioHint:
+    language === 'es'
+      ? 'La versión más larga, donde los atletas deciden reservar'
+      : 'The longer version, where athletes decide to book',
+  storefrontBioPlaceholder:
+    language === 'es'
+      ? 'Tu experiencia, tu enfoque, por qué alguien debería entrenar contigo'
+      : 'Your experience, your approach, why someone should train with you',
   sports: language === 'es' ? 'Deportes' : 'Sports',
   sportsHint: language === 'es' ? 'Por lo que la gente busca' : 'What people search by',
   specialties: language === 'es' ? 'Especialidades' : 'Specialties',
@@ -604,26 +617,18 @@ export default function InstructorOnboardingPage() {
               )}
             </div>
 
-            {/* Bio */}
+            {/* Short bio -> users.bio. The storefront bio lives in step 2,
+                beside the storefront preview it appears on, so the two are
+                never on screen together. */}
             <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.bio}</Label>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">
+                {t.bio} <span className="text-stone-400 dark:text-gray-500">({t.bioHint})</span>
+              </Label>
               <textarea
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 placeholder={t.bioPlaceholder}
                 rows={2}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
-              />
-            </div>
-
-            {/* Professional Bio */}
-            <div>
-              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">{t.professionalBio}</Label>
-              <textarea
-                value={form.instructor_bio}
-                onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })}
-                placeholder={t.profBioPlaceholder}
-                rows={3}
                 className="w-full px-3 py-2 text-sm bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
               />
             </div>
@@ -737,6 +742,23 @@ export default function InstructorOnboardingPage() {
               <p className="text-[10px] text-stone-400 dark:text-gray-500 mt-1">
                 {t.taglineHint} ({form.storefront_tagline.length}/100)
               </p>
+            </div>
+
+            {/* Storefront bio -> users.instructor_bio. Moved here from step 1,
+                where it sat directly beneath the short bio. Two textareas back
+                to back, labelled by tone rather than destination, is why seven
+                of ten instructors hold byte-identical text in both columns. */}
+            <div>
+              <Label className="text-xs text-stone-600 dark:text-gray-400 mb-1 block">
+                {t.storefrontBio} <span className="text-stone-400 dark:text-gray-500">({t.storefrontBioHint})</span>
+              </Label>
+              <textarea
+                value={form.instructor_bio}
+                onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })}
+                placeholder={t.storefrontBioPlaceholder}
+                rows={3}
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-tribe-mid border border-stone-300 dark:border-gray-600 rounded-lg text-stone-900 dark:text-white placeholder-stone-400 dark:placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-tribe-green resize-none"
+              />
             </div>
 
             {/* Banner Image Upload */}
@@ -858,6 +880,14 @@ export default function InstructorOnboardingPage() {
                   <h3 className="text-lg font-bold text-stone-900 dark:text-white mt-2">{form.name || 'Your Name'}</h3>
                   {form.storefront_tagline && (
                     <p className="text-sm text-stone-500 dark:text-gray-400 mt-0.5">{form.storefront_tagline}</p>
+                  )}
+                  {/* The storefront bio, so the field above is beside a preview
+                      that actually shows it. A field next to a preview that
+                      omits it is the same class of problem as the labels. */}
+                  {form.instructor_bio && (
+                    <p className="text-xs text-stone-600 dark:text-gray-400 mt-2 whitespace-pre-wrap text-left line-clamp-4">
+                      {form.instructor_bio}
+                    </p>
                   )}
                   {form.sports.length + form.specialties.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">

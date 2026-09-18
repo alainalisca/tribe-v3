@@ -21,7 +21,14 @@ const SPORT_CHOICES = SPORTS_LIST.filter((sport) => sport !== 'Other');
 interface StorefrontEditorProps {
   userId: string;
   language: 'en' | 'es';
+  /** users.instructor_bio. The one column this editor owns. */
   initialBio: string;
+  /**
+   * users.bio, READ ONLY. Used solely to explain the display fallback when the
+   * storefront bio is empty. This component must never write it: see the
+   * comment on handleSave.
+   */
+  initialShortBio?: string;
   initialTagline: string;
   initialSports: string[];
   initialSpecialties: string[];
@@ -33,6 +40,7 @@ export default function StorefrontEditor({
   userId,
   language,
   initialBio,
+  initialShortBio = '',
   initialTagline,
   initialSports,
   initialSpecialties,
@@ -51,8 +59,28 @@ export default function StorefrontEditor({
 
   const txt = {
     title: language === 'es' ? 'Editor de Vitrina' : 'Storefront Editor',
-    bio: language === 'es' ? 'Biografía' : 'Bio',
-    bioPlaceholder: language === 'es' ? 'Describe tu experiencia...' : 'Describe your experience...',
+    // Issue 2: this said only "Bio" / "Biografía" while prefilling from
+    // instructor_bio || bio and saving to instructor_bio. An instructor editing
+    // "their bio" here silently moved text out of users.bio, which is what
+    // /profile/[userId] and /search still display. The label now names the one
+    // column this control owns.
+    bio: language === 'es' ? 'Bio de tu vitrina' : 'Storefront bio',
+    bioHint:
+      language === 'es'
+        ? 'La versión más larga, donde los atletas deciden reservar'
+        : 'The longer version, where athletes decide to book',
+    bioPlaceholder:
+      language === 'es'
+        ? 'Tu experiencia, tu enfoque, por qué alguien debería entrenar contigo'
+        : 'Your experience, your approach, why someone should train with you',
+    // Shown only when instructor_bio is empty and bio is not. The five display
+    // paths still fall back to `instructor_bio || bio`, so the storefront shows
+    // text while this box is blank. Saying so is honest; prefilling the box
+    // with users.bio would copy one column into the other the moment they save.
+    bioFallbackNote:
+      language === 'es'
+        ? 'Por ahora se muestra tu bio corta. Escribe una bio de tu vitrina para reemplazarla.'
+        : 'Your short bio is showing here for now. Write a storefront bio to replace it.',
     tagline: language === 'es' ? 'Eslogan' : 'Tagline',
     taglinePlaceholder: language === 'es' ? 'Frase corta que te define' : 'Short phrase that defines you',
     sports: language === 'es' ? 'Deportes' : 'Sports',
@@ -134,6 +162,13 @@ export default function StorefrontEditor({
       .map((s) => s.trim())
       .filter(Boolean);
 
+    // instructor_bio ONLY. Writing `bio` here as well was the tempting option
+    // and the destructive one: this editor used to prefill from
+    // `instructor_bio || bio`, which for the instructor whose bio is English
+    // and whose instructor_bio is Spanish resolves to the Spanish, so her
+    // first storefront save would have overwritten her English bio -- silently,
+    // with text still in the field. Three of ten instructors use the pair as
+    // two genuinely different texts. One control, one column.
     const result = await updateStorefrontProfile(supabase, userId, {
       instructor_bio: bio,
       storefront_tagline: tagline,
@@ -206,9 +241,14 @@ export default function StorefrontEditor({
         />
       </div>
 
-      {/* Bio */}
+      {/* Storefront bio -> users.instructor_bio, and nothing else. */}
       <div>
-        <label className="block text-sm font-medium text-theme-secondary mb-1">{txt.bio}</label>
+        <label className="block text-sm font-medium text-theme-secondary mb-1">
+          {txt.bio} <span className="text-xs text-muted-foreground">({txt.bioHint})</span>
+        </label>
+        {bio.trim().length === 0 && initialShortBio.trim().length > 0 && (
+          <p className="text-xs text-muted-foreground mb-2">{txt.bioFallbackNote}</p>
+        )}
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
