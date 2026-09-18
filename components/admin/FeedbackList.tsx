@@ -51,7 +51,7 @@ export default function FeedbackList({ feedback, loading, language, onUpdateStat
                   <p className="text-xs text-stone-600">{item.user?.email}</p>
                 </div>
                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded">
-                  {item.type === 'feature_request' ? (language === 'es' ? 'Funcion' : 'Feature') : 'General'}
+                  {item.type === 'feature_request' ? (language === 'es' ? 'Función' : 'Feature') : 'General'}
                 </span>
               </div>
 

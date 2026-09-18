@@ -25,7 +25,7 @@ export default function MessageList({ messages, loading, actionLoading, onDelete
           {language === 'es' ? 'Mensajes Recientes' : 'Recent Messages'} ({messages.length})
         </h3>
         <p className="text-xs text-stone-600 mt-1">
-          {language === 'es' ? 'Ultimos 100 mensajes de todas las sesiones' : 'Last 100 messages across all sessions'}
+          {language === 'es' ? 'Últimos 100 mensajes de todas las sesiones' : 'Last 100 messages across all sessions'}
         </p>
       </div>
 

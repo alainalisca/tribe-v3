@@ -49,7 +49,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎉 ¡Nuevo compañero de entrenamiento!',
-      body: '{{name}} se unio a tu sesión de {{sport}}',
+      body: '{{name}} se unió a tu sesión de {{sport}}',
     },
   },
   join_request: {
@@ -69,7 +69,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎉 ¡Nuevo compañero de entrenamiento!',
-      body: '{{name}} (invitado) se unio a tu sesión de {{sport}}',
+      body: '{{name}} (invitado) se unió a tu sesión de {{sport}}',
     },
   },
   waitlist_offered: {
@@ -79,7 +79,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
     },
     es: {
       title: '🎟️ ¡Cupo disponible!',
-      body: 'Se abrio un cupo en una sesión en la que estabas en lista de espera.',
+      body: 'Se abrió un cupo en una sesión en la que estabas en lista de espera.',
     },
   },
   waitlist_expired: {
@@ -164,7 +164,7 @@ const TEMPLATES: Record<TemplateKey, Template> = {
       body: '{{name}} invited you to {{sport}} on {{date}}',
     },
     es: {
-      title: '💌 Tienes una invitacion',
+      title: '💌 Tienes una invitación',
       body: '{{name}} te invito a {{sport}} el {{date}}',
     },
   },

@@ -198,7 +198,7 @@ export const extEn = {
 
   // PhotoUploadSection
   maxPhotosAllowed: 'Maximum 3 photos allowed',
-  locationPhotosMax: 'Location photos (max 3)',
+  locationPhotosMax: 'Location photos (máx 3)',
   helpFindMeetingSpot: 'Help athletes find the meeting spot',
 
   // Training Now
@@ -260,7 +260,7 @@ export const extEn = {
 
   // BUG-211: Instructor intro video upload (StorefrontEditor)
   introVideo: 'Intro Video',
-  introVideoHint: 'Any video format · max 60 s · max 180 MB',
+  introVideoHint: 'Any video format · máx 60 s · máx 180 MB',
   uploadVideo: 'Upload video',
   changeVideo: 'Change video',
   removeVideo: 'Remove video',
@@ -294,7 +294,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   reported: 'Reportado',
   uploading: 'Subiendo...',
   noRecapPhotos: 'Aun no hay fotos. Los asistentes verificados pueden subir.',
-  recapPhotosAfterSession: 'Las fotos estaran disponibles después de que termine la sesión.',
+  recapPhotosAfterSession: 'Las fotos estarán disponibles después de que termine la sesión.',
 
   // NotificationPrompt
   enableNotifInSettings: 'Habilita las notificaciones en la configuración de tu navegador/dispositivo',
@@ -315,11 +315,11 @@ export const extEs: Record<keyof typeof extEn, string> = {
   addToCalendarGoogle: 'Google Calendar',
   addToCalendarApple: 'Apple Calendar',
   addToCalendarOpened: 'Abriendo Google Calendar en una nueva pestaña.',
-  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Abrelo para agregar la sesión.',
+  addToCalendarIcsDownloaded: 'Archivo de calendario descargado. Ábrelo para agregar la sesión.',
 
   // Error page
   somethingWentWrong: 'Algo salio mal',
-  dontWorryDataSafe: 'No te preocupes, tus datos estan a salvo.',
+  dontWorryDataSafe: 'No te preocupes, tus datos están a salvo.',
   tryAgain: 'Intentar de Nuevo',
 
   // AttendanceTracker
@@ -343,7 +343,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   hostingThisSession: 'Estás organizando esta sesión',
   editSessionBtn: 'Editar Sesión',
   cancelSession: 'Cancelar Sesión',
-  joining: 'Uniendose...',
+  joining: 'Uniéndose...',
   joinSession: 'Unirse a la Sesión',
   groupChat: 'Chat Grupal',
   generating: 'Generando...',
@@ -384,7 +384,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // ReviewSection
   howWasSession: 'Como estuvo la sesión?',
-  feedbackHelpsOthers: 'Tu opinion ayuda a otros a encontrar buenos anfitriones',
+  feedbackHelpsOthers: 'Tu opinión ayuda a otros a encontrar buenos anfitriones',
   rate: 'Calificar',
   shareExperiencePlaceholder: 'Comparte tu experiencia...',
   submitting: 'Enviando...',
@@ -426,7 +426,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   trainingNowLabel: 'ENTRENANDO AHORA',
   connectNearby: 'Conecta con personas entrenando cerca',
   couldNotLoadSessions: 'No se pudieron cargar las sesiones',
-  checkConnectionRetry: 'Revisa tu conexion e intenta de nuevo',
+  checkConnectionRetry: 'Revisa tu conexión e intenta de nuevo',
 
   // Requests page
   requestAccepted: 'Solicitud aceptada!',
@@ -436,13 +436,13 @@ export const extEs: Record<keyof typeof extEn, string> = {
   createASession: 'Crear una Sesión',
 
   // Invite page
-  inviteExpired: 'Invitacion expirada',
-  invalidInvite: 'Invitacion invalida',
-  acceptInvitation: 'Aceptar invitacion',
+  inviteExpired: 'Invitación expirada',
+  invalidInvite: 'Invitación invalida',
+  acceptInvitation: 'Aceptar invitación',
   askHostForNewLink: 'Pide al organizador un nuevo enlace.',
   fillNameAndPhone: 'Completa nombre y teléfono',
-  confirmedSeeYou: 'Confirmado! Nos vemos ahi',
-  inviteNotFound: 'Invitacion no encontrada',
+  confirmedSeeYou: 'Confirmado! Nos vemos ahí',
+  inviteNotFound: 'Invitación no encontrada',
   goHome: 'Ir al inicio',
   youreInvited: 'Estás Invitado!',
   by: 'Por',
@@ -460,7 +460,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   locationPlaceholder: 'ej. Parque Central',
   openJoinPolicy: 'Abierta - Cualquiera puede unirse',
   curatedJoinPolicy: 'Curada - Tu revisas solicitudes',
-  inviteOnlyJoinPolicy: 'Solo Invitacion - Privada',
+  inviteOnlyJoinPolicy: 'Solo Invitación - Privada',
   describeSession: 'Describe tu sesión...',
   joinPolicy: 'Política de Ingreso',
 
@@ -479,7 +479,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
 
   // PhotoUploadSection
   maxPhotosAllowed: 'Máximo 3 fotos permitidas',
-  locationPhotosMax: 'Fotos del lugar (max 3)',
+  locationPhotosMax: 'Fotos del lugar (máx 3)',
   helpFindMeetingSpot: 'Ayuda a los atletas a encontrar el punto de encuentro',
 
   // Training Now
@@ -501,7 +501,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   // Confirm dialog keys
   deleteMessageConfirm: '¿Eliminar este mensaje?',
   verifyPhotosConfirm: '¿Verificar estas fotos como autenticas?',
-  removeVerificationConfirm: '¿Quitar verificacion?',
+  removeVerificationConfirm: '¿Quitar verificación?',
   banUserConfirm: '¿Banear este usuario?',
   unbanUserConfirm: '¿Desbanear este usuario?',
   deleteUserConfirm: '¿ELIMINAR usuario y TODOS sus datos?',
@@ -511,14 +511,14 @@ export const extEs: Record<keyof typeof extEn, string> = {
   photoReported: 'Foto reportada. Un admin la revisara.',
   confirmAction: 'Confirmar',
   verifyPhotos: 'Verificar Fotos',
-  removeVerification: 'Quitar Verificacion',
+  removeVerification: 'Quitar Verificación',
   banUser: 'Banear Usuario',
   unbanUser: 'Desbanear Usuario',
   deleteUserBtn: 'Eliminar Usuario',
 
   // P0 fixes
   couldNotLoadChat: 'No se pudo cargar el chat',
-  pendingApproval: 'Aprobacion pendiente',
+  pendingApproval: 'Aprobación pendiente',
   withdrawRequest: 'Retirar Solicitud',
   noMatchingFilters: 'No hay sesiones que coincidan con tus filtros',
   clearFilters: 'Limpiar filtros',
@@ -537,7 +537,7 @@ export const extEs: Record<keyof typeof extEn, string> = {
   guest: 'Invitado',
   findYourTribe: 'Encuentra tu Tribu',
   onboardingDescBrowse: 'Explora sesiones por deporte, nivel y ubicación. Unete con un toque.',
-  inviteOnlyLabel: 'Solo con Invitacion',
+  inviteOnlyLabel: 'Solo con Invitación',
 
   // BUG-211: Instructor intro video upload (StorefrontEditor)
   introVideo: 'Video de Presentación',

@@ -53,7 +53,7 @@ export default function PackageManager({ language, userId, initialPackages }: Pa
     noPackages: language === 'es' ? 'Aun no tienes paquetes de servicio' : 'No service packages yet',
     single: language === 'es' ? 'Individual' : 'Single',
     multi: language === 'es' ? 'Multi-sesión' : 'Multi-session',
-    subscription: language === 'es' ? 'Suscripcion' : 'Subscription',
+    subscription: language === 'es' ? 'Suscripción' : 'Subscription',
   };
 
   const packageTypeOptions = [

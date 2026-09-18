@@ -169,12 +169,12 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   profile: 'Perfil',
 
   // Pagina de Solicitudes
-  joinRequests: 'Solicitudes de Union',
+  joinRequests: 'Solicitudes de Unión',
   noRequests: 'No hay solicitudes pendientes',
   accept: 'Aceptar',
   decline: 'Rechazar',
   viewProfile: 'Ver Perfil',
-  anonymous: 'Usuario Anonimo',
+  anonymous: 'Usuario Anónimo',
 
   // Comun
   loading: 'Cargando...',
@@ -259,13 +259,13 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   // Autenticacion
   signIn: 'Iniciar Sesión',
   signUp: 'Registrarse',
-  email: 'Correo Electronico',
+  email: 'Correo Electrónico',
   password: 'Contraseña',
   forgotPassword: 'Olvidaste tu Contraseña?',
 
   // Chat
   noMessagesYet: 'No hay mensajes aun',
-  startConversation: 'Inicia la conversacion!',
+  startConversation: 'Inicia la conversación!',
   noConversations: 'No hay conversaciones aun',
   joinSessionToChat: 'Unete a una sesión para chatear con otros atletas',
 
@@ -289,7 +289,7 @@ export const baseEs: Record<keyof typeof baseEn, string> = {
   sessionReminders: 'Recordatorios de Sesión',
   sessionRemindersDesc: '1 hora y 15 min antes de tus sesiones',
   reminderOneHourTitle: 'Sesión en 1 hora!',
-  reminderOneHourBody: 'comienza en 1 hora. Preparate!',
+  reminderOneHourBody: 'comienza en 1 hora. Prepárate!',
   reminderFifteenMinTitle: 'La sesión empieza pronto!',
   reminderFifteenMinBody: 'comienza en 15 minutos. Sal ya!',
   remindersEnabled: 'Recordatorios activados',
