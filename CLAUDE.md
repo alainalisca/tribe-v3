@@ -253,6 +253,27 @@ Both numbers are true statements about _something_. Only one is a statement abou
 
 Same family as the instrument findings ([[the `[^<>]` and `vercel ls` entries above]]), and the mechanism is the mirror image: there the tool could not see everything that was there, here the tool saw more than the user ever would. A number that is too big reads exactly as confidently as a number that is too small.
 
+**A TEST AT THE WRONG LAYER FOR THE DEFECT. Fifteen passing tests with the bug fully restored, because the bug does not live in what the component does.**
+
+The instructor storefront editor was copying `users.bio` into `users.instructor_bio`, leaving the column that `/profile/[userId]` and `/search` still display behind as stale. The mechanism was one prop expression at the call site:
+
+```tsx
+initialBio={profile.instructor_bio || profile.bio || ''}
+```
+
+Fifteen behaviour tests covered that component — what it writes, what it never writes, when its empty state appears. Restoring that exact expression left **all fifteen green**, because they mount the component with props they supply themselves. They can see everything the component _does_ and nothing about how it is _called_.
+
+**When a bug lives in how a component is called rather than in what it does, component tests cannot reach it, however many you write.** Ask which layer the defect actually occupies before choosing the instrument:
+
+- behaviour inside the component -> mount it and assert on its output
+- **what the component is handed** -> assert on the CALL SITE, in source. `components/dashboard/StorefrontEditor.callsite.test.ts` parses the `<StorefrontEditor ... />` props out of the dashboard and fails if `initialBio` reads `bio` at all. Same shape as `lib/sports.singleSource.test.ts`.
+- whether a module imports rather than redeclares -> source scan (the sport-list guard)
+- data-state left by a migration -> a check in `verify-migration-state.sql`
+
+**And the mutation that proves such a guard is restoring the original call-site expression**, not a variation on it. A guard written for a one-line prop expression is only shown to work by putting that line back.
+
+**Close the obvious way to make the new guard pass without fixing anything.** The call-site guard has a third case asserting the two bio props do not read the same column -- otherwise someone silences the first case by passing `instructor_bio` to both, and the empty-state note becomes permanently wrong instead. That is the same instinct as the allow-list rot test in the sport-list guard: both assume the next person will reach for the cheapest way to make the suite green, and both take it away in advance. **When you add a guard, spend one more minute asking how you would satisfy it dishonestly, and assert against that too.**
+
 **And record equivalent mutants rather than quietly dropping them.** `setSessions(null)` → `setSessions([])` in `ProfileUpcomingSessions` cannot be killed: both render nothing and both still log. That is not a coverage gap and no test should claim to cover it — say so, and note what would make the difference observable (here, adding an empty state).
 
 **`tierFor` resolves a LABEL, not an entitlement — never gate on `tier === 3`.**
