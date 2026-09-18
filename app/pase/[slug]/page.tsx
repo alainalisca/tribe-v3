@@ -8,7 +8,7 @@ import { consentTextFor, CONSENT_POLICY_PATH } from '@/lib/pase/consent';
 import PaseForm from './PaseForm';
 
 /**
- * /pase/[slug] — the digital pass.
+ * /pase/[slug] -- the digital pass.
  *
  * Server component, read with the SERVICE-ROLE client and through the SAME
  * fetchPassConfig that /api/pase uses. That is the point: if the page and the

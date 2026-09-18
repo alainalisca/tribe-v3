@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- T-LEAD1 RECON — live schema state before migration 172.
+-- T-LEAD1 RECON -- live schema state before migration 172.
 --
 -- READ ONLY. One statement, one JSON cell. Safe to re-run. Paste into the
 -- Supabase SQL editor against PRODUCTION and send the whole cell back.

@@ -1,5 +1,5 @@
 /**
- * Page: /legal/tratamiento-de-datos — Política de Tratamiento de Datos Personales
+ * Page: /legal/tratamiento-de-datos -- Política de Tratamiento de Datos Personales
  *
  * STUB. Al is writing the text.
  *

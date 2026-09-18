@@ -1,7 +1,7 @@
 -- ============================================================================
--- 172_t_lead1_pass_config_and_routing_REHEARSAL.sql  —  NOT A MIGRATION.
+-- 172_t_lead1_pass_config_and_routing_REHEARSAL.sql  --  NOT A MIGRATION.
 -- Paste into the Supabase SQL Editor and Run once. Opens a transaction, applies
--- 172's body verbatim, returns a SINGLE final result set, and ROLLS BACK —
+-- 172's body verbatim, returns a SINGLE final result set, and ROLLS BACK --
 -- ZERO changes persist.
 --
 -- WHAT IT IS PROVING: that partner_lead_routing is born unreachable. Supabase
@@ -19,7 +19,7 @@
 -- SCOPE OF PROOF: privileges, policy count and schema state, via
 -- has_table_privilege (the capability question) rather than
 -- information_schema.table_privileges, which only reports rows where the
--- current user is grantor or grantee and hands back false passes — see
+-- current user is grantor or grantee and hands back false passes -- see
 -- drift-probe.sql. It does NOT exercise RLS row predicates: the SQL Editor runs
 -- privileged and would not walk the anon auth.uid() paths. partner_lead_routing
 -- has no policies by design, so there are none to walk.
@@ -32,7 +32,7 @@ BEGIN;
 
 -- ── MIGRATION 172 BODY (verbatim; header comment omitted) ──────────────────
 -- ══════════════════════════════════════════════════════════════════════════
--- PART A — the public pass fields
+-- PART A -- the public pass fields
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Every column here is rendered on a public page to a logged-out stranger, so
@@ -63,7 +63,7 @@ COMMENT ON COLUMN public.featured_partners.pass_active IS
   'it just collected, so both conditions are checked, not either one.';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART B — partner_lead_routing: where the lead notification is sent
+-- PART B -- partner_lead_routing: where the lead notification is sent
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Separate table for one reason: anon and authenticated hold nothing on it,
@@ -113,7 +113,7 @@ COMMENT ON COLUMN public.partner_lead_routing.lead_cc IS
   'without a null check.';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART C — seed BullBox's pass fields
+-- PART C -- seed BullBox's pass fields
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Keyed on id, not slug: slug is permanent but editable, and an UPDATE that
@@ -132,7 +132,7 @@ UPDATE public.featured_partners
  WHERE id = '040cbc21-1b11-4ae1-aa99-9fe35a32bda0';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART D — guards. Assert the capability, never the statement.
+-- PART D -- guards. Assert the capability, never the statement.
 -- ══════════════════════════════════════════════════════════════════════════
 
 DO $$

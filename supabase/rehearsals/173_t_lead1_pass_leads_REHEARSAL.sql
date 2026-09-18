@@ -1,7 +1,7 @@
 -- ============================================================================
--- 173_t_lead1_pass_leads_REHEARSAL.sql  —  NOT A MIGRATION.
+-- 173_t_lead1_pass_leads_REHEARSAL.sql  --  NOT A MIGRATION.
 -- Paste into the Supabase SQL Editor and Run once. Opens a transaction, applies
--- 173's body verbatim, returns a SINGLE final result set, and ROLLS BACK —
+-- 173's body verbatim, returns a SINGLE final result set, and ROLLS BACK --
 -- ZERO changes persist.
 --
 -- ORDER MATTERS. 173's INSERT policy calls pass_is_active(), which reads
@@ -33,7 +33,7 @@
 -- SCOPE OF PROOF: privileges, policy shape and function properties, via
 -- has_table_privilege and pg_proc rather than information_schema, which only
 -- reports rows where the current user is grantor or grantee and hands back
--- false passes — see drift-probe.sql. It does NOT execute an INSERT as anon:
+-- false passes -- see drift-probe.sql. It does NOT execute an INSERT as anon:
 -- the SQL Editor runs privileged and SET ROLE inside this transaction would
 -- prove something about the editor, not about a browser. That path was
 -- rehearsed locally instead, as itself, on PostgreSQL 17.11.

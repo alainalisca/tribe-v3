@@ -62,7 +62,7 @@
 -- DROP POLICY IF EXISTS will no-op and look like it worked.
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART A — the public pass fields
+-- PART A -- the public pass fields
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Every column here is rendered on a public page to a logged-out stranger, so
@@ -93,7 +93,7 @@ COMMENT ON COLUMN public.featured_partners.pass_active IS
   'it just collected, so both conditions are checked, not either one.';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART B — partner_lead_routing: where the lead notification is sent
+-- PART B -- partner_lead_routing: where the lead notification is sent
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Separate table for one reason: anon and authenticated hold nothing on it,
@@ -143,7 +143,7 @@ COMMENT ON COLUMN public.partner_lead_routing.lead_cc IS
   'without a null check.';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART C — seed BullBox's pass fields
+-- PART C -- seed BullBox's pass fields
 -- ══════════════════════════════════════════════════════════════════════════
 --
 -- Keyed on id, not slug: slug is permanent but editable, and an UPDATE that
@@ -162,7 +162,7 @@ UPDATE public.featured_partners
  WHERE id = '040cbc21-1b11-4ae1-aa99-9fe35a32bda0';
 
 -- ══════════════════════════════════════════════════════════════════════════
--- PART D — guards. Assert the capability, never the statement.
+-- PART D -- guards. Assert the capability, never the statement.
 -- ══════════════════════════════════════════════════════════════════════════
 
 DO $$
