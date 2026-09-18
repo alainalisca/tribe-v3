@@ -7,9 +7,13 @@
  * immediately while the Server Component fetches its data, then the
  * real content swaps in. No blank screen, no spinner flash.
  *
- * With `export const revalidate = 60` on page.tsx, this loader only
- * shows on cache-miss requests (first request per 60s window, or
- * cold-start). Steady-state traffic skips it entirely.
+ * This loader shows on EVERY navigation to /instructors, not just on a cache
+ * miss. The page is dynamic -- it reads cookies through createClient, so Next
+ * renders it per request and the build lists it as `ƒ (Dynamic)`. An earlier
+ * version of this comment claimed steady-state traffic skipped the loader
+ * entirely, on the strength of a `revalidate = 60` that never had a cache to
+ * govern. It matters here because it means this skeleton is on the hot path for
+ * every visit, so it should stay cheap and match the real layout closely.
  */
 
 import { SkeletonCard } from '@/components/Skeleton';

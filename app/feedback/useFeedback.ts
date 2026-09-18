@@ -23,7 +23,7 @@ export function useFeedbackTranslations(language: string) {
         title: 'Titulo',
         titlePlaceholder: 'Breve resumen de tu comentario',
         description: 'Descripcion',
-        descriptionPlaceholder: 'Cuentanos mas sobre tu idea...',
+        descriptionPlaceholder: 'Cuentanos más sobre tu idea...',
         submitFeedback: 'Enviar Comentario',
         submitting: 'Enviando...',
         reportBug: 'Reportar un Error',

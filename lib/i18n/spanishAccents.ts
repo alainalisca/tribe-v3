@@ -73,6 +73,14 @@ export const REQUIRES_ACCENT: Readonly<Record<string, string>> = {
   ingles: 'inglés',
   extranan: 'extrañan',
   acompana: 'acompaña',
+  // Added 2026-09-17 after all three were found live in the /instructors empty
+  // state with the guard green. `busqueda` is unambiguous. `mas` as the
+  // conjunction ("but") is archaic and does not appear in UI copy, so treating
+  // every `mas` as the quantity adverb is safe here.
+  busqueda: 'búsqueda',
+  mas: 'más',
+  dia: 'día',
+  recuperacion: 'recuperación',
 };
 
 /**
@@ -108,6 +116,13 @@ export const DELIBERATELY_EXCLUDED = [
   'tu',
   'unete',
   'futbol',
+  // `mi` (possessive, "mi perfil") and `mí` (stressed pronoun, "cerca de mí")
+  // are different words. A word-level guard cannot tell them apart, and seeding
+  // `mi -> mí` would fail on every "mi sesión" in the app. Listed here so the
+  // next person knows it was considered, not missed: `Cerca de mi` shipped
+  // unaccented and no word list of any size would have caught it. That is the
+  // floor of this whole approach, dictionary or not.
+  'mi',
 ] as const;
 
 /** Matches a whole word, accent-insensitively on the left/right boundaries. */

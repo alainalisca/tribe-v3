@@ -97,7 +97,7 @@ function BulletinCard({ post, language }: { post: BulletinPost; language: 'en' |
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-tribe-green text-xs font-medium pt-1"
           >
-            {language === 'es' ? 'Ver mas' : 'Learn more'}
+            {language === 'es' ? 'Ver más' : 'Learn more'}
             <ExternalLink className="w-3 h-3" />
           </a>
         )}
