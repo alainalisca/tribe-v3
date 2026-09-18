@@ -124,7 +124,13 @@ export default function PaseForm({ slug, partnerName, options, consentText, cons
       const honeypot = (form.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '';
       const [group1, group2] = groups;
 
-      const response = await fetch('/api/pase', {
+      // Trailing slash on purpose. next.config sets trailingSlash: true, so
+      // '/api/pase' answers 308 to '/api/pase/'. fetch follows it and a 308
+      // preserves the method and body, so the form worked either way, but it
+      // spent a whole extra round trip doing it. Measured on the preview. This
+      // is the one POST in the feature that happens on a phone on gym wifi
+      // with the person still standing there.
+      const response = await fetch('/api/pase/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
