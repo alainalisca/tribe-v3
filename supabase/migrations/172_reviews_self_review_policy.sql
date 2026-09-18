@@ -97,23 +97,61 @@
 -- rating reads zero right now. Same statement as Darian's repair, so it is done
 -- here rather than deferred.
 --
--- NULL, NOT 0, for a host with no reviews. users_discoverable exposes
--- average_rating and fetchInstructors sorts with `nullsFirst: false`, so a 0
--- would place a zero-review instructor among genuinely rated ones rather than
--- after them. NULL sorts last, which is the truth: no rating, not a bad one.
+-- ZERO, NOT NULL, for a host with no reviews -- and this reverses an earlier
+-- call, on purpose. The argument for NULL was that users_discoverable exposes
+-- average_rating and fetchInstructors sorts `nullsFirst: false`, so a 0 places
+-- a zero-review instructor among genuinely rated ones rather than after them.
+-- That argument still holds. It is outweighed by this: the recreated trigger
+-- writes COALESCE(AVG(rating)::DECIMAL(3,2), 0), so a NULL written here would
+-- diverge from the trigger on Darian's very next review. Two writers
+-- disagreeing about the same column is the defect this whole thread is about.
+--
+-- KNOWN CONSEQUENCE, recorded rather than left to be rediscovered: a
+-- zero-review instructor now sorts among the 5-star ones on /instructors. The
+-- fix belongs in the DAL, not in the data -- sort or filter on
+-- total_reviews > 0 -- and is a one-line follow-up, not this migration.
 --
 -- The values are RECOMPUTED from public.reviews rather than written as
 -- literals, so the file cannot encode a stale average. avg() over zero rows
 -- returns NULL, which is exactly Darian's case.
 --
--- THE TRIGGER IS NOT FIXED HERE. add_reviews.sql declares
--- update_host_average_rating() WITHOUT SECURITY DEFINER. If that is what is
--- live, it runs as the reviewer and its `UPDATE users` targets ANOTHER user's
--- row, which the users UPDATE policy (auth.uid() = id) refuses -- a zero-row
--- update that raises nothing. One host in four measured inconsistent, which is
--- what that would look like. A repaired column under a broken trigger drifts
--- again on the next review, so the function needs its own migration and its own
--- rehearsal proving the trigger fires AND lands. Not folded in here.
+-- THE TRIGGER IS FIXED HERE, AND IT HAS TO BE.
+--
+-- prosecdef = false, confirmed in the live catalog. update_host_rating() runs
+-- as the INVOKER, and its `UPDATE users` targets the HOST's row -- which the
+-- users UPDATE policy (auth.uid() = id) refuses for every reviewer who is not
+-- that host. A zero-row update raises nothing. So the normal path, an athlete
+-- reviewing an instructor, cannot maintain this column at all.
+--
+-- WHAT THE COLUMN ACTUALLY MEANS TODAY. The column's correctness has never
+-- depended on the trigger, and the one case where the trigger COULD have
+-- written is a review the reviewer gave themselves.
+--
+-- The strongest evidence is users.updated_at, which PREDATES EVERY REVIEW in
+-- all four cases:
+--   Darian      updated_at 2025-10-30   self-review 2026-09-15  (10 months)
+--   Salomon     updated_at 2026-06-22   review      2026-08-19
+--   Alexandra   updated_at 2026-05-15   reviews     2026-05-28, 2026-07-09
+--   Caroline    updated_at 2026-06-22   reviews     2026-06-26, 2026-06-29
+-- So the trigger has never been OBSERVED to land -- not even on the
+-- self-review, whose write would have been permitted. Three hosts read
+-- correct anyway, which cannot be attributed to it.
+--
+-- And the apparent correctness carries less information than it looks:
+-- ALL SIX REVIEWS ARE 5 STARS, so average_rating = 5 is satisfied by almost any
+-- pre-existing value of 5. Only total_reviews discriminates.
+--
+-- (A stronger claim was considered and DISCARDED: that the only rating which
+-- ever updated correctly is the fraudulent one. Salomon and Alexandra have no
+-- self-review and are correct, which falsifies it. Recorded so nobody
+-- rediscovers the tidier version and believes it.)
+--
+-- WHY IT CANNOT BE A FOLLOW-UP. Part C below deletes a review, and that DELETE
+-- fires this same trigger. Repairing the column under a trigger that has never
+-- worked is repairing a symptom while the cause runs. Note the subtlety: this
+-- migration executes as the migration role, NOT under RLS, so even the BROKEN
+-- trigger would land during the apply. The fix is for every write AFTER this
+-- one -- the app path, where it has never worked.
 --
 -- ---------------------------------------------------------------------------
 -- All three parts live in ONE DO block. A DO block is a single statement, so a
@@ -177,7 +215,63 @@ BEGIN
     RAISE NOTICE '172: replaced INSERT policy % on public.reviews.', v_name;
   END IF;
 
-  -- ── Part B ──────────────────────────────────────────────────────────────
+  -- ── Part B: the rating trigger's function ───────────────────────────────
+  -- VERBATIM from the live catalog, with exactly ONE addition: SECURITY
+  -- DEFINER. The body is not touched, the DECIMAL(3,2) cast is not touched,
+  -- and the COALESCE(..., 0) is not touched -- Part D writes 0 to match it.
+  --
+  -- `SET search_path TO 'public'` is already on the live function; it is
+  -- carried through rather than added, and it is what makes SECURITY DEFINER
+  -- safe here (a definer function without a pinned search_path is a privilege
+  -- escalation waiting for a schema shadow).
+  --
+  -- CREATE OR REPLACE keeps the OID, so trigger_update_host_rating continues to
+  -- point at it and no trigger is dropped or recreated.
+  CREATE OR REPLACE FUNCTION public.update_host_rating()
+   RETURNS trigger
+   LANGUAGE plpgsql
+   SECURITY DEFINER
+   SET search_path TO 'public'
+  AS $fn$
+  BEGIN
+    UPDATE users
+    SET 
+      average_rating = (
+        SELECT COALESCE(AVG(rating)::DECIMAL(3,2), 0)
+        FROM reviews
+        WHERE host_id = COALESCE(NEW.host_id, OLD.host_id)
+      ),
+      total_reviews = (
+        SELECT COUNT(*)
+        FROM reviews
+        WHERE host_id = COALESCE(NEW.host_id, OLD.host_id)
+      )
+    WHERE id = COALESCE(NEW.host_id, OLD.host_id);
+    
+    RETURN COALESCE(NEW, OLD);
+  END;
+  $fn$;
+
+  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.update_host_rating()'::regprocedure) THEN
+    RAISE EXCEPTION '172 ABORTED: update_host_rating() is still not SECURITY DEFINER after the replace.';
+  END IF;
+  RAISE NOTICE '172: update_host_rating() recreated as SECURITY DEFINER.';
+
+  -- ── Part C: the one self-review row ─────────────────────────────────────
+  -- reviews carries UNIQUE (session_id, reviewer_id), so a person can hold at
+  -- most ONE review per session. That is what makes "exactly one self-review on
+  -- this session" a structural fact rather than a count that happened to be 1,
+  -- and it is asserted rather than assumed.
+  PERFORM 1 FROM pg_constraint
+   WHERE conrelid = 'public.reviews'::regclass
+     AND contype = 'u'
+     AND pg_get_constraintdef(oid) ILIKE '%(session_id, reviewer_id)%';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION
+      '172 ABORTED: the UNIQUE (session_id, reviewer_id) constraint on public.reviews is missing. '
+      'The one-review-per-person-per-session guarantee this migration relies on does not hold.';
+  END IF;
+
   SELECT count(*) INTO v_selfs FROM public.reviews WHERE reviewer_id = host_id;
 
   IF v_selfs = 0 THEN
@@ -204,7 +298,7 @@ BEGIN
     RAISE NOTICE '172: deleted the self-review row.';
   END IF;
 
-  -- ── Part C ──────────────────────────────────────────────────────────────
+  -- ── Part D: the two rating repairs ──────────────────────────────────────
   -- Recomputed from public.reviews, never from literals. Runs unconditionally:
   -- it is idempotent by construction, so a rerun writes the same values.
   UPDATE public.users u
@@ -240,7 +334,21 @@ BEGIN
       'The repair was scoped to two rows; a third has drifted, so re-measure before applying.', v_drift;
   END IF;
 
-  RAISE NOTICE '172: repaired 2 rating rows; all hosts now agree with public.reviews.';
+  -- ── Part E: TRUNCATE ────────────────────────────────────────────────────
+  -- TRUNCATE ESCAPES RLS ENTIRELY. No policy can stop it, so a table-level
+  -- grant is the only thing standing between a role and the whole table.
+  -- PostgREST never issues TRUNCATE, so this is inert today -- and inert-but-
+  -- wrong is exactly how the session_attendance grant sat until someone looked.
+  -- Revoking costs nothing and removes a hole that no policy work would ever
+  -- close.
+  REVOKE TRUNCATE ON public.reviews FROM anon, authenticated;
+
+  IF has_table_privilege('anon', 'public.reviews', 'TRUNCATE')
+     OR has_table_privilege('authenticated', 'public.reviews', 'TRUNCATE') THEN
+    RAISE EXCEPTION '172 ABORTED: TRUNCATE on public.reviews is still held after the revoke.';
+  END IF;
+
+  RAISE NOTICE '172: repaired 2 rating rows, revoked TRUNCATE; all hosts now agree with public.reviews.';
 END $$;
 
 -- ---------------------------------------------------------------------------
@@ -249,7 +357,7 @@ END $$;
 --   policy         reviews_insert_participant_not_host, and its WITH CHECK
 --                  mentions creator_id twice
 --   self_reviews   0
---   Darian         average_rating NULL, total_reviews 0
+--   Darian         average_rating 0, total_reviews 0
 --   Caroline       average_rating 5.00, total_reviews 2
 --   drifted_hosts  0
 --
@@ -269,8 +377,11 @@ SELECT
     WHERE schemaname='public' AND tablename='reviews' AND cmd='INSERT'
       AND with_check LIKE '%creator_id%') = 1, false)                      AS policy_ok,
   coalesce((SELECT count(*) FROM public.reviews WHERE reviewer_id = host_id) = 0, false) AS self_reviews_ok,
-  coalesce((SELECT average_rating IS NULL AND total_reviews = 0
+  coalesce((SELECT average_rating = 0 AND total_reviews = 0
               FROM public.users WHERE id = 'eaff348f-5df3-4df5-bd80-69ec233aad0e'), false) AS darian_ok,
+  coalesce((SELECT prosecdef FROM pg_proc WHERE oid = 'public.update_host_rating()'::regprocedure), false) AS trigger_fn_security_definer,
+  (NOT has_table_privilege('anon','public.reviews','TRUNCATE')
+   AND NOT has_table_privilege('authenticated','public.reviews','TRUNCATE'))            AS truncate_revoked_ok,
   coalesce((SELECT average_rating = 5.00 AND total_reviews = 2
               FROM public.users WHERE id = '1848555a-8405-475a-94e2-6dd4b2f6d70e'), false) AS caroline_ok,
   (SELECT count(*) FROM (SELECT DISTINCT host_id FROM public.reviews) h
